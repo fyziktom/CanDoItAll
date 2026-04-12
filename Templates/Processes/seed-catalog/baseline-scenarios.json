@@ -1,0 +1,560 @@
+[
+  {
+    "Key": "baseline-software-delivery",
+    "ProcessTemplateKey": "software-delivery",
+    "RunName": "Multi-team software delivery and release governance / billing export capability",
+    "Summary": "Baseline governed software delivery run aligned with the current module architecture, including explicit release-approval dependencies and artifact inputs.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a cross-team billing export capability.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "product-owner",
+        "DisplayName": "Jana Product",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns the value boundary and commercial acceptance criteria.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "",
+        "RoleKey": "delivery-manager",
+        "DisplayName": "Martin Delivery",
+        "ExecutorKind": "person",
+        "BindingReason": "Coordinates cross-team sequencing and evidence depth.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "architecture-review",
+        "RoleKey": "solution-architect",
+        "DisplayName": "Eva Architect",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns canonical-model and boundary review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "implementation",
+        "RoleKey": "lead-engineer",
+        "DisplayName": "Ondřej Lead Engineer",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Owns bounded implementation, tests, and migration notes.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "qa-validation",
+        "RoleKey": "qa-lead",
+        "DisplayName": "Klára QA",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns regression depth and browser proof.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "security-review",
+        "RoleKey": "security-reviewer",
+        "DisplayName": "Ivana Security",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns data-handling review and residual-risk challenge.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "execute-release-rollout",
+        "RoleKey": "release-manager",
+        "DisplayName": "Marek Release",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns controlled rollout and rollback readiness.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "feature-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Structured intake packet captured with explicit acceptance boundary.",
+        "DecidedBy": "Jana Product"
+      },
+      {
+        "StepKey": "architecture-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Architecture path and source-of-truth choice approved.",
+        "DecidedBy": "Eva Architect"
+      },
+      {
+        "StepKey": "implementation",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Implementation and migration notes completed with review-ready evidence.",
+        "DecidedBy": "Ondřej Lead Engineer"
+      },
+      {
+        "StepKey": "peer-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Peer review closed with no blocking integration findings.",
+        "DecidedBy": "Martin Delivery"
+      },
+      {
+        "StepKey": "qa-validation",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Regression and browser proof accepted for changed surfaces.",
+        "DecidedBy": "Klára QA"
+      },
+      {
+        "StepKey": "security-review",
+        "TargetStatus": "Blocked",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Blocked pending explicit security exception owner and residual-risk containment.",
+        "DecidedBy": "Ivana Security"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "feature-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Billing export scope boundary packet",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Created from stakeholder intake and acceptance workshop.",
+        "AllowedFutureUsageSummary": "Reusable for architecture review and implementation planning.",
+        "ReviewSummary": "Reviewed by product and delivery."
+      },
+      {
+        "StepKey": "implementation",
+        "ArtifactKind": "Deliverable",
+        "Title": "Billing export implementation change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Generated from current branch and linked tests.",
+        "AllowedFutureUsageSummary": "Reusable for review, QA, and release governance.",
+        "ReviewSummary": "Linked to migration notes and touched-surface inventory."
+      },
+      {
+        "StepKey": "security-review",
+        "ArtifactKind": "Decision",
+        "Title": "Open security exception assessment for tenant export capability",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Recorded by the security reviewer when the release lane was blocked on unresolved exception posture.",
+        "AllowedFutureUsageSummary": "Reusable for release governance, remediation planning, and audit.",
+        "ReviewSummary": "Residual risk owner and containment obligations remain open."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-branching-code-review",
+    "ProcessTemplateKey": "branching-code-review",
+    "RunName": "Branching code review and merge governance / account-settings UI",
+    "Summary": "Baseline branching review run that exercises the explicit review router, QA lane validation, and merge approval path.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a customer-visible account-settings UI change.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "author",
+        "DisplayName": "Veronika Author",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Authorship remains attached to the implementation owner.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "route-review-disposition",
+        "RoleKey": "review-lead",
+        "DisplayName": "Pavel Review Lead",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns explicit route selection.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "validate-qa-lane",
+        "RoleKey": "qa-lead",
+        "DisplayName": "Klára QA",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns targeted QA lane proof.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "approve-merge-after-qa",
+        "RoleKey": "merge-approver",
+        "DisplayName": "Milan Merge",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns final merge-governance decision.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "prepare-pull-request",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Review packet prepared with screenshots and rollback notes.",
+        "DecidedBy": "Veronika Author"
+      },
+      {
+        "StepKey": "route-review-disposition",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "qa-validation",
+        "Reason": "Router selected the QA validation lane explicitly.",
+        "DecidedBy": "Pavel Review Lead"
+      },
+      {
+        "StepKey": "validate-qa-lane",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "QA lane closed after targeted regression and browser proof.",
+        "DecidedBy": "Klára QA"
+      },
+      {
+        "StepKey": "approve-merge-after-qa",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Merge approved after QA lane completion and explicit route provenance review.",
+        "DecidedBy": "Milan Merge"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "prepare-pull-request",
+        "ArtifactKind": "Deliverable",
+        "Title": "Account settings pull request readiness packet",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from the authored diff and screenshots.",
+        "AllowedFutureUsageSummary": "Reusable for review routing and later defect analysis.",
+        "ReviewSummary": "Includes touched modules, reviewer asks, and rollback notes."
+      },
+      {
+        "StepKey": "route-review-disposition",
+        "ArtifactKind": "Decision",
+        "Title": "Account settings review routing decision",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded by review lead on the governed router step.",
+        "AllowedFutureUsageSummary": "Reusable for workflow audit.",
+        "ReviewSummary": "Route selected: QA validation."
+      },
+      {
+        "StepKey": "approve-merge-after-qa",
+        "ArtifactKind": "Decision",
+        "Title": "Account settings QA merge readiness note",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved after QA lane completion and explicit route review.",
+        "AllowedFutureUsageSummary": "Reusable for release readiness and audit.",
+        "ReviewSummary": "Residual risk declared low after QA validation."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-hotfix-rollout",
+    "ProcessTemplateKey": "hotfix-rollout",
+    "RunName": "Emergency hotfix rollout with shard-risk governance / checkout latency",
+    "Summary": "Baseline emergency hotfix run aligned with explicit blast-radius review, emergency validation, and emergency-release approval inputs.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a checkout latency incident requiring urgent remediation.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "incident-commander",
+        "DisplayName": "Daniel Commander",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns emergency bridge and severity posture.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "assess-blast-radius",
+        "RoleKey": "database-engineer",
+        "DisplayName": "Petra Database",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns shard-risk framing and rollback-trigger review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "package-hotfix",
+        "RoleKey": "platform-engineer",
+        "DisplayName": "Roman Platform",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns bounded hotfix packaging and rollback notes.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "validate-hotfix",
+        "RoleKey": "qa-lead",
+        "DisplayName": "Klára QA",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns emergency validation evidence.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "approve-emergency-release",
+        "RoleKey": "release-approver",
+        "DisplayName": "Milan Approver",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns emergency window approval.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "execute-emergency-rollout",
+        "RoleKey": "platform-engineer",
+        "DisplayName": "Roman Platform",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns controlled emergency rollout and rollback readiness.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "activate-emergency-bridge",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Emergency bridge activated with named responders and severity.",
+        "DecidedBy": "Daniel Commander"
+      },
+      {
+        "StepKey": "assess-blast-radius",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Blast radius assessed and bounded to impacted checkout shards.",
+        "DecidedBy": "Petra Database"
+      },
+      {
+        "StepKey": "package-hotfix",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Hotfix package and rollback notes produced.",
+        "DecidedBy": "Roman Platform"
+      },
+      {
+        "StepKey": "validate-hotfix",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Emergency validation evidence accepted for the urgent lane.",
+        "DecidedBy": "Klára QA"
+      },
+      {
+        "StepKey": "approve-emergency-release",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Emergency release window approved after blast-radius and validation inputs.",
+        "DecidedBy": "Milan Approver"
+      },
+      {
+        "StepKey": "execute-emergency-rollout",
+        "TargetStatus": "Failed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Rollout failed after telemetry drift crossed the declared rollback trigger.",
+        "DecidedBy": "Roman Platform"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "activate-emergency-bridge",
+        "ArtifactKind": "Transcript",
+        "Title": "Checkout latency emergency bridge log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded from emergency bridge activation.",
+        "AllowedFutureUsageSummary": "Reusable for incident timeline and post-incident review.",
+        "ReviewSummary": "Participants and initial constraints captured."
+      },
+      {
+        "StepKey": "package-hotfix",
+        "ArtifactKind": "Deliverable",
+        "Title": "Checkout latency emergency hotfix package",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Built from emergency fix branch with rollback notes.",
+        "AllowedFutureUsageSummary": "Reusable for rollout and incident replay.",
+        "ReviewSummary": "Bounded change set only."
+      },
+      {
+        "StepKey": "approve-emergency-release",
+        "ArtifactKind": "Decision",
+        "Title": "Checkout latency emergency window approval",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved by release approver after review of blast radius and validation evidence.",
+        "AllowedFutureUsageSummary": "Reusable for audit.",
+        "ReviewSummary": "Rollback trigger and watch window declared."
+      },
+      {
+        "StepKey": "execute-emergency-rollout",
+        "ArtifactKind": "Transcript",
+        "Title": "Failed rollout telemetry capture and rollback trigger notes",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from the failed production rollout and immediate rollback watch.",
+        "AllowedFutureUsageSummary": "Reusable for post-incident review and emergency policy tuning.",
+        "ReviewSummary": "Telemetry breach, rollback trigger, and operator notes captured."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-customer-onboarding",
+    "ProcessTemplateKey": "customer-onboarding",
+    "RunName": "Customer onboarding orchestration / Contoso enterprise rollout",
+    "Summary": "Baseline onboarding run that keeps intake, staffing review, and kickoff approval explicit.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a new enterprise customer onboarding.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "account-owner",
+        "DisplayName": "Lucie Account",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns customer context and success criteria.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "staffing-review",
+        "RoleKey": "staffing-manager",
+        "DisplayName": "Tomáš Staffing",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns staffing feasibility review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "RoleKey": "kickoff-lead",
+        "DisplayName": "Alice Kickoff",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns kickoff closure and action tracking.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Customer goals, stakeholders, and constraints captured.",
+        "DecidedBy": "Lucie Account"
+      },
+      {
+        "StepKey": "staffing-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Staffing readiness accepted for kickoff.",
+        "DecidedBy": "Tomáš Staffing"
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Kickoff closed with owners, milestones, and next actions.",
+        "DecidedBy": "Alice Kickoff"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "intake",
+        "ArtifactKind": "Brief",
+        "Title": "Contoso customer onboarding brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from signed scope and discovery notes.",
+        "AllowedFutureUsageSummary": "Reusable for staffing and kickoff preparation.",
+        "ReviewSummary": "Success criteria and stakeholders named."
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "ArtifactKind": "Brief",
+        "Title": "Contoso kickoff packet",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from onboarding brief and staffing note.",
+        "AllowedFutureUsageSummary": "Reusable for the first delivery phase.",
+        "ReviewSummary": "Owners and risks made explicit."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-incident-response",
+    "ProcessTemplateKey": "incident-response",
+    "RunName": "Incident response and escalation / tenant login disruption",
+    "Summary": "Baseline incident run that exercises explicit triage, diagnosis, and approval escalation.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a tenant login disruption incident.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "triage-lead",
+        "DisplayName": "Barbora Triage",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns initial triage and responder mobilization.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "diagnose",
+        "RoleKey": "resolver",
+        "DisplayName": "Karel Resolver",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns diagnosis and mitigation framing.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "escalate",
+        "RoleKey": "approver",
+        "DisplayName": "Radek Approver",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns approval on escalated mitigation.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "respond",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Severity and responders declared explicitly in triage note.",
+        "DecidedBy": "Barbora Triage"
+      },
+      {
+        "StepKey": "diagnose",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Diagnosis evidence assembled and mitigation options framed.",
+        "DecidedBy": "Karel Resolver"
+      },
+      {
+        "StepKey": "escalate",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "High-risk mitigation approved with rollback conditions.",
+        "DecidedBy": "Radek Approver"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "respond",
+        "ArtifactKind": "Decision",
+        "Title": "Tenant login incident triage note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from alert, service desk reports, and first telemetry.",
+        "AllowedFutureUsageSummary": "Reusable for diagnosis and timeline reconstruction.",
+        "ReviewSummary": "Severity and responders explicit."
+      },
+      {
+        "StepKey": "diagnose",
+        "ArtifactKind": "Evidence",
+        "Title": "Tenant login diagnosis evidence pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Collected from logs, traces, and hypothesis tracking.",
+        "AllowedFutureUsageSummary": "Reusable for mitigation choice and post-incident review.",
+        "ReviewSummary": "Hypotheses and evidence clearly separated."
+      },
+      {
+        "StepKey": "escalate",
+        "ArtifactKind": "Decision",
+        "Title": "Tenant login mitigation approval record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved by escalation authority after risk review.",
+        "AllowedFutureUsageSummary": "Reusable for incident audit.",
+        "ReviewSummary": "Rollback trigger and accountable owner recorded."
+      }
+    ]
+  }
+]

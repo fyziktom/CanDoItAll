@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validation-sbom-ready",
+  "DisplayName": "Validate SBOM and provenance readiness",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "high",
+  "OwnerRoleKey": "compliance-steward",
+  "Gate": "oss-intake",
+  "Summary": "Confirms component metadata and provenance are sufficient for governed reuse and later response.",
+  "PassCriteria": "Component identity, source, and major gaps are explicit enough for compliance and vulnerability response.",
+  "FailCriteria": "Component metadata is materially incomplete or provenance is missing without declared restriction.",
+  "EscalationRule": "Escalate to compliance steward and supply-chain owner; restrict reuse until corrected.",
+  "DocPath": "shared/validations/validation-sbom-ready.md"
+}

@@ -1,0 +1,25 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-staffing-summary",
+  "DisplayName": "Staffing summary prompt",
+  "Scope": "local",
+  "ProcessKey": "customer-onboarding",
+  "AudienceRoleKey": "staffing-manager",
+  "Phase": "Staffing review",
+  "Summary": "Produces a structured staffing readiness note from the onboarding brief and current capacity picture.",
+  "RequiredInputs": [
+    "Customer onboarding brief.",
+    "Current capacity or named specialists.",
+    "Known constraints or target dates."
+  ],
+  "OutputSchema": [
+    "Named roles and specialists.",
+    "Coverage gaps.",
+    "Kickoff recommendation."
+  ],
+  "RefusalConditions": [
+    "Refuse if critical ownership or target date information is missing.",
+    "Do not fabricate specialist availability."
+  ],
+  "DocPath": "processes/customer-onboarding/prompts/prompt-staffing-summary.md"
+}

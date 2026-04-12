@@ -6,7 +6,7 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessTemplatePackLoader
 {
-    private const string RelativePackRoot = "output/process-template-pack";
+    private const string ManifestFileName = "manifest.json";
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -149,13 +149,13 @@ public sealed class ProcessTemplatePackLoader
         if (!string.IsNullOrWhiteSpace(explicitRoot))
         {
             var normalizedExplicitRoot = Path.GetFullPath(explicitRoot);
-            if (File.Exists(Path.Combine(normalizedExplicitRoot, "manifest.json")))
+            if (File.Exists(Path.Combine(normalizedExplicitRoot, ManifestFileName)))
             {
                 return normalizedExplicitRoot;
             }
 
             if (File.Exists(normalizedExplicitRoot) &&
-                string.Equals(Path.GetFileName(normalizedExplicitRoot), "manifest.json", StringComparison.OrdinalIgnoreCase))
+                string.Equals(Path.GetFileName(normalizedExplicitRoot), ManifestFileName, StringComparison.OrdinalIgnoreCase))
             {
                 return Path.GetDirectoryName(normalizedExplicitRoot)!;
             }
@@ -176,7 +176,11 @@ public sealed class ProcessTemplatePackLoader
             var current = new DirectoryInfo(start);
             while (current is not null)
             {
-                var candidate = Path.Combine(current.FullName, "output", "process-template-pack", "manifest.json");
+                var candidate = Path.Combine(
+                    current.FullName,
+                    ProcessTemplatePackOptions.TemplatesRootDirectoryName,
+                    ProcessTemplatePackOptions.ProcessesDirectoryName,
+                    ManifestFileName);
                 if (File.Exists(candidate))
                 {
                     return Path.GetDirectoryName(candidate)!;
@@ -187,7 +191,7 @@ public sealed class ProcessTemplatePackLoader
         }
 
         throw new InvalidOperationException(
-            $"Unable to locate {RelativePackRoot}/manifest.json from the current execution root. " +
+            $"Unable to locate {ProcessTemplatePackOptions.DefaultRelativePackRoot}/{ManifestFileName} from the current execution root. " +
             $"Configure {ProcessTemplatePackOptions.SectionName}:PackRoot when the template pack lives outside the repository default layout.");
     }
 }

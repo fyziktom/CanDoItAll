@@ -1,0 +1,730 @@
+{
+  "Definition": {
+    "Id": null,
+    "ProjectId": null,
+    "WorkingVersionId": null,
+    "WorkingVersionNumber": 1,
+    "Name": "AI-assisted change delivery with guarded delegation",
+    "Summary": "Structure work so AI agents can assist delivery through bounded delegation, prompt packaging, evaluation, safety review, merge control, and evidence-rich trace capture.",
+    "ValueStatement": "Gain AI-delivery speed without losing human accountability, evidence quality, safety boundaries, or the ability to audit how a change was produced.",
+    "CustomerName": "Engineering, AI governance, and release stakeholders",
+    "OwnerName": "AI delivery governance board",
+    "InterfaceContractSummary": "Change demand, delegation boundaries, prompts, execution traces, evaluation evidence, safety reviews, and human approvals are combined into one guarded delivery contract.",
+    "GovernanceNotes": "AI execution is never treated as magic labor. Delegation scope, refusal boundaries, allowed artifacts, evaluation criteria, and merge authority remain explicit and typed.",
+    "ChangeSummary": "Built by merging SSDF, SSDF-AI, SAMM governance, SLSA provenance thinking, and practical prompt/evaluation control patterns for agent orchestration.",
+    "GovernancePolicySummary": "Delegated work requires explicit task decomposition, prompt package, output evaluation, safety review, provenance trace, and human merge approval.",
+    "ConstitutionRuleSummary": "No AI-generated change may enter protected branches or production lanes without human understanding of scope, evidence, and residual risk.",
+    "OperatingModeSummary": "Guarded autonomy: agents may generate drafts and execute bounded tasks, but humans own delegation boundaries, acceptance, safety, and merge decisions.",
+    "SimulationReadinessSummary": "Designed specifically for AI-agent orchestration, with enough structure to drive delegated task runners, evaluators, reviewers, and post-hoc audits.",
+    "Criticality": "High",
+    "AutonomyLevel": "Guarded",
+    "Status": "Draft",
+    "Roles": [
+      {
+        "Id": "9b632da7-61b8-5641-a060-aecb5bc4847d",
+        "Key": "product-owner",
+        "DisplayName": "Product owner",
+        "Purpose": "Convert business intent into an explicit delivery contract with clear acceptance boundaries and prioritized value trade-offs.",
+        "StaffingIntent": "One accountable human decision-maker who can clarify scope, decide priority, accept delivered outcomes, and absorb stakeholder escalation without routing every decision through engineering.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "CustomerContact",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 35,
+        "RoleTemplateSourceKey": "process-role-template/product-owner",
+        "RoleTemplateSnapshotName": "Product owner / template-pack v1",
+        "SnapshotSummary": "Outcome and acceptance owner for value, scope, sequencing, and release acceptance.",
+        "RequiredSkillIds": [],
+        "CanvasX": 60,
+        "CanvasY": 40
+      },
+      {
+        "Id": "d84d2c81-de8b-5e4e-9e22-c1544b475df4",
+        "Key": "solution-architect",
+        "DisplayName": "Solution architect",
+        "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
+        "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 30,
+        "RoleTemplateSourceKey": "process-role-template/solution-architect",
+        "RoleTemplateSnapshotName": "Solution architect / template-pack v1",
+        "SnapshotSummary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 210,
+        "CanvasY": 110
+      },
+      {
+        "Id": "fd9f9fce-9169-5773-8c17-71eacac0f66c",
+        "Key": "ai-safety-reviewer",
+        "DisplayName": "AI safety reviewer",
+        "Purpose": "Assess whether the AI-assisted workflow or AI-enabled output path has enough safety constraints and refusal logic for intended use.",
+        "StaffingIntent": "A specialist in practical AI safety controls and failure containment.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/ai-assisted-change-delivery/ai-safety-reviewer",
+        "RoleTemplateSnapshotName": "AI safety reviewer / template-pack v1",
+        "SnapshotSummary": "Specialist reviewer for prompt, model-behavior, and misuse-resistant delivery controls.",
+        "RequiredSkillIds": [],
+        "CanvasX": 360,
+        "CanvasY": 40
+      },
+      {
+        "Id": "1f648faa-e45e-5232-b41b-eb4cc62adad3",
+        "Key": "model-risk-approver",
+        "DisplayName": "Model risk approver",
+        "Purpose": "Accept, conditionally accept, or reject AI-related change exposure based on model behavior risk and control coverage.",
+        "StaffingIntent": "A senior risk owner combining product, security, compliance, and ML judgment.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 20,
+        "RoleTemplateSourceKey": "process-role-template/ai-assisted-change-delivery/model-risk-approver",
+        "RoleTemplateSnapshotName": "Model risk approver / template-pack v1",
+        "SnapshotSummary": "Decision authority for whether model-originated uncertainty is acceptable for the intended use.",
+        "RequiredSkillIds": [],
+        "CanvasX": 510,
+        "CanvasY": 110
+      },
+      {
+        "Id": "e105abb0-d9a5-5249-8e55-c56199c09573",
+        "Key": "software-engineer",
+        "DisplayName": "Software engineer",
+        "Purpose": "Produce working change artifacts that satisfy the process contract, surface blockers quickly, and leave enough proof for review and reuse.",
+        "StaffingIntent": "A build-capable engineer who can turn scope into code, tests, documentation, and traceable technical decisions.",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": "TeamMember",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 100,
+        "RoleTemplateSourceKey": "process-role-template/software-engineer",
+        "RoleTemplateSnapshotName": "Software engineer / template-pack v1",
+        "SnapshotSummary": "Implementation owner for code, automated tests, and change-level technical evidence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 660,
+        "CanvasY": 40
+      },
+      {
+        "Id": "3fb11bdd-d3c6-57eb-a1af-a651dbfd3c3a",
+        "Key": "ai-evaluation-lead",
+        "DisplayName": "AI evaluation lead",
+        "Purpose": "Ensure AI-assisted work is judged using explicit evaluation criteria rather than optimism about model capability.",
+        "StaffingIntent": "A technically rigorous evaluator for AI-assisted delivery or AI-enabled product changes.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 40,
+        "RoleTemplateSourceKey": "process-role-template/ai-assisted-change-delivery/ai-evaluation-lead",
+        "RoleTemplateSnapshotName": "AI evaluation lead / template-pack v1",
+        "SnapshotSummary": "Owner for AI change evaluation design, benchmark selection, and evidence integrity.",
+        "RequiredSkillIds": [],
+        "CanvasX": 810,
+        "CanvasY": 110
+      },
+      {
+        "Id": "1288d5c3-0ed0-577b-a5be-6ecaebaa286a",
+        "Key": "qa-lead",
+        "DisplayName": "QA lead",
+        "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
+        "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 40,
+        "RoleTemplateSourceKey": "process-role-template/qa-lead",
+        "RoleTemplateSnapshotName": "QA lead / template-pack v1",
+        "SnapshotSummary": "Quality owner for coverage depth, evidence quality, and release confidence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 960,
+        "CanvasY": 40
+      },
+      {
+        "Id": "1355627d-7097-5b4e-94e6-c7b1ab424efc",
+        "Key": "security-reviewer",
+        "DisplayName": "Security reviewer",
+        "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
+        "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/security-reviewer",
+        "RoleTemplateSnapshotName": "Security reviewer / template-pack v1",
+        "SnapshotSummary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions.",
+        "RequiredSkillIds": [],
+        "CanvasX": 1110,
+        "CanvasY": 110
+      },
+      {
+        "Id": "f1dd5459-59d8-5476-bc3d-9a14a453d020",
+        "Key": "release-approver",
+        "DisplayName": "Release approver",
+        "Purpose": "Decide whether the accumulated evidence is sufficient to expose the change to real users, data, and operational load.",
+        "StaffingIntent": "A senior operational or governance authority who can accept release risk on behalf of the organization.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 20,
+        "RoleTemplateSourceKey": "process-role-template/release-approver",
+        "RoleTemplateSnapshotName": "Release approver / template-pack v1",
+        "SnapshotSummary": "Final go-live decision owner for production promotion and rollback preparedness.",
+        "RequiredSkillIds": [],
+        "CanvasX": 1260,
+        "CanvasY": 40
+      }
+    ],
+    "Steps": [
+      {
+        "Id": "bdc73797-5a0a-5f2b-87ef-bc408b60d396",
+        "Key": "task-intake",
+        "Title": "Capture change demand and human acceptance boundary",
+        "Subtitle": "AI work starts from a human-owned contract",
+        "Notes": "Normalize the requested change into a bounded problem statement, value target, exclusions, and human acceptance criteria before any agent is engaged.",
+        "StepKind": "Start",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Feature request, defect, or improvement demand with business context.",
+        "OutputContractSummary": "Bounded change brief with explicit human acceptance boundary.",
+        "EvidenceContractSummary": "Intake brief and acceptance criteria map.",
+        "DecisionRightsSummary": "Product owner owns value boundary; no agent may redefine acceptance criteria alone.",
+        "ExceptionPolicySummary": "Do not delegate ambiguous or ownerless tasks.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": null,
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 120,
+        "CanvasY": 180,
+        "BranchCanvasX": 320,
+        "BranchCanvasY": 180,
+        "BranchOutcomes": [],
+        "Dependencies": [],
+        "RoleAssignments": [
+          {
+            "Id": "dbd8e227-9ebb-5362-aefd-90b7a5711937",
+            "RoleRequirementId": "9b632da7-61b8-5641-a060-aecb5bc4847d",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Product owner retains accountability for the change intent."
+          },
+          {
+            "Id": "99241575-127c-5042-99d6-6801453fcdd6",
+            "RoleRequirementId": "d84d2c81-de8b-5e4e-9e22-c1544b475df4",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Architecture review confirms technical boundary."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "d0035a13-0d15-5a65-949d-0ff1a79a4493",
+            "ArtifactKind": "Evidence",
+            "Title": "Intake brief",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "998e6e4e-5aa3-5203-82cf-131ae3d9b7c6",
+            "ArtifactKind": "Evidence",
+            "Title": "Acceptance criteria pack",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "7e69943a-dd3a-5b74-b7df-3ec93c5aaf9f",
+        "Key": "delegation-design",
+        "Title": "Define delegation boundary, allowed tools, and refusal conditions",
+        "Subtitle": "The agent gets a sandbox, not a blank check",
+        "Notes": "Translate the human change brief into a precise delegation contract that states what the agent may touch, what it must refuse, and which evidence it must produce.",
+        "StepKind": "Decision",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Bounded change brief, repository context, data-sensitivity map, and tool inventory.",
+        "OutputContractSummary": "Approved delegation contract for agent execution.",
+        "EvidenceContractSummary": "Delegation contract and refusal boundary note.",
+        "DecisionRightsSummary": "Solution architect and AI safety reviewer define safe task decomposition; model-risk approver reviews autonomy fit for sensitive domains.",
+        "ExceptionPolicySummary": "If the delegation boundary cannot be explained precisely, do not delegate.",
+        "TargetLeadHours": 6,
+        "DependsOnStepId": "bdc73797-5a0a-5f2b-87ef-bc408b60d396",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 430,
+        "CanvasY": 180,
+        "BranchCanvasX": 630,
+        "BranchCanvasY": 180,
+        "BranchOutcomes": [
+          {
+            "Id": "5c182823-0ec1-54f5-93ef-65aedfa076da",
+            "Key": "delegate",
+            "Title": "Delegate",
+            "Description": "The task can be delegated under stated constraints."
+          },
+          {
+            "Id": "7d6f6a57-ee9c-5799-8fcb-6afa5bae1242",
+            "Key": "human-only",
+            "Title": "Human only",
+            "Description": "The task stays human-executed because safe delegation criteria are not met."
+          }
+        ],
+        "Dependencies": [
+          {
+            "Id": "889f0a7f-efaf-55fa-a862-b2c8f153c364",
+            "DependsOnStepId": "bdc73797-5a0a-5f2b-87ef-bc408b60d396",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "8e8d12dd-aa51-56ea-86f5-04d3a307e819",
+            "RoleRequirementId": "d84d2c81-de8b-5e4e-9e22-c1544b475df4",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Architecture owner defines safe technical boundary."
+          },
+          {
+            "Id": "a3111d68-64d4-5096-b357-be13260815d2",
+            "RoleRequirementId": "fd9f9fce-9169-5773-8c17-71eacac0f66c",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "AI safety review is required."
+          },
+          {
+            "Id": "bac69a7b-38bf-553e-8f20-e54f70e2ff5e",
+            "RoleRequirementId": "1f648faa-e45e-5232-b41b-eb4cc62adad3",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": false,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Model-risk review becomes required for sensitive change classes."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "b27a755d-4ae5-5f3c-9153-86ebef17ecc2",
+            "ArtifactKind": "Prompt",
+            "Title": "Delegation contract and prompt package",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "21b248f4-6b03-5c90-96bc-49dcb9182acf",
+            "ArtifactKind": "Evidence",
+            "Title": "Delegation configuration snapshot",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "49fbf362-0352-5b51-8ab5-78c831859863",
+        "Key": "agent-execution",
+        "Title": "Run delegated execution and capture full trace",
+        "Subtitle": "Every automated move must stay reproducible",
+        "Notes": "Execute the delegated work, capture tool calls and outputs, and preserve the trace so later reviewers can understand what the agent actually did.",
+        "StepKind": "Work",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Delegation contract, prompt package, repository workspace, and allowed tools.",
+        "OutputContractSummary": "Draft change output plus full execution trace.",
+        "EvidenceContractSummary": "Execution trace pack, generated diff, and intermediate reasoning artifacts permitted by policy.",
+        "DecisionRightsSummary": "Software engineer supervises the lane; AI safety reviewer may halt execution when boundary breaches appear.",
+        "ExceptionPolicySummary": "Stop immediately if the agent attempts disallowed files, tools, or data domains.",
+        "TargetLeadHours": 8,
+        "DependsOnStepId": "7e69943a-dd3a-5b74-b7df-3ec93c5aaf9f",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 740,
+        "CanvasY": 180,
+        "BranchCanvasX": 940,
+        "BranchCanvasY": 180,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "62788a3a-c793-5fd7-b838-6a7de780106e",
+            "DependsOnStepId": "7e69943a-dd3a-5b74-b7df-3ec93c5aaf9f",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "469ba8fc-d5c5-5d96-9938-f241e709e29d",
+            "RoleRequirementId": "e105abb0-d9a5-5249-8e55-c56199c09573",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Engineer remains accountable for supervised execution."
+          },
+          {
+            "Id": "05b4c71c-3a73-597b-9b0f-56d448a94100",
+            "RoleRequirementId": "fd9f9fce-9169-5773-8c17-71eacac0f66c",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Safety reviewer monitors boundary adherence."
+          },
+          {
+            "Id": "96f5090f-757c-5fdc-8bfe-f6fd6fbc0af4",
+            "RoleRequirementId": "d84d2c81-de8b-5e4e-9e22-c1544b475df4",
+            "ResponsibilityKind": "Backup",
+            "IsRequired": false,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Architect remains fallback for design ambiguity."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "af02aac6-2db5-533a-8b7e-40cc007350a5",
+            "ArtifactKind": "Evidence",
+            "Title": "Execution trace pack",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "6118fe19-44ae-56f8-a8a5-6bd6ccc4eab6",
+            "ArtifactKind": "Evidence",
+            "Title": "Agent execution provenance summary",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "51ea0318-6e1b-5551-9cc3-4056d198655c",
+        "Key": "evaluation-and-benchmarking",
+        "Title": "Evaluate outputs against benchmark and acceptance evidence",
+        "Subtitle": "A polished answer is not enough",
+        "Notes": "Run deterministic checks, benchmark tasks, and human review prompts to determine whether the agent output actually satisfies the bounded acceptance criteria.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Generated diff, execution trace, acceptance criteria, test harness, and benchmark cases.",
+        "OutputContractSummary": "Evaluation report with pass/fail evidence and required rework.",
+        "EvidenceContractSummary": "Benchmark report, test evidence, and evaluator notes.",
+        "DecisionRightsSummary": "AI evaluation lead owns measurement quality; QA lead reviews reproducibility and adequacy of tests.",
+        "ExceptionPolicySummary": "Do not infer correctness from style, brevity, or model confidence.",
+        "TargetLeadHours": 8,
+        "DependsOnStepId": "49fbf362-0352-5b51-8ab5-78c831859863",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1050,
+        "CanvasY": 180,
+        "BranchCanvasX": 1250,
+        "BranchCanvasY": 180,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "3853c162-a346-531a-a32a-a8178e38672c",
+            "DependsOnStepId": "49fbf362-0352-5b51-8ab5-78c831859863",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "2a90fa3a-a748-5723-ad6e-d31c8d2def6a",
+            "RoleRequirementId": "3fb11bdd-d3c6-57eb-a1af-a651dbfd3c3a",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Evaluation stewardship remains explicit."
+          },
+          {
+            "Id": "94877592-57f2-5cfe-9194-c75ffb109163",
+            "RoleRequirementId": "1288d5c3-0ed0-577b-a5be-6ecaebaa286a",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "QA validates reproducibility."
+          },
+          {
+            "Id": "54edccad-b705-5eea-8dd8-dab2dde5c55d",
+            "RoleRequirementId": "e105abb0-d9a5-5249-8e55-c56199c09573",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Engineer reviews implementation realism."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "d4f8e8a0-d306-5ce4-8a80-6f67ac439509",
+            "ArtifactKind": "Evidence",
+            "Title": "Evaluation benchmark report",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "f517feb0-5677-5cd4-aa8c-4902af140737",
+            "ArtifactKind": "Evidence",
+            "Title": "Test evidence pack",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "84e637ed-7caa-5ecc-99c3-71d86129cf0d",
+            "ArtifactKind": "Prompt",
+            "Title": "Evaluation prompt package",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "e8d7f42b-754b-5bc0-ab72-a9ef0dac02b9",
+        "Key": "safety-and-security-review",
+        "Title": "Review safety, security, and residual risk",
+        "Subtitle": "The output must be acceptable, not merely functional",
+        "Notes": "Assess whether the agent-assisted output changes trust boundaries, introduces insecure patterns, or requires residual-risk ownership before merge.",
+        "StepKind": "Approval",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Evaluation report, execution trace, code diff, and sensitive-scope map.",
+        "OutputContractSummary": "Approved, held, or rejected merge recommendation.",
+        "EvidenceContractSummary": "Safety/security approval record with residual risk statement.",
+        "DecisionRightsSummary": "Security reviewer and model-risk approver may block merge; release approver owns final risk acceptance for guarded lanes.",
+        "ExceptionPolicySummary": "Do not merge when control impact is ambiguous.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": "51ea0318-6e1b-5551-9cc3-4056d198655c",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1360,
+        "CanvasY": 180,
+        "BranchCanvasX": 1560,
+        "BranchCanvasY": 180,
+        "BranchOutcomes": [
+          {
+            "Id": "e73e4e0b-67a0-5e20-9d74-bc8552da11de",
+            "Key": "approved",
+            "Title": "Approved",
+            "Description": "The output may proceed to controlled merge."
+          },
+          {
+            "Id": "1a79c7ce-01d2-5224-9b5b-ae0d12330490",
+            "Key": "rework",
+            "Title": "Rework",
+            "Description": "The output must be revised or re-evaluated before merge."
+          }
+        ],
+        "Dependencies": [
+          {
+            "Id": "225ffb6f-0185-5ab2-8674-9776db7554f9",
+            "DependsOnStepId": "51ea0318-6e1b-5551-9cc3-4056d198655c",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "e62f53b7-a137-5af8-8967-12637e1fd058",
+            "RoleRequirementId": "1355627d-7097-5b4e-94e6-c7b1ab424efc",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Security review remains required."
+          },
+          {
+            "Id": "d2fc1ca3-2ae2-5740-b487-95b9aef3ac9c",
+            "RoleRequirementId": "1f648faa-e45e-5232-b41b-eb4cc62adad3",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Model-risk review remains explicit for guarded autonomy."
+          },
+          {
+            "Id": "cf69ff41-e22f-55b4-9d05-fc7fe1f53ff4",
+            "RoleRequirementId": "f1dd5459-59d8-5476-bc3d-9a14a453d020",
+            "ResponsibilityKind": "Approver",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Controlled merge approval stays human."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "4393cf82-3809-5345-bb5e-7ed6a5866ac2",
+            "ArtifactKind": "Evidence",
+            "Title": "Security review note",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "ea5ff633-0996-5cf4-8c61-03d8bb50d982",
+            "ArtifactKind": "Decision",
+            "Title": "AI-assisted merge approval note",
+            "IsRequired": true,
+            "TrustRequirement": "HumanApproved",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "b37f7780-882a-5c3f-a19e-e09b9fd1c4a0",
+        "Key": "controlled-merge-and-learning",
+        "Title": "Merge under control and capture learning signal",
+        "Subtitle": "Traceability does not end at approval",
+        "Notes": "Perform the controlled merge, preserve trace references, and record what should change in prompts, benchmarks, or delegation policy next time.",
+        "StepKind": "End",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Approved merge note, trace pack, evaluated diff, and rollout instructions if applicable.",
+        "OutputContractSummary": "Merged change with traceable evidence and improvement actions.",
+        "EvidenceContractSummary": "Merge note, trace references, and improvement backlog.",
+        "DecisionRightsSummary": "Software engineer performs the merge; AI evaluation lead captures benchmark improvement; product owner reviews value fit if needed.",
+        "ExceptionPolicySummary": "Do not lose traceability between approved artifact and merged change.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": "e8d7f42b-754b-5bc0-ab72-a9ef0dac02b9",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1670,
+        "CanvasY": 180,
+        "BranchCanvasX": 1870,
+        "BranchCanvasY": 180,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "b1bf50b9-a5ae-506f-9336-80ec14d6c086",
+            "DependsOnStepId": "e8d7f42b-754b-5bc0-ab72-a9ef0dac02b9",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "b0bd6b73-c97f-5ead-9782-87e37e9c1561",
+            "RoleRequirementId": "e105abb0-d9a5-5249-8e55-c56199c09573",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Merge remains human-owned."
+          },
+          {
+            "Id": "b181c914-70b9-5f68-8a00-1ac7c5c0f3e7",
+            "RoleRequirementId": "3fb11bdd-d3c6-57eb-a1af-a651dbfd3c3a",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Evaluation lead records improvement signal."
+          },
+          {
+            "Id": "63402235-f362-548d-8ed4-70d2a7b2bf19",
+            "RoleRequirementId": "9b632da7-61b8-5641-a060-aecb5bc4847d",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": false,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Product review is required for customer-visible scope shifts."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "eed50568-445e-5c7a-9338-f691c1bb3892",
+            "ArtifactKind": "Evidence",
+            "Title": "Merged execution trace reference",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "a645dadd-e908-587e-90cd-5cd9b88420ff",
+            "ArtifactKind": "Brief",
+            "Title": "AI delivery improvement log",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      }
+    ]
+  },
+  "Warnings": [
+    "Projected from template pack process 'ai-assisted-change-delivery'.",
+    "Detailed sidecar metadata remains in the process-template pack files."
+  ],
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection"
+}

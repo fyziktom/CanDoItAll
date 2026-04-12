@@ -1,0 +1,622 @@
+{
+  "Definition": {
+    "Id": null,
+    "ProjectId": null,
+    "WorkingVersionId": null,
+    "WorkingVersionNumber": 1,
+    "Name": "Open-source intake and supply-chain governance",
+    "Summary": "Assess new third-party components through identity, license, provenance, security, SBOM, and approval steps so reuse remains deliberate and auditable.",
+    "ValueStatement": "Make open-source adoption safe, fast, and reusable by standardizing component intake, license obligation review, provenance checks, and durable approval records.",
+    "CustomerName": "Engineering, legal, and security stakeholders",
+    "OwnerName": "Open-source governance office",
+    "InterfaceContractSummary": "A requested component or package becomes an approved or rejected intake decision with explicit obligations, provenance evidence, and SBOM updates.",
+    "GovernanceNotes": "Do not confuse convenient package acquisition with approved component adoption. Identity, obligations, provenance, and update ownership must be explicit.",
+    "ChangeSummary": "Built from OpenChain resources, SPDX metadata practice, SLSA provenance expectations, and SSDF supply-chain protections.",
+    "GovernancePolicySummary": "No component may be adopted without verified identity, license review, security/provenance assessment, SBOM registration, and accountable ongoing ownership.",
+    "ConstitutionRuleSummary": "A component can be popular and still be unsuitable; approval requires explicit reasoning, not reputation transfer.",
+    "OperatingModeSummary": "Assisted execution with human legal/security approval. Automation may collect evidence and draft analysis, but approval remains accountable.",
+    "SimulationReadinessSummary": "Works for procurement-style intake, dev-team self-service review, and AI-assisted package research pipelines.",
+    "Criticality": "High",
+    "AutonomyLevel": "Guarded",
+    "Status": "Draft",
+    "Roles": [
+      {
+        "Id": "47fc5565-b61a-50f2-8f87-a5b25a6fc5fb",
+        "Key": "software-engineer",
+        "DisplayName": "Software engineer",
+        "Purpose": "Produce working change artifacts that satisfy the process contract, surface blockers quickly, and leave enough proof for review and reuse.",
+        "StaffingIntent": "A build-capable engineer who can turn scope into code, tests, documentation, and traceable technical decisions.",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": "TeamMember",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 100,
+        "RoleTemplateSourceKey": "process-role-template/software-engineer",
+        "RoleTemplateSnapshotName": "Software engineer / template-pack v1",
+        "SnapshotSummary": "Implementation owner for code, automated tests, and change-level technical evidence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 60,
+        "CanvasY": 40
+      },
+      {
+        "Id": "2e18dea3-d143-518b-b2f9-ff4aa0e05e4f",
+        "Key": "service-owner",
+        "DisplayName": "Service owner",
+        "Purpose": "Represent live-service constraints, operational history, and post-release accountability in change decisions.",
+        "StaffingIntent": "A domain-aligned owner with authority over service-level objectives, support load, and operational trade-offs.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "TechnicalContact",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/service-owner",
+        "RoleTemplateSnapshotName": "Service owner / template-pack v1",
+        "SnapshotSummary": "Operational accountability owner for a live service, product surface, or bounded business capability.",
+        "RequiredSkillIds": [],
+        "CanvasX": 210,
+        "CanvasY": 110
+      },
+      {
+        "Id": "050bdb62-439c-5928-85b0-0c17e849c2f2",
+        "Key": "sbom-curator",
+        "DisplayName": "SBOM curator",
+        "Purpose": "Keep the software bill of materials and dependency evidence accurate enough for governance, response, and later reuse.",
+        "StaffingIntent": "A supply-chain operations specialist who can structure component metadata and evidence consistently.",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": "TeamMember",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 35,
+        "RoleTemplateSourceKey": "process-role-template/oss-intake-supply-chain-governance/sbom-curator",
+        "RoleTemplateSnapshotName": "SBOM curator / template-pack v1",
+        "SnapshotSummary": "Metadata owner for component inventory, provenance completeness, and reusable dependency evidence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 360,
+        "CanvasY": 40
+      },
+      {
+        "Id": "13704b62-2e87-5d81-bbfe-af8b5c65ec21",
+        "Key": "license-counsel",
+        "DisplayName": "License counsel",
+        "Purpose": "Ensure component use decisions reflect actual license obligations and approved exception logic.",
+        "StaffingIntent": "A legal or licensing specialist focused on OSS usage governance.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 15,
+        "RoleTemplateSourceKey": "process-role-template/oss-intake-supply-chain-governance/license-counsel",
+        "RoleTemplateSnapshotName": "License counsel / template-pack v1",
+        "SnapshotSummary": "Specialist reviewer for open-source license obligations, incompatibilities, and exception framing.",
+        "RequiredSkillIds": [],
+        "CanvasX": 510,
+        "CanvasY": 110
+      },
+      {
+        "Id": "6d3c6f6e-ec4a-57ed-b7a8-f0c821320e3a",
+        "Key": "compliance-steward",
+        "DisplayName": "Compliance steward",
+        "Purpose": "Ensure required compliance considerations are identified early, translated into actionable checks, and retained as evidence.",
+        "StaffingIntent": "A governance specialist who understands how policy obligations intersect with real delivery work.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 20,
+        "RoleTemplateSourceKey": "process-role-template/compliance-steward",
+        "RoleTemplateSnapshotName": "Compliance steward / template-pack v1",
+        "SnapshotSummary": "Policy and evidence steward for contractual, regulatory, license, and audit-sensitive change decisions.",
+        "RequiredSkillIds": [],
+        "CanvasX": 660,
+        "CanvasY": 40
+      },
+      {
+        "Id": "6af41974-39f5-59a1-8450-7abe9bca8ba3",
+        "Key": "security-reviewer",
+        "DisplayName": "Security reviewer",
+        "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
+        "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/security-reviewer",
+        "RoleTemplateSnapshotName": "Security reviewer / template-pack v1",
+        "SnapshotSummary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions.",
+        "RequiredSkillIds": [],
+        "CanvasX": 810,
+        "CanvasY": 110
+      }
+    ],
+    "Steps": [
+      {
+        "Id": "1bd22c35-5333-5f38-9246-20889f478a55",
+        "Key": "component-request",
+        "Title": "Register component intake request",
+        "Subtitle": "Make the request explicit before evaluation",
+        "Notes": "Capture why the component is wanted, where it will be used, what alternatives exist, and who will own it after approval.",
+        "StepKind": "Start",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Package name or component identifier, intended use, business context, and requesting team.",
+        "OutputContractSummary": "Typed component intake request with accountable owner.",
+        "EvidenceContractSummary": "Intake brief and ownership statement.",
+        "DecisionRightsSummary": "Software engineer requests; service owner confirms operational ownership exists.",
+        "ExceptionPolicySummary": "Reject anonymous or ownerless component requests.",
+        "TargetLeadHours": 3,
+        "DependsOnStepId": null,
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 120,
+        "CanvasY": 260,
+        "BranchCanvasX": 320,
+        "BranchCanvasY": 260,
+        "BranchOutcomes": [],
+        "Dependencies": [],
+        "RoleAssignments": [
+          {
+            "Id": "4207a539-674a-5680-9636-59fb0ed25b22",
+            "RoleRequirementId": "47fc5565-b61a-50f2-8f87-a5b25a6fc5fb",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Requester remains accountable for supplying context."
+          },
+          {
+            "Id": "75a04a35-b62b-55cc-abf5-33f65b3265b4",
+            "RoleRequirementId": "2e18dea3-d143-518b-b2f9-ff4aa0e05e4f",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Operational owner review is required."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "131aac76-0dc8-5efe-8ba8-6d978f50a1ab",
+            "ArtifactKind": "Brief",
+            "Title": "Component intake request",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "4053ba4d-aba0-5f54-af66-98091b43f12f",
+        "Key": "identity-and-maintenance",
+        "Title": "Verify component identity and maintenance posture",
+        "Subtitle": "Know exactly what you are evaluating",
+        "Notes": "Confirm upstream source, package lineage, maintainer activity, release freshness, and whether the requested artifact matches the claimed project.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Component request, repository links, package registry metadata, and maintainer signals.",
+        "OutputContractSummary": "Verified identity record and maintenance posture summary.",
+        "EvidenceContractSummary": "Identity note, upstream mapping, and maintenance-health summary.",
+        "DecisionRightsSummary": "SBOM curator verifies identity; software engineer helps interpret practical adoption implications.",
+        "ExceptionPolicySummary": "Do not continue if the requested package cannot be reliably tied to an upstream project and maintenance history.",
+        "TargetLeadHours": 6,
+        "DependsOnStepId": "1bd22c35-5333-5f38-9246-20889f478a55",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 430,
+        "CanvasY": 260,
+        "BranchCanvasX": 630,
+        "BranchCanvasY": 260,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "d1adf4fc-d1cb-5c05-9ff7-b997e3a3f77d",
+            "DependsOnStepId": "1bd22c35-5333-5f38-9246-20889f478a55",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "ef1de80b-10e1-5961-a689-8af54c40d16d",
+            "RoleRequirementId": "050bdb62-439c-5928-85b0-0c17e849c2f2",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Identity verification remains with the catalog steward."
+          },
+          {
+            "Id": "121309da-8013-5484-9b88-aa1787c34fff",
+            "RoleRequirementId": "47fc5565-b61a-50f2-8f87-a5b25a6fc5fb",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Engineering review confirms functional match."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "42da4a84-361e-59da-8d18-b2a1b11b9383",
+            "ArtifactKind": "Deliverable",
+            "Title": "Component identity registration draft",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "d1c66942-e59c-5c89-8591-611ed275acd1",
+            "ArtifactKind": "Evidence",
+            "Title": "Upstream identity and maintenance summary",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "d0521e40-d579-5048-b3fb-986415eff327",
+        "Key": "license-and-obligations",
+        "Title": "Analyze license obligations and redistribution constraints",
+        "Subtitle": "Adoption must preserve downstream compliance",
+        "Notes": "Translate the component license, notice requirements, source obligations, export constraints, and policy exceptions into explicit obligations.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Verified identity, license texts, notice files, policy guidance, and intended distribution model.",
+        "OutputContractSummary": "Obligation matrix and legal position for adoption.",
+        "EvidenceContractSummary": "License-obligation matrix and unresolved legal questions.",
+        "DecisionRightsSummary": "License counsel owns legal interpretation; compliance steward reviews policy fit.",
+        "ExceptionPolicySummary": "No approval if obligations cannot be explained to downstream teams.",
+        "TargetLeadHours": 6,
+        "DependsOnStepId": "4053ba4d-aba0-5f54-af66-98091b43f12f",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 740,
+        "CanvasY": 260,
+        "BranchCanvasX": 940,
+        "BranchCanvasY": 260,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "944580ee-d6e5-5442-88d7-ccf708202ed2",
+            "DependsOnStepId": "4053ba4d-aba0-5f54-af66-98091b43f12f",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "dc566e54-d091-5153-887b-f56e40da17a0",
+            "RoleRequirementId": "13704b62-2e87-5d81-bbfe-af8b5c65ec21",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Legal interpretation remains with qualified counsel."
+          },
+          {
+            "Id": "2b1334a4-0167-52d1-ad8d-dd50439be5d1",
+            "RoleRequirementId": "6d3c6f6e-ec4a-57ed-b7a8-f0c821320e3a",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Compliance stewardship remains explicit."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "76e56a1d-f84f-5135-87d6-d29978111247",
+            "ArtifactKind": "Evidence",
+            "Title": "License obligation matrix",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "970c2af9-bc22-5409-b490-35311da62505",
+            "ArtifactKind": "Deliverable",
+            "Title": "Component license metadata entry",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "7b183b0d-bcad-5009-a60e-be4d3259e32d",
+        "Key": "security-and-provenance",
+        "Title": "Review security posture and provenance trust",
+        "Subtitle": "Supply-chain trust must match deployment risk",
+        "Notes": "Assess known vulnerabilities, update responsiveness, maintainer trust, signed provenance, and build-chain confidence relative to intended use.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Identity record, license position, vulnerability data, provenance statements, and deployment context.",
+        "OutputContractSummary": "Supply-chain risk position with compensating controls or rejection rationale.",
+        "EvidenceContractSummary": "Security/provenance review note and risk position.",
+        "DecisionRightsSummary": "Security reviewer may reject a component even if the license is acceptable.",
+        "ExceptionPolicySummary": "Do not approve runtime-critical components on weak provenance without explicit compensating controls.",
+        "TargetLeadHours": 8,
+        "DependsOnStepId": "d0521e40-d579-5048-b3fb-986415eff327",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1050,
+        "CanvasY": 260,
+        "BranchCanvasX": 1250,
+        "BranchCanvasY": 260,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "23482cb5-2867-58a8-a91b-a59e16be969b",
+            "DependsOnStepId": "d0521e40-d579-5048-b3fb-986415eff327",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "0c48dd15-bd16-5a5f-87a4-0b403997e7b4",
+            "RoleRequirementId": "6af41974-39f5-59a1-8450-7abe9bca8ba3",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Security and provenance review remain explicit."
+          },
+          {
+            "Id": "b3e4fb80-1985-58f7-87ee-a49709b0c1a0",
+            "RoleRequirementId": "2e18dea3-d143-518b-b2f9-ff4aa0e05e4f",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Operational owner reviews deployment risk."
+          },
+          {
+            "Id": "4e024ef1-021f-5f02-9ba6-170384d800a8",
+            "RoleRequirementId": "050bdb62-439c-5928-85b0-0c17e849c2f2",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Catalog steward verifies metadata completeness."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "5cf87a2e-1c8f-59a3-9105-a03341f077b7",
+            "ArtifactKind": "Evidence",
+            "Title": "Security review note",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "2203e5d6-bc43-5702-ada1-e52a76d4029d",
+            "ArtifactKind": "Evidence",
+            "Title": "Provenance report",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "a70c5019-d6c4-5fc2-835c-d2e5537867f9",
+        "Key": "approval-and-registration",
+        "Title": "Approve, reject, or constrain adoption",
+        "Subtitle": "Approval carries obligations forward",
+        "Notes": "Make the adoption decision and publish the resulting obligations, owner, approved version boundary, and review cadence.",
+        "StepKind": "Approval",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "License position, security/provenance review, and intended use context.",
+        "OutputContractSummary": "Approval decision with obligations, owner, and review cadence.",
+        "EvidenceContractSummary": "Approval record and final SBOM registration.",
+        "DecisionRightsSummary": "Compliance steward approves policy fit; service owner accepts operational ownership.",
+        "ExceptionPolicySummary": "No approval without named ongoing owner and explicit version boundary.",
+        "TargetLeadHours": 3,
+        "DependsOnStepId": "7b183b0d-bcad-5009-a60e-be4d3259e32d",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1360,
+        "CanvasY": 260,
+        "BranchCanvasX": 1560,
+        "BranchCanvasY": 260,
+        "BranchOutcomes": [
+          {
+            "Id": "7d2917ee-a1a6-5b2b-80cc-78046808f002",
+            "Key": "approved",
+            "Title": "Approved",
+            "Description": "Component may be adopted under recorded conditions."
+          },
+          {
+            "Id": "f887fe86-f788-5918-b8ae-f85d300f0179",
+            "Key": "rejected",
+            "Title": "Rejected",
+            "Description": "Component is not approved for the intended use."
+          }
+        ],
+        "Dependencies": [
+          {
+            "Id": "a52451b7-7161-5c1d-a5db-bd70129f75b6",
+            "DependsOnStepId": "7b183b0d-bcad-5009-a60e-be4d3259e32d",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "01beb2ce-2ae7-5aa2-9e73-185b5b96f105",
+            "RoleRequirementId": "6d3c6f6e-ec4a-57ed-b7a8-f0c821320e3a",
+            "ResponsibilityKind": "Approver",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Approval stays with compliance steward."
+          },
+          {
+            "Id": "bcb733fe-7e2f-5fe4-8bf2-e61f28a85b28",
+            "RoleRequirementId": "2e18dea3-d143-518b-b2f9-ff4aa0e05e4f",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Owner acceptance remains explicit."
+          },
+          {
+            "Id": "3eb48020-29f8-54df-882b-8222cc72ad1a",
+            "RoleRequirementId": "13704b62-2e87-5d81-bbfe-af8b5c65ec21",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Legal review is retained in the record."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "9cbdadef-7327-5604-b4bb-271709c22403",
+            "ArtifactKind": "Evidence",
+            "Title": "SBOM manifest",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "ba0f28fb-4546-506e-8d91-6071dc912305",
+            "ArtifactKind": "Decision",
+            "Title": "Component approval note",
+            "IsRequired": true,
+            "TrustRequirement": "HumanApproved",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "6dfb4052-265a-5d5f-a550-972a1b17326b",
+        "Key": "handoff-and-watch",
+        "Title": "Hand off obligations and establish re-review triggers",
+        "Subtitle": "Approval must become operational practice",
+        "Notes": "Publish obligation guidance, notify consuming teams, and define the triggers that force re-review when component posture changes.",
+        "StepKind": "End",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Approval record, SBOM entry, obligations matrix, and owner contacts.",
+        "OutputContractSummary": "Downstream handoff package and re-review trigger list.",
+        "EvidenceContractSummary": "Obligation handoff note and re-review log.",
+        "DecisionRightsSummary": "SBOM curator owns metadata dissemination; service owner owns runtime review cadence.",
+        "ExceptionPolicySummary": "If obligations cannot be passed to consuming teams, the adoption is not operationally complete.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": "a70c5019-d6c4-5fc2-835c-d2e5537867f9",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1670,
+        "CanvasY": 260,
+        "BranchCanvasX": 1870,
+        "BranchCanvasY": 260,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "eb065cf8-dfcd-5bf7-9d0d-b49ab3706799",
+            "DependsOnStepId": "a70c5019-d6c4-5fc2-835c-d2e5537867f9",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "800dfb4e-cd69-5b1a-beaa-3108b951aff6",
+            "RoleRequirementId": "050bdb62-439c-5928-85b0-0c17e849c2f2",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Catalog dissemination remains with the SBOM curator."
+          },
+          {
+            "Id": "816732d8-cfb6-53bc-8637-18a538d47321",
+            "RoleRequirementId": "2e18dea3-d143-518b-b2f9-ff4aa0e05e4f",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Operational owner confirms ongoing watch."
+          },
+          {
+            "Id": "2f23e470-8da9-53c0-b8e3-a10188983de6",
+            "RoleRequirementId": "47fc5565-b61a-50f2-8f87-a5b25a6fc5fb",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Consuming engineer confirms implementation fit."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "24f364b2-6b6c-50ef-b8c0-272aaedf653f",
+            "ArtifactKind": "Brief",
+            "Title": "Published obligation handoff",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "07331be5-29e5-5b6a-bf0c-d3a439e61754",
+            "ArtifactKind": "Brief",
+            "Title": "Component re-review trigger log",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      }
+    ]
+  },
+  "Warnings": [
+    "Projected from template pack process 'oss-intake-supply-chain-governance'.",
+    "Detailed sidecar metadata remains in the process-template pack files."
+  ],
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection"
+}

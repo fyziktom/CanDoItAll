@@ -22,12 +22,13 @@ public sealed class ProcessTemplatePackLoaderTests
     }
 
     [Fact]
-    public void FindPackRoot_resolves_manifest_from_build_output()
+    public void FindPackRoot_resolves_manifest_from_templates_directory_in_build_output()
     {
         var root = ProcessTemplatePackLoader.FindPackRoot();
+        var expectedRoot = Path.Combine(AppContext.BaseDirectory, "Templates", "Processes");
 
         Assert.True(File.Exists(Path.Combine(root, "manifest.json")));
-        Assert.Contains(Path.Combine("output", "process-template-pack"), root, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(expectedRoot, root, ignoreCase: true);
     }
 
     [Fact]

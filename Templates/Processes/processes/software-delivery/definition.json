@@ -1,0 +1,1233 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "software-delivery",
+  "DisplayName": "Multi-team software delivery and release governance",
+  "Summary": "Universal delivery template for planned software change with explicit intake, architecture, implementation, QA, security, release, deployment, and retrospective governance aligned to the current process-module graph model.",
+  "ValueStatement": "Delivers customer-visible or internal software change through a controllable sequence that keeps scope, evidence, dependencies, artifact inputs, and release authority explicit.",
+  "CustomerName": "Enterprise Billing Platform",
+  "OwnerName": "Digital delivery governance board",
+  "InterfaceContractSummary": "Feature delivery crosses process authoring, workspace, billing, and release-management boundaries and therefore needs explicit design, validation, and release gates.",
+  "GovernanceNotes": "No role or approval decision may be collapsed into an implicit chat or tribal handoff; every trust-sensitive transition needs explicit accountability, evidence, dependency mapping, and artifact-input traceability.",
+  "ChangeSummary": "Refreshed for the current process architecture so multi-parent joins, artifact inputs, and decision-role semantics are first-class instead of simulated through legacy fields only.",
+  "GovernancePolicySummary": "Release readiness requires architecture proof, QA evidence, security posture, rollback readiness, and explicit residual-risk ownership.",
+  "ConstitutionRuleSummary": "Role contracts, decision rights, and source-of-truth ownership outlive the specific person or agent assigned at runtime.",
+  "OperatingModeSummary": "Governed live execution is allowed only after explicit quality, security, and release gates succeed.",
+  "SimulationReadinessSummary": "This scenario is intentionally rich enough for simulation, canvas authoring, analytics, and large-screen browser walkthroughs.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "openchain",
+    "spdx",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "product-owner",
+    "delivery-manager",
+    "solution-architect",
+    "qa-lead",
+    "security-reviewer",
+    "release-manager"
+  ],
+  "SharedArtifactRefs": [
+    "scope-boundary-packet",
+    "architecture-decision-record",
+    "implementation-change-set",
+    "rollback-plan",
+    "regression-evidence-pack",
+    "security-exception-assessment",
+    "release-approval-record",
+    "retrospective-improvement-log"
+  ],
+  "SharedChecklistRefs": [
+    "intake-completeness-checklist",
+    "architecture-gate-checklist",
+    "implementation-readiness-checklist",
+    "qa-evidence-checklist",
+    "security-review-checklist",
+    "release-go-live-checklist"
+  ],
+  "SharedValidationRefs": [
+    "validate-architecture-boundaries"
+  ],
+  "SharedPromptRefs": [
+    "prompt-intake-summarizer",
+    "prompt-architecture-review",
+    "prompt-qa-risk-review",
+    "prompt-security-review"
+  ],
+  "Metrics": [
+    "Median time from approved scope boundary to architecture decision record.",
+    "Share of releases approved without rollback-plan defects.",
+    "Percentage of release approvals with complete QA, security, and rollback artifact inputs.",
+    "Rate of releases requiring rollback or controlled halt inside the first telemetry window.",
+    "Number of corrective actions closed from post-release learning within the committed SLA."
+  ],
+  "Risks": [
+    "Architecture drift if implementation bypasses the approved canonical-model decision.",
+    "Weak release decisions if artifact inputs are missing or stale.",
+    "False confidence when QA evidence is verbal instead of durable.",
+    "Security exceptions hidden inside release pressure.",
+    "Rollout instability when telemetry watch points or rollback triggers are implicit."
+  ],
+  "TailoringRules": [
+    "Low-risk internal changes may shorten QA depth, but the release-approval step still requires explicit artifact inputs.",
+    "If no tenant-data or secrets boundary is touched, security review may downgrade to reviewer status rather than full approver blocking power.",
+    "Multiple implementation slices may be modeled as separate work steps, but all must converge into the same release-approval artifact-input contract.",
+    "Hotfix or incident-driven work must use the dedicated emergency template rather than bypassing this one."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "product-owner",
+      "RoleResourceKey": "product-owner",
+      "DisplayName": "Product owner",
+      "Purpose": "Convert business intent into an explicit delivery contract with clear acceptance boundaries and prioritized value trade-offs.",
+      "StaffingIntent": "One accountable human decision-maker who can clarify scope, decide priority, accept delivered outcomes, and absorb stakeholder escalation without routing every decision through engineering.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "CustomerContact",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 120,
+      "CanvasY": 40,
+      "Notes": "Outcome and acceptance owner for value, scope, sequencing, and release acceptance."
+    },
+    {
+      "Key": "delivery-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Delivery manager",
+      "Purpose": "Keep the process executable by turning desired outcomes into a feasible, staffed, time-aware delivery path with explicit escalation triggers.",
+      "StaffingIntent": "A senior delivery-side coordinator with enough authority to challenge unrealistic dates, surface hidden dependencies, and keep multiple roles synchronized.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 390,
+      "CanvasY": 40,
+      "Notes": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation."
+    },
+    {
+      "Key": "solution-architect",
+      "RoleResourceKey": "solution-architect",
+      "DisplayName": "Solution architect",
+      "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
+      "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 30,
+      "CanvasX": 660,
+      "CanvasY": 40,
+      "Notes": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence."
+    },
+    {
+      "Key": "lead-engineer",
+      "RoleResourceKey": "lead-engineer",
+      "DisplayName": "Lead engineer",
+      "Purpose": "Own the change set and keep implementation evidence aligned with the approved architecture and release boundary.",
+      "StaffingIntent": "Build-capable engineering owner for the working change set and adjacent test evidence.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 930,
+      "CanvasY": 40,
+      "Notes": "Implementation owner for code, tests, migration notes, and executable delivery proof."
+    },
+    {
+      "Key": "qa-lead",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "QA lead",
+      "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
+      "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 40,
+      "CanvasX": 1200,
+      "CanvasY": 40,
+      "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
+    },
+    {
+      "Key": "security-reviewer",
+      "RoleResourceKey": "security-reviewer",
+      "DisplayName": "Security reviewer",
+      "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
+      "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 25,
+      "CanvasX": 1470,
+      "CanvasY": 40,
+      "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
+    },
+    {
+      "Key": "release-manager",
+      "RoleResourceKey": "release-manager",
+      "DisplayName": "Release manager",
+      "Purpose": "Coordinate go-live preparation and keep rollback and telemetry watch ownership explicit before and during release execution.",
+      "StaffingIntent": "Operational owner for production execution, release windows, and rollback decisions.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 45,
+      "CanvasX": 1740,
+      "CanvasY": 40,
+      "Notes": "Operational owner for rollout control, rollback readiness, and telemetry review."
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "feature-intake",
+      "Title": "Clarify scope and release boundary",
+      "Subtitle": "Value framing and no-go constraints",
+      "Notes": "Capture the commercial ask, tenant impact, release deadline, known dependencies, and explicit exclusions before engineering commits.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Feature request, tenant-impact notes, target release window, and customer-facing constraints.",
+      "OutputContractSummary": "Decision-ready scope packet with acceptance boundary and dependency map.",
+      "EvidenceContractSummary": "Intake notes, acceptance criteria, known exclusions, and unresolved dependency register.",
+      "DecisionRightsSummary": "Product owner can refine the ask but cannot waive architecture, data, or release-governance requirements.",
+      "ExceptionPolicySummary": "Escalate immediately when timeline pressure conflicts with data-safety or release constraints.",
+      "TargetLeadHours": 8,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 120,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "product-owner",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "If the original product owner changes, ownership transfers to the next accountable value owner without changing the process contract."
+        },
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery review remains explicit even if staffing changes mid-stream."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "scope-boundary-packet",
+          "TemplateKey": "scope-boundary-packet",
+          "Title": "Scope boundary packet",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable during architecture review, implementation planning, and future scope-drift analysis.",
+          "ValidationRequirementSummary": "Must capture no-go constraints, tenant impact, and acceptance boundary in typed form."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "intake-completeness-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [
+        "prompt-intake-summarizer"
+      ],
+      "DocRefs": [
+        "processes/software-delivery/steps/feature-intake.md"
+      ]
+    },
+    {
+      "Order": 1,
+      "Key": "architecture-review",
+      "Title": "Review architecture and canonical-model impact",
+      "Subtitle": "Cross-module and source-of-truth decision",
+      "Notes": "Validate process/workspace/billing seams, canonical model implications, migration ownership, and integration boundaries before implementation starts.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Scope packet, touched modules, data-flow map, and integration concerns.",
+      "OutputContractSummary": "Approved architecture path with explicit trade-offs and rejected alternatives.",
+      "EvidenceContractSummary": "Architecture notes, canonical-model decision, and source-of-truth rationale.",
+      "DecisionRightsSummary": "Architecture authority recommends the path; delivery manager remains accountable for choosing the approved option.",
+      "ExceptionPolicySummary": "Do not continue while source-of-truth ownership or migration responsibility remains ambiguous.",
+      "TargetLeadHours": 12,
+      "DependsOnStepKey": "feature-intake",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 430,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "feature-intake",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "solution-architect",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture authority may be reassigned between vetted humans or approved architecture agents."
+        },
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Implementation owner must confirm the design is buildable before approval."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "architecture-decision-record",
+          "TemplateKey": "architecture-decision-record",
+          "Title": "Architecture decision record",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 730,
+          "AllowedFutureUsageSummary": "Reusable for implementation, review, and later forensic replay.",
+          "ValidationRequirementSummary": "Must capture selected option, rejected options, source-of-truth choice, and migration ownership."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "architecture-gate-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-architecture-boundaries"
+      ],
+      "PromptRefs": [
+        "prompt-architecture-review"
+      ],
+      "DocRefs": [
+        "processes/software-delivery/steps/architecture-review.md"
+      ]
+    },
+    {
+      "Order": 2,
+      "Key": "implementation",
+      "Title": "Implement feature, tests, and migration notes",
+      "Subtitle": "Code, tests, and reviewable proof",
+      "Notes": "Produce the change set, migration guidance, and targeted validation without losing traceability to the approved design.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Approved architecture path, scope packet, and unresolved technical questions.",
+      "OutputContractSummary": "Review-ready implementation with tests, migration notes, and rollout checklist inputs.",
+      "EvidenceContractSummary": "Change set, test outputs, migration steps, and touched-surface inventory.",
+      "DecisionRightsSummary": "Lead engineer can implement but cannot silently alter the approved architecture or reduce proof depth.",
+      "ExceptionPolicySummary": "Pause when migration impact, performance risk, or dependency scope grows beyond the approved path.",
+      "TargetLeadHours": 36,
+      "DependsOnStepKey": "architecture-review",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 740,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Engineering ownership moves between qualified engineers without changing the role contract."
+        },
+        {
+          "RoleKey": "product-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Value owner reviews only acceptance drift, not technical implementation details."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "implementation-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Implementation change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for peer review, release approval, and later defect forensics.",
+          "ValidationRequirementSummary": "Must be linked to tests, migration notes, and touched-surface inventory."
+        },
+        {
+          "Key": "migration-rollout-preparation-checklist",
+          "TemplateKey": "rollback-plan",
+          "Title": "Migration and rollout preparation checklist",
+          "ArtifactKind": "Checklist",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for release rehearsal and rollback planning.",
+          "ValidationRequirementSummary": "Must name data changes, operational preconditions, and rollback steps."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "implementation-readiness-checklist",
+        "delivery-scope-freeze-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-migration-rehearsal"
+      ],
+      "PromptRefs": [
+        "prompt-release-scope-recap"
+      ],
+      "DocRefs": [
+        "processes/software-delivery/steps/implementation.md"
+      ]
+    },
+    {
+      "Order": 3,
+      "Key": "peer-review",
+      "Title": "Complete peer review and integration readiness",
+      "Subtitle": "Design and implementation challenge",
+      "Notes": "Review the change set against the approved design, integration consequences, and release assumptions.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Implementation package, architecture decision record, and changed-surface inventory.",
+      "OutputContractSummary": "Peer-reviewed change set with explicit residual risk and follow-up items.",
+      "EvidenceContractSummary": "Review notes, unresolved issues list, and approved follow-up actions.",
+      "DecisionRightsSummary": "Reviewers may block unsafe merge or release progression until the change set satisfies design and evidence expectations.",
+      "ExceptionPolicySummary": "Do not downgrade architecture, data, or migration concerns to cosmetic comments.",
+      "TargetLeadHours": 8,
+      "DependsOnStepKey": "implementation",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1050,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Implementation owner remains attached until review comments are addressed."
+        },
+        {
+          "RoleKey": "solution-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architectural review remains explicit when cross-module consequences exist."
+        },
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": false,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "QA participates when changed surface suggests regression risk."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "peer-review-note",
+          "TemplateKey": "test-evidence-pack",
+          "Title": "Peer review note",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for QA, security, and release governance.",
+          "ValidationRequirementSummary": "Must capture accepted issues, rejected concerns, and explicit residual risk."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/peer-review.md"
+      ]
+    },
+    {
+      "Order": 4,
+      "Key": "qa-validation",
+      "Title": "Run QA validation and browser proof",
+      "Subtitle": "Regression, UX, and quality evidence",
+      "Notes": "Execute targeted regression, browser proof, and defect triage against the reviewed implementation package.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.",
+      "OutputContractSummary": "Targeted QA result with screenshots, regressions, and explicit residual quality risk.",
+      "EvidenceContractSummary": "Regression logs, browser proof, screenshots, and defect notes.",
+      "DecisionRightsSummary": "QA lead may block release progression when evidence is too thin for the risk profile.",
+      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence.",
+      "TargetLeadHours": 10,
+      "DependsOnStepKey": "peer-review",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1360,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "peer-review",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "QA ownership may move across qualified reviewers without collapsing the gate."
+        },
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Implementation owner reviews failures and fixes before release approval."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "regression-evidence-pack",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Regression evidence pack",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for release approval, incident review, and later regression comparison.",
+          "ValidationRequirementSummary": "Must name changed flows, assertion depth, screenshots, and unresolved risks."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "qa-evidence-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [
+        "prompt-qa-risk-review"
+      ],
+      "DocRefs": [
+        "processes/software-delivery/steps/qa-validation.md"
+      ]
+    },
+    {
+      "Order": 5,
+      "Key": "security-review",
+      "Title": "Perform security and data-handling review",
+      "Subtitle": "Tenant data, secrets, and exception posture",
+      "Notes": "Review tenant-data handling, secrets, boundary changes, and policy exceptions before release approval.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Peer-reviewed package, changed-surface inventory, and data-handling notes.",
+      "OutputContractSummary": "Security outcome with explicit approval, block, or exception rationale.",
+      "EvidenceContractSummary": "Security review notes, exception rationale, and approved controls.",
+      "DecisionRightsSummary": "Security reviewer owns the sign-off for tenant-data and policy exceptions.",
+      "ExceptionPolicySummary": "Block release when data-handling review capacity is missing or exception rationale is incomplete.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "peer-review",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1670,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "peer-review",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "security-reviewer",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Security approval remains attached to the role even if the reviewer changes."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "security-exception-assessment",
+          "TemplateKey": "security-exception-assessment",
+          "Title": "Security exception assessment",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Confidential",
+          "RetentionDays": 1095,
+          "AllowedFutureUsageSummary": "Reusable for release governance, audit, and post-incident review.",
+          "ValidationRequirementSummary": "Must capture controls, residual risk owner, and approval or block rationale."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "security-review-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [
+        "prompt-security-review"
+      ],
+      "DocRefs": [
+        "processes/software-delivery/steps/security-review.md"
+      ]
+    },
+    {
+      "Order": 6,
+      "Key": "release-approval",
+      "Title": "Approve release readiness",
+      "Subtitle": "Go / no-go board decision",
+      "Notes": "Approve or reject release using QA proof, security posture, rollback readiness, and support coverage.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "QA evidence, security outcome, rollback plan, and support ownership.",
+      "OutputContractSummary": "Approved or rejected release readiness with accountable rationale.",
+      "EvidenceContractSummary": "Approval note, residual risk register, and rollback ownership record.",
+      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
+      "ExceptionPolicySummary": "Reject release when security review, rollback ownership, or support readiness remains incomplete.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1980,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "qa-validation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "security-review",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release approval belongs to the accountable delivery manager role, not to whichever person attended a meeting."
+        },
+        {
+          "RoleKey": "release-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Operational release owner reviews rollback and support readiness before the board decision."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "release-approval-record",
+          "TemplateKey": "release-approval-record",
+          "Title": "Release approval record",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 1095,
+          "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
+          "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback trigger, and release timing conditions."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "migration-rollout-preparation-checklist",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "regression-evidence-pack",
+          "SourceStepKey": "qa-validation"
+        },
+        {
+          "ArtifactExpectationKey": "security-exception-assessment",
+          "SourceStepKey": "security-review"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/release-approval.md"
+      ]
+    },
+    {
+      "Order": 7,
+      "Key": "execute-release-rollout",
+      "Title": "Execute controlled release rollout",
+      "Subtitle": "Live execution and first-hour telemetry watch",
+      "Notes": "Deploy the approved change inside the controlled release window while telemetry and rollback readiness remain actively managed.",
+      "StepKind": "Delivery",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Approved release record, deployment package, rollback plan, and telemetry watch points.",
+      "OutputContractSummary": "Executed rollout with explicit telemetry outcome, rollback status, and live-watch notes.",
+      "EvidenceContractSummary": "Operator notes, telemetry checkpoints, and any rollback invocation or release halt.",
+      "DecisionRightsSummary": "Release manager may execute only inside the approved window and rollback-trigger boundaries.",
+      "ExceptionPolicySummary": "Trigger halt or rollback immediately when telemetry, tenant impact, or operational constraints breach the approved threshold.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "release-approval",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2290,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "release-approval",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "release-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Execution ownership remains with the release-manager role until rollout completes or fails."
+        },
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Backup",
+          "IsRequired": false,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Implementation owner stays available for rapid corrective interpretation during rollout."
+        },
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Governance owner reviews telemetry and escalation timing during the release window."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "deployment-watch-log",
+          "TemplateKey": "release-readiness-report",
+          "Title": "Deployment and telemetry watch log",
+          "ArtifactKind": "Transcript",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for incident replay and release retrospectives.",
+          "ValidationRequirementSummary": "Must capture release timing, telemetry checkpoints, and any halt or rollback decision."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "release-approval-record",
+          "SourceStepKey": "release-approval"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/execute-release-rollout.md"
+      ]
+    },
+    {
+      "Order": 8,
+      "Key": "post-release-learning",
+      "Title": "Capture post-release learning and corrective actions",
+      "Subtitle": "Forensic replay and systemic follow-up",
+      "Notes": "Turn the release outcome into explicit learning about design, QA, operations, and process behavior.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Rollout outcome, telemetry record, support observations, and any release incident notes.",
+      "OutputContractSummary": "Post-release learning review with corrective actions and simulation updates.",
+      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
+      "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
+      "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "execute-release-rollout",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2600,
+      "CanvasY": 120,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "execute-release-rollout",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Follow-up ownership remains explicit until corrective actions have accountable owners."
+        },
+        {
+          "RoleKey": "solution-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture role reviews systemic design findings rather than only local defects."
+        },
+        {
+          "RoleKey": "release-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release role reviews telemetry and rollback-control lessons."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "post-release-learning-log",
+          "TemplateKey": "retrospective-improvement-log",
+          "Title": "Post-release learning review",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 730,
+          "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
+          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/post-release-learning.md"
+      ]
+    }
+  ],
+  "DocPath": "processes/software-delivery/definition.md",
+  "RelativePath": "processes/software-delivery",
+  "DefinitionJsonPath": "processes/software-delivery/definition.json",
+  "DefinitionMarkdownPath": "processes/software-delivery/definition.md",
+  "CurrentModuleImportEnvelopePath": "processes/software-delivery/projection/current-module.import-envelope.json",
+  "CurrentModuleCompatibilityReportPath": "processes/software-delivery/projection/current-module.compatibility-report.json",
+  "CurrentModuleCompatibilityReportMarkdownPath": "processes/software-delivery/projection/current-module.compatibility-report.md",
+  "FlowchartPath": "processes/software-delivery/mermaid/flowchart.mmd",
+  "SequencePath": "processes/software-delivery/mermaid/sequence.mmd",
+  "LocalRoles": [
+    {
+      "Kind": "role-resource",
+      "Key": "data-migration-owner",
+      "DisplayName": "Data migration owner",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "Summary": "Migration-specific authority for schema, data backfill, and rollback safety.",
+      "Purpose": "Own all migration mechanics that can compromise data integrity, rollback realism, or release sequencing.",
+      "StaffingIntent": "A specialist engineer who understands the data model, operational windows, and migration rollback implications in depth.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "TechnicalContact",
+      "IsRequired": false,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 40,
+      "RoleTemplateSourceKey": "process-role-template/software-delivery/data-migration-owner",
+      "RoleTemplateSnapshotName": "Data migration owner / template-pack v1",
+      "SnapshotSummary": "Migration-specific authority for schema, data backfill, and rollback safety.",
+      "SeniorityBand": "Senior database or data-platform engineer",
+      "MinimumYearsInPrimaryDiscipline": 6,
+      "MinimumYearsInSoftwareDelivery": 8,
+      "DomainTags": [
+        "database",
+        "migration",
+        "rollback",
+        "data-integrity"
+      ],
+      "KnowledgeRequirements": [
+        "Deep knowledge of schema evolution, data backfill sequencing, locking behavior, and rollback limitations.",
+        "Understanding of production data sensitivity, replication, and consistency risk during change rollout.",
+        "Ability to design reversible migration patterns or explicitly document when reversal is not technically safe.",
+        "Knowledge of runbook requirements for staged or multi-tenant data change.",
+        "Ability to interpret telemetry that indicates migration success, degradation, or partial failure.",
+        "Understanding of how code and migration deployment order interact."
+      ],
+      "ExperienceRequirements": [
+        "Has executed or reviewed production data migrations with rollback planning.",
+        "Has investigated migration-related incidents or degraded performance after release.",
+        "Has coordinated schema changes across application and platform teams.",
+        "Has authored or reviewed migration runbooks consumed by operators.",
+        "Has signed off data integrity evidence before production deployment."
+      ],
+      "DecisionRights": [
+        "Approve migration sequence and rollback viability.",
+        "Block release when migration evidence is incomplete or unsafe.",
+        "Define tenant or batch sequencing constraints for deployment.",
+        "Escalate when data change risk exceeds the normal release window."
+      ],
+      "OwnedArtifacts": [
+        "Migration plan",
+        "Rollback script bundle",
+        "Data integrity check report"
+      ],
+      "CollaborationExpectations": [
+        "Work closely with platform engineer, release approver, and software engineer.",
+        "Provide QA with data-risk hotspots requiring targeted validation.",
+        "Coordinate with service owner on maintenance-window and support implications.",
+        "Document exactly what 'successful migration' means operationally."
+      ],
+      "AntiPatterns": [
+        "Treating rollback as a theoretical possibility instead of a rehearsed path.",
+        "Approving data change based only on lower-environment success.",
+        "Ignoring long-running lock or backfill side effects.",
+        "Bundling unrelated schema risk into one opaque change."
+      ],
+      "FitnessEvidence": [
+        "Reviewed migration plans with explicit rollback reasoning.",
+        "Evidence of successful migration rehearsals or controlled dry runs.",
+        "Incident learnings showing the role reduced data-change risk.",
+        "Clear operator-facing runbooks owned by the role."
+      ],
+      "DocPath": "processes/software-delivery/roles/data-migration-owner.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "training-readiness-owner",
+      "DisplayName": "Training readiness owner",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "Summary": "Owner for end-user enablement, release notes clarity, and operational adoption readiness.",
+      "Purpose": "Ensure release output is accompanied by the minimal training, release notes, and internal enablement needed for successful adoption.",
+      "StaffingIntent": "A delivery or enablement specialist who can turn technical change into usable guidance for affected users and support teams.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Stakeholder",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 20,
+      "RoleTemplateSourceKey": "process-role-template/software-delivery/training-readiness-owner",
+      "RoleTemplateSnapshotName": "Training readiness owner / template-pack v1",
+      "SnapshotSummary": "Owner for end-user enablement, release notes clarity, and operational adoption readiness.",
+      "SeniorityBand": "Senior enablement or operations readiness specialist",
+      "MinimumYearsInPrimaryDiscipline": 4,
+      "MinimumYearsInSoftwareDelivery": 6,
+      "DomainTags": [
+        "enablement",
+        "training",
+        "release-notes",
+        "adoption"
+      ],
+      "KnowledgeRequirements": [
+        "Ability to identify what users, support, and customer-facing teams need to understand before or immediately after release.",
+        "Knowledge of release notes design, training format selection, and stakeholder communication timing.",
+        "Understanding of adoption friction caused by missing documentation or ambiguous behavior changes.",
+        "Ability to extract accurate behavior deltas from engineering and product input.",
+        "Knowledge of support-readiness and knowledge-base update workflows.",
+        "Ability to define minimum enablement completeness criteria."
+      ],
+      "ExperienceRequirements": [
+        "Has owned training or enablement deliverables for a software launch or major feature.",
+        "Has coordinated release-note or support-content updates with technical teams.",
+        "Has handled rollout where adoption risk was driven by user misunderstanding rather than technical defect.",
+        "Has updated internal support teams on changed workflows or known caveats.",
+        "Has measured or at least qualitatively assessed readiness gaps after release."
+      ],
+      "DecisionRights": [
+        "Approve completion of required enablement artifacts before broad rollout.",
+        "Require documentation updates for behavior changes that affect users or support.",
+        "Escalate if release timing would make support or adoption chaos likely.",
+        "Declare whether a limited rollout can proceed without full broad-audience training."
+      ],
+      "OwnedArtifacts": [
+        "Release notes",
+        "Training deck",
+        "Support readiness note"
+      ],
+      "CollaborationExpectations": [
+        "Collaborate with product owner, customer success, and QA on customer-facing clarity.",
+        "Work with engineers to make technical change understandable without distortion.",
+        "Coordinate with service owner for support window planning.",
+        "Feed adoption pain back into retrospective improvements."
+      ],
+      "AntiPatterns": [
+        "Treating release notes as marketing copy instead of operational guidance.",
+        "Publishing training content that does not match the implemented behavior.",
+        "Declaring readiness because documentation exists, regardless of usefulness.",
+        "Ignoring support-team readiness for changed workflows."
+      ],
+      "FitnessEvidence": [
+        "Adoption artifacts consumed successfully by customer-facing teams.",
+        "Release note and training materials with explicit behavioral changes.",
+        "Evidence of reduced support confusion after guided releases.",
+        "Retrospective feedback showing the role improved adoption readiness."
+      ],
+      "DocPath": "processes/software-delivery/roles/training-readiness-owner.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "lead-engineer",
+      "DisplayName": "Lead engineer",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "Summary": "Implementation owner for code, tests, migration notes, and reviewable delivery proof.",
+      "Purpose": "Own the change set and keep implementation evidence aligned with the approved architecture and release boundary.",
+      "StaffingIntent": "Build-capable engineering owner for the working change set and adjacent test evidence.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "RoleTemplateSourceKey": "process-role-template/software-engineer",
+      "RoleTemplateSnapshotName": "Software engineer / template-pack v1",
+      "SnapshotSummary": "Implementation owner for code, tests, migration notes, and executable delivery proof.",
+      "SeniorityBand": "Senior software engineer or technical lead",
+      "MinimumYearsInPrimaryDiscipline": 6,
+      "MinimumYearsInSoftwareDelivery": 8,
+      "DomainTags": [
+        "software-delivery",
+        "implementation",
+        "migrations",
+        "reviewability"
+      ],
+      "KnowledgeRequirements": [
+        "Solid command of the target codebase language, architecture conventions, and test approach.",
+        "Understanding of version control, code review, CI pipelines, and release hygiene.",
+        "Ability to interpret architecture guidance and convert it into implementable tasks without scope drift.",
+        "Knowledge of defect prevention techniques, observability basics, and safe rollback-friendly change packaging.",
+        "Ability to produce evidence that links what changed to why it is safe enough to proceed.",
+        "Understanding of secure coding and dependency hygiene expectations for the stack in use."
+      ],
+      "ExperienceRequirements": [
+        "Has delivered production code with automated test coverage and peer review evidence.",
+        "Has decomposed medium-complexity work into implementable slices with clear review boundaries.",
+        "Has debugged at least one production issue or high-severity defect linked to code they worked on.",
+        "Has participated in release or deployment readiness discussions and adjusted code accordingly.",
+        "Has collaborated with QA and architecture reviewers to repair inadequate evidence or design drift."
+      ],
+      "DecisionRights": [
+        "Choose implementation approach within approved architectural guardrails.",
+        "Stop and escalate when required inputs, access, or environment assumptions are missing.",
+        "Recommend technical debt acceptance or rejection when delivery pressure appears.",
+        "Refuse AI-generated output that cannot be validated to the required standard."
+      ],
+      "OwnedArtifacts": [
+        "Code change set",
+        "Implementation notes",
+        "Test evidence pack",
+        "Rollback-aware deployment notes"
+      ],
+      "CollaborationExpectations": [
+        "Clarify ambiguity with product and architecture roles before making silent assumptions.",
+        "Provide QA and reviewers with concrete evidence, not only assertions of completion.",
+        "Document trade-offs when delivery timing forces constrained implementation choices.",
+        "Support incident and hotfix response for changes the engineer helped deliver."
+      ],
+      "AntiPatterns": [
+        "Treating passing local tests as sufficient release evidence.",
+        "Shipping code that depends on tacit environment knowledge no one else has.",
+        "Hiding uncertainty to appear fast.",
+        "Accepting AI-generated code without line-level comprehension and verification."
+      ],
+      "FitnessEvidence": [
+        "Merged changes with traceable test and review evidence.",
+        "Examples of defect analysis or incident participation showing engineering accountability.",
+        "Consistent adherence to repository conventions and delivery guardrails.",
+        "Code reviews from peers indicating clarity, maintainability, and risk awareness."
+      ],
+      "DocPath": "processes/software-delivery/roles/lead-engineer.md"
+    }
+  ],
+  "LocalArtifacts": [
+    {
+      "Kind": "artifact-resource",
+      "Key": "migration-rehearsal-pack",
+      "DisplayName": "Migration rehearsal pack",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "ArtifactKind": "Evidence",
+      "DefaultTrustRequirement": "ReviewRequired",
+      "DefaultSensitivityLevel": "Restricted",
+      "DefaultRetentionDays": 730,
+      "Summary": "Evidence pack from rehearsal or dry-run execution of a risky schema or data migration.",
+      "AllowedFutureUsageSummary": "Reusable for release approval, rollback review, and post-release forensic analysis only for the covered migration path.",
+      "ValidationRequirementSummary": "Must show rehearsal scope, dataset assumptions, timing, and rollback observations.",
+      "OwnerRoleKey": "data-migration-owner",
+      "DocPath": "processes/software-delivery/artifacts/migration-rehearsal-pack.md"
+    }
+  ],
+  "LocalChecklists": [
+    {
+      "Kind": "checklist-resource",
+      "Key": "delivery-scope-freeze-checklist",
+      "DisplayName": "Delivery scope freeze checklist",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "OwnerRoleKey": "delivery-manager",
+      "Phase": "pre-release",
+      "Summary": "Confirms the delivery scope is stable enough for downstream QA, training, and release work.",
+      "EntryCriteria": "Implementation is materially complete and release-sensitive downstream work is starting.",
+      "ExitCriteria": "Scope change after this point is either rejected or explicitly re-opened with re-planning.",
+      "Checks": [
+        "Release-candidate scope is named and versioned.",
+        "Late additions are either rejected or explicitly accepted with impact review.",
+        "QA, training, and release owners were informed of the frozen scope baseline.",
+        "Open defects and known exclusions are captured."
+      ],
+      "EvidenceExpectations": [
+        "Scope-freeze note",
+        "Updated implementation plan"
+      ],
+      "DocPath": "processes/software-delivery/checklists/delivery-scope-freeze-checklist.md"
+    }
+  ],
+  "LocalValidations": [
+    {
+      "Kind": "validation-resource",
+      "Key": "validate-migration-rehearsal",
+      "DisplayName": "Validate migration rehearsal quality",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "Severity": "critical",
+      "OwnerRoleKey": "data-migration-owner",
+      "Gate": "pre-release",
+      "Summary": "Confirms risky data or schema migration behavior was rehearsed credibly before production exposure.",
+      "PassCriteria": "Rehearsal covered realistic sequencing, timing, and rollback observations for the declared risk slice.",
+      "FailCriteria": "Migration assumptions remain theoretical or rehearsal omitted critical risk characteristics.",
+      "EscalationRule": "Escalate to release approver and service owner; block production rollout until addressed.",
+      "DocPath": "processes/software-delivery/validations/validate-migration-rehearsal.md"
+    }
+  ],
+  "LocalPrompts": [
+    {
+      "Kind": "prompt-resource",
+      "Key": "prompt-release-scope-recap",
+      "DisplayName": "Prompt / release scope recap",
+      "Scope": "local",
+      "ProcessKey": "software-delivery",
+      "AudienceRoleKey": "delivery-manager",
+      "Phase": "pre-release",
+      "Summary": "Prompt scaffold for turning raw change and defect notes into a final scope recap for downstream reviewers.",
+      "RequiredInputs": [
+        "candidate change list",
+        "known exclusions",
+        "open defects",
+        "release target"
+      ],
+      "OutputSchema": [
+        "scope recap",
+        "known exclusions",
+        "open risks",
+        "downstream reviewers to notify"
+      ],
+      "RefusalConditions": [
+        "Refuse to present scope as frozen if unresolved changes are still entering the branch."
+      ],
+      "DocPath": "processes/software-delivery/prompts/prompt-release-scope-recap.md"
+    }
+  ],
+  "LocalRoleRefs": [
+    "data-migration-owner",
+    "training-readiness-owner",
+    "lead-engineer"
+  ],
+  "LocalArtifactRefs": [
+    "migration-rehearsal-pack"
+  ],
+  "LocalChecklistRefs": [
+    "delivery-scope-freeze-checklist"
+  ],
+  "LocalValidationRefs": [
+    "validate-migration-rehearsal"
+  ],
+  "LocalPromptRefs": [
+    "prompt-release-scope-recap"
+  ]
+}

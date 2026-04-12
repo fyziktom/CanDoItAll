@@ -1,0 +1,28 @@
+sequenceDiagram
+%% process-key: software-delivery
+    participant role_product_owner as Product owner
+    participant role_delivery_manager as Delivery manager
+    participant role_solution_architect as Solution architect
+    participant role_lead_engineer as Lead engineer
+    participant role_qa_lead as QA lead
+    participant role_security_reviewer as Security reviewer
+    participant role_release_manager as Release manager
+    participant system as Multi-team software delivery and release governance
+    role_product_owner->>system: Clarify scope and release boundary
+    system-->>role_product_owner: evidence -> Scope boundary packet
+    role_solution_architect->>system: Review architecture and canonical-model impact
+    system-->>role_solution_architect: evidence -> Architecture decision record
+    role_lead_engineer->>system: Implement feature, tests, and migration notes
+    system-->>role_lead_engineer: evidence -> Implementation change set, Migration and rollout preparation checklist
+    role_lead_engineer->>system: Complete peer review and integration readiness
+    system-->>role_lead_engineer: evidence -> Peer review note
+    role_qa_lead->>system: Run QA validation and browser proof
+    system-->>role_qa_lead: evidence -> Regression evidence pack
+    role_product_owner->>system: Perform security and data-handling review
+    system-->>role_product_owner: evidence -> Security exception assessment
+    role_product_owner->>system: Approve release readiness
+    system-->>role_product_owner: evidence -> Release approval record
+    role_release_manager->>system: Execute controlled release rollout
+    system-->>role_release_manager: evidence -> Deployment and telemetry watch log
+    role_delivery_manager->>system: Capture post-release learning and corrective actions
+    system-->>role_delivery_manager: evidence -> Post-release learning review

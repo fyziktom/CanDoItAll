@@ -1,0 +1,15 @@
+{
+  "Kind": "process-validation-template",
+  "Key": "validate-architecture-boundaries",
+  "DisplayName": "Architecture boundaries explicit",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "Error",
+  "OwnerRoleKey": "solution-architect",
+  "Gate": "Architecture review",
+  "Summary": "Prevents implementation from starting while service boundaries, source of truth, or migration ownership remain ambiguous.",
+  "PassCriteria": "Boundaries, source of truth, migration owner, and rejected alternatives are explicit.",
+  "FailCriteria": "Boundary ownership, canonical source, or migration responsibility is still vague.",
+  "EscalationRule": "Stop implementation planning and escalate through architecture governance.",
+  "DocPath": "shared/validations/validate-architecture-boundaries.md"
+}

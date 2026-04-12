@@ -1,0 +1,31 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-customer-handoff",
+  "DisplayName": "Prompt / customer handoff",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "customer-success-lead",
+  "Phase": "handoff",
+  "Summary": "Prompt scaffold for customer-facing handoff packs and milestone readiness summaries.",
+  "RequiredInputs": [
+    "scope delivered",
+    "customer responsibilities",
+    "open actions",
+    "support path",
+    "training assets"
+  ],
+  "OutputSchema": [
+    "handoff summary",
+    "customer next steps",
+    "internal next steps",
+    "known caveats",
+    "support path",
+    "sign-off expectations"
+  ],
+  "RefusalConditions": [
+    "Refuse to declare handoff complete while open ownership gaps remain.",
+    "Refuse to hide known caveats that affect customer use.",
+    "Escalate if support or enablement readiness is not credible."
+  ],
+  "DocPath": "shared/prompts/prompt-customer-handoff.md"
+}

@@ -1,0 +1,25 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-intake-summarizer",
+  "DisplayName": "Intake summarizer prompt",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "product-owner",
+  "Phase": "Intake",
+  "Summary": "Converts raw stakeholder notes into a structured intake brief without inventing certainty or acceptance details.",
+  "RequiredInputs": [
+    "Stakeholder notes.",
+    "Delivery target or commercial context.",
+    "Known constraints and exclusions."
+  ],
+  "OutputSchema": [
+    "Structured scope summary.",
+    "Acceptance boundary.",
+    "Known exclusions and dependencies."
+  ],
+  "RefusalConditions": [
+    "Refuse when the request lacks an identifiable owner or objective.",
+    "Do not fabricate acceptance criteria or dates."
+  ],
+  "DocPath": "shared/prompts/prompt-intake-summarizer.md"
+}

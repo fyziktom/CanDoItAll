@@ -1,13 +1,13 @@
 <Project>
   <ItemGroup>
-    <ProcessTemplatePackContent Include="$(MSBuildThisFileDirectory)output\process-template-pack\**\*.*" />
+    <RepositoryTemplateContent Include="$(MSBuildThisFileDirectory)Templates\**\*.*" />
   </ItemGroup>
 
-  <Target Name="CopyProcessTemplatePack" AfterTargets="Build">
-    <MakeDir Directories="$(TargetDir)output\process-template-pack" />
+  <Target Name="CopyRepositoryTemplates" AfterTargets="Build" Condition="'@(RepositoryTemplateContent)' != ''">
+    <MakeDir Directories="$(TargetDir)Templates" />
     <Copy
-      SourceFiles="@(ProcessTemplatePackContent)"
-      DestinationFiles="@(ProcessTemplatePackContent->'$(TargetDir)output\process-template-pack\%(RecursiveDir)%(Filename)%(Extension)')"
+      SourceFiles="@(RepositoryTemplateContent)"
+      DestinationFiles="@(RepositoryTemplateContent->'$(TargetDir)Templates\%(RecursiveDir)%(Filename)%(Extension)')"
       SkipUnchangedFiles="true" />
   </Target>
 </Project>

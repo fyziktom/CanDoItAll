@@ -1,0 +1,26 @@
+flowchart LR
+%% process-key: architecture-decision-governance
+%% definition-doc: processes/architecture-decision-governance/definition.md
+    step_decision_intake(["Capture architecture decision demand<br/><sub>decision-intake</sub><br/><i>Define the decision boundary and why now</i>"])
+    step_context_and_options["Assemble context, constraints, and options<br/><sub>context-and-options</sub><br/><i>Evidence before preference</i>"]
+    step_security_compliance_review["Review security, compliance, and policy impact<br/><sub>security-compliance-review</sub><br/><i>Decision quality includes control impact</i>"]
+    step_board_decision{"Make the board decision and record rationale<br/><sub>board-decision</sub><br/><i>Approval is a commitment, not just agreement</i>"}
+    step_rollout_guidance(["Publish rollout guidance and revisit triggers<br/><sub>rollout-guidance</sub><br/><i>Translate decision into executable downstream expectations</i>"])
+    step_decision_intake --> step_context_and_options
+    step_context_and_options --> step_security_compliance_review
+    step_security_compliance_review --> step_board_decision
+    step_board_decision --> step_rollout_guidance
+%% step-doc: decision-intake => processes/architecture-decision-governance/steps/decision-intake.md
+%% step-artifact: decision-intake => decision-brief
+%% step-artifact: decision-intake => intake-brief
+%% step-doc: context-and-options => processes/architecture-decision-governance/steps/context-and-options.md
+%% step-artifact: context-and-options => architecture-decision-record
+%% step-artifact: context-and-options => decision-brief
+%% step-doc: security-compliance-review => processes/architecture-decision-governance/steps/security-compliance-review.md
+%% step-artifact: security-compliance-review => security-review-note
+%% step-artifact: security-compliance-review => provenance-report
+%% step-doc: board-decision => processes/architecture-decision-governance/steps/board-decision.md
+%% step-artifact: board-decision => architecture-decision-record
+%% step-doc: rollout-guidance => processes/architecture-decision-governance/steps/rollout-guidance.md
+%% step-artifact: rollout-guidance => implementation-plan
+%% step-artifact: rollout-guidance => retrospective-improvement-log

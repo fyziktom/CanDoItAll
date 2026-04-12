@@ -1,0 +1,12 @@
+sequenceDiagram
+%% process-key: customer-onboarding
+    participant role_account_owner as Account owner
+    participant role_staffing_manager as Staffing manager
+    participant role_kickoff_lead as Kickoff lead
+    participant system as Customer onboarding orchestration
+    role_account_owner->>system: Capture commercial intake
+    system-->>role_account_owner: evidence -> Customer onboarding brief
+    role_staffing_manager->>system: Review staffing intent
+    system-->>role_staffing_manager: evidence -> Staffing recommendation
+    role_account_owner->>system: Approve kickoff readiness
+    system-->>role_account_owner: evidence -> Kickoff approval record

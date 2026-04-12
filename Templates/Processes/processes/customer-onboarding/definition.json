@@ -1,0 +1,891 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "customer-onboarding",
+  "DisplayName": "Customer onboarding orchestration",
+  "Summary": "Turn approved customer demand into a governed onboarding motion with explicit commercial intake, staffing review, kickoff approval, and durable sidecar resources.",
+  "ValueStatement": "Reduce handoff loss across sales, staffing, approval, and kickoff preparation.",
+  "CustomerName": "Customer Success",
+  "OwnerName": "Operations governance board",
+  "InterfaceContractSummary": "Sales hands over to delivery through explicit contracts and approval gates.",
+  "GovernanceNotes": "All external commitments require accountable owner review before kickoff.",
+  "ChangeSummary": "Refreshed to keep the current lighter baseline scenario while enriching roles, artifacts, checklists, and validations around the same three-step spine.",
+  "GovernancePolicySummary": "Kickoff readiness depends on explicit policy, accountability, and evidence retention.",
+  "ConstitutionRuleSummary": "Policy decisions stay explicit and reviewable.",
+  "OperatingModeSummary": "Manual and guarded autonomy are both supported depending on step criticality.",
+  "SimulationReadinessSummary": "Seed pack models the same typed steps used in runtime validation.",
+  "Criticality": "Standard",
+  "AutonomyLevel": "Assisted",
+  "OperatingMode": "AssistedExecution",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "openchain",
+    "spdx",
+    "slsa"
+  ],
+  "SharedRoleRefs": [],
+  "SharedArtifactRefs": [
+    "staffing-readiness-note",
+    "kickoff-packet"
+  ],
+  "SharedChecklistRefs": [
+    "customer-handoff-checklist",
+    "kickoff-alignment-checklist"
+  ],
+  "SharedValidationRefs": [
+    "validation-kickoff-ready"
+  ],
+  "SharedPromptRefs": [
+    "prompt-kickoff-agenda"
+  ],
+  "Metrics": [
+    "Median time from commercial intake to staffing decision.",
+    "Kickoffs approved with no later ownership drift.",
+    "Rate of onboarding delays caused by missing staffing data.",
+    "Percentage of kickoff approvals with explicit milestones and owners.",
+    "Post-onboarding issues traced to weak intake or staffing evidence."
+  ],
+  "Risks": [
+    "Commercial promises made before staffing feasibility is known.",
+    "Kickoff approved with vague owners or target dates.",
+    "Customer success criteria hidden in informal communication.",
+    "Fallback coverage omitted during specialist scarcity."
+  ],
+  "TailoringRules": [
+    "Large enterprise onboarding may expand after kickoff approval into deeper delivery phases using the richer onboarding extension template.",
+    "Simple self-serve onboarding may stop after staffing review with a typed no-kickoff decision.",
+    "If customer-side responsibilities are incomplete, the kickoff gate must block rather than compensate silently."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "account-owner",
+      "RoleResourceKey": "account-owner",
+      "DisplayName": "Account owner",
+      "Purpose": "Own the customer-facing commercial context for onboarding and keep success criteria explicit before staffing or kickoff commitments are made.",
+      "StaffingIntent": "A customer-facing owner who can confirm commercial priority, named stakeholders, and outcome expectations without bypassing delivery feasibility checks.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "CustomerContact",
+      "IsRequired": false,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 120,
+      "CanvasY": 40,
+      "Notes": "Commercial owner for onboarding priority, stakeholder alignment, and acceptance timing."
+    },
+    {
+      "Key": "staffing-manager",
+      "RoleResourceKey": "staffing-manager",
+      "DisplayName": "Staffing manager",
+      "Purpose": "Validate whether the required people, environments, and sequencing exist to deliver onboarding without hidden bottlenecks.",
+      "StaffingIntent": "An internal owner who can commit or deny staffing, negotiate sequencing, and surface delivery-side readiness risk.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 420,
+      "CanvasY": 40,
+      "Notes": "Capacity and staffing authority for onboarding sequencing and kickoff feasibility."
+    },
+    {
+      "Key": "kickoff-lead",
+      "RoleResourceKey": "kickoff-lead",
+      "DisplayName": "Kickoff lead",
+      "Purpose": "Run the kickoff decision point so participants leave with explicit owners, timeline, risks, and next actions.",
+      "StaffingIntent": "A facilitation-capable implementation lead who can challenge ambiguity before the customer-facing kickoff is accepted as complete.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 40,
+      "CanvasX": 720,
+      "CanvasY": 40,
+      "Notes": "Meeting and execution lead for onboarding kickoff and first-phase alignment."
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "intake",
+      "Title": "Capture commercial intake",
+      "Subtitle": "Demand handoff and initial delivery framing",
+      "Notes": "Turn signed demand into a typed onboarding brief with explicit stakeholders, target dates, constraints, and acceptance intent.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Signed scope, target dates, stakeholder summary, and customer expectations.",
+      "OutputContractSummary": "Typed intake packet ready for delivery and staffing review.",
+      "EvidenceContractSummary": "Scope summary, named stakeholders, and decision-ready onboarding notes.",
+      "DecisionRightsSummary": "Account owner can prepare intake but cannot commit delivery without review.",
+      "ExceptionPolicySummary": "Escalate immediately if customer commitments are implied rather than explicit.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 120,
+      "CanvasY": 140,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "account-owner",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to another commercial owner if the original owner changes."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "customer-onboarding-brief",
+          "TemplateKey": "customer-onboarding-brief",
+          "Title": "Customer onboarding brief",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for staffing review, kickoff, and retrospective analysis.",
+          "ValidationRequirementSummary": "Must identify success criteria, stakeholders, target dates, constraints, and unresolved dependencies."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "customer-handoff-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/customer-onboarding/steps/intake.md"
+      ]
+    },
+    {
+      "Order": 1,
+      "Key": "staffing-review",
+      "Title": "Review staffing intent",
+      "Subtitle": "Capacity and fallback decision",
+      "Notes": "Validate the proposed onboarding staffing path, named specialists, and fallback plan before kickoff approval.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Intake packet and delivery constraints.",
+      "OutputContractSummary": "Recommended staffing path with explicit fallback and coverage gaps.",
+      "EvidenceContractSummary": "Candidate list, allocation picture, and fallback recommendation.",
+      "DecisionRightsSummary": "Staffing manager recommends; governance owner approves kickoff readiness.",
+      "ExceptionPolicySummary": "Do not treat partial staffing assumptions as committed staffing.",
+      "TargetLeadHours": 8,
+      "DependsOnStepKey": "intake",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 420,
+      "CanvasY": 140,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "intake",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "staffing-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to another staffing manager if allocation changes."
+        },
+        {
+          "RoleKey": "kickoff-lead",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery lead review stays explicit even if the assigned person changes."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "staffing-readiness-note",
+          "TemplateKey": "staffing-readiness-note",
+          "Title": "Staffing recommendation",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for kickoff approval and onboarding retrospectives.",
+          "ValidationRequirementSummary": "Reviewer must confirm role-fit, availability, and fallback coverage."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "customer-onboarding-brief",
+          "SourceStepKey": "intake"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "staffing-feasibility-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-staffing-feasible"
+      ],
+      "PromptRefs": [
+        "prompt-staffing-summary"
+      ],
+      "DocRefs": [
+        "processes/customer-onboarding/steps/staffing-review.md"
+      ]
+    },
+    {
+      "Order": 2,
+      "Key": "kickoff-approval",
+      "Title": "Approve kickoff readiness",
+      "Subtitle": "Formal onboarding launch gate",
+      "Notes": "Approve or reject kickoff readiness using staffing evidence, goals, milestones, and named owners.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Staffing recommendation and draft kickoff plan.",
+      "OutputContractSummary": "Approved or rejected kickoff readiness.",
+      "EvidenceContractSummary": "Approval record and managed kickoff artifacts.",
+      "DecisionRightsSummary": "Kickoff lead can approve, block, or refuse unsafe launch.",
+      "ExceptionPolicySummary": "Reject kickoff when ownership, milestones, or dependencies remain vague.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "staffing-review",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 720,
+      "CanvasY": 140,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "staffing-review",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "kickoff-lead",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Approval remains attached to the role, not the current person."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "kickoff-approval-record",
+          "TemplateKey": "kickoff-packet",
+          "Title": "Kickoff approval record",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for customer review, onboarding execution, and future audits.",
+          "ValidationRequirementSummary": "Approval rationale must be explicit and reviewable."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "staffing-readiness-note",
+          "SourceStepKey": "staffing-review"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "kickoff-alignment-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-kickoff-ready"
+      ],
+      "PromptRefs": [
+        "prompt-kickoff-agenda"
+      ],
+      "DocRefs": [
+        "processes/customer-onboarding/steps/kickoff-approval.md"
+      ]
+    }
+  ],
+  "DocPath": "processes/customer-onboarding/definition.md",
+  "RelativePath": "processes/customer-onboarding",
+  "DefinitionJsonPath": "processes/customer-onboarding/definition.json",
+  "DefinitionMarkdownPath": "processes/customer-onboarding/definition.md",
+  "CurrentModuleImportEnvelopePath": "processes/customer-onboarding/projection/current-module.import-envelope.json",
+  "CurrentModuleCompatibilityReportPath": "processes/customer-onboarding/projection/current-module.compatibility-report.json",
+  "CurrentModuleCompatibilityReportMarkdownPath": "processes/customer-onboarding/projection/current-module.compatibility-report.md",
+  "FlowchartPath": "processes/customer-onboarding/mermaid/flowchart.mmd",
+  "SequencePath": "processes/customer-onboarding/mermaid/sequence.mmd",
+  "LocalRoles": [
+    {
+      "Kind": "role-resource",
+      "Key": "onboarding-program-manager",
+      "DisplayName": "Onboarding program manager",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Summary": "Cross-functional owner for onboarding milestone orchestration, readiness tracking, and dependency closure.",
+      "Purpose": "Turn the onboarding promise into an executable, customer-visible plan with explicit ownership on both sides.",
+      "StaffingIntent": "A delivery manager specialized in onboarding and implementation programs.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 70,
+      "RoleTemplateSourceKey": "process-role-template/customer-onboarding/onboarding-program-manager",
+      "RoleTemplateSnapshotName": "Onboarding program manager / template-pack v1",
+      "SnapshotSummary": "Cross-functional owner for onboarding milestone orchestration, readiness tracking, and dependency closure.",
+      "SeniorityBand": "Senior implementation or onboarding program management",
+      "MinimumYearsInPrimaryDiscipline": 5,
+      "MinimumYearsInSoftwareDelivery": 7,
+      "DomainTags": [
+        "onboarding",
+        "implementation",
+        "milestone-management"
+      ],
+      "KnowledgeRequirements": [
+        "Ability to define onboarding phases, exit criteria, and ownership on the customer and vendor side.",
+        "Knowledge of common onboarding blockers such as access, data, training, security review, and stakeholder alignment.",
+        "Understanding of implementation planning, cadence, and escalation in customer-facing contexts.",
+        "Ability to assess whether a milestone is truly complete or merely discussed.",
+        "Knowledge of cutover preparation and early-life support planning.",
+        "Ability to keep internal and customer timelines aligned without masking risk."
+      ],
+      "ExperienceRequirements": [
+        "Has run a structured customer onboarding or implementation program.",
+        "Has recovered an onboarding plan after scope, staffing, or customer-readiness drift.",
+        "Has managed milestone or checklist-based customer governance.",
+        "Has coordinated technical and non-technical contributors through go-live preparation.",
+        "Has handled executive or commercial escalation tied to onboarding delay."
+      ],
+      "DecisionRights": [
+        "Approve milestone plan and readiness exit criteria.",
+        "Escalate dependency slippage on either customer or internal side.",
+        "Declare whether onboarding is ready to move into cutover/go-live preparation.",
+        "Insist on explicit owner and due date for every open onboarding blocker."
+      ],
+      "OwnedArtifacts": [
+        "Onboarding milestone plan",
+        "Readiness tracker",
+        "Cutover readiness note"
+      ],
+      "CollaborationExpectations": [
+        "Coordinate with customer success lead, product owner, and solution consultant.",
+        "Keep the customer and internal team on one shared plan.",
+        "Surface unresolved blockers early rather than at the milestone review.",
+        "Document decisions and action ownership after every checkpoint."
+      ],
+      "AntiPatterns": [
+        "Treating a verbal agreement as a completed onboarding milestone.",
+        "Optimizing for stakeholder comfort instead of truthful readiness signals.",
+        "Collapsing customer and internal responsibilities into vague shared ownership.",
+        "Skipping explicit cutover or support-readiness planning."
+      ],
+      "FitnessEvidence": [
+        "Milestone trackers with clear completion logic and owners.",
+        "Examples of recovered onboarding plans.",
+        "Customer-facing governance notes with actionable follow-up.",
+        "Reduced surprise during go-live transitions."
+      ],
+      "DocPath": "processes/customer-onboarding/roles/onboarding-program-manager.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "solution-consultant",
+      "DisplayName": "Solution consultant",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Summary": "Configuration and fit-gap specialist for mapping customer needs to the delivered product capability.",
+      "Purpose": "Translate customer operating reality into a safe, supportable configuration and adoption path.",
+      "StaffingIntent": "A solution specialist who understands both the product’s capabilities and the customer’s working model.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "TechnicalContact",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 60,
+      "RoleTemplateSourceKey": "process-role-template/customer-onboarding/solution-consultant",
+      "RoleTemplateSnapshotName": "Solution consultant / template-pack v1",
+      "SnapshotSummary": "Configuration and fit-gap specialist for mapping customer needs to the delivered product capability.",
+      "SeniorityBand": "Senior solution consulting",
+      "MinimumYearsInPrimaryDiscipline": 5,
+      "MinimumYearsInSoftwareDelivery": 7,
+      "DomainTags": [
+        "configuration",
+        "fit-gap",
+        "customer-solutioning"
+      ],
+      "KnowledgeRequirements": [
+        "Knowledge of the product’s configuration model, constraints, extension points, and known limits.",
+        "Ability to identify fit-gap issues before they become late-stage surprises.",
+        "Understanding of customer process variation and what can or cannot be supported without custom delivery.",
+        "Ability to explain solution trade-offs in operational rather than purely technical language.",
+        "Knowledge of data, access, and environment prerequisites for onboarding success.",
+        "Ability to document configuration decisions so support and customer teams can reuse them."
+      ],
+      "ExperienceRequirements": [
+        "Has led customer workshops or configuration design for software onboarding.",
+        "Has identified unsupported customer assumptions early enough to change the plan.",
+        "Has produced fit-gap or configuration artifacts used in real implementation work.",
+        "Has collaborated with product and engineering on customer-specific constraints.",
+        "Has supported early-life use after onboarding to confirm the design held up."
+      ],
+      "DecisionRights": [
+        "Approve configuration baseline for the onboarding scope.",
+        "Escalate fit-gap issues that require product or custom-delivery decisions.",
+        "Reject customer requests that create unsupportable or unsafe configuration debt.",
+        "Define configuration evidence needed for go-live readiness."
+      ],
+      "OwnedArtifacts": [
+        "Configuration baseline",
+        "Fit-gap log",
+        "Environment prerequisite checklist"
+      ],
+      "CollaborationExpectations": [
+        "Collaborate with onboarding manager, product owner, and customer stakeholders.",
+        "Translate technical limits without hiding consequences.",
+        "Ensure support and success teams understand configured behavior and caveats.",
+        "Capture reusable patterns from repeated onboarding scenarios."
+      ],
+      "AntiPatterns": [
+        "Promising configurability the product does not truly have.",
+        "Keeping fit-gap issues informal until the cutover is near.",
+        "Producing configuration notes that only the consultant can understand.",
+        "Treating workarounds as equivalent to supported design."
+      ],
+      "FitnessEvidence": [
+        "Configuration artifacts reused successfully by delivery or support teams.",
+        "Fit-gap decisions documented with clear consequences.",
+        "Evidence of avoided rework because unsupported assumptions were surfaced early.",
+        "Customer or internal feedback that the consultant reduced ambiguity."
+      ],
+      "DocPath": "processes/customer-onboarding/roles/solution-consultant.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "account-owner",
+      "DisplayName": "Account owner",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Summary": "Commercial owner for onboarding priority, stakeholder alignment, and acceptance timing.",
+      "Purpose": "Own the customer-facing commercial context for onboarding and keep success criteria explicit before staffing or kickoff commitments are made.",
+      "StaffingIntent": "A customer-facing owner who can confirm commercial priority, named stakeholders, and outcome expectations without bypassing delivery feasibility checks.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "CustomerContact",
+      "IsRequired": false,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 35,
+      "RoleTemplateSourceKey": "process-role-template/customer-success-lead",
+      "RoleTemplateSnapshotName": "Customer success lead / template-pack v1",
+      "SnapshotSummary": "Commercial owner for onboarding priority, stakeholder alignment, and acceptance timing.",
+      "SeniorityBand": "Senior account executive or customer success owner",
+      "MinimumYearsInPrimaryDiscipline": 5,
+      "MinimumYearsInSoftwareDelivery": 6,
+      "DomainTags": [
+        "customer-onboarding",
+        "commercial-alignment",
+        "stakeholder-management",
+        "acceptance"
+      ],
+      "KnowledgeRequirements": [
+        "Ability to structure onboarding or delivery milestones in customer-comprehensible language.",
+        "Knowledge of customer stakeholder mapping, expectation management, and handoff design.",
+        "Understanding of adoption blockers such as access, training, configuration, and unclear ownership.",
+        "Ability to connect technical delivery status to externally meaningful outcomes and risks.",
+        "Knowledge of escalation patterns when internal delivery and customer timelines diverge.",
+        "Ability to document readiness, open actions, and responsibilities without ambiguity."
+      ],
+      "ExperienceRequirements": [
+        "Has led customer onboarding, implementation, or adoption work with multiple stakeholder groups.",
+        "Has managed expectation resets when internal readiness lagged external commitments.",
+        "Has coordinated technical and non-technical parties through a go-live or enablement plan.",
+        "Has captured and followed through on customer-raised blockers or training gaps.",
+        "Has supported post-launch stabilization or early-life support."
+      ],
+      "DecisionRights": [
+        "Approve readiness of customer-facing communications and adoption handoff.",
+        "Escalate when internal uncertainty would create misleading customer commitments.",
+        "Require explicit ownership for customer action items before declaring onboarding complete.",
+        "Define whether a customer-facing milestone is truly achieved."
+      ],
+      "OwnedArtifacts": [
+        "Onboarding plan",
+        "Customer handoff checklist",
+        "Training readiness pack",
+        "Open actions tracker"
+      ],
+      "CollaborationExpectations": [
+        "Work with product, delivery, and solution consultants to keep customer commitments real.",
+        "Coordinate with service and release owners on go-live readiness and support expectations.",
+        "Represent customer adoption risk in internal governance forums.",
+        "Document open actions so the customer is not forced to rediscover missing work."
+      ],
+      "AntiPatterns": [
+        "Promising dates or capabilities not anchored in the internal plan.",
+        "Declaring onboarding complete while training, access, or ownership gaps remain open.",
+        "Using soft language that hides customer-facing risk.",
+        "Treating customer questions as noise instead of leading indicators of unclear delivery."
+      ],
+      "FitnessEvidence": [
+        "Customer handoff artifacts with explicit owners and dates.",
+        "Examples of expectation resets handled transparently.",
+        "Evidence of adoption or onboarding milestones achieved with low rework.",
+        "Positive internal feedback that the role reduces customer-facing ambiguity."
+      ],
+      "DocPath": "processes/customer-onboarding/roles/account-owner.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "staffing-manager",
+      "DisplayName": "Staffing manager",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Summary": "Capacity and staffing authority for onboarding sequencing, specialist allocation, and kickoff feasibility.",
+      "Purpose": "Validate whether the required people, environments, and sequencing exist to deliver onboarding without hidden bottlenecks.",
+      "StaffingIntent": "An internal owner who can commit or deny staffing, negotiate sequencing, and surface delivery-side readiness risk.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 50,
+      "RoleTemplateSourceKey": "process-role-template/delivery-manager",
+      "RoleTemplateSnapshotName": "Delivery manager / template-pack v1",
+      "SnapshotSummary": "Capacity and staffing authority for onboarding sequencing and kickoff feasibility.",
+      "SeniorityBand": "Senior delivery or implementation manager",
+      "MinimumYearsInPrimaryDiscipline": 6,
+      "MinimumYearsInSoftwareDelivery": 8,
+      "DomainTags": [
+        "staffing",
+        "onboarding",
+        "capacity-planning",
+        "sequencing"
+      ],
+      "KnowledgeRequirements": [
+        "Deep understanding of software delivery planning, dependency mapping, and capacity-aware scheduling.",
+        "Ability to distinguish optimistic plans from executable plans using concrete staffing and evidence signals.",
+        "Knowledge of release governance, escalation paths, and portfolio-level sequencing trade-offs.",
+        "Understanding of workflow bottlenecks such as missing approvals, environment readiness, and cross-team handoffs.",
+        "Ability to read risk signals from burndown, blocked work, quality evidence, and unresolved decision records.",
+        "Knowledge of how to use governance cadence without turning it into performative paperwork."
+      ],
+      "ExperienceRequirements": [
+        "Has coordinated at least one multi-team delivery with conflicting priorities and hard release constraints.",
+        "Has re-planned work in flight when assumptions changed, including staffing, dependency, or customer deadline shifts.",
+        "Has facilitated executive or governance escalation with a clear options-and-consequences framing.",
+        "Has managed delivery cadence where approval, QA, and security evidence all materially affected release timing.",
+        "Has worked closely with engineering and product to convert strategic goals into short-horizon delivery decisions."
+      ],
+      "DecisionRights": [
+        "Approve or reject execution plans that do not have credible staffing or dependency coverage.",
+        "Escalate schedule, staffing, or governance risk before downstream teams are forced into silent failure.",
+        "Choose the operating cadence and checkpoint rhythm for the process instance.",
+        "Require explicit fallback ownership for critical roles and high-risk steps."
+      ],
+      "OwnedArtifacts": [
+        "Delivery plan",
+        "Dependency ledger",
+        "Escalation log",
+        "Release readiness summary"
+      ],
+      "CollaborationExpectations": [
+        "Coordinate daily or agreed checkpoint-level alignment with role owners.",
+        "Keep product, engineering, QA, and release stakeholders synchronized on risk and decision timing.",
+        "Drive issue resolution instead of only reporting issue existence.",
+        "Protect specialists from unnecessary context churn by front-loading coordination."
+      ],
+      "AntiPatterns": [
+        "Publishing optimistic dates without verifying staffing and dependency reality.",
+        "Escalating too late because of a desire to appear in control.",
+        "Treating governance checkpoints as calendar events rather than decision points.",
+        "Using vague status language that hides whether a step is blocked, risky, or truly on track."
+      ],
+      "FitnessEvidence": [
+        "Examples of delivery plans with explicit dependency and fallback treatment.",
+        "Evidence of re-planning under pressure without losing traceability.",
+        "Retrospective notes showing the role holder converted process friction into improvements.",
+        "Consistent stakeholder trust in status signals produced by the role."
+      ],
+      "DocPath": "processes/customer-onboarding/roles/staffing-manager.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "kickoff-lead",
+      "DisplayName": "Kickoff lead",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Summary": "Meeting and execution lead for the formal onboarding kickoff and first-phase alignment.",
+      "Purpose": "Run the kickoff decision point so participants leave with explicit owners, timeline, risks, and next actions.",
+      "StaffingIntent": "A facilitation-capable implementation lead who can challenge ambiguity before the customer-facing kickoff is accepted as complete.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 40,
+      "RoleTemplateSourceKey": "process-role-template/delivery-manager",
+      "RoleTemplateSnapshotName": "Delivery manager / template-pack v1",
+      "SnapshotSummary": "Meeting and execution lead for onboarding kickoff and first-phase alignment.",
+      "SeniorityBand": "Senior implementation lead or onboarding program lead",
+      "MinimumYearsInPrimaryDiscipline": 5,
+      "MinimumYearsInSoftwareDelivery": 7,
+      "DomainTags": [
+        "kickoff",
+        "facilitation",
+        "customer-onboarding",
+        "execution-alignment"
+      ],
+      "KnowledgeRequirements": [
+        "Deep understanding of software delivery planning, dependency mapping, and capacity-aware scheduling.",
+        "Ability to distinguish optimistic plans from executable plans using concrete staffing and evidence signals.",
+        "Knowledge of release governance, escalation paths, and portfolio-level sequencing trade-offs.",
+        "Understanding of workflow bottlenecks such as missing approvals, environment readiness, and cross-team handoffs.",
+        "Ability to read risk signals from burndown, blocked work, quality evidence, and unresolved decision records.",
+        "Knowledge of how to use governance cadence without turning it into performative paperwork."
+      ],
+      "ExperienceRequirements": [
+        "Has coordinated at least one multi-team delivery with conflicting priorities and hard release constraints.",
+        "Has re-planned work in flight when assumptions changed, including staffing, dependency, or customer deadline shifts.",
+        "Has facilitated executive or governance escalation with a clear options-and-consequences framing.",
+        "Has managed delivery cadence where approval, QA, and security evidence all materially affected release timing.",
+        "Has worked closely with engineering and product to convert strategic goals into short-horizon delivery decisions."
+      ],
+      "DecisionRights": [
+        "Approve or reject execution plans that do not have credible staffing or dependency coverage.",
+        "Escalate schedule, staffing, or governance risk before downstream teams are forced into silent failure.",
+        "Choose the operating cadence and checkpoint rhythm for the process instance.",
+        "Require explicit fallback ownership for critical roles and high-risk steps."
+      ],
+      "OwnedArtifacts": [
+        "Delivery plan",
+        "Dependency ledger",
+        "Escalation log",
+        "Release readiness summary"
+      ],
+      "CollaborationExpectations": [
+        "Coordinate daily or agreed checkpoint-level alignment with role owners.",
+        "Keep product, engineering, QA, and release stakeholders synchronized on risk and decision timing.",
+        "Drive issue resolution instead of only reporting issue existence.",
+        "Protect specialists from unnecessary context churn by front-loading coordination."
+      ],
+      "AntiPatterns": [
+        "Publishing optimistic dates without verifying staffing and dependency reality.",
+        "Escalating too late because of a desire to appear in control.",
+        "Treating governance checkpoints as calendar events rather than decision points.",
+        "Using vague status language that hides whether a step is blocked, risky, or truly on track."
+      ],
+      "FitnessEvidence": [
+        "Examples of delivery plans with explicit dependency and fallback treatment.",
+        "Evidence of re-planning under pressure without losing traceability.",
+        "Retrospective notes showing the role holder converted process friction into improvements.",
+        "Consistent stakeholder trust in status signals produced by the role."
+      ],
+      "DocPath": "processes/customer-onboarding/roles/kickoff-lead.md"
+    }
+  ],
+  "LocalArtifacts": [
+    {
+      "Kind": "artifact-resource",
+      "Key": "configuration-baseline",
+      "DisplayName": "Configuration baseline",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "ArtifactKind": "Deliverable",
+      "DefaultTrustRequirement": "ReviewRequired",
+      "DefaultSensitivityLevel": "Internal",
+      "DefaultRetentionDays": 1095,
+      "Summary": "Named configuration baseline for the onboarding scope, including approved options and declared exclusions.",
+      "AllowedFutureUsageSummary": "Reusable for customer handoff, support, and future fit-gap review for the same customer context.",
+      "ValidationRequirementSummary": "Must reflect the actual approved configuration, not workshop speculation.",
+      "OwnerRoleKey": "solution-consultant",
+      "DocPath": "processes/customer-onboarding/artifacts/configuration-baseline.md"
+    },
+    {
+      "Kind": "process-artifact-template",
+      "Key": "customer-onboarding-brief",
+      "DisplayName": "Customer onboarding brief",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "ArtifactKind": "Brief",
+      "DefaultTrustRequirement": "ReviewRequired",
+      "DefaultSensitivityLevel": "Internal",
+      "DefaultRetentionDays": 365,
+      "Summary": "Structured onboarding brief that captures customer goals, environment constraints, milestone targets, and named stakeholders.",
+      "AllowedFutureUsageSummary": "Reusable for staffing review, kickoff, customer communication, and later retrospective analysis.",
+      "ValidationRequirementSummary": "Must identify success criteria, stakeholders, target dates, constraints, and unresolved dependencies.",
+      "OwnerRoleKey": "account-owner",
+      "DocPath": "processes/customer-onboarding/artifacts/customer-onboarding-brief.md"
+    }
+  ],
+  "LocalChecklists": [
+    {
+      "Kind": "checklist-resource",
+      "Key": "go-live-readiness-checklist",
+      "DisplayName": "Onboarding go-live readiness checklist",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "OwnerRoleKey": "onboarding-program-manager",
+      "Phase": "go-live",
+      "Summary": "Checks whether the customer-side and internal-side prerequisites for onboarding go-live are truly complete.",
+      "EntryCriteria": "Configuration and handoff planning are largely complete and go-live is approaching.",
+      "ExitCriteria": "No go-live-critical task is ownerless or hidden behind vague 'customer to confirm' language.",
+      "Checks": [
+        "Customer-side access and ownership are explicit.",
+        "Configuration baseline is signed off or acknowledged.",
+        "Training or enablement artifacts are ready for affected users.",
+        "Support handoff and escalation path are documented."
+      ],
+      "EvidenceExpectations": [
+        "Configuration baseline",
+        "Customer handoff pack"
+      ],
+      "DocPath": "processes/customer-onboarding/checklists/go-live-readiness-checklist.md"
+    },
+    {
+      "Kind": "process-checklist-template",
+      "Key": "staffing-feasibility-checklist",
+      "DisplayName": "Staffing feasibility checklist",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "OwnerRoleKey": "staffing-manager",
+      "Phase": "Staffing review",
+      "Summary": "Verifies whether onboarding staffing and specialist dependencies support a credible kickoff date.",
+      "EntryCriteria": "The onboarding brief exists and staffing review is starting.",
+      "ExitCriteria": "A credible staffing decision exists with named gaps and fallback actions.",
+      "Checks": [
+        "Critical specialists are identified.",
+        "Allocation coverage is explicit for the next onboarding phase.",
+        "Known environment or access dependencies are named.",
+        "Any capacity gaps have an owner and escalation path."
+      ],
+      "EvidenceExpectations": [
+        "Staffing readiness note.",
+        "Named specialist list.",
+        "Gap or fallback record."
+      ],
+      "DocPath": "processes/customer-onboarding/checklists/staffing-feasibility-checklist.md"
+    }
+  ],
+  "LocalValidations": [
+    {
+      "Kind": "validation-resource",
+      "Key": "validate-onboarding-go-live-readiness",
+      "DisplayName": "Validate onboarding go-live readiness",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Severity": "high",
+      "OwnerRoleKey": "onboarding-program-manager",
+      "Gate": "go-live",
+      "Summary": "Confirms onboarding can move into go-live without relying on hidden open actions.",
+      "PassCriteria": "Critical dependencies, customer actions, and support readiness are explicit and complete enough to proceed.",
+      "FailCriteria": "Go-live is being declared based on optimism while key dependencies remain unresolved.",
+      "EscalationRule": "Escalate to customer success lead and sponsoring manager before confirming the milestone.",
+      "DocPath": "processes/customer-onboarding/validations/validate-onboarding-go-live-readiness.md"
+    },
+    {
+      "Kind": "process-validation-template",
+      "Key": "validate-staffing-feasible",
+      "DisplayName": "Staffing feasible",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "Severity": "Error",
+      "OwnerRoleKey": "staffing-manager",
+      "Gate": "Staffing review",
+      "Summary": "Blocks kickoff progression when staffing gaps or specialist constraints remain implicit.",
+      "PassCriteria": "Named staffing coverage exists for the kickoff and first execution phase, or any accepted gaps are explicitly owned.",
+      "FailCriteria": "Kickoff would proceed with unnamed specialists, unknown allocation, or ignored constraints.",
+      "EscalationRule": "Stop kickoff progression and escalate the staffing gap explicitly.",
+      "DocPath": "processes/customer-onboarding/validations/validate-staffing-feasible.md"
+    }
+  ],
+  "LocalPrompts": [
+    {
+      "Kind": "prompt-resource",
+      "Key": "prompt-fit-gap-summary",
+      "DisplayName": "Prompt / fit-gap summary",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "AudienceRoleKey": "solution-consultant",
+      "Phase": "solution-design",
+      "Summary": "Prompt scaffold for fit-gap summaries that convert workshop input into actionable design choices.",
+      "RequiredInputs": [
+        "customer process notes",
+        "product capability limits",
+        "open questions"
+      ],
+      "OutputSchema": [
+        "supported configuration",
+        "gaps",
+        "workarounds",
+        "required product decisions",
+        "customer actions"
+      ],
+      "RefusalConditions": [
+        "Refuse to label a gap as solved if the workaround is unsupported or still hypothetical."
+      ],
+      "DocPath": "processes/customer-onboarding/prompts/prompt-fit-gap-summary.md"
+    },
+    {
+      "Kind": "process-prompt-template",
+      "Key": "prompt-staffing-summary",
+      "DisplayName": "Staffing summary prompt",
+      "Scope": "local",
+      "ProcessKey": "customer-onboarding",
+      "AudienceRoleKey": "staffing-manager",
+      "Phase": "Staffing review",
+      "Summary": "Produces a structured staffing readiness note from the onboarding brief and current capacity picture.",
+      "RequiredInputs": [
+        "Customer onboarding brief.",
+        "Current capacity or named specialists.",
+        "Known constraints or target dates."
+      ],
+      "OutputSchema": [
+        "Named roles and specialists.",
+        "Coverage gaps.",
+        "Kickoff recommendation."
+      ],
+      "RefusalConditions": [
+        "Refuse if critical ownership or target date information is missing.",
+        "Do not fabricate specialist availability."
+      ],
+      "DocPath": "processes/customer-onboarding/prompts/prompt-staffing-summary.md"
+    }
+  ],
+  "LocalRoleRefs": [
+    "onboarding-program-manager",
+    "solution-consultant",
+    "account-owner",
+    "staffing-manager",
+    "kickoff-lead"
+  ],
+  "LocalArtifactRefs": [
+    "configuration-baseline",
+    "customer-onboarding-brief"
+  ],
+  "LocalChecklistRefs": [
+    "go-live-readiness-checklist",
+    "staffing-feasibility-checklist"
+  ],
+  "LocalValidationRefs": [
+    "validate-onboarding-go-live-readiness",
+    "validate-staffing-feasible"
+  ],
+  "LocalPromptRefs": [
+    "prompt-fit-gap-summary",
+    "prompt-staffing-summary"
+  ]
+}

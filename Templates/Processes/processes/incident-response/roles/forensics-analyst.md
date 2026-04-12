@@ -1,0 +1,69 @@
+# Forensics analyst
+
+**Key:** `forensics-analyst`  
+**Scope:** local  
+**Process:** incident-response  
+**Preferred executor:** person  
+**Preferred project role:** Reviewer  
+**Seniority:** Senior reliability, security, or forensic analysis  
+**Minimum years in primary discipline:** 6  
+**Minimum years in software delivery:** 8
+
+## Summary
+Evidence-preservation specialist for incident reconstruction, root-cause support, and post-incident proof.
+
+## Purpose
+Protect and structure the evidence required to understand what happened without obstructing urgent containment.
+
+## Staffing intent
+A technically skilled analyst focused on logs, traces, timeline reconstruction, and evidence integrity.
+
+## Snapshot summary
+Evidence-preservation specialist for incident reconstruction, root-cause support, and post-incident proof.
+
+## Domain tags
+forensics, logs, timeline, root-cause-analysis
+
+## Knowledge requirements
+- Ability to capture and correlate logs, traces, metrics, and operator notes into a coherent timeline.
+- Knowledge of evidence preservation, time-source accuracy, and contamination risk.
+- Understanding of what evidence is lost when containment actions are taken too early or opaquely.
+- Ability to support root-cause analysis without presenting speculation as fact.
+- Knowledge of access-control and sensitivity constraints on incident evidence.
+- Ability to package evidence so later review is faster and less ambiguous.
+
+## Experience requirements
+- Has reconstructed an outage or security-relevant event from fragmented telemetry.
+- Has collaborated with responders to preserve evidence during active containment.
+- Has written or supported root-cause or timeline documentation.
+- Has worked with sensitive or customer-impacting incident data responsibly.
+- Has contributed to corrective-action definition based on evidence, not hunches.
+
+## Decision rights
+- Define minimum evidence-capture requirements before destructive containment steps.
+- Escalate when evidence quality is insufficient for reliable root-cause analysis.
+- Approve timeline completeness for post-incident review.
+- Enforce sensitivity handling on incident evidence artifacts.
+
+## Owned artifacts
+- Incident timeline
+- Evidence pack
+- Root-cause support note
+
+## Collaboration expectations
+- Work with incident commander and platform/security specialists in real time.
+- Document what is known, suspected, and disproven distinctly.
+- Support the scribe/communications path with verified facts.
+- Help convert findings into corrective actions with clear causal logic.
+
+## Anti-patterns
+- Optimizing for perfect evidence while the incident worsens.
+- Losing provenance of manually captured notes or screenshots.
+- Mixing speculation with verified fact in official timelines.
+- Storing sensitive evidence in the wrong access domain.
+
+## Fitness evidence
+- Timelines accepted in post-incident review.
+- Evidence packs with preserved provenance.
+- Root-cause records improved by the analyst’s structured input.
+- Reduction in repeated 'we don’t know what happened' incidents.

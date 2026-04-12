@@ -1,0 +1,21 @@
+sequenceDiagram
+%% process-key: architecture-decision-governance
+    participant role_governance_facilitator as Governance facilitator
+    participant role_domain_owner as Domain owner
+    participant role_solution_architect as Solution architect
+    participant role_product_owner as Product owner
+    participant role_security_reviewer as Security reviewer
+    participant role_compliance_steward as Compliance steward
+    participant role_service_owner as Service owner
+    participant system as Architecture decision governance and ADR stewardship
+    role_governance_facilitator->>system: Capture architecture decision demand
+    system-->>role_governance_facilitator: evidence -> Decision brief, Architecture demand intake
+    role_solution_architect->>system: Assemble context, constraints, and options
+    system-->>role_solution_architect: evidence -> Architecture decision record, Option comparison brief
+    role_security_reviewer->>system: Review security, compliance, and policy impact
+    system-->>role_security_reviewer: evidence -> Security review note, Dependency and provenance impact note
+    role_governance_facilitator->>system: Make the board decision and record rationale
+    system-->>role_governance_facilitator: evidence -> Approved architecture decision record
+    Note over system: branches -> Approved, Deferred
+    role_solution_architect->>system: Publish rollout guidance and revisit triggers
+    system-->>role_solution_architect: evidence -> Architecture rollout guidance, Architecture revisit trigger log

@@ -1,0 +1,638 @@
+{
+  "Definition": {
+    "Id": null,
+    "ProjectId": null,
+    "WorkingVersionId": null,
+    "WorkingVersionNumber": 1,
+    "Name": "Emergency hotfix rollout with shard-risk governance",
+    "Summary": "Emergency delivery template for time-critical production remediation with explicit containment, rollback, customer communication, artifact-input, and approval discipline aligned to the current process architecture.",
+    "ValueStatement": "Restores service or mitigates incident impact quickly without disguising rollback, data, or customer communication risk.",
+    "CustomerName": "Enterprise Billing Platform",
+    "OwnerName": "Production response command",
+    "InterfaceContractSummary": "Emergency software delivery spans production operations, customer communication, database safety, and release governance, so the process must keep those boundaries explicit.",
+    "GovernanceNotes": "Time pressure never removes the need for explicit rollback ownership, communication ownership, typed emergency evidence, or explicit dependency joins.",
+    "ChangeSummary": "Refreshed to use current first-class dependencies and artifact inputs for emergency approval instead of compressing them into legacy single-edge sequencing.",
+    "GovernancePolicySummary": "Emergency release requires typed blast-radius analysis, focused QA proof, release approval, and explicit rollback trigger ownership.",
+    "ConstitutionRuleSummary": "Command, communication, database safety, and rollout execution remain durable role contracts even if people on the rota change.",
+    "OperatingModeSummary": "Emergency execution is allowed only inside a bounded release window with explicit rollback and communication obligations.",
+    "SimulationReadinessSummary": "This scenario is intentionally rich enough for emergency simulation, incident replay, and canvas authoring validation.",
+    "Criticality": "MissionCritical",
+    "AutonomyLevel": "Guarded",
+    "Status": "Draft",
+    "Roles": [
+      {
+        "Id": "01631cba-84cd-5965-9969-029158c88dfd",
+        "Key": "incident-commander",
+        "DisplayName": "Incident commander",
+        "Purpose": "Drive containment and structured decision-making when time pressure and uncertainty are high.",
+        "StaffingIntent": "A senior incident leader who can coordinate specialists, protect signal quality, and make time-sensitive trade-offs.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 100,
+        "RoleTemplateSourceKey": "process-role-template/incident-commander",
+        "RoleTemplateSnapshotName": "Incident commander / template-pack v1",
+        "SnapshotSummary": "Crisis-flow owner for coordination, decision timing, and containment during active incidents.",
+        "RequiredSkillIds": [],
+        "CanvasX": 120,
+        "CanvasY": 40
+      },
+      {
+        "Id": "6f91c085-10ba-5263-8ecf-6c163997cade",
+        "Key": "platform-engineer",
+        "DisplayName": "Platform engineer",
+        "Purpose": "Provide the reliable platform path required to build, deploy, observe, and if necessary roll back changes safely.",
+        "StaffingIntent": "A technical specialist in CI/CD, environments, infrastructure, and observability integration.",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": "TeamMember",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 30,
+        "RoleTemplateSourceKey": "process-role-template/platform-engineer",
+        "RoleTemplateSnapshotName": "Platform engineer / template-pack v1",
+        "SnapshotSummary": "Environment and delivery-pipeline owner for build integrity, deployment mechanics, and operational guardrails.",
+        "RequiredSkillIds": [],
+        "CanvasX": 420,
+        "CanvasY": 40
+      },
+      {
+        "Id": "21017d03-46e5-5806-aaa2-3703d5bc1bb9",
+        "Key": "database-engineer",
+        "DisplayName": "Database engineer",
+        "Purpose": "Own emergency database diagnostics, hotfix compatibility assessment, and rollback trigger definition.",
+        "StaffingIntent": "A hands-on production database specialist for emergency change paths.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "TechnicalContact",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 100,
+        "RoleTemplateSourceKey": "process-role-template/hotfix-rollout/database-engineer",
+        "RoleTemplateSnapshotName": "Database engineer / template-pack v1",
+        "SnapshotSummary": "Specialist responder for shard, schema, and persistence hotfix risk.",
+        "RequiredSkillIds": [],
+        "CanvasX": 720,
+        "CanvasY": 40
+      },
+      {
+        "Id": "e7984fa6-2b25-5fae-bcdc-a590a1754119",
+        "Key": "qa-lead",
+        "DisplayName": "QA lead",
+        "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
+        "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 40,
+        "RoleTemplateSourceKey": "process-role-template/qa-lead",
+        "RoleTemplateSnapshotName": "QA lead / template-pack v1",
+        "SnapshotSummary": "Quality owner for coverage depth, evidence quality, and release confidence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 1020,
+        "CanvasY": 40
+      },
+      {
+        "Id": "9ae634df-f53d-51ac-965d-a6370ca77100",
+        "Key": "release-approver",
+        "DisplayName": "Release approver",
+        "Purpose": "Decide whether the accumulated evidence is sufficient to expose the change to real users, data, and operational load.",
+        "StaffingIntent": "A senior operational or governance authority who can accept release risk on behalf of the organization.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 20,
+        "RoleTemplateSourceKey": "process-role-template/release-approver",
+        "RoleTemplateSnapshotName": "Release approver / template-pack v1",
+        "SnapshotSummary": "Final go-live decision owner for production promotion and rollback preparedness.",
+        "RequiredSkillIds": [],
+        "CanvasX": 1320,
+        "CanvasY": 40
+      },
+      {
+        "Id": "43f568aa-89e8-545c-8069-d057e09ce0c6",
+        "Key": "customer-liaison",
+        "DisplayName": "Customer liaison",
+        "Purpose": "Represent the customer communication path during release and incident work without allowing message drift from operational facts.",
+        "StaffingIntent": "Customer communication owner for service-impacting release or incident lanes.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "CustomerContact",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/customer-success-lead",
+        "RoleTemplateSnapshotName": "Customer success lead / template-pack v1",
+        "SnapshotSummary": "Customer communication owner for service-impacting release or incident lanes.",
+        "RequiredSkillIds": [],
+        "CanvasX": 1620,
+        "CanvasY": 40
+      }
+    ],
+    "Steps": [
+      {
+        "Id": "173aaf92-54d1-56b2-9979-1adce46cd3c4",
+        "Key": "activate-emergency-bridge",
+        "Title": "Activate emergency bridge and classify severity",
+        "Subtitle": "Command posture",
+        "Notes": "Establish the incident bridge, initial severity, and named command boundaries before packaging a hotfix.",
+        "StepKind": "Start",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": true,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Active production signal, customer impact, and first-response telemetry.",
+        "OutputContractSummary": "Explicit command bridge with severity posture, responder roster, and immediate constraints.",
+        "EvidenceContractSummary": "Bridge activation log, severity declaration, and named responders.",
+        "DecisionRightsSummary": "Incident commander owns classification and decision pacing during the emergency window.",
+        "ExceptionPolicySummary": "Do not begin emergency packaging while command ownership or severity framing is still implicit.",
+        "TargetLeadHours": 1,
+        "DependsOnStepId": null,
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 120,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [],
+        "RoleAssignments": [
+          {
+            "Id": "16835c26-2f4f-51b1-b263-f5254fcc942a",
+            "RoleRequirementId": "01631cba-84cd-5965-9969-029158c88dfd",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Command ownership may rebind across rota changes, but the command contract remains explicit."
+          },
+          {
+            "Id": "97338b40-b2b1-58a2-ae8f-bba5ae267c58",
+            "RoleRequirementId": "43f568aa-89e8-545c-8069-d057e09ce0c6",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Customer communication owner tracks external impact from the start."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "6503a7fe-b6ac-55ca-8078-f0f89c59fbaf",
+            "ArtifactKind": "Transcript",
+            "Title": "Emergency bridge activation log",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for incident timeline, hotfix approval, and post-incident review.",
+            "ValidationRequirementSummary": "Must record activation time, severity, named responders, and first declared constraints."
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "918c61a2-ece3-5769-b135-58d4a3a0c0fd",
+        "Key": "assess-blast-radius",
+        "Title": "Assess blast radius and rollback constraints",
+        "Subtitle": "Risk framing and bounded emergency scope",
+        "Notes": "Determine which shards, data paths, tenants, and rollback constraints bound the emergency change.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Emergency bridge log, production telemetry, and known change hypotheses.",
+        "OutputContractSummary": "Explicit blast-radius assessment with rollback constraints and bounded emergency scope.",
+        "EvidenceContractSummary": "Impact map, rollback notes, and disallowed expansion paths.",
+        "DecisionRightsSummary": "Incident commander frames the boundary; platform and database owners challenge unsupported assumptions.",
+        "ExceptionPolicySummary": "Pause immediately when the required fix grows into an unreviewable multi-area release.",
+        "TargetLeadHours": 2,
+        "DependsOnStepId": "173aaf92-54d1-56b2-9979-1adce46cd3c4",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 430,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "621c36fd-8c89-57a4-93d0-fb2dd294db8c",
+            "DependsOnStepId": "173aaf92-54d1-56b2-9979-1adce46cd3c4",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "0fa025c7-c14b-5d25-aa92-123ed488b529",
+            "RoleRequirementId": "01631cba-84cd-5965-9969-029158c88dfd",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Emergency boundary ownership stays with command."
+          },
+          {
+            "Id": "e0a8f8d9-74d5-5879-8f3d-0578c557c208",
+            "RoleRequirementId": "6f91c085-10ba-5263-8ecf-6c163997cade",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Platform owner reviews operational fit of the proposed emergency boundary."
+          },
+          {
+            "Id": "791f20d5-89a5-50b7-829e-88573334e994",
+            "RoleRequirementId": "21017d03-46e5-5806-aaa2-3703d5bc1bb9",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Database review is mandatory where shard state or tenant data is affected."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "c0e2fbb6-1f83-5a92-91f5-e0551d504c28",
+            "ArtifactKind": "Decision",
+            "Title": "Blast-radius assessment",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Confidential",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for validation, release approval, and later incident review.",
+            "ValidationRequirementSummary": "Must identify impacted shards or services, rollback constraints, and forbidden scope expansion paths."
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "b92ab1f9-5f65-5b63-94bd-a1861e829cd3",
+        "Key": "package-hotfix",
+        "Title": "Package emergency hotfix and rollback scripts",
+        "Subtitle": "Controlled change assembly",
+        "Notes": "Assemble the emergency patch, deployment instructions, and rollback scripts under one accountable engineer.",
+        "StepKind": "Work",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Blast-radius assessment, target change scope, and deployment constraints.",
+        "OutputContractSummary": "Hotfix package with rollout steps, rollback scripts, and changed-surface inventory.",
+        "EvidenceContractSummary": "Patch diff, deployment bundle, schema scripts, and operator checklist.",
+        "DecisionRightsSummary": "Platform engineer owns assembly but cannot expand scope beyond the approved emergency boundary.",
+        "ExceptionPolicySummary": "Pause immediately when the required fix grows into an unreviewable multi-area release.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": "918c61a2-ece3-5769-b135-58d4a3a0c0fd",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 740,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "0a6be3ef-a633-5f23-b5a1-d6c64d006b57",
+            "DependsOnStepId": "918c61a2-ece3-5769-b135-58d4a3a0c0fd",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "2d661cbf-bd37-5720-906b-39d5ebbc5211",
+            "RoleRequirementId": "6f91c085-10ba-5263-8ecf-6c163997cade",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Emergency packaging remains attached to the platform-engineer role even if the individual changes."
+          },
+          {
+            "Id": "0ed48a2a-dbdd-5fcc-b27f-48a0e5731427",
+            "RoleRequirementId": "21017d03-46e5-5806-aaa2-3703d5bc1bb9",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Database review is mandatory for scripts that touch shard state or tenant data."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "6e3c2247-742c-5a0f-b56f-faaa85f6801d",
+            "ArtifactKind": "Deliverable",
+            "Title": "Emergency patch and rollback bundle",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Confidential",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for validation, release approval, and post-incident engineering review.",
+            "ValidationRequirementSummary": "Must link the exact patch, database scripts, rollback path, and operator checklist."
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "a6b439ca-425f-57de-943a-44ffc0fe0391",
+        "Key": "validate-hotfix",
+        "Title": "Validate emergency fix in shadow environment",
+        "Subtitle": "Fast but explicit regression gate",
+        "Notes": "Run the emergency checklist against the hotfix bundle in a shadow or representative environment before release approval.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Emergency patch bundle, known blast radius, and incident reproduction notes.",
+        "OutputContractSummary": "Focused validation result with residual risks and unsupported cases.",
+        "EvidenceContractSummary": "Checklist output, shadow-environment notes, and residual-risk annotations.",
+        "DecisionRightsSummary": "QA responder may block the rollout if the emergency evidence is too thin for the risk profile.",
+        "ExceptionPolicySummary": "Do not convert the gate into a verbal approval; evidence still needs typed reviewable form.",
+        "TargetLeadHours": 2,
+        "DependsOnStepId": "b92ab1f9-5f65-5b63-94bd-a1861e829cd3",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1050,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "0731fd2d-1e48-57b0-97ea-7c9af324b79a",
+            "DependsOnStepId": "b92ab1f9-5f65-5b63-94bd-a1861e829cd3",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "72b6fe61-6c90-5750-9dfb-f81a818923db",
+            "RoleRequirementId": "e7984fa6-2b25-5fae-bcdc-a590a1754119",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Emergency QA ownership may move across the responder rota but the gate remains explicit."
+          },
+          {
+            "Id": "3f537de1-a61f-5691-afc8-a6123a763105",
+            "RoleRequirementId": "6f91c085-10ba-5263-8ecf-6c163997cade",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Package owner reviews failures and unsupported coverage before approval."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "676691ef-5f53-5bc3-9792-ac5af2f5013b",
+            "ArtifactKind": "Evidence",
+            "Title": "Emergency validation evidence pack",
+            "IsRequired": true,
+            "TrustRequirement": "HumanApproved",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for emergency release approval and later correction of the emergency checklist.",
+            "ValidationRequirementSummary": "Must name validated flows, skipped checks, and residual risk that the approver must accept explicitly."
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "1837d061-0b2b-59bd-963c-e82485c60f55",
+        "Key": "approve-emergency-release",
+        "Title": "Approve emergency release window",
+        "Subtitle": "Explicit go / no-go and rollback trigger",
+        "Notes": "Review the emergency evidence, rollback trigger, and customer communication plan before production rollout.",
+        "StepKind": "Approval",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Validation evidence, rollback trigger, customer-impact status, and operator readiness.",
+        "OutputContractSummary": "Go / no-go decision with explicit rollback trigger and accountable owners.",
+        "EvidenceContractSummary": "Approval note, release window, fallback trigger, and outward-communication owner.",
+        "DecisionRightsSummary": "Release approver owns the emergency release decision and cannot waive missing evidence or unclear rollback control.",
+        "ExceptionPolicySummary": "Reject the rollout when rollback conditions or customer-facing obligations are not explicit.",
+        "TargetLeadHours": 1,
+        "DependsOnStepId": "918c61a2-ece3-5769-b135-58d4a3a0c0fd",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1360,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "7d897c0b-9085-55ce-bcc8-ab2b1c4d038b",
+            "DependsOnStepId": "918c61a2-ece3-5769-b135-58d4a3a0c0fd",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "dcaeb26b-7837-58f1-a349-206c1d30a34e",
+            "DependsOnStepId": "a6b439ca-425f-57de-943a-44ffc0fe0391",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "33357f93-eef9-5706-a385-769e1ce06edd",
+            "RoleRequirementId": "9ae634df-f53d-51ac-965d-a6370ca77100",
+            "ResponsibilityKind": "Approver",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Emergency release approval remains attached to the role, not a specific operator."
+          },
+          {
+            "Id": "336b931b-01f9-5424-b878-3c8ca4d9e4dc",
+            "RoleRequirementId": "43f568aa-89e8-545c-8069-d057e09ce0c6",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Customer communication owner must review timing and outbound commitments before approval."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "a36c6e6b-13ba-54d8-9d4c-529052e853ac",
+            "ArtifactKind": "Decision",
+            "Title": "Emergency release approval record",
+            "IsRequired": true,
+            "TrustRequirement": "HumanApproved",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 1095,
+            "AllowedFutureUsageSummary": "Reusable for audit, customer follow-up review, and future emergency policy tuning.",
+            "ValidationRequirementSummary": "Must name the approver, rollback trigger, communication owner, and residual risk owner."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "87142cb4-de71-539b-8d91-39c96191fc51",
+            "ArtifactExpectationId": "c0e2fbb6-1f83-5a92-91f5-e0551d504c28"
+          },
+          {
+            "Id": "f682901f-8f41-5679-988e-b189a738dd4f",
+            "ArtifactExpectationId": "676691ef-5f53-5bc3-9792-ac5af2f5013b"
+          }
+        ]
+      },
+      {
+        "Id": "978d1f5f-9be3-5efa-be62-d7cf9d3410c8",
+        "Key": "execute-emergency-rollout",
+        "Title": "Execute emergency rollout and watch telemetry",
+        "Subtitle": "Controlled production action",
+        "Notes": "Roll out the patch inside the approved window while telemetry, shard locks, and customer communication remain actively managed.",
+        "StepKind": "Delivery",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Approved release record, deployment bundle, telemetry checkpoints, and customer message cadence.",
+        "OutputContractSummary": "Executed rollout with explicit telemetry outcome and rollback state.",
+        "EvidenceContractSummary": "Operator notes, telemetry checkpoints, rollback invocation if needed, and customer update timeline.",
+        "DecisionRightsSummary": "Platform engineer may execute only inside the approved window and rollback trigger boundaries.",
+        "ExceptionPolicySummary": "Trigger rollback immediately when shard lock duration, tenant impact, or telemetry drift breaches the approved threshold.",
+        "TargetLeadHours": 2,
+        "DependsOnStepId": "1837d061-0b2b-59bd-963c-e82485c60f55",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1670,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "e236e36f-561e-58f5-b1ec-7d5655cab09b",
+            "DependsOnStepId": "1837d061-0b2b-59bd-963c-e82485c60f55",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "78095815-879e-5314-92d9-a1957ec4217b",
+            "RoleRequirementId": "6f91c085-10ba-5263-8ecf-6c163997cade",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Execution ownership remains with the platform-engineer role until rollout completes or fails."
+          },
+          {
+            "Id": "df0e5f81-a3ee-539e-bcab-a8275fcd07a2",
+            "RoleRequirementId": "01631cba-84cd-5965-9969-029158c88dfd",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Incident commander reviews telemetry and escalation timing throughout the rollout."
+          },
+          {
+            "Id": "bfa8602a-d4e8-5bdd-bfd9-9b9d4203aceb",
+            "RoleRequirementId": "21017d03-46e5-5806-aaa2-3703d5bc1bb9",
+            "ResponsibilityKind": "Backup",
+            "IsRequired": false,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Database specialist remains an explicit fallback for rollback execution."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "2f816d2b-abc5-5c0e-b635-893717005b7f",
+            "ArtifactKind": "Transcript",
+            "Title": "Emergency rollout and telemetry log",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for incident replay and emergency policy tuning.",
+            "ValidationRequirementSummary": "Must capture rollout timing, telemetry checkpoints, and any rollback invocation."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "19545358-2893-53a0-abf9-da2bfa147f16",
+            "ArtifactExpectationId": "a36c6e6b-13ba-54d8-9d4c-529052e853ac"
+          }
+        ]
+      },
+      {
+        "Id": "104e0821-ef26-5a36-ae2f-c1753aa3028d",
+        "Key": "post-incident-review",
+        "Title": "Capture post-incident learning and corrective actions",
+        "Subtitle": "Forensic replay and systemic follow-up",
+        "Notes": "Turn the failed or recovered emergency path into explicit learning about detection, coordination, rollback, and architecture weaknesses.",
+        "StepKind": "End",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Rollout outcome, telemetry record, customer communications, and command timeline.",
+        "OutputContractSummary": "Post-incident review with corrective actions, owner assignments, and simulation updates.",
+        "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
+        "DecisionRightsSummary": "Incident commander owns follow-up assignment while engineering and communications roles retain accountability for their control gaps.",
+        "ExceptionPolicySummary": "Do not close the emergency process while corrective actions remain unnamed or unowned.",
+        "TargetLeadHours": 6,
+        "DependsOnStepId": "978d1f5f-9be3-5efa-be62-d7cf9d3410c8",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1980,
+        "CanvasY": 360,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "e197ad42-7a70-5803-9758-e69da3e6905e",
+            "DependsOnStepId": "978d1f5f-9be3-5efa-be62-d7cf9d3410c8",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "ffc50c9d-ccce-5b10-ba3b-f78d71202c1c",
+            "RoleRequirementId": "01631cba-84cd-5965-9969-029158c88dfd",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "The command role remains accountable until corrective actions have owners."
+          },
+          {
+            "Id": "f9a5fb71-0430-5003-b097-8d6a2f1497dc",
+            "RoleRequirementId": "6f91c085-10ba-5263-8ecf-6c163997cade",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Engineering role reviews technical corrective actions."
+          },
+          {
+            "Id": "4098ebdb-203d-53cb-a3c8-999284d3ce00",
+            "RoleRequirementId": "43f568aa-89e8-545c-8069-d057e09ce0c6",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Customer communication owner reviews trust and communication lessons."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "25d6c0cf-1193-5b6d-bf29-abffb2ef075d",
+            "ArtifactKind": "Decision",
+            "Title": "Post-incident corrective action log",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 1095,
+            "AllowedFutureUsageSummary": "Reusable for simulation packs, response playbook tuning, and recurring-incident analysis.",
+            "ValidationRequirementSummary": "Must capture missing controls, decision latency, and concrete corrective actions with owners."
+          }
+        ],
+        "ArtifactInputs": []
+      }
+    ]
+  },
+  "Warnings": [
+    "Projected from template pack process 'hotfix-rollout'.",
+    "Detailed sidecar metadata remains in the process-template pack files."
+  ],
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection"
+}

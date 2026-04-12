@@ -1,0 +1,33 @@
+flowchart LR
+%% process-key: ai-assisted-change-delivery
+%% definition-doc: processes/ai-assisted-change-delivery/definition.md
+    step_task_intake(["Capture change demand and human acceptance boundary<br/><sub>task-intake</sub><br/><i>AI work starts from a human-owned contract</i>"])
+    step_delegation_design{"Define delegation boundary, allowed tools, and refusal conditions<br/><sub>delegation-design</sub><br/><i>The agent gets a sandbox, not a blank check</i>"}
+    step_agent_execution["Run delegated execution and capture full trace<br/><sub>agent-execution</sub><br/><i>Every automated move must stay reproducible</i>"]
+    step_evaluation_and_benchmarking["Evaluate outputs against benchmark and acceptance evidence<br/><sub>evaluation-and-benchmarking</sub><br/><i>A polished answer is not enough</i>"]
+    step_safety_and_security_review{"Review safety, security, and residual risk<br/><sub>safety-and-security-review</sub><br/><i>The output must be acceptable, not merely functional</i>"}
+    step_controlled_merge_and_learning(["Merge under control and capture learning signal<br/><sub>controlled-merge-and-learning</sub><br/><i>Traceability does not end at approval</i>"])
+    step_task_intake --> step_delegation_design
+    step_delegation_design --> step_agent_execution
+    step_agent_execution --> step_evaluation_and_benchmarking
+    step_evaluation_and_benchmarking --> step_safety_and_security_review
+    step_safety_and_security_review --> step_controlled_merge_and_learning
+%% step-doc: task-intake => processes/ai-assisted-change-delivery/steps/task-intake.md
+%% step-artifact: task-intake => intake-brief
+%% step-artifact: task-intake => acceptance-criteria-pack
+%% step-doc: delegation-design => processes/ai-assisted-change-delivery/steps/delegation-design.md
+%% step-artifact: delegation-design => prompt-package
+%% step-artifact: delegation-design => execution-trace-pack
+%% step-doc: agent-execution => processes/ai-assisted-change-delivery/steps/agent-execution.md
+%% step-artifact: agent-execution => execution-trace-pack
+%% step-artifact: agent-execution => provenance-report
+%% step-doc: evaluation-and-benchmarking => processes/ai-assisted-change-delivery/steps/evaluation-and-benchmarking.md
+%% step-artifact: evaluation-and-benchmarking => evaluation-benchmark-report
+%% step-artifact: evaluation-and-benchmarking => test-evidence-pack
+%% step-artifact: evaluation-and-benchmarking => prompt-package
+%% step-doc: safety-and-security-review => processes/ai-assisted-change-delivery/steps/safety-and-security-review.md
+%% step-artifact: safety-and-security-review => security-review-note
+%% step-artifact: safety-and-security-review => release-readiness-report
+%% step-doc: controlled-merge-and-learning => processes/ai-assisted-change-delivery/steps/controlled-merge-and-learning.md
+%% step-artifact: controlled-merge-and-learning => execution-trace-pack
+%% step-artifact: controlled-merge-and-learning => retrospective-improvement-log
