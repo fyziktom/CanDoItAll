@@ -31,6 +31,11 @@ public sealed class ComponentCatalogService
             "Uses the shared BaseLib button variants, sizes, and tones from `_content/CanDoItAll.Components.BaseLib/css/output.css`.",
             "Prefer `ButtonStyle`, `Variant`, and `Size` before adding page-local button styling."
         ],
+        ["CopyButton"] =
+        [
+            "Uses the shared BaseLib button and inline icon-copy styles from `_content/CanDoItAll.Components.BaseLib/css/output.css`.",
+            "Prefer `DisplayMode`, `Size`, `ButtonStyle`, and `Variant` before adding page-local copy affordances or custom clipboard handlers."
+        ],
         ["PageScaffold"] =
         [
             "Owns page-level spacing and max-width conventions through the shared BaseLib output CSS.",
@@ -93,6 +98,7 @@ public sealed class ComponentCatalogService
         ["TreeViewNodeRow"] = [@"Tailwind\navigation\treeview.css"],
         ["TagEditor"] = [@"Tailwind\forms\tag-editor.css"],
         ["Button"] = [@"Tailwind\controls\buttons.css"],
+        ["CopyButton"] = [@"Tailwind\controls\buttons.css"],
         ["Badge"] = [@"Tailwind\controls\badges.css"],
         ["BadgesGroup"] = [@"Tailwind\controls\badges.css"],
         ["Chip"] = [@"Tailwind\controls\badges.css"],
@@ -313,6 +319,7 @@ public sealed class ComponentCatalogService
         ["Steps"] = "Shared BaseLib sequential progress navigation for wizard-like flows where order matters more than free switching.",
         ["PageHeader"] = "Shared BaseLib page-header component for titles, lead copy, and action context at the top of a workspace.",
         ["Toolbar"] = "Shared BaseLib toolbar component for dense inline actions, filters, and control clusters around a working surface.",
+        ["CopyButton"] = "Shared BaseLib clipboard action for copying a selected input slice or the full nearby value, with text, icon-button, and tiny inline icon variants for obvious copy affordances.",
         ["TreeView"] = "Shared BaseLib tree navigation component for hierarchical exploration and selection.",
         ["EmptyState"] = "Shared BaseLib empty-state component for zero-data, no-selection, and first-run orientation surfaces.",
         ["LoadingState"] = "Shared BaseLib loading-state component for progress and transition surfaces that should feel intentional instead of blank.",
@@ -356,6 +363,16 @@ public sealed class ComponentCatalogService
             "wizard",
             "progress",
             "sequential-navigation"
+        ],
+        ["CopyButton"] =
+        [
+            "clipboard",
+            "copy-action",
+            "inline-action",
+            "link",
+            "path",
+            "hash",
+            "token"
         ],
         ["PageScaffold"] =
         [
@@ -577,6 +594,21 @@ public sealed class ComponentCatalogService
             ],
             [
                 "If several section cards represent alternate views of the same object, promote them into `Tabs` so the page does not grow vertically without limit."
+            ]),
+        ["CopyButton"] = new(
+            [
+                "Copying links, file paths, hashes, tokens, invite codes, commands, and other obvious clipboard targets.",
+                "Inline copy affordances next to a nearby link, input, path, hash, or read-only value where a one-click copy action is expected."
+            ],
+            [
+                "Primary page actions or ambiguous icon-only controls where the copied target is not visually obvious.",
+                "Custom copy wrappers when the shared component can target the nearby element with `TargetElementId` or `TargetSelector`."
+            ],
+            [
+                "Use `CopyButton` automatically for obvious copyable values such as links, paths, hashes, IDs, and tokens instead of building local clipboard logic.",
+                "Default to `DisplayMode=IconOnly` with `Size=ExtraSmall` or `Size=Small` when the copy target is adjacent and self-explanatory.",
+                "Use `DisplayMode=Text`, `TextWithIcon`, or `IconButton` when the control stands alone or the copy target needs more context.",
+                "Let the built-in copied-state check icon provide lightweight confirmation instead of adding extra status chrome for simple copy flows."
             ]),
         ["ListDetailShell"] = new(
             [
