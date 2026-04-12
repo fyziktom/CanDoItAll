@@ -2880,6 +2880,110 @@
     letter-spacing: 0.18em;
     text-transform: uppercase;
   }
+  .cda-copy-button {
+    position: relative;
+  }
+  .cda-copy-button .cda-material-icon {
+    line-height: 1;
+  }
+  .cda-copy-button.cda-copy-button--icon-button {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .cda-copy-button.cda-copy-button--icon-button.cda-copy-button--size-xs {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    padding: 0;
+  }
+  .cda-copy-button.cda-copy-button--icon-button.cda-copy-button--size-sm {
+    min-width: 2rem;
+    min-height: 2rem;
+  }
+  .cda-copy-button.cda-copy-button--icon-button.cda-copy-button--size-md {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+  .cda-copy-button.cda-copy-button--icon-button.cda-copy-button--size-lg {
+    min-width: 3rem;
+    min-height: 3rem;
+  }
+  .cda-copy-button.cda-copy-button--size-xs {
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.72rem;
+  }
+  .cda-copy-button.cda-copy-button--size-xs .cda-material-icon {
+    font-size: 0.95rem;
+  }
+  .cda-copy-button.cda-copy-button--size-sm .cda-material-icon {
+    font-size: 1rem;
+  }
+  .cda-copy-button.cda-copy-button--size-md .cda-material-icon {
+    font-size: 1.1rem;
+  }
+  .cda-copy-button.cda-copy-button--size-lg .cda-material-icon {
+    font-size: 1.25rem;
+  }
+  .cda-copy-button[data-copy-state="copied"] {
+    border-color: var(--cad-tone-success-soft-border);
+    color: var(--cad-tone-success-soft-fg);
+  }
+  .cda-copy-button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--cad-radius-control);
+    background: transparent;
+    color: var(--cad-tone-light-soft-fg);
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+  }
+  .cda-copy-button-icon:hover:not(:disabled) {
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+  .cda-copy-button-icon:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .cda-copy-button-icon:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .cda-copy-button-icon--copied {
+    color: var(--cad-tone-success-soft-fg);
+  }
+  .cda-copy-button__glyph {
+    line-height: 1;
+  }
+  .cda-copy-button-icon.cda-copy-button--size-xs {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .cda-copy-button-icon.cda-copy-button--size-sm {
+    width: 2rem;
+    height: 2rem;
+  }
+  .cda-copy-button-icon.cda-copy-button--size-md {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .cda-copy-button-icon.cda-copy-button--size-lg {
+    width: 3rem;
+    height: 3rem;
+  }
+  .cda-copy-button__glyph.cda-copy-button--size-xs {
+    font-size: 0.95rem;
+  }
+  .cda-copy-button__glyph.cda-copy-button--size-sm {
+    font-size: 1rem;
+  }
+  .cda-copy-button__glyph.cda-copy-button--size-md {
+    font-size: 1.15rem;
+  }
+  .cda-copy-button__glyph.cda-copy-button--size-lg {
+    font-size: 1.3rem;
+  }
   .cda-button--quick {
     height: calc(var(--spacing) * 9);
     width: calc(var(--spacing) * 11);

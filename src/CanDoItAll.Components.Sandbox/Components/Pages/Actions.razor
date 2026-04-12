@@ -10,7 +10,7 @@
                   Frame="@CurrentFrame"
                   ExampleCount="@Examples.Count"
                   HeroTitle="Action hierarchy that stays obvious under pressure."
-                  HeroSummary="The actions page checks primary, secondary, inline, busy, disabled, and long-label states without relying on app-local styling."
+                  HeroSummary="The actions page checks primary, secondary, inline, copy, busy, disabled, and long-label states without relying on app-local styling."
                   DemoTitle="Action treatment"
                   DemoSummary="Primary and inline action surfaces for the current scenario."
                   ScenarioChanged="NavigateScenario"
@@ -20,6 +20,7 @@
             <p>Primary actions need to stand out without drowning adjacent secondary actions.</p>
             <p>Dense rows still need obvious affordances and enough tap target space.</p>
             <p>Busy and disabled states must explain what changed instead of looking broken.</p>
+            <p>Copy affordances should confirm success quickly without turning utility actions into noise.</p>
         </div>
     </Notes>
 
@@ -37,6 +38,101 @@
                     <Button Text="Request changes" ButtonStyle="@(ButtonStyle.Warning)" Variant="@(Variant.Outlined)" Disabled="@IsDisabled" />
                     <Button Text="Archive" ButtonStyle="@(ButtonStyle.Danger)" Variant="@(Variant.Text)" Disabled="@IsDisabled" />
                 </Cluster>
+            </SectionCard>
+
+            <SectionCard Title="Copy actions" Description="Copy utilities should work as full buttons, square icon buttons, and bare icons while confirming success in place.">
+                <Grid Gap="LayoutGap.Large"
+                      Columns="1"
+                      ColumnsLg="2">
+                    <div class="space-y-4">
+                        <FormField Text="Copy source">
+                            <TextBox Value="@CopySourceValue"
+                                     ReadOnly="true"
+                                     Disabled="@IsDisabled"
+                                     id="@CopySourceId"
+                                     data-testid="sandbox-actions-copy-source" />
+                        </FormField>
+
+                        <TextBlock TextStyle="@(TextStyle.Caption)"
+                                   Value="@CopySupportText" />
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <TextBlock TextStyle="@(TextStyle.Subtitle2)"
+                                       Value="Display modes" />
+
+                            <Cluster Gap="LayoutGap.Small">
+                                <CopyButton Text="Copy value"
+                                            CopiedText="Copied"
+                                            TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.Text"
+                                            data-testid="sandbox-actions-copy-text" />
+                                <CopyButton Text="Copy value"
+                                            CopiedText="Copied"
+                                            TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.TextWithIcon"
+                                            data-testid="sandbox-actions-copy-text-icon" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            AriaLabel="Copy current value"
+                                            data-testid="sandbox-actions-copy-icon-button" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                            AriaLabel="Copy current value"
+                                            data-testid="sandbox-actions-copy-icon-only" />
+                            </Cluster>
+                        </div>
+
+                        <div class="space-y-2">
+                            <TextBlock TextStyle="@(TextStyle.Subtitle2)"
+                                       Value="Compact icon sizes" />
+
+                            <Cluster Gap="LayoutGap.Small">
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            Size="CopyButtonSize.ExtraSmall"
+                                            AriaLabel="Copy current value with extra small icon button"
+                                            data-testid="sandbox-actions-copy-icon-button-xs" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            Size="CopyButtonSize.Small"
+                                            AriaLabel="Copy current value with small icon button"
+                                            data-testid="sandbox-actions-copy-icon-button-sm" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            Size="CopyButtonSize.Medium"
+                                            AriaLabel="Copy current value with medium icon button"
+                                            data-testid="sandbox-actions-copy-icon-button-md" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                            Size="CopyButtonSize.ExtraSmall"
+                                            AriaLabel="Copy current value with extra small icon"
+                                            data-testid="sandbox-actions-copy-icon-only-xs" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                            Size="CopyButtonSize.Small"
+                                            AriaLabel="Copy current value with small icon"
+                                            data-testid="sandbox-actions-copy-icon-only-sm" />
+                                <CopyButton TargetElementId="@CopySourceId"
+                                            Disabled="@IsDisabled"
+                                            DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                            Size="CopyButtonSize.Medium"
+                                            AriaLabel="Copy current value with medium icon"
+                                            data-testid="sandbox-actions-copy-icon-only-md" />
+                            </Cluster>
+                        </div>
+                    </div>
+                </Grid>
             </SectionCard>
 
             <SectionCard Title="Inline review actions" Description="Action rows often live next to dense metadata and need to remain coherent.">
@@ -68,6 +164,7 @@
 @code {
     private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Actions);
     private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Actions);
+    private const string CopySourceId = "sandbox-actions-copy-source-input";
 
     private bool IsDisabled => CurrentScenario == SandboxScenarioKey.DisabledState;
 
@@ -76,6 +173,17 @@
     private string PrimaryText => CurrentScenario == SandboxScenarioKey.LongText
         ? "Approve shared component update and publish the acceptance proof bundle"
         : "Approve update";
+
+    private string CopySourceValue => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "pkg-review://navigation-polish/approval-window?owner=design-system&lane=dense",
+        SandboxScenarioKey.LongText => "https://sandbox.candoitall.dev/review/component-proof/copy-button?request=approve-shared-component-update-and-publish-acceptance-evidence",
+        _ => "review-token-4Q26-copy-button"
+    };
+
+    private string CopySupportText => IsDisabled
+        ? "This scenario locks the source and every copy affordance so the disabled treatment can be reviewed."
+        : "Select part of the read-only input to copy only that slice; otherwise the full value is copied.";
 
     private IReadOnlyList<ActionRow> ReviewItems => CurrentScenario == SandboxScenarioKey.DenseContent
         ? DenseReviewItems
