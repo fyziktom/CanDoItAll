@@ -22,7 +22,7 @@
                     Click="HandleCloseAsync" />
         </HeaderActions>
         <ChildContent>
-            <div class="h-[78vh] min-h-[42rem]">
+            <div class="flex h-full min-h-0 min-w-0 overflow-hidden">
                 <ListDetailShell ListPaneWidth="28rem"
                                  ListPaneClass="h-full min-h-0"
                                  DetailPaneClass="h-full min-h-0">
@@ -47,7 +47,9 @@
                     </ListHeader>
 
                     <ListContent>
-                        <div class="h-full overflow-y-auto pr-1">
+                        <div class="h-full overflow-x-hidden overflow-y-auto pr-1"
+                             style="scrollbar-gutter:stable;"
+                             data-testid="processes-template-library-list-scroll">
                             @if (CurrentItems.Count == 0)
                             {
                                 <EmptyState Eyebrow="No templates"
@@ -148,7 +150,9 @@
                     </DetailHeader>
 
                     <DetailContent>
-                        <div class="h-full overflow-y-auto pr-1">
+                        <div class="h-full overflow-x-hidden overflow-y-auto pr-1"
+                             style="scrollbar-gutter:stable;"
+                             data-testid="processes-template-library-detail-scroll">
                             @if (selectedPreview is null)
                             {
                                 <EmptyState Eyebrow="Preview unavailable"
@@ -158,8 +162,10 @@
                             else
                             {
                                 <Grid Gap="LayoutGap.Large"
-                                      ColumnTemplateXl="minmax(0,1.2fr) minmax(19rem,0.8fr)">
-                                    <Stack GapScale="LayoutGap.Medium">
+                                      ColumnTemplateXl="minmax(0,1.2fr) minmax(19rem,0.8fr)"
+                                      Class="min-h-0 min-w-0">
+                                    <Stack GapScale="LayoutGap.Medium"
+                                           Class="min-h-0 min-w-0">
                                         <SecondaryTabs Items="PreviewTabs"
                                                        SelectedKey="@selectedPreviewTabKey"
                                                        SelectedKeyChanged="HandlePreviewTabChangedAsync" />
@@ -246,8 +252,9 @@
                                         }
                                     </Stack>
 
-                                    <Stack GapScale="LayoutGap.Medium">
-                                        <PanelCard>
+                                    <Stack GapScale="LayoutGap.Medium"
+                                           Class="min-h-0 min-w-0 overflow-hidden">
+                                        <PanelCard Class="min-w-0 overflow-hidden">
                                             <Stack GapScale="LayoutGap.Small">
                                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Structure" />
                                                 <TextBlock TextStyle="TextStyle.H5" Value="Definition tree" />

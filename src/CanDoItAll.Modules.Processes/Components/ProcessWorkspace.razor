@@ -2,7 +2,7 @@
 
 <PageTitle>@PageTitleText</PageTitle>
 
-<PageScaffold>
+<PageScaffold FillHeight="true">
     <Header>
         <PageHeader Eyebrow="@PageEyebrow"
                     Title="@PageTitleText"
@@ -20,33 +20,38 @@
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Definitions"
-                         Value="@definitions.Count.ToString()"
-                         HelperText="Persisted process definitions." />
-            <SummaryTile Label="Visible"
-                         Value="@FilteredDefinitions.Count.ToString()"
-                         HelperText="Definitions matching the current search."
-                         Tone="info" />
-            <SummaryTile Label="Active runs"
-                         Value="@definitions.Sum(item => item.ActiveRunCount).ToString()"
-                         HelperText="Runs still active across the visible library." />
-            <SummaryTile Label="Improvements"
-                         Value="@analytics.ImprovementCandidateCount.ToString()"
-                         HelperText="Improvement signals linked to the current scope."
-                         Tone="warning" />
-        </SummaryTiles>
+        <Stack GapScale="LayoutGap.Large"
+               Class="flex-1 min-h-0"
+               data-testid="processes-workspace-shell">
+            <SummaryTiles>
+                <SummaryTile Label="Definitions"
+                             Value="@definitions.Count.ToString()"
+                             HelperText="Persisted process definitions." />
+                <SummaryTile Label="Visible"
+                             Value="@FilteredDefinitions.Count.ToString()"
+                             HelperText="Definitions matching the current search."
+                             Tone="info" />
+                <SummaryTile Label="Active runs"
+                             Value="@definitions.Sum(item => item.ActiveRunCount).ToString()"
+                             HelperText="Runs still active across the visible library." />
+                <SummaryTile Label="Improvements"
+                             Value="@analytics.ImprovementCandidateCount.ToString()"
+                             HelperText="Improvement signals linked to the current scope."
+                             Tone="warning" />
+            </SummaryTiles>
 
-        @if (!string.IsNullOrWhiteSpace(message))
-        {
-            <SurfaceCard Soft="true"
-                         data-testid="processes-message-card">
-                <p class="cda-eyebrow">Workspace status</p>
-                <p class="mt-2 text-sm leading-6 @(isError ? "text-rose-700" : "text-slate-700")">@message</p>
-            </SurfaceCard>
-        }
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <SurfaceCard Soft="true"
+                             data-testid="processes-message-card">
+                    <p class="cda-eyebrow">Workspace status</p>
+                    <p class="mt-2 text-sm leading-6 @(isError ? "text-rose-700" : "text-slate-700")">@message</p>
+                </SurfaceCard>
+            }
 
-        <ListDetailShell ListPaneWidth="28rem">
+            <ListDetailShell ListPaneWidth="28rem"
+                             ListPaneClass="h-full min-h-0"
+                             DetailPaneClass="h-full min-h-0">
             <ListHeader>
                 <ListPanelHeader Title="Process definitions"
                                  Description="Keep the process contract, role design, runtime runs, and governance artifacts inside one workspace instead of splitting authoring and execution into different tools."
@@ -71,46 +76,50 @@
                 </ListPanelHeader>
             </ListHeader>
 
-            <ListContent>
-                @if (FilteredDefinitions.Count == 0)
-                {
-                    <EmptyState Eyebrow="No definitions"
-                                Title="Create the first process definition"
-                                Description="Role-first process definitions appear here after they have been saved. Use the detail pane to define the contract, roles, steps, runtime expectations, and import-export envelope.">
-                        <Actions>
-                            <Button Text="New definition"
-                                    Click="CreateNewAsync" />
-                            <Button Text="Templates"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Click="OpenTemplateLibraryAsync"
-                                    data-testid="processes-empty-templates-button" />
-                        </Actions>
-                    </EmptyState>
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var definition in FilteredDefinitions)
+                <ListContent>
+                    <div class="h-full overflow-y-auto pr-1"
+                         style="scrollbar-gutter:stable;"
+                         data-testid="processes-definition-list-scroll">
+                        @if (FilteredDefinitions.Count == 0)
                         {
-                            <SelectionListItem Title="@definition.Name"
-                                               Eyebrow="@(string.IsNullOrWhiteSpace(definition.ProjectName) ? "Global process" : definition.ProjectName)"
-                                               Meta="@BuildDefinitionSummary(definition)"
-                                               Summary="@definition.Summary"
-                                               IsSelected="@(selectedProcessId == definition.Id)"
-                                               OnSelect="@(() => SelectDefinitionAsync(definition.Id))">
-                                <Status>
-                                    <Cluster Gap="LayoutGap.Small">
-                                        <StatusBadge Tone="@ResolveDefinitionStatusTone(definition.Status)"
-                                                     Text="@definition.Status.ToString()" />
-                                        <StatusBadge Tone="info"
-                                                     Text="@($"{definition.ActiveRunCount} active run(s)")" />
-                                    </Cluster>
-                                </Status>
-                            </SelectionListItem>
+                            <EmptyState Eyebrow="No definitions"
+                                        Title="Create the first process definition"
+                                        Description="Role-first process definitions appear here after they have been saved. Use the detail pane to define the contract, roles, steps, runtime expectations, and import-export envelope.">
+                                <Actions>
+                                    <Button Text="New definition"
+                                            Click="CreateNewAsync" />
+                                    <Button Text="Templates"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="OpenTemplateLibraryAsync"
+                                            data-testid="processes-empty-templates-button" />
+                                </Actions>
+                            </EmptyState>
                         }
-                    </Stack>
-                }
-            </ListContent>
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Medium">
+                                @foreach (var definition in FilteredDefinitions)
+                                {
+                                    <SelectionListItem Title="@definition.Name"
+                                                       Eyebrow="@(string.IsNullOrWhiteSpace(definition.ProjectName) ? "Global process" : definition.ProjectName)"
+                                                       Meta="@BuildDefinitionSummary(definition)"
+                                                       Summary="@definition.Summary"
+                                                       IsSelected="@(selectedProcessId == definition.Id)"
+                                                       OnSelect="@(() => SelectDefinitionAsync(definition.Id))">
+                                        <Status>
+                                            <Cluster Gap="LayoutGap.Small">
+                                                <StatusBadge Tone="@ResolveDefinitionStatusTone(definition.Status)"
+                                                             Text="@definition.Status.ToString()" />
+                                                <StatusBadge Tone="info"
+                                                             Text="@($"{definition.ActiveRunCount} active run(s)")" />
+                                            </Cluster>
+                                        </Status>
+                                    </SelectionListItem>
+                                }
+                            </Stack>
+                        }
+                    </div>
+                </ListContent>
 
             <DetailHeader>
                 <Stack GapScale="LayoutGap.Medium">
@@ -139,12 +148,17 @@
                 </Stack>
             </DetailHeader>
 
-            <DetailContent>
-                <Tabs SelectedIndex="@SelectedDetailTabIndex"
-                      SelectedIndexChanged="HandleDetailTabChanged"
-                      Variant="@(TabsVariant.WorkspaceSecondary)"
-                      BorderMode="@(TabsBorderMode.Soft)"
-                      AriaLabel="Process workspace detail panels">
+                <DetailContent>
+                    <Tabs SelectedIndex="@SelectedDetailTabIndex"
+                          SelectedIndexChanged="HandleDetailTabChanged"
+                          Variant="@(TabsVariant.WorkspaceSecondary)"
+                          BorderMode="@(TabsBorderMode.Soft)"
+                          OverflowMode="@(TabsOverflowMode.Scroll)"
+                          PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
+                          FillHeight="true"
+                          Class="h-full min-h-0 w-full min-w-0"
+                          AriaLabel="Process workspace detail panels"
+                          data-testid="processes-detail-tabs">
                     <TabItems>
                         <TabsItem Text="Definition">
                         <ProcessDefinitionForm Model="@editor"
@@ -959,9 +973,10 @@
                         </SectionCard>
                         </TabsItem>
                     </TabItems>
-                </Tabs>
-            </DetailContent>
-        </ListDetailShell>
+                    </Tabs>
+                </DetailContent>
+            </ListDetailShell>
+        </Stack>
     </ChildContent>
 </PageScaffold>
 

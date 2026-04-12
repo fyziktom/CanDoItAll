@@ -4,7 +4,8 @@
 @using MermaidJS.Blazor
 @using Microsoft.AspNetCore.Components.Web
 
-<SurfaceCard data-testid="@TestId">
+<SurfaceCard Class="min-w-0"
+             data-testid="@TestId">
     <Split Gap="LayoutGap.Medium"
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween"
@@ -32,8 +33,12 @@
         </Cluster>
     </Split>
 
-    <div class="mt-4 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50/70">
-        <div class="min-h-[28rem] overflow-hidden"
+    <div class="relative mt-4 min-w-0 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50/70"
+         style="contain:layout paint;"
+         data-testid="@($"{TestId}-frame")">
+        <div class="relative min-h-[28rem] min-w-0 overflow-hidden"
+             style="contain:layout paint;"
+             data-testid="@($"{TestId}-clip")"
              @onmousedown="HandleMouseDown"
              @onmousemove="HandleMouseMove"
              @onmouseup="HandleMouseUp"
@@ -41,10 +46,11 @@
              @onwheel="HandleWheel"
              @onwheel:preventDefault="true"
              @onmousedown:preventDefault="true">
-            <div class="flex min-h-[28rem] items-center justify-center"
+            <div class="flex min-h-[28rem] min-w-0 items-center justify-center overflow-hidden"
                  style="touch-action:none;">
                 <div class="@ViewportCss"
-                     style="@ViewportStyle">
+                     style="@ViewportStyle"
+                     data-testid="@($"{TestId}-viewport")">
                     <MermaidDiagram Definition="@Definition" />
                 </div>
             </div>
@@ -78,11 +84,11 @@
 
     private string ViewportCss
         => isDragging
-            ? "origin-center cursor-grabbing select-none"
-            : "origin-center cursor-grab select-none";
+            ? "inline-flex shrink-0 origin-center cursor-grabbing select-none"
+            : "inline-flex shrink-0 origin-center cursor-grab select-none";
 
     private string ViewportStyle
-        => $"transform: translate({offsetX}px, {offsetY}px) scale({scale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}); transform-origin: center center;";
+        => $"transform: translate({offsetX}px, {offsetY}px) scale({scale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}); transform-origin: center center; will-change:transform;";
 
     private Task ResetView()
     {

@@ -8,7 +8,7 @@ public sealed partial class AppSmokeTests
     public async Task Process_management_template_library_flows_are_validated_in_browser()
     {
         var repoRoot = GetRepoRoot();
-        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-template-library");
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-workspace-containment");
         ResetDirectory(artifactsDir);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -34,6 +34,9 @@ public sealed partial class AppSmokeTests
         }
 
         await page.GetByTestId("processes-new-definition-button").ClickAsync();
+        await page.GetByTestId("processes-workspace-shell").WaitForAsync();
+        await page.GetByTestId("processes-definition-list-scroll").WaitForAsync();
+        await page.GetByTestId("processes-detail-tabs").WaitForAsync();
         var definitionStepsTab = page.GetByRole(AriaRole.Tab, new() { Name = "Steps", Exact = true });
         await definitionStepsTab.WaitForAsync();
         await definitionStepsTab.ClickAsync();
@@ -42,12 +45,18 @@ public sealed partial class AppSmokeTests
         var firstStepCard = page.GetByTestId("processes-step-card").First;
         await firstStepCard.WaitForAsync();
         await firstStepCard.Locator("input").Nth(1).FillAsync("Template artifact target");
+        await page.GetByTestId("processes-workspace-shell").ScreenshotAsync(new()
+        {
+            Path = Path.Combine(artifactsDir, "01-processes-workspace-shell.png")
+        });
 
         await page.GetByTestId("processes-templates-button").WaitForAsync();
         await page.GetByTestId("processes-templates-button").ClickAsync();
 
         var templateDialog = page.GetByTestId("processes-template-library-dialog");
         await templateDialog.WaitForAsync();
+        await page.GetByTestId("processes-template-library-list-scroll").WaitForAsync();
+        await page.GetByTestId("processes-template-library-detail-scroll").WaitForAsync();
         await templateDialog.GetByPlaceholder("Search templates, roles, artifacts, governance, or evidence").FillAsync("AI-assisted");
         await page.GetByTestId("processes-template-library-item-ai-assisted-change-delivery").WaitForAsync();
         await page.GetByTestId("processes-template-library-item-ai-assisted-change-delivery").ClickAsync();
@@ -56,7 +65,7 @@ public sealed partial class AppSmokeTests
 
         await templateDialog.ScreenshotAsync(new()
         {
-            Path = Path.Combine(artifactsDir, "01-template-library-process-preview.png")
+            Path = Path.Combine(artifactsDir, "02-template-library-dialog.png")
         });
 
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "Markdown", Exact = true }).ClickAsync();
@@ -65,7 +74,8 @@ public sealed partial class AppSmokeTests
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "Diagrams", Exact = true }).ClickAsync();
         var flowchartDiagram = page.GetByTestId("processes-template-library-diagram-flowchart");
         await flowchartDiagram.WaitForAsync();
-        var flowchartViewport = flowchartDiagram.Locator("div[style*='transform-origin: center center']").First;
+        var flowchartViewport = page.GetByTestId("processes-template-library-diagram-flowchart-viewport");
+        var flowchartClip = page.GetByTestId("processes-template-library-diagram-flowchart-clip");
         var styleBeforeZoom = await flowchartViewport.GetAttributeAsync("style");
         Assert.False(string.IsNullOrWhiteSpace(styleBeforeZoom));
         await flowchartDiagram.GetByRole(AriaRole.Button, new() { Name = "+", Exact = true }).ClickAsync();
@@ -73,16 +83,41 @@ public sealed partial class AppSmokeTests
         var styleAfterZoom = await flowchartViewport.GetAttributeAsync("style");
         Assert.False(string.IsNullOrWhiteSpace(styleAfterZoom));
         Assert.NotEqual(styleBeforeZoom, styleAfterZoom);
+
+        var containmentProof = await page.EvaluateAsync<MermaidContainmentProof>(
+            @"() => {
+                const clip = document.querySelector('[data-testid=""processes-template-library-diagram-flowchart-clip""]');
+                const viewport = document.querySelector('[data-testid=""processes-template-library-diagram-flowchart-viewport""]');
+                const clipStyle = clip ? getComputedStyle(clip) : null;
+                const clipRect = clip ? clip.getBoundingClientRect() : null;
+                const viewportRect = viewport ? viewport.getBoundingClientRect() : null;
+                return {
+                    overflowX: clipStyle?.overflowX ?? '',
+                    overflowY: clipStyle?.overflowY ?? '',
+                    clipWidth: clipRect?.width ?? 0,
+                    clipHeight: clipRect?.height ?? 0,
+                    viewportWidth: viewportRect?.width ?? 0,
+                    viewportHeight: viewportRect?.height ?? 0
+                };
+            }");
+        Assert.NotNull(containmentProof);
+        Assert.Equal("hidden", containmentProof!.OverflowX);
+        Assert.Equal("hidden", containmentProof.OverflowY);
+        Assert.True(containmentProof.ClipWidth > 0);
+        Assert.True(containmentProof.ClipHeight > 0);
+        Assert.True(containmentProof.ViewportWidth > 0);
+        Assert.True(containmentProof.ViewportHeight > 0);
+
         await page.GetByTestId("processes-template-library-diagram-flowchart").ScreenshotAsync(new()
         {
-            Path = Path.Combine(artifactsDir, "02-template-library-mermaid-preview.png")
+            Path = Path.Combine(artifactsDir, "03-template-library-mermaid-contained.png")
         });
 
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "JSON", Exact = true }).ClickAsync();
         await page.GetByTestId("processes-template-library-json-definition-json").WaitForAsync();
         await page.GetByTestId("processes-template-library-json-definition-json").ScreenshotAsync(new()
         {
-            Path = Path.Combine(artifactsDir, "03-template-library-json-preview.png")
+            Path = Path.Combine(artifactsDir, "04-template-library-json-preview.png")
         });
 
         var rolesTab = page.GetByRole(AriaRole.Tab, new() { Name = "Roles", Exact = true });
@@ -109,7 +144,7 @@ public sealed partial class AppSmokeTests
 
         await page.Locator(".rz-notification").First.ScreenshotAsync(new()
         {
-            Path = Path.Combine(artifactsDir, "04-template-library-notification-over-modal.png")
+            Path = Path.Combine(artifactsDir, "05-template-library-notification-over-modal.png")
         });
 
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "Processes", Exact = true }).ClickAsync();
@@ -143,7 +178,7 @@ public sealed partial class AppSmokeTests
         Assert.Contains("Artifact added", artifactNotificationText, StringComparison.OrdinalIgnoreCase);
         await templateDialog.ScreenshotAsync(new()
         {
-            Path = Path.Combine(artifactsDir, "05-template-library-role-and-artifact-imports.png")
+            Path = Path.Combine(artifactsDir, "06-template-library-role-and-artifact-imports.png")
         });
 
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
@@ -160,5 +195,20 @@ public sealed partial class AppSmokeTests
         public int NotificationZIndex { get; set; }
 
         public int DialogZIndex { get; set; }
+    }
+
+    private sealed class MermaidContainmentProof
+    {
+        public string OverflowX { get; set; } = string.Empty;
+
+        public string OverflowY { get; set; } = string.Empty;
+
+        public double ClipWidth { get; set; }
+
+        public double ClipHeight { get; set; }
+
+        public double ViewportWidth { get; set; }
+
+        public double ViewportHeight { get; set; }
     }
 }

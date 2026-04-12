@@ -32,6 +32,34 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Workspace_shell_uses_internal_scroll_regions_for_definition_list_and_detail_tabs()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Containment workspace project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workspace-visible process", cut.Markup);
+            Assert.NotNull(cut.Find("[data-testid='processes-workspace-shell']"));
+        });
+
+        var definitionListScroll = cut.Find("[data-testid='processes-definition-list-scroll']");
+        Assert.Contains("h-full", definitionListScroll.ClassName, StringComparison.Ordinal);
+        Assert.Contains("overflow-y-auto", definitionListScroll.ClassName, StringComparison.Ordinal);
+
+        var detailTabs = cut.Find("[data-testid='processes-detail-tabs']");
+        Assert.Contains("cad-tabs--fill-height", detailTabs.ClassName, StringComparison.Ordinal);
+        Assert.Contains("cad-tabs--panel-overflow-auto", detailTabs.ClassName, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Steps_canvas_toolbar_switches_between_authoring_and_delete_modes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -627,6 +655,44 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Templates_dialog_uses_internal_scroll_regions_and_bounded_mermaid_viewport_markup()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template containment project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-list-scroll']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-detail-scroll']"));
+        });
+
+        var listScroll = cut.Find("[data-testid='processes-template-library-list-scroll']");
+        Assert.Contains("h-full", listScroll.ClassName, StringComparison.Ordinal);
+        Assert.Contains("overflow-y-auto", listScroll.ClassName, StringComparison.Ordinal);
+
+        var detailScroll = cut.Find("[data-testid='processes-template-library-detail-scroll']");
+        Assert.Contains("h-full", detailScroll.ClassName, StringComparison.Ordinal);
+        Assert.Contains("overflow-y-auto", detailScroll.ClassName, StringComparison.Ordinal);
+
+        await SetTemplateLibraryPreviewTabAsync(cut, "diagrams");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-diagram-flowchart-clip']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-diagram-flowchart-viewport']"));
+        });
+    }
+
+    [Fact]
     public async Task Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -927,6 +993,32 @@ public sealed class ProcessWorkspaceTests
                 "artifacts" => "Add to my artifacts",
                 _ => "Add to my processes"
             }, refreshedDialog.Markup);
+        });
+    }
+
+    private static async Task SetTemplateLibraryPreviewTabAsync(IRenderedComponent<ProcessWorkspace> cut, string key)
+    {
+        var dialog = cut.FindComponent<ProcessTemplateLibraryDialog>();
+        var method = typeof(ProcessTemplateLibraryDialog).GetMethod("HandlePreviewTabChangedAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(dialog.Instance, [key]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(key switch
+            {
+                "diagrams" => "Mermaid",
+                "markdown" => "Markdown",
+                "json" => "JSON",
+                _ => "Overview"
+            }, cut.Markup);
         });
     }
 
