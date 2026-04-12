@@ -106,6 +106,14 @@
     box-shadow: var(--cad-shadow-soft);
   }
 
+  .cda-summary-tile--compact {
+    @apply p-4;
+  }
+
+  .cda-summary-tile--compact .cda-eyebrow {
+    @apply text-[11px] tracking-[0.18em];
+  }
+
   .cda-summary-tile--tone-info {
     border-color: var(--cad-tone-info-soft-border);
     background: color-mix(in srgb, var(--cad-tone-info-soft-bg) 72%, var(--cad-color-surface) 28%);
@@ -136,20 +144,16 @@
     color: var(--cad-color-text-strong);
   }
 
-  .cda-summary-tile__label-row {
-    @apply flex items-center gap-2;
-  }
-
-  .cda-summary-tile__help {
-    @apply inline-flex items-center;
-  }
-
-  .cda-summary-tile__help-toggle {
-    @apply shrink-0;
+  .cda-summary-tile--compact .cda-summary-tile__value {
+    @apply mt-2 text-xl;
   }
 
   .cda-summary-tile__helper {
     @apply mt-2 text-sm leading-6;
     color: var(--cad-color-text-muted);
+  }
+
+  .cda-summary-tile--compact .cda-summary-tile__helper {
+    @apply mt-1 text-xs leading-5;
   }
 }

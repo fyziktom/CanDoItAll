@@ -11,13 +11,23 @@
                 }
 
                 <div class="cw-stage-header-row">
-                    <div class="cw-stage-heading">
-                        <div class="cw-stage-title-row">
-                            <h2 class="cw-stage-title">@Title</h2>
-                            @HeaderActions
-                        </div>
-                        @if (!string.IsNullOrWhiteSpace(Description))
-                        {
+                        <div class="cw-stage-heading">
+                            <div class="cw-stage-title-row">
+                                <h2 class="cw-stage-title">@Title</h2>
+                                @if (HasHelp)
+                                {
+                                    <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                                 OpenOnHover="true"
+                                                 AriaLabel="@ResolvedHelpAriaLabel"
+                                                 Title="@ResolvedHelpAriaLabel"
+                                                 Heading="@ResolvedHelpHeading"
+                                                 Body="@(HelpText!)" />
+                                }
+                                @HeaderActions
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(Description))
+                            {
                             <p class="cw-stage-description">@Description</p>
                         }
                     </div>
@@ -67,6 +77,12 @@
     public string Description { get; set; } = string.Empty;
 
     [Parameter]
+    public string? HelpText { get; set; }
+
+    [Parameter]
+    public string? HelpHeading { get; set; }
+
+    [Parameter]
     public RenderFragment? HeaderActions { get; set; }
 
     [Parameter]
@@ -80,6 +96,12 @@
 
     [Parameter]
     public RenderFragment? Supporting { get; set; }
+
+    private bool HasHelp => !string.IsNullOrWhiteSpace(HelpText);
+
+    private string ResolvedHelpHeading => string.IsNullOrWhiteSpace(HelpHeading) ? Title : HelpHeading;
+
+    private string ResolvedHelpAriaLabel => $"Show help for {Title}";
 }
 
 

@@ -6,7 +6,7 @@
 
 <SurfaceCard Class="min-w-0"
              data-testid="@TestId">
-    <Split Gap="LayoutGap.Medium"
+    <Split Gap="LayoutGap.Small"
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween"
            Wrap="FlexWrap.Wrap">
@@ -33,10 +33,10 @@
         </Cluster>
     </Split>
 
-    <div class="relative mt-4 min-w-0 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50/70"
+    <div class="relative mt-3 min-w-0 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50/70"
          style="contain:layout paint;"
          data-testid="@($"{TestId}-frame")">
-        <div class="relative min-h-[28rem] min-w-0 overflow-hidden"
+        <div class="relative min-h-[20rem] min-w-0 overflow-hidden"
              style="contain:layout paint;"
              data-testid="@($"{TestId}-clip")"
              @onmousedown="HandleMouseDown"
@@ -46,7 +46,7 @@
              @onwheel="HandleWheel"
              @onwheel:preventDefault="true"
              @onmousedown:preventDefault="true">
-            <div class="flex min-h-[28rem] min-w-0 items-center justify-center overflow-hidden"
+            <div class="flex min-h-[20rem] min-w-0 items-center justify-center overflow-hidden"
                  style="touch-action:none;">
                 <div class="@ViewportCss"
                      style="@ViewportStyle"

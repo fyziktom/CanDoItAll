@@ -76,7 +76,7 @@ public sealed class ProcessWorkspaceTests
         {
             Assert.Contains("Workspace-visible process", cut.Markup);
             Assert.NotNull(cut.Find("button[aria-label='Show help for Definitions']"));
-            Assert.NotNull(cut.Find("button[aria-label='Show process definitions help']"));
+            Assert.NotNull(cut.Find("button[aria-label='Show help for Process definitions']"));
             Assert.NotNull(cut.Find("button[aria-label='Show process workspace help']"));
         });
 

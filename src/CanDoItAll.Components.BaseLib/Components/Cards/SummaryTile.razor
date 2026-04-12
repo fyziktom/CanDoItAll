@@ -2,10 +2,10 @@
 <div class="@ResolveCssClass()">
     @if (ShouldRenderHelperTooltip)
     {
-        <div class="cda-summary-tile__label-row">
-            <p class="cda-eyebrow">@Label</p>
-            <HelpPopover RootClass="@TooltipRootClass"
-                         ToggleClass="@TooltipToggleClass"
+        <div class="inline-flex max-w-full flex-nowrap items-center gap-2">
+            <p class="cda-eyebrow whitespace-nowrap">@Label</p>
+            <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                         ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact shrink-0"
                          OpenOnHover="true"
                          AriaLabel="@($"Show help for {Label}")"
                          Title="@($"Show help for {Label}")"
@@ -26,9 +26,6 @@
 </div>
 
 @code {
-    private const string TooltipRootClass = "pf-help-popover cda-summary-tile__help";
-    private const string TooltipToggleClass = "pf-help-popover__toggle pf-help-popover__toggle--compact cda-summary-tile__help-toggle";
-
     [Parameter, EditorRequired]
     public string Label { get; set; } = string.Empty;
 
@@ -43,6 +40,9 @@
 
     [Parameter]
     public string Tone { get; set; } = "neutral";
+
+    [Parameter]
+    public bool Compact { get; set; }
 
     private bool HasHelperText => !string.IsNullOrWhiteSpace(HelperText);
 
@@ -63,7 +63,8 @@
             _ => string.Empty
         };
 
-        return $"cda-summary-tile {toneClass}".TrimEnd();
+        var compactClass = Compact ? "cda-summary-tile--compact" : string.Empty;
+        return $"cda-summary-tile {toneClass} {compactClass}".TrimEnd();
     }
 }
 

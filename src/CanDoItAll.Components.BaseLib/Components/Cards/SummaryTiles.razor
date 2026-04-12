@@ -1,11 +1,28 @@
 @namespace CanDoItAll.Components.BaseLib
-<Grid Gap="LayoutGap.Medium"
-      ColumnsSm="2"
-      ColumnsXl="4">
+<Grid Gap="@GapScale"
+      ColumnsSm="@ColumnsSm"
+      ColumnsMd="@ColumnsMd"
+      ColumnsLg="@ColumnsLg"
+      ColumnsXl="@ColumnsXl">
     @ChildContent
 </Grid>
 
 @code {
+    [Parameter]
+    public LayoutGap GapScale { get; set; } = LayoutGap.Medium;
+
+    [Parameter]
+    public int? ColumnsSm { get; set; } = 2;
+
+    [Parameter]
+    public int? ColumnsMd { get; set; }
+
+    [Parameter]
+    public int? ColumnsLg { get; set; }
+
+    [Parameter]
+    public int? ColumnsXl { get; set; } = 4;
+
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 }

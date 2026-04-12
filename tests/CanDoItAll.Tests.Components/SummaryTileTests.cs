@@ -48,7 +48,7 @@ public sealed class SummaryTileTests
 
         Assert.DoesNotContain("Persisted process definitions.", cut.Markup);
 
-        cut.Find(".cda-summary-tile__help")
+        cut.Find(".pf-help-popover")
             .TriggerEvent("onmouseenter", new MouseEventArgs());
 
         cut.WaitForAssertion(() => Assert.Contains("Persisted process definitions.", cut.Markup));
