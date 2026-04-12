@@ -6,6 +6,8 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessTemplatePackLoader
 {
+    private const string RelativePackRoot = "output/process-template-pack";
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
@@ -184,6 +186,8 @@ public sealed class ProcessTemplatePackLoader
             }
         }
 
-        throw new InvalidOperationException("Unable to locate output/process-template-pack/manifest.json from the current execution root.");
+        throw new InvalidOperationException(
+            $"Unable to locate {RelativePackRoot}/manifest.json from the current execution root. " +
+            $"Configure {ProcessTemplatePackOptions.SectionName}:PackRoot when the template pack lives outside the repository default layout.");
     }
 }

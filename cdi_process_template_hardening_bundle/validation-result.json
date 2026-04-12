@@ -1,22 +1,22 @@
 {
-  "GeneratedAtUtc": "2026-04-11T22:19:11Z",
+  "GeneratedAtUtc": "2026-04-12T01:26:47.7975434Z",
   "BundleKey": "cdi-process-template-completion-and-architecture-hardening",
   "BundleValidator": {
     "ProcessCount": 9,
-    "StepCount": 54,
+    "StepCount": 58,
     "BaselineScenarioCount": 5,
-    "DependencyCount": 52,
-    "ArtifactInputCount": 20,
+    "DependencyCount": 56,
+    "ArtifactInputCount": 28,
     "WarningCount": 0,
     "Warnings": [],
     "ErrorCount": 0,
     "Errors": []
   },
   "CurrentRepoAuditAgainstOldManifest": {
-    "Ok": false,
+    "Ok": true,
     "EntryCount": 501,
-    "MissingCount": 477
+    "MissingCount": 0
   },
   "SourceDriftCount": 5,
-  "DotnetExecutedInContainer": false
+  "DotnetExecutedInContainer": true
 }

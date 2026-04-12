@@ -140,18 +140,18 @@ public sealed class ProcessesServiceIntegrationTests
         var projectId = await CreateProjectAsync(projectsService, "Seeded process project");
         var globalSeedResult = await seedService.SeedBaselineAsync();
 
-        Assert.True(globalSeedResult.IsSuccess);
+        Assert.True(globalSeedResult.IsSuccess, string.Join(" | ", globalSeedResult.Errors.Select(error => error.Message)));
 
         var seedResult = await seedService.SeedBaselineAsync(projectId);
 
-        Assert.True(seedResult.IsSuccess);
+        Assert.True(seedResult.IsSuccess, string.Join(" | ", seedResult.Errors.Select(error => error.Message)));
         Assert.NotNull(seedResult.Value);
         Assert.True(seedResult.Value!.SeededDefinitionIds.Count >= 5);
         Assert.True(seedResult.Value.SeededRunIds.Count >= 5);
 
         var repeatedSeedResult = await seedService.SeedBaselineAsync(projectId);
 
-        Assert.True(repeatedSeedResult.IsSuccess);
+        Assert.True(repeatedSeedResult.IsSuccess, string.Join(" | ", repeatedSeedResult.Errors.Select(error => error.Message)));
 
         var definitions = await processesService.ListDefinitionsAsync(projectId);
         Assert.Equal(5, definitions.Count);
@@ -166,7 +166,7 @@ public sealed class ProcessesServiceIntegrationTests
 
         var softwareDeliveryRun = Assert.Single(
             await processesService.ListRunsAsync(softwareDeliveryDefinition.Id, projectId),
-            item => item.Name == "Multi-team software delivery and release governance / Q3 billing capability");
+            item => item.Name == "Multi-team software delivery and release governance / billing export capability");
         var softwareDeliveryStepRuns = await processesService.ListStepRunsAsync(softwareDeliveryRun.Id);
         var softwareDeliveryArtifacts = await processesService.ListArtifactsAsync(softwareDeliveryRun.Id);
         var softwareDeliveryConformance = await processesService.ListConformanceObservationsAsync(softwareDeliveryRun.Id);
@@ -185,7 +185,7 @@ public sealed class ProcessesServiceIntegrationTests
 
         var hotfixRun = Assert.Single(
             await processesService.ListRunsAsync(hotfixDefinition.Id, projectId),
-            item => item.Name == "Emergency hotfix rollout with shard-risk governance / tenant billing outage");
+            item => item.Name == "Emergency hotfix rollout with shard-risk governance / checkout latency");
         var hotfixStepRuns = await processesService.ListStepRunsAsync(hotfixRun.Id);
         var hotfixArtifacts = await processesService.ListArtifactsAsync(hotfixRun.Id);
         var hotfixEditor = await processesService.GetEditorAsync(hotfixDefinition.Id, projectId);
@@ -201,20 +201,36 @@ public sealed class ProcessesServiceIntegrationTests
 
         var branchingRun = Assert.Single(
             await processesService.ListRunsAsync(branchingDefinition.Id, projectId),
-            item => item.Name == "Branching code review and merge governance / pull request routing rehearsal");
+            item => item.Name == "Branching code review and merge governance / account-settings UI");
         var branchingStepRuns = await processesService.ListStepRunsAsync(branchingRun.Id);
         var branchingEditor = await processesService.GetEditorAsync(branchingDefinition.Id, projectId);
 
-        Assert.True(branchingStepRuns.Count >= 8);
+        Assert.True(branchingStepRuns.Count >= 12);
         Assert.Contains(branchingStepRuns, item => item.Title == "Route code review disposition");
-        Assert.Contains(branchingStepRuns, item => item.Title == "Normalize unclassified review disposition");
-        Assert.Contains(branchingStepRuns, item => item.Title == "Escalate review workflow failure");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Normalize default review lane");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Capture workflow failure and recovery path");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Approve direct merge route");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Approve merge after QA validation");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Approve merge after security review");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Approve merge after architecture escalation");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Approve merge after default normalization");
         var branchingDecisionStepRun = Assert.Single(branchingStepRuns, item => item.Title == "Route code review disposition");
         Assert.Equal("Review lead", branchingDecisionStepRun.DecisionRoleTitle);
         Assert.Equal(1, branchingDecisionStepRun.ArtifactInputCount);
         Assert.Single(branchingDecisionStepRun.ArtifactOutputs);
+        var directMergeStepRun = Assert.Single(branchingStepRuns, item => item.Title == "Approve direct merge route");
+        Assert.Equal(ProcessStepRunStatus.Skipped, directMergeStepRun.Status);
+        var qaMergeStepRun = Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after QA validation");
+        Assert.Equal(ProcessStepRunStatus.Completed, qaMergeStepRun.Status);
+        Assert.Equal(2, qaMergeStepRun.ArtifactInputCount);
+        Assert.Equal(ProcessStepRunStatus.Skipped, Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after security review").Status);
+        Assert.Equal(ProcessStepRunStatus.Skipped, Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after architecture escalation").Status);
+        Assert.Equal(ProcessStepRunStatus.Skipped, Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after default normalization").Status);
         var branchingQaDefinitionStep = Assert.Single(branchingEditor.Steps, item => item.Key == "validate-qa-lane");
         Assert.Single(branchingQaDefinitionStep.ArtifactInputs);
+        var branchingQaMergeDefinitionStep = Assert.Single(branchingEditor.Steps, item => item.Key == "approve-merge-after-qa");
+        Assert.Equal(2, branchingQaMergeDefinitionStep.Dependencies.Count);
+        Assert.Equal(2, branchingQaMergeDefinitionStep.ArtifactInputs.Count);
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;

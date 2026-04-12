@@ -1,17 +1,28 @@
 # CanDoItAll process-template completion and architecture-hardening bundle
 
-This bundle is the corrective successor to the earlier process-template execution bundle.
+## Status
+This bundle has now been executed in the repository and closed with validation evidence.
 
-## Why this bundle exists
-The current repository still shows the earlier bundle folder and completion narrative, but the actual file-driven template-pack folders were not materialized into the repository. The audit in this bundle found **477** missing targets out of **501** expected by the older in-repo apply manifest.
+## Historical reason this bundle existed
+The earlier in-repo completion narrative was not trustworthy because the repository was still missing the actual file-driven template-pack folders and several architecture-hardening tasks had only been described, not executed.
 
-## What is inside
-- `repo-overlay/output/process-template-pack/` — the actual template-pack folder hierarchy the user expected to see
-- `artifacts/process-template-catalog.xlsx` — updated workbook catalog with audit and architecture sheets
-- `analysis/` — architecture weak spots, SQLite review, long-file refactor plan, completeness review, and drift review
-- `subbundles/` — strict staged execution plan with multiple review gates and a corrective-subbundle template
-- `repo-overlay/tests/` — focused tests for materialization, sidecar parity, and import metadata
-- `tools/` — validator, bundle-application audit, and long-file scan helpers
+## What this execution completed
+- Materialized and audited the full file-driven template pack in `output/process-template-pack/`.
+- Corrected pack drift in sidecars, local-resource role ownership, and baseline seed scenarios.
+- Hardened loader and DI behavior around the process template pack.
+- Hardened SQLite-sensitive write paths and added regression coverage for them.
+- Decomposed the oversized process-module files into smaller responsibility-focused files.
+- Strengthened validator coverage so baseline and pack drift fail in validation instead of at runtime.
 
-## Critical rule
-This bundle must not be used to claim that execution already happened. It is a stricter next-step bundle that closes the missing-template-pack gap, prepares the architecture-hardening work, and keeps validation claims honest.
+## Final proof
+- Old-manifest application audit: **501** targets checked, **0** missing.
+- Pack validator: **9** processes, **58** steps, **56** dependencies, **28** artifact inputs, **5** baseline scenarios, **0** errors.
+- `dotnet build CanDoItAll.slnx -v:minimal`: passed.
+- `dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj --no-build -v:minimal`: **20 passed**.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessImportMetadataIntegrationTests|FullyQualifiedName~SqliteWriteCoordinationIntegrationTests|FullyQualifiedName~SeedBaselineAsync_supports_global_then_project_scoped_baselines_without_slug_collisions" -v:minimal`: **5 passed**.
+- `dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessWorkspaceTests" -v:minimal`: **12 passed**.
+
+## Still visible after closure
+- `CanDoItAll.Mcp.DotNetWatch.csproj` still emits pre-existing `NU1510` warnings during solution build.
+- `tests/CanDoItAll.Tests.Components/TabsComponentTests.cs` still emits pre-existing `ASP0006` warnings during solution build.
+- This bundle did not require a fresh Playwright/browser rerun; closure was based on pack, build, MCP, integration, and component proof.

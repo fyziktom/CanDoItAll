@@ -6,10 +6,16 @@ public static class ProcessesModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddProcessesModule(this IServiceCollection services)
     {
+        services.AddOptions<ProcessTemplatePackOptions>()
+            .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();
-        services.AddScoped<ProcessTemplatePackLoader>();
+        services.AddScoped(provider =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ProcessTemplatePackOptions>>().Value;
+            return new ProcessTemplatePackLoader(options.PackRoot);
+        });
         services.AddScoped<ProcessTemplateCatalogService>();
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();

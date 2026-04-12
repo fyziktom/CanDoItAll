@@ -21,6 +21,25 @@ public sealed class CurrentArchitectureTemplateParityTests
 
         var qaLane = process.Steps.Single(step => step.Key == "validate-qa-lane");
         Assert.Single(qaLane.ArtifactInputs);
+
+        var directMerge = process.Steps.Single(step => step.Key == "approve-merge");
+        Assert.Equal("Approve direct merge route", directMerge.Title);
+        Assert.Single(directMerge.Dependencies);
+        Assert.Equal("route-review-disposition", directMerge.Dependencies[0].DependsOnStepKey);
+        Assert.Equal("ready-for-merge", directMerge.Dependencies[0].DependsOnBranchOutcomeKey);
+
+        var qaMerge = process.Steps.Single(step => step.Key == "approve-merge-after-qa");
+        Assert.Equal(2, qaMerge.Dependencies.Count);
+        Assert.Contains(
+            qaMerge.Dependencies,
+            dependency => dependency.DependsOnStepKey == "route-review-disposition" &&
+                dependency.DependsOnBranchOutcomeKey == "qa-validation");
+        Assert.Contains(qaMerge.Dependencies, dependency => dependency.DependsOnStepKey == "validate-qa-lane");
+        Assert.Equal(2, qaMerge.ArtifactInputs.Count);
+
+        Assert.Contains(process.Steps, step => step.Key == "approve-merge-after-security");
+        Assert.Contains(process.Steps, step => step.Key == "approve-merge-after-architecture");
+        Assert.Contains(process.Steps, step => step.Key == "approve-merge-after-default");
     }
 
     [Fact]

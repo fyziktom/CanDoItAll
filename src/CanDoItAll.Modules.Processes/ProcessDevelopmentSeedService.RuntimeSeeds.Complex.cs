@@ -70,16 +70,55 @@ public sealed partial class ProcessDevelopmentSeedService
             return Result.Success();
         }
 
-        return await processesService.TransitionStepAsync(
-            new ProcessStepTransitionRequest
+        if (stepRun.Status == ProcessStepRunStatus.Skipped &&
+            targetStatus != ProcessStepRunStatus.Skipped)
+        {
+            return Result.Failure(
+                Error.Validation(
+                    $"Baseline seeding cannot transition skipped step '{stepRun.Title}' to {targetStatus}. Skip reason: {stepRun.DecisionSummary}",
+                    "processes.seed-step-already-skipped"));
+        }
+
+        var transitionSequenceResult = BuildTransitionSequence(stepRun.Status, targetStatus);
+        if (transitionSequenceResult.IsFailure)
+        {
+            return Result.Failure(
+                transitionSequenceResult.Errors
+                    .Select(error =>
+                        Error.Validation(
+                            $"{error.Message} Step '{stepRun.Title}' in run '{runId:D}' triggered the invalid baseline transition.",
+                            error.Code))
+                    .ToArray());
+        }
+
+        var transitionSequence = transitionSequenceResult.Value;
+        if (transitionSequence is null)
+        {
+            return Result.Failure(
+                Error.Validation(
+                    "Baseline seeding could not resolve a transition sequence.",
+                    "processes.seed-transition-sequence-missing"));
+        }
+
+        foreach (var transitionStatus in transitionSequence)
+        {
+            var transitionResult = await processesService.TransitionStepAsync(
+                new ProcessStepTransitionRequest
+                {
+                    StepRunId = stepRunId,
+                    TargetStatus = transitionStatus,
+                    SelectedBranchOutcomeId = transitionStatus == targetStatus ? selectedBranchOutcomeId : null,
+                    Reason = transitionStatus == targetStatus ? reason?.Trim() ?? string.Empty : string.Empty,
+                    DecidedBy = string.IsNullOrWhiteSpace(decidedBy) ? "process-template-pack" : decidedBy.Trim()
+                },
+                cancellationToken);
+            if (transitionResult.IsFailure)
             {
-                StepRunId = stepRunId,
-                TargetStatus = targetStatus,
-                SelectedBranchOutcomeId = selectedBranchOutcomeId,
-                Reason = reason?.Trim() ?? string.Empty,
-                DecidedBy = string.IsNullOrWhiteSpace(decidedBy) ? "process-template-pack" : decidedBy.Trim()
-            },
-            cancellationToken);
+                return transitionResult;
+            }
+        }
+
+        return Result.Success();
     }
 
     private async Task<Result> EnsureArtifactAsync(
@@ -138,5 +177,45 @@ public sealed partial class ProcessDevelopmentSeedService
         return Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed)
             ? parsed
             : fallback;
+    }
+
+    private static Result<IReadOnlyList<ProcessStepRunStatus>> BuildTransitionSequence(
+        ProcessStepRunStatus currentStatus,
+        ProcessStepRunStatus targetStatus)
+    {
+        if (currentStatus == targetStatus)
+        {
+            return Result<IReadOnlyList<ProcessStepRunStatus>>.Success([]);
+        }
+
+        if (ProcessStepRunTransitions.IsAllowed(currentStatus, targetStatus))
+        {
+            return Result<IReadOnlyList<ProcessStepRunStatus>>.Success([targetStatus]);
+        }
+
+        if (currentStatus == ProcessStepRunStatus.Ready &&
+            targetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Failed)
+        {
+            return Result<IReadOnlyList<ProcessStepRunStatus>>.Success(
+            [
+                ProcessStepRunStatus.InProgress,
+                targetStatus
+            ]);
+        }
+
+        if (currentStatus == ProcessStepRunStatus.Blocked &&
+            targetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Failed)
+        {
+            return Result<IReadOnlyList<ProcessStepRunStatus>>.Success(
+            [
+                ProcessStepRunStatus.InProgress,
+                targetStatus
+            ]);
+        }
+
+        return Result<IReadOnlyList<ProcessStepRunStatus>>.Failure(
+            Error.Validation(
+                $"Baseline seeding cannot move a step from {currentStatus} to {targetStatus} without violating runtime transition rules.",
+                "processes.seed-transition-path-not-found"));
     }
 }

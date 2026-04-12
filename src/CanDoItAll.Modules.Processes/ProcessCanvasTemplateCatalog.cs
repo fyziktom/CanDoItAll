@@ -61,34 +61,3 @@ public sealed record ProcessCanvasStepTemplate(
     string Label,
     string Summary,
     Func<int, Guid?, double, double, ProcessStepEditorModel> Factory);
-
-internal static class ProcessCanvasTemplateCatalog
-{
-    private static readonly Lazy<ProcessTemplateCatalogService> Catalog =
-        new(() => new ProcessTemplateCatalogService(new ProcessTemplatePackLoader()), LazyThreadSafetyMode.ExecutionAndPublication);
-
-    public static IReadOnlyList<ProcessCanvasRoleTemplate> RoleTemplates => Catalog.Value.GetRoleTemplates();
-
-    public static IReadOnlyList<ProcessCanvasStepTemplate> StepTemplates => Catalog.Value.GetStepTemplates();
-
-    public static IReadOnlyList<ProcessCanvasToolboxGroup> BuildDefinitionToolboxGroups()
-    {
-        return Catalog.Value.GetDefinitionToolboxGroups();
-    }
-
-    public static bool TryCreateRoleDraft(string actionId, int ordinal, out ProcessRoleEditorModel role)
-    {
-        return Catalog.Value.TryCreateRoleDraft(actionId, ordinal, out role);
-    }
-
-    public static bool TryCreateStepDraft(
-        string actionId,
-        int ordinal,
-        Guid? dependsOnStepId,
-        double x,
-        double y,
-        out ProcessStepEditorModel step)
-    {
-        return Catalog.Value.TryCreateStepDraft(actionId, ordinal, dependsOnStepId, x, y, out step);
-    }
-}

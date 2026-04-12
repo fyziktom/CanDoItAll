@@ -3,7 +3,7 @@
 | ProcessKey | DisplayName | StepCount | DependencyCount | ArtifactInputCount | SharedRoleCount | LocalRoleCount | SharedArtifactCount | LocalArtifactCount | RelativePath |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | software-delivery | Multi-team software delivery and release governance | 9 | 10 | 5 | 6 | 3 | 8 | 1 | processes/software-delivery |
-| branching-code-review | Branching code review and merge governance | 9 | 12 | 8 | 3 | 3 | 5 | 3 | processes/branching-code-review |
+| branching-code-review | Branching code review and merge governance | 13 | 16 | 16 | 3 | 3 | 5 | 3 | processes/branching-code-review |
 | hotfix-rollout | Emergency hotfix rollout with shard-risk governance | 7 | 7 | 3 | 5 | 2 | 6 | 1 | processes/hotfix-rollout |
 | customer-onboarding | Customer onboarding orchestration | 3 | 2 | 2 | 0 | 5 | 2 | 2 | processes/customer-onboarding |
 | incident-response | Incident response and escalation | 3 | 2 | 2 | 0 | 5 | 3 | 2 | processes/incident-response |

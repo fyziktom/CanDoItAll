@@ -1,4 +1,6 @@
 using CanDoItAll.Modules.Processes;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Mcp.Processes.Tests;
 
@@ -26,5 +28,75 @@ public sealed class ProcessTemplatePackLoaderTests
 
         Assert.True(File.Exists(Path.Combine(root, "manifest.json")));
         Assert.Contains(Path.Combine("output", "process-template-pack"), root, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_accepts_an_explicit_manifest_path()
+    {
+        var root = ProcessTemplatePackLoader.FindPackRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(root, "manifest.json"));
+
+        var pack = loader.Load();
+
+        Assert.Equal(root, pack.RootPath);
+    }
+
+    [Fact]
+    public void AddProcessesModule_resolves_loader_from_configured_pack_root()
+    {
+        using var packClone = CreatePackClone();
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddLogging();
+        services.AddProcessesModule();
+        services.Configure<ProcessTemplatePackOptions>(options => options.PackRoot = packClone.RootPath);
+        using var provider = services.BuildServiceProvider();
+
+        var loader = provider.GetRequiredService<ProcessTemplatePackLoader>();
+        var pack = loader.Load();
+
+        Assert.Equal(packClone.RootPath, pack.RootPath);
+    }
+
+    private static PackClone CreatePackClone()
+    {
+        return new PackClone(ProcessTemplatePackLoader.FindPackRoot());
+    }
+
+    private sealed class PackClone : IDisposable
+    {
+        public PackClone(string sourceRoot)
+        {
+            RootPath = Path.Combine(Path.GetTempPath(), "candoitall-pack-loader-" + Guid.NewGuid().ToString("N"));
+            CopyDirectory(sourceRoot, RootPath);
+        }
+
+        public string RootPath { get; }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(RootPath))
+            {
+                Directory.Delete(RootPath, recursive: true);
+            }
+        }
+
+        private static void CopyDirectory(string sourceRoot, string destinationRoot)
+        {
+            foreach (var directoryPath in Directory.GetDirectories(sourceRoot, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(sourceRoot, directoryPath);
+                Directory.CreateDirectory(Path.Combine(destinationRoot, relativePath));
+            }
+
+            Directory.CreateDirectory(destinationRoot);
+            foreach (var filePath in Directory.GetFiles(sourceRoot, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(sourceRoot, filePath);
+                var destinationPath = Path.Combine(destinationRoot, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+                File.Copy(filePath, destinationPath, overwrite: true);
+            }
+        }
     }
 }

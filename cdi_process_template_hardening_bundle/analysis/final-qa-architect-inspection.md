@@ -1,28 +1,28 @@
 # Final QA and senior architect inspection
 
 ## Final verdict
-This bundle is materially more honest and more complete than the earlier in-repo process-template bundle because it no longer assumes the template-pack folders exist — it physically includes them.
+This bundle is now an executed repository remediation, not only a preparation artifact.
 
 ## What passed inspection
-- The ZIP now contains the expected `repo-overlay/output/process-template-pack/` hierarchy.
-- The workbook catalog includes explicit audit and architecture sheets instead of only template rows.
-- The missing-pack problem is visible, quantified, and treated as a blocking baseline defect.
-- Current-repository source drift is preserved rather than overwritten blindly.
-- SQLite-first concerns are called out explicitly.
-- Long-file decomposition is planned in staged, review-gated subbundles.
-- A corrective-subbundle template is included and made mandatory by the execution rules.
+- The old-manifest audit is fully closed: **501** expected targets, **0** missing.
+- The file-driven process-template pack is present on disk and validator-clean.
+- Baseline seeding now survives the project-scoped execution proof without stale role drift.
+- The pack validator was strengthened to catch the exact drift classes that escaped earlier.
+- Build proof passed.
+- MCP process tests passed.
+- Targeted integration proof for import metadata, SQLite write coordination, and baseline seeding passed.
+- Targeted component proof for the decomposed process surfaces passed.
 
-## What still requires repository execution
-- Applying the overlay into the real repository
-- Running `dotnet build` and the relevant xUnit suites
-- Implementing the long-file decomposition in compile-verified commits
-- Hardening loader/DI behavior and SQLite write paths in code
+## Corrective issues found and closed during this run
+- `branching-code-review` had an impossible merge topology under the current branch-router normalization rules.
+- `software-delivery` and `hotfix-rollout` baseline scenarios had fallen behind the current template semantics.
+- `hotfix-rollout` and `incident-response` still carried retired role identifiers in local resource sidecars.
+- The validator was too weak to stop those defects before runtime seeding exposed them.
 
-## Residual concerns that must remain visible
-- Static template-catalog loading outside DI
-- SQLite-sensitive multi-context import metadata persistence
-- Manual delete cascade breadth
-- Oversized source files until the decomposition subbundles are executed
+## Residual concerns that remain visible
+- `src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj` still emits pre-existing `NU1510` warnings.
+- `tests/CanDoItAll.Tests.Components/TabsComponentTests.cs` still emits pre-existing `ASP0006` warnings.
+- This closure did not require a new Playwright/browser run, so browser proof remains outside this bundle’s final evidence set.
 
 ## QA closure stance
-This bundle is suitable for the next Codex run because it closes the missing-template-pack packaging gap and gives that run a stricter, review-driven plan. It must not be described as an already executed repository remediation.
+The bundle may now be described as fully executed for its repository scope, with the validation boundary recorded in `VALIDATION_REPORT.md`.

@@ -1,38 +1,37 @@
 # Validation report
 
-## What was validated in this container
-- Audited the current repository against the in-repo previous apply manifest.
-- Confirmed **477** missing targets out of **501**, overwhelmingly the real template-pack files.
-- Confirmed the current repository differs from the older overlay in **5** overlapping non-pack files, so those newer repository versions were preserved.
-- Materialized the full template-pack tree into the new bundle overlay.
-- Added focused test files and audit helpers.
-- Rebuilt the workbook catalog and supporting CSV exports.
-- Ran the process-template pack validator against the new bundle overlay.
+## Execution status
+Repository execution is complete for the scope of this bundle.
 
-## Pack-validator result
-- Process count: **9**
-- Step count: **54**
-- Dependency count: **52**
-- Artifact input count: **20**
-- Baseline scenario count: **5**
-- Error count: **0**
-
-## Current-repository audit result against the older in-repo manifest
-- Manifest entry count: **501**
-- Missing target count: **477**
-- Result: **not yet applied in the current repository**
-
-## What was not validated here
-- `dotnet build`
-- `dotnet test`
-- Browser or Playwright execution
-
-## Required post-apply commands in a dotnet-capable environment
-- `python cdi_process_template_completion_and_architecture_hardening_bundle/tools/validate_process_template_pack.py output/process-template-pack`
-- `python tools/audit_process_template_bundle_materialization.py . cdi_process_templates_bundle/apply-manifest.json`
+## Commands executed
+- `python cdi_process_template_hardening_bundle/tools/audit_bundle_application.py . cdi_process_templates_bundle/apply-manifest.json`
+  - Result: **ok=true**, **501** targets checked, **0** missing.
+- `python cdi_process_template_hardening_bundle/tools/validate_process_template_pack.py output/process-template-pack`
+  - Result: **9** processes, **58** steps, **56** dependencies, **28** artifact inputs, **5** baseline scenarios, **0** errors.
 - `dotnet build CanDoItAll.slnx -v:minimal`
-- `dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj -v:minimal`
-- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessImportMetadataIntegrationTests|FullyQualifiedName~SqliteWriteCoordinationIntegrationTests" -v:minimal`
+  - Result: passed.
+  - Visible warnings: pre-existing `NU1510` warnings in `src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj` and pre-existing `ASP0006` warnings in `tests/CanDoItAll.Tests.Components/TabsComponentTests.cs`.
+- `dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj --no-build -v:minimal`
+  - Result: **20 passed**.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessImportMetadataIntegrationTests|FullyQualifiedName~SqliteWriteCoordinationIntegrationTests|FullyQualifiedName~SeedBaselineAsync_supports_global_then_project_scoped_baselines_without_slug_collisions" -v:minimal`
+  - Result: **5 passed**.
+- `dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessWorkspaceTests" -v:minimal`
+  - Result: **12 passed**.
 
-## Honesty note
-This validation report is intentionally explicit: the bundle content itself was validated, but the repository has **not** been claimed as fully remediated in this container.
+## Corrective findings closed during execution
+- Replaced invalid branching merge topology with route-specific merge gates in `branching-code-review`.
+- Corrected stale hotfix and software-delivery baseline scenarios so they match the current runtime contracts and still exercise failure or blocked paths.
+- Corrected local resource owner and audience role drift in `hotfix-rollout` and `incident-response`.
+- Hardened the pack validator to catch:
+  - invalid local resource role ownership
+  - stale baseline assignment role keys
+  - stale baseline step keys
+  - stale baseline branch references
+  - stale baseline artifact step references
+
+## What was not rerun for this bundle
+- No new Playwright/browser proof run.
+- No full-solution test sweep beyond the build and targeted regression slices above.
+
+## Closure statement
+The bundle no longer describes a future corrective run. The repository state, validator output, and .NET proof above are the actual closure evidence for this execution.

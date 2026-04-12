@@ -141,7 +141,7 @@ public sealed partial class ProcessDevelopmentSeedService
 
         seededRunIds.Add(runId);
 
-        var runtimeResult = await EnsureScenarioRuntimeStateAsync(definitionId, scenario, runId, cancellationToken);
+        var runtimeResult = await EnsureScenarioRuntimeStateAsync(scenario, runId, cancellationToken);
         return runtimeResult.IsFailure
             ? Result<Guid>.Failure(runtimeResult.Errors.ToArray())
             : Result<Guid>.Success(definitionId);

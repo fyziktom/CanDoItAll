@@ -5,34 +5,22 @@ namespace CanDoItAll.Modules.Processes;
 public sealed partial class ProcessDevelopmentSeedService
 {
     private async Task<Result> EnsureScenarioRuntimeStateAsync(
-        Guid definitionId,
         ProcessTemplateBaselineScenario scenario,
         Guid runId,
         CancellationToken cancellationToken)
     {
-        var editor = await processesService.GetEditorAsync(definitionId, cancellationToken: cancellationToken);
-        var roleIdsByKey = editor.Roles
-            .Where(item => item.Id.HasValue && !string.IsNullOrWhiteSpace(item.Key))
-            .ToDictionary(item => item.Key, item => item.Id!.Value, StringComparer.OrdinalIgnoreCase);
-        var stepIdsByKey = editor.Steps
-            .Where(item => item.Id.HasValue && !string.IsNullOrWhiteSpace(item.Key))
-            .ToDictionary(item => item.Key, item => item.Id!.Value, StringComparer.OrdinalIgnoreCase);
-
-        var branchIdsByCompositeKey = editor.Steps
-            .Where(step => !string.IsNullOrWhiteSpace(step.Key))
-            .SelectMany(
-                step => step.BranchOutcomes
-                    .Where(outcome => outcome.Id.HasValue && !string.IsNullOrWhiteSpace(outcome.Key))
-                    .Select(outcome => new
-                    {
-                        CompositeKey = BuildCompositeBranchKey(step.Key, outcome.Key),
-                        BranchOutcomeId = outcome.Id!.Value
-                    }))
-            .ToDictionary(item => item.CompositeKey, item => item.BranchOutcomeId, StringComparer.OrdinalIgnoreCase);
+        var runtimeBindings = await processesService.GetRuntimeBindingCatalogAsync(runId, cancellationToken);
+        if (runtimeBindings is null)
+        {
+            return Result.Failure(
+                Error.Validation(
+                    $"Process run '{runId:D}' was not found while seeding baseline scenario '{scenario.Key}'.",
+                    "processes.seed-run-not-found"));
+        }
 
         var stepRuns = await processesService.ListStepRunsAsync(runId, cancellationToken);
         var stepRunIdsByStepKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-        foreach (var pair in stepIdsByKey)
+        foreach (var pair in runtimeBindings.StepDefinitionIdsByKey)
         {
             var stepRun = stepRuns.FirstOrDefault(item => item.StepDefinitionId == pair.Value);
             if (stepRun is not null)
@@ -43,15 +31,29 @@ public sealed partial class ProcessDevelopmentSeedService
 
         foreach (var assignment in scenario.Assignments)
         {
-            var roleRequirementId = string.IsNullOrWhiteSpace(assignment.RoleKey)
-                ? Guid.Empty
-                : roleIdsByKey.GetValueOrDefault(assignment.RoleKey);
-            var stepDefinitionId = ResolveOptionalStepDefinitionId(stepIdsByKey, assignment.StepKey);
+            var roleRequirementIdResult = ResolveRoleRequirementId(
+                runtimeBindings.RoleRequirementIdsByKey,
+                assignment.RoleKey,
+                scenario.Key);
+            if (roleRequirementIdResult.IsFailure)
+            {
+                return Result.Failure(roleRequirementIdResult.Errors.ToArray());
+            }
+
+            var stepDefinitionIdResult = ResolveOptionalStepDefinitionId(
+                runtimeBindings.StepDefinitionIdsByKey,
+                assignment.StepKey,
+                scenario.Key,
+                "assignment");
+            if (stepDefinitionIdResult.IsFailure)
+            {
+                return Result.Failure(stepDefinitionIdResult.Errors.ToArray());
+            }
 
             var assignmentResult = await EnsureAssignmentAsync(
                 runId,
-                roleRequirementId,
-                stepDefinitionId,
+                roleRequirementIdResult.Value,
+                stepDefinitionIdResult.Value,
                 assignment.DisplayName,
                 assignment.ExecutorKind,
                 assignment.BindingReason,
@@ -65,20 +67,27 @@ public sealed partial class ProcessDevelopmentSeedService
 
         foreach (var transition in scenario.Transitions)
         {
-            if (!stepRunIdsByStepKey.TryGetValue(transition.StepKey, out var stepRunId))
+            var stepRunIdResult = ResolveStepRunId(stepRunIdsByStepKey, transition.StepKey, scenario.Key, "transition");
+            if (stepRunIdResult.IsFailure)
             {
-                continue;
+                return Result.Failure(stepRunIdResult.Errors.ToArray());
             }
 
-            Guid? selectedBranchOutcomeId = string.IsNullOrWhiteSpace(transition.SelectedBranchOutcomeKey)
-                ? null
-                : branchIdsByCompositeKey.GetValueOrDefault(BuildCompositeBranchKey(transition.StepKey, transition.SelectedBranchOutcomeKey));
+            var selectedBranchOutcomeIdResult = ResolveOptionalBranchOutcomeId(
+                runtimeBindings.BranchOutcomeIdsByCompositeKey,
+                transition.StepKey,
+                transition.SelectedBranchOutcomeKey,
+                scenario.Key);
+            if (selectedBranchOutcomeIdResult.IsFailure)
+            {
+                return Result.Failure(selectedBranchOutcomeIdResult.Errors.ToArray());
+            }
 
             var transitionResult = await EnsureStepStatusAsync(
                 runId,
-                stepRunId,
+                stepRunIdResult.Value,
                 ParseEnum(transition.TargetStatus, ProcessStepRunStatus.Completed),
-                selectedBranchOutcomeId,
+                selectedBranchOutcomeIdResult.Value,
                 transition.Reason,
                 transition.DecidedBy,
                 cancellationToken);
@@ -90,13 +99,15 @@ public sealed partial class ProcessDevelopmentSeedService
 
         foreach (var artifact in scenario.Artifacts)
         {
-            Guid? stepRunId = string.IsNullOrWhiteSpace(artifact.StepKey)
-                ? null
-                : stepRunIdsByStepKey.GetValueOrDefault(artifact.StepKey);
+            var stepRunIdResult = ResolveOptionalStepRunId(stepRunIdsByStepKey, artifact.StepKey, scenario.Key, "artifact");
+            if (stepRunIdResult.IsFailure)
+            {
+                return Result.Failure(stepRunIdResult.Errors.ToArray());
+            }
 
             var artifactResult = await EnsureArtifactAsync(
                 runId,
-                stepRunId,
+                stepRunIdResult.Value,
                 ParseEnum(artifact.ArtifactKind, ProcessArtifactKind.Evidence),
                 artifact.Title,
                 ParseEnum(artifact.TrustStatus, ProcessArtifactTrustStatus.ReviewRequired),
@@ -114,16 +125,128 @@ public sealed partial class ProcessDevelopmentSeedService
         return Result.Success();
     }
 
-    private static Guid? ResolveOptionalStepDefinitionId(
+    private static Result<Guid> ResolveRoleRequirementId(
+        IReadOnlyDictionary<string, Guid> roleIdsByKey,
+        string? roleKey,
+        string scenarioKey)
+    {
+        if (string.IsNullOrWhiteSpace(roleKey))
+        {
+            return Result<Guid>.Failure(
+                Error.Validation(
+                    $"Baseline scenario '{scenarioKey}' contains an assignment without a role key.",
+                    "processes.seed-role-key-required"));
+        }
+
+        if (roleIdsByKey.TryGetValue(roleKey, out var roleRequirementId))
+        {
+            return Result<Guid>.Success(roleRequirementId);
+        }
+
+        return Result<Guid>.Failure(
+            Error.Validation(
+                $"Baseline scenario '{scenarioKey}' references unknown role key '{roleKey}'.",
+                "processes.seed-role-key-not-found"));
+    }
+
+    private static Result<Guid?> ResolveOptionalStepDefinitionId(
         IReadOnlyDictionary<string, Guid> stepIdsByKey,
-        string stepKey)
+        string? stepKey,
+        string scenarioKey,
+        string operationName)
     {
         if (string.IsNullOrWhiteSpace(stepKey))
         {
-            return null;
+            return Result<Guid?>.Success(null);
         }
 
-        return stepIdsByKey.GetValueOrDefault(stepKey);
+        if (stepIdsByKey.TryGetValue(stepKey, out var stepDefinitionId))
+        {
+            return Result<Guid?>.Success(stepDefinitionId);
+        }
+
+        return Result<Guid?>.Failure(
+            Error.Validation(
+                $"Baseline scenario '{scenarioKey}' references unknown step key '{stepKey}' for {operationName}.",
+                "processes.seed-step-key-not-found"));
+    }
+
+    private static Result<Guid> ResolveStepRunId(
+        IReadOnlyDictionary<string, Guid> stepRunIdsByStepKey,
+        string? stepKey,
+        string scenarioKey,
+        string operationName)
+    {
+        if (string.IsNullOrWhiteSpace(stepKey))
+        {
+            return Result<Guid>.Failure(
+                Error.Validation(
+                    $"Baseline scenario '{scenarioKey}' requires a step key for {operationName}.",
+                    "processes.seed-step-key-required"));
+        }
+
+        if (stepRunIdsByStepKey.TryGetValue(stepKey, out var stepRunId))
+        {
+            return Result<Guid>.Success(stepRunId);
+        }
+
+        return Result<Guid>.Failure(
+            Error.Validation(
+                $"Baseline scenario '{scenarioKey}' could not find runtime step '{stepKey}' for {operationName}.",
+                "processes.seed-step-run-not-found"));
+    }
+
+    private static Result<Guid?> ResolveOptionalStepRunId(
+        IReadOnlyDictionary<string, Guid> stepRunIdsByStepKey,
+        string? stepKey,
+        string scenarioKey,
+        string operationName)
+    {
+        if (string.IsNullOrWhiteSpace(stepKey))
+        {
+            return Result<Guid?>.Success(null);
+        }
+
+        if (stepRunIdsByStepKey.TryGetValue(stepKey, out var stepRunId))
+        {
+            return Result<Guid?>.Success(stepRunId);
+        }
+
+        return Result<Guid?>.Failure(
+            Error.Validation(
+                $"Baseline scenario '{scenarioKey}' could not find runtime step '{stepKey}' for {operationName}.",
+                "processes.seed-step-run-not-found"));
+    }
+
+    private static Result<Guid?> ResolveOptionalBranchOutcomeId(
+        IReadOnlyDictionary<string, Guid> branchOutcomeIdsByCompositeKey,
+        string? stepKey,
+        string? branchOutcomeKey,
+        string scenarioKey)
+    {
+        if (string.IsNullOrWhiteSpace(branchOutcomeKey))
+        {
+            return Result<Guid?>.Success(null);
+        }
+
+        if (string.IsNullOrWhiteSpace(stepKey))
+        {
+            return Result<Guid?>.Failure(
+                Error.Validation(
+                    $"Baseline scenario '{scenarioKey}' references branch outcome '{branchOutcomeKey}' without a step key.",
+                    "processes.seed-branch-step-key-required"));
+        }
+
+        var compositeKey = BuildCompositeBranchKey(stepKey, branchOutcomeKey);
+        if (branchOutcomeIdsByCompositeKey.TryGetValue(compositeKey, out var branchOutcomeId))
+        {
+            return Result<Guid?>.Success(branchOutcomeId);
+        }
+
+        return Result<Guid?>.Failure(
+            Error.Validation(
+                $"Baseline scenario '{scenarioKey}' references unknown branch outcome '{branchOutcomeKey}' for step '{stepKey}'.",
+                "processes.seed-branch-key-not-found"));
     }
 
     private static string BuildCompositeBranchKey(string stepKey, string branchOutcomeKey)
