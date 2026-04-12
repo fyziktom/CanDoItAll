@@ -390,7 +390,7 @@
       "TargetLeadHours": 2,
       "DependsOnStepKey": "cutover-rehearsal",
       "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DecisionRoleKey": "release-approver",
       "CanvasX": 1050,
       "CanvasY": 200,
       "BranchOutcomes": [

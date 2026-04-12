@@ -11,10 +11,10 @@
                 <Button Text="New definition"
                         Click="CreateNewAsync"
                         data-testid="processes-new-definition-button" />
-                <Button Text="Seed development baseline"
+                <Button Text="Templates"
                         ButtonStyle="ButtonStyle.Light"
-                        Click="SeedBaselineAsync"
-                        data-testid="processes-seed-baseline-button" />
+                        Click="OpenTemplateLibraryAsync"
+                        data-testid="processes-templates-button" />
             </Actions>
         </PageHeader>
     </Header>
@@ -80,9 +80,10 @@
                         <Actions>
                             <Button Text="New definition"
                                     Click="CreateNewAsync" />
-                            <Button Text="Seed baseline"
+                            <Button Text="Templates"
                                     ButtonStyle="ButtonStyle.Light"
-                                    Click="SeedBaselineAsync" />
+                                    Click="OpenTemplateLibraryAsync"
+                                    data-testid="processes-empty-templates-button" />
                         </Actions>
                     </EmptyState>
                 }
@@ -160,6 +161,10 @@
                                         ButtonStyle="ButtonStyle.Light"
                                         Click="AddRole"
                                         data-testid="processes-add-role-button" />
+                                <Button Text="Templates"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="OpenTemplateLibraryAsync"
+                                        data-testid="processes-role-templates-button" />
                             </Actions>
                             <ChildContent>
                                 @if (editor.Roles.Count == 0)
@@ -959,6 +964,16 @@
         </ListDetailShell>
     </ChildContent>
 </PageScaffold>
+
+<ProcessTemplateLibraryDialog IsOpen="@templateLibraryOpen"
+                              ScopeLabel="@TemplateLibraryScopeLabel"
+                              ArtifactTargets="@TemplateArtifactTargets"
+                              SelectedArtifactTargetStepId="@templateLibraryArtifactTargetStepId"
+                              SelectedArtifactTargetStepIdChanged="@((Guid? stepId) => templateLibraryArtifactTargetStepId = stepId)"
+                              Close="CloseTemplateLibraryAsync"
+                              AddProcessTemplate="AddProcessTemplateAsync"
+                              AddRoleTemplate="AddRoleTemplateAsync"
+                              AddArtifactTemplate="AddArtifactTemplateAsync" />
 
 @if (canvasActionDialog is not null)
 {

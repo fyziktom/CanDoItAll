@@ -57,4 +57,33 @@ public sealed class CurrentArchitectureTemplateParityTests
         Assert.Equal(2, emergencyApproval.Dependencies.Count);
         Assert.Equal(2, emergencyApproval.ArtifactInputs.Count);
     }
+
+    [Fact]
+    public void Ai_assisted_change_delivery_keeps_explicit_delegation_decision_authority()
+    {
+        var pack = new ProcessTemplatePackLoader().Load();
+        var process = pack.Processes["ai-assisted-change-delivery"];
+
+        var delegationDesign = process.Steps.Single(step => step.Key == "delegation-design");
+        var safetyReview = process.Steps.Single(step => step.Key == "safety-and-security-review");
+
+        Assert.Equal("solution-architect", delegationDesign.DecisionRoleKey);
+        Assert.Equal(2, delegationDesign.BranchOutcomes.Count);
+        Assert.Equal("release-approver", safetyReview.DecisionRoleKey);
+        Assert.Equal(2, safetyReview.BranchOutcomes.Count);
+    }
+
+    [Fact]
+    public void Branching_templates_require_explicit_decision_roles()
+    {
+        var pack = new ProcessTemplatePackLoader().Load();
+
+        var offenders = pack.Processes.Values
+            .SelectMany(process => process.Steps
+                .Where(step => step.BranchOutcomes.Count > 0 && string.IsNullOrWhiteSpace(step.DecisionRoleKey))
+                .Select(step => $"{process.Key}/{step.Key}"))
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
 }

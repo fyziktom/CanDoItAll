@@ -126,6 +126,7 @@
         </Split>
     </TopBar>
     <Body>
+        <Notification />
         @if (CurrentTuningSurface is { } tuningSurface)
         {
             <TunableComponentBoundary IsEnabled="@TuningEnabled"

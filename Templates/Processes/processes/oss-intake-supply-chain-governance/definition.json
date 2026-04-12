@@ -431,7 +431,7 @@
       "TargetLeadHours": 3,
       "DependsOnStepKey": "security-and-provenance",
       "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DecisionRoleKey": "compliance-steward",
       "CanvasX": 1360,
       "CanvasY": 260,
       "BranchOutcomes": [

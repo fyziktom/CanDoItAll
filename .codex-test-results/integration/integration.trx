@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="43087df2-272e-447b-b8ae-c75a56ba5fb5" name="lucys@LUCYSPOWER 2026-04-12 11:35:29" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-12T11:35:29.9416265-04:00" queuing="2026-04-12T11:35:29.9416274-04:00" start="2026-04-12T11:35:23.9554419-04:00" finish="2026-04-12T11:35:31.0825538-04:00" />
+  <TestSettings name="default" id="015c36a1-d592-4359-ad82-34d8bdc66c98">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-04-12_11_35_29" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="43609151-c1d7-4925-bc91-fb1a8c314908" testId="96401f18-1b1e-1872-c3a0-c7adf9a763ea" testName="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests.ImportAsync_persists_source_format_and_warnings_on_the_working_version" computerName="LUCYSPOWER" duration="00:00:00.4839380" startTime="2026-04-12T11:35:30.5066365-04:00" endTime="2026-04-12T11:35:30.9899422-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="43609151-c1d7-4925-bc91-fb1a8c314908" />
+    <UnitTestResult executionId="b429bee3-79ec-4b68-a714-5b63566edf90" testId="9a0306db-c523-84fd-7255-56e196fae61c" testName="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests.ImportAsync_imports_project_scoped_template_pack_processes" computerName="LUCYSPOWER" duration="00:00:04.2947432" startTime="2026-04-12T11:35:25.5825070-04:00" endTime="2026-04-12T11:35:29.8870963-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b429bee3-79ec-4b68-a714-5b63566edf90" />
+    <UnitTestResult executionId="d66ec9f4-eab3-46cb-9282-334b7d7d8067" testId="b88829e0-7e69-7dfc-3761-0206b852d56a" testName="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests.ImportAsync_persists_source_format_when_the_envelope_has_no_warnings" computerName="LUCYSPOWER" duration="00:00:00.6183358" startTime="2026-04-12T11:35:29.9057693-04:00" endTime="2026-04-12T11:35:30.5057136-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d66ec9f4-eab3-46cb-9282-334b7d7d8067" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests.ImportAsync_persists_source_format_and_warnings_on_the_working_version" storage="c:\repositories\candoitall\.codex-artifacts\integration\bin\candoitall.tests.integration\debug\candoitall.tests.integration.dll" id="96401f18-1b1e-1872-c3a0-c7adf9a763ea">
+      <Execution id="43609151-c1d7-4925-bc91-fb1a8c314908" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\integration\bin\CanDoItAll.Tests.Integration\debug\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests" name="ImportAsync_persists_source_format_and_warnings_on_the_working_version" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests.ImportAsync_imports_project_scoped_template_pack_processes" storage="c:\repositories\candoitall\.codex-artifacts\integration\bin\candoitall.tests.integration\debug\candoitall.tests.integration.dll" id="9a0306db-c523-84fd-7255-56e196fae61c">
+      <Execution id="b429bee3-79ec-4b68-a714-5b63566edf90" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\integration\bin\CanDoItAll.Tests.Integration\debug\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests" name="ImportAsync_imports_project_scoped_template_pack_processes" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests.ImportAsync_persists_source_format_when_the_envelope_has_no_warnings" storage="c:\repositories\candoitall\.codex-artifacts\integration\bin\candoitall.tests.integration\debug\candoitall.tests.integration.dll" id="b88829e0-7e69-7dfc-3761-0206b852d56a">
+      <Execution id="d66ec9f4-eab3-46cb-9282-334b7d7d8067" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\integration\bin\CanDoItAll.Tests.Integration\debug\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessImportMetadataIntegrationTests" name="ImportAsync_persists_source_format_when_the_envelope_has_no_warnings" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="96401f18-1b1e-1872-c3a0-c7adf9a763ea" executionId="43609151-c1d7-4925-bc91-fb1a8c314908" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9a0306db-c523-84fd-7255-56e196fae61c" executionId="b429bee3-79ec-4b68-a714-5b63566edf90" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b88829e0-7e69-7dfc-3761-0206b852d56a" executionId="d66ec9f4-eab3-46cb-9282-334b7d7d8067" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.32]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.39]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.42]   Starting:    CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:05.86]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

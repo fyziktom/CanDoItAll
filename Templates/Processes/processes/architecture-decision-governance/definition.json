@@ -364,7 +364,7 @@
       "TargetLeadHours": 2,
       "DependsOnStepKey": "security-compliance-review",
       "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DecisionRoleKey": "service-owner",
       "CanvasX": 1050,
       "CanvasY": 220,
       "BranchOutcomes": [

@@ -595,6 +595,96 @@ public sealed class ProcessWorkspaceTests
         });
     }
 
+    [Fact]
+    public async Task Templates_dialog_shows_process_template_preview_with_add_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template process import project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-item-ai-assisted-change-delivery']"));
+        });
+
+        cut.Find("[data-testid='processes-template-library-item-ai-assisted-change-delivery']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("AI-assisted change delivery with guarded delegation", cut.Markup);
+            Assert.Contains("Add to my processes", cut.Markup);
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+        });
+    }
+
+    [Fact]
+    public async Task Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template role import project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
+
+        await SetTemplateLibraryCategoryAsync(cut, "roles");
+        cut.Find("[data-testid='processes-template-library-add-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Equal(2, editor.Roles.Count);
+        });
+        Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+    }
+
+    [Fact]
+    public async Task Templates_dialog_adds_artifact_templates_into_the_selected_definition_step_without_closing_the_modal()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template artifact import project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
+
+        await SetTemplateLibraryCategoryAsync(cut, "artifacts");
+        cut.Find("[data-testid='processes-template-library-add-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var targetStep = Assert.Single(editor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Single(targetStep.ArtifactExpectations);
+        });
+        Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+    }
+
     private static ProcessDefinitionEditorModel BuildDefinitionEditor(Guid projectId, Guid managerRoleId)
     {
         var intakeStepId = Guid.NewGuid();
@@ -679,6 +769,7 @@ public sealed class ProcessWorkspaceTests
             ]
         };
     }
+
 
     private static CanvasAuthoringFixture BuildCanvasAuthoringDefinition(
         Guid projectId,
@@ -811,6 +902,32 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<CanvasWorkbench>()));
+    }
+
+    private static async Task SetTemplateLibraryCategoryAsync(IRenderedComponent<ProcessWorkspace> cut, string key)
+    {
+        var dialog = cut.FindComponent<ProcessTemplateLibraryDialog>();
+        var method = typeof(ProcessTemplateLibraryDialog).GetMethod("HandleCategoryChangedAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(dialog.Instance, [key]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() =>
+        {
+            var refreshedDialog = cut.FindComponent<ProcessTemplateLibraryDialog>();
+            Assert.Contains(key switch
+            {
+                "roles" => "Add to my roles",
+                "artifacts" => "Add to my artifacts",
+                _ => "Add to my processes"
+            }, refreshedDialog.Markup);
+        });
     }
 
     private static ProcessDefinitionEditorModel GetEditor(ProcessWorkspace component)

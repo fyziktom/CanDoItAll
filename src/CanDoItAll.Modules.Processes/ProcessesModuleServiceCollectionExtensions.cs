@@ -17,6 +17,7 @@ public static class ProcessesModuleServiceCollectionExtensions
             return new ProcessTemplatePackLoader(options.PackRoot);
         });
         services.AddScoped<ProcessTemplateCatalogService>();
+        services.AddScoped<ProcessTemplateLibraryService>();
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();
         services.AddScoped<ProcessDevelopmentSeedService>();

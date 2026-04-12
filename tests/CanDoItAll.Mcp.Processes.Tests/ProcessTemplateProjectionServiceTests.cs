@@ -27,6 +27,24 @@ public sealed class ProcessTemplateProjectionServiceTests
     }
 
     [Fact]
+    public void GetProjectedEnvelope_projects_branching_decision_roles_from_the_canonical_template()
+    {
+        var loader = new ProcessTemplatePackLoader();
+        var projection = new ProcessTemplateProjectionService(loader);
+
+        var envelope = projection.GetProjectedEnvelope("ai-assisted-change-delivery");
+
+        Assert.Equal(9, envelope.Definition.Roles.Count);
+        Assert.Equal(6, envelope.Definition.Steps.Count);
+
+        var architect = envelope.Definition.Roles.Single(role => role.Key == "solution-architect");
+        var delegationDesign = envelope.Definition.Steps.Single(step => step.Key == "delegation-design");
+
+        Assert.Equal(architect.Id, delegationDesign.DecisionRoleRequirementId);
+        Assert.Equal(2, delegationDesign.BranchOutcomes.Count);
+    }
+
+    [Fact]
     public void GetCompatibilityReportMarkdown_returns_current_architecture_report()
     {
         var loader = new ProcessTemplatePackLoader();

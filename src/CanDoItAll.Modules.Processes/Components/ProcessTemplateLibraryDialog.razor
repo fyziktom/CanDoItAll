@@ -1,0 +1,332 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using Component.Core
+
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Templates"
+            Title="Templates"
+            Subtitle="Browse reusable process, role, and artifact definitions, inspect the authored source material, and add only the pieces you want into the current process workspace."
+            Size="ModalSize.Full"
+            ShowCloseButton="false"
+            TestId="processes-template-library-dialog"
+            OnClose="HandleCloseAsync">
+        <HeaderActions>
+            <StatusBadge Tone="neutral" Text="@($"{processItems.Count} processes")" />
+            <StatusBadge Tone="info" Text="@($"{roleItems.Count} roles")" />
+            <StatusBadge Tone="warning" Text="@($"{artifactItems.Count} artifacts")" />
+            <Button ButtonStyle="ButtonStyle.Light"
+                    Text="Close"
+                    Click="HandleCloseAsync" />
+        </HeaderActions>
+        <ChildContent>
+            <div class="h-[78vh] min-h-[42rem]">
+                <ListDetailShell ListPaneWidth="28rem"
+                                 ListPaneClass="h-full min-h-0"
+                                 DetailPaneClass="h-full min-h-0">
+                    <ListHeader>
+                        <Stack GapScale="LayoutGap.Medium">
+                            <div>
+                                <p class="cda-eyebrow">Template browser</p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-950">Browse by category</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">Search the process template pack without leaving the current authoring session.</p>
+                            </div>
+
+                            <TextBox Value="@searchText"
+                                     ValueChanged="HandleSearchChangedAsync"
+                                     Placeholder="Search templates, roles, artifacts, governance, or evidence"
+                                     Immediate="true"
+                                     Class="w-full" />
+
+                            <SecondaryTabs Items="CategoryTabs"
+                                           SelectedKey="@selectedCategoryKey"
+                                           SelectedKeyChanged="HandleCategoryChangedAsync" />
+                        </Stack>
+                    </ListHeader>
+
+                    <ListContent>
+                        <div class="h-full overflow-y-auto pr-1">
+                            @if (CurrentItems.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No templates"
+                                            Title="No templates match the current filter"
+                                            Description="Clear the search to restore the full catalog for the selected category." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Medium">
+                                    @foreach (var item in CurrentItems)
+                                    {
+                                        <SelectionListItem Title="@item.Title"
+                                                           Eyebrow="@item.Eyebrow"
+                                                           Meta="@BuildListMeta(item)"
+                                                           Summary="@item.Summary"
+                                                           IsSelected="@(string.Equals(item.ItemId, selectedItemId, StringComparison.Ordinal))"
+                                                           OnSelect="@(() => SelectItemAsync(item.ItemId))"
+                                                           DataTestId="@BuildItemTestId(item)">
+                                            <Status>
+                                                <Cluster Gap="LayoutGap.Small">
+                                                    @foreach (var fact in item.Facts.Take(2))
+                                                    {
+                                                        <StatusBadge Tone="neutral" Text="@($"{fact.Label}: {fact.Value}")" />
+                                                    }
+                                                </Cluster>
+                                            </Status>
+                                        </SelectionListItem>
+                                    }
+                                </Stack>
+                            }
+                        </div>
+                    </ListContent>
+
+                    <DetailHeader>
+                        @if (selectedPreview is null)
+                        {
+                            <div>
+                                <p class="cda-eyebrow">Preview</p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-950">Select a template</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">The detail pane fills when you pick a process, role, or artifact from the library list.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Medium">
+                                <Split Gap="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Start"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       Wrap="FlexWrap.Wrap">
+                                    <div class="min-w-0">
+                                        <p class="cda-eyebrow">@selectedPreview.Eyebrow</p>
+                                        <h3 class="mt-1 text-xl font-semibold text-slate-950">@selectedPreview.Title</h3>
+                                        <p class="mt-2 text-sm leading-6 text-slate-600">@selectedPreview.Summary</p>
+                                        <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">@selectedPreview.ScopeLabel</p>
+                                    </div>
+
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <Button Text="@CurrentAddButtonText"
+                                                Disabled="@(!CanAddCurrentSelection)"
+                                                Click="AddCurrentSelectionAsync"
+                                                data-testid="processes-template-library-add-button" />
+                                    </Cluster>
+                                </Split>
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="neutral" Text="@ScopeLabel" />
+                                    @foreach (var fact in selectedPreview.Facts)
+                                    {
+                                        <StatusBadge Tone="info" Text="@($"{fact.Label}: {fact.Value}")" />
+                                    }
+                                </Cluster>
+
+                                @if (ShowArtifactTargetPicker)
+                                {
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateMd="minmax(0,18rem) minmax(0,1fr)">
+                                        <FormField Text="Artifact target step">
+                                            <InputSelect @bind-Value="SelectedArtifactTargetStepId"
+                                                         @bind-Value:after="@(() => HandleArtifactTargetChangedAsync(SelectedArtifactTargetStepId))"
+                                                         class="cda-input"
+                                                         data-testid="processes-template-library-artifact-target">
+                                                <option value="">Select a process step</option>
+                                                @foreach (var target in ArtifactTargets)
+                                                {
+                                                    <option value="@target.StepId">@target.Title</option>
+                                                }
+                                            </InputSelect>
+                                        </FormField>
+                                        <SurfaceCard Soft="true">
+                                            <p class="text-sm leading-6 text-slate-600">
+                                                Artifact templates attach to a concrete process step because artifact expectations are step-scoped in the current domain model.
+                                            </p>
+                                        </SurfaceCard>
+                                    </Grid>
+                                }
+                            </Stack>
+                        }
+                    </DetailHeader>
+
+                    <DetailContent>
+                        <div class="h-full overflow-y-auto pr-1">
+                            @if (selectedPreview is null)
+                            {
+                                <EmptyState Eyebrow="Preview unavailable"
+                                            Title="Choose a template from the list"
+                                            Description="Process previews include source markdown, Mermaid diagrams, JSON definitions, and a structural tree so you can inspect before importing." />
+                            }
+                            else
+                            {
+                                <Grid Gap="LayoutGap.Large"
+                                      ColumnTemplateXl="minmax(0,1.2fr) minmax(19rem,0.8fr)">
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        <SecondaryTabs Items="PreviewTabs"
+                                                       SelectedKey="@selectedPreviewTabKey"
+                                                       SelectedKeyChanged="HandlePreviewTabChangedAsync" />
+
+                                        @if (string.Equals(selectedPreviewTabKey, "overview", StringComparison.Ordinal))
+                                        {
+                                            <SurfaceCard>
+                                                <p class="cda-eyebrow">Overview</p>
+                                                <h4 class="mt-1 text-lg font-semibold text-slate-950">What this template contributes</h4>
+                                                <p class="mt-3 text-sm leading-6 text-slate-600">@selectedPreview.Summary</p>
+                                            </SurfaceCard>
+
+                                            @if (selectedPreview.MarkdownDocuments.Count > 0)
+                                            {
+                                                <SurfaceCard Soft="true">
+                                                    <p class="cda-eyebrow">Source documents</p>
+                                                    <h4 class="mt-1 text-lg font-semibold text-slate-950">@($"{selectedPreview.MarkdownDocuments.Count} markdown file(s)")</h4>
+                                                    <p class="mt-2 text-sm leading-6 text-slate-600">Open the Markdown tab for full rendered documentation with the original file contents.</p>
+                                                </SurfaceCard>
+                                            }
+
+                                            @if (selectedPreview.MermaidDiagrams.Count > 0)
+                                            {
+                                                <SurfaceCard Soft="true">
+                                                    <p class="cda-eyebrow">Diagrams</p>
+                                                    <h4 class="mt-1 text-lg font-semibold text-slate-950">@($"{selectedPreview.MermaidDiagrams.Count} mermaid diagram(s)")</h4>
+                                                    <p class="mt-2 text-sm leading-6 text-slate-600">Open the Diagrams tab to inspect the rendered graph with pan and zoom.</p>
+                                                </SurfaceCard>
+                                            }
+
+                                            @if (selectedPreview.JsonDocuments.Count > 0)
+                                            {
+                                                <SurfaceCard Soft="true">
+                                                    <p class="cda-eyebrow">Structured definitions</p>
+                                                    <h4 class="mt-1 text-lg font-semibold text-slate-950">@($"{selectedPreview.JsonDocuments.Count} JSON file(s)")</h4>
+                                                    <p class="mt-2 text-sm leading-6 text-slate-600">Open the JSON tab to inspect the canonical template payloads and projections.</p>
+                                                </SurfaceCard>
+                                            }
+                                        }
+                                        else if (string.Equals(selectedPreviewTabKey, "markdown", StringComparison.Ordinal))
+                                        {
+                                            <Stack GapScale="LayoutGap.Medium">
+                                                @foreach (var document in selectedPreview.MarkdownDocuments)
+                                                {
+                                                    <SurfaceCard data-testid="@($"processes-template-library-markdown-{document.Id}")">
+                                                        <p class="cda-eyebrow">Markdown</p>
+                                                        <h4 class="mt-1 text-lg font-semibold text-slate-950">@document.Title</h4>
+                                                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@document.SourcePath</p>
+                                                        <div class="prose prose-slate mt-4 max-w-none">
+                                                            @RenderMarkdown(document.Content)
+                                                        </div>
+                                                    </SurfaceCard>
+                                                }
+                                            </Stack>
+                                        }
+                                        else if (string.Equals(selectedPreviewTabKey, "diagrams", StringComparison.Ordinal))
+                                        {
+                                            <Stack GapScale="LayoutGap.Medium">
+                                                @foreach (var diagram in selectedPreview.MermaidDiagrams)
+                                                {
+                                                    <ProcessTemplateMermaidPreview Title="@diagram.Title"
+                                                                                   Definition="@diagram.Definition"
+                                                                                   SourcePath="@diagram.SourcePath"
+                                                                                   TestId="@($"processes-template-library-diagram-{diagram.Id}")" />
+                                                }
+                                            </Stack>
+                                        }
+                                        else if (string.Equals(selectedPreviewTabKey, "json", StringComparison.Ordinal))
+                                        {
+                                            <Stack GapScale="LayoutGap.Medium">
+                                                @foreach (var document in selectedPreview.JsonDocuments)
+                                                {
+                                                    <SurfaceCard data-testid="@($"processes-template-library-json-{document.Id}")">
+                                                        <p class="cda-eyebrow">JSON</p>
+                                                        <h4 class="mt-1 text-lg font-semibold text-slate-950">@document.Title</h4>
+                                                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@document.SourcePath</p>
+                                                        <div class="mt-4 overflow-hidden rounded-[1.5rem] border border-slate-200">
+                                                            <JsonViewer JsonData="@document.Content"
+                                                                        IsEditable="false" />
+                                                        </div>
+                                                    </SurfaceCard>
+                                                }
+                                            </Stack>
+                                        }
+                                    </Stack>
+
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        <PanelCard>
+                                            <Stack GapScale="LayoutGap.Small">
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Structure" />
+                                                <TextBlock TextStyle="TextStyle.H5" Value="Definition tree" />
+                                                <TreeView Items="@selectedPreview.StructureNodes"
+                                                          AriaLabel="Template structure"
+                                                          OnSelect="IgnoreTreeInteractionAsync"
+                                                          OnToggle="IgnoreTreeInteractionAsync" />
+                                            </Stack>
+                                        </PanelCard>
+
+                                        @if (selectedPreview.RelatedRoles.Count > 0)
+                                        {
+                                            <SurfaceCard>
+                                                <p class="cda-eyebrow">Related roles</p>
+                                                <h4 class="mt-1 text-lg font-semibold text-slate-950">Selective role import</h4>
+                                                <Stack GapScale="LayoutGap.Small"
+                                                       Class="mt-4">
+                                                    @foreach (var role in selectedPreview.RelatedRoles)
+                                                    {
+                                                        <PanelCard Soft="true">
+                                                            <p class="text-sm font-semibold text-slate-950">@role.Title</p>
+                                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@role.ScopeLabel</p>
+                                                            <p class="mt-3 text-sm leading-6 text-slate-600">@role.Summary</p>
+                                                            <Cluster Gap="LayoutGap.Small"
+                                                                     Class="mt-4">
+                                                                <Button ButtonStyle="ButtonStyle.Light"
+                                                                        Size="ButtonSize.Small"
+                                                                        Text="Preview role"
+                                                                        Click="@(() => OpenRelatedRoleAsync(role.ItemId))"
+                                                                        data-testid="@BuildLinkedResourceTestId("processes-template-library-open-role", role)" />
+                                                                <Button Size="ButtonSize.Small"
+                                                                        Text="Add role"
+                                                                        Click="@(() => AddRoleTemplate.InvokeAsync(role.ItemId))"
+                                                                        data-testid="@BuildLinkedResourceTestId("processes-template-library-add-role", role)" />
+                                                            </Cluster>
+                                                        </PanelCard>
+                                                    }
+                                                </Stack>
+                                            </SurfaceCard>
+                                        }
+
+                                        @if (selectedPreview.RelatedArtifacts.Count > 0)
+                                        {
+                                            <SurfaceCard>
+                                                <p class="cda-eyebrow">Related artifacts</p>
+                                                <h4 class="mt-1 text-lg font-semibold text-slate-950">Selective artifact import</h4>
+                                                <Stack GapScale="LayoutGap.Small"
+                                                       Class="mt-4">
+                                                    @foreach (var artifact in selectedPreview.RelatedArtifacts)
+                                                    {
+                                                        <PanelCard Soft="true">
+                                                            <p class="text-sm font-semibold text-slate-950">@artifact.Title</p>
+                                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@artifact.ScopeLabel</p>
+                                                            <p class="mt-3 text-sm leading-6 text-slate-600">@artifact.Summary</p>
+                                                            <Cluster Gap="LayoutGap.Small"
+                                                                     Class="mt-4">
+                                                                <Button ButtonStyle="ButtonStyle.Light"
+                                                                        Size="ButtonSize.Small"
+                                                                        Text="Preview artifact"
+                                                                        Click="@(() => OpenRelatedArtifactAsync(artifact.ItemId))"
+                                                                        data-testid="@BuildLinkedResourceTestId("processes-template-library-open-artifact", artifact)" />
+                                                                <Button Size="ButtonSize.Small"
+                                                                        Text="Add artifact"
+                                                                        Disabled="@(!HasArtifactTarget)"
+                                                                        Click="@(() => AddArtifactTemplate.InvokeAsync(artifact.ItemId))"
+                                                                        data-testid="@BuildLinkedResourceTestId("processes-template-library-add-artifact", artifact)" />
+                                                            </Cluster>
+                                                        </PanelCard>
+                                                    }
+                                                </Stack>
+                                            </SurfaceCard>
+                                        }
+                                    </Stack>
+                                </Grid>
+                            }
+                        </div>
+                    </DetailContent>
+                </ListDetailShell>
+            </div>
+        </ChildContent>
+    </Dialog>
+}

@@ -1,4 +1,5 @@
 using System.Reflection;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
@@ -20,7 +21,9 @@ using CanDoItAll.Web.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Tests.Support;
 
@@ -52,8 +55,11 @@ public static class TestApplicationBootstrap
         services.AddSingleton(configuration);
         services.AddSingleton<TestHostApplicationLifetime>();
         services.AddSingleton<IHostApplicationLifetime>(serviceProvider => serviceProvider.GetRequiredService<TestHostApplicationLifetime>());
+        services.TryAddSingleton<IJSRuntime, UnsupportedJsRuntime>();
+        services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
+        services.AddMermaidJS();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
         services.AddSecurityModule();
         services.AddWorkspaceModule();
@@ -100,5 +106,18 @@ public static class TestApplicationBootstrap
         await using var scope = serviceProvider.CreateAsyncScope();
         var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
         await bootstrapper.EnsureCurrentProfileReadyAsync(cancellationToken);
+    }
+
+    private sealed class UnsupportedJsRuntime : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+        }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+        }
     }
 }

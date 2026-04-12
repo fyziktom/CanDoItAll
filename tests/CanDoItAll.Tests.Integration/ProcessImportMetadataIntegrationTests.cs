@@ -80,6 +80,31 @@ public sealed class ProcessImportMetadataIntegrationTests
         Assert.Equal(string.Empty, importedVersion.ImportWarnings);
     }
 
+    [Fact]
+    public async Task ImportAsync_imports_project_scoped_template_pack_processes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var templateLibraryService = scope.ServiceProvider.GetRequiredService<ProcessTemplateLibraryService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template pack import project");
+
+        var envelope = templateLibraryService.CreateProcessImportEnvelope("ai-assisted-change-delivery", projectId);
+
+        var importResult = await processesService.ImportAsync(envelope);
+
+        Assert.True(importResult.IsSuccess, string.Join(" | ", importResult.Errors.Select(error => error.Message)));
+
+        var definitions = await processesService.ListDefinitionsAsync(projectId);
+        var importedDefinition = Assert.Single(definitions);
+        Assert.Equal(importResult.Value, importedDefinition.Id);
+        Assert.Equal("AI-assisted change delivery with guarded delegation", importedDefinition.Name);
+        Assert.Equal(projectId, importedDefinition.ProjectId);
+        Assert.Equal(envelope.Definition.Roles.Count, importedDefinition.RoleCount);
+        Assert.Equal(envelope.Definition.Steps.Count, importedDefinition.StepCount);
+    }
+
     private static ProcessDefinitionEditorModel BuildDefinitionEditor(Guid projectId)
     {
         var roleId = Guid.NewGuid();

@@ -186,7 +186,7 @@
       "TargetLeadHours": 6,
       "DependsOnStepKey": "task-intake",
       "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DecisionRoleKey": "solution-architect",
       "CanvasX": 430,
       "CanvasY": 180,
       "BranchOutcomes": [
@@ -492,7 +492,7 @@
       "TargetLeadHours": 4,
       "DependsOnStepKey": "evaluation-and-benchmarking",
       "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DecisionRoleKey": "release-approver",
       "CanvasX": 1360,
       "CanvasY": 180,
       "BranchOutcomes": [

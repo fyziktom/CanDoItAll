@@ -53,6 +53,25 @@ public sealed class MainLayoutDatabaseProfileTests
         });
     }
 
+    [Fact]
+    public async Task Main_layout_hosts_notification_surface_for_runtime_toasts()
+    {
+        await using var harness = await CreateUnlockedHarnessAsync();
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
+            .SetResult(true);
+
+        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var notificationHost = cut.Find(".rz-notification");
+            var style = (notificationHost.GetAttribute("style") ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal);
+
+            Assert.Contains("z-index:900", style, StringComparison.Ordinal);
+        });
+    }
+
     private static async Task<ComponentTestHarness> CreateUnlockedHarnessAsync()
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-tests");

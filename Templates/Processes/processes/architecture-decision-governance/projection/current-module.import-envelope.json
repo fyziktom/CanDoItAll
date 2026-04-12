@@ -412,7 +412,7 @@
         "TargetLeadHours": 2,
         "DependsOnStepId": "487336c7-633d-520a-8579-0869a9f360ce",
         "DependsOnBranchOutcomeId": null,
-        "DecisionRoleRequirementId": null,
+        "DecisionRoleRequirementId": "e5d76f21-f3c4-5e84-bcc6-32bdcb40bf31",
         "CanvasX": 1050,
         "CanvasY": 220,
         "BranchCanvasX": 1250,

@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="7dbe01dd-b08a-4788-9538-b05de302b445" name="lucys@LUCYSPOWER 2026-04-12 11:34:22" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-12T11:34:22.6675046-04:00" queuing="2026-04-12T11:34:22.6675049-04:00" start="2026-04-12T11:34:19.5531759-04:00" finish="2026-04-12T11:34:22.6792124-04:00" />
+  <TestSettings name="default" id="8f496ea4-613f-4b34-a0d7-f834e36adf9a">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-04-12_11_34_22" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="eb93d5e4-5d74-49ac-a4e3-b1f96bf08cd3" testId="97ef2742-4067-cdda-4325-3d7c086961d1" testName="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Hotfix_and_software_templates_match_current_dependency_and_artifact_input_expectations" computerName="LUCYSPOWER" duration="00:00:00.0469206" startTime="2026-04-12T11:34:22.4853155-04:00" endTime="2026-04-12T11:34:22.5322144-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eb93d5e4-5d74-49ac-a4e3-b1f96bf08cd3" />
+    <UnitTestResult executionId="f9be007e-114a-4fca-8088-4f03ad393ce9" testId="cd46940d-6a65-5f90-5562-b6ff40d6ed2a" testName="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Branching_templates_require_explicit_decision_roles" computerName="LUCYSPOWER" duration="00:00:00.1691410" startTime="2026-04-12T11:34:22.2882831-04:00" endTime="2026-04-12T11:34:22.4423440-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f9be007e-114a-4fca-8088-4f03ad393ce9" />
+    <UnitTestResult executionId="72a45224-d66f-4a40-9145-80e5c4202b8a" testId="36a62a1c-6900-2517-2b51-314f75566ef3" testName="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Ai_assisted_change_delivery_keeps_explicit_delegation_decision_authority" computerName="LUCYSPOWER" duration="00:00:00.0344801" startTime="2026-04-12T11:34:22.5324015-04:00" endTime="2026-04-12T11:34:22.5669195-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="72a45224-d66f-4a40-9145-80e5c4202b8a" />
+    <UnitTestResult executionId="f2badd47-a29a-47bf-a5df-92be3ce6d10e" testId="79950af7-9a58-4000-2176-bbbad36a70fb" testName="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Branching_code_review_keeps_explicit_router_and_error_lane" computerName="LUCYSPOWER" duration="00:00:00.0423624" startTime="2026-04-12T11:34:22.4540925-04:00" endTime="2026-04-12T11:34:22.4851667-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f2badd47-a29a-47bf-a5df-92be3ce6d10e" />
+    <UnitTestResult executionId="f3871086-f195-4777-8ea3-c76c4b75fce4" testId="a8e4a7cf-9752-7840-f72c-9a520ef8a514" testName="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests.GetCompatibilityReportMarkdown_returns_current_architecture_report" computerName="LUCYSPOWER" duration="00:00:00.0356485" startTime="2026-04-12T11:34:22.4596093-04:00" endTime="2026-04-12T11:34:22.4941372-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f3871086-f195-4777-8ea3-c76c4b75fce4" />
+    <UnitTestResult executionId="63379872-ce15-4956-bde0-895071856e0c" testId="eeea50b9-5bc3-7d67-e5ad-76e34de2d5cd" testName="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests.GetProjectedEnvelope_clears_definition_ids_and_preserves_current_architecture_counts" computerName="LUCYSPOWER" duration="00:00:00.0491632" startTime="2026-04-12T11:34:22.4943154-04:00" endTime="2026-04-12T11:34:22.5434259-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="63379872-ce15-4956-bde0-895071856e0c" />
+    <UnitTestResult executionId="03c2e2ea-61ee-45af-868d-38a6e7872588" testId="461696c8-7f8d-d533-ff43-0f7e8bb70945" testName="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests.GetProjectedEnvelope_projects_branching_decision_roles_from_the_canonical_template" computerName="LUCYSPOWER" duration="00:00:00.1882342" startTime="2026-04-12T11:34:22.2896923-04:00" endTime="2026-04-12T11:34:22.4584626-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03c2e2ea-61ee-45af-868d-38a6e7872588" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests.GetProjectedEnvelope_clears_definition_ids_and_preserves_current_architecture_counts" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="eeea50b9-5bc3-7d67-e5ad-76e34de2d5cd">
+      <Execution id="63379872-ce15-4956-bde0-895071856e0c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests" name="GetProjectedEnvelope_clears_definition_ids_and_preserves_current_architecture_counts" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Ai_assisted_change_delivery_keeps_explicit_delegation_decision_authority" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="36a62a1c-6900-2517-2b51-314f75566ef3">
+      <Execution id="72a45224-d66f-4a40-9145-80e5c4202b8a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests" name="Ai_assisted_change_delivery_keeps_explicit_delegation_decision_authority" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests.GetCompatibilityReportMarkdown_returns_current_architecture_report" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="a8e4a7cf-9752-7840-f72c-9a520ef8a514">
+      <Execution id="f3871086-f195-4777-8ea3-c76c4b75fce4" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests" name="GetCompatibilityReportMarkdown_returns_current_architecture_report" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Branching_code_review_keeps_explicit_router_and_error_lane" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="79950af7-9a58-4000-2176-bbbad36a70fb">
+      <Execution id="f2badd47-a29a-47bf-a5df-92be3ce6d10e" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests" name="Branching_code_review_keeps_explicit_router_and_error_lane" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Hotfix_and_software_templates_match_current_dependency_and_artifact_input_expectations" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="97ef2742-4067-cdda-4325-3d7c086961d1">
+      <Execution id="eb93d5e4-5d74-49ac-a4e3-b1f96bf08cd3" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests" name="Hotfix_and_software_templates_match_current_dependency_and_artifact_input_expectations" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests.Branching_templates_require_explicit_decision_roles" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="cd46940d-6a65-5f90-5562-b6ff40d6ed2a">
+      <Execution id="f9be007e-114a-4fca-8088-4f03ad393ce9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.CurrentArchitectureTemplateParityTests" name="Branching_templates_require_explicit_decision_roles" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests.GetProjectedEnvelope_projects_branching_decision_roles_from_the_canonical_template" storage="c:\repositories\candoitall\.codex-artifacts\mcp-processes\bin\candoitall.mcp.processes.tests\debug\candoitall.mcp.processes.tests.dll" id="461696c8-7f8d-d533-ff43-0f7e8bb70945">
+      <Execution id="03c2e2ea-61ee-45af-868d-38a6e7872588" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\mcp-processes\bin\CanDoItAll.Mcp.Processes.Tests\debug\CanDoItAll.Mcp.Processes.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Mcp.Processes.Tests.ProcessTemplateProjectionServiceTests" name="GetProjectedEnvelope_projects_branching_decision_roles_from_the_canonical_template" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="97ef2742-4067-cdda-4325-3d7c086961d1" executionId="eb93d5e4-5d74-49ac-a4e3-b1f96bf08cd3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cd46940d-6a65-5f90-5562-b6ff40d6ed2a" executionId="f9be007e-114a-4fca-8088-4f03ad393ce9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="36a62a1c-6900-2517-2b51-314f75566ef3" executionId="72a45224-d66f-4a40-9145-80e5c4202b8a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="79950af7-9a58-4000-2176-bbbad36a70fb" executionId="f2badd47-a29a-47bf-a5df-92be3ce6d10e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8e4a7cf-9752-7840-f72c-9a520ef8a514" executionId="f3871086-f195-4777-8ea3-c76c4b75fce4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eeea50b9-5bc3-7d67-e5ad-76e34de2d5cd" executionId="63379872-ce15-4956-bde0-895071856e0c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="461696c8-7f8d-d533-ff43-0f7e8bb70945" executionId="03c2e2ea-61ee-45af-868d-38a6e7872588" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="7" executed="7" passed="7" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:01.61]   Discovering: CanDoItAll.Mcp.Processes.Tests&#xD;
+[xUnit.net 00:00:01.68]   Discovered:  CanDoItAll.Mcp.Processes.Tests&#xD;
+[xUnit.net 00:00:01.70]   Starting:    CanDoItAll.Mcp.Processes.Tests&#xD;
+[xUnit.net 00:00:02.03]   Finished:    CanDoItAll.Mcp.Processes.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="8be36ac9-4c10-473a-8b7a-82b9d3c4c2cb" name="lucys@LUCYSPOWER 2026-04-12 11:36:30" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-12T11:36:30.0759593-04:00" queuing="2026-04-12T11:36:30.0759597-04:00" start="2026-04-12T11:36:25.3889604-04:00" finish="2026-04-12T11:36:41.7939611-04:00" />
+  <TestSettings name="default" id="dcf28a67-3c39-41b1-8f49-b5ee44fc1880">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-04-12_11_36_30" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="0a13ff9f-5ca2-42d4-9739-22f98a79c698" testId="0e2c7b1b-ae39-6114-b20c-78799bc4e30d" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_node_moves_update_role_and_branch_positions_in_editor_state" computerName="LUCYSPOWER" duration="00:00:01.1462749" startTime="2026-04-12T11:36:34.5799138-04:00" endTime="2026-04-12T11:36:35.7235065-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0a13ff9f-5ca2-42d4-9739-22f98a79c698" />
+    <UnitTestResult executionId="9eb82813-b456-4ea5-ade6-1d11d334b63b" testId="77f3d072-2a82-3ced-848e-d434a67c1007" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_node_moves_coalesce_rapid_updates_into_one_persisted_definition_update" computerName="LUCYSPOWER" duration="00:00:00.9426778" startTime="2026-04-12T11:36:37.4978131-04:00" endTime="2026-04-12T11:36:38.4404409-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9eb82813-b456-4ea5-ade6-1d11d334b63b" />
+    <UnitTestResult executionId="47e1308e-0a5e-4dd6-8b33-a8dfb421c459" testId="41f1470c-049b-0c1a-2188-c27356f2fa1f" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_delete_action_removes_roles_and_steps" computerName="LUCYSPOWER" duration="00:00:00.6396117" startTime="2026-04-12T11:36:40.2204581-04:00" endTime="2026-04-12T11:36:40.8600186-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="47e1308e-0a5e-4dd6-8b33-a8dfb421c459" />
+    <UnitTestResult executionId="841e375b-85e5-403e-91cd-494b4335b277" testId="4e29b8f8-0b87-6ba9-819d-3fa4fd6379bd" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal" computerName="LUCYSPOWER" duration="00:00:00.6095337" startTime="2026-04-12T11:36:36.3873858-04:00" endTime="2026-04-12T11:36:36.9968488-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="841e375b-85e5-403e-91cd-494b4335b277" />
+    <UnitTestResult executionId="42b0d7bd-e209-4470-8758-6c0201cf6483" testId="1503464e-dab9-dea8-5240-fa6abaf15c88" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Global_workspace_loads_persisted_definitions_on_the_first_render_without_query_parameters" computerName="LUCYSPOWER" duration="00:00:00.5006513" startTime="2026-04-12T11:36:36.9971332-04:00" endTime="2026-04-12T11:36:37.4976360-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="42b0d7bd-e209-4470-8758-6c0201cf6483" />
+    <UnitTestResult executionId="f4a5ef99-1b52-4d08-a588-6275d839c2f0" testId="b6956270-b1dc-e82e-dd92-871a97058575" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_connection_actions_create_and_delete_role_participation_and_artifact_links_and_persist" computerName="LUCYSPOWER" duration="00:00:00.9691808" startTime="2026-04-12T11:36:39.2512304-04:00" endTime="2026-04-12T11:36:40.2202838-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f4a5ef99-1b52-4d08-a588-6275d839c2f0" />
+    <UnitTestResult executionId="d09908ae-2f53-4cc7-a052-1966b58b585b" testId="258ce61c-b97a-b1d2-bac7-126274dbfbb5" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_connection_actions_create_and_delete_branch_and_step_dependencies" computerName="LUCYSPOWER" duration="00:00:00.8104086" startTime="2026-04-12T11:36:38.4406260-04:00" endTime="2026-04-12T11:36:39.2510058-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d09908ae-2f53-4cc7-a052-1966b58b585b" />
+    <UnitTestResult executionId="efb404f7-1337-4535-8a5e-e27ea78fc322" testId="df2e6be1-786c-fe8f-02eb-1c5b1c636a6c" testName="CanDoItAll.Tests.Components.NotificationTests.Notification_surface_renders_above_modal_overlays" computerName="LUCYSPOWER" duration="00:00:01.2686944" startTime="2026-04-12T11:36:28.5284138-04:00" endTime="2026-04-12T11:36:29.7805261-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="efb404f7-1337-4535-8a5e-e27ea78fc322" />
+    <UnitTestResult executionId="a3906092-cd4b-4563-a7f4-fe0d715d689c" testId="19a6de12-62d5-ce67-1a7a-d0dcdb8fffd8" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_toolbar_switches_between_authoring_and_delete_modes" computerName="LUCYSPOWER" duration="00:00:00.6635723" startTime="2026-04-12T11:36:35.7237030-04:00" endTime="2026-04-12T11:36:36.3871972-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a3906092-cd4b-4563-a7f4-fe0d715d689c" />
+    <UnitTestResult executionId="f8968246-03c5-4ddd-9595-40ae2c5a9a54" testId="f6df0d96-5409-7419-0f9e-833522d3df36" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_shows_process_template_preview_with_add_action" computerName="LUCYSPOWER" duration="00:00:00.8344342" startTime="2026-04-12T11:36:40.8602114-04:00" endTime="2026-04-12T11:36:41.6946070-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f8968246-03c5-4ddd-9595-40ae2c5a9a54" />
+    <UnitTestResult executionId="2f43776d-3939-40a2-98cf-54819de2ee37" testId="61cbfd25-97e5-2737-b87e-a28fdbafa399" testName="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_adds_artifact_templates_into_the_selected_definition_step_without_closing_the_modal" computerName="LUCYSPOWER" duration="00:00:06.0679974" startTime="2026-04-12T11:36:28.5299868-04:00" endTime="2026-04-12T11:36:34.5770922-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2f43776d-3939-40a2-98cf-54819de2ee37" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_toolbar_switches_between_authoring_and_delete_modes" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="19a6de12-62d5-ce67-1a7a-d0dcdb8fffd8">
+      <Execution id="a3906092-cd4b-4563-a7f4-fe0d715d689c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Steps_canvas_toolbar_switches_between_authoring_and_delete_modes" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_node_moves_coalesce_rapid_updates_into_one_persisted_definition_update" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="77f3d072-2a82-3ced-848e-d434a67c1007">
+      <Execution id="9eb82813-b456-4ea5-ade6-1d11d334b63b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Steps_canvas_node_moves_coalesce_rapid_updates_into_one_persisted_definition_update" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_adds_artifact_templates_into_the_selected_definition_step_without_closing_the_modal" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="61cbfd25-97e5-2737-b87e-a28fdbafa399">
+      <Execution id="2f43776d-3939-40a2-98cf-54819de2ee37" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Templates_dialog_adds_artifact_templates_into_the_selected_definition_step_without_closing_the_modal" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Global_workspace_loads_persisted_definitions_on_the_first_render_without_query_parameters" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="1503464e-dab9-dea8-5240-fa6abaf15c88">
+      <Execution id="42b0d7bd-e209-4470-8758-6c0201cf6483" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Global_workspace_loads_persisted_definitions_on_the_first_render_without_query_parameters" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_node_moves_update_role_and_branch_positions_in_editor_state" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="0e2c7b1b-ae39-6114-b20c-78799bc4e30d">
+      <Execution id="0a13ff9f-5ca2-42d4-9739-22f98a79c698" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Steps_canvas_node_moves_update_role_and_branch_positions_in_editor_state" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="4e29b8f8-0b87-6ba9-819d-3fa4fd6379bd">
+      <Execution id="841e375b-85e5-403e-91cd-494b4335b277" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_connection_actions_create_and_delete_branch_and_step_dependencies" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="258ce61c-b97a-b1d2-bac7-126274dbfbb5">
+      <Execution id="d09908ae-2f53-4cc7-a052-1966b58b585b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Steps_canvas_connection_actions_create_and_delete_branch_and_step_dependencies" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_shows_process_template_preview_with_add_action" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="f6df0d96-5409-7419-0f9e-833522d3df36">
+      <Execution id="f8968246-03c5-4ddd-9595-40ae2c5a9a54" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Templates_dialog_shows_process_template_preview_with_add_action" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.NotificationTests.Notification_surface_renders_above_modal_overlays" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="df2e6be1-786c-fe8f-02eb-1c5b1c636a6c">
+      <Execution id="efb404f7-1337-4535-8a5e-e27ea78fc322" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.NotificationTests" name="Notification_surface_renders_above_modal_overlays" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_delete_action_removes_roles_and_steps" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="41f1470c-049b-0c1a-2188-c27356f2fa1f">
+      <Execution id="47e1308e-0a5e-4dd6-8b33-a8dfb421c459" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Steps_canvas_delete_action_removes_roles_and_steps" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProcessWorkspaceTests.Steps_canvas_connection_actions_create_and_delete_role_participation_and_artifact_links_and_persist" storage="c:\repositories\candoitall\.codex-artifacts\components\bin\candoitall.tests.components\debug\candoitall.tests.components.dll" id="b6956270-b1dc-e82e-dd92-871a97058575">
+      <Execution id="f4a5ef99-1b52-4d08-a588-6275d839c2f0" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.codex-artifacts\components\bin\CanDoItAll.Tests.Components\debug\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProcessWorkspaceTests" name="Steps_canvas_connection_actions_create_and_delete_role_participation_and_artifact_links_and_persist" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="0e2c7b1b-ae39-6114-b20c-78799bc4e30d" executionId="0a13ff9f-5ca2-42d4-9739-22f98a79c698" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77f3d072-2a82-3ced-848e-d434a67c1007" executionId="9eb82813-b456-4ea5-ade6-1d11d334b63b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="41f1470c-049b-0c1a-2188-c27356f2fa1f" executionId="47e1308e-0a5e-4dd6-8b33-a8dfb421c459" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4e29b8f8-0b87-6ba9-819d-3fa4fd6379bd" executionId="841e375b-85e5-403e-91cd-494b4335b277" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1503464e-dab9-dea8-5240-fa6abaf15c88" executionId="42b0d7bd-e209-4470-8758-6c0201cf6483" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b6956270-b1dc-e82e-dd92-871a97058575" executionId="f4a5ef99-1b52-4d08-a588-6275d839c2f0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="258ce61c-b97a-b1d2-bac7-126274dbfbb5" executionId="d09908ae-2f53-4cc7-a052-1966b58b585b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="df2e6be1-786c-fe8f-02eb-1c5b1c636a6c" executionId="efb404f7-1337-4535-8a5e-e27ea78fc322" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="19a6de12-62d5-ce67-1a7a-d0dcdb8fffd8" executionId="a3906092-cd4b-4563-a7f4-fe0d715d689c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f6df0d96-5409-7419-0f9e-833522d3df36" executionId="f8968246-03c5-4ddd-9595-40ae2c5a9a54" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="61cbfd25-97e5-2737-b87e-a28fdbafa399" executionId="2f43776d-3939-40a2-98cf-54819de2ee37" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="11" executed="11" passed="11" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:01.93]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:02.02]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:02.04]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:15.26]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
