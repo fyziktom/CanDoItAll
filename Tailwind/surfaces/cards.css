@@ -136,6 +136,18 @@
     color: var(--cad-color-text-strong);
   }
 
+  .cda-summary-tile__label-row {
+    @apply flex items-center gap-2;
+  }
+
+  .cda-summary-tile__help {
+    @apply inline-flex items-center;
+  }
+
+  .cda-summary-tile__help-toggle {
+    @apply shrink-0;
+  }
+
   .cda-summary-tile__helper {
     @apply mt-2 text-sm leading-6;
     color: var(--cad-color-text-muted);

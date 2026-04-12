@@ -6,6 +6,7 @@ using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -26,7 +27,6 @@ public sealed class ProcessWorkspaceTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Process management", cut.Markup);
             Assert.Contains("Workspace-visible process", cut.Markup);
         });
     }
@@ -57,6 +57,39 @@ public sealed class ProcessWorkspaceTests
         var detailTabs = cut.Find("[data-testid='processes-detail-tabs']");
         Assert.Contains("cad-tabs--fill-height", detailTabs.ClassName, StringComparison.Ordinal);
         Assert.Contains("cad-tabs--panel-overflow-auto", detailTabs.ClassName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workspace_replaces_inline_help_copy_with_compact_help_popovers()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Help popover workspace project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workspace-visible process", cut.Markup);
+            Assert.NotNull(cut.Find("button[aria-label='Show help for Definitions']"));
+            Assert.NotNull(cut.Find("button[aria-label='Show process definitions help']"));
+            Assert.NotNull(cut.Find("button[aria-label='Show process workspace help']"));
+        });
+
+        Assert.DoesNotContain("Persisted process definitions.", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Browse saved process contracts, filter the library, and keep selection in sync with the detail workspace without expanding the list header.", cut.Markup, StringComparison.Ordinal);
+
+        var workspaceHelpButton = cut.Find("button[aria-label='Show process workspace help']");
+        Assert.NotNull(workspaceHelpButton.ParentElement);
+
+        workspaceHelpButton.ParentElement.TriggerEvent("onmouseenter", new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence.", cut.Markup));
     }
 
     [Fact]

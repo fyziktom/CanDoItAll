@@ -11,6 +11,8 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
 {
     private const string DefinitionCanvasSelectTool = "authoring";
     private const string DefinitionCanvasDeleteTool = "delete";
+    private const string CompactHelpPopoverRootClass = "pf-help-popover flex items-center";
+    private const string CompactHelpPopoverToggleClass = "pf-help-popover__toggle pf-help-popover__toggle--compact";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {

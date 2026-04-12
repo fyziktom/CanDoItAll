@@ -79,6 +79,9 @@
     public int CloseDelayMs { get; set; } = 220;
 
     [Parameter]
+    public bool OpenOnHover { get; set; }
+
+    [Parameter]
     public RenderFragment? PanelContent { get; set; }
 
     private async Task ToggleAsync()
@@ -95,10 +98,18 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleMouseEnter()
+    private async Task HandleMouseEnter()
     {
         pointerInside = true;
         CancelScheduledClose();
+
+        if (!OpenOnHover || isOpen)
+        {
+            return;
+        }
+
+        isOpen = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleMouseLeave()
