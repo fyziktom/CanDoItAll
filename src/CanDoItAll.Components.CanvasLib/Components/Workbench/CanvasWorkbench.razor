@@ -621,6 +621,11 @@
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
     }
 
+    public Task FitViewToSceneAsync()
+    {
+        return FitViewAsync();
+    }
+
     private async Task FocusPrimaryNodeAsync()
     {
         var targetNodeId = Surface.Nodes.FirstOrDefault(node => string.Equals(node.Family, "root", StringComparison.OrdinalIgnoreCase))?.Id

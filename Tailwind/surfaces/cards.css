@@ -110,7 +110,23 @@
     @apply p-4;
   }
 
+  .cda-summary-tile__row {
+    @apply min-w-0;
+  }
+
   .cda-summary-tile--compact .cda-eyebrow {
+    @apply text-[11px] tracking-[0.18em];
+  }
+
+  .cda-summary-tile--badge {
+    @apply px-4 py-3;
+  }
+
+  .cda-summary-tile--badge .cda-summary-tile__row {
+    @apply flex items-center justify-between gap-2;
+  }
+
+  .cda-summary-tile--badge .cda-eyebrow {
     @apply text-[11px] tracking-[0.18em];
   }
 
@@ -140,12 +156,16 @@
   }
 
   .cda-summary-tile__value {
-    @apply mt-3 text-2xl font-semibold tracking-tight;
+    @apply mt-3 shrink-0 text-2xl font-semibold tracking-tight;
     color: var(--cad-color-text-strong);
   }
 
   .cda-summary-tile--compact .cda-summary-tile__value {
     @apply mt-2 text-xl;
+  }
+
+  .cda-summary-tile--badge .cda-summary-tile__value {
+    @apply mt-0 text-lg;
   }
 
   .cda-summary-tile__helper {

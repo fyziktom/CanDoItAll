@@ -10,6 +10,7 @@ public static class ProcessesModuleServiceCollectionExtensions
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
+        services.AddScoped<ProcessCanvasRecompositionService>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();
         services.AddScoped(provider =>
         {

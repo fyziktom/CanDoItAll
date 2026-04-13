@@ -2,7 +2,10 @@
 
 <PageTitle>@PageTitleText</PageTitle>
 
-<PageScaffold FillHeight="true">
+<PageScaffold FillHeight="true"
+              MaxWidthClass="max-w-full"
+              Class="processes-page-scaffold"
+              data-testid="processes-page-scaffold">
     <Header>
         <PageHeader Eyebrow="@PageEyebrow"
                     Title=""
@@ -29,22 +32,26 @@
                 <SummaryTile Label="Definitions"
                              Value="@definitions.Count.ToString()"
                              HelperText="Persisted process definitions."
+                             Badge="true"
                              Compact="true"
                              ShowHelperTextAsTooltip="true" />
                 <SummaryTile Label="Visible"
                              Value="@FilteredDefinitions.Count.ToString()"
                              HelperText="Definitions matching the current search."
+                             Badge="true"
                              Compact="true"
                              Tone="info"
                              ShowHelperTextAsTooltip="true" />
                 <SummaryTile Label="Active runs"
                              Value="@definitions.Sum(item => item.ActiveRunCount).ToString()"
                              HelperText="Runs still active across the visible library."
+                             Badge="true"
                              Compact="true"
                              ShowHelperTextAsTooltip="true" />
                 <SummaryTile Label="Improvements"
                              Value="@analytics.ImprovementCandidateCount.ToString()"
                              HelperText="Improvement signals linked to the current scope."
+                             Badge="true"
                              Compact="true"
                              Tone="warning"
                              ShowHelperTextAsTooltip="true" />
@@ -256,10 +263,15 @@
                                             <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
                                                                          ActiveTool="@definitionCanvasTool"
                                                                          ToolboxWindowVisible="@canvasToolboxWindowState.IsVisible"
+                                                                         CanRecomposeCanvas="@CanRecomposeDefinitionCanvas"
+                                                                         IsRecompositionInProgress="@isDefinitionCanvasRecompositionInProgress"
                                                                          SelectToolClicked="SelectDefinitionCanvasToolAsync"
                                                                          DeleteToolClicked="DeleteDefinitionCanvasToolAsync"
                                                                          ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync"
-                                                                         ToggleToolboxWindow="ToggleCanvasToolboxWindowAsync" />
+                                                                         ToggleToolboxWindow="ToggleCanvasToolboxWindowAsync"
+                                                                         ResolveCollisionsClicked="ResolveDefinitionCanvasCollisionsAsync"
+                                                                         AddSpaceAroundClicked="AddDefinitionCanvasSpaceAroundAsync"
+                                                                         RecomposeCanvasClicked="RecomposeDefinitionCanvasAsync" />
                                         </ToolbarLeftContent>
                                         <OverlayContent>
                                             @if (canvasToolboxWindowState.IsVisible)
@@ -917,23 +929,27 @@
                             <SummaryTile Label="Runs"
                                          Value="@analytics.TotalRuns.ToString()"
                                          HelperText="@($"{analytics.ActiveRuns} active / {analytics.CompletedRuns} completed")"
+                                         Badge="true"
                                          Compact="true"
                                          ShowHelperTextAsTooltip="true" />
                             <SummaryTile Label="Capability gaps"
                                          Value="@analytics.CapabilityGapCount.ToString()"
                                          HelperText="Assignments or execution capacity gaps detected."
+                                         Badge="true"
                                          Compact="true"
                                          Tone="danger"
                                          ShowHelperTextAsTooltip="true" />
                             <SummaryTile Label="Conformance"
                                          Value="@analytics.ConformanceObservationCount.ToString()"
                                          HelperText="@($"{analytics.SafeNonActionCount} safe non-actions recorded")"
+                                         Badge="true"
                                          Compact="true"
                                          Tone="warning"
                                          ShowHelperTextAsTooltip="true" />
                             <SummaryTile Label="Actual cost"
                                          Value="@analytics.ActualCost.ToString("C")"
                                          HelperText="@($"{analytics.EstimatedCost:C} estimated in scope")"
+                                         Badge="true"
                                          Compact="true"
                                          Tone="info"
                                          ShowHelperTextAsTooltip="true" />

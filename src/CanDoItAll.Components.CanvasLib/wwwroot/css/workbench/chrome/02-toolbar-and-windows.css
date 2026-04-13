@@ -42,7 +42,7 @@
 .cw-toolbar-group--left {
     flex: 1 1 auto;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     scrollbar-width: none;
 }
 

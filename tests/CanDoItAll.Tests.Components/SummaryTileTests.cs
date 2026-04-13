@@ -53,4 +53,22 @@ public sealed class SummaryTileTests
 
         cut.WaitForAssertion(() => Assert.Contains("Persisted process definitions.", cut.Markup));
     }
+
+    [Fact]
+    public void Summary_tile_badge_mode_renders_compact_single_row_shell()
+    {
+        using var context = new TestContext();
+
+        var cut = context.RenderComponent<SummaryTile>(parameters => parameters
+            .Add(component => component.Label, "Definitions")
+            .Add(component => component.Value, "8")
+            .Add(component => component.HelperText, "Persisted process definitions.")
+            .Add(component => component.ShowHelperTextAsTooltip, true)
+            .Add(component => component.Badge, true));
+
+        var tile = cut.Find(".cda-summary-tile");
+        Assert.Contains("cda-summary-tile--badge", tile.ClassName, StringComparison.Ordinal);
+        Assert.NotNull(cut.Find(".cda-summary-tile__row"));
+        Assert.NotNull(cut.Find("button[aria-label='Show help for Definitions']"));
+    }
 }

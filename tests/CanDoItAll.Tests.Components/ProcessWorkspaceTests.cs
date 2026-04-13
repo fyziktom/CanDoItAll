@@ -48,7 +48,14 @@ public sealed class ProcessWorkspaceTests
         {
             Assert.Contains("Workspace-visible process", cut.Markup);
             Assert.NotNull(cut.Find("[data-testid='processes-workspace-shell']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-page-scaffold']"));
         });
+
+        var pageScaffold = cut.Find("[data-testid='processes-page-scaffold']");
+        Assert.Contains("max-w-full", pageScaffold.ClassName, StringComparison.Ordinal);
+
+        var summaryTiles = cut.FindAll(".cda-summary-tile--badge");
+        Assert.Equal(4, summaryTiles.Count);
 
         var definitionListScroll = cut.Find("[data-testid='processes-definition-list-scroll']");
         Assert.Contains("h-full", definitionListScroll.ClassName, StringComparison.Ordinal);
