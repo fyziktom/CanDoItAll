@@ -1,0 +1,36 @@
+{
+  "Key": "04-process-schema-referential-integrity-hardening",
+  "Title": "Process schema referential integrity hardening",
+  "Purpose": "Add the missing definition-child and runtime foreign keys, choose delete behaviors intentionally, and stop relying on ordered delete code as the primary integrity mechanism.",
+  "DependsOn": [
+    "03-architecture-review-gate-a"
+  ],
+  "Deliverables": [
+    "Explicit FK mappings for the remaining Process definition-child and runtime tables.",
+    "Provider migrations for SQLite and PostgreSQL reflecting the new FK graph.",
+    "A short written delete-behavior map explaining which links cascade, restrict, or set-null and why.",
+    "Integration tests proving the DB rejects representative orphan rows and invalid references."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Modules.Processes/ProcessDefinitionEntityConfigurations.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessRuntimeEntityConfigurations.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessesService.Publication.cs",
+    "src/CanDoItAll.Migrations.Sqlite/Migrations",
+    "src/CanDoItAll.Migrations.PostgreSql/Migrations",
+    "tests/CanDoItAll.Tests.Integration"
+  ],
+  "ValidationCommands": [
+    "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessSchema|FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
+    "dotnet ef migrations script --project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --startup-project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --context AppDbContext",
+    "dotnet ef migrations script --project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --context AppDbContext"
+  ],
+  "ReviewQuestions": [
+    "Does the DB now reject representative orphan definition-child and runtime rows?",
+    "Are delete behaviors explicit and documented instead of incidental?",
+    "Did FK hardening preserve differential save and delete behavior?"
+  ],
+  "CorrectiveOnFailure": "If FK hardening causes save-cycle failures, do not quietly remove the FK plan. Open the DB-integrity corrective playbook and redesign the save ordering or ownership model first.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-db-integrity-reset"
+}
