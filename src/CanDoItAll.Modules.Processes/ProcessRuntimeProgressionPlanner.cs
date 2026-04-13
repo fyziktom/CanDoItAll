@@ -69,7 +69,7 @@ internal static class ProcessRuntimeProgressionPlanner
     {
         return stepDefinitionsById.Values
             .Where(
-                item => ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(item, stepDependenciesByStepId)
+                item => ProcessStepDependencyCollection.GetPersistedDependencies(item.Id, stepDependenciesByStepId)
                     .Any(dependency => dependency.DependsOnStepId == stepDefinition.Id))
             .OrderBy(item => item.OrderIndex);
     }
@@ -127,7 +127,7 @@ internal static class ProcessRuntimeProgressionPlanner
         IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId)
     {
-        foreach (var dependency in ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(stepDefinition, stepDependenciesByStepId))
+        foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
         {
             if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
                 sourceStepRun.Status != ProcessStepRunStatus.Completed)
@@ -152,7 +152,7 @@ internal static class ProcessRuntimeProgressionPlanner
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
         out string reason)
     {
-        foreach (var dependency in ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(stepDefinition, stepDependenciesByStepId))
+        foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
         {
             if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
                 !stepDefinitionsById.TryGetValue(dependency.DependsOnStepId, out var sourceStepDefinition))

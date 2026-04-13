@@ -1,5 +1,4 @@
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -10,8 +9,9 @@ namespace CanDoItAll.Modules.Processes;
 public sealed partial class ProcessesService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    IActivityStream activityStream,
-    ISearchIndexService searchIndexService,
+    ProcessOutboxService processOutboxService,
+    IProcessDefinitionListQueryService definitionListQueryService,
+    IProcessRuntimeReadQueryService runtimeReadQueryService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IProcessExecutorRegistryBridge executorRegistryBridge)
 {
@@ -22,7 +22,7 @@ public sealed partial class ProcessesService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await DefinitionListQueries.ListAsync(dbContext, projectId, cancellationToken);
+        return await definitionListQueryService.ListAsync(dbContext, projectId, cancellationToken);
     }
 
     public async Task<ProcessDefinitionEditorModel> GetEditorAsync(
@@ -197,7 +197,7 @@ public sealed partial class ProcessesService(
                         .ToList(),
                     ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)
                 };
-                ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(editorStep, BuildEditorDependencies(step, stepDependencies));
+                ProcessStepDependencyCollection.SetEditorDependencies(editorStep, BuildEditorDependencies(step, stepDependencies));
                 return editorStep;
             }).ToList()
         };

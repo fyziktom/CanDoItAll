@@ -21,6 +21,15 @@ internal sealed class ProcessRunConfiguration : IEntityTypeConfiguration<Process
         builder.HasIndex(run => run.ProcessDefinitionId);
         builder.HasIndex(run => run.ProjectId);
         builder.HasIndex(run => run.Status);
+        builder.HasOne<ProcessDefinition>()
+            .WithMany()
+            .HasForeignKey(run => run.ProcessDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessDefinitionVersion>()
+            .WithMany()
+            .HasForeignKey(run => new { run.ProcessDefinitionId, run.ProcessDefinitionVersionId })
+            .HasPrincipalKey(version => new { version.ProcessDefinitionId, version.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -47,6 +56,18 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.HasIndex(step => new { step.ProcessRunId, step.Status });
         builder.HasIndex(step => step.StepDefinitionId);
         builder.HasIndex(step => step.SelectedBranchOutcomeId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(step => step.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(step => step.StepDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessStepBranchOutcomeDefinition>()
+            .WithMany()
+            .HasForeignKey(step => step.SelectedBranchOutcomeId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -63,6 +84,18 @@ internal sealed class ProcessRunAssignmentConfiguration : IEntityTypeConfigurati
         builder.Property(assignment => assignment.SnapshotSummary).HasColumnType("TEXT");
         builder.HasIndex(assignment => new { assignment.ProcessRunId, assignment.RoleRequirementId, assignment.StepDefinitionId });
         builder.HasIndex(assignment => assignment.PartyId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(assignment => assignment.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessRoleRequirement>()
+            .WithMany()
+            .HasForeignKey(assignment => assignment.RoleRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(assignment => assignment.StepDefinitionId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -80,6 +113,14 @@ internal sealed class ProcessWorkBriefConfiguration : IEntityTypeConfiguration<P
         builder.Property(brief => brief.EvidenceExpectationSummary).HasColumnType("TEXT");
         builder.HasIndex(brief => brief.ProcessRunId);
         builder.HasIndex(brief => brief.StepRunId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(brief => brief.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(brief => brief.StepRunId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -100,6 +141,18 @@ internal sealed class ProcessDecisionRecordConfiguration : IEntityTypeConfigurat
         builder.HasIndex(record => new { record.ProcessRunId, record.CreatedAtUtc });
         builder.HasIndex(record => record.StepRunId);
         builder.HasIndex(record => record.BranchOutcomeId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(record => record.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(record => record.StepRunId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<ProcessStepBranchOutcomeDefinition>()
+            .WithMany()
+            .HasForeignKey(record => record.BranchOutcomeId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -120,6 +173,14 @@ internal sealed class ProcessArtifactRecordConfiguration : IEntityTypeConfigurat
         builder.Property(record => record.ExternalReferenceKey).HasMaxLength(200);
         builder.HasIndex(record => record.ProcessRunId);
         builder.HasIndex(record => record.StepRunId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(record => record.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(record => record.StepRunId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -139,6 +200,14 @@ internal sealed class ProcessJournalEntryConfiguration : IEntityTypeConfiguratio
         builder.Property(entry => entry.ReplayContextJson).HasColumnType("TEXT");
         builder.HasIndex(entry => new { entry.ProcessRunId, entry.OccurredAtUtc });
         builder.HasIndex(entry => entry.StepRunId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(entry => entry.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(entry => entry.StepRunId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -154,6 +223,14 @@ internal sealed class ProcessConformanceObservationConfiguration : IEntityTypeCo
         builder.Property(observation => observation.DeviationReason).HasColumnType("TEXT");
         builder.HasIndex(observation => observation.ProcessRunId);
         builder.HasIndex(observation => observation.StepRunId);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(observation => observation.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(observation => observation.StepRunId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -171,5 +248,13 @@ internal sealed class ProcessImprovementCandidateConfiguration : IEntityTypeConf
         builder.HasIndex(candidate => candidate.ProcessDefinitionId);
         builder.HasIndex(candidate => candidate.ProcessRunId);
         builder.HasIndex(candidate => candidate.Status);
+        builder.HasOne<ProcessDefinition>()
+            .WithMany()
+            .HasForeignKey(candidate => candidate.ProcessDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(candidate => candidate.ProcessRunId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

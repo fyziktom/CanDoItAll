@@ -57,8 +57,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "db-review-step",
                     Title = "Review database impact",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = branchOutcomeId,
+                    Dependencies = CreateDependencies((decisionStepId, branchOutcomeId)),
                     OutputContractSummary = "Data review completed."
                 }
             ]
@@ -122,8 +121,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "repair-change",
                     Title = "Repair change set",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = fixOutcomeId
+                    Dependencies = CreateDependencies((decisionStepId, fixOutcomeId))
                 },
                 new ProcessStepEditorModel
                 {
@@ -131,7 +129,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "qa-lane",
                     Title = "Validate QA lane",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = decisionStepId
+                    Dependencies = CreateDependencies((decisionStepId, null))
                 }
             ]
         };
@@ -261,15 +259,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "peer-review",
                     Title = "Complete peer review",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = implementationStepId,
-                    Dependencies =
-                    [
-                        new ProcessStepDependencyEditorModel
-                        {
-                            Id = Guid.NewGuid(),
-                            DependsOnStepId = implementationStepId
-                        }
-                    ],
+                    Dependencies = CreateDependencies((implementationStepId, null)),
                     RoleAssignments =
                     [
                         new ProcessStepRoleRequirementEditorModel
@@ -377,8 +367,6 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                 Guid.NewGuid(),
                 stepDefinitionId,
                 null,
-                null,
-                null,
                 1,
                 "Route review outcome",
                 ProcessStepKind.Decision,
@@ -402,8 +390,6 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             new(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
-                stepDefinitionId,
-                repairOutcomeId,
                 null,
                 2,
                 "Repair change set",
@@ -440,8 +426,6 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             new(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
-                stepDefinitionId,
-                null,
                 null,
                 3,
                 "Validate QA lane",
@@ -495,5 +479,17 @@ public sealed class ProcessCanvasSurfaceFactoryTests
         return new ProcessCanvasSurfaceFactory(
             new ProcessCanvasChromeCatalogService(
                 new ProcessTemplatePackLoader(packRoot)));
+    }
+
+    private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)
+    {
+        return items
+            .Select(item => new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = item.StepId,
+                DependsOnBranchOutcomeId = item.BranchOutcomeId
+            })
+            .ToList();
     }
 }

@@ -38,8 +38,6 @@ public sealed record ProcessStepRunArtifactPortViewModel(
 public sealed record ProcessStepRunViewModel(
     Guid Id,
     Guid StepDefinitionId,
-    Guid? DependsOnStepDefinitionId,
-    Guid? DependsOnBranchOutcomeId,
     Guid? DecisionRoleRequirementId,
     int Sequence,
     string Title,
@@ -220,11 +218,3 @@ public sealed class ProcessArtifactRecordRequest
     public string ManagedStoragePath { get; set; } = string.Empty;
 }
 
-public sealed class ProcessImportExportEnvelope
-{
-    public ProcessDefinitionEditorModel Definition { get; set; } = new();
-
-    public List<string> Warnings { get; set; } = [];
-
-    public string SourceFormat { get; set; } = string.Empty;
-}

@@ -7,6 +7,8 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService
 {
+    private const int DefinitionSlugRetryLimit = 3;
+
     public async Task<Result<Guid>> SaveAsync(
         ProcessDefinitionEditorModel model,
         CancellationToken cancellationToken = default) {
@@ -23,122 +25,112 @@ public sealed partial class ProcessesService
             return Result<Guid>.Failure(validationError);
         }
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        for (var slugRetryAttempt = 0; ; slugRetryAttempt++) {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        ProcessDefinition definition;
-        ProcessDefinitionVersion workingVersion;
-        var isNew = false;
-        try {
-            definition = model.Id.HasValue
-                ? await dbContext.Set<ProcessDefinition>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-                : null;
+            ProcessDefinition definition;
+            ProcessDefinitionVersion workingVersion;
+            Guid outboxId;
+            var isNew = false;
+            try {
+                definition = model.Id.HasValue
+                    ? await dbContext.Set<ProcessDefinition>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
+                    : null;
 
-            isNew = definition is null;
-            if (definition is null) {
-                definition = new ProcessDefinition {
-                    CreatedAtUtc = clock.GetUtcNow()
-                };
+                isNew = definition is null;
+                if (definition is null) {
+                    definition = new ProcessDefinition {
+                        CreatedAtUtc = clock.GetUtcNow()
+                    };
 
-                await dbContext.Set<ProcessDefinition>().AddAsync(definition, cancellationToken);
-            } else if (HasConcurrencyTokenMismatch(model.DefinitionConcurrencyToken, definition.ConcurrencyToken)) {
+                    await dbContext.Set<ProcessDefinition>().AddAsync(definition, cancellationToken);
+                } else if (HasConcurrencyTokenMismatch(model.DefinitionConcurrencyToken, definition.ConcurrencyToken)) {
+                    return Result<Guid>.Failure(CreateDefinitionSaveConflictError());
+                }
+
+                definition.ProjectId = model.ProjectId;
+                definition.Name = model.Name.Trim();
+                definition.Slug = await BuildUniqueSlugAsync(dbContext, model.Name, model.ProjectId, definition.Id, cancellationToken);
+                definition.Summary = model.Summary.Trim();
+                definition.ValueStatement = model.ValueStatement.Trim();
+                definition.CustomerName = model.CustomerName.Trim();
+                definition.OwnerName = model.OwnerName.Trim();
+                definition.InterfaceContractSummary = model.InterfaceContractSummary.Trim();
+                definition.GovernanceNotes = model.GovernanceNotes.Trim();
+                definition.Criticality = model.Criticality;
+                definition.AutonomyLevel = model.AutonomyLevel;
+                definition.Status = model.Status;
+                definition.UpdatedAtUtc = clock.GetUtcNow();
+
+                workingVersion = model.WorkingVersionId.HasValue
+                    ? await dbContext.Set<ProcessDefinitionVersion>()
+                        .SingleOrDefaultAsync(item => item.Id == model.WorkingVersionId.Value, cancellationToken)
+                    : null;
+
+                if (workingVersion is null) {
+                    workingVersion = await GetWorkingVersionAsync(dbContext, definition.Id, cancellationToken);
+                }
+
+                if (workingVersion is not null && HasConcurrencyTokenMismatch(model.WorkingVersionConcurrencyToken, workingVersion.ConcurrencyToken)) {
+                    return Result<Guid>.Failure(CreateDefinitionSaveConflictError());
+                }
+
+                if (workingVersion is not null && workingVersion.Status == ProcessVersionStatus.Published) {
+                    return Result<Guid>.Failure(Error.Validation("Published versions are immutable. Save into a draft version instead.", "processes.immutable-published-version"));
+                }
+
+                if (workingVersion is null) {
+                    await EnsureNextVersionNumberAheadOfExistingVersionsAsync(dbContext, definition, cancellationToken);
+                    workingVersion = new ProcessDefinitionVersion {
+                        ProcessDefinitionId = definition.Id,
+                        VersionNumber = AllocateNextVersionNumber(definition),
+                        Status = ProcessVersionStatus.Draft,
+                        CreatedAtUtc = clock.GetUtcNow()
+                    };
+
+                    await dbContext.Set<ProcessDefinitionVersion>().AddAsync(workingVersion, cancellationToken);
+                }
+
+                workingVersion.ChangeSummary = model.ChangeSummary.Trim();
+                workingVersion.GovernancePolicySummary = model.GovernancePolicySummary.Trim();
+                workingVersion.ConstitutionRuleSummary = model.ConstitutionRuleSummary.Trim();
+                workingVersion.OperatingModeSummary = model.OperatingModeSummary.Trim();
+                workingVersion.SimulationReadinessSummary = model.SimulationReadinessSummary.Trim();
+                if (importMetadata is not null) {
+                    workingVersion.ImportedFrom = importMetadata.SourceFormat;
+                    workingVersion.ImportWarnings = importMetadata.WarningSummary;
+                }
+
+                workingVersion.UpdatedAtUtc = clock.GetUtcNow();
+
+                await SaveDefinitionChildrenAsync(dbContext, workingVersion.Id, model, cancellationToken);
+                outboxId = await processOutboxService.EnqueueDefinitionSaveAsync(
+                    dbContext,
+                    definition,
+                    workingVersion,
+                    isNew,
+                    cancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+                return Result<Guid>.Success(definition.Id);
+            }
+            catch (DbUpdateConcurrencyException) {
+                await transaction.RollbackAsync(cancellationToken);
                 return Result<Guid>.Failure(CreateDefinitionSaveConflictError());
             }
-
-            definition.ProjectId = model.ProjectId;
-            definition.Name = model.Name.Trim();
-            definition.Slug = await BuildUniqueSlugAsync(dbContext, model.Name, model.ProjectId, definition.Id, cancellationToken);
-            definition.Summary = model.Summary.Trim();
-            definition.ValueStatement = model.ValueStatement.Trim();
-            definition.CustomerName = model.CustomerName.Trim();
-            definition.OwnerName = model.OwnerName.Trim();
-            definition.InterfaceContractSummary = model.InterfaceContractSummary.Trim();
-            definition.GovernanceNotes = model.GovernanceNotes.Trim();
-            definition.Criticality = model.Criticality;
-            definition.AutonomyLevel = model.AutonomyLevel;
-            definition.Status = model.Status;
-            definition.UpdatedAtUtc = clock.GetUtcNow();
-
-            workingVersion = model.WorkingVersionId.HasValue
-                ? await dbContext.Set<ProcessDefinitionVersion>()
-                    .SingleOrDefaultAsync(item => item.Id == model.WorkingVersionId.Value, cancellationToken)
-                : null;
-
-            if (workingVersion is null) {
-                workingVersion = await GetWorkingVersionAsync(dbContext, definition.Id, cancellationToken);
+            catch (DbUpdateException exception) when (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception) &&
+                                                      IsDefinitionSlugConflict(exception) &&
+                                                      slugRetryAttempt < DefinitionSlugRetryLimit - 1) {
+                await transaction.RollbackAsync(cancellationToken);
+                continue;
             }
-
-            if (workingVersion is not null && HasConcurrencyTokenMismatch(model.WorkingVersionConcurrencyToken, workingVersion.ConcurrencyToken)) {
-                return Result<Guid>.Failure(CreateDefinitionSaveConflictError());
+            catch (DbUpdateException exception) when (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)) {
+                await transaction.RollbackAsync(cancellationToken);
+                return Result<Guid>.Failure(CreateDefinitionSaveUniqueConflictError(exception));
             }
-
-            if (workingVersion is not null && workingVersion.Status == ProcessVersionStatus.Published) {
-                return Result<Guid>.Failure(Error.Validation("Published versions are immutable. Save into a draft version instead.", "processes.immutable-published-version"));
-            }
-
-            if (workingVersion is null) {
-                workingVersion = new ProcessDefinitionVersion {
-                    ProcessDefinitionId = definition.Id,
-                    VersionNumber = await GetNextVersionNumberAsync(dbContext, definition.Id, cancellationToken),
-                    Status = ProcessVersionStatus.Draft,
-                    CreatedAtUtc = clock.GetUtcNow()
-                };
-
-                await dbContext.Set<ProcessDefinitionVersion>().AddAsync(workingVersion, cancellationToken);
-            }
-
-            workingVersion.ChangeSummary = model.ChangeSummary.Trim();
-            workingVersion.GovernancePolicySummary = model.GovernancePolicySummary.Trim();
-            workingVersion.ConstitutionRuleSummary = model.ConstitutionRuleSummary.Trim();
-            workingVersion.OperatingModeSummary = model.OperatingModeSummary.Trim();
-            workingVersion.SimulationReadinessSummary = model.SimulationReadinessSummary.Trim();
-            if (importMetadata is not null) {
-                workingVersion.ImportedFrom = importMetadata.SourceFormat;
-                workingVersion.ImportWarnings = importMetadata.WarningSummary;
-            }
-
-            workingVersion.UpdatedAtUtc = clock.GetUtcNow();
-
-            await SaveDefinitionChildrenAsync(dbContext, workingVersion.Id, model, cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException) {
-            await transaction.RollbackAsync(cancellationToken);
-            return Result<Guid>.Failure(CreateDefinitionSaveConflictError());
-        }
-        catch (DbUpdateException exception) when (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)) {
-            await transaction.RollbackAsync(cancellationToken);
-            return Result<Guid>.Failure(CreateDefinitionSaveUniqueConflictError());
-        }
-
-        var route = definition.ProjectId.HasValue
-            ? $"/projects/{definition.ProjectId.Value:D}/processes?processId={definition.Id:D}"
-            : $"/processes?processId={definition.Id:D}";
-        await searchIndexService.UpsertAsync(
-            new SearchDocumentInput(
-                "process-definition",
-                definition.Id.ToString(),
-                "Processes",
-                definition.Name,
-                definition.Summary,
-                $"{definition.ValueStatement}\nCustomer: {definition.CustomerName}\nOwner: {definition.OwnerName}\nVersion: {workingVersion.VersionNumber}",
-                route,
-                definition.ProjectId),
-            cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "processes",
-                isNew ? "create-definition" : "update-definition",
-                isNew ? "Created process definition" : "Updated process definition",
-                definition.Name,
-                definition.ProjectId,
-                "process-definition",
-                definition.Id,
-                route,
-                DefaultActor),
-            cancellationToken);
-        return Result<Guid>.Success(definition.Id);
     }
 
     private sealed record ProcessImportMetadata(
@@ -277,7 +269,7 @@ public sealed partial class ProcessesService
             }
         }
 
-        var resolvedSteps = new List<(Guid StepId, ProcessStepDefinition Entity, ProcessStepEditorModel Model, IReadOnlyList<ProcessStepDependencyEditorModel> Dependencies)>(model.Steps.Count);
+        var resolvedSteps = new List<(Guid StepId, bool ReusesExistingEntity, ProcessStepDefinition Entity, ProcessStepEditorModel Model, IReadOnlyList<ProcessStepDependencyEditorModel> Dependencies)>(model.Steps.Count);
         for (var index = 0; index < model.Steps.Count; index++) {
             var stepModel = model.Steps[index];
             var stepId = ResolveStableChildId(stepModel.Id, assignedStepIds, "step");
@@ -285,7 +277,8 @@ public sealed partial class ProcessesService
                 stepIdMap[stepModel.Id.Value] = stepId;
             }
 
-            if (!stepsById.TryGetValue(stepId, out var step)) {
+            var reusesExistingEntity = stepsById.TryGetValue(stepId, out var step);
+            if (!reusesExistingEntity) {
                 step = new ProcessStepDefinition {
                     Id = stepId,
                     ProcessDefinitionVersionId = workingVersionId
@@ -326,6 +319,7 @@ public sealed partial class ProcessesService
             retainedStepIds.Add(stepId);
             resolvedSteps.Add((
                 stepId,
+                reusesExistingEntity,
                 step,
                 stepModel,
                 ProcessCanvasBranching.GetOrderedDependencies(stepModel)
@@ -351,12 +345,18 @@ public sealed partial class ProcessesService
                     ? BuildKey(outcomeModel.Title, $"outcome-{outcomeIndex + 1}")
                     : BuildKey(outcomeModel.Key, $"outcome-{outcomeIndex + 1}");
                 ProcessStepBranchOutcomeDefinition? branchOutcome = null;
-                var requestedOutcomeId = ResolveStableChildId(outcomeModel.Id, assignedBranchOutcomeIds, "branch outcome");
+                var requestedOutcomeId = ResolveStableChildId(
+                    resolvedStep.ReusesExistingEntity
+                        ? outcomeModel.Id
+                        : null,
+                    assignedBranchOutcomeIds,
+                    "branch outcome");
                 if (outcomeModel.Id.HasValue && outcomeModel.Id.Value != Guid.Empty) {
                     branchOutcomeIdMap[outcomeModel.Id.Value] = requestedOutcomeId;
                 }
 
-                if (branchOutcomesById.TryGetValue(requestedOutcomeId, out var existingOutcome)) {
+                if (resolvedStep.ReusesExistingEntity &&
+                    branchOutcomesById.TryGetValue(requestedOutcomeId, out var existingOutcome)) {
                     branchOutcome = existingOutcome;
                 } else if ((!outcomeModel.Id.HasValue || outcomeModel.Id.Value == Guid.Empty) &&
                            existingOutcomesByKey.TryGetValue(resolvedKey, out var matchingOutcomes)) {
@@ -417,8 +417,15 @@ public sealed partial class ProcessesService
                 }
 
                 ProcessStepDependencyDefinition? dependency = null;
-                var requestedDependencyId = ResolveStableChildId(dependencyModel.Id, assignedDependencyIds, "step dependency");
-                if (dependencyModel.Id.HasValue && dependencyModel.Id.Value != Guid.Empty &&
+                var requestedDependencyId = ResolveStableChildId(
+                    resolvedStep.ReusesExistingEntity
+                        ? dependencyModel.Id
+                        : null,
+                    assignedDependencyIds,
+                    "step dependency");
+                if (resolvedStep.ReusesExistingEntity &&
+                    dependencyModel.Id.HasValue &&
+                    dependencyModel.Id.Value != Guid.Empty &&
                     dependenciesById.TryGetValue(requestedDependencyId, out var existingDependency)) {
                     dependency = existingDependency;
                 } else if ((!dependencyModel.Id.HasValue || dependencyModel.Id.Value == Guid.Empty) &&
@@ -445,7 +452,6 @@ public sealed partial class ProcessesService
                 orderedDependencies.Add(dependency);
             }
 
-            ProcessDependencyCompatibilityBridge.SyncLegacyPersistedPrimaryDependency(resolvedStep.Entity, orderedDependencies);
         }
 
         foreach (var resolvedStep in resolvedSteps) {
@@ -469,8 +475,15 @@ public sealed partial class ProcessesService
                 }
 
                 ProcessStepRoleAssignmentRequirement? assignment = null;
-                var requestedAssignmentId = ResolveStableChildId(roleAssignmentModel.Id, assignedAssignmentIds, "step role assignment");
-                if (roleAssignmentModel.Id.HasValue && roleAssignmentModel.Id.Value != Guid.Empty &&
+                var requestedAssignmentId = ResolveStableChildId(
+                    resolvedStep.ReusesExistingEntity
+                        ? roleAssignmentModel.Id
+                        : null,
+                    assignedAssignmentIds,
+                    "step role assignment");
+                if (resolvedStep.ReusesExistingEntity &&
+                    roleAssignmentModel.Id.HasValue &&
+                    roleAssignmentModel.Id.Value != Guid.Empty &&
                     assignmentsById.TryGetValue(requestedAssignmentId, out var existingAssignment)) {
                     assignment = existingAssignment;
                 } else if ((!roleAssignmentModel.Id.HasValue || roleAssignmentModel.Id.Value == Guid.Empty) &&
@@ -504,12 +517,19 @@ public sealed partial class ProcessesService
                 }
 
                 ProcessArtifactExpectation? artifactExpectation = null;
-                var requestedArtifactExpectationId = ResolveStableChildId(artifactModel.Id, assignedArtifactExpectationIds, "artifact expectation");
+                var requestedArtifactExpectationId = ResolveStableChildId(
+                    resolvedStep.ReusesExistingEntity
+                        ? artifactModel.Id
+                        : null,
+                    assignedArtifactExpectationIds,
+                    "artifact expectation");
                 if (artifactModel.Id.HasValue && artifactModel.Id.Value != Guid.Empty) {
                     artifactExpectationIdMap[artifactModel.Id.Value] = requestedArtifactExpectationId;
                 }
 
-                if (artifactModel.Id.HasValue && artifactModel.Id.Value != Guid.Empty &&
+                if (resolvedStep.ReusesExistingEntity &&
+                    artifactModel.Id.HasValue &&
+                    artifactModel.Id.Value != Guid.Empty &&
                     artifactExpectationsById.TryGetValue(requestedArtifactExpectationId, out var existingArtifactExpectation)) {
                     artifactExpectation = existingArtifactExpectation;
                 }
@@ -561,8 +581,15 @@ public sealed partial class ProcessesService
                 }
 
                 ProcessStepArtifactInputDefinition? artifactInput = null;
-                var requestedArtifactInputId = ResolveStableChildId(artifactInputModel.Id, assignedArtifactInputIds, "artifact input");
-                if (artifactInputModel.Id.HasValue && artifactInputModel.Id.Value != Guid.Empty &&
+                var requestedArtifactInputId = ResolveStableChildId(
+                    resolvedStep.ReusesExistingEntity
+                        ? artifactInputModel.Id
+                        : null,
+                    assignedArtifactInputIds,
+                    "artifact input");
+                if (resolvedStep.ReusesExistingEntity &&
+                    artifactInputModel.Id.HasValue &&
+                    artifactInputModel.Id.Value != Guid.Empty &&
                     artifactInputsById.TryGetValue(requestedArtifactInputId, out var existingArtifactInput)) {
                     artifactInput = existingArtifactInput;
                 } else if ((!artifactInputModel.Id.HasValue || artifactInputModel.Id.Value == Guid.Empty) &&
@@ -620,18 +647,36 @@ public sealed partial class ProcessesService
         Guid definitionId,
         CancellationToken cancellationToken) {
         return await dbContext.Set<ProcessDefinitionVersion>()
-            .Where(item => item.ProcessDefinitionId == definitionId)
-            .OrderBy(item => item.Status == ProcessVersionStatus.Draft ? 0 : 1)
-            .ThenByDescending(item => item.VersionNumber)
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(
+                item => item.ProcessDefinitionId == definitionId &&
+                item.Status == ProcessVersionStatus.Draft,
+                cancellationToken);
     }
 
-    private async Task<int> GetNextVersionNumberAsync(AppDbContext dbContext, Guid definitionId, CancellationToken cancellationToken) {
-        var existingVersionNumber = await dbContext.Set<ProcessDefinitionVersion>()
-            .Where(item => item.ProcessDefinitionId == definitionId)
+    private static async Task EnsureNextVersionNumberAheadOfExistingVersionsAsync(
+        AppDbContext dbContext,
+        ProcessDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(definition);
+
+        var highestExistingVersionNumber = await dbContext.Set<ProcessDefinitionVersion>()
+            .Where(item => item.ProcessDefinitionId == definition.Id)
             .Select(item => (int?)item.VersionNumber)
             .MaxAsync(cancellationToken);
-        return (existingVersionNumber ?? 0) + 1;
+        var nextAvailableVersionNumber = (highestExistingVersionNumber ?? 0) + 1;
+        if (definition.NextVersionNumber < nextAvailableVersionNumber) {
+            definition.NextVersionNumber = nextAvailableVersionNumber;
+        }
+    }
+
+    private static int AllocateNextVersionNumber(ProcessDefinition definition) {
+        ArgumentNullException.ThrowIfNull(definition);
+
+        var nextVersionNumber = Math.Max(1, definition.NextVersionNumber);
+        definition.NextVersionNumber = nextVersionNumber + 1;
+        return nextVersionNumber;
     }
 
     private static string BuildSlug(string input) {

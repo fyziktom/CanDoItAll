@@ -880,19 +880,10 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task Canonical_dependency_collection_survives_save_publish_clone_and_runtime_when_legacy_primary_dependency_is_stale()
+    public async Task Canonical_dependency_collection_survives_import_publish_clone_and_runtime_when_legacy_primary_dependency_is_stale()
     {
-        static List<string> ResolveDependencyKeys(ProcessDefinitionEditorModel editor, ProcessStepEditorModel step)
-        {
-            return ProcessCanvasBranching.GetOrderedDependencies(step)
-                .Select(dependency => Assert.Single(editor.Steps, candidate => candidate.Id == dependency.DependsOnStepId).Key)
-                .OrderBy(key => key)
-                .ToList();
-        }
-
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
@@ -912,49 +903,49 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(assignmentResult.IsSuccess);
 
         var managerRoleId = Guid.NewGuid();
-        var model = BuildParallelJoinDefinitionEditor(projectId, managerRoleId);
-        var intakeDraftStep = Assert.Single(model.Steps, item => item.Key == "capture-package");
-        var joinDraftStep = Assert.Single(model.Steps, item => item.Key == "merge-readiness");
-        joinDraftStep.DependsOnStepId = intakeDraftStep.Id;
-        joinDraftStep.DependsOnBranchOutcomeId = null;
+        var baselineSaveResult = await processesService.SaveAsync(BuildParallelJoinDefinitionEditor(projectId, managerRoleId));
 
-        var saveResult = await processesService.SaveAsync(model);
+        Assert.True(baselineSaveResult.IsSuccess);
 
-        Assert.True(saveResult.IsSuccess);
+        var importEnvelope = await processesService.ExportAsync(baselineSaveResult.Value);
+        importEnvelope.Definition.Id = null;
+        importEnvelope.Definition.WorkingVersionId = null;
+        importEnvelope.Definition.DefinitionConcurrencyToken = null;
+        importEnvelope.Definition.WorkingVersionConcurrencyToken = null;
+        importEnvelope.Definition.Name = "Imported canonical dependency compatibility process";
+        importEnvelope.Definition.ChangeSummary = "Imported for canonical dependency boundary validation.";
+        var importedIntakeStep = Assert.Single(importEnvelope.Definition.Steps, item => item.Key == "capture-package");
+        var importedJoinStep = Assert.Single(importEnvelope.Definition.Steps, item => item.Key == "merge-readiness");
+        importedJoinStep.DependsOnStepId = importedIntakeStep.Id;
+        importedJoinStep.DependsOnBranchOutcomeId = null;
 
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
-        {
-            var workingVersion = await dbContext.Set<ProcessDefinitionVersion>()
-                .Where(item => item.ProcessDefinitionId == saveResult.Value)
-                .OrderBy(item => item.Status == ProcessVersionStatus.Draft ? 0 : 1)
-                .ThenByDescending(item => item.VersionNumber)
-                .FirstAsync();
-            var persistedIntakeStep = await dbContext.Set<ProcessStepDefinition>()
-                .SingleAsync(item => item.ProcessDefinitionVersionId == workingVersion.Id && item.Key == "capture-package");
-            var persistedJoinStep = await dbContext.Set<ProcessStepDefinition>()
-                .SingleAsync(item => item.ProcessDefinitionVersionId == workingVersion.Id && item.Key == "merge-readiness");
-            persistedJoinStep.DependsOnStepId = persistedIntakeStep.Id;
-            persistedJoinStep.DependsOnBranchOutcomeId = null;
-            await dbContext.SaveChangesAsync();
-        }
+        var importResult = await processesService.ImportAsync(importEnvelope);
 
-        var savedEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
-        var savedIntakeStep = Assert.Single(savedEditor.Steps, item => item.Key == "capture-package");
+        Assert.True(importResult.IsSuccess);
+
+        var savedEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
         var savedJoinStep = Assert.Single(savedEditor.Steps, item => item.Key == "merge-readiness");
 
         Assert.Equal(["qa-review", "security-review"], ResolveDependencyKeys(savedEditor, savedJoinStep));
-        Assert.NotEqual(savedIntakeStep.Id, savedJoinStep.DependsOnStepId);
+        Assert.DoesNotContain("capture-package", ResolveDependencyKeys(savedEditor, savedJoinStep));
 
-        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+        var exportedEnvelope = await processesService.ExportAsync(importResult.Value);
+        var exportedJoinStep = Assert.Single(exportedEnvelope.Definition.Steps, item => item.Key == "merge-readiness");
 
-        var nextDraftEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+        Assert.Null(exportedJoinStep.DependsOnStepId);
+        Assert.Null(exportedJoinStep.DependsOnBranchOutcomeId);
+        Assert.Equal(2, exportedJoinStep.Dependencies.Count);
+
+        Assert.True((await processesService.PublishAsync(importResult.Value)).IsSuccess);
+
+        var nextDraftEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
         var nextDraftJoinStep = Assert.Single(nextDraftEditor.Steps, item => item.Key == "merge-readiness");
 
         Assert.Equal(["qa-review", "security-review"], ResolveDependencyKeys(nextDraftEditor, nextDraftJoinStep));
 
         var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
         {
-            ProcessDefinitionId = saveResult.Value,
+            ProcessDefinitionId = importResult.Value,
             ProjectId = projectId,
             RunName = "Canonical dependency compatibility validation",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
@@ -1146,25 +1137,51 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public void ValidateDefinitionEditor_is_side_effect_free_for_stale_legacy_dependency_mirrors()
+    public void Core_process_models_do_not_expose_legacy_dependency_mirror_properties()
     {
-        var model = BuildParallelJoinDefinitionEditor(Guid.NewGuid(), Guid.NewGuid());
-        var intakeStep = Assert.Single(model.Steps, item => item.Key == "capture-package");
-        var joinStep = Assert.Single(model.Steps, item => item.Key == "merge-readiness");
-        model.Name = string.Empty;
-        joinStep.DependsOnStepId = intakeStep.Id;
-        joinStep.DependsOnBranchOutcomeId = null;
+        Assert.Null(typeof(ProcessStepDefinition).GetProperty("DependsOnStepId"));
+        Assert.Null(typeof(ProcessStepDefinition).GetProperty("DependsOnBranchOutcomeId"));
+        Assert.Null(typeof(ProcessStepEditorModel).GetProperty("DependsOnStepId"));
+        Assert.Null(typeof(ProcessStepEditorModel).GetProperty("DependsOnBranchOutcomeId"));
+        Assert.Null(typeof(ProcessStepRunViewModel).GetProperty("DependsOnStepDefinitionId"));
+        Assert.Null(typeof(ProcessStepRunViewModel).GetProperty("DependsOnBranchOutcomeId"));
+    }
 
-        var snapshot = JsonSerializer.Serialize(model);
-        var method = typeof(ProcessesService).GetMethod("ValidateDefinitionEditor", BindingFlags.NonPublic | BindingFlags.Static);
+    [Fact]
+    public async Task ImportAsync_maps_legacy_single_dependency_payload_into_canonical_dependency_collection()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
-        Assert.NotNull(method);
+        var projectId = await CreateProjectAsync(projectsService, "Legacy dependency import compatibility project");
+        var baselineSaveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
 
-        var error = method!.Invoke(null, [model]);
+        Assert.True(baselineSaveResult.IsSuccess);
 
-        Assert.NotNull(error);
-        Assert.Equal("processes.name-required", Assert.IsType<Error>(error).Code);
-        Assert.Equal(snapshot, JsonSerializer.Serialize(model));
+        var importEnvelope = await processesService.ExportAsync(baselineSaveResult.Value);
+        importEnvelope.Definition.Id = null;
+        importEnvelope.Definition.WorkingVersionId = null;
+        importEnvelope.Definition.DefinitionConcurrencyToken = null;
+        importEnvelope.Definition.WorkingVersionConcurrencyToken = null;
+        importEnvelope.Definition.Name = "Imported legacy dependency fallback process";
+        importEnvelope.Definition.ChangeSummary = "Imported for legacy single-dependency compatibility validation.";
+        var intakeStep = Assert.Single(importEnvelope.Definition.Steps, item => item.Key == "intake");
+        var reviewStep = Assert.Single(importEnvelope.Definition.Steps, item => item.Key == "delivery-review");
+        reviewStep.Dependencies.Clear();
+        reviewStep.DependsOnStepId = intakeStep.Id;
+        reviewStep.DependsOnBranchOutcomeId = null;
+
+        var importResult = await processesService.ImportAsync(importEnvelope);
+
+        Assert.True(importResult.IsSuccess);
+
+        var importedEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
+        var importedReviewStep = Assert.Single(importedEditor.Steps, item => item.Key == "delivery-review");
+
+        Assert.Equal(["intake"], ResolveDependencyKeys(importedEditor, importedReviewStep));
+        Assert.Single(importedReviewStep.Dependencies);
     }
 
     [Fact]
@@ -1456,7 +1473,7 @@ public sealed class ProcessesServiceIntegrationTests
                     DecisionRightsSummary = "Delivery owner decides whether to proceed or block.",
                     ExceptionPolicySummary = "Block when evidence is missing.",
                     TargetLeadHours = 4,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     CanvasX = 420,
                     CanvasY = 160,
                     RoleAssignments =
@@ -1540,7 +1557,7 @@ public sealed class ProcessesServiceIntegrationTests
                     Key = "route-change",
                     Title = "Route requested revision",
                     StepKind = ProcessStepKind.Decision,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     DecisionRoleRequirementId = managerRoleId,
                     TargetLeadHours = 2,
                     CanvasX = 420,
@@ -1628,7 +1645,7 @@ public sealed class ProcessesServiceIntegrationTests
                     Key = "route-change",
                     Title = "Route requested revision",
                     StepKind = ProcessStepKind.Decision,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     DecisionRoleRequirementId = managerRoleId,
                     TargetLeadHours = 2,
                     CanvasX = 420,
@@ -1664,8 +1681,7 @@ public sealed class ProcessesServiceIntegrationTests
                     Key = "ui-review",
                     Title = "Review UI architecture",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = uiOutcomeId,
+                    Dependencies = CreateDependencies((decisionStepId, uiOutcomeId)),
                     TargetLeadHours = 2,
                     CanvasX = 720,
                     CanvasY = 100,
@@ -1683,8 +1699,7 @@ public sealed class ProcessesServiceIntegrationTests
                     Key = "db-review",
                     Title = "Review data architecture",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = dbOutcomeId,
+                    Dependencies = CreateDependencies((decisionStepId, dbOutcomeId)),
                     TargetLeadHours = 2,
                     CanvasX = 720,
                     CanvasY = 240,
@@ -1771,16 +1786,8 @@ public sealed class ProcessesServiceIntegrationTests
                     Title = "Validate QA evidence",
                     StepKind = ProcessStepKind.Review,
                     TargetLeadHours = 2,
-                    DependsOnStepId = includeDependency ? captureStepId : null,
                     Dependencies = includeDependency
-                        ?
-                        [
-                            new ProcessStepDependencyEditorModel
-                            {
-                                Id = Guid.NewGuid(),
-                                DependsOnStepId = captureStepId
-                            }
-                        ]
+                        ? CreateDependencies((captureStepId, null))
                         : [],
                     CanvasX = 460,
                     CanvasY = 180,
@@ -1864,15 +1871,7 @@ public sealed class ProcessesServiceIntegrationTests
                     Title = "Validate QA evidence",
                     StepKind = ProcessStepKind.Review,
                     TargetLeadHours = 2,
-                    DependsOnStepId = intakeStepId,
-                    Dependencies =
-                    [
-                        new ProcessStepDependencyEditorModel
-                        {
-                            Id = Guid.NewGuid(),
-                            DependsOnStepId = intakeStepId
-                        }
-                    ],
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     CanvasX = 460,
                     CanvasY = 120,
                     RoleAssignments =
@@ -1891,15 +1890,7 @@ public sealed class ProcessesServiceIntegrationTests
                     Title = "Validate security posture",
                     StepKind = ProcessStepKind.Review,
                     TargetLeadHours = 2,
-                    DependsOnStepId = intakeStepId,
-                    Dependencies =
-                    [
-                        new ProcessStepDependencyEditorModel
-                        {
-                            Id = Guid.NewGuid(),
-                            DependsOnStepId = intakeStepId
-                        }
-                    ],
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     CanvasX = 460,
                     CanvasY = 260,
                     RoleAssignments =
@@ -1958,6 +1949,26 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static List<string> ResolveDependencyKeys(ProcessDefinitionEditorModel editor, ProcessStepEditorModel step)
+    {
+        return ProcessCanvasBranching.GetOrderedDependencies(step)
+            .Select(dependency => Assert.Single(editor.Steps, candidate => candidate.Id == dependency.DependsOnStepId).Key)
+            .OrderBy(key => key)
+            .ToList();
+    }
+
+    private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)
+    {
+        return items
+            .Select(item => new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = item.StepId,
+                DependsOnBranchOutcomeId = item.BranchOutcomeId
+            })
+            .ToList();
     }
 
     private static async Task<Guid> CreatePartyAsync(PartyDirectoryService partyDirectoryService, PartyType partyType, string displayName)

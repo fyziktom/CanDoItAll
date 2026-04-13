@@ -17,6 +17,7 @@ public sealed partial class ProcessesService {
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         ProcessRun run;
+        Guid outboxId;
         try {
             var definition = await dbContext.Set<ProcessDefinition>()
                 .SingleOrDefaultAsync(item => item.Id == request.ProcessDefinitionId, cancellationToken);
@@ -25,7 +26,11 @@ public sealed partial class ProcessesService {
             }
 
             var publishedVersion = await dbContext.Set<ProcessDefinitionVersion>()
-                .SingleAsync(item => item.Id == definition.ActivePublishedVersionId.Value, cancellationToken);
+                .SingleAsync(
+                    item => item.ProcessDefinitionId == definition.Id &&
+                        item.Id == definition.ActivePublishedVersionId.Value &&
+                        item.Status == ProcessVersionStatus.Published,
+                    cancellationToken);
             var roles = await dbContext.Set<ProcessRoleRequirement>()
                 .Where(item => item.ProcessDefinitionVersionId == publishedVersion.Id)
                 .OrderBy(item => item.DisplayOrder)
@@ -189,6 +194,7 @@ public sealed partial class ProcessesService {
                     run.TriggerReason),
                 cancellationToken);
 
+            outboxId = await processOutboxService.EnqueueRunStartAsync(dbContext, run, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
@@ -201,18 +207,7 @@ public sealed partial class ProcessesService {
             return Result<Guid>.Failure(CreateRunStartConflictError());
         }
 
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "processes",
-                "start-run",
-                "Started process run",
-                run.Name,
-                run.ProjectId,
-                "process-run",
-                run.Id,
-                BuildRunRoute(run),
-                DefaultActor),
-            cancellationToken);
+        await processOutboxService.ProcessAsync(outboxId, cancellationToken);
         return Result<Guid>.Success(run.Id);
     }
 

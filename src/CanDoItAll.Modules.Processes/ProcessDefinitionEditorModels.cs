@@ -157,10 +157,6 @@ public sealed class ProcessStepEditorModel
 
     public int TargetLeadHours { get; set; }
 
-    public Guid? DependsOnStepId { get; set; }
-
-    public Guid? DependsOnBranchOutcomeId { get; set; }
-
     public Guid? DecisionRoleRequirementId { get; set; }
 
     public double CanvasX { get; set; }

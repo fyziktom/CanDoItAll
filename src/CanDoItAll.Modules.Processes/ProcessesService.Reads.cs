@@ -14,13 +14,13 @@ public sealed partial class ProcessesService {
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await RuntimeReadQueries.ListRunsAsync(dbContext, definitionId, projectId, cancellationToken);
+        return await runtimeReadQueryService.ListRunsAsync(dbContext, definitionId, projectId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(Guid runId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await RuntimeReadQueries.ListStepRunsAsync(dbContext, runId, cancellationToken);
+        return await runtimeReadQueryService.ListStepRunsAsync(dbContext, runId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(Guid runId, CancellationToken cancellationToken = default) {
@@ -149,46 +149,11 @@ public sealed partial class ProcessesService {
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await RuntimeReadQueries.GetAnalyticsAsync(dbContext, definitionId, projectId, cancellationToken);
+        return await runtimeReadQueryService.GetAnalyticsAsync(dbContext, definitionId, projectId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default) {
         return await projectPartyIntegrationBridge.ListPartyOptionsAsync(projectId, cancellationToken);
-    }
-
-    private static IReadOnlyList<ProcessStepDependencyViewModel> BuildRuntimeDependencies(
-        ProcessStepDefinition stepDefinition,
-        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
-        return ProcessDependencyCompatibilityBridge.BuildRuntimeDependencies(stepDefinition, dependenciesByStepId);
-    }
-
-    private static IReadOnlyList<ProcessStepRunResponsibilityPortViewModel> BuildRuntimeResponsibilityPorts(
-        Guid stepDefinitionId,
-        IReadOnlyDictionary<Guid, List<ProcessStepRoleAssignmentRequirement>> assignmentsByStepId) {
-        if (!assignmentsByStepId.TryGetValue(stepDefinitionId, out var assignments) || assignments.Count == 0) {
-            return [];
-        }
-
-        var orderedKinds = new[]
-        {
-            ProcessResponsibilityKind.Responsible,
-            ProcessResponsibilityKind.Reviewer,
-            ProcessResponsibilityKind.Approver,
-            ProcessResponsibilityKind.Backup
-        };
-
-        return orderedKinds
-            .Select(responsibilityKind => {
-                var matchingAssignments = assignments
-                    .Where(item => item.ResponsibilityKind == responsibilityKind)
-                    .ToList();
-                return new ProcessStepRunResponsibilityPortViewModel(
-                    responsibilityKind,
-                    matchingAssignments.Any(item => item.IsRequired),
-                    matchingAssignments.Count);
-            })
-            .Where(item => item.AssignmentCount > 0)
-            .ToList();
     }
 }
 

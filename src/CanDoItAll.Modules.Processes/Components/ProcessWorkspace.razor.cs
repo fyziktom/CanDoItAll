@@ -44,6 +44,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
     [Inject]
     private ProjectsService ProjectsService { get; set; } = default!;
 
+    [Inject]
+    private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
+
     [Parameter]
     public Guid? ProjectId { get; set; }
 
@@ -244,12 +247,13 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
             return;
         }
 
-        stepRuns = await ProcessesService.ListStepRunsAsync(selectedRunId.Value);
-        decisions = await ProcessesService.ListDecisionRecordsAsync(selectedRunId.Value);
-        artifacts = await ProcessesService.ListArtifactsAsync(selectedRunId.Value);
-        assignments = await ProcessesService.ListAssignmentsAsync(selectedRunId.Value);
-        workBriefs = await ProcessesService.ListWorkBriefsAsync(selectedRunId.Value);
-        conformanceObservations = await ProcessesService.ListConformanceObservationsAsync(selectedRunId.Value);
+        var runDetails = await RunDetailsLoader.LoadAsync(selectedRunId.Value);
+        stepRuns = runDetails.StepRuns;
+        decisions = runDetails.Decisions;
+        artifacts = runDetails.Artifacts;
+        assignments = runDetails.Assignments;
+        workBriefs = runDetails.WorkBriefs;
+        conformanceObservations = runDetails.ConformanceObservations;
         var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
         foreach (var stepRun in stepRuns) {
             runtimeBranchOutcomeSelections.TryGetValue(stepRun.Id, out var selectedBranchOutcomeId);

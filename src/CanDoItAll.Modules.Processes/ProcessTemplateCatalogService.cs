@@ -199,7 +199,9 @@ public sealed class ProcessTemplateCatalogService
 
         if (dependsOnStepId.HasValue && dependsOnStepId.Value != Guid.Empty)
         {
-            ProcessDependencyCompatibilityBridge.SetLegacyEditorPrimaryDependency(step, dependsOnStepId, null);
+            ProcessStepDependencyCollection.SetEditorDependencies(
+                step,
+                [ProcessStepDependencyCollection.CreateEditorDependency(dependsOnStepId.Value, null)]);
         }
 
         return step;

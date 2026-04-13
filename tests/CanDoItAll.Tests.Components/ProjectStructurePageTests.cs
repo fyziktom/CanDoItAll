@@ -2264,7 +2264,14 @@ public sealed class ProjectStructurePageTests
                     DecisionRightsSummary = "Delivery owner can approve, block, or escalate.",
                     ExceptionPolicySummary = "Block when evidence or staffing is incomplete.",
                     TargetLeadHours = 4,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies =
+                    [
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = intakeStepId
+                        }
+                    ],
                     CanvasX = 420,
                     CanvasY = 140,
                     RoleAssignments =

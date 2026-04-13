@@ -182,7 +182,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Key = "review",
                     Title = "Review request",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = firstStepId,
+                    Dependencies = CreateDependencies((firstStepId, null)),
                     CanvasX = 320,
                     CanvasY = 180,
                     RoleAssignments =
@@ -242,7 +242,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Key = "validate",
                     Title = "Validate request",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     CanvasX = 470,
                     CanvasY = 140,
                     RoleAssignments =
@@ -308,7 +308,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Key = "review-path",
                     Title = "Review outcome",
                     StepKind = ProcessStepKind.Decision,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     DecisionRoleRequirementId = roleId,
                     CanvasX = 1080,
                     CanvasY = 380,
@@ -334,8 +334,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Key = "implement",
                     Title = "Implement change",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = defaultOutcomeId,
+                    Dependencies = CreateDependencies((decisionStepId, defaultOutcomeId)),
                     CanvasX = 1040,
                     CanvasY = 380,
                     RoleAssignments =
@@ -353,8 +352,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Key = "repair",
                     Title = "Repair change",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = repairOutcomeId,
+                    Dependencies = CreateDependencies((decisionStepId, repairOutcomeId)),
                     CanvasX = 1040,
                     CanvasY = 380
                 },
@@ -363,11 +361,23 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Key = "merge",
                     Title = "Merge change",
                     StepKind = ProcessStepKind.End,
-                    DependsOnStepId = implementationStepId,
+                    Dependencies = CreateDependencies((implementationStepId, null)),
                     CanvasX = 1040,
                     CanvasY = 380
                 }
             ]
         };
+    }
+
+    private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)
+    {
+        return items
+            .Select(item => new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = item.StepId,
+                DependsOnBranchOutcomeId = item.BranchOutcomeId
+            })
+            .ToList();
     }
 }

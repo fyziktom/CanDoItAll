@@ -9,6 +9,10 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddOptions<ProcessTemplatePackOptions>()
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
+        services.AddScoped<ProcessOutboxService>();
+        services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
+        services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
+        services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();
@@ -23,6 +27,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessTemplateMermaidExporter>();
         services.AddScoped<ProcessDevelopmentSeedService>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
+        services.AddHostedService<ProcessOutboxDrainWorker>();
         return services;
     }
 }

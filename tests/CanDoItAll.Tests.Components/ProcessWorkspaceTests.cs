@@ -872,7 +872,7 @@ public sealed class ProcessWorkspaceTests
                     DecisionRightsSummary = "Workspace owner confirms visibility.",
                     ExceptionPolicySummary = "Fail when the page does not hydrate.",
                     TargetLeadHours = 1,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     CanvasX = 420,
                     CanvasY = 160,
                     RoleAssignments =
@@ -958,8 +958,9 @@ public sealed class ProcessWorkspaceTests
                     Key = "repair-change",
                     Title = "Repair change",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = connectFixStep ? decisionStepId : null,
-                    DependsOnBranchOutcomeId = connectFixStep ? repairsOutcomeId : null,
+                    Dependencies = connectFixStep
+                        ? CreateDependencies((decisionStepId, repairsOutcomeId))
+                        : [],
                     OutputContractSummary = "Updated implementation ready for another review.",
                     CanvasX = 760,
                     CanvasY = 60
@@ -1115,6 +1116,18 @@ public sealed class ProcessWorkspaceTests
         }
 
         return lastObserved ?? await processesService.GetEditorAsync(definitionId, projectId);
+    }
+
+    private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)
+    {
+        return items
+            .Select(item => new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = item.StepId,
+                DependsOnBranchOutcomeId = item.BranchOutcomeId
+            })
+            .ToList();
     }
 
     private sealed record CanvasAuthoringFixture(

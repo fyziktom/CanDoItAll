@@ -32,15 +32,18 @@ public sealed partial class ProcessCanvasSurfaceFactory
         var stepNodes = editor.Steps
             .Select((step, index) =>
             {
-                var primaryDependency = ProcessCanvasBranching.GetOrderedDependencies(step).FirstOrDefault();
+                var dependencyOutcomeTitles = ProcessCanvasBranching.GetOrderedDependencies(step)
+                    .Where(dependency => dependency.DependsOnBranchOutcomeId.HasValue)
+                    .Select(dependency => dependency.DependsOnBranchOutcomeId!.Value)
+                    .Distinct()
+                    .Where(branchOutcomeTitles.ContainsKey)
+                    .Select(branchOutcomeId => branchOutcomeTitles[branchOutcomeId])
+                    .ToList();
                 return BuildDefinitionNode(
                     step,
                     index,
                     rolesById,
-                    primaryDependency?.DependsOnBranchOutcomeId.HasValue == true &&
-                    branchOutcomeTitles.TryGetValue(primaryDependency.DependsOnBranchOutcomeId.Value, out var dependencyOutcomeTitle)
-                        ? dependencyOutcomeTitle
-                        : null);
+                    dependencyOutcomeTitles);
             })
             .ToList();
         var branchNodes = editor.Steps
@@ -119,7 +122,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
         ProcessStepEditorModel step,
         int index,
         IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById,
-        string? dependencyOutcomeTitle)
+        IReadOnlyList<string> dependencyOutcomeTitles)
     {
         var status = step.RequiresApproval
             ? "approval"
@@ -144,7 +147,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             Icon = ResolveStepIcon(step.StepKind),
             Title = step.Title,
             Subtitle = string.IsNullOrWhiteSpace(step.Subtitle) ? step.StepKind.ToString() : step.Subtitle,
-            LeadText = ResolveDefinitionLeadText(step, dependencyOutcomeTitle),
+            LeadText = ResolveDefinitionLeadText(step, dependencyOutcomeTitles),
             Status = status,
             StatusPill = step.StepKind.ToString(),
             PaletteKey = paletteKey,
@@ -170,7 +173,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     Tone = step.BranchOutcomes.Count == 0 ? "neutral" : "accent"
                 }
             ],
-            FooterChips = BuildDefinitionFooterChips(status, dependencyOutcomeTitle),
+            FooterChips = BuildDefinitionFooterChips(status, dependencyOutcomeTitles),
             ContextActions =
             [
                 new CanvasWorkbenchAction

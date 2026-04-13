@@ -125,9 +125,10 @@ public sealed partial class ProcessesService
 
     public async Task<ProcessImportExportEnvelope> ExportAsync(Guid definitionId, CancellationToken cancellationToken = default) {
         return new ProcessImportExportEnvelope {
-            Definition = await GetEditorAsync(definitionId, null, cancellationToken),
+            Definition = ProcessDependencyCompatibilityBridge.ToImportExportModel(
+                await GetEditorAsync(definitionId, null, cancellationToken)),
             Warnings = [],
-            SourceFormat = "CanDoItAll.ProcessDefinition/v1"
+            SourceFormat = "CanDoItAll.ProcessDefinition/v2"
         };
     }
 
@@ -135,8 +136,9 @@ public sealed partial class ProcessesService
         var importMetadata = new ProcessImportMetadata(
             envelope.SourceFormat,
             string.Join(Environment.NewLine, envelope.Warnings));
-        PrepareImportedDefinitionForSave(envelope.Definition);
-        return await SaveAsync(envelope.Definition, importMetadata, cancellationToken);
+        var editor = ProcessDependencyCompatibilityBridge.ToEditorModel(envelope.Definition);
+        PrepareImportedDefinitionForSave(editor);
+        return await SaveAsync(editor, importMetadata, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default) {

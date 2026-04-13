@@ -39,7 +39,7 @@ internal static class ProcessStepTransitionGuard
         if (request.TargetStatus == ProcessStepRunStatus.Completed)
         {
             var hasConditionalDependents = stepDefinitions.Any(
-                item => ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(item, stepDependenciesByStepId)
+                item => ProcessStepDependencyCollection.GetPersistedDependencies(item.Id, stepDependenciesByStepId)
                     .Any(
                         dependency => dependency.DependsOnStepId == currentStepDefinition.Id &&
                             dependency.DependsOnBranchOutcomeId.HasValue));

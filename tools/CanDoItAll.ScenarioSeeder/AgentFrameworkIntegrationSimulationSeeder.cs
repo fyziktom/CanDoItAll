@@ -539,9 +539,15 @@ internal sealed partial class AgentFrameworkIntegrationSimulationSeeder(
                 DecisionRightsSummary = step.DecisionRightsSummary,
                 ExceptionPolicySummary = step.ExceptionPolicySummary,
                 TargetLeadHours = step.TargetLeadHours,
-                DependsOnStepId = string.IsNullOrWhiteSpace(step.DependsOnStepKey)
-                    ? null
-                    : stepIds[step.DependsOnStepKey],
+                Dependencies = string.IsNullOrWhiteSpace(step.DependsOnStepKey)
+                    ? []
+                    : [
+                        new CanDoItAll.Modules.Processes.ProcessStepDependencyEditorModel
+                        {
+                            Id = CreateStableGuid($"{spec.Name}:step:{step.Key}:dependency:primary"),
+                            DependsOnStepId = stepIds[step.DependsOnStepKey]
+                        }
+                    ],
                 CanvasX = step.CanvasX,
                 CanvasY = step.CanvasY,
                 RoleAssignments = step.Assignments.Select(assignment => new CanDoItAll.Modules.Processes.ProcessStepRoleRequirementEditorModel

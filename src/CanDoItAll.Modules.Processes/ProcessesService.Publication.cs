@@ -26,6 +26,7 @@ public sealed partial class ProcessesService
 
         ProcessDefinition definition;
         ProcessDefinitionVersion draftVersion;
+        Guid outboxId;
         try {
             var publicationContextResult = await LoadPublicationContextAsync(dbContext, request, cancellationToken);
             if (publicationContextResult.IsFailure) {
@@ -54,14 +55,25 @@ public sealed partial class ProcessesService
                 .Where(item => item.ProcessDefinitionId == request.DefinitionId && item.Status == ProcessVersionStatus.Published)
                 .ToListAsync(cancellationToken);
             var now = clock.GetUtcNow();
-            ApplyPublicationLifecycle(definition, draftVersion, publishedVersions, now);
+            RetirePublishedVersions(publishedVersions, now);
+            if (publishedVersions.Count > 0) {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            PromoteDraftVersion(definition, draftVersion, now);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
             await ProvisionNextDraftFromPublishedVersionAsync(
                 dbContext,
-                definition.Id,
+                definition,
                 draftVersion,
                 publicationContext.CloneSource,
                 now,
+                cancellationToken);
+            outboxId = await processOutboxService.EnqueueDefinitionPublishAsync(
+                dbContext,
+                definition,
+                draftVersion,
                 cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -75,29 +87,15 @@ public sealed partial class ProcessesService
             return Result.Failure(CreateDefinitionPublishUniqueConflictError());
         }
 
-        var route = definition.ProjectId.HasValue
-            ? $"/projects/{definition.ProjectId.Value:D}/processes?processId={definition.Id:D}"
-            : $"/processes?processId={definition.Id:D}";
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "processes",
-                "publish-definition",
-                "Published process definition",
-                $"{definition.Name} v{draftVersion.VersionNumber} is now immutable for runtime use.",
-                definition.ProjectId,
-                "process-definition",
-                definition.Id,
-                route,
-                DefaultActor),
-            cancellationToken);
+        await processOutboxService.ProcessAsync(outboxId, cancellationToken);
         return Result.Success();
     }
 
     public async Task DeleteAsync(Guid definitionId, CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var definitionExists = await dbContext.Set<ProcessDefinition>()
-            .AnyAsync(item => item.Id == definitionId, cancellationToken);
-        if (!definitionExists) {
+        var definition = await dbContext.Set<ProcessDefinition>()
+            .SingleOrDefaultAsync(item => item.Id == definitionId, cancellationToken);
+        if (definition is null) {
             return;
         }
 
@@ -123,6 +121,7 @@ public sealed partial class ProcessesService
             .ToListAsync(cancellationToken);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        Guid outboxId;
 
         if (roleIds.Count > 0) {
             await dbContext.Set<ProcessRoleSkillRequirement>()
@@ -176,6 +175,13 @@ public sealed partial class ProcessesService
             .Where(item => item.ProcessDefinitionId == definitionId)
             .ExecuteDeleteAsync(cancellationToken);
 
+        await dbContext.Set<ProcessDefinition>()
+            .Where(item => item.Id == definitionId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.ActivePublishedVersionId, (Guid?)null),
+                cancellationToken);
+
         if (runIds.Count > 0) {
             await dbContext.Set<ProcessRun>()
                 .Where(item => runIds.Contains(item.Id))
@@ -204,8 +210,14 @@ public sealed partial class ProcessesService
             .Where(item => item.Id == definitionId)
             .ExecuteDeleteAsync(cancellationToken);
 
+        outboxId = await processOutboxService.EnqueueDefinitionDeleteAsync(
+            dbContext,
+            definitionId,
+            definition.ProjectId,
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        await searchIndexService.DeleteAsync("process-definition", definitionId.ToString(), cancellationToken);
+        await processOutboxService.ProcessAsync(outboxId, cancellationToken);
     }
 
     private async Task<Result<ProcessPublicationContext>> LoadPublicationContextAsync(
@@ -224,9 +236,10 @@ public sealed partial class ProcessesService
         }
 
         var draftVersion = await dbContext.Set<ProcessDefinitionVersion>()
-            .Where(item => item.ProcessDefinitionId == request.DefinitionId && item.Status == ProcessVersionStatus.Draft)
-            .OrderByDescending(item => item.VersionNumber)
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(
+                item => item.ProcessDefinitionId == request.DefinitionId &&
+                    item.Status == ProcessVersionStatus.Draft,
+                cancellationToken);
         if (draftVersion is null) {
             return Result<ProcessPublicationContext>.Failure(
                 Error.Validation("No draft version is available to publish.", "processes.draft-version-required"));
@@ -294,12 +307,13 @@ public sealed partial class ProcessesService
 
     private async Task ProvisionNextDraftFromPublishedVersionAsync(
         AppDbContext dbContext,
-        Guid definitionId,
+        ProcessDefinition definition,
         ProcessDefinitionVersion publishedVersion,
         ProcessDefinitionDraftCloneSource cloneSource,
         DateTimeOffset now,
         CancellationToken cancellationToken) {
-        var nextDraft = await CreateNextDraftVersionAsync(dbContext, definitionId, publishedVersion, now, cancellationToken);
+        await EnsureNextVersionNumberAheadOfExistingVersionsAsync(dbContext, definition, cancellationToken);
+        var nextDraft = CreateNextDraftVersion(definition, publishedVersion, now);
         await dbContext.Set<ProcessDefinitionVersion>().AddAsync(nextDraft, cancellationToken);
         await DraftCloneEngine.CloneAsync(
             dbContext,
@@ -308,16 +322,19 @@ public sealed partial class ProcessesService
             cancellationToken);
     }
 
-    private static void ApplyPublicationLifecycle(
-        ProcessDefinition definition,
-        ProcessDefinitionVersion draftVersion,
+    private static void RetirePublishedVersions(
         IReadOnlyList<ProcessDefinitionVersion> publishedVersions,
         DateTimeOffset now) {
         foreach (var publishedVersion in publishedVersions) {
             publishedVersion.Status = ProcessVersionStatus.Superseded;
             publishedVersion.UpdatedAtUtc = now;
         }
+    }
 
+    private static void PromoteDraftVersion(
+        ProcessDefinition definition,
+        ProcessDefinitionVersion draftVersion,
+        DateTimeOffset now) {
         draftVersion.Status = ProcessVersionStatus.Published;
         draftVersion.PublishedAtUtc = now;
         draftVersion.PublishedBy = DefaultActor;
@@ -327,15 +344,13 @@ public sealed partial class ProcessesService
         definition.UpdatedAtUtc = now;
     }
 
-    private async Task<ProcessDefinitionVersion> CreateNextDraftVersionAsync(
-        AppDbContext dbContext,
-        Guid definitionId,
+    private static ProcessDefinitionVersion CreateNextDraftVersion(
+        ProcessDefinition definition,
         ProcessDefinitionVersion publishedVersion,
-        DateTimeOffset now,
-        CancellationToken cancellationToken) {
+        DateTimeOffset now) {
         return new ProcessDefinitionVersion {
-            ProcessDefinitionId = definitionId,
-            VersionNumber = await GetNextVersionNumberAsync(dbContext, definitionId, cancellationToken),
+            ProcessDefinitionId = definition.Id,
+            VersionNumber = AllocateNextVersionNumber(definition),
             Status = ProcessVersionStatus.Draft,
             ChangeSummary = $"Draft created from published v{publishedVersion.VersionNumber}.",
             GovernancePolicySummary = publishedVersion.GovernancePolicySummary,

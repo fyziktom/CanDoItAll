@@ -23,19 +23,22 @@ public sealed partial class ProcessCanvasSurfaceFactory
         };
     }
 
-    private static string ResolveDefinitionLeadText(ProcessStepEditorModel step, string? dependencyOutcomeTitle)
+    private static string ResolveDefinitionLeadText(ProcessStepEditorModel step, IReadOnlyList<string> dependencyOutcomeTitles)
     {
-        if (!string.IsNullOrWhiteSpace(dependencyOutcomeTitle))
+        if (dependencyOutcomeTitles.Count == 0)
         {
-            return string.IsNullOrWhiteSpace(step.OutputContractSummary)
-                ? $"Continues when '{dependencyOutcomeTitle}' is selected."
-                : $"{step.OutputContractSummary} Path: {dependencyOutcomeTitle}.";
+            return step.OutputContractSummary;
         }
 
-        return step.OutputContractSummary;
+        var dependencyOutcomeSummary = dependencyOutcomeTitles.Count == 1
+            ? dependencyOutcomeTitles[0]
+            : string.Join(", ", dependencyOutcomeTitles);
+        return string.IsNullOrWhiteSpace(step.OutputContractSummary)
+            ? $"Continues when one of these paths is selected: {dependencyOutcomeSummary}."
+            : $"{step.OutputContractSummary} Paths: {dependencyOutcomeSummary}.";
     }
 
-    private static List<CanvasWorkbenchChip> BuildDefinitionFooterChips(string status, string? dependencyOutcomeTitle)
+    private static List<CanvasWorkbenchChip> BuildDefinitionFooterChips(string status, IReadOnlyList<string> dependencyOutcomeTitles)
     {
         var chips = new List<CanvasWorkbenchChip>
         {
@@ -51,7 +54,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             }
         };
 
-        if (!string.IsNullOrWhiteSpace(dependencyOutcomeTitle))
+        foreach (var dependencyOutcomeTitle in dependencyOutcomeTitles.Where(title => !string.IsNullOrWhiteSpace(title)))
         {
             chips.Add(new CanvasWorkbenchChip
             {

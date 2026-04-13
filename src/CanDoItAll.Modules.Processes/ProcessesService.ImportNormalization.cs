@@ -81,8 +81,6 @@ public sealed partial class ProcessesService
         foreach (var step in model.Steps)
         {
             step.DecisionRoleRequirementId = RemapImportedId(step.DecisionRoleRequirementId, roleIdMap);
-            step.DependsOnStepId = RemapImportedId(step.DependsOnStepId, stepIdMap);
-            step.DependsOnBranchOutcomeId = RemapImportedId(step.DependsOnBranchOutcomeId, branchOutcomeIdMap);
 
             foreach (var dependency in step.Dependencies)
             {

@@ -22,7 +22,8 @@ public sealed class ProcessTemplateProjectionService
 
         return new ProcessImportExportEnvelope
         {
-            Definition = BuildDefinition(pack, process, projectId, definitionName),
+            Definition = ProcessDependencyCompatibilityBridge.ToImportExportModel(
+                BuildDefinition(pack, process, projectId, definitionName)),
             SourceFormat = "CanDoItAll.ProcessTemplatePack/current-module-projection",
             Warnings =
             [

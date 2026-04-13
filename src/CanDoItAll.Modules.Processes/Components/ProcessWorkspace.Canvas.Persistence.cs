@@ -435,7 +435,7 @@ public partial class ProcessWorkspace
                 .ToList()
         };
 
-        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(
+        ProcessStepDependencyCollection.SetEditorDependencies(
             clone,
             ProcessCanvasBranching.GetOrderedDependencies(source)
                 .Select(dependency => new ProcessStepDependencyEditorModel
@@ -473,7 +473,7 @@ public partial class ProcessWorkspace
         target.CanvasY = clone.CanvasY;
         target.BranchCanvasX = clone.BranchCanvasX;
         target.BranchCanvasY = clone.BranchCanvasY;
-        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(target, clone.Dependencies);
+        ProcessStepDependencyCollection.SetEditorDependencies(target, clone.Dependencies);
         target.BranchOutcomes = clone.BranchOutcomes;
         target.RoleAssignments = clone.RoleAssignments;
         target.ArtifactExpectations = clone.ArtifactExpectations;

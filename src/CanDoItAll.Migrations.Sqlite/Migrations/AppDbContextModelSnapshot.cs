@@ -300,6 +300,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("TEXT");
 
@@ -315,6 +319,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
 
                     b.ToTable("Activity_Entries", (string)null);
                 });
@@ -2578,7 +2585,6 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ActivePublishedVersionId")
@@ -2619,6 +2625,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("NextVersionNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("OwnerName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -2650,12 +2661,17 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActivePublishedVersionId");
+
                     b.HasIndex("ProjectId");
 
                     b.HasIndex("Slug")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Processes_Definitions_Slug");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("Id", "ActivePublishedVersionId");
 
                     b.ToTable("Processes_Definitions", (string)null);
                 });
@@ -2726,7 +2742,15 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessDefinitionId", "Status");
+                    b.HasIndex("ProcessDefinitionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessVersions_PubPerDef")
+                        .HasFilter("\"Status\" = 'Published'");
+
+                    b.HasIndex("ProcessDefinitionId", "Status")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessVersions_DraftPerDef")
+                        .HasFilter("\"Status\" = 'Draft'");
 
                     b.HasIndex("ProcessDefinitionId", "VersionNumber")
                         .IsUnique();
@@ -2852,6 +2876,76 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("ProcessRunId", "OccurredAtUtc");
 
                     b.ToTable("Processes_JournalEntries", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CommandKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProcessDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProcessRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessDefinitionId", "CreatedAtUtc");
+
+                    b.HasIndex("ProcessRunId", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.HasIndex("Status", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
+
+                    b.ToTable("Processes_Outbox", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
@@ -3048,6 +3142,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("ProcessDefinitionId", "ProcessDefinitionVersionId");
+
                     b.ToTable("Processes_Runs", (string)null);
                 });
 
@@ -3101,6 +3197,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PartyId");
+
+                    b.HasIndex("RoleRequirementId");
+
+                    b.HasIndex("StepDefinitionId");
 
                     b.HasIndex("ProcessRunId", "RoleRequirementId", "StepDefinitionId");
 
@@ -3203,12 +3303,6 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid?>("DecisionRoleRequirementId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("DependsOnBranchOutcomeId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("DependsOnStepId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("EvidenceContractSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -3268,10 +3362,6 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("DecisionRoleRequirementId");
 
-                    b.HasIndex("DependsOnBranchOutcomeId");
-
-                    b.HasIndex("DependsOnStepId");
-
                     b.HasIndex("ProcessDefinitionVersionId", "Key")
                         .IsUnique();
 
@@ -3306,10 +3396,17 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("StepDefinitionId");
 
+                    b.HasIndex("StepDefinitionId", "DependsOnStepId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessStepDeps_Unconditional")
+                        .HasFilter("\"DependsOnBranchOutcomeId\" IS NULL");
+
                     b.HasIndex("StepDefinitionId", "DisplayOrder");
 
                     b.HasIndex("StepDefinitionId", "DependsOnStepId", "DependsOnBranchOutcomeId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessStepDeps_Conditional")
+                        .HasFilter("\"DependsOnBranchOutcomeId\" IS NOT NULL");
 
                     b.ToTable("Processes_StepDependencies", (string)null);
                 });
@@ -3342,6 +3439,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RoleRequirementId");
 
                     b.HasIndex("StepDefinitionId", "RoleRequirementId", "ResponsibilityKind")
                         .IsUnique();
@@ -5159,6 +5258,71 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("StepRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("StepRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("BranchOutcomeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("StepRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+                        .WithMany()
+                        .HasForeignKey("Id", "ActivePublishedVersionId")
+                        .HasPrincipalKey("ProcessDefinitionId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
@@ -5166,6 +5330,34 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasForeignKey("ProcessDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("StepRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
@@ -5186,6 +5378,66 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessDefinitionId", "ProcessDefinitionVersionId")
+                        .HasPrincipalKey("ProcessDefinitionId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+                        .WithMany()
+                        .HasForeignKey("RoleRequirementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactExpectationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
@@ -5198,6 +5450,75 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasForeignKey("ProcessDefinitionVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("DependsOnBranchOutcomeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("DependsOnStepId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+                        .WithMany()
+                        .HasForeignKey("RoleRequirementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("SelectedBranchOutcomeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("StepDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("StepRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>

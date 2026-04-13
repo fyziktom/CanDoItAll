@@ -86,7 +86,13 @@ public sealed partial class ProcessesService
             "processes.definition-concurrency-conflict");
     }
 
-    private static Error CreateDefinitionSaveUniqueConflictError() {
+    private static Error CreateDefinitionSaveUniqueConflictError(DbUpdateException? exception = null) {
+        if (IsDependencyUniqueConflict(exception)) {
+            return Error.Validation(
+                "Process definition contains duplicate dependency routes. Remove the duplicate dependency and try again.",
+                "processes.dependency-unique-conflict");
+        }
+
         return Error.Validation(
             "Process definition could not be saved because a conflicting definition update already claimed the required unique values. Reload and try again.",
             "processes.definition-unique-conflict");
@@ -114,6 +120,42 @@ public sealed partial class ProcessesService
         return Error.Validation(
             "Process step changed before the transition completed. Reload the run and try again.",
             "processes.step-transition-conflict");
+    }
+
+    private static bool IsDependencyUniqueConflict(DbUpdateException? exception) {
+        if (exception is null || !DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)) {
+            return false;
+        }
+
+        var constraintName = DbUpdateExceptionClassifier.GetConstraintName(exception);
+        if (string.Equals(constraintName, ProcessPersistenceConstraintNames.StepDependencyUnconditionalUniqueIndex, StringComparison.Ordinal) ||
+            string.Equals(constraintName, ProcessPersistenceConstraintNames.StepDependencyConditionalUniqueIndex, StringComparison.Ordinal)) {
+            return true;
+        }
+
+        var providerMessage = DbUpdateExceptionClassifier.GetProviderMessage(exception);
+        if (providerMessage.Contains(ProcessPersistenceConstraintNames.StepDependencyUnconditionalUniqueIndex, StringComparison.OrdinalIgnoreCase) ||
+            providerMessage.Contains(ProcessPersistenceConstraintNames.StepDependencyConditionalUniqueIndex, StringComparison.OrdinalIgnoreCase)) {
+            return true;
+        }
+
+        return providerMessage.Contains("Processes_StepDependencies.StepDefinitionId", StringComparison.OrdinalIgnoreCase) &&
+            providerMessage.Contains("Processes_StepDependencies.DependsOnStepId", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDefinitionSlugConflict(DbUpdateException? exception) {
+        if (exception is null || !DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)) {
+            return false;
+        }
+
+        var constraintName = DbUpdateExceptionClassifier.GetConstraintName(exception);
+        if (string.Equals(constraintName, ProcessPersistenceConstraintNames.DefinitionSlugUniqueIndex, StringComparison.Ordinal)) {
+            return true;
+        }
+
+        var providerMessage = DbUpdateExceptionClassifier.GetProviderMessage(exception);
+        return providerMessage.Contains(ProcessPersistenceConstraintNames.DefinitionSlugUniqueIndex, StringComparison.OrdinalIgnoreCase) ||
+            providerMessage.Contains("Processes_Definitions.Slug", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Error? ValidatePublish(
@@ -224,13 +266,13 @@ public sealed partial class ProcessesService
     private static List<ProcessStepDependencyEditorModel> BuildEditorDependencies(
         ProcessStepDefinition step,
         IReadOnlyList<ProcessStepDependencyDefinition> allDependencies) {
-        return ProcessDependencyCompatibilityBridge.BuildEditorDependencies(step, allDependencies);
+        return ProcessStepDependencyCollection.BuildEditorDependencies(step.Id, allDependencies);
     }
 
     private static IReadOnlyList<ProcessStepDependencyDefinition> GetPersistedDependencies(
         ProcessStepDefinition step,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
-        return ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(step, dependenciesByStepId);
+        return ProcessStepDependencyCollection.GetPersistedDependencies(step.Id, dependenciesByStepId);
     }
 
     private static string BuildWorkBrief(ProcessDefinition definition, ProcessStepDefinition step, string? executorName) {

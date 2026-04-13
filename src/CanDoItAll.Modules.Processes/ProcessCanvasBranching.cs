@@ -37,7 +37,6 @@ public static class ProcessCanvasBranching
     {
         ArgumentNullException.ThrowIfNull(step);
 
-        ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step);
         NormalizeStepBranchOutcomes(step, [step]);
     }
 
@@ -75,7 +74,7 @@ public static class ProcessCanvasBranching
     {
         ArgumentNullException.ThrowIfNull(step);
 
-        return [.. ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step)];
+        return [.. ProcessStepDependencyCollection.GetOrderedEditorDependencies(step)];
     }
 
     public static bool IsSystemOutcome(ProcessStepBranchOutcomeEditorModel outcome)
@@ -256,8 +255,6 @@ public static class ProcessCanvasBranching
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
-        ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step);
-
         var systemOutcomes = step.BranchOutcomes
             .Where(IsSystemOutcome)
             .ToList();
@@ -295,9 +292,8 @@ public static class ProcessCanvasBranching
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
-        var dependencies = ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step);
+        var dependencies = ProcessStepDependencyCollection.GetOrderedEditorDependencies(step);
         var normalized = new List<ProcessStepDependencyEditorModel>(dependencies.Count);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var dependency in dependencies)
         {
             if (!dependency.DependsOnStepId.HasValue ||
@@ -323,12 +319,6 @@ public static class ProcessCanvasBranching
                 dependency.DependsOnBranchOutcomeId = null;
             }
 
-            var dedupeKey = $"{dependency.DependsOnStepId.Value:D}:{dependency.DependsOnBranchOutcomeId?.ToString("D") ?? string.Empty}";
-            if (!seen.Add(dedupeKey))
-            {
-                continue;
-            }
-
             dependency.Id ??= Guid.NewGuid();
             normalized.Add(new ProcessStepDependencyEditorModel
             {
@@ -338,7 +328,7 @@ public static class ProcessCanvasBranching
             });
         }
 
-        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(step, normalized);
+        ProcessStepDependencyCollection.SetEditorDependencies(step, normalized);
     }
 
     private static ProcessStepBranchOutcomeEditorModel ResolveSystemOutcome(

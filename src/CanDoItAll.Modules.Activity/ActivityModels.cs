@@ -28,6 +28,8 @@ public sealed class ActivityEntry
 
     public string Actor { get; set; } = "local-user";
 
+    public string? IdempotencyKey { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 }
 
@@ -44,7 +46,9 @@ internal sealed class ActivityEntryConfiguration : IEntityTypeConfiguration<Acti
         builder.Property(entry => entry.ArtifactKind).HasMaxLength(120);
         builder.Property(entry => entry.Route).HasMaxLength(500);
         builder.Property(entry => entry.Actor).HasMaxLength(120).IsRequired();
+        builder.Property(entry => entry.IdempotencyKey).HasMaxLength(200);
         builder.HasIndex(entry => entry.CreatedAtUtc);
+        builder.HasIndex(entry => entry.IdempotencyKey).IsUnique();
     }
 }
 
@@ -84,21 +88,44 @@ public sealed class ActivityService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await dbContext.Set<ActivityEntry>().AddAsync(new ActivityEntry
+        var normalizedIdempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey)
+            ? null
+            : request.IdempotencyKey.Trim();
+        if (normalizedIdempotencyKey is not null)
         {
-            Category = request.Category.Trim(),
-            Action = request.Action.Trim(),
-            Title = request.Title.Trim(),
-            Description = request.Description?.Trim() ?? string.Empty,
-            ProjectId = request.ProjectId,
-            ArtifactKind = request.ArtifactKind?.Trim(),
-            ArtifactId = request.ArtifactId,
-            Route = request.Route?.Trim(),
-            Actor = string.IsNullOrWhiteSpace(request.Actor) ? "local-user" : request.Actor.Trim(),
-            CreatedAtUtc = clock.GetUtcNow()
-        }, cancellationToken);
+            var alreadyRecorded = await dbContext.Set<ActivityEntry>()
+                .AnyAsync(entry => entry.IdempotencyKey == normalizedIdempotencyKey, cancellationToken);
+            if (alreadyRecorded)
+            {
+                return;
+            }
+        }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.Set<ActivityEntry>().AddAsync(
+            new ActivityEntry
+            {
+                Category = request.Category.Trim(),
+                Action = request.Action.Trim(),
+                Title = request.Title.Trim(),
+                Description = request.Description?.Trim() ?? string.Empty,
+                ProjectId = request.ProjectId,
+                ArtifactKind = request.ArtifactKind?.Trim(),
+                ArtifactId = request.ArtifactId,
+                Route = request.Route?.Trim(),
+                Actor = string.IsNullOrWhiteSpace(request.Actor) ? "local-user" : request.Actor.Trim(),
+                IdempotencyKey = normalizedIdempotencyKey,
+                CreatedAtUtc = clock.GetUtcNow()
+            },
+            cancellationToken);
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (normalizedIdempotencyKey is not null && DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
+        {
+            return;
+        }
     }
 
     public async Task<IReadOnlyList<ActivityTimelineItem>> ListRecentAsync(int take = 40, CancellationToken cancellationToken = default)

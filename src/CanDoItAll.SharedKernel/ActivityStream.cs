@@ -20,7 +20,8 @@ public sealed record ActivityWriteRequest(
     string? ArtifactKind = null,
     Guid? ArtifactId = null,
     string? Route = null,
-    string? Actor = null);
+    string? Actor = null,
+    string? IdempotencyKey = null);
 
 /* codex-capsule
 kind: contract

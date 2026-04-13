@@ -20,10 +20,19 @@ internal sealed class ProcessDefinitionConfiguration : IEntityTypeConfiguration<
         builder.Property(definition => definition.Criticality).HasConversion<string>().HasMaxLength(48);
         builder.Property(definition => definition.AutonomyLevel).HasConversion<string>().HasMaxLength(48);
         builder.Property(definition => definition.Status).HasConversion<string>().HasMaxLength(48);
+        builder.Property(definition => definition.NextVersionNumber).HasDefaultValue(1);
         builder.Property(definition => definition.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(definition => definition.ProjectId);
-        builder.HasIndex(definition => definition.Slug).IsUnique();
+        builder.HasIndex(definition => definition.Slug)
+            .HasDatabaseName(ProcessPersistenceConstraintNames.DefinitionSlugUniqueIndex)
+            .IsUnique();
         builder.HasIndex(definition => definition.Status);
+        builder.HasIndex(definition => definition.ActivePublishedVersionId);
+        builder.HasOne<ProcessDefinitionVersion>()
+            .WithMany()
+            .HasForeignKey(definition => new { definition.Id, definition.ActivePublishedVersionId })
+            .HasPrincipalKey(version => new { version.ProcessDefinitionId, version.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -43,6 +52,15 @@ internal sealed class ProcessDefinitionVersionConfiguration : IEntityTypeConfigu
         builder.Property(version => version.ImportWarnings).HasColumnType("TEXT");
         builder.Property(version => version.PublishedBy).HasMaxLength(160);
         builder.Property(version => version.ConcurrencyToken).IsConcurrencyToken();
+        builder.HasAlternateKey(version => new { version.ProcessDefinitionId, version.Id });
+        builder.HasIndex(version => new { version.ProcessDefinitionId, version.Status })
+            .HasDatabaseName(ProcessPersistenceConstraintNames.VersionDraftPerDefinitionUniqueIndex)
+            .HasFilter("\"Status\" = 'Draft'")
+            .IsUnique();
+        builder.HasIndex(version => version.ProcessDefinitionId)
+            .HasDatabaseName(ProcessPersistenceConstraintNames.VersionPublishedPerDefinitionUniqueIndex)
+            .HasFilter("\"Status\" = 'Published'")
+            .IsUnique();
         builder.HasIndex(version => new { version.ProcessDefinitionId, version.VersionNumber }).IsUnique();
         builder.HasIndex(version => new { version.ProcessDefinitionId, version.Status });
         builder.HasOne<ProcessDefinition>()
@@ -108,8 +126,6 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
         builder.Property(step => step.ExceptionPolicySummary).HasColumnType("TEXT");
         builder.HasIndex(step => new { step.ProcessDefinitionVersionId, step.OrderIndex });
         builder.HasIndex(step => new { step.ProcessDefinitionVersionId, step.Key }).IsUnique();
-        builder.HasIndex(step => step.DependsOnStepId);
-        builder.HasIndex(step => step.DependsOnBranchOutcomeId);
         builder.HasIndex(step => step.DecisionRoleRequirementId);
         builder.HasOne<ProcessDefinitionVersion>()
             .WithMany()
@@ -131,8 +147,27 @@ internal sealed class ProcessStepDependencyDefinitionConfiguration : IEntityType
         builder.HasIndex(item => item.StepDefinitionId);
         builder.HasIndex(item => item.DependsOnStepId);
         builder.HasIndex(item => item.DependsOnBranchOutcomeId);
-        builder.HasIndex(item => new { item.StepDefinitionId, item.DependsOnStepId, item.DependsOnBranchOutcomeId }).IsUnique();
+        builder.HasIndex(item => new { item.StepDefinitionId, item.DependsOnStepId })
+            .HasDatabaseName(ProcessPersistenceConstraintNames.StepDependencyUnconditionalUniqueIndex)
+            .HasFilter("\"DependsOnBranchOutcomeId\" IS NULL")
+            .IsUnique();
+        builder.HasIndex(item => new { item.StepDefinitionId, item.DependsOnStepId, item.DependsOnBranchOutcomeId })
+            .HasDatabaseName(ProcessPersistenceConstraintNames.StepDependencyConditionalUniqueIndex)
+            .HasFilter("\"DependsOnBranchOutcomeId\" IS NOT NULL")
+            .IsUnique();
         builder.HasIndex(item => new { item.StepDefinitionId, item.DisplayOrder });
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(item => item.StepDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(item => item.DependsOnStepId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessStepBranchOutcomeDefinition>()
+            .WithMany()
+            .HasForeignKey(item => item.DependsOnBranchOutcomeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -147,6 +182,10 @@ internal sealed class ProcessStepBranchOutcomeDefinitionConfiguration : IEntityT
         builder.Property(outcome => outcome.Description).HasColumnType("TEXT");
         builder.HasIndex(outcome => new { outcome.StepDefinitionId, outcome.Key }).IsUnique();
         builder.HasIndex(outcome => new { outcome.StepDefinitionId, outcome.DisplayOrder });
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(outcome => outcome.StepDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -159,6 +198,14 @@ internal sealed class ProcessStepRoleAssignmentRequirementConfiguration : IEntit
         builder.Property(requirement => requirement.ResponsibilityKind).HasConversion<string>().HasMaxLength(48);
         builder.Property(requirement => requirement.RebindPolicySummary).HasColumnType("TEXT");
         builder.HasIndex(requirement => new { requirement.StepDefinitionId, requirement.RoleRequirementId, requirement.ResponsibilityKind }).IsUnique();
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(requirement => requirement.StepDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessRoleRequirement>()
+            .WithMany()
+            .HasForeignKey(requirement => requirement.RoleRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -175,6 +222,10 @@ internal sealed class ProcessArtifactExpectationConfiguration : IEntityTypeConfi
         builder.Property(expectation => expectation.AllowedFutureUsageSummary).HasColumnType("TEXT");
         builder.Property(expectation => expectation.ValidationRequirementSummary).HasColumnType("TEXT");
         builder.HasIndex(expectation => expectation.StepDefinitionId);
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(expectation => expectation.StepDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -188,5 +239,13 @@ internal sealed class ProcessStepArtifactInputDefinitionConfiguration : IEntityT
         builder.HasIndex(item => item.ArtifactExpectationId);
         builder.HasIndex(item => new { item.StepDefinitionId, item.ArtifactExpectationId }).IsUnique();
         builder.HasIndex(item => new { item.StepDefinitionId, item.DisplayOrder });
+        builder.HasOne<ProcessStepDefinition>()
+            .WithMany()
+            .HasForeignKey(item => item.StepDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessArtifactExpectation>()
+            .WithMany()
+            .HasForeignKey(item => item.ArtifactExpectationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

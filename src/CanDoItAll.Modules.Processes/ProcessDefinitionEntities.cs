@@ -33,6 +33,8 @@ public sealed class ProcessDefinition : IHasConcurrencyToken
 
     public Guid? ActivePublishedVersionId { get; set; }
 
+    public int NextVersionNumber { get; set; } = 1;
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -164,10 +166,6 @@ public sealed class ProcessStepDefinition
     public int TargetLeadHours { get; set; }
 
     public int OrderIndex { get; set; }
-
-    public Guid? DependsOnStepId { get; set; }
-
-    public Guid? DependsOnBranchOutcomeId { get; set; }
 
     public Guid? DecisionRoleRequirementId { get; set; }
 

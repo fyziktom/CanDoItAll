@@ -219,26 +219,11 @@ public partial class ProcessWorkspace
         return Task.CompletedTask;
     }
 
-    private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> GetDependencyOutcomeOptions(ProcessStepEditorModel step)
-    {
-        var dependencyStepId = ProcessCanvasBranching.GetOrderedDependencies(step)
-            .FirstOrDefault()?.DependsOnStepId;
-        if (!dependencyStepId.HasValue)
-        {
-            return [];
-        }
-
-        return editor.Steps
-            .FirstOrDefault(candidate => candidate.Id == dependencyStepId.Value)?
-            .BranchOutcomes
-            ?? [];
-    }
-
     private static void SetStepDependencies(
         ProcessStepEditorModel step,
         IEnumerable<ProcessStepDependencyEditorModel> dependencies)
     {
-        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(step, dependencies);
+        ProcessStepDependencyCollection.SetEditorDependencies(step, dependencies);
     }
 
     private string ResolveRoleName(Guid? roleId)

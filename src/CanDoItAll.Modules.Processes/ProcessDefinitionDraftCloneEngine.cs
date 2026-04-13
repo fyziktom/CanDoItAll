@@ -148,7 +148,7 @@ internal sealed class ProcessDefinitionDraftCloneEngine
         }
 
         foreach (var step in source.Steps.OrderBy(item => item.OrderIndex)) {
-            var canonicalDependencies = ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(step, sourceDependenciesByStepId);
+            var canonicalDependencies = ProcessStepDependencyCollection.GetPersistedDependencies(step.Id, sourceDependenciesByStepId);
             var nextStepId = stepIdMap[step.Id];
             var clonedDependencies = new List<ProcessStepDependencyDefinition>(canonicalDependencies.Count);
 
@@ -181,12 +181,6 @@ internal sealed class ProcessDefinitionDraftCloneEngine
 
             clonedDependenciesByStepId[nextStepId] = clonedDependencies;
         }
-
-        foreach (var clonedStep in clonedStepsById.Values) {
-            clonedDependenciesByStepId.TryGetValue(clonedStep.Id, out var clonedDependencies);
-            ProcessDependencyCompatibilityBridge.SyncLegacyPersistedPrimaryDependency(clonedStep, clonedDependencies ?? []);
-        }
-
         foreach (var artifactExpectation in source.ArtifactExpectations) {
             if (!stepIdMap.TryGetValue(artifactExpectation.StepDefinitionId, out var nextStepId)) {
                 throw new InvalidOperationException(
