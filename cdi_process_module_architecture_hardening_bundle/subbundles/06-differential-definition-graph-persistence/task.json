@@ -1,0 +1,32 @@
+{
+  "Key": "06-differential-definition-graph-persistence",
+  "Title": "Differential definition-graph persistence",
+  "Purpose": "Replace the current delete-and-recreate definition save behavior with differential graph persistence so stable logical children retain identity and saves become less destructive.",
+  "DependsOn": [
+    "05-transaction-concurrency-and-conflict-hardening"
+  ],
+  "Deliverables": [
+    "A differential save engine or equivalent service for process-definition children.",
+    "Stable child IDs across no-op and targeted saves.",
+    "Removal of the delete-and-recreate graph rewrite path from the normal save flow.",
+    "Tests proving stable identity and rollback safety."
+  ],
+  "RepositoryTouchpoints": [
+    "src\\CanDoItAll.Modules.Processes\\ProcessesService.Persistence.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessDefinitionModels.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessDefinitionEditorModels.cs",
+    "tests\\CanDoItAll.Tests.Integration\\ProcessesServiceIntegrationTests.cs",
+    "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessesToolsTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Mcp.Processes.Tests\\CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessesToolsTests\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Does the normal save path now preserve stable child identities?",
+    "Did we truly remove destructive graph rewrite from normal saves?",
+    "Are rollback and targeted-update behaviors actually proven?"
+  ],
+  "CorrectiveOnFailure": "If unchanged logical children still churn or rollback proof is weak, trigger the persistence/concurrency corrective playbook before publication work starts.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-persistence-and-concurrency-reset"
+}

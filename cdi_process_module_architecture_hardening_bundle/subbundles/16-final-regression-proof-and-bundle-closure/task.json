@@ -1,0 +1,37 @@
+{
+  "Key": "16-final-regression-proof-and-bundle-closure",
+  "Title": "Final regression proof and bundle closure",
+  "Purpose": "Run the final proof matrix, capture browser evidence, close the raw user notes against real evidence, and synchronize the whole bundle to the actually shipped state.",
+  "DependsOn": [
+    "15-architecture-review-gate-d"
+  ],
+  "Deliverables": [
+    "Prepared and completed validator proof on the target machine.",
+    "Final build and targeted test proof.",
+    "Final browser proof and screenshot review notes for `/processes` if UI changed during execution.",
+    "A completed execution report and raw-note closure table."
+  ],
+  "RepositoryTouchpoints": [
+    "cdi_process_module_architecture_hardening_bundle\\README.md",
+    "cdi_process_module_architecture_hardening_bundle\\09-proof-contract.md",
+    "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md",
+    "cdi_process_module_architecture_hardening_bundle\\traceability\\01-requirement-traceability.md",
+    "cdi_process_module_architecture_hardening_bundle\\inputs\\00-original-request.md"
+  ],
+  "ValidationCommands": [
+    "python C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-preparation\\scripts\\validate_bundle.py C:\\repositories\\CanDoItAll\\cdi_process_module_architecture_hardening_bundle --profile initiative --stage prepared",
+    "dotnet build C:\\repositories\\CanDoItAll\\CanDoItAll.slnx -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessImportMetadataIntegrationTests|FullyQualifiedName~ProcessDeletionIntegrationTests|FullyQualifiedName~SqliteWriteCoordinationIntegrationTests\" -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Components\\CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests\" -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Mcp.Processes.Tests\\CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessesToolsTests|FullyQualifiedName~ProcessTemplateProjectionServiceTests|FullyQualifiedName~ProcessTemplateCatalogServiceTests|FullyQualifiedName~ProcessTemplatePackLoaderTests|FullyQualifiedName~ProcessTemplateMermaidExporterTests\" -v:minimal",
+    "python C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-preparation\\scripts\\validate_bundle.py C:\\repositories\\CanDoItAll\\cdi_process_module_architecture_hardening_bundle --profile initiative --stage completed"
+  ],
+  "ReviewQuestions": [
+    "Does the recorded proof fully support the completion claim?",
+    "Did any gate or raw-note row remain incomplete?",
+    "If UI changed, was browser proof actually refreshed and reviewed?"
+  ],
+  "CorrectiveOnFailure": "If final proof is missing or any validator fails, keep the bundle open and create a targeted corrective subbundle before closure is attempted again.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-template"
+}

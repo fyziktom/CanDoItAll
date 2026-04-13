@@ -1,0 +1,25 @@
+# Requirement traceability
+
+| Input or requirement | Bundle location | Owning subbundle(s) | Planned proof | Notes |
+| --- | --- | --- | --- | --- |
+| `U001` Review the new Process module | `analysis/01-current-state.md`, `analysis/02-core-architecture-failures.md` | `01-16` | Full execution report and final closure | The whole bundle is centered on the Process module. |
+| `U002` Check duplication across modules | `analysis/03-duplication-and-hotspots.md`, `inventories/03-cross-module-duplication-map.md`, `architecture/04-query-and-template-consolidation-strategy.md` | `12-template-subsystem-and-cross-module-shared-infrastructure-consolidation` | Shared-helper tests and final architecture review gate D | Cross-module duplication is visible and intentionally scoped. |
+| `U003` Focus on architecture, overloaded functions, long files, maintainability, modularity, testability, canonicality, performance, DB conflicts | `requirements/01-normalized-requirements.md`, `inventories/02-long-file-hotspots.md`, `inventories/05-db-and-migration-risk-map.md` | `02-15` | Per-subbundle proof plus final closure | The execution order prioritizes canonicality and safety first. |
+| `U004` Produce a detailed execution-grade bundle | `README.md`, `codex/MASTER_TASKS.json`, `subbundles/*` | `01` foundation + all subbundles | Prepared-stage validator | The bundle follows the initiative structure. |
+| `U005` Make subbundles detailed and precise for Codex | `templates/subbundle-readme-template.md`, all subbundle READMEs, `shared-prompts/*` | `All subbundles` | Review checklist + bundle self-review | Detailed source references and proof are included. |
+| `U006` Use in-repo bundle examples and improve on them | `inputs/01-source-artifacts.md`, `07-emergency-corrective-policy.md` | `01` and bundle-wide | Prepared-stage validator and self-review | This bundle adds stronger corrective governance than the examples. |
+| `U007` Add recurring architecture reviews and corrective subbundles | `plan/02-review-gate-checkpoints.md`, `subbundles/04-*`, `07-*`, `11-*`, `15-*`, corrective playbooks | `04`, `07`, `11`, `15` | Architecture gate memos and rerun results | A failed gate blocks downstream work. |
+| `U008` Deliver as zip | Root bundle artifact | Bundle packaging step | Zip artifact exists | Preparation-only closure, not repository execution closure. |
+| `BRQ-003` Canonical dependency model | `architecture/01-target-solution.md`, `analysis/02-core-architecture-failures.md` | `02`, `03`, `04` | Integration/component tests and gate A | Foundational requirement. |
+| `BRQ-005` Pure validation | `requirements/01-normalized-requirements.md#brq-005-pure-validation`, `requirements/02-execution-invariants.md` | `03`, `04` | Pure-validation tests and gate A | Validation must stop mutating state. |
+| `BRQ-006` Atomic save/publish/transition | `architecture/03-persistence-concurrency-strategy.md`, `analysis/05-db-concurrency-and-runtime-risk-review.md` | `05`, `07`, `16` | Conflict tests and gate B | Critical for correctness. |
+| `BRQ-008` Differential graph persistence | `architecture/03-persistence-concurrency-strategy.md` | `06`, `07` | Stable-ID tests and gate B | No-op save stability is a must. |
+| `BRQ-009` Publish/version hardening | `analysis/05-db-concurrency-and-runtime-risk-review.md` | `08`, `11` | Publish conflict tests and gate C | Must remove race-prone helper coupling. |
+| `BRQ-010` Runtime state-machine extraction | `architecture/01-target-solution.md`, `architecture/02-service-and-component-split-map.md` | `09`, `11` | Runtime policy tests and gate C | Keep public command surface stable. |
+| `BRQ-011` Read-side query hardening | `architecture/04-query-and-template-consolidation-strategy.md` | `10`, `11` | Query-shape proof and gate C | Avoid broad-load assumptions. |
+| `BRQ-012` Cross-module duplication reduction | `analysis/03-duplication-and-hotspots.md`, `inventories/03-cross-module-duplication-map.md` | `12`, `15` | Shared-helper tests and gate D | Use ownership-aware extraction. |
+| `BRQ-013` Workspace and canvas decomposition | `inventories/02-long-file-hotspots.md`, `architecture/02-service-and-component-split-map.md` | `13`, `15`, `16` | Component tests + browser proof | UI logic must remain thin. |
+| `BRQ-014` Schema and model hygiene | `inventories/05-db-and-migration-risk-map.md` | `14`, `15`, `16` | Build, migration sync, gate D | Both providers must remain coherent. |
+| `BRQ-015` Regression and proof discipline | `09-proof-contract.md`, `reviews/01-execution-report.md` | `01-16` | Validators, tests, browser proof | Proof is mandatory work. |
+| `BRQ-016` Repeated architecture review gates | `plan/02-review-gate-checkpoints.md` | `04`, `07`, `11`, `15` | Gate memos | Must stop and re-evaluate direction. |
+| `BRQ-017` Corrective-first continuation | `07-emergency-corrective-policy.md`, corrective playbooks | `04`, `07`, `11`, `15` and any corrective subbundle | Corrective subbundle closure + rerun gate | Downstream work must stay blocked until repaired. |

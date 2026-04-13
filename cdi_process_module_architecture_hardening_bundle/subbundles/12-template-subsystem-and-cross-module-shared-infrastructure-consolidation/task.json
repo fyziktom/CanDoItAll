@@ -1,0 +1,38 @@
+{
+  "Key": "12-template-subsystem-and-cross-module-shared-infrastructure-consolidation",
+  "Title": "Template subsystem and cross-module shared-infrastructure consolidation",
+  "Purpose": "Remove the real duplicated helper hotspots in template and adjacent modules without creating a generic dumping ground or blurring domain ownership.",
+  "DependsOn": [
+    "11-architecture-review-gate-c"
+  ],
+  "Deliverables": [
+    "Consolidated shared helper(s) for genuinely generic duplicated behavior such as file/json reading, enum parsing defaults, or slug generation where justified.",
+    "A single process-template-domain helper for role snapshot summary generation if the semantics are the same across services.",
+    "Updated tests proving the new shared helpers preserve prior behavior."
+  ],
+  "RepositoryTouchpoints": [
+    "src\\CanDoItAll.Modules.Processes\\ProcessTemplatePackLoader.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessTemplateProjectionService.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessTemplateCatalogService.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessTemplateLibraryService.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs",
+    "src\\CanDoItAll.Modules.Factory\\PromptLibraryPackLoader.cs",
+    "src\\CanDoItAll.Modules.Prompts\\Pages\\PromptGalleryPage.razor",
+    "src\\CanDoItAll.Modules.Projects\\ProjectModels.cs",
+    "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessTemplateProjectionServiceTests.cs",
+    "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessTemplateCatalogServiceTests.cs",
+    "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessTemplatePackLoaderTests.cs",
+    "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessTemplateMermaidExporterTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Mcp.Processes.Tests\\CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessTemplateProjectionServiceTests|FullyQualifiedName~ProcessTemplateCatalogServiceTests|FullyQualifiedName~ProcessTemplatePackLoaderTests|FullyQualifiedName~ProcessTemplateMermaidExporterTests\" -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Did we actually reduce the main duplicated hotspots?",
+    "Did we keep generic and domain-specific extraction separate?",
+    "Would a new maintainer now know where to change the shared behavior?"
+  ],
+  "CorrectiveOnFailure": "If consolidation increases coupling or leaves major duplication active, trigger the workspace/shared-infrastructure corrective playbook before the next phase continues.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-workspace-and-shared-infrastructure-reset"
+}

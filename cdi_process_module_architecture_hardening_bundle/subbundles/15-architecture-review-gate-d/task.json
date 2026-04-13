@@ -1,0 +1,32 @@
+{
+  "Key": "15-architecture-review-gate-d",
+  "Title": "Architecture review gate D",
+  "Purpose": "Stop after consolidation, workspace decomposition, and schema hygiene to decide whether the module is now architecturally strong enough for final closure proof.",
+  "DependsOn": [
+    "12-template-subsystem-and-cross-module-shared-infrastructure-consolidation",
+    "13-workspace-and-canvas-decomposition",
+    "14-schema-hygiene-migrations-and-long-file-split"
+  ],
+  "Deliverables": [
+    "Architecture review memo D.",
+    "Explicit pass/fail decision covering consolidation, UI decomposition, and schema hygiene.",
+    "Corrective subbundle if the gate fails."
+  ],
+  "RepositoryTouchpoints": [
+    "cdi_process_module_architecture_hardening_bundle\\analysis\\03-duplication-and-hotspots.md",
+    "cdi_process_module_architecture_hardening_bundle\\inventories\\02-long-file-hotspots.md",
+    "cdi_process_module_architecture_hardening_bundle\\inventories\\03-cross-module-duplication-map.md",
+    "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+  ],
+  "ValidationCommands": [
+    "Review the latest execution-report rows, browser proof for subbundle 13, and build/migration proof for subbundle 14."
+  ],
+  "ReviewQuestions": [
+    "Did consolidation reduce duplication without creating a dumping ground?",
+    "Is the workspace materially easier to reason about now?",
+    "Are schema and provider snapshots/migrations coherent and auditable?"
+  ],
+  "CorrectiveOnFailure": "Create a gate-D corrective subbundle from `subbundles/_corrective-workspace-and-shared-infrastructure-reset` or `subbundles/_corrective-template`, block the queue, and rerun gate D after the correction lands.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-workspace-and-shared-infrastructure-reset"
+}
