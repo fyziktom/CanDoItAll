@@ -1,0 +1,39 @@
+{
+  "Key": "11-performance-scaling-and-structural-follow-up",
+  "Title": "Performance, scaling, and structural follow-up",
+  "Purpose": "Apply targeted performance and concentration cleanup now that correctness is closed: reduce hot repeated scans, clean dead locals, document or improve analytics aggregation, and trim low-value duplication without opening a risky rewrite.",
+  "DependsOn": [
+    "10-architecture-review-gate-c"
+  ],
+  "Deliverables": [
+    "Precomputed lookups or other targeted complexity reductions in known hot loops such as differential save and progression planning.",
+    "Cleanup of dead locals or obviously unused intermediate collections such as the current unused `orderedDependencies` local.",
+    "A short performance note for analytics/read-side aggregation that either improves the query shape or documents the remaining data-size assumptions honestly.",
+    "Small helper deduplication where duplication is still low-risk and obvious, such as repeated route builders.",
+    "No blanket rewrite of the Process module or large renaming churn."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Modules.Processes/ProcessesService.Persistence.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessRuntimeProgressionPlanner.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessesService.RuntimeReadQuery.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasRecompositionService.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessOutbox.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessesService.Support.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessTemplateLibraryService.cs",
+    "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Presenters.cs",
+    "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs",
+    "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessSchemaIntegrationTests|FullyQualifiedName~ProcessOutboxIntegrationTests\" -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Were the most obvious repeated-scan hotspots reduced without destabilizing the already-hardened invariants?",
+    "Is the performance note honest about remaining scale assumptions instead of claiming unlimited scalability?",
+    "Did structural cleanup avoid reopening earlier invariants or re-concentrating logic into `ProcessesService`?"
+  ],
+  "CorrectiveOnFailure": "If performance cleanup begins to reopen correctness or widens into a rewrite, stop and create a corrective subbundle instead of continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-template"
+}

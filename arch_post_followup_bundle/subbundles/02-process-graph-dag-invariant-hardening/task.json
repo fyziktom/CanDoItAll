@@ -1,0 +1,34 @@
+{
+  "Key": "02-process-graph-dag-invariant-hardening",
+  "Title": "Process graph DAG invariant hardening",
+  "Purpose": "Make the process graph legally acyclic, reject self-loops and dependency cycles at save/publish time, and remove the current runtime/canvas fallbacks that silently compensate for invalid cyclic graphs.",
+  "DependsOn": [
+    "01-live-proof-reconciliation-and-unverified-closure-reset"
+  ],
+  "Deliverables": [
+    "A graph-validation path that rejects self-dependencies and multi-step dependency cycles before save/publish succeeds.",
+    "Removal of the `StartRunAsync` fallback that seeds the first step when no roots exist.",
+    "Removal or fail-fast replacement of the canvas topological-order fallback that appends unresolved nodes silently.",
+    "Fresh tests proving invalid cyclic graphs are rejected and valid branching DAGs still run and render correctly."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Modules.Processes/ProcessesService.Support.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasRecompositionService.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasBranching.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessStepDependencyCollection.cs",
+    "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs",
+    "tests/CanDoItAll.Tests.Components/ProcessCanvasSurfaceFactoryTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessWorkspaceTests\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Can a self-loop or multi-step dependency cycle still be saved or published?",
+    "Does runtime startup still contain any silent fallback when the graph has no legal roots?",
+    "Does the canvas now fail loudly or diagnose invalid graph order instead of silently appending unresolved nodes?"
+  ],
+  "CorrectiveOnFailure": "If any cyclic graph can still slip through or any fallback still silently compensates for it, fail the gate and open the graph-invariant corrective playbook.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-graph-invariant-reset"
+}

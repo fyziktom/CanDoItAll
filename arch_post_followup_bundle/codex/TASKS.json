@@ -1,0 +1,360 @@
+[
+  {
+    "id": "COD-PRC-R3-001",
+    "phase": "Phase 0",
+    "priority": "Critical",
+    "title": "Live proof reconciliation and unverified-closure reset",
+    "desired_outcome": "Reconcile the prior closure claim with the live repository, capture the newly reopened findings from evidence, and reset the proof record before any more code changes continue.",
+    "dependencies": [],
+    "primary_touchpoints": [
+      "architecture_followup_bundle/reviews/01-execution-report.md",
+      "architecture_followup_bundle/reviews/02-architecture-gate-memo-log.md",
+      ".codex-test-results/integration",
+      ".codex-test-results/components",
+      ".codex-test-results/mcp-processes",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs"
+    ],
+    "acceptance": [
+      "A written proof-reconciliation memo that compares the claimed closure state with the current live code and test artifacts.",
+      "Fresh `.trx` artifacts for the Process integration/component surface that this follow-up depends on.",
+      "An updated execution report section that explicitly reopens the still-active gaps instead of inheriting the old closure claim.",
+      "No production architecture change beyond proof capture and any narrowly necessary test scaffolding."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessSchemaIntegrationTests|FullyQualifiedName~ProcessOutboxIntegrationTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj -v:minimal"
+    ],
+    "risk_notes": "If the proof record still overclaims or cannot be reconciled from live evidence, stop immediately and open the proof corrective playbook before touching production code."
+  },
+  {
+    "id": "COD-PRC-R3-002",
+    "phase": "Phase 1",
+    "priority": "Critical",
+    "title": "Process graph DAG invariant hardening",
+    "desired_outcome": "Make the process graph legally acyclic, reject self-loops and dependency cycles at save/publish time, and remove the current runtime/canvas fallbacks that silently compensate for invalid cyclic graphs.",
+    "dependencies": [
+      "01-live-proof-reconciliation-and-unverified-closure-reset"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Support.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasRecompositionService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasBranching.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessStepDependencyCollection.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessCanvasSurfaceFactoryTests.cs"
+    ],
+    "acceptance": [
+      "A graph-validation path that rejects self-dependencies and multi-step dependency cycles before save/publish succeeds.",
+      "Removal of the `StartRunAsync` fallback that seeds the first step when no roots exist.",
+      "Removal or fail-fast replacement of the canvas topological-order fallback that appends unresolved nodes silently.",
+      "Fresh tests proving invalid cyclic graphs are rejected and valid branching DAGs still run and render correctly."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessWorkspaceTests\" -v:minimal"
+    ],
+    "risk_notes": "If any cyclic graph can still slip through or any fallback still silently compensates for it, fail the gate and open the graph-invariant corrective playbook."
+  },
+  {
+    "id": "COD-PRC-R3-003",
+    "phase": "Gate A",
+    "priority": "Critical",
+    "title": "Architecture review gate A",
+    "desired_outcome": "Stop after proof reset and DAG hardening to verify that the repository no longer permits an illegal dependency graph before runtime/schema follow-up continues.",
+    "dependencies": [
+      "01-live-proof-reconciliation-and-unverified-closure-reset",
+      "02-process-graph-dag-invariant-hardening"
+    ],
+    "primary_touchpoints": [
+      "02-open-findings.md",
+      "reviews/01-architecture-gate-memo-log-template.md",
+      "templates/review-gate-memo-template.md",
+      "subbundles/02-process-graph-dag-invariant-hardening/README.md"
+    ],
+    "acceptance": [
+      "A written Gate A memo with an explicit pass/fail decision.",
+      "An explicit answer on whether graph legality is truly enforced at the service boundary.",
+      "An updated queue state that blocks all downstream work if Gate A fails."
+    ],
+    "tests_to_add_or_update": [
+      "Review the live repository, new tests, and generated proof artifacts for subbundles 01-02."
+    ],
+    "risk_notes": "If any answer is weaker than an explicit yes, create and finish a corrective graph-invariant subbundle before continuing."
+  },
+  {
+    "id": "COD-PRC-R3-004",
+    "phase": "Phase 2",
+    "priority": "Critical",
+    "title": "Runtime row singularity and DB uniqueness hardening",
+    "desired_outcome": "Bring the runtime schema in line with service assumptions by enforcing singular step runs and singular run assignments directly in the database, including null-safe uniqueness for step-scoped versus run-scoped assignments.",
+    "dependencies": [
+      "03-architecture-review-gate-a"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/ProcessRuntimeEntityConfigurations.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.Operations.cs",
+      "src/CanDoItAll.Migrations.Sqlite/Migrations",
+      "src/CanDoItAll.Migrations.PostgreSql/Migrations",
+      "tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs"
+    ],
+    "acceptance": [
+      "A unique runtime invariant for one `ProcessStepRun` per `(ProcessRunId, StepDefinitionId)`.",
+      "A unique runtime invariant for one `ProcessRunAssignment` per `(ProcessRunId, RoleRequirementId)` at run scope and per `(ProcessRunId, RoleRequirementId, StepDefinitionId)` at step scope.",
+      "Friendly service-boundary handling for uniqueness conflicts where concurrency races can still occur.",
+      "Fresh integration tests proving duplicate runtime rows are rejected and concurrent assignment resolution cannot create duplicate rows silently."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessSchemaIntegrationTests|FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
+      "dotnet ef migrations script --project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --startup-project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --context AppDbContext",
+      "dotnet ef migrations script --project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --context AppDbContext"
+    ],
+    "risk_notes": "If runtime singularity still depends only on service discipline or nullable non-unique indexes, stop and open the runtime-uniqueness corrective playbook."
+  },
+  {
+    "id": "COD-PRC-R3-005",
+    "phase": "Phase 2",
+    "priority": "Critical",
+    "title": "Workspace pending-persistence quiescence and action ordering",
+    "desired_outcome": "Ensure that pending debounced canvas persistence cannot race publish, delete, export, process switching, or disposal, and make the workspace action order deterministic around local unsaved definition state.",
+    "dependencies": [
+      "04-runtime-row-singularity-and-db-uniqueness-hardening"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.DefinitionCrud.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Persistence.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs"
+    ],
+    "acceptance": [
+      "A single quiescence helper or equivalent orchestration rule used by Save, Publish, Delete, Export, selection changes, and disposal where needed.",
+      "A guarantee that Publish cannot run against stale local authoring state when a canvas save is pending or in flight.",
+      "A guarantee that Delete cannot be followed by an in-flight autosave that recreates the deleted definition under a new identity.",
+      "A guarantee that Export reflects the current editor state or explicitly forces persistence first.",
+      "Component and/or integration tests that cover pending autosave + publish, pending autosave + delete, and pending autosave + export."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal"
+    ],
+    "risk_notes": "If any workspace action still bypasses pending-persistence quiescence, fail immediately and open the workspace-quiescence corrective playbook."
+  },
+  {
+    "id": "COD-PRC-R3-006",
+    "phase": "Gate B",
+    "priority": "Critical",
+    "title": "Architecture review gate B",
+    "desired_outcome": "Stop after runtime singularity and workspace quiescence work to verify that the runtime now has both DB-backed singularity and deterministic UI action ordering before query/cohesion work begins.",
+    "dependencies": [
+      "04-runtime-row-singularity-and-db-uniqueness-hardening",
+      "05-workspace-pending-persistence-quiescence-and-action-ordering"
+    ],
+    "primary_touchpoints": [
+      "02-open-findings.md",
+      "templates/review-gate-memo-template.md",
+      "subbundles/04-runtime-row-singularity-and-db-uniqueness-hardening/README.md",
+      "subbundles/05-workspace-pending-persistence-quiescence-and-action-ordering/README.md"
+    ],
+    "acceptance": [
+      "A written Gate B memo with an explicit pass/fail decision.",
+      "An explicit statement on whether runtime singularity and workspace action ordering are now materially safe.",
+      "A corrective subbundle if either runtime uniqueness or workspace quiescence still leaks through assumptions."
+    ],
+    "tests_to_add_or_update": [
+      "Review the live repository, migrations, and fresh tests for subbundles 04-05."
+    ],
+    "risk_notes": "If any answer is no, stop and open the runtime-uniqueness or workspace-quiescence corrective playbook before continuing."
+  },
+  {
+    "id": "COD-PRC-R3-007",
+    "phase": "Phase 3",
+    "priority": "High",
+    "title": "Published-only editor concurrency closure",
+    "desired_outcome": "Close the remaining stale-save hole in the published-only editor path by ensuring definition-level concurrency metadata is always present when editing an existing definition without a working draft.",
+    "dependencies": [
+      "06-architecture-review-gate-b"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/ProcessesService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Persistence.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessDefinitionEditorModels.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs"
+    ],
+    "acceptance": [
+      "An editor-loading path that always sets `DefinitionConcurrencyToken` when an existing definition is loaded, even if no working draft exists yet.",
+      "A direct integration test that simulates a published-only or no-draft state and proves a stale save is rejected.",
+      "No weakening of the current working-draft concurrency behavior."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal"
+    ],
+    "risk_notes": "If any existing-definition editor path still returns a null definition token, fail and reopen this subbundle before continuing."
+  },
+  {
+    "id": "COD-PRC-R3-008",
+    "phase": "Phase 3",
+    "priority": "High",
+    "title": "Aggregated workspace read model and query cohesion",
+    "desired_outcome": "Reduce workspace chattiness and torn-read risk by introducing a more cohesive read boundary for workspace and run details instead of many sequential service calls with separate `DbContext` instances.",
+    "dependencies": [
+      "07-published-only-editor-concurrency-closure"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunDetailsLoader.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Reads.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.RuntimeReadQuery.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs"
+    ],
+    "acceptance": [
+      "A cohesive read model or query service for run details at minimum, and preferably for the broader workspace payload if the scope stays controlled.",
+      "A documented consistency boundary so one user-visible workspace refresh is not stitched from unrelated `DbContext` snapshots without intention.",
+      "Selective `AsNoTracking` where full entities are materialized for read-only work; do not add cargo-cult `AsNoTracking` to pure DTO projections that already avoid tracking.",
+      "Component/integration tests showing the workspace still renders correctly after the query-cohesion refactor."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal"
+    ],
+    "risk_notes": "If query cohesion work widens into a risky rewrite or leaves the same torn-read pattern intact, stop and open the query-cohesion corrective playbook."
+  },
+  {
+    "id": "COD-PRC-R3-009",
+    "phase": "Phase 3",
+    "priority": "Medium",
+    "title": "Template helper isolation and pack immutability decision",
+    "desired_outcome": "Finish isolating duplicated template-to-editor mapping rules and make the pack-caching/immutability tradeoff explicit and safe.",
+    "dependencies": [
+      "08-aggregated-workspace-read-model-and-query-cohesion"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/ProcessTemplateCatalogService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplateLibraryService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplatePackLoader.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplatePackModels.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs"
+    ],
+    "acceptance": [
+      "One shared owner for role-draft and artifact-expectation mapping rules instead of repeating that logic across catalog, library, and projection services.",
+      "A short design note that explicitly chooses one of two safe directions: keep the pack scoped because the graph is mutable, or make the pack truly immutable and safe for broader caching.",
+      "No introduction of a shared mutable singleton pack graph without immutability or defensive cloning.",
+      "Regression proof that catalog/library/projection behavior still agrees after helper extraction."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessImportMetadataIntegrationTests\" -v:minimal"
+    ],
+    "risk_notes": "If the change introduces shared mutable cross-scope state or still leaves the same mapping rules duplicated in multiple services, stop and open the template-isolation corrective playbook."
+  },
+  {
+    "id": "COD-PRC-R3-010",
+    "phase": "Gate C",
+    "priority": "Critical",
+    "title": "Architecture review gate C",
+    "desired_outcome": "Stop after the remaining correctness, query-cohesion, and helper-isolation work to verify that the Process module is actually ready for final performance and closure proof.",
+    "dependencies": [
+      "07-published-only-editor-concurrency-closure",
+      "08-aggregated-workspace-read-model-and-query-cohesion",
+      "09-template-helper-isolation-and-pack-immutability-decision"
+    ],
+    "primary_touchpoints": [
+      "02-open-findings.md",
+      "templates/review-gate-memo-template.md",
+      "subbundles/07-published-only-editor-concurrency-closure/README.md",
+      "subbundles/08-aggregated-workspace-read-model-and-query-cohesion/README.md",
+      "subbundles/09-template-helper-isolation-and-pack-immutability-decision/README.md"
+    ],
+    "acceptance": [
+      "A written Gate C memo with explicit pass/fail decision.",
+      "An explicit statement on whether the remaining closure work is now performance/cleanup only instead of correctness repair.",
+      "A corrective subbundle if any correctness or thread-safety gap still survives into this gate."
+    ],
+    "tests_to_add_or_update": [
+      "Review the live repository and fresh proof for subbundles 07-09."
+    ],
+    "risk_notes": "If any answer is no, stop and create the matching corrective subbundle before proceeding to final scaling/closure work."
+  },
+  {
+    "id": "COD-PRC-R3-011",
+    "phase": "Phase 4",
+    "priority": "Medium",
+    "title": "Performance, scaling, and structural follow-up",
+    "desired_outcome": "Apply targeted performance and concentration cleanup now that correctness is closed: reduce hot repeated scans, clean dead locals, document or improve analytics aggregation, and trim low-value duplication without opening a risky rewrite.",
+    "dependencies": [
+      "10-architecture-review-gate-c"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Persistence.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessRuntimeProgressionPlanner.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.RuntimeReadQuery.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasRecompositionService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessOutbox.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessesService.Support.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplateLibraryService.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Presenters.cs",
+      "tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs"
+    ],
+    "acceptance": [
+      "Precomputed lookups or other targeted complexity reductions in known hot loops such as differential save and progression planning.",
+      "Cleanup of dead locals or obviously unused intermediate collections such as the current unused `orderedDependencies` local.",
+      "A short performance note for analytics/read-side aggregation that either improves the query shape or documents the remaining data-size assumptions honestly.",
+      "Small helper deduplication where duplication is still low-risk and obvious, such as repeated route builders.",
+      "No blanket rewrite of the Process module or large renaming churn."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessSchemaIntegrationTests|FullyQualifiedName~ProcessOutboxIntegrationTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests\" -v:minimal"
+    ],
+    "risk_notes": "If performance cleanup begins to reopen correctness or widens into a rewrite, stop and create a corrective subbundle instead of continuing."
+  },
+  {
+    "id": "COD-PRC-R3-012",
+    "phase": "Final",
+    "priority": "Critical",
+    "title": "Final proof and closure",
+    "desired_outcome": "Close the bundle only after all gates pass, fresh proof exists for the new scope, and the live execution report matches the actual repository state.",
+    "dependencies": [
+      "11-performance-scaling-and-structural-follow-up"
+    ],
+    "primary_touchpoints": [
+      "reviews/01-execution-report.md",
+      "reviews/02-architecture-gate-memo-log.md",
+      "codex/MASTER_TASKS.json",
+      "codex/TASKS.json",
+      "codex/VALIDATION_COMMANDS.md",
+      "traceability/01-finding-to-subbundle-map.md",
+      "traceability/01-requirement-traceability.md",
+      "tests/CanDoItAll.Tests.Integration",
+      "tests/CanDoItAll.Tests.Components",
+      "tests/CanDoItAll.Mcp.Processes.Tests"
+    ],
+    "acceptance": [
+      "Fresh build, integration, component, MCP, and migration artifacts that cover the full reopened scope.",
+      "A final execution report that lists the real artifacts, real remaining risks, and a defensible closure decision.",
+      "A completed architecture-gate memo log showing Gate A, Gate B, and Gate C outcomes from the live repository.",
+      "No closure claim while any red finding from `02-open-findings.md` remains open."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessSchemaIntegrationTests|FullyQualifiedName~ProcessOutboxIntegrationTests|FullyQualifiedName~ProcessImportMetadataIntegrationTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj -v:minimal",
+      "dotnet ef migrations script --project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --startup-project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --context AppDbContext",
+      "dotnet ef migrations script --project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --context AppDbContext"
+    ],
+    "risk_notes": "If fresh proof is missing, inconsistent, or weaker than the closure claim, do not close the bundle."
+  }
+]

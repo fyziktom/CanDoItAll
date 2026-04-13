@@ -1,0 +1,30 @@
+{
+  "Key": "06-architecture-review-gate-b",
+  "Title": "Architecture review gate B",
+  "Purpose": "Stop after runtime singularity and workspace quiescence work to verify that the runtime now has both DB-backed singularity and deterministic UI action ordering before query/cohesion work begins.",
+  "DependsOn": [
+    "04-runtime-row-singularity-and-db-uniqueness-hardening",
+    "05-workspace-pending-persistence-quiescence-and-action-ordering"
+  ],
+  "Deliverables": [
+    "A written Gate B memo with an explicit pass/fail decision.",
+    "An explicit statement on whether runtime singularity and workspace action ordering are now materially safe.",
+    "A corrective subbundle if either runtime uniqueness or workspace quiescence still leaks through assumptions."
+  ],
+  "RepositoryTouchpoints": [
+    "02-open-findings.md",
+    "templates/review-gate-memo-template.md",
+    "subbundles/04-runtime-row-singularity-and-db-uniqueness-hardening/README.md",
+    "subbundles/05-workspace-pending-persistence-quiescence-and-action-ordering/README.md"
+  ],
+  "ValidationCommands": [
+    "Review the live repository, migrations, and fresh tests for subbundles 04-05."
+  ],
+  "ReviewQuestions": [
+    "Does the database now protect runtime singularity strongly enough to match the service code\u2019s assumptions?",
+    "Can the workspace still publish, delete, or export against stale or racing definition state?",
+    "Do the new tests prove both the DB uniqueness side and the UI quiescence side?"
+  ],
+  "CorrectiveOnFailure": "If any answer is no, stop and open the runtime-uniqueness or workspace-quiescence corrective playbook before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-runtime-uniqueness-reset"
+}

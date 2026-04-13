@@ -1,0 +1,32 @@
+{
+  "Key": "10-architecture-review-gate-c",
+  "Title": "Architecture review gate C",
+  "Purpose": "Stop after the remaining correctness, query-cohesion, and helper-isolation work to verify that the Process module is actually ready for final performance and closure proof.",
+  "DependsOn": [
+    "07-published-only-editor-concurrency-closure",
+    "08-aggregated-workspace-read-model-and-query-cohesion",
+    "09-template-helper-isolation-and-pack-immutability-decision"
+  ],
+  "Deliverables": [
+    "A written Gate C memo with explicit pass/fail decision.",
+    "An explicit statement on whether the remaining closure work is now performance/cleanup only instead of correctness repair.",
+    "A corrective subbundle if any correctness or thread-safety gap still survives into this gate."
+  ],
+  "RepositoryTouchpoints": [
+    "02-open-findings.md",
+    "templates/review-gate-memo-template.md",
+    "subbundles/07-published-only-editor-concurrency-closure/README.md",
+    "subbundles/08-aggregated-workspace-read-model-and-query-cohesion/README.md",
+    "subbundles/09-template-helper-isolation-and-pack-immutability-decision/README.md"
+  ],
+  "ValidationCommands": [
+    "Review the live repository and fresh proof for subbundles 07-09."
+  ],
+  "ReviewQuestions": [
+    "Do all editor paths now provide the metadata needed for stale-write detection?",
+    "Is the workspace read path cohesive enough that one refresh does not tear across many unrelated calls without intention?",
+    "Are template helpers isolated enough, and is the pack-thread-safety/caching decision explicit and safe?"
+  ],
+  "CorrectiveOnFailure": "If any answer is no, stop and create the matching corrective subbundle before proceeding to final scaling/closure work.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-query-cohesion-reset"
+}
