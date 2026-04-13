@@ -37,8 +37,7 @@ public static class ProcessCanvasBranching
     {
         ArgumentNullException.ThrowIfNull(step);
 
-        SyncDependencyCollectionFromLegacy(step);
-        SyncLegacyDependency(step);
+        ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step);
         NormalizeStepBranchOutcomes(step, [step]);
     }
 
@@ -76,9 +75,7 @@ public static class ProcessCanvasBranching
     {
         ArgumentNullException.ThrowIfNull(step);
 
-        SyncDependencyCollectionFromLegacy(step);
-        SyncLegacyDependency(step);
-        return [.. step.Dependencies];
+        return [.. ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step)];
     }
 
     public static bool IsSystemOutcome(ProcessStepBranchOutcomeEditorModel outcome)
@@ -259,7 +256,7 @@ public static class ProcessCanvasBranching
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
-        SyncDependencyCollectionFromLegacy(step);
+        ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step);
 
         var systemOutcomes = step.BranchOutcomes
             .Where(IsSystemOutcome)
@@ -298,11 +295,10 @@ public static class ProcessCanvasBranching
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
-        SyncDependencyCollectionFromLegacy(step);
-
-        var normalized = new List<ProcessStepDependencyEditorModel>(step.Dependencies.Count);
+        var dependencies = ProcessDependencyCompatibilityBridge.GetCanonicalEditorDependencies(step);
+        var normalized = new List<ProcessStepDependencyEditorModel>(dependencies.Count);
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var dependency in step.Dependencies)
+        foreach (var dependency in dependencies)
         {
             if (!dependency.DependsOnStepId.HasValue ||
                 dependency.DependsOnStepId.Value == Guid.Empty ||
@@ -342,34 +338,7 @@ public static class ProcessCanvasBranching
             });
         }
 
-        step.Dependencies = normalized;
-        SyncLegacyDependency(step);
-    }
-
-    private static void SyncDependencyCollectionFromLegacy(ProcessStepEditorModel step)
-    {
-        if (step.Dependencies.Count > 0 || !step.DependsOnStepId.HasValue)
-        {
-            return;
-        }
-
-        step.Dependencies =
-        [
-            new ProcessStepDependencyEditorModel
-            {
-                Id = Guid.NewGuid(),
-                DependsOnStepId = step.DependsOnStepId,
-                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId
-            }
-        ];
-    }
-
-    private static void SyncLegacyDependency(ProcessStepEditorModel step)
-    {
-        var primaryDependency = step.Dependencies
-            .FirstOrDefault(dependency => dependency.DependsOnStepId.HasValue);
-        step.DependsOnStepId = primaryDependency?.DependsOnStepId;
-        step.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId;
+        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(step, normalized);
     }
 
     private static ProcessStepBranchOutcomeEditorModel ResolveSystemOutcome(

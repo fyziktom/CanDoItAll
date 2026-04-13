@@ -381,15 +381,28 @@ public sealed class ProcessWorkspaceTests
             Assert.Contains(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep), dependency => dependency.DependsOnStepId == currentImplementationStep.Id);
         });
 
-        cut.WaitForAssertion(() =>
-        {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
-            var persistedImplementationStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.ImplementationStepKey);
-            var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
-            var persistedArtifact = Assert.Single(persistedImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
-            Assert.Contains(persistedMergeStep.RoleAssignments, assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible);
-            Assert.Contains(persistedMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == persistedArtifact.Id);
-        });
+        var persistedEditor = await WaitForPersistedEditorAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            persisted =>
+            {
+                var persistedImplementationStep = persisted.Steps.FirstOrDefault(step => step.Key == process.ImplementationStepKey);
+                var persistedMergeStep = persisted.Steps.FirstOrDefault(step => step.Key == process.MergeStepKey);
+                var persistedArtifactId = persistedImplementationStep?.ArtifactExpectations
+                    .FirstOrDefault(artifact => artifact.Title == "Implementation package")?
+                    .Id;
+                return persistedMergeStep is not null &&
+                    persistedMergeStep.RoleAssignments.Any(assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible) &&
+                    persistedArtifactId.HasValue &&
+                    persistedMergeStep.ArtifactInputs.Any(input => input.ArtifactExpectationId == persistedArtifactId.Value);
+            });
+
+        var persistedImplementationStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.ImplementationStepKey);
+        var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
+        var persistedArtifact = Assert.Single(persistedImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+        Assert.Contains(persistedMergeStep.RoleAssignments, assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible);
+        Assert.Contains(persistedMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == persistedArtifact.Id);
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
             new CanvasWorkbenchContextActionRequest(
@@ -1081,6 +1094,27 @@ public sealed class ProcessWorkspaceTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task<ProcessDefinitionEditorModel> WaitForPersistedEditorAsync(
+        ProcessesService processesService,
+        Guid definitionId,
+        Guid projectId,
+        Func<ProcessDefinitionEditorModel, bool> predicate)
+    {
+        ProcessDefinitionEditorModel? lastObserved = null;
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            lastObserved = await processesService.GetEditorAsync(definitionId, projectId);
+            if (predicate(lastObserved))
+            {
+                return lastObserved;
+            }
+
+            await Task.Delay(100);
+        }
+
+        return lastObserved ?? await processesService.GetEditorAsync(definitionId, projectId);
     }
 
     private sealed record CanvasAuthoringFixture(

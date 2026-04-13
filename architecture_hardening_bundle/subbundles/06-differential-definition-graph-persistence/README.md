@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: `ProcessesService.SaveDefinitionChildrenAsync` now performs tracked differential persistence for roles, skills, steps, branch outcomes, dependencies, role assignments, artifact expectations, and artifact inputs; the normal save path no longer deletes and recreates the whole child graph, unchanged logical children keep stable IDs, and the targeted build/integration/MCP proof passed.
 
 ## Objective
 
@@ -21,7 +22,9 @@
 ## Exact Source References
 
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Persistence.cs
-- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionModels.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEnums.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEntities.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEntityConfigurations.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEditorModels.cs
 - C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
 - C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Processes.Tests\ProcessesToolsTests.cs

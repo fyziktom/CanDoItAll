@@ -6,77 +6,74 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService
 {
-    public async Task<Result> PublishAsync(Guid definitionId, CancellationToken cancellationToken = default) {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var definition = await dbContext.Set<ProcessDefinition>()
-            .SingleOrDefaultAsync(item => item.Id == definitionId, cancellationToken);
-        if (definition is null) {
+    private static readonly ProcessDefinitionDraftCloneEngine DraftCloneEngine = new();
+
+    public Task<Result> PublishAsync(Guid definitionId, CancellationToken cancellationToken = default) {
+        return PublishAsync(
+            new ProcessDefinitionPublishRequest {
+                DefinitionId = definitionId
+            },
+            cancellationToken);
+    }
+
+    public async Task<Result> PublishAsync(ProcessDefinitionPublishRequest request, CancellationToken cancellationToken = default) {
+        if (request.DefinitionId == Guid.Empty) {
             return Result.Failure(Error.Validation("Process definition was not found.", "processes.definition-not-found"));
         }
 
-        var draftVersion = await dbContext.Set<ProcessDefinitionVersion>()
-            .Where(item => item.ProcessDefinitionId == definitionId && item.Status == ProcessVersionStatus.Draft)
-            .OrderByDescending(item => item.VersionNumber)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (draftVersion is null) {
-            return Result.Failure(Error.Validation("No draft version is available to publish.", "processes.draft-version-required"));
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        ProcessDefinition definition;
+        ProcessDefinitionVersion draftVersion;
+        try {
+            var publicationContextResult = await LoadPublicationContextAsync(dbContext, request, cancellationToken);
+            if (publicationContextResult.IsFailure) {
+                return Result.Failure(publicationContextResult.Errors);
+            }
+
+            var publicationContext = publicationContextResult.Value!;
+            definition = publicationContext.Definition;
+            draftVersion = publicationContext.DraftVersion;
+
+            var publishError = ValidatePublish(
+                definition,
+                draftVersion,
+                publicationContext.CloneSource.Roles,
+                publicationContext.CloneSource.Steps,
+                publicationContext.CloneSource.StepRoleRequirements,
+                publicationContext.CloneSource.BranchOutcomes,
+                publicationContext.CloneSource.StepDependencies,
+                publicationContext.CloneSource.ArtifactExpectations,
+                publicationContext.CloneSource.ArtifactInputs);
+            if (publishError is not null) {
+                return Result.Failure(publishError);
+            }
+
+            var publishedVersions = await dbContext.Set<ProcessDefinitionVersion>()
+                .Where(item => item.ProcessDefinitionId == request.DefinitionId && item.Status == ProcessVersionStatus.Published)
+                .ToListAsync(cancellationToken);
+            var now = clock.GetUtcNow();
+            ApplyPublicationLifecycle(definition, draftVersion, publishedVersions, now);
+
+            await ProvisionNextDraftFromPublishedVersionAsync(
+                dbContext,
+                definition.Id,
+                draftVersion,
+                publicationContext.CloneSource,
+                now,
+                cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
-
-        var roles = await dbContext.Set<ProcessRoleRequirement>()
-            .Where(item => item.ProcessDefinitionVersionId == draftVersion.Id)
-            .ToListAsync(cancellationToken);
-        var steps = await dbContext.Set<ProcessStepDefinition>()
-            .Where(item => item.ProcessDefinitionVersionId == draftVersion.Id)
-            .OrderBy(item => item.OrderIndex)
-            .ToListAsync(cancellationToken);
-        var stepRoleRequirements = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var publishError = ValidatePublish(definition, draftVersion, roles, steps, stepRoleRequirements, branchOutcomes, stepDependencies, artifactExpectations, artifactInputs);
-        if (publishError is not null) {
-            return Result.Failure(publishError);
+        catch (DbUpdateConcurrencyException) {
+            await transaction.RollbackAsync(cancellationToken);
+            return Result.Failure(CreateDefinitionPublishConflictError());
         }
-
-        var publishedVersions = await dbContext.Set<ProcessDefinitionVersion>()
-            .Where(item => item.ProcessDefinitionId == definitionId && item.Status == ProcessVersionStatus.Published)
-            .ToListAsync(cancellationToken);
-        foreach (var publishedVersion in publishedVersions) {
-            publishedVersion.Status = ProcessVersionStatus.Superseded;
-            publishedVersion.UpdatedAtUtc = clock.GetUtcNow();
+        catch (DbUpdateException exception) when (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)) {
+            await transaction.RollbackAsync(cancellationToken);
+            return Result.Failure(CreateDefinitionPublishUniqueConflictError());
         }
-
-        draftVersion.Status = ProcessVersionStatus.Published;
-        draftVersion.PublishedAtUtc = clock.GetUtcNow();
-        draftVersion.PublishedBy = DefaultActor;
-        draftVersion.UpdatedAtUtc = clock.GetUtcNow();
-        definition.Status = ProcessDefinitionStatus.Published;
-        definition.ActivePublishedVersionId = draftVersion.Id;
-        definition.UpdatedAtUtc = clock.GetUtcNow();
-
-        await ClonePublishedVersionIntoNextDraftAsync(
-            dbContext,
-            definitionId,
-            draftVersion,
-            roles,
-            steps,
-            stepRoleRequirements,
-            stepDependencies,
-            artifactExpectations,
-            artifactInputs,
-            cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         var route = definition.ProjectId.HasValue
             ? $"/projects/{definition.ProjectId.Value:D}/processes?processId={definition.Id:D}"
@@ -140,10 +137,10 @@ public sealed partial class ProcessesService
             await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ExecuteDeleteAsync(cancellationToken);
-            await dbContext.Set<ProcessArtifactExpectation>()
+            await dbContext.Set<ProcessStepArtifactInputDefinition>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ExecuteDeleteAsync(cancellationToken);
-            await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            await dbContext.Set<ProcessArtifactExpectation>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ExecuteDeleteAsync(cancellationToken);
             await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
@@ -211,25 +208,134 @@ public sealed partial class ProcessesService
         await searchIndexService.DeleteAsync("process-definition", definitionId.ToString(), cancellationToken);
     }
 
-    private async Task ClonePublishedVersionIntoNextDraftAsync(
+    private async Task<Result<ProcessPublicationContext>> LoadPublicationContextAsync(
+        AppDbContext dbContext,
+        ProcessDefinitionPublishRequest request,
+        CancellationToken cancellationToken) {
+        var definition = await dbContext.Set<ProcessDefinition>()
+            .SingleOrDefaultAsync(item => item.Id == request.DefinitionId, cancellationToken);
+        if (definition is null) {
+            return Result<ProcessPublicationContext>.Failure(
+                Error.Validation("Process definition was not found.", "processes.definition-not-found"));
+        }
+
+        if (HasConcurrencyTokenMismatch(request.DefinitionConcurrencyToken, definition.ConcurrencyToken)) {
+            return Result<ProcessPublicationContext>.Failure(CreateDefinitionPublishConflictError());
+        }
+
+        var draftVersion = await dbContext.Set<ProcessDefinitionVersion>()
+            .Where(item => item.ProcessDefinitionId == request.DefinitionId && item.Status == ProcessVersionStatus.Draft)
+            .OrderByDescending(item => item.VersionNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (draftVersion is null) {
+            return Result<ProcessPublicationContext>.Failure(
+                Error.Validation("No draft version is available to publish.", "processes.draft-version-required"));
+        }
+
+        if (HasConcurrencyTokenMismatch(request.DraftVersionConcurrencyToken, draftVersion.ConcurrencyToken)) {
+            return Result<ProcessPublicationContext>.Failure(CreateDefinitionPublishConflictError());
+        }
+
+        var roles = await dbContext.Set<ProcessRoleRequirement>()
+            .Where(item => item.ProcessDefinitionVersionId == draftVersion.Id)
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var steps = await dbContext.Set<ProcessStepDefinition>()
+            .Where(item => item.ProcessDefinitionVersionId == draftVersion.Id)
+            .OrderBy(item => item.OrderIndex)
+            .ToListAsync(cancellationToken);
+        var roleIds = roles.Select(item => item.Id).ToList();
+        var stepIds = steps.Select(item => item.Id).ToList();
+        IReadOnlyList<ProcessRoleSkillRequirement> roleSkills = roleIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessRoleSkillRequirement>()
+                .Where(item => roleIds.Contains(item.RoleRequirementId))
+                .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements = stepIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
+                .Where(item => stepIds.Contains(item.StepDefinitionId))
+                .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes = stepIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+                .Where(item => stepIds.Contains(item.StepDefinitionId))
+                .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies = stepIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessStepDependencyDefinition>()
+                .Where(item => stepIds.Contains(item.StepDefinitionId))
+                .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations = stepIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessArtifactExpectation>()
+                .Where(item => stepIds.Contains(item.StepDefinitionId))
+                .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs = stepIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessStepArtifactInputDefinition>()
+                .Where(item => stepIds.Contains(item.StepDefinitionId))
+                .ToListAsync(cancellationToken);
+
+        return Result<ProcessPublicationContext>.Success(
+            new ProcessPublicationContext(
+                definition,
+                draftVersion,
+                new ProcessDefinitionDraftCloneSource(
+                    roles,
+                    roleSkills,
+                    steps,
+                    stepRoleRequirements,
+                    branchOutcomes,
+                    stepDependencies,
+                    artifactExpectations,
+                    artifactInputs)));
+    }
+
+    private async Task ProvisionNextDraftFromPublishedVersionAsync(
         AppDbContext dbContext,
         Guid definitionId,
         ProcessDefinitionVersion publishedVersion,
-        IReadOnlyList<ProcessRoleRequirement> roles,
-        IReadOnlyList<ProcessStepDefinition> steps,
-        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
-        IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies,
-        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations,
-        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs,
+        ProcessDefinitionDraftCloneSource cloneSource,
+        DateTimeOffset now,
         CancellationToken cancellationToken) {
-        var nextDraftVersionId = Guid.NewGuid();
-        var roleIdMap = roles.ToDictionary(item => item.Id, _ => Guid.NewGuid());
-        var stepIdMap = steps.ToDictionary(item => item.Id, _ => Guid.NewGuid());
+        var nextDraft = await CreateNextDraftVersionAsync(dbContext, definitionId, publishedVersion, now, cancellationToken);
+        await dbContext.Set<ProcessDefinitionVersion>().AddAsync(nextDraft, cancellationToken);
+        await DraftCloneEngine.CloneAsync(
+            dbContext,
+            nextDraft,
+            cloneSource,
+            cancellationToken);
+    }
 
-        var nextDraft = new ProcessDefinitionVersion {
-            Id = nextDraftVersionId,
+    private static void ApplyPublicationLifecycle(
+        ProcessDefinition definition,
+        ProcessDefinitionVersion draftVersion,
+        IReadOnlyList<ProcessDefinitionVersion> publishedVersions,
+        DateTimeOffset now) {
+        foreach (var publishedVersion in publishedVersions) {
+            publishedVersion.Status = ProcessVersionStatus.Superseded;
+            publishedVersion.UpdatedAtUtc = now;
+        }
+
+        draftVersion.Status = ProcessVersionStatus.Published;
+        draftVersion.PublishedAtUtc = now;
+        draftVersion.PublishedBy = DefaultActor;
+        draftVersion.UpdatedAtUtc = now;
+        definition.Status = ProcessDefinitionStatus.Published;
+        definition.ActivePublishedVersionId = draftVersion.Id;
+        definition.UpdatedAtUtc = now;
+    }
+
+    private async Task<ProcessDefinitionVersion> CreateNextDraftVersionAsync(
+        AppDbContext dbContext,
+        Guid definitionId,
+        ProcessDefinitionVersion publishedVersion,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) {
+        return new ProcessDefinitionVersion {
             ProcessDefinitionId = definitionId,
-            VersionNumber = publishedVersion.VersionNumber + 1,
+            VersionNumber = await GetNextVersionNumberAsync(dbContext, definitionId, cancellationToken),
             Status = ProcessVersionStatus.Draft,
             ChangeSummary = $"Draft created from published v{publishedVersion.VersionNumber}.",
             GovernancePolicySummary = publishedVersion.GovernancePolicySummary,
@@ -238,201 +344,13 @@ public sealed partial class ProcessesService
             SimulationReadinessSummary = publishedVersion.SimulationReadinessSummary,
             ImportedFrom = publishedVersion.ImportedFrom,
             ImportWarnings = publishedVersion.ImportWarnings,
-            CreatedAtUtc = clock.GetUtcNow(),
-            UpdatedAtUtc = clock.GetUtcNow()
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
         };
-        await dbContext.Set<ProcessDefinitionVersion>().AddAsync(nextDraft, cancellationToken);
-
-        var roleSkills = await dbContext.Set<ProcessRoleSkillRequirement>()
-            .Where(item => roles.Select(role => role.Id).Contains(item.RoleRequirementId))
-            .ToListAsync(cancellationToken);
-        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var branchOutcomeIdMap = branchOutcomes.ToDictionary(item => item.Id, _ => Guid.NewGuid());
-        var artifactExpectationIdMap = artifactExpectations.ToDictionary(item => item.Id, _ => Guid.NewGuid());
-        var stepDependenciesByStepId = stepDependencies
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
-        var clonedStepsById = new Dictionary<Guid, ProcessStepDefinition>();
-
-        foreach (var role in roles.OrderBy(item => item.DisplayOrder)) {
-            await dbContext.Set<ProcessRoleRequirement>().AddAsync(
-                new ProcessRoleRequirement {
-                    Id = roleIdMap[role.Id],
-                    ProcessDefinitionVersionId = nextDraftVersionId,
-                    Key = role.Key,
-                    DisplayName = role.DisplayName,
-                    Purpose = role.Purpose,
-                    StaffingIntent = role.StaffingIntent,
-                    PreferredExecutorKind = role.PreferredExecutorKind,
-                    PreferredProjectAssignmentRole = role.PreferredProjectAssignmentRole,
-                    IsRequired = role.IsRequired,
-                    AllowsFallback = role.AllowsFallback,
-                    RequiresExplicitApproval = role.RequiresExplicitApproval,
-                    DefaultAllocationPercent = role.DefaultAllocationPercent,
-                    RoleTemplateSourceKey = role.RoleTemplateSourceKey,
-                    RoleTemplateSnapshotName = role.RoleTemplateSnapshotName,
-                    SnapshotSummary = role.SnapshotSummary,
-                    DisplayOrder = role.DisplayOrder,
-                    CanvasX = role.CanvasX,
-                    CanvasY = role.CanvasY
-                },
-                cancellationToken);
-        }
-
-        foreach (var roleSkill in roleSkills) {
-            if (!roleIdMap.TryGetValue(roleSkill.RoleRequirementId, out var nextRoleId)) {
-                continue;
-            }
-
-            await dbContext.Set<ProcessRoleSkillRequirement>().AddAsync(
-                new ProcessRoleSkillRequirement {
-                    RoleRequirementId = nextRoleId,
-                    SkillId = roleSkill.SkillId,
-                    IsRequired = roleSkill.IsRequired,
-                    MinimumYearsExperience = roleSkill.MinimumYearsExperience
-                },
-                cancellationToken);
-        }
-
-        foreach (var step in steps.OrderBy(item => item.OrderIndex)) {
-            var clonedStep = new ProcessStepDefinition {
-                Id = stepIdMap[step.Id],
-                ProcessDefinitionVersionId = nextDraftVersionId,
-                Key = step.Key,
-                Title = step.Title,
-                Subtitle = step.Subtitle,
-                Notes = step.Notes,
-                StepKind = step.StepKind,
-                AllowsManualSkip = step.AllowsManualSkip,
-                AllowsSafeRefusal = step.AllowsSafeRefusal,
-                RequiresApproval = step.RequiresApproval,
-                RequiresDecisionRecord = step.RequiresDecisionRecord,
-                InputContractSummary = step.InputContractSummary,
-                OutputContractSummary = step.OutputContractSummary,
-                EvidenceContractSummary = step.EvidenceContractSummary,
-                DecisionRightsSummary = step.DecisionRightsSummary,
-                ExceptionPolicySummary = step.ExceptionPolicySummary,
-                TargetLeadHours = step.TargetLeadHours,
-                OrderIndex = step.OrderIndex,
-                DecisionRoleRequirementId = step.DecisionRoleRequirementId.HasValue ? roleIdMap.GetValueOrDefault(step.DecisionRoleRequirementId.Value) : null,
-                CanvasX = step.CanvasX,
-                CanvasY = step.CanvasY,
-                BranchCanvasX = step.BranchCanvasX,
-                BranchCanvasY = step.BranchCanvasY
-            };
-            clonedStepsById[clonedStep.Id] = clonedStep;
-            await dbContext.Set<ProcessStepDefinition>().AddAsync(clonedStep, cancellationToken);
-        }
-
-        foreach (var branchOutcome in branchOutcomes.OrderBy(item => item.DisplayOrder)) {
-            if (!stepIdMap.TryGetValue(branchOutcome.StepDefinitionId, out var nextStepId) ||
-                !branchOutcomeIdMap.TryGetValue(branchOutcome.Id, out var nextOutcomeId)) {
-                continue;
-            }
-
-            await dbContext.Set<ProcessStepBranchOutcomeDefinition>().AddAsync(
-                new ProcessStepBranchOutcomeDefinition {
-                    Id = nextOutcomeId,
-                    StepDefinitionId = nextStepId,
-                    Key = branchOutcome.Key,
-                    Title = branchOutcome.Title,
-                    Description = branchOutcome.Description,
-                    DisplayOrder = branchOutcome.DisplayOrder
-                },
-                cancellationToken);
-        }
-
-        foreach (var stepRoleRequirement in stepRoleRequirements) {
-            if (!stepIdMap.TryGetValue(stepRoleRequirement.StepDefinitionId, out var nextStepId) ||
-                !roleIdMap.TryGetValue(stepRoleRequirement.RoleRequirementId, out var nextRoleId)) {
-                continue;
-            }
-
-            await dbContext.Set<ProcessStepRoleAssignmentRequirement>().AddAsync(
-                new ProcessStepRoleAssignmentRequirement {
-                    StepDefinitionId = nextStepId,
-                    RoleRequirementId = nextRoleId,
-                    ResponsibilityKind = stepRoleRequirement.ResponsibilityKind,
-                    IsRequired = stepRoleRequirement.IsRequired,
-                    FallbackOrder = stepRoleRequirement.FallbackOrder,
-                    RebindPolicySummary = stepRoleRequirement.RebindPolicySummary
-                },
-                cancellationToken);
-        }
-
-        foreach (var stepDependency in stepDependencies.OrderBy(item => item.DisplayOrder)) {
-            if (!stepIdMap.TryGetValue(stepDependency.StepDefinitionId, out var nextStepId) ||
-                !stepIdMap.TryGetValue(stepDependency.DependsOnStepId, out var nextDependsOnStepId)) {
-                continue;
-            }
-
-            await dbContext.Set<ProcessStepDependencyDefinition>().AddAsync(
-                new ProcessStepDependencyDefinition {
-                    StepDefinitionId = nextStepId,
-                    DependsOnStepId = nextDependsOnStepId,
-                    DependsOnBranchOutcomeId = stepDependency.DependsOnBranchOutcomeId.HasValue
-                        ? branchOutcomeIdMap.GetValueOrDefault(stepDependency.DependsOnBranchOutcomeId.Value)
-                        : null,
-                    DisplayOrder = stepDependency.DisplayOrder
-                },
-                cancellationToken);
-        }
-
-        foreach (var step in steps.OrderBy(item => item.OrderIndex)) {
-            if (!stepIdMap.TryGetValue(step.Id, out var nextStepId)) {
-                continue;
-            }
-
-            var primaryDependency = GetPersistedDependencies(step, stepDependenciesByStepId)
-                .FirstOrDefault();
-            if (!clonedStepsById.TryGetValue(nextStepId, out var clonedStep)) {
-                continue;
-            }
-
-            clonedStep.DependsOnStepId = primaryDependency is null
-                ? null
-                : stepIdMap.GetValueOrDefault(primaryDependency.DependsOnStepId);
-            clonedStep.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId.HasValue == true
-                ? branchOutcomeIdMap.GetValueOrDefault(primaryDependency.DependsOnBranchOutcomeId.Value)
-                : null;
-        }
-
-        foreach (var artifactExpectation in artifactExpectations) {
-            if (!stepIdMap.TryGetValue(artifactExpectation.StepDefinitionId, out var nextStepId)) {
-                continue;
-            }
-
-            await dbContext.Set<ProcessArtifactExpectation>().AddAsync(
-                new ProcessArtifactExpectation {
-                    Id = artifactExpectationIdMap[artifactExpectation.Id],
-                    StepDefinitionId = nextStepId,
-                    ArtifactKind = artifactExpectation.ArtifactKind,
-                    Title = artifactExpectation.Title,
-                    IsRequired = artifactExpectation.IsRequired,
-                    TrustRequirement = artifactExpectation.TrustRequirement,
-                    SensitivityLevel = artifactExpectation.SensitivityLevel,
-                    RetentionDays = artifactExpectation.RetentionDays,
-                    AllowedFutureUsageSummary = artifactExpectation.AllowedFutureUsageSummary,
-                    ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary
-                },
-                cancellationToken);
-        }
-
-        foreach (var artifactInput in artifactInputs.OrderBy(item => item.DisplayOrder)) {
-            if (!stepIdMap.TryGetValue(artifactInput.StepDefinitionId, out var nextStepId) ||
-                !artifactExpectationIdMap.TryGetValue(artifactInput.ArtifactExpectationId, out var nextArtifactExpectationId)) {
-                continue;
-            }
-
-            await dbContext.Set<ProcessStepArtifactInputDefinition>().AddAsync(
-                new ProcessStepArtifactInputDefinition {
-                    StepDefinitionId = nextStepId,
-                    ArtifactExpectationId = nextArtifactExpectationId,
-                    DisplayOrder = artifactInput.DisplayOrder
-                },
-                cancellationToken);
-        }
     }
+
+    private sealed record ProcessPublicationContext(
+        ProcessDefinition Definition,
+        ProcessDefinitionVersion DraftVersion,
+        ProcessDefinitionDraftCloneSource CloneSource);
 }

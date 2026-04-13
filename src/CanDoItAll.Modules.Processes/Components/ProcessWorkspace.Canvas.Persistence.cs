@@ -30,7 +30,7 @@ public partial class ProcessWorkspace
                 return;
             }
 
-            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+            NormalizeEditorForAuthoring();
             var result = await ProcessesService.SaveAsync(editor);
             if (result.IsFailure)
             {
@@ -39,7 +39,9 @@ public partial class ProcessWorkspace
             }
 
             selectedProcessId = result.Value;
+            editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId);
             definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
+            RefreshCanvasSurface();
             if (!string.IsNullOrWhiteSpace(successMessage))
             {
                 SetMessage(successMessage);
@@ -367,7 +369,7 @@ public partial class ProcessWorkspace
 
     private static ProcessStepEditorModel CloneStep(ProcessStepEditorModel source)
     {
-        return new ProcessStepEditorModel
+        var clone = new ProcessStepEditorModel
         {
             Id = source.Id,
             Key = source.Key,
@@ -385,8 +387,6 @@ public partial class ProcessWorkspace
             DecisionRightsSummary = source.DecisionRightsSummary,
             ExceptionPolicySummary = source.ExceptionPolicySummary,
             TargetLeadHours = source.TargetLeadHours,
-            DependsOnStepId = source.DependsOnStepId,
-            DependsOnBranchOutcomeId = source.DependsOnBranchOutcomeId,
             DecisionRoleRequirementId = source.DecisionRoleRequirementId,
             CanvasX = source.CanvasX,
             CanvasY = source.CanvasY,
@@ -399,14 +399,6 @@ public partial class ProcessWorkspace
                     Key = outcome.Key,
                     Title = outcome.Title,
                     Description = outcome.Description
-                })
-                .ToList(),
-            Dependencies = source.Dependencies
-                .Select(dependency => new ProcessStepDependencyEditorModel
-                {
-                    Id = dependency.Id,
-                    DependsOnStepId = dependency.DependsOnStepId,
-                    DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
                 })
                 .ToList(),
             RoleAssignments = source.RoleAssignments
@@ -442,38 +434,50 @@ public partial class ProcessWorkspace
                 })
                 .ToList()
         };
+
+        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(
+            clone,
+            ProcessCanvasBranching.GetOrderedDependencies(source)
+                .Select(dependency => new ProcessStepDependencyEditorModel
+                {
+                    Id = dependency.Id,
+                    DependsOnStepId = dependency.DependsOnStepId,
+                    DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
+                }));
+
+        return clone;
     }
 
     private static void CopyStep(ProcessStepEditorModel source, ProcessStepEditorModel target)
     {
-        target.Id = source.Id;
-        target.Key = source.Key;
-        target.Title = source.Title;
-        target.Subtitle = source.Subtitle;
-        target.Notes = source.Notes;
-        target.StepKind = source.StepKind;
-        target.AllowsManualSkip = source.AllowsManualSkip;
-        target.AllowsSafeRefusal = source.AllowsSafeRefusal;
-        target.RequiresApproval = source.RequiresApproval;
-        target.RequiresDecisionRecord = source.RequiresDecisionRecord;
-        target.InputContractSummary = source.InputContractSummary;
-        target.OutputContractSummary = source.OutputContractSummary;
-        target.EvidenceContractSummary = source.EvidenceContractSummary;
-        target.DecisionRightsSummary = source.DecisionRightsSummary;
-        target.ExceptionPolicySummary = source.ExceptionPolicySummary;
-        target.TargetLeadHours = source.TargetLeadHours;
-        target.DependsOnStepId = source.DependsOnStepId;
-        target.DependsOnBranchOutcomeId = source.DependsOnBranchOutcomeId;
-        target.DecisionRoleRequirementId = source.DecisionRoleRequirementId;
-        target.CanvasX = source.CanvasX;
-        target.CanvasY = source.CanvasY;
-        target.BranchCanvasX = source.BranchCanvasX;
-        target.BranchCanvasY = source.BranchCanvasY;
-        target.Dependencies = CloneStep(source).Dependencies;
-        target.BranchOutcomes = CloneStep(source).BranchOutcomes;
-        target.RoleAssignments = CloneStep(source).RoleAssignments;
-        target.ArtifactExpectations = CloneStep(source).ArtifactExpectations;
-        target.ArtifactInputs = CloneStep(source).ArtifactInputs;
+        var clone = CloneStep(source);
+
+        target.Id = clone.Id;
+        target.Key = clone.Key;
+        target.Title = clone.Title;
+        target.Subtitle = clone.Subtitle;
+        target.Notes = clone.Notes;
+        target.StepKind = clone.StepKind;
+        target.AllowsManualSkip = clone.AllowsManualSkip;
+        target.AllowsSafeRefusal = clone.AllowsSafeRefusal;
+        target.RequiresApproval = clone.RequiresApproval;
+        target.RequiresDecisionRecord = clone.RequiresDecisionRecord;
+        target.InputContractSummary = clone.InputContractSummary;
+        target.OutputContractSummary = clone.OutputContractSummary;
+        target.EvidenceContractSummary = clone.EvidenceContractSummary;
+        target.DecisionRightsSummary = clone.DecisionRightsSummary;
+        target.ExceptionPolicySummary = clone.ExceptionPolicySummary;
+        target.TargetLeadHours = clone.TargetLeadHours;
+        target.DecisionRoleRequirementId = clone.DecisionRoleRequirementId;
+        target.CanvasX = clone.CanvasX;
+        target.CanvasY = clone.CanvasY;
+        target.BranchCanvasX = clone.BranchCanvasX;
+        target.BranchCanvasY = clone.BranchCanvasY;
+        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(target, clone.Dependencies);
+        target.BranchOutcomes = clone.BranchOutcomes;
+        target.RoleAssignments = clone.RoleAssignments;
+        target.ArtifactExpectations = clone.ArtifactExpectations;
+        target.ArtifactInputs = clone.ArtifactInputs;
     }
 
     private sealed record ProcessCanvasNodeActionDialogState(

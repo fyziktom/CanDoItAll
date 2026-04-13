@@ -308,7 +308,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
 
     private void RefreshCanvasSurface()
     {
-        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        NormalizeEditorForAuthoring();
         canvasSurface = detailTab == "runs" && SelectedRun is not null
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
             : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId, definitionCanvasTool);
@@ -333,6 +333,16 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
         {
             selectedCanvasNodeId = null;
         }
+    }
+
+    private void NormalizeEditorForAuthoring()
+    {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+    }
+
+    private static void NormalizeStepDraftForAuthoring(ProcessStepEditorModel step)
+    {
+        ProcessCanvasBranching.NormalizeStepDraft(step);
     }
 
     private CanvasWorkbenchUiState ResolveStoredCanvasUiState()

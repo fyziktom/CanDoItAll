@@ -19,63 +19,10 @@ public sealed partial class ProcessesService(
 
     public async Task<IReadOnlyList<ProcessDefinitionListItem>> ListDefinitionsAsync(
         Guid? projectId = null,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var definitionsQuery = dbContext.Set<ProcessDefinition>().AsQueryable();
-        if (projectId.HasValue) {
-            definitionsQuery = definitionsQuery.Where(definition => definition.ProjectId == projectId.Value);
-        }
-
-        var definitions = await definitionsQuery.ToListAsync(cancellationToken);
-        var versions = await dbContext.Set<ProcessDefinitionVersion>().ToListAsync(cancellationToken);
-        var roles = await dbContext.Set<ProcessRoleRequirement>().ToListAsync(cancellationToken);
-        var steps = await dbContext.Set<ProcessStepDefinition>().ToListAsync(cancellationToken);
-        var runs = await dbContext.Set<ProcessRun>().ToListAsync(cancellationToken);
-        var assignments = await dbContext.Set<ProcessRunAssignment>().ToListAsync(cancellationToken);
-        var projectNames = await LoadProjectNamesAsync(dbContext, cancellationToken);
-        var versionsByDefinitionId = versions
-            .GroupBy(version => version.ProcessDefinitionId)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<ProcessDefinitionVersion>)group.ToList());
-        var roleIdsByVersionId = roles
-            .GroupBy(role => role.ProcessDefinitionVersionId)
-            .ToDictionary(group => group.Key, group => group.Select(role => role.Id).ToHashSet());
-        var stepCountByVersionId = steps
-            .GroupBy(step => step.ProcessDefinitionVersionId)
-            .ToDictionary(group => group.Key, group => group.Count());
-
-        return definitions
-            .OrderByDescending(definition => definition.UpdatedAtUtc)
-            .Select(definition => {
-                var definitionVersions = versionsByDefinitionId.GetValueOrDefault(definition.Id) ?? Array.Empty<ProcessDefinitionVersion>();
-                var summaryVersion = ResolveDefinitionSummaryVersion(definitionVersions);
-                var summaryVersionId = summaryVersion?.Id;
-                var roleIds = summaryVersionId.HasValue && roleIdsByVersionId.TryGetValue(summaryVersionId.Value, out var summaryRoleIds)
-                    ? summaryRoleIds
-                    : new HashSet<Guid>();
-                var definitionRuns = runs.Where(run => run.ProcessDefinitionId == definition.Id).ToList();
-                return new ProcessDefinitionListItem(
-                    definition.Id,
-                    definition.ProjectId,
-                    definition.Name,
-                    definition.Status,
-                    summaryVersion?.VersionNumber ?? 0,
-                    definition.ActivePublishedVersionId.HasValue,
-                    roleIds.Count,
-                    summaryVersionId.HasValue && stepCountByVersionId.TryGetValue(summaryVersionId.Value, out var stepCount)
-                        ? stepCount
-                        : 0,
-                    definitionRuns.Count(run => run.Status == ProcessRunStatus.Active || run.Status == ProcessRunStatus.Blocked),
-                    assignments.Count(assignment =>
-                        definitionRuns.Any(run => run.Id == assignment.ProcessRunId) &&
-                        roleIds.Contains(assignment.RoleRequirementId) &&
-                        assignment.IsCapabilityGap),
-                    definition.Summary,
-                    definition.ValueStatement,
-                    definition.ProjectId.HasValue ? projectNames.GetValueOrDefault(definition.ProjectId.Value) ?? string.Empty : string.Empty,
-                    definition.UpdatedAtUtc);
-            })
-            .ToList();
+        return await DefinitionListQueries.ListAsync(dbContext, projectId, cancellationToken);
     }
 
     public async Task<ProcessDefinitionEditorModel> GetEditorAsync(
@@ -148,6 +95,8 @@ public sealed partial class ProcessesService(
             Id = definition.Id,
             ProjectId = definition.ProjectId,
             WorkingVersionId = workingVersion.Id,
+            DefinitionConcurrencyToken = definition.ConcurrencyToken,
+            WorkingVersionConcurrencyToken = workingVersion.ConcurrencyToken,
             WorkingVersionNumber = workingVersion.VersionNumber,
             Name = definition.Name,
             Summary = definition.Summary,
@@ -186,69 +135,70 @@ public sealed partial class ProcessesService(
                     .Select(item => item.SkillId)
                     .ToList()
             }).ToList(),
-            Steps = steps.Select(step => new ProcessStepEditorModel {
-                Id = step.Id,
-                Key = step.Key,
-                Title = step.Title,
-                Subtitle = step.Subtitle,
-                Notes = step.Notes,
-                StepKind = step.StepKind,
-                AllowsManualSkip = step.AllowsManualSkip,
-                AllowsSafeRefusal = step.AllowsSafeRefusal,
-                RequiresApproval = step.RequiresApproval,
-                RequiresDecisionRecord = step.RequiresDecisionRecord,
-                InputContractSummary = step.InputContractSummary,
-                OutputContractSummary = step.OutputContractSummary,
-                EvidenceContractSummary = step.EvidenceContractSummary,
-                DecisionRightsSummary = step.DecisionRightsSummary,
-                ExceptionPolicySummary = step.ExceptionPolicySummary,
-                TargetLeadHours = step.TargetLeadHours,
-                DependsOnStepId = step.DependsOnStepId,
-                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId,
-                DecisionRoleRequirementId = step.DecisionRoleRequirementId,
-                CanvasX = step.CanvasX,
-                CanvasY = step.CanvasY,
-                BranchCanvasX = step.BranchCanvasX,
-                BranchCanvasY = step.BranchCanvasY,
-                BranchOutcomes = branchOutcomes
-                    .Where(item => item.StepDefinitionId == step.Id)
-                    .OrderBy(item => item.DisplayOrder)
-                    .Select(item => new ProcessStepBranchOutcomeEditorModel {
-                        Id = item.Id,
-                        Key = item.Key,
-                        Title = item.Title,
-                        Description = item.Description
-                    })
-                    .ToList(),
-                Dependencies = BuildEditorDependencies(step, stepDependencies),
-                RoleAssignments = stepRoleRequirements
-                    .Where(item => item.StepDefinitionId == step.Id)
-                    .OrderBy(item => item.FallbackOrder)
-                    .ThenBy(item => item.ResponsibilityKind)
-                    .Select(item => new ProcessStepRoleRequirementEditorModel {
-                        Id = item.Id,
-                        RoleRequirementId = item.RoleRequirementId,
-                        ResponsibilityKind = item.ResponsibilityKind,
-                        IsRequired = item.IsRequired,
-                        FallbackOrder = item.FallbackOrder,
-                        RebindPolicySummary = item.RebindPolicySummary
-                    })
-                    .ToList(),
-                ArtifactExpectations = artifactExpectations
-                    .Where(item => item.StepDefinitionId == step.Id)
-                    .Select(item => new ProcessArtifactExpectationEditorModel {
-                        Id = item.Id,
-                        ArtifactKind = item.ArtifactKind,
-                        Title = item.Title,
-                        IsRequired = item.IsRequired,
-                        TrustRequirement = item.TrustRequirement,
-                        SensitivityLevel = item.SensitivityLevel,
-                        RetentionDays = item.RetentionDays,
-                        AllowedFutureUsageSummary = item.AllowedFutureUsageSummary,
-                        ValidationRequirementSummary = item.ValidationRequirementSummary
-                    })
-                    .ToList(),
-                ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)
+            Steps = steps.Select(step => {
+                var editorStep = new ProcessStepEditorModel {
+                    Id = step.Id,
+                    Key = step.Key,
+                    Title = step.Title,
+                    Subtitle = step.Subtitle,
+                    Notes = step.Notes,
+                    StepKind = step.StepKind,
+                    AllowsManualSkip = step.AllowsManualSkip,
+                    AllowsSafeRefusal = step.AllowsSafeRefusal,
+                    RequiresApproval = step.RequiresApproval,
+                    RequiresDecisionRecord = step.RequiresDecisionRecord,
+                    InputContractSummary = step.InputContractSummary,
+                    OutputContractSummary = step.OutputContractSummary,
+                    EvidenceContractSummary = step.EvidenceContractSummary,
+                    DecisionRightsSummary = step.DecisionRightsSummary,
+                    ExceptionPolicySummary = step.ExceptionPolicySummary,
+                    TargetLeadHours = step.TargetLeadHours,
+                    DecisionRoleRequirementId = step.DecisionRoleRequirementId,
+                    CanvasX = step.CanvasX,
+                    CanvasY = step.CanvasY,
+                    BranchCanvasX = step.BranchCanvasX,
+                    BranchCanvasY = step.BranchCanvasY,
+                    BranchOutcomes = branchOutcomes
+                        .Where(item => item.StepDefinitionId == step.Id)
+                        .OrderBy(item => item.DisplayOrder)
+                        .Select(item => new ProcessStepBranchOutcomeEditorModel {
+                            Id = item.Id,
+                            Key = item.Key,
+                            Title = item.Title,
+                            Description = item.Description
+                        })
+                        .ToList(),
+                    RoleAssignments = stepRoleRequirements
+                        .Where(item => item.StepDefinitionId == step.Id)
+                        .OrderBy(item => item.FallbackOrder)
+                        .ThenBy(item => item.ResponsibilityKind)
+                        .Select(item => new ProcessStepRoleRequirementEditorModel {
+                            Id = item.Id,
+                            RoleRequirementId = item.RoleRequirementId,
+                            ResponsibilityKind = item.ResponsibilityKind,
+                            IsRequired = item.IsRequired,
+                            FallbackOrder = item.FallbackOrder,
+                            RebindPolicySummary = item.RebindPolicySummary
+                        })
+                        .ToList(),
+                    ArtifactExpectations = artifactExpectations
+                        .Where(item => item.StepDefinitionId == step.Id)
+                        .Select(item => new ProcessArtifactExpectationEditorModel {
+                            Id = item.Id,
+                            ArtifactKind = item.ArtifactKind,
+                            Title = item.Title,
+                            IsRequired = item.IsRequired,
+                            TrustRequirement = item.TrustRequirement,
+                            SensitivityLevel = item.SensitivityLevel,
+                            RetentionDays = item.RetentionDays,
+                            AllowedFutureUsageSummary = item.AllowedFutureUsageSummary,
+                            ValidationRequirementSummary = item.ValidationRequirementSummary
+                        })
+                        .ToList(),
+                    ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)
+                };
+                ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(editorStep, BuildEditorDependencies(step, stepDependencies));
+                return editorStep;
             }).ToList()
         };
     }

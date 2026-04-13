@@ -5,7 +5,7 @@
 Run on the target machine:
 
 ```text
-python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle --profile initiative --stage prepared
+python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\architecture_hardening_bundle --profile initiative --stage prepared
 ```
 
 If the validator fails, repair the bundle before code work begins.
@@ -43,7 +43,7 @@ At minimum, capture a real Playwright/browser pass for `/processes` with:
 ## Completed-stage proof
 
 ```text
-python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle --profile initiative --stage completed
+python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\architecture_hardening_bundle --profile initiative --stage completed
 ```
 
 ## Proof integrity rules

@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: gate B reviewed subbundles 05-06 and passed. The mutation core now has explicit transaction/conflict rails plus differential graph persistence with stable child-ID and rollback proof, so no corrective persistence subbundle was opened.
 
 ## Objective
 
@@ -21,10 +22,10 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\analysis\05-db-concurrency-and-runtime-risk-review.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\architecture\03-persistence-concurrency-strategy.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\01-execution-report.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\analysis\05-db-concurrency-and-runtime-risk-review.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\architecture\03-persistence-concurrency-strategy.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
 
 ## Deliverables
 

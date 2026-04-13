@@ -7,9 +7,9 @@
     "desired_outcome": "Establish a trusted baseline from the live repository, add the minimum characterization coverage needed for safe refactoring, and prove the bundle is execution-ready before architectural mutation work begins.",
     "dependencies": [],
     "primary_touchpoints": [
-      "cdi_process_module_architecture_hardening_bundle\\README.md",
-      "cdi_process_module_architecture_hardening_bundle\\plan\\01-phase-plan.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
+      "architecture_hardening_bundle\\README.md",
+      "architecture_hardening_bundle\\plan\\01-phase-plan.md",
+      "architecture_hardening_bundle\\reviews\\01-execution-report.md",
       "src\\CanDoItAll.Modules.Processes\\ProcessesService.Persistence.cs",
       "src\\CanDoItAll.Modules.Processes\\ProcessesService.Publication.cs",
       "src\\CanDoItAll.Modules.Processes\\ProcessesService.Runtime.cs",
@@ -102,11 +102,11 @@
       "03-side-effect-free-validation-and-editor-normalization-split"
     ],
     "primary_touchpoints": [
-      "cdi_process_module_architecture_hardening_bundle\\analysis\\01-current-state.md",
-      "cdi_process_module_architecture_hardening_bundle\\analysis\\02-core-architecture-failures.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md",
-      "cdi_process_module_architecture_hardening_bundle\\templates\\review-gate-memo-template.md"
+      "architecture_hardening_bundle\\analysis\\01-current-state.md",
+      "architecture_hardening_bundle\\analysis\\02-core-architecture-failures.md",
+      "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+      "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md",
+      "architecture_hardening_bundle\\templates\\review-gate-memo-template.md"
     ],
     "acceptance": [
       "A written gate memo exists.",
@@ -184,10 +184,10 @@
       "06-differential-definition-graph-persistence"
     ],
     "primary_touchpoints": [
-      "cdi_process_module_architecture_hardening_bundle\\analysis\\05-db-concurrency-and-runtime-risk-review.md",
-      "cdi_process_module_architecture_hardening_bundle\\architecture\\03-persistence-concurrency-strategy.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+      "architecture_hardening_bundle\\analysis\\05-db-concurrency-and-runtime-risk-review.md",
+      "architecture_hardening_bundle\\architecture\\03-persistence-concurrency-strategy.md",
+      "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+      "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
     ],
     "acceptance": [
       "A written gate-B memo exists.",
@@ -297,11 +297,11 @@
       "10-read-side-query-splitting-and-performance-hardening"
     ],
     "primary_touchpoints": [
-      "cdi_process_module_architecture_hardening_bundle\\architecture\\01-target-solution.md",
-      "cdi_process_module_architecture_hardening_bundle\\architecture\\02-service-and-component-split-map.md",
-      "cdi_process_module_architecture_hardening_bundle\\architecture\\04-query-and-template-consolidation-strategy.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+      "architecture_hardening_bundle\\architecture\\01-target-solution.md",
+      "architecture_hardening_bundle\\architecture\\02-service-and-component-split-map.md",
+      "architecture_hardening_bundle\\architecture\\04-query-and-template-consolidation-strategy.md",
+      "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+      "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
     ],
     "acceptance": [
       "A written gate-C memo exists.",
@@ -413,11 +413,11 @@
       "14-schema-hygiene-migrations-and-long-file-split"
     ],
     "primary_touchpoints": [
-      "cdi_process_module_architecture_hardening_bundle\\analysis\\03-duplication-and-hotspots.md",
-      "cdi_process_module_architecture_hardening_bundle\\inventories\\02-long-file-hotspots.md",
-      "cdi_process_module_architecture_hardening_bundle\\inventories\\03-cross-module-duplication-map.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+      "architecture_hardening_bundle\\analysis\\03-duplication-and-hotspots.md",
+      "architecture_hardening_bundle\\inventories\\02-long-file-hotspots.md",
+      "architecture_hardening_bundle\\inventories\\03-cross-module-duplication-map.md",
+      "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+      "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
     ],
     "acceptance": [
       "A written gate-D memo exists.",
@@ -437,12 +437,12 @@
       "15-architecture-review-gate-d"
     ],
     "primary_touchpoints": [
-      "cdi_process_module_architecture_hardening_bundle\\README.md",
-      "cdi_process_module_architecture_hardening_bundle\\09-proof-contract.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-      "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md",
-      "cdi_process_module_architecture_hardening_bundle\\traceability\\01-requirement-traceability.md",
-      "cdi_process_module_architecture_hardening_bundle\\inputs\\00-original-request.md"
+      "architecture_hardening_bundle\\README.md",
+      "architecture_hardening_bundle\\09-proof-contract.md",
+      "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+      "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md",
+      "architecture_hardening_bundle\\traceability\\01-requirement-traceability.md",
+      "architecture_hardening_bundle\\inputs\\00-original-request.md"
     ],
     "acceptance": [
       "All required validators, builds, tests, and browser proofs have been run and recorded.",

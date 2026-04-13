@@ -2,6 +2,7 @@
 @using System.Text.Json
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
+@using CanDoItAll.SharedKernel
 @inject PromptsService PromptsService
 
 <PageTitle>Prompt Gallery</PageTitle>
@@ -450,16 +451,10 @@
 
     private static string? ResolvePromptLibraryRoot()
     {
-        var candidates = new[]
-        {
-            Path.Combine(Directory.GetCurrentDirectory(), "output", "prompt-library"),
-            Path.Combine(AppContext.BaseDirectory, "output", "prompt-library"),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "output", "prompt-library")
-        };
-
-        return candidates
-            .Select(Path.GetFullPath)
-            .FirstOrDefault(Directory.Exists);
+        return AncestorFileLocator.FindContainingDirectory(
+            Path.Combine("output", "prompt-library", "manifest.json"),
+            Directory.GetCurrentDirectory(),
+            AppContext.BaseDirectory);
     }
 
     private static T ReadJson<T>(string path) where T : new()

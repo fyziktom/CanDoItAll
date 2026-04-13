@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: `ProcessDefinitionModels.cs` was split into `ProcessDefinitionEnums.cs`, `ProcessDefinitionEntities.cs`, and `ProcessDefinitionEntityConfigurations.cs`; stable aggregate-boundary relationships were made explicit, both provider migrations were synchronized, and focused integration plus migration-script proof passed on the live repository.
 
 ## Objective
 
@@ -20,7 +21,9 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionModels.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEnums.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEntities.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEntityConfigurations.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRuntimeModels.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRuntimeEntityConfigurations.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesModuleServiceCollectionExtensions.cs

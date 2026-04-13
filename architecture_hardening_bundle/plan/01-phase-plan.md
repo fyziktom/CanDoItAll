@@ -1,6 +1,6 @@
 # Phase plan
 
-## Execution order
+## Execution Order
 
 1. `01-baseline-characterization-and-live-gap-reconciliation`
 2. `02-canonical-dependency-model-and-compatibility-boundary`
@@ -19,7 +19,7 @@
 15. `15-architecture-review-gate-d`
 16. `16-final-regression-proof-and-bundle-closure`
 
-## Subbundle dependency map
+## Subbundle Dependency Map
 
 ```mermaid
 flowchart TD
@@ -51,7 +51,7 @@ flowchart TD
     C4 --> G4
 ```
 
-## Critical foundation subbundles
+## Critical Subbundles
 
 - `01-baseline-characterization-and-live-gap-reconciliation`
 - `02-canonical-dependency-model-and-compatibility-boundary`
@@ -63,9 +63,13 @@ flowchart TD
 
 If any of these are wrong, later proof becomes weak or misleading.
 
-## Gate rule
+## Phase Gates
 
-No downstream work may start until the prior gate is recorded as `Passed` in:
+- Gate A closes subbundles `01-03` and must be recorded as `Passed` before subbundle `05` may start.
+- Gate B closes subbundles `05-06` and must be recorded as `Passed` before subbundle `08` may start.
+- Gate C closes subbundles `08-10` and must be recorded as `Passed` before subbundle `12` may start.
+- Gate D closes subbundles `12-14` and must be recorded as `Passed` before subbundle `16` may start.
+- No downstream work may start until the prior gate is recorded as `Passed` in:
 - `reviews/01-execution-report.md`
 - `reviews/02-architecture-gate-memo-log.md`
 

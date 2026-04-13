@@ -201,10 +201,13 @@ public partial class ProcessWorkspace
             return;
         }
 
-        stepDraft.DependsOnBranchOutcomeId = branchOutcomeId ??
-            (sourceStep is not null && ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep)
-                ? ProcessCanvasBranching.GetDefaultOutcomeId(sourceStep)
-                : null);
+        ProcessDependencyCompatibilityBridge.SetLegacyEditorPrimaryDependency(
+            stepDraft,
+            dependencyId,
+            branchOutcomeId ??
+                (sourceStep is not null && ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep)
+                    ? ProcessCanvasBranching.GetDefaultOutcomeId(sourceStep)
+                    : null));
         canvasRoleDraft = null;
         canvasStepDraft = stepDraft;
         canvasEditedRoleTarget = null;

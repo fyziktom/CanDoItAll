@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: validation no longer performs hidden normalization, save/workspace normalization now flows through explicit entry points, and targeted purity/idempotence plus regression tests passed on the live repository.
 
 ## Objective
 

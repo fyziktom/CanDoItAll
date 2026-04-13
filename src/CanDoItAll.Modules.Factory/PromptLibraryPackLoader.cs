@@ -1,16 +1,11 @@
 using System.Reflection;
-using System.Text.Json;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Factory;
 
 public sealed class PromptLibraryPackLoader
 {
     public const string CatalogSource = "prompt-library-pack";
-
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     private readonly Lazy<PromptLibraryPack> _pack;
 
@@ -83,35 +78,19 @@ public sealed class PromptLibraryPackLoader
 
     private static T ReadJson<T>(string path) where T : class, new()
     {
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<T>(json, SerializerOptions) ?? new T();
+        return JsonFileLoader.ReadRequired<T>(path);
     }
 
     private static string ResolvePackRoot()
     {
-        var candidateStarts = new[]
-        {
+        var root = AncestorFileLocator.FindContainingDirectory(
+            Path.Combine("output", "prompt-library", "manifest.json"),
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty
-        }
-        .Where(path => !string.IsNullOrWhiteSpace(path))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
-
-        foreach (var start in candidateStarts)
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+        if (!string.IsNullOrWhiteSpace(root))
         {
-            var current = new DirectoryInfo(start);
-            while (current is not null)
-            {
-                var candidate = Path.Combine(current.FullName, "output", "prompt-library", "manifest.json");
-                if (File.Exists(candidate))
-                {
-                    return Path.GetDirectoryName(candidate)!;
-                }
-
-                current = current.Parent;
-            }
+            return root;
         }
 
         throw new InvalidOperationException("Unable to locate output/prompt-library/manifest.json from the current application base path.");

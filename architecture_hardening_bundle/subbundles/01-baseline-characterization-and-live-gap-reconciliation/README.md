@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: prepared-stage validator passed, the live-gap memo was captured in `reviews/03-live-gap-baseline-memo.md`, and the targeted integration, component, and MCP baseline suites passed on the live repository.
 
 ## Objective
 
@@ -23,9 +24,9 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\README.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\plan\01-phase-plan.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\README.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\plan\01-phase-plan.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\01-execution-report.md
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Persistence.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Publication.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.cs

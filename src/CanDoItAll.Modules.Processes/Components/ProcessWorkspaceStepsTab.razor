@@ -1,0 +1,228 @@
+@namespace CanDoItAll.Modules.Processes
+
+<CanvasWorkbenchStage Eyebrow="Definition canvas"
+                      Title="Process definition map"
+                      Description=""
+                      HelpText="Review the structural shape of the definition, right-click into templates, and keep the selection inspector plus authoring windows aligned with the shared canvas workflow.">
+    <Canvas>
+        @if (Presenter.CanvasSurface is null)
+        {
+            <SurfaceCard Soft="true">
+                <p class="text-sm text-slate-600">The process canvas appears after the workspace surface is prepared.</p>
+            </SurfaceCard>
+        }
+        else
+        {
+            <CanvasWorkbench Surface="Presenter.CanvasSurface"
+                             @ref="workbenchRef"
+                             StateChanged="Presenter.HandleCanvasStateChangedAsync"
+                             SelectionChanged="Presenter.HandleCanvasSelectionChangedAsync"
+                             NodesMoved="Presenter.HandleCanvasNodesMovedAsync"
+                             ContextActionRequested="Presenter.HandleCanvasContextActionAsync"
+                             CreateActionInvoked="Presenter.HandleCanvasCreateActionAsync"
+                             NodeEdited="Presenter.HandleCanvasNodeEditedAsync"
+                             NodeOpened="Presenter.HandleCanvasNodeOpenedAsync">
+                <ToolbarLeftContent>
+                    <ProcessCanvasToolbarActions SelectionWindowVisible="@Presenter.CanvasSelectionWindowState.IsVisible"
+                                                 ActiveTool="@Presenter.DefinitionCanvasTool"
+                                                 ToolboxWindowVisible="@Presenter.CanvasToolboxWindowState.IsVisible"
+                                                 CanRecomposeCanvas="@Presenter.CanRecomposeCanvas"
+                                                 IsRecompositionInProgress="@Presenter.IsDefinitionCanvasRecompositionInProgress"
+                                                 SelectToolClicked="Presenter.SelectDefinitionCanvasToolAsync"
+                                                 DeleteToolClicked="Presenter.DeleteDefinitionCanvasToolAsync"
+                                                 ToggleSelectionWindow="Presenter.ToggleCanvasSelectionWindowAsync"
+                                                 ToggleToolboxWindow="Presenter.ToggleCanvasToolboxWindowAsync"
+                                                 ResolveCollisionsClicked="Presenter.ResolveDefinitionCanvasCollisionsAsync"
+                                                 AddSpaceAroundClicked="Presenter.AddDefinitionCanvasSpaceAroundAsync"
+                                                 RecomposeCanvasClicked="Presenter.RecomposeDefinitionCanvasAsync" />
+                </ToolbarLeftContent>
+                <OverlayContent>
+                    @if (Presenter.CanvasToolboxWindowState.IsVisible)
+                    {
+                        <ProcessCanvasToolboxWindow WindowId="@Presenter.CanvasToolboxWindowId"
+                                                    TestId="processes-canvas-toolbox-window"
+                                                    AriaLabel="Process templates toolbox"
+                                                    Kicker="Process toolbox"
+                                                    Title="Process components library"
+                                                    Summary="Open role and step templates without duplicating the form logic outside the canvas workflow."
+                                                    State="@Presenter.CanvasToolboxWindowState"
+                                                    StateChanged="Presenter.HandleCanvasToolboxWindowStateChangedAsync"
+                                                    Groups="@Presenter.DefinitionToolboxGroups"
+                                                    SearchText="@Presenter.CanvasToolboxSearchText"
+                                                    SearchTextChanged="Presenter.HandleCanvasToolboxSearchTextChangedAsync"
+                                                    OpenAction="Presenter.OpenToolboxActionAsync" />
+                    }
+                    @if (Presenter.CanvasSelectionWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@Presenter.CanvasSelectionWindowId"
+                                              TestId="processes-canvas-selection-window"
+                                              AriaLabel="Process canvas selection"
+                                              Kicker="Selection"
+                                              Title="@Presenter.CanvasSelectionWindowTitle"
+                                              Summary="@Presenter.CanvasSelectionWindowSummary"
+                                              DefaultPlacement="top-right"
+                                              DefaultWidth="360"
+                                              DefaultHeight="360"
+                                              MinWidth="320"
+                                              MinHeight="220"
+                                              MaxWidth="520"
+                                              State="@Presenter.CanvasSelectionWindowState"
+                                              StateChanged="Presenter.HandleCanvasSelectionWindowStateChangedAsync">
+                            <ProcessCanvasSelectionPanel DefinitionStep="@Presenter.SelectedCanvasDefinitionStep"
+                                                         DefinitionRole="@Presenter.SelectedCanvasDefinitionRole"
+                                                         OpenToolbox="Presenter.OpenCanvasToolboxAsync"
+                                                         ClearSelection="Presenter.ClearCanvasSelectionAsync"
+                                                         EditDefinitionStep="Presenter.EditDefinitionStepAsync"
+                                                         EditDefinitionRole="Presenter.EditDefinitionRoleAsync"
+                                                         AddDependentStep="Presenter.AddDependentStepAsync"
+                                                         AddBranchOutcome="Presenter.AddBranchOutcomeToSelectedStepAsync"
+                                                         AddRoutedStep="Presenter.AddRoutedStepAsync"
+                                                         AddRoleBinding="Presenter.AddRoleBindingToSelectedStepAsync"
+                                                         AddArtifactExpectation="Presenter.AddArtifactExpectationToSelectedStepAsync"
+                                                         OpenActionDialog="Presenter.OpenCanvasActionDialogAsync" />
+                        </CanvasFloatingWindow>
+                    }
+                    @if (Presenter.IsCanvasEditorOpen)
+                    {
+                        <CanvasFloatingWindow WindowId="@Presenter.CanvasEditorWindowId"
+                                              TestId="processes-canvas-editor-window"
+                                              AriaLabel="Process canvas editor"
+                                              Kicker="Canvas editor"
+                                              Title="@Presenter.CanvasEditorWindowTitle"
+                                              Summary="@Presenter.CanvasEditorWindowSummary"
+                                              DefaultPlacement="bottom-right"
+                                              DefaultWidth="540"
+                                              DefaultHeight="620"
+                                              MinWidth="380"
+                                              MinHeight="320"
+                                              MaxWidth="760"
+                                              State="@Presenter.CanvasEditorWindowState"
+                                              StateChanged="Presenter.HandleCanvasEditorWindowStateChangedAsync">
+                            <Stack GapScale="LayoutGap.Large">
+                                @if (Presenter.IsCanvasEditorCreateMode)
+                                {
+                                    <FormField Text="Template">
+                                        <select class="cda-input"
+                                                value="@Presenter.CanvasTemplateActionId"
+                                                @onchange="Presenter.HandleCanvasTemplateChangedAsync"
+                                                data-testid="processes-canvas-template-select">
+                                            @if (Presenter.CanvasRoleDraft is not null)
+                                            {
+                                                @foreach (var template in Presenter.CanvasRoleTemplates)
+                                                {
+                                                    <option value="@template.ActionId">@template.Label</option>
+                                                }
+                                            }
+                                            else if (Presenter.CanvasStepDraft is not null)
+                                            {
+                                                @foreach (var template in Presenter.CanvasStepTemplates)
+                                                {
+                                                    <option value="@template.ActionId">@template.Label</option>
+                                                }
+                                            }
+                                        </select>
+                                    </FormField>
+                                }
+
+                                @if (Presenter.CanvasRoleDraft is not null)
+                                {
+                                    <ProcessRoleEditorForm Model="@Presenter.CanvasRoleDraft"
+                                                           ShowRemove="false"
+                                                           TestId="processes-canvas-role-editor" />
+                                }
+                                else if (Presenter.CanvasStepDraft is not null)
+                                {
+                                    <ProcessStepEditorForm Model="@Presenter.CanvasStepDraft"
+                                                           AvailableRoles="@Presenter.Editor.Roles"
+                                                           DependencyOptions="@Presenter.CanvasEditorDependencyOptions"
+                                                           ShowRemove="false"
+                                                           TestId="processes-canvas-step-editor"
+                                                           AddBranchOutcome="Presenter.AddCanvasBranchOutcomeAsync"
+                                                           RemoveBranchOutcome="Presenter.RemoveCanvasBranchOutcomeAsync"
+                                                           AddRoleAssignment="Presenter.AddCanvasRoleAssignmentAsync"
+                                                           RemoveRoleAssignment="Presenter.RemoveCanvasRoleAssignmentAsync"
+                                                           AddArtifact="Presenter.AddCanvasArtifactExpectationAsync"
+                                                           RemoveArtifact="Presenter.RemoveCanvasArtifactExpectationAsync" />
+                                }
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Cancel"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="Presenter.CloseCanvasEditorAsync" />
+                                    <Button Text="Apply"
+                                            Click="Presenter.SaveCanvasEditorAsync"
+                                            data-testid="processes-canvas-editor-apply" />
+                                </Cluster>
+                            </Stack>
+                        </CanvasFloatingWindow>
+                    }
+                </OverlayContent>
+            </CanvasWorkbench>
+        }
+    </Canvas>
+</CanvasWorkbenchStage>
+
+<FormSection Title="Workflow steps"
+             Description=""
+             HelpText="Shape the executable path, explicit dependencies, role bindings, and evidence expectations before the first runtime run starts.">
+    <Actions>
+        <Button Text="Add step"
+                ButtonStyle="ButtonStyle.Light"
+                Click="Presenter.AddStep"
+                data-testid="processes-add-step-button" />
+    </Actions>
+    <ChildContent>
+        @if (Presenter.Editor.Steps.Count == 0)
+        {
+            <EmptyState Eyebrow="No steps"
+                        Title="Add the first workflow step"
+                        Description="Steps define the order, dependency chain, role bindings, and required artifacts for the process definition." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var step in Presenter.Editor.Steps)
+                {
+                    <ProcessStepEditorForm Model="@step"
+                                           AvailableRoles="@Presenter.Editor.Roles"
+                                           DependencyOptions="@(Presenter.Editor.Steps.Where(candidate => candidate != step).ToList())"
+                                           Remove="@(() => Presenter.RemoveStep(step))"
+                                           AddBranchOutcome="@(() => Presenter.AddBranchOutcome(step))"
+                                           RemoveBranchOutcome="@((ProcessStepBranchOutcomeEditorModel branchOutcome) => Presenter.RemoveBranchOutcome(step, branchOutcome))"
+                                           AddRoleAssignment="@(() => Presenter.AddRoleAssignment(step))"
+                                           RemoveRoleAssignment="@((ProcessStepRoleRequirementEditorModel assignment) => Presenter.RemoveRoleAssignment(step, assignment))"
+                                           AddArtifact="@(() => Presenter.AddArtifact(step))"
+                                           RemoveArtifact="@((ProcessArtifactExpectationEditorModel artifact) => Presenter.RemoveArtifact(step, artifact))" />
+                }
+            </Stack>
+        }
+
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Save definition"
+                    Click="Presenter.SaveAsync" />
+            <Button Text="Publish"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="Presenter.PublishAsync" />
+        </Cluster>
+    </ChildContent>
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceStepsTabPresenter Presenter { get; set; } = default!;
+
+    private CanvasWorkbench? workbenchRef;
+
+    private CanvasWorkbench? reportedWorkbenchRef;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (ReferenceEquals(workbenchRef, reportedWorkbenchRef))
+        {
+            return;
+        }
+
+        reportedWorkbenchRef = workbenchRef;
+        Presenter.CaptureWorkbench(workbenchRef);
+    }
+}

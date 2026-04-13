@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -140,7 +141,7 @@ public sealed class ProcessTemplateCatalogService
             PreferredExecutorKind = string.IsNullOrWhiteSpace(roleResource.PreferredExecutorKind)
                 ? seed.PreferredExecutorKind
                 : roleResource.PreferredExecutorKind,
-            PreferredProjectAssignmentRole = ParseEnum<ProjectPartyAssignmentRole>(roleResource.PreferredProjectAssignmentRole),
+            PreferredProjectAssignmentRole = EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(roleResource.PreferredProjectAssignmentRole),
             IsRequired = roleResource.IsRequired,
             AllowsFallback = roleResource.AllowsFallback,
             RequiresExplicitApproval = roleResource.RequiresExplicitApproval,
@@ -149,7 +150,7 @@ public sealed class ProcessTemplateCatalogService
                 : Math.Max(0, seed.DefaultAllocationPercent),
             RoleTemplateSourceKey = roleResource.RoleTemplateSourceKey,
             RoleTemplateSnapshotName = roleResource.RoleTemplateSnapshotName,
-            SnapshotSummary = BuildRoleSnapshotSummary(roleResource)
+            SnapshotSummary = ProcessTemplateRoleSnapshotSummaryBuilder.Build(roleResource)
         };
     }
 
@@ -162,14 +163,14 @@ public sealed class ProcessTemplateCatalogService
         double y)
     {
         var template = seed.Template;
-        return new ProcessStepEditorModel
+        var step = new ProcessStepEditorModel
         {
             Id = Guid.NewGuid(),
             Key = $"{template.Key}-{ordinal}",
             Title = template.Title,
             Subtitle = template.Subtitle,
             Notes = BuildStepNotes(template),
-            StepKind = ParseEnum(template.StepKind, ProcessStepKind.Work),
+            StepKind = EnumValueParser.ParseOrDefault(template.StepKind, ProcessStepKind.Work),
             AllowsManualSkip = template.AllowsManualSkip,
             AllowsSafeRefusal = template.AllowsSafeRefusal,
             RequiresApproval = template.RequiresApproval,
@@ -180,7 +181,6 @@ public sealed class ProcessTemplateCatalogService
             DecisionRightsSummary = template.DecisionRightsSummary,
             ExceptionPolicySummary = template.ExceptionPolicySummary,
             TargetLeadHours = template.TargetLeadHours,
-            DependsOnStepId = dependsOnStepId,
             CanvasX = x,
             CanvasY = y,
             ArtifactExpectations = template.ArtifactExpectations
@@ -196,6 +196,13 @@ public sealed class ProcessTemplateCatalogService
                 })
                 .ToList()
         };
+
+        if (dependsOnStepId.HasValue && dependsOnStepId.Value != Guid.Empty)
+        {
+            ProcessDependencyCompatibilityBridge.SetLegacyEditorPrimaryDependency(step, dependsOnStepId, null);
+        }
+
+        return step;
     }
 
     private static ProcessArtifactExpectationEditorModel BuildArtifactExpectation(
@@ -207,17 +214,17 @@ public sealed class ProcessTemplateCatalogService
         return new ProcessArtifactExpectationEditorModel
         {
             Id = Guid.NewGuid(),
-            ArtifactKind = ParseEnum(
+            ArtifactKind = EnumValueParser.ParseOrDefault(
                 string.IsNullOrWhiteSpace(template.ArtifactKind) ? artifactResource?.ArtifactKind : template.ArtifactKind,
                 ProcessArtifactKind.Evidence),
             Title = string.IsNullOrWhiteSpace(template.Title)
                 ? artifactResource?.DisplayName ?? template.TemplateKey
                 : template.Title,
             IsRequired = template.IsRequired,
-            TrustRequirement = ParseEnum(
+            TrustRequirement = EnumValueParser.ParseOrDefault(
                 string.IsNullOrWhiteSpace(template.TrustRequirement) ? artifactResource?.DefaultTrustRequirement : template.TrustRequirement,
                 ProcessArtifactTrustRequirement.ReviewRequired),
-            SensitivityLevel = ParseEnum(
+            SensitivityLevel = EnumValueParser.ParseOrDefault(
                 string.IsNullOrWhiteSpace(template.SensitivityLevel) ? artifactResource?.DefaultSensitivityLevel : template.SensitivityLevel,
                 ProcessSensitivityLevel.Internal),
             RetentionDays = template.RetentionDays > 0
@@ -275,39 +282,6 @@ public sealed class ProcessTemplateCatalogService
         return null;
     }
 
-    private static string BuildRoleSnapshotSummary(ProcessTemplateRoleResource roleResource)
-    {
-        var detailParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(roleResource.SeniorityBand))
-        {
-            detailParts.Add($"Seniority: {roleResource.SeniorityBand}");
-        }
-
-        if (roleResource.MinimumYearsInPrimaryDiscipline > 0)
-        {
-            detailParts.Add($"Min years primary discipline: {roleResource.MinimumYearsInPrimaryDiscipline}");
-        }
-
-        if (roleResource.MinimumYearsInSoftwareDelivery > 0)
-        {
-            detailParts.Add($"Min years software delivery: {roleResource.MinimumYearsInSoftwareDelivery}");
-        }
-
-        if (roleResource.DomainTags.Count > 0)
-        {
-            detailParts.Add($"Domain tags: {string.Join(", ", roleResource.DomainTags)}");
-        }
-
-        if (detailParts.Count == 0)
-        {
-            return roleResource.SnapshotSummary;
-        }
-
-        return string.IsNullOrWhiteSpace(roleResource.SnapshotSummary)
-            ? string.Join(" | ", detailParts)
-            : roleResource.SnapshotSummary + " | " + string.Join(" | ", detailParts);
-    }
-
     private static string BuildStepNotes(ProcessTemplateStepDefinition template)
     {
         var addendum = new List<string>();
@@ -337,29 +311,4 @@ public sealed class ProcessTemplateCatalogService
             : template.Notes + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, addendum);
     }
 
-    private static TEnum? ParseEnum<TEnum>(string? value)
-        where TEnum : struct
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed)
-            ? parsed
-            : null;
-    }
-
-    private static TEnum ParseEnum<TEnum>(string? value, TEnum fallback)
-        where TEnum : struct
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return fallback;
-        }
-
-        return Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed)
-            ? parsed
-            : fallback;
-    }
 }

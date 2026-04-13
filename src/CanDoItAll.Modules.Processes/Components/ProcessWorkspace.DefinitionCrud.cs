@@ -39,7 +39,7 @@ public partial class ProcessWorkspace
     {
         CancelPendingDefinitionCanvasPersistence();
         await WaitForDefinitionCanvasPersistenceIdleAsync();
-        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        NormalizeEditorForAuthoring();
         var result = await ProcessesService.SaveAsync(editor);
         if (result.IsFailure)
         {
@@ -60,7 +60,13 @@ public partial class ProcessWorkspace
             return;
         }
 
-        var result = await ProcessesService.PublishAsync(selectedProcessId.Value);
+        var result = await ProcessesService.PublishAsync(
+            new ProcessDefinitionPublishRequest
+            {
+                DefinitionId = selectedProcessId.Value,
+                DefinitionConcurrencyToken = editor.DefinitionConcurrencyToken,
+                DraftVersionConcurrencyToken = editor.WorkingVersionConcurrencyToken
+            });
         if (result.IsFailure)
         {
             SetError(result.Errors);
@@ -228,11 +234,11 @@ public partial class ProcessWorkspace
     {
         if (editor.Steps.Contains(step))
         {
-            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+            NormalizeEditorForAuthoring();
         }
         else
         {
-            ProcessCanvasBranching.NormalizeStepDraft(step);
+            NormalizeStepDraftForAuthoring(step);
         }
 
         var customOutcomeCount = ProcessCanvasBranching.GetCustomBranchOutcomes(step).Count;
@@ -244,11 +250,11 @@ public partial class ProcessWorkspace
         });
         if (editor.Steps.Contains(step))
         {
-            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+            NormalizeEditorForAuthoring();
         }
         else
         {
-            ProcessCanvasBranching.NormalizeStepDraft(step);
+            NormalizeStepDraftForAuthoring(step);
         }
 
         RefreshCanvasSurface();
@@ -264,7 +270,7 @@ public partial class ProcessWorkspace
         step.BranchOutcomes.Remove(branchOutcome);
         if (!branchOutcome.Id.HasValue)
         {
-            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+            NormalizeEditorForAuthoring();
             RefreshCanvasSurface();
             return;
         }
@@ -277,7 +283,7 @@ public partial class ProcessWorkspace
                     .Where(dependency => dependency.DependsOnBranchOutcomeId != branchOutcome.Id.Value));
         }
 
-        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        NormalizeEditorForAuthoring();
         RefreshCanvasSurface();
     }
 

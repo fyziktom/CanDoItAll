@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: Gate C passed. Publication lifecycle vs clone, runtime transition policy, and read-side query ownership are now separated enough to continue into consolidation and UI decomposition without opening a corrective runtime/query reset subbundle.
 
 ## Objective
 
@@ -22,11 +23,11 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\architecture\01-target-solution.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\architecture\02-service-and-component-split-map.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\architecture\04-query-and-template-consolidation-strategy.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\01-execution-report.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\architecture\01-target-solution.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\architecture\02-service-and-component-split-map.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\architecture\04-query-and-template-consolidation-strategy.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
 
 ## Deliverables
 

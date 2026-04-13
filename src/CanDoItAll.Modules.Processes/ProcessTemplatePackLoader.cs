@@ -1,17 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Text.Json;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessTemplatePackLoader
 {
     private const string ManifestFileName = "manifest.json";
-
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     private readonly string? configuredPackRoot;
     private readonly Lazy<ProcessTemplatePack> pack;
@@ -29,7 +24,7 @@ public sealed class ProcessTemplatePackLoader
     private ProcessTemplatePack LoadCore()
     {
         var root = ResolvePackRoot(configuredPackRoot);
-        var manifest = ReadJson<ProcessTemplatePackManifest>(Path.Combine(root, "manifest.json"));
+        var manifest = ReadJson<ProcessTemplatePackManifest>(Path.Combine(root, ManifestFileName));
 
         var frameworkSources = ReadJson<List<ProcessFrameworkSource>>(Path.Combine(root, manifest.FrameworkSourcesPath));
         var roleTemplates = ReadJson<List<ProcessTemplateToolboxRoleSeed>>(Path.Combine(root, manifest.Toolbox.RoleTemplatesPath));
@@ -140,8 +135,7 @@ public sealed class ProcessTemplatePackLoader
     private static T ReadJson<T>(string path)
         where T : class, new()
     {
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<T>(json, SerializerOptions) ?? new T();
+        return JsonFileLoader.ReadRequired<T>(path);
     }
 
     private static string ResolvePackRoot(string? explicitRoot)
@@ -161,33 +155,18 @@ public sealed class ProcessTemplatePackLoader
             }
         }
 
-        var candidateStarts = new[]
-        {
+        var relativeManifestPath = Path.Combine(
+            ProcessTemplatePackOptions.TemplatesRootDirectoryName,
+            ProcessTemplatePackOptions.ProcessesDirectoryName,
+            ManifestFileName);
+        var discoveredRoot = AncestorFileLocator.FindContainingDirectory(
+            relativeManifestPath,
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty
-        }
-        .Where(path => !string.IsNullOrWhiteSpace(path))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
-
-        foreach (var start in candidateStarts)
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+        if (!string.IsNullOrWhiteSpace(discoveredRoot))
         {
-            var current = new DirectoryInfo(start);
-            while (current is not null)
-            {
-                var candidate = Path.Combine(
-                    current.FullName,
-                    ProcessTemplatePackOptions.TemplatesRootDirectoryName,
-                    ProcessTemplatePackOptions.ProcessesDirectoryName,
-                    ManifestFileName);
-                if (File.Exists(candidate))
-                {
-                    return Path.GetDirectoryName(candidate)!;
-                }
-
-                current = current.Parent;
-            }
+            return discoveredRoot;
         }
 
         throw new InvalidOperationException(

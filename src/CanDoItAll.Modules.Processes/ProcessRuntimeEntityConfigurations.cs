@@ -17,6 +17,7 @@ internal sealed class ProcessRunConfiguration : IEntityTypeConfiguration<Process
         builder.Property(run => run.PolicySnapshot).HasColumnType("TEXT");
         builder.Property(run => run.ExecutorSnapshotSummary).HasColumnType("TEXT");
         builder.Property(run => run.ReplayPackageKey).HasMaxLength(200);
+        builder.Property(run => run.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(run => run.ProcessDefinitionId);
         builder.HasIndex(run => run.ProjectId);
         builder.HasIndex(run => run.Status);
@@ -41,6 +42,7 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(step => step.InputQualitySummary).HasColumnType("TEXT");
         builder.Property(step => step.SelectedBranchOutcomeTitle).HasMaxLength(200);
         builder.Property(step => step.CapabilityGapSeverity).HasConversion<string>().HasMaxLength(48);
+        builder.Property(step => step.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(step => new { step.ProcessRunId, step.Sequence }).IsUnique();
         builder.HasIndex(step => new { step.ProcessRunId, step.Status });
         builder.HasIndex(step => step.StepDefinitionId);

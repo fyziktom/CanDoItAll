@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: `ProcessesService.TransitionStepAsync` now delegates guard validation, runtime progression, and run-status recomputation to focused helpers instead of inlining the full state-machine path, branch-outcome guard rules are explicitly covered, and the targeted build/integration/MCP proof passed.
 
 ## Objective
 

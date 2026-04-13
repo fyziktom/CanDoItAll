@@ -45,6 +45,13 @@ public partial class ProcessWorkspace
 
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)
     {
+        var currentStepRun = stepRuns.FirstOrDefault(item => item.Id == stepRunId);
+        if (currentStepRun is null)
+        {
+            SetError("Reload the run before updating this step.");
+            return;
+        }
+
         var selectedBranchOutcomeId = targetStatus == ProcessStepRunStatus.Completed
             ? ResolveSelectedBranchOutcomeId(stepRunId)
             : null;
@@ -52,6 +59,7 @@ public partial class ProcessWorkspace
             new ProcessStepTransitionRequest
             {
                 StepRunId = stepRunId,
+                StepRunConcurrencyToken = currentStepRun.StepRunConcurrencyToken,
                 TargetStatus = targetStatus,
                 Reason = BuildTransitionReason(targetStatus, stepRunId, selectedBranchOutcomeId),
                 SelectedBranchOutcomeId = selectedBranchOutcomeId,
@@ -230,19 +238,7 @@ public partial class ProcessWorkspace
         ProcessStepEditorModel step,
         IEnumerable<ProcessStepDependencyEditorModel> dependencies)
     {
-        var materialized = dependencies
-            .Where(dependency => dependency.DependsOnStepId.HasValue)
-            .Select(dependency => new ProcessStepDependencyEditorModel
-            {
-                Id = dependency.Id ?? Guid.NewGuid(),
-                DependsOnStepId = dependency.DependsOnStepId,
-                DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
-            })
-            .ToList();
-        step.Dependencies = materialized;
-        var primaryDependency = materialized.FirstOrDefault();
-        step.DependsOnStepId = primaryDependency?.DependsOnStepId;
-        step.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId;
+        ProcessDependencyCompatibilityBridge.SetCanonicalEditorDependencies(step, dependencies);
     }
 
     private string ResolveRoleName(Guid? roleId)

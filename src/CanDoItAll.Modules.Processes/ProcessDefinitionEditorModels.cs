@@ -36,6 +36,10 @@ public sealed class ProcessDefinitionEditorModel
 
     public Guid? WorkingVersionId { get; set; }
 
+    public Guid? DefinitionConcurrencyToken { get; set; }
+
+    public Guid? WorkingVersionConcurrencyToken { get; set; }
+
     public int WorkingVersionNumber { get; set; } = 1;
 
     public string Name { get; set; } = string.Empty;
@@ -71,6 +75,15 @@ public sealed class ProcessDefinitionEditorModel
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];
 
     public List<ProcessStepEditorModel> Steps { get; set; } = [];
+}
+
+public sealed class ProcessDefinitionPublishRequest
+{
+    public Guid DefinitionId { get; set; }
+
+    public Guid? DefinitionConcurrencyToken { get; set; }
+
+    public Guid? DraftVersionConcurrencyToken { get; set; }
 }
 
 public sealed class ProcessRoleEditorModel

@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: Gate D passed without opening `_corrective-workspace-and-shared-infrastructure-reset`; shared helper extraction stayed narrow, the workspace decomposition remained browser-proofed, and the schema-hygiene compromise is coherent with the current mutation core.
 
 ## Objective
 
@@ -22,11 +23,11 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\analysis\03-duplication-and-hotspots.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\inventories\02-long-file-hotspots.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\inventories\03-cross-module-duplication-map.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\01-execution-report.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\analysis\03-duplication-and-hotspots.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\inventories\02-long-file-hotspots.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\inventories\03-cross-module-duplication-map.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
 
 ## Deliverables
 

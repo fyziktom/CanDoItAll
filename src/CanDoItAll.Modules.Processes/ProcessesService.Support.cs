@@ -9,8 +9,6 @@ namespace CanDoItAll.Modules.Processes;
 public sealed partial class ProcessesService
 {
     private static Error? ValidateDefinitionEditor(ProcessDefinitionEditorModel model) {
-        ProcessCanvasBranching.NormalizeDefinitionEditor(model);
-
         if (string.IsNullOrWhiteSpace(model.Name)) {
             return Error.Validation("Process name is required.", "processes.name-required");
         }
@@ -72,6 +70,50 @@ public sealed partial class ProcessesService
         }
 
         return ValidateArtifactInputs(model);
+    }
+
+    private static void NormalizeDefinitionEditorForSave(ProcessDefinitionEditorModel model) {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(model);
+    }
+
+    private static bool HasConcurrencyTokenMismatch(Guid? expectedToken, Guid actualToken) {
+        return expectedToken.HasValue && expectedToken.Value != actualToken;
+    }
+
+    private static Error CreateDefinitionSaveConflictError() {
+        return Error.Validation(
+            "Process definition changed before the save completed. Reload the definition and try again.",
+            "processes.definition-concurrency-conflict");
+    }
+
+    private static Error CreateDefinitionSaveUniqueConflictError() {
+        return Error.Validation(
+            "Process definition could not be saved because a conflicting definition update already claimed the required unique values. Reload and try again.",
+            "processes.definition-unique-conflict");
+    }
+
+    private static Error CreateDefinitionPublishConflictError() {
+        return Error.Validation(
+            "Process definition changed before publish completed. Reload the definition and try again.",
+            "processes.publish-concurrency-conflict");
+    }
+
+    private static Error CreateDefinitionPublishUniqueConflictError() {
+        return Error.Validation(
+            "Publish could not complete because another definition update already created conflicting version data. Reload and try again.",
+            "processes.publish-unique-conflict");
+    }
+
+    private static Error CreateRunStartConflictError() {
+        return Error.Validation(
+            "Process run creation conflicted with another update. Reload the process and try again.",
+            "processes.run-start-conflict");
+    }
+
+    private static Error CreateStepTransitionConflictError() {
+        return Error.Validation(
+            "Process step changed before the transition completed. Reload the run and try again.",
+            "processes.step-transition-conflict");
     }
 
     private static Error? ValidatePublish(
@@ -182,77 +224,13 @@ public sealed partial class ProcessesService
     private static List<ProcessStepDependencyEditorModel> BuildEditorDependencies(
         ProcessStepDefinition step,
         IReadOnlyList<ProcessStepDependencyDefinition> allDependencies) {
-        var dependencies = allDependencies
-            .Where(item => item.StepDefinitionId == step.Id)
-            .OrderBy(item => item.DisplayOrder)
-            .Select(item => new ProcessStepDependencyEditorModel {
-                Id = item.Id,
-                DependsOnStepId = item.DependsOnStepId,
-                DependsOnBranchOutcomeId = item.DependsOnBranchOutcomeId
-            })
-            .ToList();
-        if (dependencies.Count > 0) {
-            return dependencies;
-        }
-
-        if (!step.DependsOnStepId.HasValue) {
-            return [];
-        }
-
-        return
-        [
-            new ProcessStepDependencyEditorModel {
-                Id = Guid.NewGuid(),
-                DependsOnStepId = step.DependsOnStepId,
-                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId
-            }
-        ];
+        return ProcessDependencyCompatibilityBridge.BuildEditorDependencies(step, allDependencies);
     }
 
     private static IReadOnlyList<ProcessStepDependencyDefinition> GetPersistedDependencies(
         ProcessStepDefinition step,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
-        if (dependenciesByStepId.TryGetValue(step.Id, out var dependencies) && dependencies.Count > 0) {
-            return dependencies;
-        }
-
-        if (!step.DependsOnStepId.HasValue) {
-            return [];
-        }
-
-        return
-        [
-            new ProcessStepDependencyDefinition {
-                StepDefinitionId = step.Id,
-                DependsOnStepId = step.DependsOnStepId.Value,
-                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId
-            }
-        ];
-    }
-
-    private static ProcessRunStatus ResolveRunStatus(IReadOnlyList<ProcessStepRun> persistedStepRuns, ProcessStepRun currentStepRun) {
-        var stepRuns = persistedStepRuns
-            .Where(item => item.Id != currentStepRun.Id)
-            .Append(currentStepRun)
-            .ToList();
-        if (stepRuns.All(item => item.Status == ProcessStepRunStatus.Completed || item.Status == ProcessStepRunStatus.Skipped)) {
-            return ProcessRunStatus.Completed;
-        }
-
-        if (stepRuns.Any(item => item.Status == ProcessStepRunStatus.Failed)) {
-            return ProcessRunStatus.Failed;
-        }
-
-        if (stepRuns.Any(item => item.Status == ProcessStepRunStatus.Blocked)) {
-            return ProcessRunStatus.Blocked;
-        }
-
-        return ProcessRunStatus.Active;
-    }
-
-    private static bool IsTransitionAllowed(ProcessStepRunStatus currentStatus, ProcessStepRunStatus targetStatus)
-    {
-        return ProcessStepRunTransitions.IsAllowed(currentStatus, targetStatus);
+        return ProcessDependencyCompatibilityBridge.GetCanonicalPersistedDependencies(step, dependenciesByStepId);
     }
 
     private static string BuildWorkBrief(ProcessDefinition definition, ProcessStepDefinition step, string? executorName) {
@@ -326,17 +304,4 @@ public sealed partial class ProcessesService
             cancellationToken);
     }
 
-    private static async Task<IReadOnlyDictionary<Guid, string>> LoadProjectNamesAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken) {
-        return await dbContext.Set<Project>()
-            .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
-    }
-
-    private static ProcessDefinitionVersion? ResolveDefinitionSummaryVersion(IReadOnlyList<ProcessDefinitionVersion> versions) {
-        return versions
-            .OrderBy(version => version.Status == ProcessVersionStatus.Draft ? 0 : 1)
-            .ThenByDescending(version => version.VersionNumber)
-            .FirstOrDefault();
-    }
 }

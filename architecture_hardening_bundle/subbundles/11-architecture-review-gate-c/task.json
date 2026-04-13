@@ -13,11 +13,11 @@
     "Corrective subbundle if the gate fails."
   ],
   "RepositoryTouchpoints": [
-    "cdi_process_module_architecture_hardening_bundle\\architecture\\01-target-solution.md",
-    "cdi_process_module_architecture_hardening_bundle\\architecture\\02-service-and-component-split-map.md",
-    "cdi_process_module_architecture_hardening_bundle\\architecture\\04-query-and-template-consolidation-strategy.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+    "architecture_hardening_bundle\\architecture\\01-target-solution.md",
+    "architecture_hardening_bundle\\architecture\\02-service-and-component-split-map.md",
+    "architecture_hardening_bundle\\architecture\\04-query-and-template-consolidation-strategy.md",
+    "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
   ],
   "ValidationCommands": [
     "Review execution-report rows, targeted test outputs, and the service split against the architecture docs."

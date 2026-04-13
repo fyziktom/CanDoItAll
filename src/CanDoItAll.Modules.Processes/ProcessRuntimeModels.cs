@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -83,7 +84,7 @@ public enum ProcessImprovementStatus {
     Closed
 }
 
-public sealed class ProcessRun {
+public sealed class ProcessRun : IHasConcurrencyToken {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid ProcessDefinitionId { get; set; }
@@ -123,9 +124,11 @@ public sealed class ProcessRun {
     public int FirstTimeRightPercent { get; set; } = 100;
 
     public int SlaAttainmentPercent { get; set; } = 100;
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
 }
 
-public sealed class ProcessStepRun {
+public sealed class ProcessStepRun : IHasConcurrencyToken {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid ProcessRunId { get; set; }
@@ -175,6 +178,8 @@ public sealed class ProcessStepRun {
     public int ReworkCount { get; set; }
 
     public ProcessCapabilityGapSeverity CapabilityGapSeverity { get; set; } = ProcessCapabilityGapSeverity.None;
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
 }
 
 public sealed class ProcessRunAssignment {

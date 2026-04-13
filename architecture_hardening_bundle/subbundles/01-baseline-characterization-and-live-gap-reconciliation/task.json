@@ -10,9 +10,9 @@
     "An updated execution report with the real starting gate state."
   ],
   "RepositoryTouchpoints": [
-    "cdi_process_module_architecture_hardening_bundle\\README.md",
-    "cdi_process_module_architecture_hardening_bundle\\plan\\01-phase-plan.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "architecture_hardening_bundle\\README.md",
+    "architecture_hardening_bundle\\plan\\01-phase-plan.md",
+    "architecture_hardening_bundle\\reviews\\01-execution-report.md",
     "src\\CanDoItAll.Modules.Processes\\ProcessesService.Persistence.cs",
     "src\\CanDoItAll.Modules.Processes\\ProcessesService.Publication.cs",
     "src\\CanDoItAll.Modules.Processes\\ProcessesService.Runtime.cs",
@@ -21,7 +21,7 @@
     "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessesToolsTests.cs"
   ],
   "ValidationCommands": [
-    "python C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-preparation\\scripts\\validate_bundle.py C:\\repositories\\CanDoItAll\\cdi_process_module_architecture_hardening_bundle --profile initiative --stage prepared",
+    "python C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-preparation\\scripts\\validate_bundle.py C:\\repositories\\CanDoItAll\\architecture_hardening_bundle --profile initiative --stage prepared",
     "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
     "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Components\\CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests\" -v:minimal",
     "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Mcp.Processes.Tests\\CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessesToolsTests\" -v:minimal"

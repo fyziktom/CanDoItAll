@@ -146,6 +146,12 @@ public sealed partial class ProcessDevelopmentSeedService
             ? Result<Guid>.Failure(runtimeResult.Errors.ToArray())
             : Result<Guid>.Success(definitionId);
     }
+
+    private static TEnum ParseEnum<TEnum>(string? value, TEnum fallback)
+        where TEnum : struct, Enum
+    {
+        return EnumValueParser.ParseOrDefault(value, fallback);
+    }
 }
 
 public sealed record ProcessSeedReport(

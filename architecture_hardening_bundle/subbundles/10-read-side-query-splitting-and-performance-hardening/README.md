@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: `ProcessesService` now delegates definition-list and runtime read aggregation to focused query services, definition/run summary queries no longer load whole versions/roles/steps/runs tables by default, analytics now project only the scalar fields they need, and the targeted build/integration/MCP proof passed.
 
 ## Objective
 

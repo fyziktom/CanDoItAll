@@ -135,6 +135,7 @@ public sealed partial class ProcessesService
         var importMetadata = new ProcessImportMetadata(
             envelope.SourceFormat,
             string.Join(Environment.NewLine, envelope.Warnings));
+        PrepareImportedDefinitionForSave(envelope.Definition);
         return await SaveAsync(envelope.Definition, importMetadata, cancellationToken);
     }
 

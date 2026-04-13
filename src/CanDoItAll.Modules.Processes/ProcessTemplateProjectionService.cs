@@ -1,21 +1,10 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessTemplateProjectionService
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
-    static ProcessTemplateProjectionService()
-    {
-        SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    }
-
     private readonly ProcessTemplatePackLoader packLoader;
 
     public ProcessTemplateProjectionService(ProcessTemplatePackLoader packLoader)
@@ -76,8 +65,8 @@ public sealed class ProcessTemplateProjectionService
             ConstitutionRuleSummary = process.ConstitutionRuleSummary,
             OperatingModeSummary = process.OperatingModeSummary,
             SimulationReadinessSummary = process.SimulationReadinessSummary,
-            Criticality = ParseEnum(process.Criticality, ProcessCriticality.Standard),
-            AutonomyLevel = ParseEnum(process.AutonomyLevel, ProcessAutonomyLevel.Assisted)
+            Criticality = EnumValueParser.ParseOrDefault(process.Criticality, ProcessCriticality.Standard),
+            AutonomyLevel = EnumValueParser.ParseOrDefault(process.AutonomyLevel, ProcessAutonomyLevel.Assisted)
         };
 
         var roleIdsByKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
@@ -95,7 +84,7 @@ public sealed class ProcessTemplateProjectionService
                 Purpose = FirstNonEmpty(usage.Purpose, roleResource?.Purpose),
                 StaffingIntent = FirstNonEmpty(usage.StaffingIntent, roleResource?.StaffingIntent),
                 PreferredExecutorKind = FirstNonEmpty(usage.PreferredExecutorKind, roleResource?.PreferredExecutorKind),
-                PreferredProjectAssignmentRole = ParseNullableEnum<ProjectPartyAssignmentRole>(
+                PreferredProjectAssignmentRole = EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(
                     FirstNonEmpty(usage.PreferredProjectAssignmentRole, roleResource?.PreferredProjectAssignmentRole)),
                 IsRequired = usage.IsRequired,
                 AllowsFallback = usage.AllowsFallback,
@@ -105,7 +94,7 @@ public sealed class ProcessTemplateProjectionService
                     : Math.Max(0, roleResource?.DefaultAllocationPercent ?? 100),
                 RoleTemplateSourceKey = roleResource?.RoleTemplateSourceKey ?? string.Empty,
                 RoleTemplateSnapshotName = roleResource?.RoleTemplateSnapshotName ?? string.Empty,
-                SnapshotSummary = BuildRoleSnapshotSummary(roleResource),
+                SnapshotSummary = ProcessTemplateRoleSnapshotSummaryBuilder.Build(roleResource),
                 CanvasX = usage.CanvasX,
                 CanvasY = usage.CanvasY
             });
@@ -130,7 +119,7 @@ public sealed class ProcessTemplateProjectionService
                 Title = template.Title,
                 Subtitle = template.Subtitle,
                 Notes = template.Notes,
-                StepKind = ParseEnum(template.StepKind, ProcessStepKind.Work),
+                StepKind = EnumValueParser.ParseOrDefault(template.StepKind, ProcessStepKind.Work),
                 AllowsManualSkip = template.AllowsManualSkip,
                 AllowsSafeRefusal = template.AllowsSafeRefusal,
                 RequiresApproval = template.RequiresApproval,
@@ -181,7 +170,7 @@ public sealed class ProcessTemplateProjectionService
                 step.ArtifactExpectations.Add(new ProcessArtifactExpectationEditorModel
                 {
                     Id = artifactExpectationId,
-                    ArtifactKind = ParseEnum(
+                    ArtifactKind = EnumValueParser.ParseOrDefault(
                         FirstNonEmpty(artifactExpectation.ArtifactKind, artifactResource?.ArtifactKind),
                         ProcessArtifactKind.Evidence),
                     Title = FirstNonEmpty(
@@ -190,10 +179,10 @@ public sealed class ProcessTemplateProjectionService
                         artifactExpectation.TemplateKey,
                         artifactExpectation.Key),
                     IsRequired = artifactExpectation.IsRequired,
-                    TrustRequirement = ParseEnum(
+                    TrustRequirement = EnumValueParser.ParseOrDefault(
                         FirstNonEmpty(artifactExpectation.TrustRequirement, artifactResource?.DefaultTrustRequirement),
                         ProcessArtifactTrustRequirement.ReviewRequired),
-                    SensitivityLevel = ParseEnum(
+                    SensitivityLevel = EnumValueParser.ParseOrDefault(
                         FirstNonEmpty(artifactExpectation.SensitivityLevel, artifactResource?.DefaultSensitivityLevel),
                         ProcessSensitivityLevel.Internal),
                     RetentionDays = artifactExpectation.RetentionDays > 0
@@ -257,7 +246,7 @@ public sealed class ProcessTemplateProjectionService
                         process.Key,
                         template.Key,
                         "role assignment"),
-                    ResponsibilityKind = ParseEnum(assignment.ResponsibilityKind, ProcessResponsibilityKind.Responsible),
+                    ResponsibilityKind = EnumValueParser.ParseOrDefault(assignment.ResponsibilityKind, ProcessResponsibilityKind.Responsible),
                     IsRequired = assignment.IsRequired,
                     FallbackOrder = assignment.FallbackOrder,
                     RebindPolicySummary = assignment.RebindPolicySummary
@@ -409,44 +398,6 @@ public sealed class ProcessTemplateProjectionService
         return artifactExpectationId;
     }
 
-    private static string BuildRoleSnapshotSummary(ProcessTemplateRoleResource? roleResource)
-    {
-        if (roleResource is null)
-        {
-            return string.Empty;
-        }
-
-        var detailParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(roleResource.SeniorityBand))
-        {
-            detailParts.Add($"Seniority: {roleResource.SeniorityBand}");
-        }
-
-        if (roleResource.MinimumYearsInPrimaryDiscipline > 0)
-        {
-            detailParts.Add($"Min years primary discipline: {roleResource.MinimumYearsInPrimaryDiscipline}");
-        }
-
-        if (roleResource.MinimumYearsInSoftwareDelivery > 0)
-        {
-            detailParts.Add($"Min years software delivery: {roleResource.MinimumYearsInSoftwareDelivery}");
-        }
-
-        if (roleResource.DomainTags.Count > 0)
-        {
-            detailParts.Add($"Domain tags: {string.Join(", ", roleResource.DomainTags)}");
-        }
-
-        if (detailParts.Count == 0)
-        {
-            return roleResource.SnapshotSummary;
-        }
-
-        return string.IsNullOrWhiteSpace(roleResource.SnapshotSummary)
-            ? string.Join(" | ", detailParts)
-            : roleResource.SnapshotSummary + " | " + string.Join(" | ", detailParts);
-    }
-
     private static string BuildCompositeKey(string left, string right)
     {
         return left.Trim() + "::" + right.Trim();
@@ -465,36 +416,4 @@ public sealed class ProcessTemplateProjectionService
         return string.Empty;
     }
 
-    private static TEnum ParseEnum<TEnum>(string? value, TEnum fallback)
-        where TEnum : struct
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return fallback;
-        }
-
-        return Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed)
-            ? parsed
-            : fallback;
-    }
-
-    private static TEnum? ParseNullableEnum<TEnum>(string? value)
-        where TEnum : struct
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed)
-            ? parsed
-            : null;
-    }
-
-    private static T ReadJson<T>(string path)
-        where T : class, new()
-    {
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<T>(json, SerializerOptions) ?? new T();
-    }
 }

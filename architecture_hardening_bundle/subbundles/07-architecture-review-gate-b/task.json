@@ -12,10 +12,10 @@
     "Corrective subbundle if the gate fails."
   ],
   "RepositoryTouchpoints": [
-    "cdi_process_module_architecture_hardening_bundle\\analysis\\05-db-concurrency-and-runtime-risk-review.md",
-    "cdi_process_module_architecture_hardening_bundle\\architecture\\03-persistence-concurrency-strategy.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+    "architecture_hardening_bundle\\analysis\\05-db-concurrency-and-runtime-risk-review.md",
+    "architecture_hardening_bundle\\architecture\\03-persistence-concurrency-strategy.md",
+    "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
   ],
   "ValidationCommands": [
     "Review the test outputs, migration/snapshot updates, and execution-report rows from subbundles 05 and 06."

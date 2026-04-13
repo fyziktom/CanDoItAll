@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: Gate A passed. Subbundles `01-03` produced a stable canonical foundation with explicit compatibility and pure validation, so downstream transaction and persistence work may proceed without a corrective subbundle.
 
 ## Objective
 
@@ -22,11 +23,11 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\analysis\01-current-state.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\analysis\02-core-architecture-failures.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\01-execution-report.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
-- C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle\templates\review-gate-memo-template.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\analysis\01-current-state.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\analysis\02-core-architecture-failures.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\reviews\02-architecture-gate-memo-log.md
+- C:\repositories\CanDoItAll\architecture_hardening_bundle\templates\review-gate-memo-template.md
 
 ## Deliverables
 

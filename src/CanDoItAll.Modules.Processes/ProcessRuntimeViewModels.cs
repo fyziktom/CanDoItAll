@@ -58,6 +58,8 @@ public sealed record ProcessStepRunViewModel(
     ProcessCapabilityGapSeverity CapabilityGapSeverity,
     IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel> AvailableBranchOutcomes)
 {
+    public Guid StepRunConcurrencyToken { get; init; }
+
     public IReadOnlyList<ProcessStepDependencyViewModel> Dependencies { get; init; } = [];
 
     public string DecisionRoleTitle { get; init; } = string.Empty;
@@ -164,6 +166,8 @@ public sealed class ProcessRunStartRequest
 public sealed class ProcessStepTransitionRequest
 {
     public Guid StepRunId { get; set; }
+
+    public Guid? StepRunConcurrencyToken { get; set; }
 
     public ProcessStepRunStatus TargetStatus { get; set; } = ProcessStepRunStatus.InProgress;
 

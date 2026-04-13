@@ -3,7 +3,7 @@
 ## Prepared-stage validator
 
 ```text
-python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle --profile initiative --stage prepared
+python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\architecture_hardening_bundle --profile initiative --stage prepared
 ```
 
 ## Build
@@ -33,5 +33,5 @@ dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Processes.Tests\CanD
 ## Completed-stage validator
 
 ```text
-python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\cdi_process_module_architecture_hardening_bundle --profile initiative --stage completed
+python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\architecture_hardening_bundle --profile initiative --stage completed
 ```

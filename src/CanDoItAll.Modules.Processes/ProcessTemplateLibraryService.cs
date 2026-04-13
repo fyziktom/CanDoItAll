@@ -1,5 +1,6 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -74,7 +75,7 @@ public sealed class ProcessTemplateLibraryService
             Purpose = descriptor.Resource.Purpose,
             StaffingIntent = descriptor.Resource.StaffingIntent,
             PreferredExecutorKind = descriptor.Resource.PreferredExecutorKind,
-            PreferredProjectAssignmentRole = ParseEnum<ProjectPartyAssignmentRole>(descriptor.Resource.PreferredProjectAssignmentRole),
+            PreferredProjectAssignmentRole = EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(descriptor.Resource.PreferredProjectAssignmentRole),
             IsRequired = descriptor.Resource.IsRequired,
             AllowsFallback = descriptor.Resource.AllowsFallback,
             RequiresExplicitApproval = descriptor.Resource.RequiresExplicitApproval,
@@ -85,7 +86,7 @@ public sealed class ProcessTemplateLibraryService
                 ? descriptor.Resource.Key
                 : descriptor.Resource.RoleTemplateSourceKey,
             RoleTemplateSnapshotName = descriptor.Resource.RoleTemplateSnapshotName,
-            SnapshotSummary = BuildRoleSnapshotSummary(descriptor.Resource)
+            SnapshotSummary = ProcessTemplateRoleSnapshotSummaryBuilder.Build(descriptor.Resource)
         };
     }
 
@@ -96,13 +97,13 @@ public sealed class ProcessTemplateLibraryService
         return new ProcessArtifactExpectationEditorModel
         {
             Id = Guid.NewGuid(),
-            ArtifactKind = ParseEnum(descriptor.Resource.ArtifactKind, ProcessArtifactKind.Evidence),
+            ArtifactKind = EnumValueParser.ParseOrDefault(descriptor.Resource.ArtifactKind, ProcessArtifactKind.Evidence),
             Title = descriptor.Resource.DisplayName,
             IsRequired = isRequired,
-            TrustRequirement = ParseEnum(
+            TrustRequirement = EnumValueParser.ParseOrDefault(
                 descriptor.Resource.DefaultTrustRequirement,
                 ProcessArtifactTrustRequirement.ReviewRequired),
-            SensitivityLevel = ParseEnum(
+            SensitivityLevel = EnumValueParser.ParseOrDefault(
                 descriptor.Resource.DefaultSensitivityLevel,
                 ProcessSensitivityLevel.Internal),
             RetentionDays = descriptor.Resource.DefaultRetentionDays > 0
@@ -780,58 +781,6 @@ public sealed class ProcessTemplateLibraryService
         }
 
         return new string(characters.ToArray());
-    }
-
-    private static string BuildRoleSnapshotSummary(ProcessTemplateRoleResource resource)
-    {
-        if (!string.IsNullOrWhiteSpace(resource.SnapshotSummary))
-        {
-            return resource.SnapshotSummary;
-        }
-
-        if (!string.IsNullOrWhiteSpace(resource.RoleTemplateSnapshotName))
-        {
-            return resource.RoleTemplateSnapshotName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(resource.SeniorityBand))
-        {
-            return $"{NormalizeValue(resource.SeniorityBand, resource.SeniorityBand)} role template";
-        }
-
-        return NormalizeValue(resource.Summary, "Template import");
-    }
-
-    private static TEnum? ParseEnum<TEnum>(string? value)
-        where TEnum : struct, Enum
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var normalizedValue = value
-            .Replace("-", string.Empty, StringComparison.Ordinal)
-            .Replace("_", string.Empty, StringComparison.Ordinal)
-            .Replace(" ", string.Empty, StringComparison.Ordinal);
-
-        foreach (var candidate in Enum.GetValues<TEnum>())
-        {
-            var normalizedCandidate = candidate.ToString()
-                .Replace("_", string.Empty, StringComparison.Ordinal);
-            if (string.Equals(normalizedCandidate, normalizedValue, StringComparison.OrdinalIgnoreCase))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
-    }
-
-    private static TEnum ParseEnum<TEnum>(string? value, TEnum fallback)
-        where TEnum : struct, Enum
-    {
-        return ParseEnum<TEnum>(value) ?? fallback;
     }
 
     private sealed record RoleDescriptor(

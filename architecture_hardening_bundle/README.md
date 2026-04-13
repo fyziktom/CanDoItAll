@@ -2,7 +2,16 @@
 
 ## Status
 
-This bundle is **prepared for execution** and has **not** been executed in the repository yet.
+This bundle passed the prepared-stage validator on **2026-04-13** and completed execution on **2026-04-13**. Subbundles `01-16` are complete, architecture review gates `04-architecture-review-gate-a`, `07-architecture-review-gate-b`, `11-architecture-review-gate-c`, and `15-architecture-review-gate-d` passed, no corrective subbundle was triggered, and the final closure proof is recorded in `reviews/01-execution-report.md`.
+
+## Validation Summary
+
+- Bundle preparation status: `Prepared`
+- Bundle readiness gate: `Passed on 2026-04-13`
+- Execution status: `Completed`
+- Subbundle gate review: `Subbundles 01-16 passed and Gates A-D passed`
+- Final closure gate: `Passed on 2026-04-13`
+- Browser validation analytics: `Subbundle 13 and final closure proof recorded`
 
 ## Why this bundle exists
 
@@ -55,14 +64,16 @@ No downstream subbundle may proceed on “probably good enough” proof.
 
 ## Validation status
 
-The bundle is prepared from static repository analysis only. In this environment, `dotnet` execution was not available, so the following are still pending on the target machine:
+The bundle is no longer preparation-only. Live execution started and completed on `2026-04-13`, the prepared-stage validator passed, and the baseline characterization proof is recorded in `reviews/03-live-gap-baseline-memo.md`.
 
-- prepared-stage bundle validation,
-- subbundle execution,
-- build,
-- targeted .NET tests,
-- Playwright/browser proof,
-- completed-stage bundle validation.
+Fresh final proof is recorded in `reviews/01-execution-report.md`:
+
+- full solution build passed,
+- targeted integration, component, and MCP process matrices passed,
+- `/processes` browser proof was refreshed at `1600x900` and `430x932`,
+- the completed-stage validator passed.
+
+Corrective playbooks remain in the bundle as governance artifacts only; none were triggered during execution.
 
 ## Read first
 

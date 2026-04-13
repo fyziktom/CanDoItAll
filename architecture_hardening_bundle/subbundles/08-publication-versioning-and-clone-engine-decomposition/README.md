@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+- `2026-04-13`: `ProcessesService.PublishAsync` now loads a dedicated publication context, `ProcessDefinitionDraftCloneEngine` owns draft graph cloning, next-draft allocation uses the highest persisted version number instead of `published + 1`, canonical dependency rows are materialized during clone through the compatibility boundary, and the targeted build/integration/MCP proof passed.
 
 ## Objective
 
@@ -23,7 +24,9 @@
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Publication.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Persistence.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.cs
-- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionModels.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEnums.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEntities.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionEntityConfigurations.cs
 - C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
 - C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessDeletionIntegrationTests.cs
 - C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Processes.Tests\ProcessesToolsTests.cs

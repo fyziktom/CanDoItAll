@@ -33,6 +33,7 @@ public sealed class AppDbContext(
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        StampApplicationManagedConcurrencyTokens();
         return ExecuteSaveChangesWithCoordination(() => base.SaveChanges(acceptAllChangesOnSuccess));
     }
 
@@ -43,6 +44,7 @@ public sealed class AppDbContext(
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        StampApplicationManagedConcurrencyTokens();
         return ExecuteSaveChangesWithCoordinationAsync(
             () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken),
             cancellationToken);
@@ -57,6 +59,27 @@ public sealed class AppDbContext(
     private void ReleaseRuntimeLease()
     {
         Interlocked.Exchange(ref _runtimeLease, null)?.Dispose();
+    }
+
+    private void StampApplicationManagedConcurrencyTokens()
+    {
+        foreach (var entry in ChangeTracker.Entries<IHasConcurrencyToken>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                if (entry.Entity.ConcurrencyToken == Guid.Empty)
+                {
+                    entry.Entity.ConcurrencyToken = Guid.NewGuid();
+                }
+
+                continue;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.ConcurrencyToken = Guid.NewGuid();
+            }
+        }
     }
 
     private int ExecuteSaveChangesWithCoordination(Func<int> saveChanges)

@@ -13,11 +13,11 @@
     "Corrective subbundle if the gate fails."
   ],
   "RepositoryTouchpoints": [
-    "cdi_process_module_architecture_hardening_bundle\\analysis\\03-duplication-and-hotspots.md",
-    "cdi_process_module_architecture_hardening_bundle\\inventories\\02-long-file-hotspots.md",
-    "cdi_process_module_architecture_hardening_bundle\\inventories\\03-cross-module-duplication-map.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\01-execution-report.md",
-    "cdi_process_module_architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+    "architecture_hardening_bundle\\analysis\\03-duplication-and-hotspots.md",
+    "architecture_hardening_bundle\\inventories\\02-long-file-hotspots.md",
+    "architecture_hardening_bundle\\inventories\\03-cross-module-duplication-map.md",
+    "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
   ],
   "ValidationCommands": [
     "Review the latest execution-report rows, browser proof for subbundle 13, and build/migration proof for subbundle 14."

@@ -166,19 +166,6 @@ public sealed partial class ProcessDevelopmentSeedService
             : Result.Success();
     }
 
-    private static TEnum ParseEnum<TEnum>(string? value, TEnum fallback)
-        where TEnum : struct
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return fallback;
-        }
-
-        return Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed)
-            ? parsed
-            : fallback;
-    }
-
     private static Result<IReadOnlyList<ProcessStepRunStatus>> BuildTransitionSequence(
         ProcessStepRunStatus currentStatus,
         ProcessStepRunStatus targetStatus)
