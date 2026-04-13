@@ -1,10 +1,10 @@
 @layer components {
   .cda-form-field {
-    @apply flex flex-col gap-2;
+    @apply flex flex-col gap-2 !w-full !max-w-full;
   }
 
   .cda-prefixed-field {
-    @apply relative block min-w-0 flex-1;
+    @apply relative block min-w-0 w-full flex-1 max-w-full;
   }
 
   .cda-prefixed-field .cda-input {
@@ -47,21 +47,21 @@
   }
 
   .cda-form-field__label {
-    @apply text-xs font-semibold uppercase tracking-[0.18em];
+    @apply text-xs font-semibold uppercase tracking-[0.18em] w-full;
     color: var(--cad-color-text-soft);
   }
 
   .cda-form-field__content {
-    @apply flex items-center gap-2;
+    @apply flex items-center gap-2 w-full max-w-full;
   }
 
   .cda-field-label {
-    @apply mb-1 block text-sm font-medium;
+    @apply mb-1 block text-sm font-medium w-full;
     color: var(--cad-color-text-muted);
   }
 
   .cda-input {
-    @apply min-w-0 w-full border px-3 py-2 text-sm outline-none transition;
+    @apply min-w-0 w-full max-w-full border px-3 py-2 text-sm outline-none transition;
     border-radius: var(--cad-radius-control);
     border-color: var(--cad-color-border);
     background: var(--cad-color-surface);

@@ -1,0 +1,341 @@
+@namespace CanDoItAll.Components.BaseLib
+@using Microsoft.JSInterop
+@inherits StyledComponentBase
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@if (DisplayMode == CopyButtonDisplayMode.IconOnly)
+{
+    <button type="button"
+            disabled="@IsDisabled"
+            aria-describedby="@successAnnouncementId"
+            data-copy-state="@(isCopied ? "copied" : "idle")"
+            @attributes='BuildAttributes(ResolveIconOnlyCssClass())'
+            @onclick="HandleCopyAsync">
+        <Icon Name="@ResolveDisplayedIcon()"
+              Class="@ResolveIconGlyphCssClass()" />
+        <span class="sr-only">@ResolveAccessibleLabel()</span>
+    </button>
+}
+else
+{
+    <Button Text="@ResolveDisplayedText()"
+            Icon="@ResolveButtonIcon()"
+            ButtonStyle="@ButtonStyle"
+            Size="@ResolveButtonSize()"
+            Variant="@Variant"
+            Disabled="@IsDisabled"
+            Class="@ResolveStandardButtonCssClass()"
+            Style="@BuildStyle()"
+            AdditionalAttributes="@ResolveButtonAttributes()"
+            Click="@HandleCopyAsync" />
+}
+
+<span id="@successAnnouncementId" class="sr-only" aria-live="polite">@statusMessage</span>
+
+@code {
+    private const string DefaultCopyText = "Copy";
+    private const string DefaultCopyLabel = "Copy to clipboard";
+    private const string DefaultSuccessMessage = "Copied to clipboard.";
+    private const string DefaultFailureMessage = "Unable to copy to clipboard.";
+    private readonly string successAnnouncementId = $"cda-copy-status-{Guid.NewGuid():N}";
+    private IJSObjectReference? module;
+    private CancellationTokenSource? resetCts;
+    private bool isCopied;
+    private string statusMessage = string.Empty;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public string? TargetElementId { get; set; }
+
+    [Parameter]
+    public string? TargetSelector { get; set; }
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? CopiedText { get; set; }
+
+    [Parameter]
+    public string Icon { get; set; } = "content_copy";
+
+    [Parameter]
+    public string SuccessIcon { get; set; } = "check";
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string SuccessMessage { get; set; } = DefaultSuccessMessage;
+
+    [Parameter]
+    public string FailureMessage { get; set; } = DefaultFailureMessage;
+
+    [Parameter]
+    public int SuccessDurationMs { get; set; } = 2500;
+
+    [Parameter]
+    public CopyButtonDisplayMode DisplayMode { get; set; } = CopyButtonDisplayMode.TextWithIcon;
+
+    [Parameter]
+    public CopyButtonSize Size { get; set; } = CopyButtonSize.Medium;
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Light;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Outlined;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Copied { get; set; }
+
+    private bool HasCopySource =>
+        Value is not null
+        || !string.IsNullOrWhiteSpace(TargetElementId)
+        || !string.IsNullOrWhiteSpace(TargetSelector);
+
+    private bool IsDisabled => Disabled || !HasCopySource;
+
+    private async Task HandleCopyAsync()
+    {
+        if (IsDisabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var copiedValue = await CopyAsync();
+            statusMessage = string.IsNullOrWhiteSpace(SuccessMessage)
+                ? DefaultSuccessMessage
+                : SuccessMessage;
+            isCopied = true;
+            await Copied.InvokeAsync(copiedValue);
+            await InvokeAsync(StateHasChanged);
+            StartResetTimer();
+        }
+        catch (JSException)
+        {
+            statusMessage = string.IsNullOrWhiteSpace(FailureMessage)
+                ? DefaultFailureMessage
+                : FailureMessage;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (InvalidOperationException)
+        {
+            statusMessage = string.IsNullOrWhiteSpace(FailureMessage)
+                ? DefaultFailureMessage
+                : FailureMessage;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<string> CopyAsync()
+    {
+        var jsModule = await EnsureModuleAsync();
+        if (Value is not null)
+        {
+            return await jsModule.InvokeAsync<string>("copyText", Value);
+        }
+
+        return await jsModule.InvokeAsync<string>(
+            "copyFromTarget",
+            TargetElementId,
+            TargetSelector);
+    }
+
+    private async ValueTask<IJSObjectReference> EnsureModuleAsync()
+    {
+        if (module is not null)
+        {
+            return module;
+        }
+
+        module = await JS.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/CanDoItAll.Components.BaseLib/js/copyButton.js");
+        return module;
+    }
+
+    private void StartResetTimer()
+    {
+        resetCts?.Cancel();
+        resetCts?.Dispose();
+
+        resetCts = new CancellationTokenSource();
+        _ = ResetCopiedStateAsync(resetCts.Token);
+    }
+
+    private async Task ResetCopiedStateAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(Math.Max(400, SuccessDurationMs), cancellationToken);
+            isCopied = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private string? ResolveDisplayedText()
+    {
+        if (DisplayMode == CopyButtonDisplayMode.IconButton)
+        {
+            return null;
+        }
+
+        if (isCopied && !string.IsNullOrWhiteSpace(CopiedText))
+        {
+            return CopiedText;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Text))
+        {
+            return Text;
+        }
+
+        return DefaultCopyText;
+    }
+
+    private string? ResolveButtonIcon()
+    {
+        return DisplayMode switch
+        {
+            CopyButtonDisplayMode.Text when isCopied => ResolveDisplayedIcon(),
+            CopyButtonDisplayMode.Text => null,
+            _ => ResolveDisplayedIcon()
+        };
+    }
+
+    private string ResolveDisplayedIcon()
+        => isCopied ? SuccessIcon : Icon;
+
+    private ButtonSize ResolveButtonSize()
+    {
+        return Size switch
+        {
+            CopyButtonSize.Large => ButtonSize.Large,
+            CopyButtonSize.Medium => ButtonSize.Medium,
+            _ => ButtonSize.Small
+        };
+    }
+
+    private string ResolveStandardButtonCssClass()
+    {
+        return BuildClass(
+            "cda-copy-button",
+            DisplayMode == CopyButtonDisplayMode.IconButton ? "cda-copy-button--icon-button" : "cda-copy-button--full-button",
+            ResolveSizeCssClass(),
+            isCopied ? "cda-copy-button--copied" : null);
+    }
+
+    private string ResolveIconOnlyCssClass()
+    {
+        return string.Join(
+            " ",
+            new[]
+            {
+                "cda-copy-button-icon",
+                ResolveSizeCssClass(),
+                isCopied ? "cda-copy-button-icon--copied" : null
+            }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private string ResolveIconGlyphCssClass()
+    {
+        return $"cda-copy-button__glyph {ResolveSizeCssClass()}";
+    }
+
+    private string ResolveSizeCssClass()
+    {
+        return Size switch
+        {
+            CopyButtonSize.ExtraSmall => "cda-copy-button--size-xs",
+            CopyButtonSize.Small => "cda-copy-button--size-sm",
+            CopyButtonSize.Large => "cda-copy-button--size-lg",
+            _ => "cda-copy-button--size-md"
+        };
+    }
+
+    private IReadOnlyDictionary<string, object> ResolveButtonAttributes()
+    {
+        var attributes = AdditionalAttributes is null
+            ? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, object>(AdditionalAttributes, StringComparer.OrdinalIgnoreCase);
+
+        if (attributes.TryGetValue("aria-describedby", out var existingDescription)
+            && existingDescription is string existingDescriptionText
+            && !string.IsNullOrWhiteSpace(existingDescriptionText))
+        {
+            attributes["aria-describedby"] = $"{existingDescriptionText} {successAnnouncementId}";
+        }
+        else
+        {
+            attributes["aria-describedby"] = successAnnouncementId;
+        }
+
+        attributes["data-copy-state"] = isCopied ? "copied" : "idle";
+
+        if (!HasExplicitAccessibleName() && ShouldEmitAriaLabel())
+        {
+            attributes["aria-label"] = ResolveAccessibleLabel();
+        }
+
+        return attributes;
+    }
+
+    private bool ShouldEmitAriaLabel()
+        => DisplayMode == CopyButtonDisplayMode.IconButton
+           || DisplayMode == CopyButtonDisplayMode.IconOnly;
+
+    private string ResolveAccessibleLabel()
+    {
+        if (!string.IsNullOrWhiteSpace(AriaLabel))
+        {
+            return AriaLabel;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Text))
+        {
+            return Text;
+        }
+
+        return DefaultCopyLabel;
+    }
+
+    private bool HasExplicitAccessibleName()
+        => AdditionalAttributes is not null
+            && AdditionalAttributes.Keys.Any(key =>
+                string.Equals(key, "aria-label", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "aria-labelledby", StringComparison.OrdinalIgnoreCase));
+
+    public async ValueTask DisposeAsync()
+    {
+        resetCts?.Cancel();
+        resetCts?.Dispose();
+
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (InvalidOperationException exception) when (exception.Message.Contains("disconnected", StringComparison.OrdinalIgnoreCase))
+        {
+        }
+    }
+}
