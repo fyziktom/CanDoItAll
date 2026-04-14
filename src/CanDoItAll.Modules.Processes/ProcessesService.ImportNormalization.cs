@@ -23,6 +23,11 @@ public sealed partial class ProcessesService
             role.Id = generatedRoleId;
         }
 
+        foreach (var messagingPolicy in model.MessagingPolicies)
+        {
+            messagingPolicy.Id = Guid.NewGuid();
+        }
+
         var stepIdMap = new Dictionary<Guid, Guid>();
         var branchOutcomeIdMap = new Dictionary<Guid, Guid>();
         var artifactExpectationIdMap = new Dictionary<Guid, Guid>();
@@ -97,6 +102,12 @@ public sealed partial class ProcessesService
             {
                 artifactInput.ArtifactExpectationId = RemapImportedId(artifactInput.ArtifactExpectationId, artifactExpectationIdMap);
             }
+        }
+
+        foreach (var messagingPolicy in model.MessagingPolicies)
+        {
+            messagingPolicy.SourceRoleRequirementId = RemapImportedId(messagingPolicy.SourceRoleRequirementId, roleIdMap);
+            messagingPolicy.TargetRoleRequirementId = RemapImportedId(messagingPolicy.TargetRoleRequirementId, roleIdMap);
         }
     }
 

@@ -57,7 +57,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
         nodes.AddRange(stepNodes);
         nodes.AddRange(branchNodes);
         nodes.AddRange(roleNodes);
-        var links = BuildDefinitionLinks(editor.Steps, rolesById);
+        var links = BuildDefinitionLinks(editor.Steps, rolesById, editor.MessagingPolicies);
 
         return new CanvasWorkbenchSurface
         {
@@ -329,6 +329,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
     {
         var assignmentCount = editor.Steps.Sum(step => step.RoleAssignments.Count(assignment => assignment.RoleRequirementId == role.Id));
         var decisionCount = editor.Steps.Count(step => step.DecisionRoleRequirementId == role.Id);
+        var outboundMessagingCount = editor.MessagingPolicies.Count(item => item.SourceRoleRequirementId == role.Id);
+        var inboundMessagingCount = editor.MessagingPolicies.Count(item => item.TargetRoleRequirementId == role.Id);
 
         return new CanvasWorkbenchNode
         {
@@ -361,6 +363,11 @@ public sealed partial class ProcessCanvasSurfaceFactory
                 {
                     Text = $"{decisionCount} decisions",
                     Tone = decisionCount == 0 ? "neutral" : "accent"
+                },
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{outboundMessagingCount} out / {inboundMessagingCount} in",
+                    Tone = outboundMessagingCount == 0 && inboundMessagingCount == 0 ? "neutral" : "accent"
                 }
             ],
             FooterChips =
@@ -382,6 +389,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     Tone = "accent"
                 }
             ],
+            InputPorts = DecorateProcessPorts(BuildDefinitionRoleInputPorts(role, editor)),
             OutputPorts = DecorateProcessPorts(BuildDefinitionRoleOutputPorts(role, editor))
         };
     }

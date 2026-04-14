@@ -333,9 +333,134 @@
                             <InputCheckbox @bind-Value="Presenter.AssignmentIsFallback" />
                             Treat this as fallback binding
                         </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <InputCheckbox @bind-Value="Presenter.AssignmentAllowsDirectMessaging"
+                                           data-testid="processes-assignment-direct-messaging-checkbox" />
+                            Allow direct role messaging for this assignment snapshot
+                        </label>
                         <Button Text="Resolve assignment"
                                 Click="Presenter.ResolveSelectedAssignmentAsync"
                                 data-testid="processes-resolve-assignment-button" />
+                    </Stack>
+                }
+            </SurfaceCard>
+        </Grid>
+    </SectionCard>
+
+    <SectionCard Title="Direct role messaging"
+                 Description=""
+                 HelpText="Process-owned Messaging links define which run-scoped roles may communicate directly. Every allowed or denied attempt stays attached to the same run evidence trail.">
+        <Grid Gap="LayoutGap.Large"
+              ColumnTemplateLg="minmax(0,0.95fr) minmax(0,1.05fr)">
+            <SurfaceCard>
+                @if (Presenter.DirectMessageAssignments.Count < 2)
+                {
+                    <EmptyState Eyebrow="Messaging unavailable"
+                                Title="At least two run-scoped roles are required"
+                                Description="Direct role messaging activates only after the run has multiple run-scoped role assignments that can participate in process-owned messaging policy." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        <div>
+                            <label class="cda-field-label">Sender role</label>
+                            <InputSelect TValue="Guid?"
+                                         @bind-Value="Presenter.DirectMessageSourceRoleRequirementId"
+                                         class="cda-input"
+                                         data-testid="processes-direct-message-source-select">
+                                <option value="">Select sender</option>
+                                @foreach (var assignment in Presenter.DirectMessageAssignments)
+                                {
+                                    <option value="@assignment.RoleRequirementId">@Presenter.BuildDirectMessageAssignmentLabel(assignment)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Recipient role</label>
+                            <InputSelect TValue="Guid?"
+                                         @bind-Value="Presenter.DirectMessageTargetRoleRequirementId"
+                                         class="cda-input"
+                                         data-testid="processes-direct-message-target-select">
+                                <option value="">Select recipient</option>
+                                @foreach (var assignment in Presenter.DirectMessageAssignments)
+                                {
+                                    <option value="@assignment.RoleRequirementId">@Presenter.BuildDirectMessageAssignmentLabel(assignment)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Message body</label>
+                            <InputTextArea @bind-Value="Presenter.DirectMessageBody"
+                                           class="cda-input cda-input--textarea min-h-28"
+                                           data-testid="processes-direct-message-body-input" />
+                        </div>
+                        <Button Text="Send direct message"
+                                Disabled="@(!Presenter.CanSendDirectMessage)"
+                                Click="Presenter.SendDirectMessageAsync"
+                                data-testid="processes-direct-message-send-button" />
+                    </Stack>
+                }
+            </SurfaceCard>
+
+            <SurfaceCard>
+                <p class="cda-eyebrow">Transcript projection</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Role-to-role conversation evidence</h3>
+                @if (Presenter.DirectMessageThreads.Count == 0)
+                {
+                    <EmptyState Eyebrow="No transcript yet"
+                                Title="No direct role messages recorded"
+                                Description="Allowed messages project into Collaboration and reappear here as run-scoped transcript evidence." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="mt-4">
+                        @foreach (var thread in Presenter.DirectMessageThreads)
+                        {
+                            <SurfaceCard Soft="true"
+                                         data-testid="processes-direct-message-thread-card">
+                                <Split Gap="LayoutGap.Medium">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-950">@thread.Subject</p>
+                                        <p class="mt-1 text-sm text-slate-600">@thread.ParticipantSummary</p>
+                                    </div>
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="info"
+                                                     Text="@($"{thread.MessageCount} messages")" />
+                                        @if (thread.UnreadCount > 0)
+                                        {
+                                            <StatusBadge Tone="warning"
+                                                         Text="@($"{thread.UnreadCount} unread")" />
+                                        }
+                                    </Cluster>
+                                </Split>
+
+                                <Stack GapScale="LayoutGap.Small"
+                                       Class="mt-4">
+                                    @foreach (var message in thread.Messages)
+                                    {
+                                        <SurfaceCard Soft="true"
+                                                     data-testid="processes-direct-message-entry">
+                                            <Split Gap="LayoutGap.Medium">
+                                                <p class="text-sm font-semibold text-slate-950">@message.AuthorName</p>
+                                                <p class="text-xs uppercase tracking-[0.18em] text-slate-500">@message.CreatedAtUtc.ToLocalTime().ToString("g")</p>
+                                            </Split>
+                                            <p class="mt-3 text-sm leading-6 text-slate-600">@message.Body</p>
+                                        </SurfaceCard>
+                                    }
+                                </Stack>
+
+                                @if (!string.IsNullOrWhiteSpace(thread.Route))
+                                {
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Class="mt-4">
+                                        <Button Text="Open collaboration thread"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Href="@thread.Route" />
+                                    </Cluster>
+                                }
+                            </SurfaceCard>
+                        }
                     </Stack>
                 }
             </SurfaceCard>

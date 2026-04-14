@@ -21,13 +21,13 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Security/SecurityModels.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/ProviderModels.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Components/SettingsPageProvidersTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Security/SecurityModels.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Models/ProviderModels.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/SettingsPageProvidersTests.cs
 
 ## Deliverables
 
@@ -97,3 +97,4 @@ Implement only subbundle 04.
 
 Make Workspace/Security the canonical owner of provider master data and secrets, and AgentFramework the canonical owner of runtime execution. Add the integrated provider bridge, disable the old Workspace execution path as canonical, and prove health/execution through the new bridge.
 ```
+

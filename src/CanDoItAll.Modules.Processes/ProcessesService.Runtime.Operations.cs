@@ -42,6 +42,7 @@ public sealed partial class ProcessesService
             assignment.BindingReason = request.BindingReason.Trim();
             assignment.IsFallback = request.IsFallback;
             assignment.IsCapabilityGap = !request.PartyId.HasValue && string.IsNullOrWhiteSpace(request.DisplayName);
+            assignment.AllowsDirectMessaging = request.AllowsDirectMessaging && !assignment.IsCapabilityGap;
 
             if (request.StepDefinitionId.HasValue) {
                 var stepRun = await dbContext.Set<ProcessStepRun>()

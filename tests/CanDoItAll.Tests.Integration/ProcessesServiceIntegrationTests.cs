@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
@@ -138,6 +139,165 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(assignments.Select(item => item.Id), runDetails.Assignments.Select(item => item.Id));
         Assert.Equal(workBriefs.Select(item => item.Id), runDetails.WorkBriefs.Select(item => item.Id));
         Assert.Equal(conformance.Select(item => item.Id), runDetails.ConformanceObservations.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task SendDirectMessageAsync_persists_collaboration_transcript_when_policy_assignment_permissions_and_governance_allow_it()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var fixture = await CreateDirectMessagingRunFixtureAsync(scope.ServiceProvider, includeMessagingPolicy: true);
+
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.SourceRoleRequirementId, "Delivery lead", allowsDirectMessaging: true);
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.TargetRoleRequirementId, "Review lead", allowsDirectMessaging: true);
+
+        var result = await processesService.SendDirectMessageAsync(new ProcessDirectMessageRequest
+        {
+            ProcessRunId = fixture.RunId,
+            SourceRoleRequirementId = fixture.SourceRoleRequirementId,
+            TargetRoleRequirementId = fixture.TargetRoleRequirementId,
+            MessageBody = "Delivery handoff package is ready for review."
+        });
+
+        Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
+
+        var runDetails = await processesService.GetRunDetailsAsync(fixture.RunId);
+        var thread = Assert.Single(runDetails.DirectMessageThreads);
+        Assert.Equal(result.Value, thread.ThreadId);
+        Assert.Single(thread.Messages);
+        Assert.Equal("Delivery lead", thread.Messages[0].AuthorName);
+        Assert.Equal("Delivery handoff package is ready for review.", thread.Messages[0].Body);
+        var decision = Assert.Single(runDetails.Decisions.Where(item => item.DecisionKind == ProcessDecisionKind.DirectMessage));
+        Assert.Equal(ProcessDecisionOutcome.Accepted, decision.Outcome);
+        Assert.DoesNotContain(runDetails.ConformanceObservations, item => item.Category == "DirectMessagingPolicy");
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedThread = await dbContext.Set<CollaborationThreadRecord>()
+            .SingleAsync(item => item.Id == result.Value);
+        Assert.Equal(CollaborationContextKind.ProcessRun, persistedThread.ContextKind);
+        Assert.Equal(fixture.RunId, persistedThread.ContextId);
+        var persistedParticipants = await dbContext.Set<CollaborationParticipantRecord>()
+            .Where(item => item.ThreadId == result.Value)
+            .ToListAsync();
+        Assert.Equal(2, persistedParticipants.Count);
+        var persistedMessage = await dbContext.Set<CollaborationMessageRecord>()
+            .SingleAsync(item => item.ThreadId == result.Value);
+        Assert.Equal("Delivery lead", persistedMessage.AuthorName);
+        Assert.Equal("Delivery handoff package is ready for review.", persistedMessage.Body);
+        var persistedInboxItem = await dbContext.Set<CollaborationInboxItemRecord>()
+            .SingleAsync(item => item.ThreadId == result.Value);
+        Assert.Equal("/collaboration?threadId=" + result.Value.ToString("D"), persistedInboxItem.Route);
+        Assert.Equal(1, persistedInboxItem.UnreadCount);
+    }
+
+    [Fact]
+    public async Task SendDirectMessageAsync_rejects_when_process_policy_has_no_messaging_link()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var fixture = await CreateDirectMessagingRunFixtureAsync(scope.ServiceProvider, includeMessagingPolicy: false);
+
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.SourceRoleRequirementId, "Delivery lead", allowsDirectMessaging: true);
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.TargetRoleRequirementId, "Review lead", allowsDirectMessaging: true);
+
+        var result = await processesService.SendDirectMessageAsync(new ProcessDirectMessageRequest
+        {
+            ProcessRunId = fixture.RunId,
+            SourceRoleRequirementId = fixture.SourceRoleRequirementId,
+            TargetRoleRequirementId = fixture.TargetRoleRequirementId,
+            MessageBody = "Attempt without a process-owned messaging link."
+        });
+
+        Assert.True(result.IsFailure);
+        Assert.Contains(result.Errors, error => error.Code == "processes.direct-message-policy-missing");
+
+        var runDetails = await processesService.GetRunDetailsAsync(fixture.RunId);
+        Assert.Empty(runDetails.DirectMessageThreads);
+        var decision = Assert.Single(runDetails.Decisions.Where(item => item.DecisionKind == ProcessDecisionKind.DirectMessage));
+        Assert.Equal(ProcessDecisionOutcome.Rejected, decision.Outcome);
+        Assert.Contains(runDetails.ConformanceObservations, item =>
+            item.Category == "DirectMessagingPolicy" &&
+            item.Observation.Contains("no explicit Messaging link", StringComparison.Ordinal));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.Empty(await dbContext.Set<CollaborationThreadRecord>()
+            .Where(item => item.ContextKind == CollaborationContextKind.ProcessRun && item.ContextId == fixture.RunId)
+            .ToListAsync());
+    }
+
+    [Fact]
+    public async Task SendDirectMessageAsync_rejects_when_run_assignment_permissions_disable_direct_messaging()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var fixture = await CreateDirectMessagingRunFixtureAsync(scope.ServiceProvider, includeMessagingPolicy: true);
+
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.SourceRoleRequirementId, "Delivery lead", allowsDirectMessaging: true);
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.TargetRoleRequirementId, "Review lead", allowsDirectMessaging: false);
+
+        var result = await processesService.SendDirectMessageAsync(new ProcessDirectMessageRequest
+        {
+            ProcessRunId = fixture.RunId,
+            SourceRoleRequirementId = fixture.SourceRoleRequirementId,
+            TargetRoleRequirementId = fixture.TargetRoleRequirementId,
+            MessageBody = "Attempt blocked by assignment permission."
+        });
+
+        Assert.True(result.IsFailure);
+        Assert.Contains(result.Errors, error => error.Code == "processes.direct-message-target-permission-denied");
+
+        var runDetails = await processesService.GetRunDetailsAsync(fixture.RunId);
+        Assert.Empty(runDetails.DirectMessageThreads);
+        Assert.Contains(runDetails.ConformanceObservations, item =>
+            item.Category == "DirectMessagingPolicy" &&
+            item.Observation.Contains("cannot receive direct messages", StringComparison.Ordinal));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.Empty(await dbContext.Set<CollaborationMessageRecord>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task SendDirectMessageAsync_rejects_when_governance_state_blocks_direct_messaging()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var fixture = await CreateDirectMessagingRunFixtureAsync(
+            scope.ServiceProvider,
+            includeMessagingPolicy: true,
+            operatingMode: ProcessOperatingMode.Emergency);
+
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.SourceRoleRequirementId, "Delivery lead", allowsDirectMessaging: true);
+        await ResolveRunAssignmentAsync(processesService, fixture.RunId, fixture.TargetRoleRequirementId, "Review lead", allowsDirectMessaging: true);
+
+        var result = await processesService.SendDirectMessageAsync(new ProcessDirectMessageRequest
+        {
+            ProcessRunId = fixture.RunId,
+            SourceRoleRequirementId = fixture.SourceRoleRequirementId,
+            TargetRoleRequirementId = fixture.TargetRoleRequirementId,
+            MessageBody = "Attempt blocked by emergency governance."
+        });
+
+        Assert.True(result.IsFailure);
+        Assert.Contains(result.Errors, error => error.Code == "processes.direct-message-governance-denied");
+
+        var runDetails = await processesService.GetRunDetailsAsync(fixture.RunId);
+        Assert.Empty(runDetails.DirectMessageThreads);
+        Assert.Contains(runDetails.ConformanceObservations, item =>
+            item.Category == "DirectMessagingPolicy" &&
+            item.Observation.Contains("Direct messaging is not allowed while the run is Active in Emergency mode.", StringComparison.Ordinal));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.Empty(await dbContext.Set<CollaborationThreadRecord>()
+            .Where(item => item.ContextKind == CollaborationContextKind.ProcessRun && item.ContextId == fixture.RunId)
+            .ToListAsync());
     }
 
     [Fact]
@@ -2373,6 +2533,111 @@ public sealed class ProcessesServiceIntegrationTests
         };
     }
 
+    private static ProcessDefinitionEditorModel BuildDirectMessagingDefinitionEditor(Guid projectId, bool includeMessagingPolicy)
+    {
+        var sourceRoleId = Guid.NewGuid();
+        var targetRoleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = includeMessagingPolicy
+                ? "Process direct messaging policy"
+                : "Process direct messaging without policy",
+            Summary = "Validates process-owned direct role messaging policy and runtime enforcement.",
+            ValueStatement = "Direct role messaging must stay process-owned, auditable, and deterministic.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Direct messaging is allowed only for explicit role links with explicit runtime permission.",
+            ChangeSummary = "Integration coverage for direct role messaging.",
+            ConstitutionRuleSummary = "No role may bypass process-owned messaging policy or governance state.",
+            OperatingModeSummary = "Assisted execution or emergency governance validation.",
+            SimulationReadinessSummary = "Safe for integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = sourceRoleId,
+                    Key = "delivery-lead",
+                    DisplayName = "Delivery lead",
+                    Purpose = "Initiate direct delivery handoffs.",
+                    StaffingIntent = "Primary delivery authority.",
+                    PreferredExecutorKind = "person",
+                    DefaultAllocationPercent = 60
+                },
+                new ProcessRoleEditorModel
+                {
+                    Id = targetRoleId,
+                    Key = "review-lead",
+                    DisplayName = "Review lead",
+                    Purpose = "Receive delivery-side direct review handoffs.",
+                    StaffingIntent = "Primary review authority.",
+                    PreferredExecutorKind = "person",
+                    DefaultAllocationPercent = 40
+                }
+            ],
+            MessagingPolicies = includeMessagingPolicy
+                ? [
+                    new ProcessRoleMessagingPolicyEditorModel
+                    {
+                        SourceRoleRequirementId = sourceRoleId,
+                        TargetRoleRequirementId = targetRoleId
+                    }
+                ]
+                : [],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "capture-delivery-handoff",
+                    Title = "Capture delivery handoff",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Release candidate ready for delivery handoff.",
+                    OutputContractSummary = "Structured delivery handoff package.",
+                    EvidenceContractSummary = "Visible published process run with run-scoped role assignments.",
+                    DecisionRightsSummary = "Delivery lead confirms the package is ready for review.",
+                    ExceptionPolicySummary = "Escalate when the handoff package is incomplete.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = sourceRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Key = "review-delivery-handoff",
+                    Title = "Review delivery handoff",
+                    StepKind = ProcessStepKind.Review,
+                    InputContractSummary = "Structured delivery handoff package.",
+                    OutputContractSummary = "Reviewed handoff package ready for next execution stage.",
+                    EvidenceContractSummary = "Review note or direct-message evidence attached to the run.",
+                    DecisionRightsSummary = "Review lead confirms the package is reviewable.",
+                    ExceptionPolicySummary = "Block the run when delivery handoff evidence is missing.",
+                    TargetLeadHours = 1,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
+                    CanvasX = 520,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = targetRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -2385,6 +2650,79 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task<DirectMessagingRunFixture> CreateDirectMessagingRunFixtureAsync(
+        IServiceProvider serviceProvider,
+        bool includeMessagingPolicy,
+        ProcessOperatingMode operatingMode = ProcessOperatingMode.AssistedExecution)
+    {
+        var projectsService = serviceProvider.GetRequiredService<ProjectsService>();
+        var processesService = serviceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            includeMessagingPolicy
+                ? "Direct messaging policy project"
+                : "Direct messaging policy missing project");
+        var saveResult = await processesService.SaveAsync(BuildDirectMessagingDefinitionEditor(projectId, includeMessagingPolicy));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var roleIds = await ResolvePublishedDirectMessagingRoleIdsAsync(dbContextFactory, saveResult.Value);
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = includeMessagingPolicy
+                ? "Direct messaging run"
+                : "Direct messaging run without policy",
+            OperatingMode = operatingMode,
+            TriggerReason = "Integration verification for direct role messaging."
+        });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+        return new DirectMessagingRunFixture(projectId, saveResult.Value, runResult.Value, roleIds.SourceRoleRequirementId, roleIds.TargetRoleRequirementId);
+    }
+
+    private static async Task ResolveRunAssignmentAsync(
+        ProcessesService processesService,
+        Guid runId,
+        Guid roleRequirementId,
+        string displayName,
+        bool allowsDirectMessaging)
+    {
+        var result = await processesService.ResolveAssignmentAsync(new ProcessAssignmentResolutionRequest
+        {
+            ProcessRunId = runId,
+            RoleRequirementId = roleRequirementId,
+            DisplayName = displayName,
+            ExecutorKind = "person",
+            BindingReason = $"Resolved for {displayName} during integration coverage.",
+            AllowsDirectMessaging = allowsDirectMessaging
+        });
+
+        Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
+    }
+
+    private static async Task<(Guid SourceRoleRequirementId, Guid TargetRoleRequirementId)> ResolvePublishedDirectMessagingRoleIdsAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid definitionId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var definition = await dbContext.Set<ProcessDefinition>()
+            .SingleAsync(item => item.Id == definitionId);
+        Assert.True(definition.ActivePublishedVersionId.HasValue);
+
+        var roles = await dbContext.Set<ProcessRoleRequirement>()
+            .Where(item => item.ProcessDefinitionVersionId == definition.ActivePublishedVersionId.Value)
+            .ToListAsync();
+        var sourceRole = Assert.Single(roles, item => item.Key == "delivery-lead");
+        var targetRole = Assert.Single(roles, item => item.Key == "review-lead");
+        return (sourceRole.Id, targetRole.Id);
     }
 
     private static async Task AddPersistedDependencyAsync(
@@ -2464,4 +2802,11 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private sealed record DirectMessagingRunFixture(
+        Guid ProjectId,
+        Guid DefinitionId,
+        Guid RunId,
+        Guid SourceRoleRequirementId,
+        Guid TargetRoleRequirementId);
 }

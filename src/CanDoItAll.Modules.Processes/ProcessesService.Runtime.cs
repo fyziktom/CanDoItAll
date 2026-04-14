@@ -92,7 +92,8 @@ public sealed partial class ProcessesService {
                         : "No eligible project assignment was pre-bound to this role.",
                     SnapshotSummary = role.SnapshotSummary,
                     IsFallback = false,
-                    IsCapabilityGap = candidate is null
+                    IsCapabilityGap = candidate is null,
+                    AllowsDirectMessaging = candidate is not null
                 };
                 resolvedAssignments.Add(assignment);
                 await dbContext.Set<ProcessRunAssignment>().AddAsync(assignment, cancellationToken);

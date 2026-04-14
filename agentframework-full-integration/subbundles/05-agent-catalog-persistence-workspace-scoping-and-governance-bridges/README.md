@@ -21,15 +21,15 @@
 
 ## Exact Source References
 
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/AgentModels.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Core/Contracts.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceCatalogService.Agents.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Persistence/FileSandboxWorkspaceStore.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Infrastructure/Storage/Abstractions/StorageContracts.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Models/AgentModels.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Core/Contracts.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceCatalogService.Agents.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Persistence/FileSandboxWorkspaceStore.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Storage/Abstractions/StorageContracts.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
 
 ## Deliverables
 
@@ -99,3 +99,4 @@ Implement only subbundle 05.
 
 Turn the imported AgentFramework into an integrated technical agent catalog with scoped workspaces, durable execution state and governance bridges. Remove the global sandbox-root assumption for integrated mode. Prove restart/resume and approval round-trip behavior.
 ```
+

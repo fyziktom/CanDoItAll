@@ -20,15 +20,15 @@
 
 | Test asset | Path | Why it matters |
 | --- | --- | --- |
-| AI agents component tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Components/AiAgentsPageTests.cs` | CRM-HR AI agent UI is already tested and will need adaptation. |
-| Provider settings component tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Components/SettingsPageProvidersTests.cs` | Legacy provider UI behavior must be migrated or redirected safely. |
-| Process workspace component tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs` | Best place to add Messaging canvas link and launch UX checks. |
-| Processes integration tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs` | Captures current simplistic start flow and must be expanded. |
-| Process outbox integration tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs` | Natural proof point for agent execution orchestration. |
-| Staffing integration tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs` | Reuse for staffing/availability/resource ranking behavior. |
-| AI agent profile integration tests | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs` | Useful for CRM-HR to AgentFramework binding migration. |
-| AI agent Playwright flow | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs` | Good base for CRM-HR + Agents integrated UX. |
-| Staffing Playwright flow | `/mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/StaffingFlowTests.cs` | Good base for process launch staffing UX. |
+| AI agents component tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/AiAgentsPageTests.cs` | CRM-HR AI agent UI is already tested and will need adaptation. |
+| Provider settings component tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/SettingsPageProvidersTests.cs` | Legacy provider UI behavior must be migrated or redirected safely. |
+| Process workspace component tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs` | Best place to add Messaging canvas link and launch UX checks. |
+| Processes integration tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs` | Captures current simplistic start flow and must be expanded. |
+| Process outbox integration tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs` | Natural proof point for agent execution orchestration. |
+| Staffing integration tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs` | Reuse for staffing/availability/resource ranking behavior. |
+| AI agent profile integration tests | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs` | Useful for CRM-HR to AgentFramework binding migration. |
+| AI agent Playwright flow | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs` | Good base for CRM-HR + Agents integrated UX. |
+| Staffing Playwright flow | `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/StaffingFlowTests.cs` | Good base for process launch staffing UX. |
 
 ## Validation Gap To Close
 
@@ -39,3 +39,4 @@
   - integrated scenario harness inside CanDoItAll shell,
   - resource creation proposal for missing AI agents,
   - run-level communication transcript with artifacts and approvals.
+

@@ -41,6 +41,7 @@ public sealed partial class ProcessesService
                 definition,
                 draftVersion,
                 publicationContext.CloneSource.Roles,
+                publicationContext.CloneSource.MessagingPolicies,
                 publicationContext.CloneSource.Steps,
                 publicationContext.CloneSource.StepRoleRequirements,
                 publicationContext.CloneSource.BranchOutcomes,
@@ -126,6 +127,12 @@ public sealed partial class ProcessesService
         if (roleIds.Count > 0) {
             await dbContext.Set<ProcessRoleSkillRequirement>()
                 .Where(item => roleIds.Contains(item.RoleRequirementId))
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        if (versionIds.Count > 0) {
+            await dbContext.Set<ProcessRoleMessagingPolicyDefinition>()
+                .Where(item => versionIds.Contains(item.ProcessDefinitionVersionId))
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
@@ -264,6 +271,12 @@ public sealed partial class ProcessesService
             : await dbContext.Set<ProcessRoleSkillRequirement>()
                 .Where(item => roleIds.Contains(item.RoleRequirementId))
                 .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessRoleMessagingPolicyDefinition> messagingPolicies = roleIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessRoleMessagingPolicyDefinition>()
+                .Where(item => item.ProcessDefinitionVersionId == draftVersion.Id)
+                .OrderBy(item => item.DisplayOrder)
+                .ToListAsync(cancellationToken);
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements = stepIds.Count == 0
             ? []
             : await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
@@ -297,6 +310,7 @@ public sealed partial class ProcessesService
                 new ProcessDefinitionDraftCloneSource(
                     roles,
                     roleSkills,
+                    messagingPolicies,
                     steps,
                     stepRoleRequirements,
                     branchOutcomes,

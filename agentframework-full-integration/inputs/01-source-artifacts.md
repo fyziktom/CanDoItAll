@@ -7,8 +7,8 @@
 
 ## Extracted Working Copies Used For Analysis
 
-- CanDoItAll extracted root: `/mnt/data/work/cando/CanDoItAll-development`
-- AgentFramework extracted root: `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main`
+- CanDoItAll extracted root: `C:\repositories\CanDoItAll`
+- AgentFramework extracted root: `C:\repositories\CanDoItAll.AgentFramework`
 
 ## User-Expected Execution Paths
 
@@ -19,23 +19,23 @@
 
 ### CanDoItAll
 
-- `/mnt/data/work/cando/CanDoItAll-development/CanDoItAll.slnx`
-- `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Program.cs`
-- `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Composition/ModuleAssemblies.cs`
-- `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Composition/ShellNavigation.cs`
+- `C:\repositories\CanDoItAll/CanDoItAll.slnx`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Composition/ModuleAssemblies.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Composition/ShellNavigation.cs`
 
 ### AgentFramework
 
-- `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/CanDoItAll.AgentFramework.sln`
-- `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs`
-- `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Hosting/ScenarioHarnessSupport.cs`
+- `C:\repositories\CanDoItAll.AgentFramework/CanDoItAll.AgentFramework.sln`
+- `C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs`
+- `C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Hosting/ScenarioHarnessSupport.cs`
 
 ## Path Translation Rule For Codex
 
 - Všechny absolute source references v bundle ukazují na analyzované kopie pod `/mnt/data/work/...`, aby prošla lokální validace bundle.
 - Při skutečné implementaci na uživatelčině stroji musí Codex přeložit:
-  - `/mnt/data/work/cando/CanDoItAll-development` -> `C:\repositories\CanDoItAll`
-  - `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main` -> `C:\repositories\CanDoItAll.AgentFramework`
+  - `C:\repositories\CanDoItAll` -> `C:\repositories\CanDoItAll`
+  - `C:\repositories\CanDoItAll.AgentFramework` -> `C:\repositories\CanDoItAll.AgentFramework`
 - Bundle nepředpokládá, že externí repo zůstane po integraci připojené jako live dependency. Slouží jen jako source material pro fyzické převzetí kódu.
 
 ## Artifact Integrity Notes
@@ -43,3 +43,4 @@
 - Bundle vychází z reálného obsahu obou archivů, ne z hypotetického stavu.
 - Byla ověřená existence relevantních modulů CanDoItAll (`Workspace`, `Processes`, `CRM-HR`, `Automation`, `Activity`, `Security`, `Web`) i AgentFramework projektů (`Models`, `Core`, `Persistence`, `Hosting`, `Maf`, `Components`, `Sandbox`).
 - Bylo ověřeno, že AgentFramework scenario harness aktuálně obsahuje scénáře `SC01–SC08`, což je důležitá odchylka proti zadání, které mluví o pěti scénářích.
+

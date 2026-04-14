@@ -29,8 +29,8 @@ Tento bundle je execution-grade koordinační balíček pro plnou integraci `Can
 
 | Logical repo | User machine path | Bundle analysis path | Notes |
 | --- | --- | --- | --- |
-| CanDoItAll | `C:\repositories\CanDoItAll` | `/mnt/data/work/cando/CanDoItAll-development` | Cílové repo pro integraci a místo, kam se budou kopírovat zdroje AgentFrameworku. |
-| CanDoItAll.AgentFramework | `C:\repositories\CanDoItAll.AgentFramework` | `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main` | Zdrojová codebase, ze které se musí převzít neutral runtime, models, components a scenario harness logika. |
+| CanDoItAll | `C:\repositories\CanDoItAll` | `C:\repositories\CanDoItAll` | Cílové repo pro integraci a místo, kam se budou kopírovat zdroje AgentFrameworku. |
+| CanDoItAll.AgentFramework | `C:\repositories\CanDoItAll.AgentFramework` | `C:\repositories\CanDoItAll.AgentFramework` | Zdrojová codebase, ze které se musí převzít neutral runtime, models, components a scenario harness logika. |
 
 
 ## Recommended Execution Order
@@ -65,7 +65,14 @@ Tento bundle je execution-grade koordinační balíček pro plnou integraci `Can
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Execution status: `Pending implementation with strict phase gates`
-- Subbundle gate review: `Mapped and ready for enforcement`
-- Final closure gate: `Defined; requires implementation evidence`
-- Browser validation analytics: `Planned per UI-affecting subbundle`
+- Execution status: `In progress; subbundles 01, 02, and 03 closed with real proof on 2026-04-14`
+- Subbundle gate review: `01, 02, and 03 passed; 04+ remain pending`
+- Final closure gate: `Defined; still requires downstream implementation evidence`
+- Browser validation analytics: `Recorded for subbundles 01, 02, and 03 under reviews/artifacts/`
+
+## Execution Notes
+
+- `2026-04-14`: subbundle `01-foundation-import-map-and-module-skeleton` closed after module skeleton wiring, `CanDoItAll.Web` build, external-reference architecture guard, and shell proof on `/agents`.
+- `2026-04-14`: subbundle `02-collaboration-domain-notification-and-conversation-foundation` closed after collaboration persistence/service wiring, SQLite/PostgreSQL migrations, targeted integration/component tests, and desktop/mobile browser proof on `/collaboration`.
+- `2026-04-14`: subbundle `03-process-messaging-policy-canvas-and-runtime-enforcement` closed after process-owned Messaging policy persistence, canvas link authoring, runtime transcript/audit enforcement, targeted component/integration tests, and live `/processes` browser proof on a published v4 definition plus a fresh runtime run.
+

@@ -67,6 +67,10 @@ public sealed partial class ProcessesService(
             .Where(item => item.ProcessDefinitionVersionId == workingVersion.Id)
             .OrderBy(item => item.DisplayOrder)
             .ToListAsync(cancellationToken);
+        var messagingPolicies = await dbContext.Set<ProcessRoleMessagingPolicyDefinition>()
+            .Where(item => item.ProcessDefinitionVersionId == workingVersion.Id)
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
         var roleSkills = await dbContext.Set<ProcessRoleSkillRequirement>()
             .Where(item => roles.Select(role => role.Id).Contains(item.RoleRequirementId))
             .ToListAsync(cancellationToken);
@@ -135,6 +139,11 @@ public sealed partial class ProcessesService(
                     .Where(item => item.RoleRequirementId == role.Id)
                     .Select(item => item.SkillId)
                     .ToList()
+            }).ToList(),
+            MessagingPolicies = messagingPolicies.Select(item => new ProcessRoleMessagingPolicyEditorModel {
+                Id = item.Id,
+                SourceRoleRequirementId = item.SourceRoleRequirementId,
+                TargetRoleRequirementId = item.TargetRoleRequirementId
             }).ToList(),
             Steps = steps.Select(step => {
                 var editorStep = new ProcessStepEditorModel {

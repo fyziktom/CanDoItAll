@@ -74,6 +74,8 @@ public sealed class ProcessDefinitionEditorModel
 
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];
 
+    public List<ProcessRoleMessagingPolicyEditorModel> MessagingPolicies { get; set; } = [];
+
     public List<ProcessStepEditorModel> Steps { get; set; } = [];
 }
 
@@ -121,6 +123,15 @@ public sealed class ProcessRoleEditorModel
     public double CanvasX { get; set; }
 
     public double CanvasY { get; set; }
+}
+
+public sealed class ProcessRoleMessagingPolicyEditorModel
+{
+    public Guid? Id { get; set; }
+
+    public Guid? SourceRoleRequirementId { get; set; }
+
+    public Guid? TargetRoleRequirementId { get; set; }
 }
 
 public sealed class ProcessStepEditorModel

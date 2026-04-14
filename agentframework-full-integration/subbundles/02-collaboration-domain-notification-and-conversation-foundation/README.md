@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Closed`
 
 ## Objective
 
@@ -21,12 +21,12 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.SharedKernel/ActivityStream.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Activity/ActivityModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Components/Layout/MainLayout.razor
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Program.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Composition/ModuleAssemblies.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.SharedKernel/ActivityStream.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Activity/ActivityModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Web/Components/Layout/MainLayout.razor
+- C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Composition/ModuleAssemblies.cs
 
 ## Deliverables
 
@@ -77,6 +77,33 @@
 - Playwright proof na `/collaboration` s inbox listingem a otevřením thread detailu.
 - Screenshot a vizuální review unread badge / hierarchy / readability.
 
+## Closure Evidence
+
+- Build gate passed on `2026-04-14`:
+  - `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj`
+  - `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj`
+- Migration gate passed on `2026-04-14`:
+  - `dotnet ef migrations add AddCollaborationFoundation --project C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj --context AppDbContext --output-dir Migrations`
+  - `dotnet ef migrations add AddCollaborationFoundation --project C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj --context AppDbContext --output-dir Migrations`
+- Test gate passed on `2026-04-14`:
+  - `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CollaborationIntegrationTests"`
+  - `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~MainLayoutCollaborationTests"`
+- Real validation found and fixed a provider bug before closure:
+  - initial integration run failed because SQLite in this stack did not support `DateTimeOffset` ordering inside `GetWorkspaceAsync`.
+  - service query ordering was moved after materialization so SQLite and PostgreSQL both stay valid.
+- Browser proof passed on `2026-04-14`:
+  - created an escalation through the real `/collaboration` UI,
+  - verified shell unread badge `1`, unread/escalation/thread counts, selected thread detail, transcript, and route-bound `threadId`,
+  - verified `Unread only` filter kept the selected unread thread visible,
+  - marked the selected thread as read and verified the shell badge disappeared and the unread-filtered inbox became empty,
+  - retained screenshot artifacts:
+    - `C:\repositories\CanDoItAll\agentframework-full-integration\reviews\artifacts\sb02-collaboration-desktop.png`
+    - `C:\repositories\CanDoItAll\agentframework-full-integration\reviews\artifacts\sb02-collaboration-mobile.png`
+- Visual review conclusion:
+  - desktop hierarchy is readable and the two-pane layout keeps list/detail responsibilities clear,
+  - unread badge state is obvious in shell and workspace tiles,
+  - the `390px` mobile pass keeps reply actions visible without clipped controls.
+
 ## Browser Validation Logging
 
 - Route: `/collaboration`.
@@ -96,3 +123,4 @@ Implement only subbundle 02.
 
 Build the Collaboration module as the canonical inbox/thread/escalation store. Reuse Automation only as transport. Add unread badge support in the shell and provide a browser-visible `/collaboration` route. Do not yet implement process messaging policy beyond the storage and context foundations.
 ```
+

@@ -182,6 +182,9 @@ public partial class ProcessWorkspace
     private void RemoveRole(ProcessRoleEditorModel role, bool refreshSurface = true)
     {
         editor.Roles.Remove(role);
+        editor.MessagingPolicies.RemoveAll(item =>
+            item.SourceRoleRequirementId == role.Id ||
+            item.TargetRoleRequirementId == role.Id);
         foreach (var step in editor.Steps)
         {
             step.RoleAssignments.RemoveAll(item => item.RoleRequirementId == role.Id);

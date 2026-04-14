@@ -438,6 +438,42 @@ public partial class ProcessWorkspace
             set => workspace.assignmentIsFallback = value;
         }
 
+        public bool AssignmentAllowsDirectMessaging
+        {
+            get => workspace.assignmentAllowsDirectMessaging;
+            set => workspace.assignmentAllowsDirectMessaging = value;
+        }
+
+        public Guid? DirectMessageSourceRoleRequirementId
+        {
+            get => workspace.directMessageSourceRoleRequirementId;
+            set => workspace.directMessageSourceRoleRequirementId = value;
+        }
+
+        public Guid? DirectMessageTargetRoleRequirementId
+        {
+            get => workspace.directMessageTargetRoleRequirementId;
+            set => workspace.directMessageTargetRoleRequirementId = value;
+        }
+
+        public string DirectMessageBody
+        {
+            get => workspace.directMessageBody;
+            set => workspace.directMessageBody = value ?? string.Empty;
+        }
+
+        public IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments => workspace.DirectMessageAssignments;
+
+        public IReadOnlyList<ProcessDirectMessageThreadViewModel> DirectMessageThreads => workspace.directMessageThreads;
+
+        public bool CanSendDirectMessage
+            => workspace.selectedRunId.HasValue &&
+               DirectMessageAssignments.Count >= 2 &&
+               DirectMessageSourceRoleRequirementId.HasValue &&
+               DirectMessageTargetRoleRequirementId.HasValue &&
+               DirectMessageSourceRoleRequirementId != DirectMessageTargetRoleRequirementId &&
+               !string.IsNullOrWhiteSpace(DirectMessageBody);
+
         public void CaptureWorkbench(CanvasWorkbench? workbench)
         {
             workspace.workbenchRef = workbench;
@@ -559,6 +595,16 @@ public partial class ProcessWorkspace
         public Task ResolveSelectedAssignmentAsync()
         {
             return workspace.ResolveSelectedAssignmentAsync();
+        }
+
+        public string BuildDirectMessageAssignmentLabel(ProcessRunAssignmentViewModel assignment)
+        {
+            return workspace.BuildDirectMessageAssignmentLabel(assignment);
+        }
+
+        public Task SendDirectMessageAsync()
+        {
+            return workspace.SendDirectMessageAsync();
         }
 
         public Task RecordArtifactAsync()

@@ -83,7 +83,8 @@ public sealed partial class ProcessesService {
                 item.SourceRegistryKey,
                 item.SnapshotSummary,
                 item.IsFallback,
-                item.IsCapabilityGap))
+                item.IsCapabilityGap,
+                item.AllowsDirectMessaging))
             .ToListAsync(cancellationToken);
     }
 

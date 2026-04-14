@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Closed`
 
 ## Objective
 
@@ -21,14 +21,14 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessCanvasCatalog.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessCanvasSurfaceFactory.Links.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Links.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessCanvasCatalog.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessCanvasSurfaceFactory.Links.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Links.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
 
 ## Deliverables
 
@@ -98,3 +98,38 @@ Implement only subbundle 03.
 
 Add process-owned Messaging links to the canvas and a runtime authorizer that blocks any direct role-to-role communication without explicit policy. Persist allowed messages into Collaboration and audit denied attempts. Prove both allowed and denied paths.
 ```
+
+## Execution Result
+
+- Persistent role-to-role Messaging policies were added to process definition storage plus SQLite and PostgreSQL migrations.
+- Definition-canvas link creation and deletion now persist Messaging links and classify them with the dedicated Messaging category and ports.
+- Runtime direct messaging now enforces the effective permission intersection of process policy, run-assignment direct-messaging permission, and governance state.
+- Allowed direct messages project into Collaboration and reappear as run-scoped transcript evidence.
+- Denied direct messages create durable rejected decision evidence plus conformance observations instead of silently falling back.
+
+## Validation Result
+
+- `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj`
+- `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~Steps_canvas_connection_actions_create_and_delete_messaging_links_and_classify_them_visually"`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~SendDirectMessageAsync"`
+- Live SQLite runtime verification against `C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db` confirmed the direct-messaging migration and policy tables before browser proof.
+- Playwright MCP on `http://127.0.0.1:5502/processes` created and published a real Messaging link on `Customer onboarding orchestration` v4, started the run `Messaging policy proof 2026-04-14`, recorded an allowed direct message, and verified the denied reverse-direction evidence.
+
+## Browser Proof
+
+- Canvas proof: `C:\repositories\CanDoItAll\agentframework-full-integration\reviews\artifacts\sb03-processes-messaging-canvas.png`
+- Transcript proof: `C:\repositories\CanDoItAll\agentframework-full-integration\reviews\artifacts\sb03-processes-messaging-runtime.png`
+- Denied-path proof: `C:\repositories\CanDoItAll\agentframework-full-integration\reviews\artifacts\sb03-processes-messaging-runtime-conformance.png`
+
+## Closure Decision
+
+- Entry gate: `Prepared`
+- Closure gate: `Closed on 2026-04-14`
+- Progression result: `Passed`
+- Downstream dependency note: `Launch-planning and orchestration phases may now consume process-owned direct-messaging policy, transcript projection, and denied-path audit evidence without reopening subbundle 03.`
+
+## Residual Risk
+
+- The live runtime assignment editor and direct-message selectors still render `Unknown role` for run-scoped assignments created from the v4 published definition even though transcript and conformance evidence resolve the role names correctly. Policy enforcement is correct, but the role-label projection should be cleaned up in a downstream UI-focused phase instead of being silently ignored.
+

@@ -12,4 +12,5 @@ public sealed record ProcessWorkspaceRunDetails(
     IReadOnlyList<ProcessArtifactViewModel> Artifacts,
     IReadOnlyList<ProcessRunAssignmentViewModel> Assignments,
     IReadOnlyList<ProcessWorkBriefViewModel> WorkBriefs,
-    IReadOnlyList<ProcessConformanceObservationViewModel> ConformanceObservations);
+    IReadOnlyList<ProcessConformanceObservationViewModel> ConformanceObservations,
+    IReadOnlyList<ProcessDirectMessageThreadViewModel> DirectMessageThreads);

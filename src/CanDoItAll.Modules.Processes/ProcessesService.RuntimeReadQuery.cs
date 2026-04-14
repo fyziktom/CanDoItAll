@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -272,6 +273,7 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
         var assignments = await ListAssignmentsAsync(dbContext, runId, cancellationToken);
         var workBriefs = await ListWorkBriefsAsync(dbContext, runId, cancellationToken);
         var conformanceObservations = await ListConformanceObservationsAsync(dbContext, runId, cancellationToken);
+        var directMessageThreads = await ListDirectMessageThreadsAsync(dbContext, runId, cancellationToken);
 
         return new ProcessWorkspaceRunDetails(
             stepRuns,
@@ -279,7 +281,8 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
             artifacts,
             assignments,
             workBriefs,
-            conformanceObservations);
+            conformanceObservations,
+            directMessageThreads);
     }
 
     public async Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
@@ -468,7 +471,8 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
                 item.SourceRegistryKey,
                 item.SnapshotSummary,
                 item.IsFallback,
-                item.IsCapabilityGap))
+                item.IsCapabilityGap,
+                item.AllowsDirectMessaging))
             .ToListAsync(cancellationToken);
     }
 
@@ -518,6 +522,97 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
             .ToList();
     }
 
+    private static async Task<IReadOnlyList<ProcessDirectMessageThreadViewModel>> ListDirectMessageThreadsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var threads = await dbContext.Set<CollaborationThreadRecord>()
+            .Where(item => item.ContextKind == CollaborationContextKind.ProcessRun && item.ContextId == runId)
+            .Select(item => new ProcessDirectMessageThreadProjection(
+                item.Id,
+                item.Subject,
+                item.LastActivityAtUtc))
+            .ToListAsync(cancellationToken);
+        if (threads.Count == 0)
+        {
+            return [];
+        }
+
+        var threadIds = threads
+            .Select(item => item.ThreadId)
+            .ToArray();
+        var inboxItems = await dbContext.Set<CollaborationInboxItemRecord>()
+            .Where(item => threadIds.Contains(item.ThreadId))
+            .Select(item => new ProcessDirectMessageInboxProjection(
+                item.ThreadId,
+                item.Route,
+                item.UnreadCount))
+            .ToListAsync(cancellationToken);
+        var participants = await dbContext.Set<CollaborationParticipantRecord>()
+            .Where(item => threadIds.Contains(item.ThreadId) && item.ParticipantKind == CollaborationParticipantKind.Role)
+            .Select(item => new ProcessDirectMessageParticipantProjection(
+                item.ThreadId,
+                item.DisplayName))
+            .ToListAsync(cancellationToken);
+        var messages = await dbContext.Set<CollaborationMessageRecord>()
+            .Where(item => threadIds.Contains(item.ThreadId))
+            .Select(item => new ProcessDirectMessageMessageProjection(
+                item.ThreadId,
+                item.Id,
+                item.Kind,
+                item.AuthorName,
+                item.Body,
+                item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        var inboxByThreadId = inboxItems.ToDictionary(item => item.ThreadId);
+        var participantsByThreadId = participants
+            .GroupBy(item => item.ThreadId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => item.DisplayName)
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                    .ToList());
+        var messagesByThreadId = messages
+            .GroupBy(item => item.ThreadId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => new ProcessDirectMessageEntryViewModel(
+                        item.MessageId,
+                        item.MessageKind,
+                        item.AuthorName,
+                        item.Body,
+                        item.CreatedAtUtc))
+                    .ToList());
+
+        return threads
+            .OrderByDescending(item => item.LastActivityAtUtc)
+            .Where(item => participantsByThreadId.ContainsKey(item.ThreadId))
+            .Select(item =>
+            {
+                var roleLabels = participantsByThreadId[item.ThreadId];
+                var threadMessages = (messagesByThreadId.GetValueOrDefault(item.ThreadId) ?? [])
+                    .OrderBy(message => message.CreatedAtUtc)
+                    .ToList();
+                inboxByThreadId.TryGetValue(item.ThreadId, out var inbox);
+                return new ProcessDirectMessageThreadViewModel(
+                    item.ThreadId,
+                    item.Subject,
+                    inbox?.Route ?? string.Empty,
+                    roleLabels.Count == 0 ? "Process roles" : string.Join(" / ", roleLabels),
+                    threadMessages.Count,
+                    inbox?.UnreadCount ?? 0,
+                    item.LastActivityAtUtc,
+                    threadMessages);
+            })
+            .ToList();
+    }
+
     private sealed record ProcessRunListProjection(
         Guid Id,
         Guid ProcessDefinitionId,
@@ -564,4 +659,26 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
         int TouchMinutes,
         int BlockedMinutes,
         ProcessCapabilityGapSeverity CapabilityGapSeverity);
+
+    private sealed record ProcessDirectMessageThreadProjection(
+        Guid ThreadId,
+        string Subject,
+        DateTimeOffset LastActivityAtUtc);
+
+    private sealed record ProcessDirectMessageInboxProjection(
+        Guid ThreadId,
+        string Route,
+        int UnreadCount);
+
+    private sealed record ProcessDirectMessageParticipantProjection(
+        Guid ThreadId,
+        string DisplayName);
+
+    private sealed record ProcessDirectMessageMessageProjection(
+        Guid ThreadId,
+        Guid MessageId,
+        CollaborationMessageKind MessageKind,
+        string AuthorName,
+        string Body,
+        DateTimeOffset CreatedAtUtc);
 }

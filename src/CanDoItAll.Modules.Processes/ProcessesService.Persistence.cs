@@ -158,6 +158,9 @@ public sealed partial class ProcessesService
         var existingRoleSkills = await dbContext.Set<ProcessRoleSkillRequirement>()
             .Where(item => existingRoleIds.Contains(item.RoleRequirementId))
             .ToListAsync(cancellationToken);
+        var existingMessagingPolicies = await dbContext.Set<ProcessRoleMessagingPolicyDefinition>()
+            .Where(item => item.ProcessDefinitionVersionId == workingVersionId)
+            .ToListAsync(cancellationToken);
         var existingDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
             .Where(item => existingStepIds.Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
@@ -177,6 +180,7 @@ public sealed partial class ProcessesService
         var rolesById = existingRoles.ToDictionary(item => item.Id);
         var stepsById = existingSteps.ToDictionary(item => item.Id);
         var roleSkillsById = existingRoleSkills.ToDictionary(item => item.Id);
+        var messagingPoliciesById = existingMessagingPolicies.ToDictionary(item => item.Id);
         var dependenciesById = existingDependencies.ToDictionary(item => item.Id);
         var assignmentsById = existingAssignments.ToDictionary(item => item.Id);
         var artifactExpectationsById = existingArtifactExpectations.ToDictionary(item => item.Id);
@@ -206,6 +210,7 @@ public sealed partial class ProcessesService
         var artifactExpectationIdMap = new Dictionary<Guid, Guid>();
 
         var assignedRoleIds = new HashSet<Guid>();
+        var assignedMessagingPolicyIds = new HashSet<Guid>();
         var assignedStepIds = new HashSet<Guid>();
         var assignedBranchOutcomeIds = new HashSet<Guid>();
         var assignedDependencyIds = new HashSet<Guid>();
@@ -215,6 +220,7 @@ public sealed partial class ProcessesService
 
         var retainedRoleIds = new HashSet<Guid>();
         var retainedRoleSkillIds = new HashSet<Guid>();
+        var retainedMessagingPolicyIds = new HashSet<Guid>();
         var retainedStepIds = new HashSet<Guid>();
         var retainedBranchOutcomeIds = new HashSet<Guid>();
         var retainedDependencyIds = new HashSet<Guid>();
@@ -292,6 +298,61 @@ public sealed partial class ProcessesService
 
                 retainedRoleSkillIds.Add(existingRoleSkill.Id);
             }
+        }
+
+        var existingMessagingPoliciesByShape = existingMessagingPolicies
+            .GroupBy(item => (item.SourceRoleRequirementId, item.TargetRoleRequirementId))
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        for (var index = 0; index < model.MessagingPolicies.Count; index++) {
+            var messagingPolicyModel = model.MessagingPolicies[index];
+            if (!messagingPolicyModel.SourceRoleRequirementId.HasValue ||
+                !messagingPolicyModel.TargetRoleRequirementId.HasValue ||
+                messagingPolicyModel.SourceRoleRequirementId.Value == Guid.Empty ||
+                messagingPolicyModel.TargetRoleRequirementId.Value == Guid.Empty) {
+                continue;
+            }
+
+            var sourceRoleId = roleIdMap.TryGetValue(messagingPolicyModel.SourceRoleRequirementId.Value, out var remappedSourceRoleId)
+                ? remappedSourceRoleId
+                : messagingPolicyModel.SourceRoleRequirementId.Value;
+            var targetRoleId = roleIdMap.TryGetValue(messagingPolicyModel.TargetRoleRequirementId.Value, out var remappedTargetRoleId)
+                ? remappedTargetRoleId
+                : messagingPolicyModel.TargetRoleRequirementId.Value;
+            if (!rolesById.ContainsKey(sourceRoleId) || !rolesById.ContainsKey(targetRoleId)) {
+                throw new InvalidOperationException("Messaging policy references a role that could not be resolved during save.");
+            }
+
+            ProcessRoleMessagingPolicyDefinition? messagingPolicy = null;
+            var requestedMessagingPolicyId = ResolveStableChildId(
+                messagingPolicyModel.Id,
+                assignedMessagingPolicyIds,
+                "messaging policy");
+            if (messagingPolicyModel.Id.HasValue &&
+                messagingPolicyModel.Id.Value != Guid.Empty &&
+                messagingPoliciesById.TryGetValue(requestedMessagingPolicyId, out var existingMessagingPolicy)) {
+                messagingPolicy = existingMessagingPolicy;
+            } else if ((!messagingPolicyModel.Id.HasValue || messagingPolicyModel.Id.Value == Guid.Empty) &&
+                       existingMessagingPoliciesByShape.TryGetValue((sourceRoleId, targetRoleId), out var matchingPolicies)) {
+                messagingPolicy = matchingPolicies.FirstOrDefault(candidate => !retainedMessagingPolicyIds.Contains(candidate.Id));
+            }
+
+            if (messagingPolicy is null) {
+                messagingPolicy = new ProcessRoleMessagingPolicyDefinition {
+                    Id = requestedMessagingPolicyId
+                };
+
+                await dbContext.Set<ProcessRoleMessagingPolicyDefinition>().AddAsync(messagingPolicy, cancellationToken);
+                existingMessagingPolicies.Add(messagingPolicy);
+                messagingPoliciesById[messagingPolicy.Id] = messagingPolicy;
+            }
+
+            messagingPolicy.ProcessDefinitionVersionId = workingVersionId;
+            messagingPolicy.SourceRoleRequirementId = sourceRoleId;
+            messagingPolicy.TargetRoleRequirementId = targetRoleId;
+            messagingPolicy.DisplayOrder = index;
+
+            retainedMessagingPolicyIds.Add(messagingPolicy.Id);
         }
 
         var resolvedSteps = new List<(Guid StepId, bool ReusesExistingEntity, ProcessStepDefinition Entity, ProcessStepEditorModel Model, IReadOnlyList<ProcessStepDependencyEditorModel> Dependencies)>(model.Steps.Count);
@@ -655,6 +716,7 @@ public sealed partial class ProcessesService
         dbContext.RemoveRange(existingDependencies.Where(item => !retainedDependencyIds.Contains(item.Id)).ToList());
         dbContext.RemoveRange(existingBranchOutcomes.Where(item => !retainedBranchOutcomeIds.Contains(item.Id)).ToList());
         dbContext.RemoveRange(existingArtifactExpectations.Where(item => !retainedArtifactExpectationIds.Contains(item.Id)).ToList());
+        dbContext.RemoveRange(existingMessagingPolicies.Where(item => !retainedMessagingPolicyIds.Contains(item.Id)).ToList());
         dbContext.RemoveRange(existingRoleSkills.Where(item => !retainedRoleSkillIds.Contains(item.Id)).ToList());
         dbContext.RemoveRange(existingSteps.Where(item => !retainedStepIds.Contains(item.Id)).ToList());
         dbContext.RemoveRange(existingRoles.Where(item => !retainedRoleIds.Contains(item.Id)).ToList());

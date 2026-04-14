@@ -21,12 +21,12 @@
 
 ## Exact Source References
 
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Hosting/ScenarioHarnessSupport.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/StaffingFlowTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Hosting/ScenarioHarnessSupport.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/StaffingFlowTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs
 
 ## Deliverables
 
@@ -96,3 +96,4 @@ Implement only subbundle 11.
 
 Run real end-to-end validation using the actual integrated scenario harness and the new process-centric scenarios. Respect the current SC01–SC08 inventory, add SC09–SC11, and capture real run/artifact/screenshot evidence. No fake shortcuts are allowed.
 ```
+

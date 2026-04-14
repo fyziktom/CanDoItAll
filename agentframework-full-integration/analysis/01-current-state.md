@@ -4,19 +4,20 @@
 
 ### CanDoItAll
 
-- Solution root: `/mnt/data/work/cando/CanDoItAll-development/CanDoItAll.slnx`
-- Web composition root: `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Program.cs`
-- Module registry: `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Composition/ModuleAssemblies.cs`
-- Shell navigation: `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Composition/ShellNavigation.cs`
+- Solution root: `C:\repositories\CanDoItAll/CanDoItAll.slnx`
+- Web composition root: `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- Module registry: `C:\repositories\CanDoItAll/src/CanDoItAll.Composition/ModuleAssemblies.cs`
+- Shell navigation: `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Composition/ShellNavigation.cs`
 
 CanDoItAll dnes registruje moduly `Security`, `Workspace`, `Projects`, `Workbench`, `Resources`, `Prompts`, `Factory`, `Processes`, `Validation`, `TestLab`, `Activity`, `Automation` a `CrmHr`. Samostatný agent module ani collaboration module zatím neexistují.
+Shell navigation dnes nabízí pouze `/`, `/projects`, `/processes`, `/crm-hr`, `/resources`, `/prompt-gallery`, `/prompt-factory`, `/validation`, `/test-lab`, `/activity`, `/automation` a `/settings`. Route `/agents` ani `/collaboration` zatím nejsou součástí hlavního shellu.
 
 ### AgentFramework
 
-- Solution root: `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/CanDoItAll.AgentFramework.sln`
-- Main hosting registration: `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs`
-- Scenario harness: `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Hosting/ScenarioHarnessSupport.cs`
-- Sandbox pages: `/mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages`
+- Solution root: `C:\repositories\CanDoItAll.AgentFramework/CanDoItAll.AgentFramework.sln`
+- Main hosting registration: `C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs`
+- Scenario harness: `C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Hosting/ScenarioHarnessSupport.cs`
+- Sandbox pages: `C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages`
 
 AgentFramework je dnes navržený jako separátní sandbox host se svými providers, agents, chatem, capabilities, memory a scenario harness UI.
 
@@ -24,14 +25,14 @@ AgentFramework je dnes navržený jako separátní sandbox host se svými provid
 
 | Concern | Existing surface | Evidence | Practical implication |
 | --- | --- | --- | --- |
-| Provider persistence | `Workspace.ProviderProfile` + `SecretService` | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs`, `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Security/SecurityModels.cs` | Master data a secret ownership už existují a nemají se duplikovat. |
-| Provider runtime | `ProviderRegistry`, `OpenAiProviderAdapter`, `OllamaProviderAdapter` | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs` | Tato vrstva se překrývá s AgentFramework runtime a musí být retirená nebo shimnutá. |
-| Durable messaging transport | Automation envelopes, dispatcher, retries, dead-letter | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs` | Skvělý backplane pro outbox/inbox transport, ale ne pro user-facing conversation store. |
-| Activity / audit projection | `IActivityStream` + Activity module | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.SharedKernel/ActivityStream.cs`, `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Activity/ActivityModels.cs` | Lze použít pro projection a audit, ale ne jako canonical notification center. |
-| Resource pool | Parties, project assignments, AI agent profiles, staffing requests | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs`, `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs` | CRM-HR už nese resource foundations, takže nesmí vzniknout druhý resource registry v AgentFrameworku. |
-| Process role model | Roles, steps, responsibilities, runtime assignments | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs`, `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs` | Process module už zná role a run assignments, ale neumí launch planning ani messaging policy. |
-| Durable process boundary | `ProcessOutboxService` + worker | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs` | Ideální boundary pro asynchronní spuštění agent runs a artifact propagation. |
-| Existing executor seam | `IProcessExecutorRegistryBridge` | `/mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs` | Už existuje místo, kam se dá napojit agent/resource katalog, ale zatím je to no-op. |
+| Provider persistence | `Workspace.ProviderProfile` + `SecretService` | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs`, `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Security/SecurityModels.cs` | Master data a secret ownership už existují a nemají se duplikovat. |
+| Provider runtime | `ProviderRegistry`, `OpenAiProviderAdapter`, `OllamaProviderAdapter` | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs` | Tato vrstva se překrývá s AgentFramework runtime a musí být retirená nebo shimnutá. |
+| Durable messaging transport | Automation envelopes, dispatcher, retries, dead-letter | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs` | Skvělý backplane pro outbox/inbox transport, ale ne pro user-facing conversation store. |
+| Activity / audit projection | `IActivityStream` + Activity module | `C:\repositories\CanDoItAll/src/CanDoItAll.SharedKernel/ActivityStream.cs`, `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Activity/ActivityModels.cs` | Lze použít pro projection a audit, ale ne jako canonical notification center. |
+| Resource pool | Parties, project assignments, AI agent profiles, staffing requests | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs`, `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs` | CRM-HR už nese resource foundations, takže nesmí vzniknout druhý resource registry v AgentFrameworku. |
+| Process role model | Roles, steps, responsibilities, runtime assignments | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs`, `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs` | Process module už zná role a run assignments, ale neumí launch planning ani messaging policy. |
+| Durable process boundary | `ProcessOutboxService` + worker | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs` | Ideální boundary pro asynchronní spuštění agent runs a artifact propagation. |
+| Existing executor seam | `IProcessExecutorRegistryBridge` | `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs` | Už existuje místo, kam se dá napojit agent/resource katalog, ale zatím je to no-op. |
 
 ## CRM-HR Findings
 
@@ -41,6 +42,7 @@ AgentFramework je dnes navržený jako separátní sandbox host se svými provid
 - `ProjectPartyAssignment` jako mixed resource binding pro projekty (`AiAgent`, `Manager`, `TeamMember`, ...).
 - `StaffingRequest` jako obecná demand entity pro projektové staffing.
 - UI route `/crm-hr/agents` s quick-create AI agent party flow a profile editingem.
+- Reálné test coverage pro současný CRM-HR agent surface už existuje v `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\AiAgentsPageTests.cs`, `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\AiAgentProfileIntegrationTests.cs` a `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\AiAgentFlowTests.cs`.
 
 ### Why it matters
 
@@ -65,6 +67,7 @@ CRM-HR dnes **už** funguje jako resource/business registry. Technická agent de
 - rozjede outbox.
 
 To je výrazně méně než požadovaný flow `request resources -> HR recommendation -> manager/human approval -> provisioning -> actual run start`.
+UI na `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs` stále volá `ProcessesService.StartRunAsync(...)` přímo ze shell akce `StartRunAsync()`, takže launch-plan gate dnes neexistuje ani na aplikační, ani na UI vrstvě.
 
 ## AgentFramework Findings
 
@@ -111,6 +114,7 @@ To je výrazně méně než požadovaný flow `request resources -> HR recommend
 
 Repo už obsahuje dost stavebních bloků na čistou integraci, ale neobsahuje hotové end-to-end řešení. Nejsilnější foundation je v `Processes`, `CRM-HR`, `Automation`, `Activity`, `Security` a shell composition. Nejslabší místa jsou:
 - chybějící Collaboration modul,
+- chybějící `/agents` a `/collaboration` shell routes,
 - split provider ownership,
 - split business vs technical agent model,
 - sandbox-based workspace scoping,
@@ -119,3 +123,4 @@ Repo už obsahuje dost stavebních bloků na čistou integraci, ale neobsahuje h
 - a chybějící reálný integrated scenario validation plan.
 
 Tahle bundle proto neřeší jen „přidat modul“, ale definuje controlled migration programu, který minimalizuje architektonický dluh.
+

@@ -2,13 +2,14 @@
 
 ## Status
 
-- `Ready`
+- `Ready; current repo still starts runs directly without a launch plan`
 
 ## Objective
 
 - Změnit start procesu z okamžitého `Active` runu na staged launch/staffing flow.
 - Vytvořit HR recommendation pipeline pro existing resources i new-agent proposals.
 - Zajistit, že systém funguje i bez AI provideru přes defaultní rule-based HR a Main Manager strategie.
+- Navázat nové process-owned launch flow na už existující CRM-HR staffing foundations místo vytváření druhého demand modelu.
 
 ## Covered Inputs
 
@@ -21,16 +22,16 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/Components/StaffingRequestEditor.razor
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/StaffingFlowTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/Components/StaffingRequestEditor.razor
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/StaffingFlowTests.cs
 
 ## Deliverables
 
@@ -53,7 +54,7 @@
 
 1. Navrhnout `ProcessLaunchPlan` a navázané role/candidate/provisioning entity.
 2. Rozšířit process start API/UI tak, aby nejprve vytvořil launch plan místo `Active` runu.
-3. Implementovat HR recommendation bridge, který využívá CRM-HR resource pool, project assignments a AgentFramework templates/definitions.
+3. Implementovat HR recommendation bridge, který využívá existující CRM-HR resource pool, staffing request/candidate search foundations, project assignments a AgentFramework templates/definitions.
 4. Implementovat default rule-based fallback strategii pro případ, že není AI provider nebo není HR AI agent configured.
 5. Zobrazit candidate list, scoring a creation proposals v launch UI.
 
@@ -100,3 +101,4 @@ Implement only subbundle 07.
 
 Introduce a staged process launch plan with HR recommendations and a mandatory rule-based fallback strategy. Starting a process must no longer create an active run immediately. Prove candidate selection, creation proposals and blocked early-run behavior.
 ```
+

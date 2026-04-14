@@ -65,6 +65,27 @@ internal sealed class ProcessDefinitionDraftCloneEngine
                 cancellationToken);
         }
 
+        foreach (var messagingPolicy in source.MessagingPolicies.OrderBy(item => item.DisplayOrder)) {
+            if (!roleIdMap.TryGetValue(messagingPolicy.SourceRoleRequirementId, out var nextSourceRoleId)) {
+                throw new InvalidOperationException(
+                    $"Messaging policy '{messagingPolicy.Id:D}' references missing source role '{messagingPolicy.SourceRoleRequirementId:D}' during draft clone.");
+            }
+
+            if (!roleIdMap.TryGetValue(messagingPolicy.TargetRoleRequirementId, out var nextTargetRoleId)) {
+                throw new InvalidOperationException(
+                    $"Messaging policy '{messagingPolicy.Id:D}' references missing target role '{messagingPolicy.TargetRoleRequirementId:D}' during draft clone.");
+            }
+
+            await dbContext.Set<ProcessRoleMessagingPolicyDefinition>().AddAsync(
+                new ProcessRoleMessagingPolicyDefinition {
+                    ProcessDefinitionVersionId = nextDraft.Id,
+                    SourceRoleRequirementId = nextSourceRoleId,
+                    TargetRoleRequirementId = nextTargetRoleId,
+                    DisplayOrder = messagingPolicy.DisplayOrder
+                },
+                cancellationToken);
+        }
+
         foreach (var step in source.Steps.OrderBy(item => item.OrderIndex)) {
             Guid? decisionRoleRequirementId = null;
             if (step.DecisionRoleRequirementId.HasValue) {
@@ -228,6 +249,7 @@ internal sealed class ProcessDefinitionDraftCloneEngine
 internal sealed record ProcessDefinitionDraftCloneSource(
     IReadOnlyList<ProcessRoleRequirement> Roles,
     IReadOnlyList<ProcessRoleSkillRequirement> RoleSkills,
+    IReadOnlyList<ProcessRoleMessagingPolicyDefinition> MessagingPolicies,
     IReadOnlyList<ProcessStepDefinition> Steps,
     IReadOnlyList<ProcessStepRoleAssignmentRequirement> StepRoleRequirements,
     IReadOnlyList<ProcessStepBranchOutcomeDefinition> BranchOutcomes,

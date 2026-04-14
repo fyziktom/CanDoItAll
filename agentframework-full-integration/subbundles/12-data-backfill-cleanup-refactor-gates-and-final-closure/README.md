@@ -21,12 +21,12 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs
 
 ## Deliverables
 
@@ -96,3 +96,4 @@ Implement only subbundle 12.
 
 Finish migrations, backfill and cleanup, then perform the final closure review. Verify story coverage against the real UI, remove legacy duplicate paths, populate the execution report fully, and close from QA, development manager and architect perspectives.
 ```
+

@@ -95,7 +95,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string assignmentExecutorKind = "person";
     private string assignmentBindingReason = string.Empty;
     private bool assignmentIsFallback;
+    private bool assignmentAllowsDirectMessaging = true;
+    private Guid? directMessageSourceRoleRequirementId;
+    private Guid? directMessageTargetRoleRequirementId;
+    private string directMessageBody = string.Empty;
     private Dictionary<Guid, Guid?> runtimeBranchOutcomeSelections = [];
+    private IReadOnlyList<ProcessDirectMessageThreadViewModel> directMessageThreads = [];
     private string exportJson = string.Empty;
     private string importJson = string.Empty;
     private string projectName = string.Empty;
@@ -129,6 +134,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         => selectedAssignmentId.HasValue
             ? assignments.FirstOrDefault(item => item.Id == selectedAssignmentId.Value)
             : null;
+
+    private IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments
+        => assignments
+            .Where(item => !item.StepDefinitionId.HasValue)
+            .OrderBy(item => ResolveRoleName(item.RoleRequirementId), StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private string PageEyebrow
         => ProjectId.HasValue
@@ -247,8 +258,13 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
             assignments = [];
             workBriefs = [];
             conformanceObservations = [];
+            directMessageThreads = [];
             selectedAssignmentId = null;
             artifactStepRunId = null;
+            assignmentAllowsDirectMessaging = true;
+            directMessageSourceRoleRequirementId = null;
+            directMessageTargetRoleRequirementId = null;
+            directMessageBody = string.Empty;
             return;
         }
 
@@ -259,6 +275,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         assignments = runDetails.Assignments;
         workBriefs = runDetails.WorkBriefs;
         conformanceObservations = runDetails.ConformanceObservations;
+        directMessageThreads = runDetails.DirectMessageThreads;
         var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
         foreach (var stepRun in stepRuns) {
             runtimeBranchOutcomeSelections.TryGetValue(stepRun.Id, out var selectedBranchOutcomeId);
@@ -278,6 +295,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         }
 
         ApplyAssignmentSelection();
+        SynchronizeDirectMessagingComposer();
 
         if (!artifactStepRunId.HasValue || stepRuns.All(item => item.Id != artifactStepRunId.Value))
         {

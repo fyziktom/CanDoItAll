@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Ready; current shell still has no /agents route`
 
 ## Objective
 
@@ -21,20 +21,20 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Composition/ShellNavigation.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Components/Layout/MainLayout.razor
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Home.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Agents.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Providers.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Chat.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Capabilities.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Memory.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/IntegrationMap.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Hosting.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/ScenarioHarness.razor
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Web/Composition/ShellNavigation.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Web/Components/Layout/MainLayout.razor
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Home.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Agents.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Providers.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Chat.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Capabilities.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Memory.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/IntegrationMap.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Hosting.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/ScenarioHarness.razor
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs
 
 ## Deliverables
 
@@ -104,3 +104,4 @@ Implement only subbundle 10.
 
 Recompose the AgentFramework sandbox experience into a single `/agents` module inside the CanDoItAll shell, with internal tabs and deep links from CRM-HR and Processes. Remove or redirect duplicate old surfaces and prove desktop-quality UX.
 ```
+

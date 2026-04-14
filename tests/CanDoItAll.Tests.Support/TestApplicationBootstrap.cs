@@ -4,7 +4,9 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Activity;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
@@ -72,7 +74,9 @@ public static class TestApplicationBootstrap
         services.AddValidationModule();
         services.AddTestLabModule();
         services.AddActivityModule();
+        services.AddAgentFrameworkModule();
         services.AddAutomationModule();
+        services.AddCollaborationModule();
         services.AddCrmHrModule();
     }
 

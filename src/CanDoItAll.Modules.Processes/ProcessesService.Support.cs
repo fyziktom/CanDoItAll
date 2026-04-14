@@ -33,6 +33,33 @@ public sealed partial class ProcessesService
             return Error.Validation("Every step requires a title.", "processes.step-title-required");
         }
 
+        var roleIds = model.Roles
+            .Where(role => role.Id.HasValue && role.Id.Value != Guid.Empty)
+            .Select(role => role.Id!.Value)
+            .ToHashSet();
+        var duplicateMessagingPolicy = model.MessagingPolicies
+            .Where(item => item.SourceRoleRequirementId.HasValue && item.TargetRoleRequirementId.HasValue)
+            .GroupBy(item => (item.SourceRoleRequirementId!.Value, item.TargetRoleRequirementId!.Value))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateMessagingPolicy is not null) {
+            return Error.Validation("Messaging policy links must remain unique per source and target role pair.", "processes.messaging-policy-duplicate");
+        }
+
+        foreach (var messagingPolicy in model.MessagingPolicies) {
+            if (!messagingPolicy.SourceRoleRequirementId.HasValue || !messagingPolicy.TargetRoleRequirementId.HasValue) {
+                return Error.Validation("Messaging policy links must resolve both the source and target process role.", "processes.messaging-policy-role-required");
+            }
+
+            if (messagingPolicy.SourceRoleRequirementId == messagingPolicy.TargetRoleRequirementId) {
+                return Error.Validation("Messaging policy links cannot target the same role as both source and destination.", "processes.messaging-policy-self-reference");
+            }
+
+            if (!roleIds.Contains(messagingPolicy.SourceRoleRequirementId.Value) ||
+                !roleIds.Contains(messagingPolicy.TargetRoleRequirementId.Value)) {
+                return Error.Validation("Messaging policy links must reference roles in the same process definition.", "processes.messaging-policy-role-invalid");
+            }
+        }
+
         var stepsById = model.Steps
             .Where(step => step.Id.HasValue)
             .ToDictionary(step => step.Id!.Value);
@@ -211,6 +238,7 @@ public sealed partial class ProcessesService
         ProcessDefinition definition,
         ProcessDefinitionVersion version,
         IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessRoleMessagingPolicyDefinition> messagingPolicies,
         IReadOnlyList<ProcessStepDefinition> steps,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
         IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes,
@@ -228,6 +256,11 @@ public sealed partial class ProcessesService
 
         if (roles.Count == 0 || steps.Count == 0) {
             return Error.Validation("Publishing requires at least one role and one step.", "processes.publish-shape-required");
+        }
+
+        var publishMessagingPolicyError = ValidatePublishMessagingPolicies(roles, messagingPolicies);
+        if (publishMessagingPolicyError is not null) {
+            return publishMessagingPolicyError;
         }
 
         if (steps.Any(step => !stepRoleRequirements.Any(requirement => requirement.StepDefinitionId == step.Id))) {
@@ -319,6 +352,37 @@ public sealed partial class ProcessesService
                         $"Branch outcome '{branchOutcome.Title}' on process '{definition.Name}' is not routed to any downstream step.",
                         "processes.publish-branch-outcome-unused");
                 }
+            }
+        }
+
+        return null;
+    }
+
+    private static Error? ValidatePublishMessagingPolicies(
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessRoleMessagingPolicyDefinition> messagingPolicies) {
+        if (messagingPolicies.Count == 0) {
+            return null;
+        }
+
+        var roleIds = roles
+            .Select(role => role.Id)
+            .ToHashSet();
+        var duplicatePolicy = messagingPolicies
+            .GroupBy(item => (item.SourceRoleRequirementId, item.TargetRoleRequirementId))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicatePolicy is not null) {
+            return Error.Validation("Publishing requires messaging policy links to remain unique per source and target role pair.", "processes.publish-messaging-policy-duplicate");
+        }
+
+        foreach (var messagingPolicy in messagingPolicies) {
+            if (messagingPolicy.SourceRoleRequirementId == messagingPolicy.TargetRoleRequirementId) {
+                return Error.Validation("Publishing requires messaging policy links to connect two distinct roles.", "processes.publish-messaging-policy-self-reference");
+            }
+
+            if (!roleIds.Contains(messagingPolicy.SourceRoleRequirementId) ||
+                !roleIds.Contains(messagingPolicy.TargetRoleRequirementId)) {
+                return Error.Validation("Publishing requires messaging policy links to reference published roles.", "processes.publish-messaging-policy-role-invalid");
             }
         }
 

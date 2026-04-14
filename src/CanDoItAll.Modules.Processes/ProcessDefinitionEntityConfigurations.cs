@@ -108,6 +108,33 @@ internal sealed class ProcessRoleSkillRequirementConfiguration : IEntityTypeConf
     }
 }
 
+internal sealed class ProcessRoleMessagingPolicyDefinitionConfiguration : IEntityTypeConfiguration<ProcessRoleMessagingPolicyDefinition>
+{
+    public void Configure(EntityTypeBuilder<ProcessRoleMessagingPolicyDefinition> builder)
+    {
+        builder.ToTable("Processes_RoleMessagingPolicies");
+        builder.HasKey(item => item.Id);
+        builder.HasIndex(item => new { item.ProcessDefinitionVersionId, item.SourceRoleRequirementId, item.TargetRoleRequirementId })
+            .HasDatabaseName(ProcessPersistenceConstraintNames.DefinitionMessagingPolicyUniqueIndex)
+            .IsUnique();
+        builder.HasIndex(item => new { item.ProcessDefinitionVersionId, item.DisplayOrder });
+        builder.HasIndex(item => item.SourceRoleRequirementId);
+        builder.HasIndex(item => item.TargetRoleRequirementId);
+        builder.HasOne<ProcessDefinitionVersion>()
+            .WithMany()
+            .HasForeignKey(item => item.ProcessDefinitionVersionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessRoleRequirement>()
+            .WithMany()
+            .HasForeignKey(item => item.SourceRoleRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessRoleRequirement>()
+            .WithMany()
+            .HasForeignKey(item => item.TargetRoleRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfiguration<ProcessStepDefinition>
 {
     public void Configure(EntityTypeBuilder<ProcessStepDefinition> builder)

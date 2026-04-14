@@ -37,6 +37,7 @@ public enum ProcessDecisionKind {
     Assignment,
     Approval,
     Escalation,
+    DirectMessage,
     Exception,
     Refusal,
     Autonomy,
@@ -206,6 +207,8 @@ public sealed class ProcessRunAssignment {
     public bool IsFallback { get; set; }
 
     public bool IsCapabilityGap { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; }
 }
 
 public sealed class ProcessWorkBrief {

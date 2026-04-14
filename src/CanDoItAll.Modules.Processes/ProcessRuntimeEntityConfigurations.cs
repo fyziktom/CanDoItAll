@@ -85,6 +85,7 @@ internal sealed class ProcessRunAssignmentConfiguration : IEntityTypeConfigurati
         builder.Property(assignment => assignment.BindingReason).HasColumnType("TEXT");
         builder.Property(assignment => assignment.SourceRegistryKey).HasMaxLength(160);
         builder.Property(assignment => assignment.SnapshotSummary).HasColumnType("TEXT");
+        builder.Property(assignment => assignment.AllowsDirectMessaging).HasDefaultValue(false);
         builder.HasIndex(assignment => new { assignment.ProcessRunId, assignment.RoleRequirementId })
             .IsUnique()
             .HasDatabaseName(ProcessPersistenceConstraintNames.RunAssignmentRunScopedUniqueIndex)

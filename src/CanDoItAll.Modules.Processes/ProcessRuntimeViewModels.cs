@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Collaboration;
+
 namespace CanDoItAll.Modules.Processes;
 
 public sealed record ProcessRunListItem(
@@ -100,7 +102,8 @@ public sealed record ProcessRunAssignmentViewModel(
     string SourceRegistryKey,
     string SnapshotSummary,
     bool IsFallback,
-    bool IsCapabilityGap);
+    bool IsCapabilityGap,
+    bool AllowsDirectMessaging);
 
 public sealed record ProcessWorkBriefViewModel(
     Guid Id,
@@ -123,6 +126,23 @@ public sealed record ProcessConformanceObservationViewModel(
     bool IsSafeNonAction,
     bool ContainsSensitiveAssessment,
     DateTimeOffset CreatedAtUtc);
+
+public sealed record ProcessDirectMessageEntryViewModel(
+    Guid MessageId,
+    CollaborationMessageKind MessageKind,
+    string AuthorName,
+    string Body,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record ProcessDirectMessageThreadViewModel(
+    Guid ThreadId,
+    string Subject,
+    string Route,
+    string ParticipantSummary,
+    int MessageCount,
+    int UnreadCount,
+    DateTimeOffset LastActivityAtUtc,
+    IReadOnlyList<ProcessDirectMessageEntryViewModel> Messages);
 
 public sealed record ProcessImprovementViewModel(
     Guid Id,
@@ -193,6 +213,8 @@ public sealed class ProcessAssignmentResolutionRequest
     public string BindingReason { get; set; } = string.Empty;
 
     public bool IsFallback { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; } = true;
 }
 
 public sealed class ProcessArtifactRecordRequest
@@ -216,5 +238,16 @@ public sealed class ProcessArtifactRecordRequest
     public string ReviewSummary { get; set; } = string.Empty;
 
     public string ManagedStoragePath { get; set; } = string.Empty;
+}
+
+public sealed class ProcessDirectMessageRequest
+{
+    public Guid ProcessRunId { get; set; }
+
+    public Guid SourceRoleRequirementId { get; set; }
+
+    public Guid TargetRoleRequirementId { get; set; }
+
+    public string MessageBody { get; set; } = string.Empty;
 }
 

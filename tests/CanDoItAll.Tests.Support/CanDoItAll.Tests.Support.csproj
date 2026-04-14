@@ -21,7 +21,9 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />

@@ -21,17 +21,17 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.Operations.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeViewModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Infrastructure/Storage/Abstractions/StorageContracts.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.Operations.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeViewModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Storage/Abstractions/StorageContracts.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
 
 ## Deliverables
 
@@ -101,3 +101,4 @@ Implement only subbundle 09.
 
 Wire approved process runs into AgentFramework execution through a durable outbox boundary. Bridge artifacts into managed storage and expose full run observability (assignments, messages, approvals, artifacts) in process detail surfaces.
 ```
+

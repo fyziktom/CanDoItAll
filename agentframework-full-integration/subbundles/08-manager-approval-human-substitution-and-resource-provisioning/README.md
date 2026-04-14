@@ -21,14 +21,14 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/AgentModels.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Models/AgentModels.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/StaffingAllocationIntegrationTests.cs
 
 ## Deliverables
 
@@ -98,3 +98,4 @@ Implement only subbundle 08.
 
 Add Main Manager approval, human substitution and resource provisioning on top of the launch plan. Use Collaboration for inbox/task visibility, support project-specific manager authority, and keep the flow durable and auditable.
 ```
+

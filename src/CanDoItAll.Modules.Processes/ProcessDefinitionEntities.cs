@@ -129,6 +129,19 @@ public sealed class ProcessRoleSkillRequirement
     public int MinimumYearsExperience { get; set; }
 }
 
+public sealed class ProcessRoleMessagingPolicyDefinition
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessDefinitionVersionId { get; set; }
+
+    public Guid SourceRoleRequirementId { get; set; }
+
+    public Guid TargetRoleRequirementId { get; set; }
+
+    public int DisplayOrder { get; set; }
+}
+
 public sealed class ProcessStepDefinition
 {
     public Guid Id { get; set; } = Guid.NewGuid();

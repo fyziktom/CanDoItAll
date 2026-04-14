@@ -1,6 +1,8 @@
 using System.Reflection;
 using CanDoItAll.Modules.Activity;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
@@ -20,7 +22,9 @@ public static class ModuleAssemblies
     public static readonly Assembly[] All =
     [
         typeof(ActivityModuleAssemblyMarker).Assembly,
+        typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
         typeof(AutomationModuleAssemblyMarker).Assembly,
+        typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
         typeof(FactoryModuleAssemblyMarker).Assembly,
         typeof(ProjectsModuleAssemblyMarker).Assembly,

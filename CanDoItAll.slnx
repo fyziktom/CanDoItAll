@@ -18,7 +18,9 @@
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
     <Project Path="src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj" />
     <Project Path="src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj" />
+    <Project Path="src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />
+    <Project Path="src/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
     <Project Path="src/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
     <Project Path="src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />

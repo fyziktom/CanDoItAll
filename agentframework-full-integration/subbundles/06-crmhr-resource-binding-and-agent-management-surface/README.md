@@ -2,13 +2,13 @@
 
 ## Status
 
-- `Ready`
+- `Ready with existing CRM-HR baseline already in place`
 
 ## Objective
 
 - Nechat CRM-HR jako canonical resource pool a zároveň ho propojit s technical agent definitions z AgentFrameworku.
 - Zabránit druhému editable source of truth pro agent runtime pole.
-- Udělat z `/crm-hr/agents` business-facing resource page s controlled technical delegation.
+- Zachovat existující `/crm-hr/agents` business-facing resource page a dovést ji k controlled technical delegation místo paralelního technical editoru.
 
 ## Covered Inputs
 
@@ -21,19 +21,19 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/ProjectStructureAgentAdministrationService.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Components/AiAgentsPageTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
-- /mnt/data/work/cando/CanDoItAll-development/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/ProjectStructureAgentAdministrationService.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/AiAgentsPageTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs
+- C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs
 
 ## Deliverables
 
 - Explicit `AiResourceBinding` model/service between CRM-HR party and AgentFramework technical definition.
-- Updated CRM-HR agents page with combined view model and deep link into `/agents`.
+- Updated CRM-HR agents page with combined view model and připraveným handoff bodem do `/agents`, jakmile nový shell route vznikne.
 - Delegated technical save/load path into AgentFramework facade.
 - Resource lookup/query surfaces that keep AI agents in the same pool as people and contractors.
 
@@ -74,16 +74,16 @@
 
 ## Proof Required
 
-- Component tests pro CRM-HR agents page.
-- Integration tests pro binding save/load/backfill.
-- Playwright proof na `/crm-hr/agents` včetně deep linku do Agents modulu.
+- Component tests pro CRM-HR agents page, ideálně navazující na současné `AiAgentsPageTests`.
+- Integration tests pro binding save/load/backfill, ideálně navazující na současné `AiAgentProfileIntegrationTests`.
+- Playwright proof na `/crm-hr/agents`; deep link do `/agents` je povinný teprve po uzavření subbundle 10.
 - Build proof affected projects.
 
 ## Browser Validation Logging
 
-- Route: `/crm-hr/agents` a následný deep link do `/agents`.
+- Route: `/crm-hr/agents`; deep link do `/agents` validovat pouze pokud route už v dané chvíli existuje.
 - Viewport: `1600x900` a užší pass, pokud detail layout mění split pane.
-- Actions: vybrat AI agent resource, ověřit binding summary, otevřít technical definition, vrátit se zpět.
+- Actions: vybrat AI agent resource, ověřit binding summary, potvrdit business-versus-technical separation a zaznamenat, zda handoff do `/agents` už je nebo ještě není dostupný.
 - Screenshot review: business a technical informace jsou rozlišitelné a nezdvojené.
 
 ## Progression Gate
@@ -98,3 +98,4 @@ Implement only subbundle 06.
 
 Keep CRM-HR as the canonical resource pool and introduce an explicit binding to the technical AgentFramework definitions. Update `/crm-hr/agents` so it remains the business-facing management surface while delegating technical saves to the AgentFramework module.
 ```
+

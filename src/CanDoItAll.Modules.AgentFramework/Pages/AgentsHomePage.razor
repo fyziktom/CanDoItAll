@@ -1,0 +1,108 @@
+@page "/agents"
+@inject NavigationManager Navigation
+
+<PageTitle>Agents</PageTitle>
+
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="AgentFramework"
+                    Title="Integrated agent module foundation"
+                    Description="This route establishes the in-app AgentFramework boundary inside the existing shell. CRM / HR remains the business-facing resource pool until later subbundles move technical ownership and sandbox content here.">
+            <Actions>
+                <Button Text="Open CRM / HR agents"
+                        Click="OpenCrmHrAgents"
+                        data-testid="agents-foundation-open-crmhr" />
+                <Button Text="Open settings"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenSettings"
+                        data-testid="agents-foundation-open-settings" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            <SummaryTiles>
+                <SummaryTile Label="Foundation"
+                             Value="Active"
+                             HelperText="Module registration, shell entry, and route are live."
+                             Tone="success" />
+                <SummaryTile Label="Business registry"
+                             Value="CRM / HR"
+                             HelperText="AI agent parties and current profiles still live in CRM / HR."
+                             Tone="info" />
+                <SummaryTile Label="Planned imports"
+                             Value="6"
+                             HelperText="Providers, chat, capabilities, memory, scenarios, and governance remain future surfaces."
+                             Tone="warning" />
+            </SummaryTiles>
+
+            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                <SurfaceCard>
+                    <p class="cda-eyebrow">Current contract</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">No second shell, no external project reference</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        The new route is only a foundation surface. It intentionally avoids copying the sandbox chrome into CanDoItAll and points users back to the currently canonical business and provider pages until deeper integration lands.
+                    </p>
+
+                    <Stack GapScale="LayoutGap.Small" Class="mt-5">
+                        <div class="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm leading-6 text-slate-700">
+                            CRM / HR remains the current business-facing AI resource registry.
+                        </div>
+                        <div class="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm leading-6 text-slate-700">
+                            Settings remains the current provider-management surface until provider ownership is retired cleanly.
+                        </div>
+                        <div class="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm leading-6 text-slate-700">
+                            Process runtime and collaboration integrations are intentionally deferred to later gated subbundles.
+                        </div>
+                    </Stack>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Planned tabs</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">Future integrated surfaces</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        Later subbundles will replace this placeholder with an internal tab experience that reuses imported AgentFramework content without duplicating shell navigation.
+                    </p>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsSm="2" Class="mt-5">
+                        <Button Text="Agents"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenCrmHrAgents" />
+                        <Button Text="Providers"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenSettings" />
+                        <Button Text="Processes"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenProcesses" />
+                        <Button Text="Collaboration"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenCollaboration" />
+                    </Grid>
+                </SurfaceCard>
+            </Grid>
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private void OpenCollaboration()
+    {
+        Navigation.NavigateTo("/collaboration");
+    }
+
+    private void OpenCrmHrAgents()
+    {
+        Navigation.NavigateTo("/crm-hr/agents");
+    }
+
+    private void OpenProcesses()
+    {
+        Navigation.NavigateTo("/processes");
+    }
+
+    private void OpenSettings()
+    {
+        Navigation.NavigateTo("/settings");
+    }
+}

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Closed`
 
 ## Objective
 
@@ -22,14 +22,14 @@
 
 ## Exact Source References
 
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Program.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Composition/ModuleAssemblies.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Web/Composition/ShellNavigation.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs
-- /mnt/data/work/cando/CanDoItAll-development/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Home.razor
-- /mnt/data/work/agentfw/CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Agents.razor
+- C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Composition/ModuleAssemblies.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Web/Composition/ShellNavigation.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Home.razor
+- C:\repositories\CanDoItAll.AgentFramework/src/CanDoItAll.AgentFramework.Sandbox/Components/Pages/Agents.razor
 
 ## Deliverables
 
@@ -79,6 +79,16 @@
 - Architecture guard test nebo grep/diff proof, že solution/reference neodkazují na externí AgentFramework repo.
 - Playwright nebo host/browser proof, že shell ukáže nové module entry bez rozbití layoutu.
 
+## Closure Evidence
+
+- `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj` passed on `2026-04-14`.
+- Architecture guard passed on `2026-04-14`:
+  - `git grep -n "C:\repositories\CanDoItAll.AgentFramework" -- "*.csproj" "*.slnx"` returned no live external project references.
+  - `git grep -n "ProjectReference Include=.*AgentFramework" -- "*.csproj"` showed only local CanDoItAll module wiring.
+- Browser proof passed on `2026-04-14`:
+  - `/agents` rendered inside the existing shell without a second app chrome.
+  - retained screenshot artifact: `C:\repositories\CanDoItAll\agentframework-full-integration\reviews\artifacts\sb01-agents-desktop.png`.
+
 ## Browser Validation Logging
 
 - Route: `/agents` a případně `/collaboration` placeholder.
@@ -98,3 +108,4 @@ Implement only subbundle 01.
 
 Create the physical merge skeleton inside CanDoItAll. Add new Collaboration and AgentFramework modules, connect them to Program/Composition/Web shell, and establish copy boundaries for imported AgentFramework code. Do not implement business behavior yet beyond the minimal placeholders needed for build and shell proof. Prove that there is no external project reference back to the AgentFramework repo and no second application shell.
 ```
+
