@@ -564,16 +564,19 @@ public sealed class ProcessOutboxService(
 
     private static string BuildDefinitionRoute(Guid definitionId, Guid? projectId)
     {
-        return projectId.HasValue
-            ? $"/projects/{projectId.Value:D}/processes?processId={definitionId:D}"
-            : $"/processes?processId={definitionId:D}";
+        return BuildProcessWorkspaceRoute(projectId, "processId", definitionId);
     }
 
     private static string BuildRunRoute(ProcessRun run)
     {
-        return run.ProjectId.HasValue
-            ? $"/projects/{run.ProjectId.Value:D}/processes?runId={run.Id:D}"
-            : $"/processes?runId={run.Id:D}";
+        return BuildProcessWorkspaceRoute(run.ProjectId, "runId", run.Id);
+    }
+
+    private static string BuildProcessWorkspaceRoute(Guid? projectId, string queryKey, Guid entityId)
+    {
+        return projectId.HasValue
+            ? $"/projects/{projectId.Value:D}/processes?{queryKey}={entityId:D}"
+            : $"/processes?{queryKey}={entityId:D}";
     }
 }
 

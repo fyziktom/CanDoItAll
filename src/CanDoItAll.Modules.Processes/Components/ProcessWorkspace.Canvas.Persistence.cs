@@ -2,6 +2,12 @@ namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace
 {
+    private enum DefinitionCanvasPersistenceQuiescenceMode
+    {
+        FlushPendingChanges,
+        CancelPendingChanges
+    }
+
     private async Task PersistDefinitionCanvasChangesAsync(
         string? successMessage = null,
         bool refreshSurface = true,
@@ -10,6 +16,7 @@ public partial class ProcessWorkspace
         if (cancelPendingPersistence)
         {
             CancelPendingDefinitionCanvasPersistence();
+            await definitionCanvasPersistDrainTask;
         }
 
         await definitionCanvasPersistGate.WaitAsync();
@@ -64,7 +71,8 @@ public partial class ProcessWorkspace
         CancelPendingDefinitionCanvasPersistence();
         var persistCts = new CancellationTokenSource();
         pendingDefinitionCanvasPersistCts = persistCts;
-        _ = PersistDefinitionCanvasChangesWhenIdleAsync(persistCts);
+        pendingDefinitionCanvasPersistTask = PersistDefinitionCanvasChangesWhenIdleAsync(persistCts);
+        definitionCanvasPersistDrainTask = TrackDefinitionCanvasPersistenceAsync(definitionCanvasPersistDrainTask, pendingDefinitionCanvasPersistTask);
     }
 
     private async Task PersistDefinitionCanvasChangesWhenIdleAsync(CancellationTokenSource persistCts)
@@ -99,14 +107,19 @@ public partial class ProcessWorkspace
     }
 
     private async Task FlushPendingDefinitionCanvasPersistenceAsync()
+        => await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
+
+    private async Task QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode mode)
     {
-        if (pendingDefinitionCanvasPersistCts is null)
+        CancelPendingDefinitionCanvasPersistence();
+        await definitionCanvasPersistDrainTask;
+
+        if (mode == DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges && selectedProcessId.HasValue)
         {
-            return;
+            await PersistDefinitionCanvasChangesAsync(refreshSurface: false, cancelPendingPersistence: false);
         }
 
-        CancelPendingDefinitionCanvasPersistence();
-        await PersistDefinitionCanvasChangesAsync(refreshSurface: false, cancelPendingPersistence: false);
+        await WaitForDefinitionCanvasPersistenceIdleAsync();
     }
 
     private async Task WaitForDefinitionCanvasPersistenceIdleAsync()
@@ -119,6 +132,7 @@ public partial class ProcessWorkspace
     {
         var persistCts = pendingDefinitionCanvasPersistCts;
         pendingDefinitionCanvasPersistCts = null;
+        pendingDefinitionCanvasPersistTask = Task.CompletedTask;
         if (persistCts is null)
         {
             return;
@@ -126,6 +140,25 @@ public partial class ProcessWorkspace
 
         persistCts.Cancel();
         persistCts.Dispose();
+    }
+
+    private static async Task TrackDefinitionCanvasPersistenceAsync(Task priorTask, Task currentTask)
+    {
+        try
+        {
+            await priorTask;
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            await currentTask;
+        }
+        catch
+        {
+        }
     }
 
     private static bool TryResolveDefinitionArtifactByOutputPortId(

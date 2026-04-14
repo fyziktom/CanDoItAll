@@ -67,51 +67,21 @@ public sealed class ProcessTemplateLibraryService
             ? "-" + ordinal.ToString()
             : string.Empty;
 
-        return new ProcessRoleEditorModel
-        {
-            Id = Guid.NewGuid(),
-            Key = descriptor.Resource.Key + keySuffix,
-            DisplayName = descriptor.Resource.DisplayName,
-            Purpose = descriptor.Resource.Purpose,
-            StaffingIntent = descriptor.Resource.StaffingIntent,
-            PreferredExecutorKind = descriptor.Resource.PreferredExecutorKind,
-            PreferredProjectAssignmentRole = EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(descriptor.Resource.PreferredProjectAssignmentRole),
-            IsRequired = descriptor.Resource.IsRequired,
-            AllowsFallback = descriptor.Resource.AllowsFallback,
-            RequiresExplicitApproval = descriptor.Resource.RequiresExplicitApproval,
-            DefaultAllocationPercent = descriptor.Resource.DefaultAllocationPercent > 0
-                ? descriptor.Resource.DefaultAllocationPercent
-                : 100,
-            RoleTemplateSourceKey = string.IsNullOrWhiteSpace(descriptor.Resource.RoleTemplateSourceKey)
-                ? descriptor.Resource.Key
-                : descriptor.Resource.RoleTemplateSourceKey,
-            RoleTemplateSnapshotName = descriptor.Resource.RoleTemplateSnapshotName,
-            SnapshotSummary = ProcessTemplateRoleSnapshotSummaryBuilder.Build(descriptor.Resource)
-        };
+        return ProcessTemplateEditorModelFactory.CreateRoleFromResource(
+            descriptor.Resource,
+            Guid.NewGuid(),
+            descriptor.Resource.Key + keySuffix,
+            descriptor.Resource.DisplayName,
+            descriptor.Resource.PreferredExecutorKind,
+            100);
     }
 
     public ProcessArtifactExpectationEditorModel CreateArtifactExpectation(string itemId, bool isRequired = true)
     {
-        var descriptor = ResolveArtifact(packLoader.Load(), itemId);
-
-        return new ProcessArtifactExpectationEditorModel
-        {
-            Id = Guid.NewGuid(),
-            ArtifactKind = EnumValueParser.ParseOrDefault(descriptor.Resource.ArtifactKind, ProcessArtifactKind.Evidence),
-            Title = descriptor.Resource.DisplayName,
-            IsRequired = isRequired,
-            TrustRequirement = EnumValueParser.ParseOrDefault(
-                descriptor.Resource.DefaultTrustRequirement,
-                ProcessArtifactTrustRequirement.ReviewRequired),
-            SensitivityLevel = EnumValueParser.ParseOrDefault(
-                descriptor.Resource.DefaultSensitivityLevel,
-                ProcessSensitivityLevel.Internal),
-            RetentionDays = descriptor.Resource.DefaultRetentionDays > 0
-                ? descriptor.Resource.DefaultRetentionDays
-                : 90,
-            AllowedFutureUsageSummary = descriptor.Resource.AllowedFutureUsageSummary,
-            ValidationRequirementSummary = descriptor.Resource.ValidationRequirementSummary
-        };
+        return ProcessTemplateEditorModelFactory.CreateArtifactExpectationFromResource(
+            ResolveArtifact(packLoader.Load(), itemId).Resource,
+            Guid.NewGuid(),
+            isRequired);
     }
 
     private static ProcessTemplateLibraryListItem BuildProcessListItem(ProcessTemplateDefinition process)

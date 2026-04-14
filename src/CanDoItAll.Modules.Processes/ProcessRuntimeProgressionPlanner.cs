@@ -15,9 +15,11 @@ internal static class ProcessRuntimeProgressionPlanner
         ArgumentNullException.ThrowIfNull(stepRunsByDefinitionId);
         ArgumentNullException.ThrowIfNull(stepDependenciesByStepId);
 
+        var dependentStepsByDependsOnStepId = BuildDependentStepsByDependsOnStepId(stepDefinitionsById, stepDependenciesByStepId);
+
         if (targetStatus == ProcessStepRunStatus.Completed)
         {
-            foreach (var dependentStep in GetDependentSteps(currentStepDefinition, stepDefinitionsById, stepDependenciesByStepId))
+            foreach (var dependentStep in GetDependentSteps(currentStepDefinition.Id, dependentStepsByDependsOnStepId))
             {
                 if (!stepRunsByDefinitionId.TryGetValue(dependentStep.Id, out var dependentStepRun))
                 {
@@ -35,6 +37,7 @@ internal static class ProcessRuntimeProgressionPlanner
                         dependentStep,
                         stepDefinitionsById,
                         stepRunsByDefinitionId,
+                        dependentStepsByDependsOnStepId,
                         stepDependenciesByStepId,
                         impossibleReason,
                         now);
@@ -56,22 +59,47 @@ internal static class ProcessRuntimeProgressionPlanner
                 currentStepDefinition,
                 stepDefinitionsById,
                 stepRunsByDefinitionId,
+                dependentStepsByDependsOnStepId,
                 stepDependenciesByStepId,
                 reason,
                 now);
         }
     }
 
-    private static IEnumerable<ProcessStepDefinition> GetDependentSteps(
-        ProcessStepDefinition stepDefinition,
+    private static IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> BuildDependentStepsByDependsOnStepId(
         IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId)
     {
-        return stepDefinitionsById.Values
-            .Where(
-                item => ProcessStepDependencyCollection.GetPersistedDependencies(item.Id, stepDependenciesByStepId)
-                    .Any(dependency => dependency.DependsOnStepId == stepDefinition.Id))
-            .OrderBy(item => item.OrderIndex);
+        var dependentStepsByDependsOnStepId = new Dictionary<Guid, List<ProcessStepDefinition>>();
+
+        foreach (var stepDefinition in stepDefinitionsById.Values)
+        {
+            foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
+            {
+                if (!dependentStepsByDependsOnStepId.TryGetValue(dependency.DependsOnStepId, out var dependentSteps))
+                {
+                    dependentSteps = [];
+                    dependentStepsByDependsOnStepId[dependency.DependsOnStepId] = dependentSteps;
+                }
+
+                dependentSteps.Add(stepDefinition);
+            }
+        }
+
+        return dependentStepsByDependsOnStepId.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<ProcessStepDefinition>)pair.Value
+                .OrderBy(item => item.OrderIndex)
+                .ToList());
+    }
+
+    private static IReadOnlyList<ProcessStepDefinition> GetDependentSteps(
+        Guid stepDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId)
+    {
+        return dependentStepsByDependsOnStepId.TryGetValue(stepDefinitionId, out var dependentSteps)
+            ? dependentSteps
+            : [];
     }
 
     private static void ActivatePendingStepRun(ProcessStepRun stepRun, ProcessStepDefinition stepDefinition, DateTimeOffset now)
@@ -91,6 +119,7 @@ internal static class ProcessRuntimeProgressionPlanner
         ProcessStepDefinition stepDefinition,
         IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
         IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
         string reason,
         DateTimeOffset now)
@@ -105,20 +134,35 @@ internal static class ProcessRuntimeProgressionPlanner
         stepRun.CompletedAtUtc = now;
         stepRun.DecisionSummary = reason;
 
-        CascadeSkipDependents(stepDefinition, stepDefinitionsById, stepRunsByDefinitionId, stepDependenciesByStepId, reason, now);
+        CascadeSkipDependents(
+            stepDefinition,
+            stepDefinitionsById,
+            stepRunsByDefinitionId,
+            dependentStepsByDependsOnStepId,
+            stepDependenciesByStepId,
+            reason,
+            now);
     }
 
     private static void CascadeSkipDependents(
         ProcessStepDefinition stepDefinition,
         IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
         IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
         string reason,
         DateTimeOffset now)
     {
-        foreach (var dependentStep in GetDependentSteps(stepDefinition, stepDefinitionsById, stepDependenciesByStepId))
+        foreach (var dependentStep in GetDependentSteps(stepDefinition.Id, dependentStepsByDependsOnStepId))
         {
-            CascadeSkipStepRun(dependentStep, stepDefinitionsById, stepRunsByDefinitionId, stepDependenciesByStepId, reason, now);
+            CascadeSkipStepRun(
+                dependentStep,
+                stepDefinitionsById,
+                stepRunsByDefinitionId,
+                dependentStepsByDependsOnStepId,
+                stepDependenciesByStepId,
+                reason,
+                now);
         }
     }
 

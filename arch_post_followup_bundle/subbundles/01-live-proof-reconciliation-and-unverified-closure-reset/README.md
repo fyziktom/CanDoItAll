@@ -8,7 +8,7 @@
 
 - Reconcile the prior closure claim with the live repository, capture the newly reopened findings from evidence, and reset the proof record before any more code changes continue.
 
-## Covered inputs
+## Covered Inputs
 
 - See `02-open-findings.md`, `requirements/01-normalized-requirements.md`, and `traceability/01-finding-to-subbundle-map.md` for the owning findings and requirements.
 
@@ -16,27 +16,27 @@
 
 - Follow the dependencies recorded in `codex/TASKS.json` and `plan/01-phase-plan.md`.
 
-## Exact source references
+## Exact Source References
 
-- architecture_followup_bundle/reviews/01-execution-report.md
-- architecture_followup_bundle/reviews/02-architecture-gate-memo-log.md
-- .codex-test-results/integration
-- .codex-test-results/components
-- .codex-test-results/mcp-processes
-- tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-- tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs
-- tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs
-- tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs
+- C:\repositories\CanDoItAll\architecture_followup_bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\architecture_followup_bundle\reviews\02-architecture-gate-memo-log.md
+- C:\repositories\CanDoItAll\.codex-test-results\integration
+- C:\repositories\CanDoItAll\.codex-test-results\components
+- C:\repositories\CanDoItAll\.codex-test-results\mcp-processes
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessSchemaIntegrationTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs
 
-## Dependency impact
+## Dependency Impact
 
 - Downstream work remains blocked until this subbundle's progression gate is satisfied from fresh proof.
 
-## Validation depth
+## Validation Depth
 
 - `Critical foundation`
 
-## Implementation steps
+## Implementation Steps
 
 1. Audit the listed source references against the current live repository state.
 2. Implement only the smallest correct change set for this subbundle.
@@ -44,39 +44,39 @@
 4. Run the required proof commands and capture fresh artifacts.
 5. Update `reviews/01-execution-report.md` or the live execution report and the gate memo log before allowing downstream work to continue.
 
-## Scope exceptions
+## Scope Exceptions
 
 - Do not widen this subbundle beyond the stated objective. If the work uncovers a later-phase defect, record it and stop at the correct boundary.
 
-## Do not do
+## Do Not Do
 
 - Do not continue into downstream numbered phases just because nearby files are already open.
 - Do not mark this subbundle complete until the progression gate can be answered explicitly from real proof.
 - If the proof record still overclaims or cannot be reconciled from live evidence, stop immediately and open the proof corrective playbook before touching production code.
 
-## Acceptance checklist
+## Acceptance Checklist
 
 - Satisfy the deliverables and review questions preserved below.
 
-## Proof required
+## Proof Required
 
 - Run the validation commands preserved below and record the resulting artifacts in the live execution report.
 
-## Browser validation logging
+## Browser Validation Logging
 
 - Only required if this subbundle changes visible `/processes` UI behavior beyond what component proof already covers.
 
-## Progression gate
+## Progression Gate
 
 - This phase is complete only when its acceptance checklist and proof artifacts are satisfied strongly enough for the next dependency to proceed without borrowed trust.
 
-## Suggested agent prompt
+## Suggested Agent Prompt
 
 ```text
 Implement only subbundle 01-live-proof-reconciliation-and-unverified-closure-reset. Reconcile the prior closure claim with the live repository, capture the newly reopened findings from evidence, and reset the proof record before any more code changes continue. Respect the prerequisites, stop rules, and proof contract, update the live execution report from fresh evidence, and do not continue downstream until the progression gate is explicitly satisfied.
 ```
 
-## Preserved bundle notes
+## Preserved Bundle Notes
 
 ### Purpose
 Reconcile the prior closure claim with the live repository, capture the newly reopened findings from evidence, and reset the proof record before any more code changes continue.
@@ -117,3 +117,4 @@ If the proof record still overclaims or cannot be reconciled from live evidence,
 ### Detailed execution notes
 - This phase is deliberately allowed to reopen findings that were previously marked closed too early.
 - Do not bury disagreement between the previous report and the live source; make it explicit in the report.
+

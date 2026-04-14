@@ -24,3 +24,4 @@ Execute numbered subbundles in order. Review gates are hard stops. Corrective pl
 - workspace quiescence reset
 - query cohesion reset
 - template isolation reset
+

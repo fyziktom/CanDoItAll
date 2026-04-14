@@ -121,12 +121,17 @@ public sealed partial class ProcessesService {
             var stepDependenciesByStepId = stepDependencies
                 .GroupBy(item => item.StepDefinitionId)
                 .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
+            var graphIssue = FindPublishedGraphIssue(steps, stepDependenciesByStepId);
+            if (graphIssue is not null) {
+                return Result<Guid>.Failure(CreateRunStartGraphError(graphIssue));
+            }
+
             var rootStepIds = steps
                 .Where(step => GetPersistedDependencies(step, stepDependenciesByStepId).Count == 0)
                 .Select(step => step.Id)
                 .ToHashSet();
             if (rootStepIds.Count == 0 && steps.Count > 0) {
-                rootStepIds.Add(steps[0].Id);
+                return Result<Guid>.Failure(CreateRunStartGraphError());
             }
 
             for (var index = 0; index < steps.Count; index++) {

@@ -77,28 +77,7 @@ public sealed class ProcessTemplateProjectionService
             var roleResource = ResolveRoleResource(pack, process, usage);
 
             roleIdsByKey[usage.Key] = roleId;
-            definition.Roles.Add(new ProcessRoleEditorModel
-            {
-                Id = roleId,
-                Key = usage.Key,
-                DisplayName = FirstNonEmpty(usage.DisplayName, roleResource?.DisplayName),
-                Purpose = FirstNonEmpty(usage.Purpose, roleResource?.Purpose),
-                StaffingIntent = FirstNonEmpty(usage.StaffingIntent, roleResource?.StaffingIntent),
-                PreferredExecutorKind = FirstNonEmpty(usage.PreferredExecutorKind, roleResource?.PreferredExecutorKind),
-                PreferredProjectAssignmentRole = EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(
-                    FirstNonEmpty(usage.PreferredProjectAssignmentRole, roleResource?.PreferredProjectAssignmentRole)),
-                IsRequired = usage.IsRequired,
-                AllowsFallback = usage.AllowsFallback,
-                RequiresExplicitApproval = usage.RequiresExplicitApproval,
-                DefaultAllocationPercent = usage.DefaultAllocationPercent > 0
-                    ? usage.DefaultAllocationPercent
-                    : Math.Max(0, roleResource?.DefaultAllocationPercent ?? 100),
-                RoleTemplateSourceKey = roleResource?.RoleTemplateSourceKey ?? string.Empty,
-                RoleTemplateSnapshotName = roleResource?.RoleTemplateSnapshotName ?? string.Empty,
-                SnapshotSummary = ProcessTemplateRoleSnapshotSummaryBuilder.Build(roleResource),
-                CanvasX = usage.CanvasX,
-                CanvasY = usage.CanvasY
-            });
+            definition.Roles.Add(ProcessTemplateEditorModelFactory.CreateRoleFromUsage(usage, roleResource, roleId));
         }
 
         var orderedTemplates = process.Steps
@@ -168,34 +147,11 @@ public sealed class ProcessTemplateProjectionService
                     artifactExpectationIdsByKey[BuildCompositeKey(template.Key, artifactExpectation.TemplateKey)] = artifactExpectationId;
                 }
 
-                step.ArtifactExpectations.Add(new ProcessArtifactExpectationEditorModel
-                {
-                    Id = artifactExpectationId,
-                    ArtifactKind = EnumValueParser.ParseOrDefault(
-                        FirstNonEmpty(artifactExpectation.ArtifactKind, artifactResource?.ArtifactKind),
-                        ProcessArtifactKind.Evidence),
-                    Title = FirstNonEmpty(
-                        artifactExpectation.Title,
-                        artifactResource?.DisplayName,
-                        artifactExpectation.TemplateKey,
-                        artifactExpectation.Key),
-                    IsRequired = artifactExpectation.IsRequired,
-                    TrustRequirement = EnumValueParser.ParseOrDefault(
-                        FirstNonEmpty(artifactExpectation.TrustRequirement, artifactResource?.DefaultTrustRequirement),
-                        ProcessArtifactTrustRequirement.ReviewRequired),
-                    SensitivityLevel = EnumValueParser.ParseOrDefault(
-                        FirstNonEmpty(artifactExpectation.SensitivityLevel, artifactResource?.DefaultSensitivityLevel),
-                        ProcessSensitivityLevel.Internal),
-                    RetentionDays = artifactExpectation.RetentionDays > 0
-                        ? artifactExpectation.RetentionDays
-                        : artifactResource?.DefaultRetentionDays ?? 90,
-                    AllowedFutureUsageSummary = FirstNonEmpty(
-                        artifactExpectation.AllowedFutureUsageSummary,
-                        artifactResource?.AllowedFutureUsageSummary),
-                    ValidationRequirementSummary = FirstNonEmpty(
-                        artifactExpectation.ValidationRequirementSummary,
-                        artifactResource?.ValidationRequirementSummary)
-                });
+                step.ArtifactExpectations.Add(
+                    ProcessTemplateEditorModelFactory.CreateArtifactExpectationFromTemplate(
+                        artifactExpectation,
+                        artifactResource,
+                        artifactExpectationId));
             }
 
             definition.Steps.Add(step);
@@ -402,19 +358,6 @@ public sealed class ProcessTemplateProjectionService
     private static string BuildCompositeKey(string left, string right)
     {
         return left.Trim() + "::" + right.Trim();
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value.Trim();
-            }
-        }
-
-        return string.Empty;
     }
 
 }

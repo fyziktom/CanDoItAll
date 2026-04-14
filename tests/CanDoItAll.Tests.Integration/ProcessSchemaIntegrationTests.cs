@@ -57,6 +57,134 @@ public sealed class ProcessSchemaIntegrationTests
     }
 
     [Fact]
+    public async Task Process_schema_rejects_duplicate_step_runs_for_the_same_run_and_step_definition()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projectsService, "Process schema duplicate step-run project");
+        var saveResult = await processesService.SaveAsync(BuildLinearDefinitionEditor(projectId, roleId, intakeStepId, reviewStepId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Duplicate step-run schema proof",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify runtime row singularity."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await dbContext.Set<ProcessStepRun>().AddAsync(new ProcessStepRun
+        {
+            ProcessRunId = runResult.Value,
+            StepDefinitionId = intakeStepId,
+            Sequence = 99,
+            Title = "Duplicate step-run",
+            Status = ProcessStepRunStatus.Pending
+        });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task Process_schema_rejects_duplicate_run_scoped_assignments()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projectsService, "Process schema duplicate run assignment project");
+        var saveResult = await processesService.SaveAsync(BuildLinearDefinitionEditor(projectId, roleId, intakeStepId, reviewStepId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Duplicate run assignment schema proof",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify run-scope assignment singularity."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await dbContext.Set<ProcessRunAssignment>().AddAsync(new ProcessRunAssignment
+        {
+            ProcessRunId = runResult.Value,
+            RoleRequirementId = roleId,
+            DisplayName = "Duplicate run assignment"
+        });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task Process_schema_rejects_duplicate_step_scoped_assignments()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projectsService, "Process schema duplicate step assignment project");
+        var saveResult = await processesService.SaveAsync(BuildLinearDefinitionEditor(projectId, roleId, intakeStepId, reviewStepId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Duplicate step assignment schema proof",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify step-scope assignment singularity."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await dbContext.Set<ProcessRunAssignment>().AddRangeAsync(
+            new ProcessRunAssignment
+            {
+                ProcessRunId = runResult.Value,
+                RoleRequirementId = roleId,
+                StepDefinitionId = reviewStepId,
+                DisplayName = "First step assignment"
+            },
+            new ProcessRunAssignment
+            {
+                ProcessRunId = runResult.Value,
+                RoleRequirementId = roleId,
+                StepDefinitionId = reviewStepId,
+                DisplayName = "Duplicate step assignment"
+            });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+    }
+
+    [Fact]
     public async Task Process_schema_rejects_run_binding_to_a_foreign_definition_version()
     {
         await using var application = await TestApplication.CreateAsync();

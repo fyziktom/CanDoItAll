@@ -3202,7 +3202,15 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("StepDefinitionId");
 
-                    b.HasIndex("ProcessRunId", "RoleRequirementId", "StepDefinitionId");
+                    b.HasIndex("ProcessRunId", "RoleRequirementId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessRunAssignments_RunScoped")
+                        .HasFilter("\"StepDefinitionId\" IS NULL");
+
+                    b.HasIndex("ProcessRunId", "RoleRequirementId", "StepDefinitionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessRunAssignments_StepScoped")
+                        .HasFilter("\"StepDefinitionId\" IS NOT NULL");
 
                     b.ToTable("Processes_RunAssignments", (string)null);
                 });
@@ -3558,6 +3566,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsUnique();
 
                     b.HasIndex("ProcessRunId", "Status");
+
+                    b.HasIndex("ProcessRunId", "StepDefinitionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
 
                     b.ToTable("Processes_StepRuns", (string)null);
                 });

@@ -6,7 +6,7 @@ public partial class ProcessWorkspace
 {
     private async Task CreateNewAsync()
     {
-        await FlushPendingDefinitionCanvasPersistenceAsync();
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
         selectedProcessId = null;
         selectedRunId = null;
         selectedCanvasNodeId = null;
@@ -26,7 +26,7 @@ public partial class ProcessWorkspace
 
     private async Task SelectDefinitionAsync(Guid definitionId)
     {
-        await FlushPendingDefinitionCanvasPersistenceAsync();
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
         selectedProcessId = definitionId;
         detailTab = "definition";
         selectedCanvasNodeId = null;
@@ -37,8 +37,7 @@ public partial class ProcessWorkspace
 
     private async Task SaveAsync()
     {
-        CancelPendingDefinitionCanvasPersistence();
-        await WaitForDefinitionCanvasPersistenceIdleAsync();
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
         NormalizeEditorForAuthoring();
         var result = await ProcessesService.SaveAsync(editor);
         if (result.IsFailure)
@@ -60,6 +59,7 @@ public partial class ProcessWorkspace
             return;
         }
 
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
         var result = await ProcessesService.PublishAsync(
             new ProcessDefinitionPublishRequest
             {
@@ -84,6 +84,7 @@ public partial class ProcessWorkspace
             return;
         }
 
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
         await ProcessesService.DeleteAsync(selectedProcessId.Value);
         selectedProcessId = null;
         selectedRunId = null;
@@ -120,6 +121,7 @@ public partial class ProcessWorkspace
             return;
         }
 
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
         var envelope = await ProcessesService.ExportAsync(selectedProcessId.Value);
         exportJson = JsonSerializer.Serialize(envelope, JsonOptions);
         detailTab = "exchange";

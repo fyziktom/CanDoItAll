@@ -398,9 +398,18 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             }
         }
 
-        orderedIds.AddRange(indegreeByStepId.Keys
-            .Where(stepId => !orderedIds.Contains(stepId))
-            .OrderBy(stepId => originalIndexByStepId[stepId]));
+        if (orderedIds.Count != indegreeByStepId.Count)
+        {
+            var unresolvedStepTitles = indegreeByStepId.Keys
+                .Where(stepId => !orderedIds.Contains(stepId))
+                .OrderBy(stepId => originalIndexByStepId[stepId])
+                .Select(stepId => string.IsNullOrWhiteSpace(stepIdMap[stepId].Title)
+                    ? stepIdMap[stepId].Key
+                    : stepIdMap[stepId].Title)
+                .ToList();
+            throw new InvalidOperationException(
+                $"Process canvas recomposition requires an acyclic dependency graph. Remove the dependency cycle involving: {string.Join(" -> ", unresolvedStepTitles)}.");
+        }
 
         return orderedIds
             .Select(stepId => stepIdMap[stepId])

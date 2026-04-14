@@ -53,6 +53,9 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(step => step.CapabilityGapSeverity).HasConversion<string>().HasMaxLength(48);
         builder.Property(step => step.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(step => new { step.ProcessRunId, step.Sequence }).IsUnique();
+        builder.HasIndex(step => new { step.ProcessRunId, step.StepDefinitionId })
+            .IsUnique()
+            .HasDatabaseName(ProcessPersistenceConstraintNames.StepRunPerDefinitionUniqueIndex);
         builder.HasIndex(step => new { step.ProcessRunId, step.Status });
         builder.HasIndex(step => step.StepDefinitionId);
         builder.HasIndex(step => step.SelectedBranchOutcomeId);
@@ -82,7 +85,14 @@ internal sealed class ProcessRunAssignmentConfiguration : IEntityTypeConfigurati
         builder.Property(assignment => assignment.BindingReason).HasColumnType("TEXT");
         builder.Property(assignment => assignment.SourceRegistryKey).HasMaxLength(160);
         builder.Property(assignment => assignment.SnapshotSummary).HasColumnType("TEXT");
-        builder.HasIndex(assignment => new { assignment.ProcessRunId, assignment.RoleRequirementId, assignment.StepDefinitionId });
+        builder.HasIndex(assignment => new { assignment.ProcessRunId, assignment.RoleRequirementId })
+            .IsUnique()
+            .HasDatabaseName(ProcessPersistenceConstraintNames.RunAssignmentRunScopedUniqueIndex)
+            .HasFilter("\"StepDefinitionId\" IS NULL");
+        builder.HasIndex(assignment => new { assignment.ProcessRunId, assignment.RoleRequirementId, assignment.StepDefinitionId })
+            .IsUnique()
+            .HasDatabaseName(ProcessPersistenceConstraintNames.RunAssignmentStepScopedUniqueIndex)
+            .HasFilter("\"StepDefinitionId\" IS NOT NULL");
         builder.HasIndex(assignment => assignment.PartyId);
         builder.HasOne<ProcessRun>()
             .WithMany()

@@ -16,6 +16,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();
+        // Keep the template pack scoped until the loaded graph becomes deeply immutable.
         services.AddScoped(provider =>
         {
             var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ProcessTemplatePackOptions>>().Value;

@@ -2,21 +2,23 @@
 
 ## Status
 
-This bundle reopens the Process-module hardening work **again** because the live repository still contains unresolved architectural issues after the previous follow-up was declared closed.
+This bundle reopens the Process-module hardening work again because the live repository still contains unresolved architectural issues after the previous follow-up was declared closed.
 
-## Validation summary
+## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Bundle execution status: `Not executed in this package`
-- Review gates included: `Gate A`, `Gate B`, `Gate C`
+- Bundle readiness gate: `Pending rerun after bundle repair`
+- Execution status: `Not executed in this package`
+- Subbundle gate review: `Gate A pending; Gate B pending; Gate C pending`
 - Final closure gate: `Pending`
+- Browser validation analytics: `Pending`
 - Source repository zip: `CanDoItAll-process-manag-modul (5).zip`
 
 ## Why this bundle exists
 
 The current repository is materially better than the earlier versions. The Process module now has stronger canonical dependency handling, better schema integrity, durable outbox behavior, differential graph persistence, and better query seams.
 
-However, the architecture is **still not closed** because several meaningful issues remain:
+However, the architecture is still not closed because several meaningful issues remain:
 
 - the process graph is not yet guaranteed to be a legal DAG;
 - runtime schema singularity still lags behind runtime service assumptions;
@@ -34,10 +36,11 @@ However, the architecture is **still not closed** because several meaningful iss
 5. `architecture/01-target-solution.md`
 6. `plan/01-phase-plan.md`
 7. `codex/TASKS.json`
-8. `reviews/00-execution-report-template.md`
+8. `reviews/01-execution-report.md`
 
 ## Closure bar
 
 Do not close this bundle while any red finding from `02-open-findings.md` remains open.
 
 Closure bar result: `Not yet satisfied`
+

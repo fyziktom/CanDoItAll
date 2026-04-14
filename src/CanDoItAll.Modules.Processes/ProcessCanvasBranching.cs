@@ -297,8 +297,7 @@ public static class ProcessCanvasBranching
         foreach (var dependency in dependencies)
         {
             if (!dependency.DependsOnStepId.HasValue ||
-                dependency.DependsOnStepId.Value == Guid.Empty ||
-                (step.Id.HasValue && dependency.DependsOnStepId.Value == step.Id.Value))
+                dependency.DependsOnStepId.Value == Guid.Empty)
             {
                 continue;
             }

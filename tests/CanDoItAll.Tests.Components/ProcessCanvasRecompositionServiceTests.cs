@@ -75,6 +75,19 @@ public sealed class ProcessCanvasRecompositionServiceTests
         Assert.True(implementationBox.Y < mergeBox.Y || repairBox.Y < mergeBox.Y || mergeBox.X > implementationBox.X);
     }
 
+    [Fact]
+    public void Recompose_throws_for_cyclic_process_graph()
+    {
+        var surfaceFactory = CreateSurfaceFactory();
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+        var editor = BuildCyclicEditor();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            service.Apply(editor, ProcessCanvasRecompositionMode.Recompose));
+
+        Assert.Contains("acyclic dependency graph", exception.Message, StringComparison.Ordinal);
+    }
+
     private static ProcessCanvasSurfaceFactory CreateSurfaceFactory()
     {
         return new ProcessCanvasSurfaceFactory(
@@ -379,5 +392,48 @@ public sealed class ProcessCanvasRecompositionServiceTests
                 DependsOnBranchOutcomeId = item.BranchOutcomeId
             })
             .ToList();
+    }
+
+    private static ProcessDefinitionEditorModel BuildCyclicEditor()
+    {
+        var firstStepId = Guid.NewGuid();
+        var secondStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            Name = "Cycle recomposition test",
+            Summary = "Reject cyclic graph recomposition.",
+            ValueStatement = "Recomposition must fail loudly for invalid graphs.",
+            CustomerName = "Acme",
+            OwnerName = "Owner",
+            GovernancePolicySummary = "Cycle proof.",
+            ChangeSummary = "Cycle proof.",
+            ConstitutionRuleSummary = "Cycle proof.",
+            OperatingModeSummary = "Cycle proof.",
+            SimulationReadinessSummary = "Cycle proof.",
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = firstStepId,
+                    Key = "capture",
+                    Title = "Capture request",
+                    StepKind = ProcessStepKind.Start,
+                    Dependencies = CreateDependencies((secondStepId, null)),
+                    CanvasX = 180,
+                    CanvasY = 160
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = secondStepId,
+                    Key = "review",
+                    Title = "Review request",
+                    StepKind = ProcessStepKind.Work,
+                    Dependencies = CreateDependencies((firstStepId, null)),
+                    CanvasX = 460,
+                    CanvasY = 160
+                }
+            ]
+        };
     }
 }

@@ -23,6 +23,12 @@ public sealed partial class ProcessesService {
         return await runtimeReadQueryService.ListStepRunsAsync(dbContext, runId, cancellationToken);
     }
 
+    public async Task<ProcessWorkspaceRunDetails> GetRunDetailsAsync(Guid runId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await runtimeReadQueryService.GetRunDetailsAsync(dbContext, runId, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(Guid runId, CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var items = await dbContext.Set<ProcessDecisionRecord>()

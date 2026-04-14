@@ -123,6 +123,7 @@ public sealed class ProcessesServiceIntegrationTests
         var workBriefs = await processesService.ListWorkBriefsAsync(runResult.Value);
         var improvements = await processesService.ListImprovementsAsync(saveResult.Value);
         var analytics = await processesService.GetAnalyticsAsync(saveResult.Value, projectId);
+        var runDetails = await processesService.GetRunDetailsAsync(runResult.Value);
 
         Assert.NotEmpty(decisions);
         Assert.Contains(artifacts, item => item.Title == "Delivery readiness note");
@@ -131,6 +132,12 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.NotEmpty(improvements);
         Assert.True(analytics.BlockedRuns >= 1);
         Assert.True(analytics.ImprovementCandidateCount >= 1);
+        Assert.Equal(stepRuns.Select(item => item.Id), runDetails.StepRuns.Select(item => item.Id));
+        Assert.Equal(decisions.Select(item => item.Id), runDetails.Decisions.Select(item => item.Id));
+        Assert.Equal(artifacts.Select(item => item.Id), runDetails.Artifacts.Select(item => item.Id));
+        Assert.Equal(assignments.Select(item => item.Id), runDetails.Assignments.Select(item => item.Id));
+        Assert.Equal(workBriefs.Select(item => item.Id), runDetails.WorkBriefs.Select(item => item.Id));
+        Assert.Equal(conformance.Select(item => item.Id), runDetails.ConformanceObservations.Select(item => item.Id));
     }
 
     [Fact]
@@ -357,6 +364,180 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(publishResult.IsFailure);
         Assert.Contains(publishResult.Errors, error => error.Code == "processes.publish-branch-outcome-unused");
+    }
+
+    [Fact]
+    public async Task SaveAsync_rejects_self_referencing_step_dependency()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Self dependency validation project");
+        var model = BuildArtifactInputDefinitionEditor(projectId, Guid.NewGuid());
+        var reviewStep = Assert.Single(model.Steps, item => item.Key == "qa-review");
+
+        reviewStep.Dependencies = CreateDependencies((reviewStep.Id!.Value, null));
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        Assert.True(saveResult.IsFailure);
+        Assert.Contains(saveResult.Errors, error => error.Code == "processes.branch-dependency-self-reference");
+    }
+
+    [Fact]
+    public async Task SaveAsync_rejects_multi_step_dependency_cycle()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Cycle validation project");
+        var model = BuildArtifactInputDefinitionEditor(projectId, Guid.NewGuid());
+        var captureStep = Assert.Single(model.Steps, item => item.Key == "capture-package");
+        var reviewStep = Assert.Single(model.Steps, item => item.Key == "qa-review");
+
+        captureStep.Dependencies = CreateDependencies((reviewStep.Id!.Value, null));
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        Assert.True(saveResult.IsFailure);
+        Assert.Contains(saveResult.Errors, error => error.Code == "processes.branch-dependency-cycle-invalid");
+    }
+
+    [Fact]
+    public async Task PublishAsync_rejects_self_referencing_dependency_in_persisted_draft()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Persisted self dependency validation project");
+        var saveResult = await processesService.SaveAsync(BuildArtifactInputDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        await AddPersistedDependencyAsync(
+            dbContextFactory,
+            saveResult.Value,
+            ProcessVersionStatus.Draft,
+            "qa-review",
+            "qa-review");
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsFailure);
+        Assert.Contains(publishResult.Errors, error => error.Code == "processes.publish-branch-dependency-self-reference");
+    }
+
+    [Fact]
+    public async Task StartRunAsync_rejects_published_dependency_cycle_when_storage_is_invalid()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Persisted cycle runtime validation project");
+        var saveResult = await processesService.SaveAsync(BuildArtifactInputDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        await AddPersistedDependencyAsync(
+            dbContextFactory,
+            saveResult.Value,
+            ProcessVersionStatus.Published,
+            "capture-package",
+            "qa-review");
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Invalid persisted graph run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Runtime graph guard validation"
+        });
+
+        Assert.True(runResult.IsFailure);
+        Assert.Contains(runResult.Errors, error => error.Code == "processes.run-invalid-graph");
+    }
+
+    [Fact]
+    public async Task ResolveAssignmentAsync_concurrent_step_scoped_resolution_keeps_a_single_assignment_row()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projectsService, "Concurrent assignment resolution project");
+        var saveResult = await processesService.SaveAsync(BuildLinearAssignmentDefinitionEditor(projectId, roleId, intakeStepId, reviewStepId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Concurrent step assignment resolution",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify assignment upsert singularity"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var resolutionTasks = Enumerable.Range(0, 8)
+            .Select(async index =>
+            {
+                await using var resolutionScope = application.Services.CreateAsyncScope();
+                var resolutionService = resolutionScope.ServiceProvider.GetRequiredService<ProcessesService>();
+                return await resolutionService.ResolveAssignmentAsync(new ProcessAssignmentResolutionRequest
+                {
+                    ProcessRunId = runResult.Value,
+                    RoleRequirementId = roleId,
+                    StepDefinitionId = reviewStepId,
+                    DisplayName = $"Concurrent assignee {index}",
+                    ExecutorKind = "person",
+                    BindingReason = $"Concurrent resolution attempt {index}",
+                    IsFallback = false
+                });
+            })
+            .ToList();
+
+        var resolutionResults = await Task.WhenAll(resolutionTasks);
+
+        Assert.All(
+            resolutionResults,
+            result => Assert.True(
+                result.IsSuccess,
+                string.Join(" | ", result.Errors.Select(error => $"{error.Code}:{error.Message}"))));
+
+        var assignments = await processesService.ListAssignmentsAsync(runResult.Value);
+        var scopedAssignments = assignments
+            .Where(item => item.RoleRequirementId == roleId && item.StepDefinitionId == reviewStepId)
+            .ToList();
+        Assert.Single(scopedAssignments);
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.Equal(
+            1,
+            await verificationContext.Set<ProcessRunAssignment>()
+                .CountAsync(
+                    item => item.ProcessRunId == runResult.Value &&
+                        item.RoleRequirementId == roleId &&
+                        item.StepDefinitionId == reviewStepId));
     }
 
     [Fact]
@@ -1028,6 +1209,68 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task SaveAsync_rejects_stale_editor_concurrency_tokens_when_no_working_draft_exists()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Definition concurrency no-draft project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var baselineDraftEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var draftVersion = await dbContext.Set<ProcessDefinitionVersion>()
+                .SingleAsync(item => item.ProcessDefinitionId == saveResult.Value && item.Status == ProcessVersionStatus.Draft);
+
+            draftVersion.Status = ProcessVersionStatus.Archived;
+            draftVersion.UpdatedAtUtc = DateTimeOffset.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var staleEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+
+        Assert.Null(staleEditor.WorkingVersionId);
+        Assert.NotNull(staleEditor.DefinitionConcurrencyToken);
+
+        staleEditor.ChangeSummary = baselineDraftEditor.ChangeSummary;
+        staleEditor.GovernancePolicySummary = baselineDraftEditor.GovernancePolicySummary;
+        staleEditor.ConstitutionRuleSummary = baselineDraftEditor.ConstitutionRuleSummary;
+        staleEditor.OperatingModeSummary = baselineDraftEditor.OperatingModeSummary;
+        staleEditor.SimulationReadinessSummary = baselineDraftEditor.SimulationReadinessSummary;
+        staleEditor.Roles = baselineDraftEditor.Roles;
+        staleEditor.Steps = baselineDraftEditor.Steps;
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var definition = await dbContext.Set<ProcessDefinition>()
+                .SingleAsync(item => item.Id == saveResult.Value);
+
+            definition.Summary = "Concurrent update before stale no-draft save.";
+            definition.UpdatedAtUtc = DateTimeOffset.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        staleEditor.Summary = "Stale no-draft summary write.";
+
+        var staleSaveResult = await processesService.SaveAsync(staleEditor);
+
+        Assert.True(staleSaveResult.IsFailure);
+        Assert.Contains(
+            staleSaveResult.Errors,
+            error => error.Code == "processes.definition-concurrency-conflict");
+    }
+
+    [Fact]
     public async Task PublishAsync_rejects_stale_publish_request_after_concurrent_update()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1073,6 +1316,123 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Contains(
             publishResult.Errors,
             error => error.Code == "processes.publish-concurrency-conflict");
+    }
+
+    [Fact]
+    public async Task Template_services_keep_role_and_artifact_editor_mapping_rules_aligned()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessTemplateCatalogService>();
+        var libraryService = scope.ServiceProvider.GetRequiredService<ProcessTemplateLibraryService>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var pack = packLoader.Load();
+        var roleSeed = pack.RoleTemplates.First(seed =>
+            !string.IsNullOrWhiteSpace(seed.TemplateRoleKey) &&
+            pack.SharedRoles.ContainsKey(seed.TemplateRoleKey));
+        var sharedRoleItem = Assert.Single(
+            libraryService.ListItems(ProcessTemplateLibraryCategory.Roles),
+            item =>
+                string.Equals(item.ScopeLabel, "Shared role library", StringComparison.Ordinal) &&
+                string.Equals(item.Key, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase));
+
+        Assert.True(catalogService.TryCreateRoleDraft(roleSeed.ActionId, 1, out var catalogRole));
+
+        var libraryRole = libraryService.CreateRoleDraft(sharedRoleItem.ItemId, 1);
+        var roleResource = pack.SharedRoles[roleSeed.TemplateRoleKey];
+        var projectionRoleCase = pack.Processes.Values.First(process =>
+            process.RoleUsages.Any(usage =>
+                string.Equals(usage.RoleResourceKey, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(usage.Key, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase)));
+        var projectedRoleEnvelope = projectionService.GetProjectedEnvelope(projectionRoleCase.Key);
+        var projectedRole = Assert.Single(
+            projectedRoleEnvelope.Definition.Roles,
+            role => string.Equals(role.Key, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal(roleResource.Purpose, catalogRole.Purpose);
+        Assert.Equal(roleResource.Purpose, libraryRole.Purpose);
+        Assert.Equal(roleResource.Purpose, projectedRole.Purpose);
+        Assert.Equal(roleResource.StaffingIntent, catalogRole.StaffingIntent);
+        Assert.Equal(roleResource.StaffingIntent, libraryRole.StaffingIntent);
+        Assert.Equal(roleResource.StaffingIntent, projectedRole.StaffingIntent);
+        Assert.Equal(catalogRole.PreferredExecutorKind, libraryRole.PreferredExecutorKind);
+        Assert.Equal(catalogRole.PreferredExecutorKind, projectedRole.PreferredExecutorKind);
+        Assert.Equal(catalogRole.PreferredProjectAssignmentRole, libraryRole.PreferredProjectAssignmentRole);
+        Assert.Equal(catalogRole.PreferredProjectAssignmentRole, projectedRole.PreferredProjectAssignmentRole);
+        Assert.Equal(catalogRole.IsRequired, libraryRole.IsRequired);
+        Assert.Equal(catalogRole.IsRequired, projectedRole.IsRequired);
+        Assert.Equal(catalogRole.AllowsFallback, libraryRole.AllowsFallback);
+        Assert.Equal(catalogRole.AllowsFallback, projectedRole.AllowsFallback);
+        Assert.Equal(catalogRole.RequiresExplicitApproval, libraryRole.RequiresExplicitApproval);
+        Assert.Equal(catalogRole.RequiresExplicitApproval, projectedRole.RequiresExplicitApproval);
+        Assert.Equal(catalogRole.DefaultAllocationPercent, libraryRole.DefaultAllocationPercent);
+        Assert.Equal(catalogRole.DefaultAllocationPercent, projectedRole.DefaultAllocationPercent);
+        Assert.Equal(catalogRole.RoleTemplateSourceKey, libraryRole.RoleTemplateSourceKey);
+        Assert.Equal(catalogRole.RoleTemplateSourceKey, projectedRole.RoleTemplateSourceKey);
+        Assert.Equal(catalogRole.RoleTemplateSnapshotName, libraryRole.RoleTemplateSnapshotName);
+        Assert.Equal(catalogRole.RoleTemplateSnapshotName, projectedRole.RoleTemplateSnapshotName);
+        Assert.Equal(catalogRole.SnapshotSummary, libraryRole.SnapshotSummary);
+        Assert.Equal(catalogRole.SnapshotSummary, projectedRole.SnapshotSummary);
+
+        var artifactSeed = pack.StepTemplates.First(seed =>
+            seed.Template.ArtifactExpectations.Count == 1 &&
+            !string.IsNullOrWhiteSpace(seed.Template.ArtifactExpectations[0].TemplateKey) &&
+            pack.SharedArtifacts.ContainsKey(seed.Template.ArtifactExpectations[0].TemplateKey) &&
+            HasNoArtifactOverrides(seed.Template.ArtifactExpectations[0]));
+        var artifactTemplate = Assert.Single(artifactSeed.Template.ArtifactExpectations);
+        var sharedArtifactItem = Assert.Single(
+            libraryService.ListItems(ProcessTemplateLibraryCategory.Artifacts),
+            item =>
+                string.Equals(item.ScopeLabel, "Shared artifact library", StringComparison.Ordinal) &&
+                string.Equals(item.Key, artifactTemplate.TemplateKey, StringComparison.OrdinalIgnoreCase));
+
+        Assert.True(catalogService.TryCreateStepDraft(artifactSeed.ActionId, 1, null, 0, 0, out var catalogStep));
+
+        var catalogArtifact = Assert.Single(catalogStep.ArtifactExpectations);
+        var libraryArtifact = libraryService.CreateArtifactExpectation(sharedArtifactItem.ItemId);
+        var projectionArtifactCase = pack.Processes.Values
+            .SelectMany(process => process.Steps.Select(step => new { process, step }))
+            .SelectMany(item => item.step.ArtifactExpectations.Select(artifact => new { item.process, item.step, artifact }))
+            .First(item =>
+                item.step.ArtifactExpectations.Count == 1 &&
+                string.Equals(item.artifact.TemplateKey, artifactTemplate.TemplateKey, StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(item.artifact.TrustRequirement) &&
+                string.IsNullOrWhiteSpace(item.artifact.SensitivityLevel) &&
+                item.artifact.RetentionDays <= 0 &&
+                string.IsNullOrWhiteSpace(item.artifact.AllowedFutureUsageSummary) &&
+                string.IsNullOrWhiteSpace(item.artifact.ValidationRequirementSummary));
+        var projectedEnvelope = projectionService.GetProjectedEnvelope(projectionArtifactCase.process.Key);
+        var projectedStep = Assert.Single(
+            projectedEnvelope.Definition.Steps,
+            step => string.Equals(step.Key, projectionArtifactCase.step.Key, StringComparison.OrdinalIgnoreCase));
+        var projectedArtifact = Assert.Single(projectedStep.ArtifactExpectations);
+
+        Assert.Equal(catalogArtifact.ArtifactKind, libraryArtifact.ArtifactKind);
+        Assert.Equal(catalogArtifact.Title, libraryArtifact.Title);
+        Assert.Equal(catalogArtifact.IsRequired, libraryArtifact.IsRequired);
+        Assert.Equal(catalogArtifact.TrustRequirement, libraryArtifact.TrustRequirement);
+        Assert.Equal(catalogArtifact.TrustRequirement, projectedArtifact.TrustRequirement);
+        Assert.Equal(catalogArtifact.SensitivityLevel, libraryArtifact.SensitivityLevel);
+        Assert.Equal(catalogArtifact.SensitivityLevel, projectedArtifact.SensitivityLevel);
+        Assert.Equal(catalogArtifact.RetentionDays, libraryArtifact.RetentionDays);
+        Assert.Equal(catalogArtifact.RetentionDays, projectedArtifact.RetentionDays);
+        Assert.Equal(catalogArtifact.AllowedFutureUsageSummary, libraryArtifact.AllowedFutureUsageSummary);
+        Assert.Equal(catalogArtifact.AllowedFutureUsageSummary, projectedArtifact.AllowedFutureUsageSummary);
+        Assert.Equal(catalogArtifact.ValidationRequirementSummary, libraryArtifact.ValidationRequirementSummary);
+        Assert.Equal(catalogArtifact.ValidationRequirementSummary, projectedArtifact.ValidationRequirementSummary);
+        Assert.Equal(
+            string.IsNullOrWhiteSpace(projectionArtifactCase.artifact.ArtifactKind)
+                ? libraryArtifact.ArtifactKind
+                : EnumValueParser.ParseOrDefault(projectionArtifactCase.artifact.ArtifactKind, ProcessArtifactKind.Evidence),
+            projectedArtifact.ArtifactKind);
+        Assert.Equal(
+            string.IsNullOrWhiteSpace(projectionArtifactCase.artifact.Title)
+                ? libraryArtifact.Title
+                : projectionArtifactCase.artifact.Title,
+            projectedArtifact.Title);
+        Assert.Equal(projectionArtifactCase.artifact.IsRequired, projectedArtifact.IsRequired);
     }
 
     [Fact]
@@ -1937,6 +2297,82 @@ public sealed class ProcessesServiceIntegrationTests
         };
     }
 
+    private static ProcessDefinitionEditorModel BuildLinearAssignmentDefinitionEditor(
+        Guid projectId,
+        Guid roleId,
+        Guid intakeStepId,
+        Guid reviewStepId)
+    {
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Linear assignment race proof process",
+            Summary = "Validates step-scoped assignment singularity.",
+            ValueStatement = "Runtime assignment rows must stay singular.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Assignment resolution must not fork duplicate logical rows.",
+            ChangeSummary = "Initial assignment race proof definition.",
+            ConstitutionRuleSummary = "One step-scoped assignment row per run, role, and step.",
+            OperatingModeSummary = "Assisted execution for concurrency verification.",
+            SimulationReadinessSummary = "Safe for integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the assignment race proof flow.",
+                    StaffingIntent = "Primary delivery owner.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Assignment race proof owner."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "capture-intake",
+                    Title = "Capture intake",
+                    StepKind = ProcessStepKind.Start,
+                    TargetLeadHours = 1,
+                    CanvasX = 140,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = reviewStepId,
+                    Key = "review-intake",
+                    Title = "Review intake",
+                    StepKind = ProcessStepKind.Review,
+                    TargetLeadHours = 2,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
+                    CanvasX = 460,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -1951,12 +2387,55 @@ public sealed class ProcessesServiceIntegrationTests
         return result.Value;
     }
 
+    private static async Task AddPersistedDependencyAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid definitionId,
+        ProcessVersionStatus versionStatus,
+        string stepKey,
+        string dependsOnStepKey)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var version = await dbContext.Set<ProcessDefinitionVersion>()
+            .SingleAsync(item => item.ProcessDefinitionId == definitionId && item.Status == versionStatus);
+        var steps = await dbContext.Set<ProcessStepDefinition>()
+            .Where(item => item.ProcessDefinitionVersionId == version.Id)
+            .ToListAsync();
+        var step = Assert.Single(steps, item => item.Key == stepKey);
+        var dependsOnStep = Assert.Single(steps, item => item.Key == dependsOnStepKey);
+        var nextDisplayOrder = (await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => item.StepDefinitionId == step.Id)
+            .Select(item => (int?)item.DisplayOrder)
+            .MaxAsync()) ?? -1;
+
+        await dbContext.Set<ProcessStepDependencyDefinition>().AddAsync(
+            new ProcessStepDependencyDefinition
+            {
+                Id = Guid.NewGuid(),
+                StepDefinitionId = step.Id,
+                DependsOnStepId = dependsOnStep.Id,
+                DisplayOrder = nextDisplayOrder + 1
+            });
+
+        await dbContext.SaveChangesAsync();
+    }
+
     private static List<string> ResolveDependencyKeys(ProcessDefinitionEditorModel editor, ProcessStepEditorModel step)
     {
         return ProcessCanvasBranching.GetOrderedDependencies(step)
             .Select(dependency => Assert.Single(editor.Steps, candidate => candidate.Id == dependency.DependsOnStepId).Key)
             .OrderBy(key => key)
             .ToList();
+    }
+
+    private static bool HasNoArtifactOverrides(ProcessTemplateArtifactExpectation artifact)
+    {
+        return string.IsNullOrWhiteSpace(artifact.Title) &&
+               string.IsNullOrWhiteSpace(artifact.ArtifactKind) &&
+               string.IsNullOrWhiteSpace(artifact.TrustRequirement) &&
+               string.IsNullOrWhiteSpace(artifact.SensitivityLevel) &&
+               artifact.RetentionDays <= 0 &&
+               string.IsNullOrWhiteSpace(artifact.AllowedFutureUsageSummary) &&
+               string.IsNullOrWhiteSpace(artifact.ValidationRequirementSummary);
     }
 
     private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)

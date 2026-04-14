@@ -8,7 +8,7 @@
 
 - Bring the runtime schema in line with service assumptions by enforcing singular step runs and singular run assignments directly in the database, including null-safe uniqueness for step-scoped versus run-scoped assignments.
 
-## Covered inputs
+## Covered Inputs
 
 - See `02-open-findings.md`, `requirements/01-normalized-requirements.md`, and `traceability/01-finding-to-subbundle-map.md` for the owning findings and requirements.
 
@@ -16,26 +16,26 @@
 
 - Follow the dependencies recorded in `codex/TASKS.json` and `plan/01-phase-plan.md`.
 
-## Exact source references
+## Exact Source References
 
-- src/CanDoItAll.Modules.Processes/ProcessRuntimeEntityConfigurations.cs
-- src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
-- src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.Operations.cs
-- src/CanDoItAll.Migrations.Sqlite/Migrations
-- src/CanDoItAll.Migrations.PostgreSql/Migrations
-- tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs
-- tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRuntimeEntityConfigurations.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRuntimeModels.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.Operations.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\Migrations
+- C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\Migrations
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessSchemaIntegrationTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
 
-## Dependency impact
+## Dependency Impact
 
 - Downstream work remains blocked until this subbundle's progression gate is satisfied from fresh proof.
 
-## Validation depth
+## Validation Depth
 
 - `Critical foundation`
 
-## Implementation steps
+## Implementation Steps
 
 1. Audit the listed source references against the current live repository state.
 2. Implement only the smallest correct change set for this subbundle.
@@ -43,39 +43,39 @@
 4. Run the required proof commands and capture fresh artifacts.
 5. Update `reviews/01-execution-report.md` or the live execution report and the gate memo log before allowing downstream work to continue.
 
-## Scope exceptions
+## Scope Exceptions
 
 - Do not widen this subbundle beyond the stated objective. If the work uncovers a later-phase defect, record it and stop at the correct boundary.
 
-## Do not do
+## Do Not Do
 
 - Do not continue into downstream numbered phases just because nearby files are already open.
 - Do not mark this subbundle complete until the progression gate can be answered explicitly from real proof.
 - If runtime singularity still depends only on service discipline or nullable non-unique indexes, stop and open the runtime-uniqueness corrective playbook.
 
-## Acceptance checklist
+## Acceptance Checklist
 
 - Satisfy the deliverables and review questions preserved below.
 
-## Proof required
+## Proof Required
 
 - Run the validation commands preserved below and record the resulting artifacts in the live execution report.
 
-## Browser validation logging
+## Browser Validation Logging
 
 - Only required if this subbundle changes visible `/processes` UI behavior beyond what component proof already covers.
 
-## Progression gate
+## Progression Gate
 
 - This phase is complete only when its acceptance checklist and proof artifacts are satisfied strongly enough for the next dependency to proceed without borrowed trust.
 
-## Suggested agent prompt
+## Suggested Agent Prompt
 
 ```text
 Implement only subbundle 04-runtime-row-singularity-and-db-uniqueness-hardening. Bring the runtime schema in line with service assumptions by enforcing singular step runs and singular run assignments directly in the database, including null-safe uniqueness for step-scoped versus run-scoped assignments. Respect the prerequisites, stop rules, and proof contract, update the live execution report from fresh evidence, and do not continue downstream until the progression gate is explicitly satisfied.
 ```
 
-## Preserved bundle notes
+## Preserved Bundle Notes
 
 ### Purpose
 Bring the runtime schema in line with service assumptions by enforcing singular step runs and singular run assignments directly in the database, including null-safe uniqueness for step-scoped versus run-scoped assignments.
@@ -115,3 +115,4 @@ If runtime singularity still depends only on service discipline or nullable non-
 ### Detailed execution notes
 - This is not merely defensive schema polish. `ResolveAssignmentAsync` currently has a real concurrent duplicate-insert race without a unique index.
 - Do not rely on one giant nullable composite index if the null semantics differ between providers.
+

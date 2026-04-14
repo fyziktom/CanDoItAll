@@ -69,6 +69,11 @@ public sealed partial class ProcessesService
             }
         }
 
+        var graphIssue = FindDefinitionGraphIssue(model);
+        if (graphIssue is not null) {
+            return CreateDefinitionGraphValidationError(graphIssue);
+        }
+
         return ValidateArtifactInputs(model);
     }
 
@@ -116,6 +121,29 @@ public sealed partial class ProcessesService
             "processes.run-start-conflict");
     }
 
+    private static Error CreateRunStartGraphError(ProcessDependencyGraphIssue? issue = null) {
+        if (issue is null) {
+            return Error.Validation(
+                "Process run cannot start because the published process graph has no legal root step. Publish a corrected definition and try again.",
+                "processes.run-invalid-graph");
+        }
+
+        return issue.Kind switch {
+            ProcessDependencyGraphIssueKind.SelfDependency => Error.Validation(
+                $"Process run cannot start because published step '{issue.StepLabels[0]}' depends on itself. Publish a corrected definition and try again.",
+                "processes.run-invalid-graph"),
+            _ => Error.Validation(
+                $"Process run cannot start because the published process graph contains a dependency cycle: {string.Join(" -> ", issue.StepLabels)}. Publish a corrected definition and try again.",
+                "processes.run-invalid-graph")
+        };
+    }
+
+    private static Error CreateAssignmentUniqueConflictError() {
+        return Error.Validation(
+            "Another assignment update already claimed this run role scope. Reload the run and try again.",
+            "processes.assignment-unique-conflict");
+    }
+
     private static Error CreateStepTransitionConflictError() {
         return Error.Validation(
             "Process step changed before the transition completed. Reload the run and try again.",
@@ -158,6 +186,27 @@ public sealed partial class ProcessesService
             providerMessage.Contains("Processes_Definitions.Slug", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsRunAssignmentUniqueConflict(DbUpdateException? exception) {
+        if (exception is null || !DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)) {
+            return false;
+        }
+
+        var constraintName = DbUpdateExceptionClassifier.GetConstraintName(exception);
+        if (string.Equals(constraintName, ProcessPersistenceConstraintNames.RunAssignmentRunScopedUniqueIndex, StringComparison.Ordinal) ||
+            string.Equals(constraintName, ProcessPersistenceConstraintNames.RunAssignmentStepScopedUniqueIndex, StringComparison.Ordinal)) {
+            return true;
+        }
+
+        var providerMessage = DbUpdateExceptionClassifier.GetProviderMessage(exception);
+        if (providerMessage.Contains(ProcessPersistenceConstraintNames.RunAssignmentRunScopedUniqueIndex, StringComparison.OrdinalIgnoreCase) ||
+            providerMessage.Contains(ProcessPersistenceConstraintNames.RunAssignmentStepScopedUniqueIndex, StringComparison.OrdinalIgnoreCase)) {
+            return true;
+        }
+
+        return providerMessage.Contains("Processes_RunAssignments.ProcessRunId", StringComparison.OrdinalIgnoreCase) &&
+            providerMessage.Contains("Processes_RunAssignments.RoleRequirementId", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Error? ValidatePublish(
         ProcessDefinition definition,
         ProcessDefinitionVersion version,
@@ -197,6 +246,11 @@ public sealed partial class ProcessesService
             return branchingError;
         }
 
+        var graphIssue = FindPublishedGraphIssue(steps, stepDependenciesByStepId);
+        if (graphIssue is not null) {
+            return CreatePublishGraphValidationError(graphIssue);
+        }
+
         return ValidatePublishedArtifactInputs(steps, artifactExpectations, artifactInputs, stepDependenciesByStepId);
     }
 
@@ -207,6 +261,19 @@ public sealed partial class ProcessesService
         IReadOnlyDictionary<Guid, List<ProcessStepBranchOutcomeDefinition>> branchOutcomesByStepId,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId) {
         var stepsById = steps.ToDictionary(step => step.Id);
+        var roleIds = roles.Select(role => role.Id).ToHashSet();
+        var dependencyOutcomeIdsByStepId = branchOutcomesByStepId.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.Select(outcome => outcome.Id).ToHashSet());
+        var routedBranchOutcomeIdsByDependsOnStepId = stepDependenciesByStepId.Values
+            .SelectMany(dependencies => dependencies)
+            .Where(dependency => dependency.DependsOnBranchOutcomeId.HasValue)
+            .GroupBy(dependency => dependency.DependsOnStepId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(dependency => dependency.DependsOnBranchOutcomeId!.Value)
+                    .ToHashSet());
 
         foreach (var step in steps) {
             branchOutcomesByStepId.TryGetValue(step.Id, out var stepBranchOutcomes);
@@ -216,7 +283,7 @@ public sealed partial class ProcessesService
                 return Error.Validation("Publishing requires a decision-maker role for branching steps.", "processes.publish-branch-decision-role-required");
             }
 
-            if (step.DecisionRoleRequirementId.HasValue && roles.All(role => role.Id != step.DecisionRoleRequirementId.Value)) {
+            if (step.DecisionRoleRequirementId.HasValue && !roleIds.Contains(step.DecisionRoleRequirementId.Value)) {
                 return Error.Validation("Branch decision-maker roles must resolve to a published process role.", "processes.publish-branch-decision-role-invalid");
             }
 
@@ -229,10 +296,8 @@ public sealed partial class ProcessesService
                     continue;
                 }
 
-                branchOutcomesByStepId.TryGetValue(dependency.DependsOnStepId, out var dependencyOutcomes);
-                dependencyOutcomes ??= [];
-
-                if (dependencyOutcomes.All(outcome => outcome.Id != dependency.DependsOnBranchOutcomeId.Value)) {
+                if (!dependencyOutcomeIdsByStepId.TryGetValue(dependency.DependsOnStepId, out var dependencyOutcomeIds) ||
+                    !dependencyOutcomeIds.Contains(dependency.DependsOnBranchOutcomeId.Value)) {
                     return Error.Validation("Dependency outcomes must belong to the selected dependency step before publication.", "processes.publish-branch-dependency-outcome-invalid");
                 }
             }
@@ -248,11 +313,8 @@ public sealed partial class ProcessesService
                     continue;
                 }
 
-                var hasDependent = steps.Any(candidate =>
-                    GetPersistedDependencies(candidate, stepDependenciesByStepId)
-                        .Any(dependency => dependency.DependsOnStepId == step.Id &&
-                            dependency.DependsOnBranchOutcomeId == branchOutcome.Id));
-                if (!hasDependent) {
+                if (!routedBranchOutcomeIdsByDependsOnStepId.TryGetValue(step.Id, out var routedBranchOutcomeIds) ||
+                    !routedBranchOutcomeIds.Contains(branchOutcome.Id)) {
                     return Error.Validation(
                         $"Branch outcome '{branchOutcome.Title}' on process '{definition.Name}' is not routed to any downstream step.",
                         "processes.publish-branch-outcome-unused");
@@ -273,6 +335,142 @@ public sealed partial class ProcessesService
         ProcessStepDefinition step,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
         return ProcessStepDependencyCollection.GetPersistedDependencies(step.Id, dependenciesByStepId);
+    }
+
+    private static Error CreateDefinitionGraphValidationError(ProcessDependencyGraphIssue issue) {
+        return issue.Kind switch {
+            ProcessDependencyGraphIssueKind.SelfDependency => Error.Validation(
+                $"Step '{issue.StepLabels[0]}' cannot depend on itself.",
+                "processes.branch-dependency-self-reference"),
+            _ => Error.Validation(
+                $"Process graph contains a dependency cycle: {string.Join(" -> ", issue.StepLabels)}. Remove the cycle and try again.",
+                "processes.branch-dependency-cycle-invalid")
+        };
+    }
+
+    private static Error CreatePublishGraphValidationError(ProcessDependencyGraphIssue issue) {
+        return issue.Kind switch {
+            ProcessDependencyGraphIssueKind.SelfDependency => Error.Validation(
+                $"Publishing requires every step to depend on an upstream step instead of itself. Step '{issue.StepLabels[0]}' is self-referential.",
+                "processes.publish-branch-dependency-self-reference"),
+            _ => Error.Validation(
+                $"Publishing requires an acyclic dependency graph. Remove the cycle: {string.Join(" -> ", issue.StepLabels)}.",
+                "processes.publish-branch-dependency-cycle-invalid")
+        };
+    }
+
+    private static ProcessDependencyGraphIssue? FindDefinitionGraphIssue(ProcessDefinitionEditorModel model) {
+        return FindDependencyGraphIssue(
+            model.Steps,
+            step => step.Id,
+            ResolveDefinitionStepLabel,
+            step => ProcessCanvasBranching.GetOrderedDependencies(step)
+                .Where(dependency => dependency.DependsOnStepId.HasValue)
+                .Select(dependency => dependency.DependsOnStepId!.Value));
+    }
+
+    private static ProcessDependencyGraphIssue? FindPublishedGraphIssue(
+        IReadOnlyList<ProcessStepDefinition> steps,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId) {
+        return FindDependencyGraphIssue(
+            steps,
+            step => step.Id,
+            step => ResolvePersistedStepLabel(step.Title, step.Key, step.Id),
+            step => GetPersistedDependencies(step, stepDependenciesByStepId)
+                .Select(dependency => dependency.DependsOnStepId));
+    }
+
+    private static ProcessDependencyGraphIssue? FindDependencyGraphIssue<TStep>(
+        IReadOnlyList<TStep> steps,
+        Func<TStep, Guid?> stepIdSelector,
+        Func<TStep, string> stepLabelSelector,
+        Func<TStep, IEnumerable<Guid>> dependencySelector) {
+        var orderedSteps = steps
+            .Where(step => stepIdSelector(step).HasValue && stepIdSelector(step)!.Value != Guid.Empty)
+            .ToList();
+        var stepsById = orderedSteps.ToDictionary(step => stepIdSelector(step)!.Value);
+
+        foreach (var step in orderedSteps) {
+            var stepId = stepIdSelector(step)!.Value;
+            if (dependencySelector(step).Any(dependencyStepId => dependencyStepId == stepId)) {
+                return new ProcessDependencyGraphIssue(
+                    ProcessDependencyGraphIssueKind.SelfDependency,
+                    [stepLabelSelector(step)]);
+            }
+        }
+
+        var cycle = FindDependencyCycle(
+            [.. orderedSteps.Select(step => stepIdSelector(step)!.Value)],
+            stepId => dependencySelector(stepsById[stepId])
+                .Where(stepsById.ContainsKey)
+                .Distinct());
+        if (cycle is null) {
+            return null;
+        }
+
+        return new ProcessDependencyGraphIssue(
+            ProcessDependencyGraphIssueKind.Cycle,
+            [.. cycle.Select(stepId => stepLabelSelector(stepsById[stepId]))]);
+    }
+
+    private static List<Guid>? FindDependencyCycle(
+        IReadOnlyList<Guid> orderedStepIds,
+        Func<Guid, IEnumerable<Guid>> dependencySelector) {
+        var stepOrder = orderedStepIds
+            .Select((stepId, index) => new { stepId, index })
+            .ToDictionary(item => item.stepId, item => item.index);
+        var visitStateByStepId = orderedStepIds.ToDictionary(stepId => stepId, _ => 0);
+        var traversalStack = new List<Guid>(orderedStepIds.Count);
+        List<Guid>? cycle = null;
+
+        bool Visit(Guid stepId) {
+            visitStateByStepId[stepId] = 1;
+            traversalStack.Add(stepId);
+
+            foreach (var dependencyStepId in dependencySelector(stepId).OrderBy(candidate => stepOrder[candidate])) {
+                var visitState = visitStateByStepId.GetValueOrDefault(dependencyStepId);
+                if (visitState == 1) {
+                    var cycleStartIndex = traversalStack.IndexOf(dependencyStepId);
+                    cycle = traversalStack.Skip(cycleStartIndex).ToList();
+                    cycle.Add(dependencyStepId);
+                    return true;
+                }
+
+                if (visitState == 0 && Visit(dependencyStepId)) {
+                    return true;
+                }
+            }
+
+            traversalStack.RemoveAt(traversalStack.Count - 1);
+            visitStateByStepId[stepId] = 2;
+            return false;
+        }
+
+        foreach (var stepId in orderedStepIds) {
+            if (visitStateByStepId[stepId] == 0 && Visit(stepId)) {
+                break;
+            }
+        }
+
+        return cycle;
+    }
+
+    private static string ResolveDefinitionStepLabel(ProcessStepEditorModel step) {
+        return ResolvePersistedStepLabel(step.Title, step.Key, step.Id);
+    }
+
+    private static string ResolvePersistedStepLabel(string? title, string? key, Guid? stepId) {
+        if (!string.IsNullOrWhiteSpace(title)) {
+            return title.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(key)) {
+            return key.Trim();
+        }
+
+        return stepId.HasValue && stepId.Value != Guid.Empty
+            ? stepId.Value.ToString("D")
+            : "Unnamed step";
     }
 
     private static string BuildWorkBrief(ProcessDefinition definition, ProcessStepDefinition step, string? executorName) {
@@ -345,5 +543,15 @@ public sealed partial class ProcessesService
             },
             cancellationToken);
     }
+
+    private enum ProcessDependencyGraphIssueKind
+    {
+        SelfDependency = 0,
+        Cycle = 1
+    }
+
+    private sealed record ProcessDependencyGraphIssue(
+        ProcessDependencyGraphIssueKind Kind,
+        IReadOnlyList<string> StepLabels);
 
 }

@@ -129,29 +129,15 @@ public sealed class ProcessTemplateCatalogService
         var roleResource = ResolveRoleResource(pack, seed.TemplateRoleKey)
             ?? throw new InvalidOperationException($"Role template '{seed.TemplateRoleKey}' was not found in the template pack.");
 
-        return new ProcessRoleEditorModel
-        {
-            Id = Guid.NewGuid(),
-            Key = $"{(string.IsNullOrWhiteSpace(seed.KeyPrefix) ? roleResource.Key : seed.KeyPrefix)}-{ordinal}",
-            DisplayName = string.IsNullOrWhiteSpace(seed.DisplayNameTemplate)
+        return ProcessTemplateEditorModelFactory.CreateRoleFromResource(
+            roleResource,
+            Guid.NewGuid(),
+            $"{(string.IsNullOrWhiteSpace(seed.KeyPrefix) ? roleResource.Key : seed.KeyPrefix)}-{ordinal}",
+            string.IsNullOrWhiteSpace(seed.DisplayNameTemplate)
                 ? roleResource.DisplayName
                 : seed.DisplayNameTemplate.Replace("{ordinal}", ordinal.ToString(), StringComparison.Ordinal),
-            Purpose = roleResource.Purpose,
-            StaffingIntent = roleResource.StaffingIntent,
-            PreferredExecutorKind = string.IsNullOrWhiteSpace(roleResource.PreferredExecutorKind)
-                ? seed.PreferredExecutorKind
-                : roleResource.PreferredExecutorKind,
-            PreferredProjectAssignmentRole = EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(roleResource.PreferredProjectAssignmentRole),
-            IsRequired = roleResource.IsRequired,
-            AllowsFallback = roleResource.AllowsFallback,
-            RequiresExplicitApproval = roleResource.RequiresExplicitApproval,
-            DefaultAllocationPercent = roleResource.DefaultAllocationPercent > 0
-                ? roleResource.DefaultAllocationPercent
-                : Math.Max(0, seed.DefaultAllocationPercent),
-            RoleTemplateSourceKey = roleResource.RoleTemplateSourceKey,
-            RoleTemplateSnapshotName = roleResource.RoleTemplateSnapshotName,
-            SnapshotSummary = ProcessTemplateRoleSnapshotSummaryBuilder.Build(roleResource)
-        };
+            seed.PreferredExecutorKind,
+            Math.Max(0, seed.DefaultAllocationPercent));
     }
 
     private static ProcessStepEditorModel BuildStepDraft(
@@ -211,34 +197,10 @@ public sealed class ProcessTemplateCatalogService
         ProcessTemplatePack pack,
         ProcessTemplateArtifactExpectation template)
     {
-        var artifactResource = ResolveArtifactResource(pack, template.TemplateKey);
-
-        return new ProcessArtifactExpectationEditorModel
-        {
-            Id = Guid.NewGuid(),
-            ArtifactKind = EnumValueParser.ParseOrDefault(
-                string.IsNullOrWhiteSpace(template.ArtifactKind) ? artifactResource?.ArtifactKind : template.ArtifactKind,
-                ProcessArtifactKind.Evidence),
-            Title = string.IsNullOrWhiteSpace(template.Title)
-                ? artifactResource?.DisplayName ?? template.TemplateKey
-                : template.Title,
-            IsRequired = template.IsRequired,
-            TrustRequirement = EnumValueParser.ParseOrDefault(
-                string.IsNullOrWhiteSpace(template.TrustRequirement) ? artifactResource?.DefaultTrustRequirement : template.TrustRequirement,
-                ProcessArtifactTrustRequirement.ReviewRequired),
-            SensitivityLevel = EnumValueParser.ParseOrDefault(
-                string.IsNullOrWhiteSpace(template.SensitivityLevel) ? artifactResource?.DefaultSensitivityLevel : template.SensitivityLevel,
-                ProcessSensitivityLevel.Internal),
-            RetentionDays = template.RetentionDays > 0
-                ? template.RetentionDays
-                : artifactResource?.DefaultRetentionDays ?? 90,
-            AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(template.AllowedFutureUsageSummary)
-                ? artifactResource?.AllowedFutureUsageSummary ?? string.Empty
-                : template.AllowedFutureUsageSummary,
-            ValidationRequirementSummary = string.IsNullOrWhiteSpace(template.ValidationRequirementSummary)
-                ? artifactResource?.ValidationRequirementSummary ?? string.Empty
-                : template.ValidationRequirementSummary
-        };
+        return ProcessTemplateEditorModelFactory.CreateArtifactExpectationFromTemplate(
+            template,
+            ResolveArtifactResource(pack, template.TemplateKey),
+            Guid.NewGuid());
     }
 
     private static ProcessTemplateRoleResource? ResolveRoleResource(ProcessTemplatePack pack, string roleKey)

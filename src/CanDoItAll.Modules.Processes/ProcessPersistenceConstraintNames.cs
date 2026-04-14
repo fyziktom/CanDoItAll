@@ -8,6 +8,12 @@ internal static class ProcessPersistenceConstraintNames
 
     public const string StepDependencyConditionalUniqueIndex = "UX_ProcessStepDeps_Conditional";
 
+    public const string StepRunPerDefinitionUniqueIndex = "UX_ProcessStepRuns_RunStep";
+
+    public const string RunAssignmentRunScopedUniqueIndex = "UX_ProcessRunAssignments_RunScoped";
+
+    public const string RunAssignmentStepScopedUniqueIndex = "UX_ProcessRunAssignments_StepScoped";
+
     public const string VersionDraftPerDefinitionUniqueIndex = "UX_ProcessVersions_DraftPerDef";
 
     public const string VersionPublishedPerDefinitionUniqueIndex = "UX_ProcessVersions_PubPerDef";

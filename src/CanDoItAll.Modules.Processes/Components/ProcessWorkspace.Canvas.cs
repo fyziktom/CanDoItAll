@@ -30,6 +30,8 @@ public partial class ProcessWorkspace
     private ProcessCanvasNodeActionDialogState? canvasActionDialog;
     private readonly SemaphoreSlim definitionCanvasPersistGate = new(1, 1);
     private CancellationTokenSource? pendingDefinitionCanvasPersistCts;
+    private Task pendingDefinitionCanvasPersistTask = Task.CompletedTask;
+    private Task definitionCanvasPersistDrainTask = Task.CompletedTask;
 
     private bool IsDefinitionCanvasActive => string.Equals(detailTab, "steps", StringComparison.Ordinal);
 

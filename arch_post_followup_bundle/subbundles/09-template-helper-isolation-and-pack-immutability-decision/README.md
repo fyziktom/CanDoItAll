@@ -8,7 +8,7 @@
 
 - Finish isolating duplicated template-to-editor mapping rules and make the pack-caching/immutability tradeoff explicit and safe.
 
-## Covered inputs
+## Covered Inputs
 
 - See `02-open-findings.md`, `requirements/01-normalized-requirements.md`, and `traceability/01-finding-to-subbundle-map.md` for the owning findings and requirements.
 
@@ -16,24 +16,24 @@
 
 - Follow the dependencies recorded in `codex/TASKS.json` and `plan/01-phase-plan.md`.
 
-## Exact source references
+## Exact Source References
 
-- src/CanDoItAll.Modules.Processes/ProcessTemplateCatalogService.cs
-- src/CanDoItAll.Modules.Processes/ProcessTemplateLibraryService.cs
-- src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs
-- src/CanDoItAll.Modules.Processes/ProcessTemplatePackLoader.cs
-- src/CanDoItAll.Modules.Processes/ProcessTemplatePackModels.cs
-- tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplateCatalogService.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplateLibraryService.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplateProjectionService.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplatePackLoader.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplatePackModels.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
 
-## Dependency impact
+## Dependency Impact
 
 - Downstream work remains blocked until this subbundle's progression gate is satisfied from fresh proof.
 
-## Validation depth
+## Validation Depth
 
 - `Targeted follow-up`
 
-## Implementation steps
+## Implementation Steps
 
 1. Audit the listed source references against the current live repository state.
 2. Implement only the smallest correct change set for this subbundle.
@@ -41,39 +41,39 @@
 4. Run the required proof commands and capture fresh artifacts.
 5. Update `reviews/01-execution-report.md` or the live execution report and the gate memo log before allowing downstream work to continue.
 
-## Scope exceptions
+## Scope Exceptions
 
 - Do not widen this subbundle beyond the stated objective. If the work uncovers a later-phase defect, record it and stop at the correct boundary.
 
-## Do not do
+## Do Not Do
 
 - Do not continue into downstream numbered phases just because nearby files are already open.
 - Do not mark this subbundle complete until the progression gate can be answered explicitly from real proof.
 - If the change introduces shared mutable cross-scope state or still leaves the same mapping rules duplicated in multiple services, stop and open the template-isolation corrective playbook.
 
-## Acceptance checklist
+## Acceptance Checklist
 
 - Satisfy the deliverables and review questions preserved below.
 
-## Proof required
+## Proof Required
 
 - Run the validation commands preserved below and record the resulting artifacts in the live execution report.
 
-## Browser validation logging
+## Browser Validation Logging
 
 - Only required if this subbundle changes visible `/processes` UI behavior beyond what component proof already covers.
 
-## Progression gate
+## Progression Gate
 
 - This phase is complete only when its acceptance checklist and proof artifacts are satisfied strongly enough for the next dependency to proceed without borrowed trust.
 
-## Suggested agent prompt
+## Suggested Agent Prompt
 
 ```text
 Implement only subbundle 09-template-helper-isolation-and-pack-immutability-decision. Finish isolating duplicated template-to-editor mapping rules and make the pack-caching/immutability tradeoff explicit and safe. Respect the prerequisites, stop rules, and proof contract, update the live execution report from fresh evidence, and do not continue downstream until the progression gate is explicitly satisfied.
 ```
 
-## Preserved bundle notes
+## Preserved Bundle Notes
 
 ### Purpose
 Finish isolating duplicated template-to-editor mapping rules and make the pack-caching/immutability tradeoff explicit and safe.
@@ -108,3 +108,4 @@ If the change introduces shared mutable cross-scope state or still leaves the sa
 
 ### Detailed execution notes
 - The current scoped loader avoids a shared mutable graph, so do not 'optimize' it into a singleton unless the graph becomes safely immutable.
+

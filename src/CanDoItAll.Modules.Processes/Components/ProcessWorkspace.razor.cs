@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Processes;
 
-public partial class ProcessWorkspace : ComponentBase, IDisposable
+public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDisposable
 {
     private const string DefinitionCanvasSelectTool = "authoring";
     private const string DefinitionCanvasDeleteTool = "delete";
@@ -173,6 +173,11 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
         CancelPendingDefinitionCanvasPersistence();
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
+    }
+
     private async Task LoadWorkspaceAsync()
     {
         if (ProjectId.HasValue)
@@ -189,7 +194,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable
         var nextSelectedProcessId = ResolveSelectedProcessId();
         if (nextSelectedProcessId != selectedProcessId)
         {
-            await FlushPendingDefinitionCanvasPersistenceAsync();
+            await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
             selectedCanvasNodeId = null;
             ResetDefinitionCanvasState();
             ResetRuntimeCanvasState();

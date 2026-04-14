@@ -16,6 +16,11 @@ public interface IProcessRuntimeReadQueryService
         Guid runId,
         CancellationToken cancellationToken);
 
+    Task<ProcessWorkspaceRunDetails> GetRunDetailsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken);
+
     Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         AppDbContext dbContext,
         Guid? definitionId,
@@ -254,6 +259,29 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
             .ToList();
     }
 
+    public async Task<ProcessWorkspaceRunDetails> GetRunDetailsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var stepRuns = await ListStepRunsAsync(dbContext, runId, cancellationToken);
+        var decisions = await ListDecisionRecordsAsync(dbContext, runId, cancellationToken);
+        var artifacts = await ListArtifactsAsync(dbContext, runId, cancellationToken);
+        var assignments = await ListAssignmentsAsync(dbContext, runId, cancellationToken);
+        var workBriefs = await ListWorkBriefsAsync(dbContext, runId, cancellationToken);
+        var conformanceObservations = await ListConformanceObservationsAsync(dbContext, runId, cancellationToken);
+
+        return new ProcessWorkspaceRunDetails(
+            stepRuns,
+            decisions,
+            artifacts,
+            assignments,
+            workBriefs,
+            conformanceObservations);
+    }
+
     public async Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         AppDbContext dbContext,
         Guid? definitionId,
@@ -375,6 +403,119 @@ public sealed class ProcessRuntimeReadQueryService : IProcessRuntimeReadQuerySer
         return materialized.Count == 0
             ? 0
             : (int)Math.Round(materialized.Average(), MidpointRounding.AwayFromZero);
+    }
+
+    private static async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var items = await dbContext.Set<ProcessDecisionRecord>()
+            .Where(item => item.ProcessRunId == runId)
+            .Select(item => new ProcessDecisionViewModel(
+                item.Id,
+                item.DecisionKind,
+                item.Outcome,
+                item.Title,
+                item.Reason,
+                item.BranchOutcomeTitle,
+                item.DecidedBy,
+                item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return items
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<ProcessArtifactViewModel>> ListArtifactsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var items = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runId)
+            .Select(item => new ProcessArtifactViewModel(
+                item.Id,
+                item.ArtifactKind,
+                item.Title,
+                item.TrustStatus,
+                item.SensitivityLevel,
+                item.ProvenanceSummary,
+                item.AllowedFutureUsageSummary,
+                item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return items
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<ProcessRunAssignmentViewModel>> ListAssignmentsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        return await dbContext.Set<ProcessRunAssignment>()
+            .Where(item => item.ProcessRunId == runId)
+            .OrderBy(item => item.DisplayName)
+            .Select(item => new ProcessRunAssignmentViewModel(
+                item.Id,
+                item.RoleRequirementId,
+                item.StepDefinitionId,
+                item.PartyId,
+                item.DisplayName,
+                item.ExecutorKind,
+                item.BindingReason,
+                item.SourceRegistryKey,
+                item.SnapshotSummary,
+                item.IsFallback,
+                item.IsCapabilityGap))
+            .ToListAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<ProcessWorkBriefViewModel>> ListWorkBriefsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var items = await dbContext.Set<ProcessWorkBrief>()
+            .Where(item => item.ProcessRunId == runId)
+            .Select(item => new ProcessWorkBriefViewModel(
+                item.Id,
+                item.StepRunId,
+                item.Title,
+                item.WorkBriefText,
+                item.HandoffSummary,
+                item.AssignmentReason,
+                item.ExpectedOutcome,
+                item.EvidenceExpectationSummary,
+                item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return items
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<ProcessConformanceObservationViewModel>> ListConformanceObservationsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var items = await dbContext.Set<ProcessConformanceObservation>()
+            .Where(item => item.ProcessRunId == runId)
+            .Select(item => new ProcessConformanceObservationViewModel(
+                item.Id,
+                item.StepRunId,
+                item.Severity,
+                item.Category,
+                item.Observation,
+                item.DeviationReason,
+                item.IsSafeNonAction,
+                item.ContainsSensitiveAssessment,
+                item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return items
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToList();
     }
 
     private sealed record ProcessRunListProjection(

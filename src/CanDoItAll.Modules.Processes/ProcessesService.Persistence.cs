@@ -19,8 +19,13 @@ public sealed partial class ProcessesService
         ProcessDefinitionEditorModel model,
         ProcessImportMetadata? importMetadata,
         CancellationToken cancellationToken) {
-        NormalizeDefinitionEditorForSave(model);
         var validationError = ValidateDefinitionEditor(model);
+        if (validationError is not null) {
+            return Result<Guid>.Failure(validationError);
+        }
+
+        NormalizeDefinitionEditorForSave(model);
+        validationError = ValidateDefinitionEditor(model);
         if (validationError is not null) {
             return Result<Guid>.Failure(validationError);
         }
@@ -177,6 +182,23 @@ public sealed partial class ProcessesService
         var artifactExpectationsById = existingArtifactExpectations.ToDictionary(item => item.Id);
         var artifactInputsById = existingArtifactInputs.ToDictionary(item => item.Id);
         var branchOutcomesById = existingBranchOutcomes.ToDictionary(item => item.Id);
+        var existingRoleSkillsByRoleId = existingRoleSkills
+            .GroupBy(item => item.RoleRequirementId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToDictionary(item => item.SkillId));
+        var existingBranchOutcomesByStepId = existingBranchOutcomes
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var existingDependenciesByStepId = existingDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var existingAssignmentsByStepId = existingAssignments
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var existingArtifactInputsByStepId = existingArtifactInputs
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
 
         var roleIdMap = new Dictionary<Guid, Guid>();
         var stepIdMap = new Dictionary<Guid, Guid>();
@@ -243,15 +265,17 @@ public sealed partial class ProcessesService
         }
 
         foreach (var resolvedRole in resolvedRoles) {
+            if (!existingRoleSkillsByRoleId.TryGetValue(resolvedRole.RoleId, out var existingRoleSkillsForRole)) {
+                existingRoleSkillsForRole = [];
+                existingRoleSkillsByRoleId[resolvedRole.RoleId] = existingRoleSkillsForRole;
+            }
+
             foreach (var skillId in resolvedRole.Model.RequiredSkillIds.Distinct()) {
                 if (skillId == Guid.Empty) {
                     continue;
                 }
 
-                var existingRoleSkill = existingRoleSkills.FirstOrDefault(item =>
-                    item.RoleRequirementId == resolvedRole.RoleId &&
-                    item.SkillId == skillId);
-                if (existingRoleSkill is null) {
+                if (!existingRoleSkillsForRole.TryGetValue(skillId, out var existingRoleSkill)) {
                     existingRoleSkill = new ProcessRoleSkillRequirement {
                         RoleRequirementId = resolvedRole.RoleId,
                         SkillId = skillId,
@@ -261,6 +285,7 @@ public sealed partial class ProcessesService
                     await dbContext.Set<ProcessRoleSkillRequirement>().AddAsync(existingRoleSkill, cancellationToken);
                     existingRoleSkills.Add(existingRoleSkill);
                     roleSkillsById[existingRoleSkill.Id] = existingRoleSkill;
+                    existingRoleSkillsForRole[skillId] = existingRoleSkill;
                 } else {
                     existingRoleSkill.IsRequired = true;
                 }
@@ -332,9 +357,11 @@ public sealed partial class ProcessesService
         }
 
         foreach (var resolvedStep in resolvedSteps) {
-            var existingOutcomesForStep = existingBranchOutcomes
-                .Where(item => item.StepDefinitionId == resolvedStep.StepId)
-                .ToList();
+            if (!existingBranchOutcomesByStepId.TryGetValue(resolvedStep.StepId, out var existingOutcomesForStep)) {
+                existingOutcomesForStep = [];
+                existingBranchOutcomesByStepId[resolvedStep.StepId] = existingOutcomesForStep;
+            }
+
             var existingOutcomesByKey = existingOutcomesForStep
                 .GroupBy(item => item.Key, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
@@ -370,6 +397,7 @@ public sealed partial class ProcessesService
 
                     await dbContext.Set<ProcessStepBranchOutcomeDefinition>().AddAsync(branchOutcome, cancellationToken);
                     existingBranchOutcomes.Add(branchOutcome);
+                    existingOutcomesForStep.Add(branchOutcome);
                     branchOutcomesById[branchOutcome.Id] = branchOutcome;
                 }
 
@@ -385,13 +413,14 @@ public sealed partial class ProcessesService
         }
 
         foreach (var resolvedStep in resolvedSteps) {
-            var existingDependenciesForStep = existingDependencies
-                .Where(item => item.StepDefinitionId == resolvedStep.StepId)
-                .ToList();
+            if (!existingDependenciesByStepId.TryGetValue(resolvedStep.StepId, out var existingDependenciesForStep)) {
+                existingDependenciesForStep = [];
+                existingDependenciesByStepId[resolvedStep.StepId] = existingDependenciesForStep;
+            }
+
             var existingDependenciesByShape = existingDependenciesForStep
                 .GroupBy(item => (item.DependsOnStepId, item.DependsOnBranchOutcomeId))
                 .ToDictionary(group => group.Key, group => group.ToList());
-            var orderedDependencies = new List<ProcessStepDependencyDefinition>();
 
             for (var dependencyIndex = 0; dependencyIndex < resolvedStep.Dependencies.Count; dependencyIndex++) {
                 var dependencyModel = resolvedStep.Dependencies[dependencyIndex];
@@ -440,6 +469,7 @@ public sealed partial class ProcessesService
 
                     await dbContext.Set<ProcessStepDependencyDefinition>().AddAsync(dependency, cancellationToken);
                     existingDependencies.Add(dependency);
+                    existingDependenciesForStep.Add(dependency);
                     dependenciesById[dependency.Id] = dependency;
                 }
 
@@ -449,15 +479,16 @@ public sealed partial class ProcessesService
                 dependency.DisplayOrder = dependencyIndex;
 
                 retainedDependencyIds.Add(dependency.Id);
-                orderedDependencies.Add(dependency);
             }
 
         }
 
         foreach (var resolvedStep in resolvedSteps) {
-            var existingAssignmentsForStep = existingAssignments
-                .Where(item => item.StepDefinitionId == resolvedStep.StepId)
-                .ToList();
+            if (!existingAssignmentsByStepId.TryGetValue(resolvedStep.StepId, out var existingAssignmentsForStep)) {
+                existingAssignmentsForStep = [];
+                existingAssignmentsByStepId[resolvedStep.StepId] = existingAssignmentsForStep;
+            }
+
             var existingAssignmentsByShape = existingAssignmentsForStep
                 .GroupBy(item => (item.RoleRequirementId, item.ResponsibilityKind))
                 .ToDictionary(group => group.Key, group => group.ToList());
@@ -498,6 +529,7 @@ public sealed partial class ProcessesService
 
                     await dbContext.Set<ProcessStepRoleAssignmentRequirement>().AddAsync(assignment, cancellationToken);
                     existingAssignments.Add(assignment);
+                    existingAssignmentsForStep.Add(assignment);
                     assignmentsById[assignment.Id] = assignment;
                 }
 
@@ -560,9 +592,11 @@ public sealed partial class ProcessesService
         }
 
         foreach (var resolvedStep in resolvedSteps) {
-            var existingArtifactInputsForStep = existingArtifactInputs
-                .Where(item => item.StepDefinitionId == resolvedStep.StepId)
-                .ToList();
+            if (!existingArtifactInputsByStepId.TryGetValue(resolvedStep.StepId, out var existingArtifactInputsForStep)) {
+                existingArtifactInputsForStep = [];
+                existingArtifactInputsByStepId[resolvedStep.StepId] = existingArtifactInputsForStep;
+            }
+
             var existingArtifactInputsByArtifactId = existingArtifactInputsForStep
                 .GroupBy(item => item.ArtifactExpectationId)
                 .ToDictionary(group => group.Key, group => group.ToList());
@@ -604,6 +638,7 @@ public sealed partial class ProcessesService
 
                     await dbContext.Set<ProcessStepArtifactInputDefinition>().AddAsync(artifactInput, cancellationToken);
                     existingArtifactInputs.Add(artifactInput);
+                    existingArtifactInputsForStep.Add(artifactInput);
                     artifactInputsById[artifactInput.Id] = artifactInput;
                 }
 

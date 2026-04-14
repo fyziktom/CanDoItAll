@@ -49,6 +49,7 @@ public sealed partial class ProcessesService(
             return new ProcessDefinitionEditorModel {
                 Id = definition.Id,
                 ProjectId = definition.ProjectId,
+                DefinitionConcurrencyToken = definition.ConcurrencyToken,
                 Name = definition.Name,
                 Summary = definition.Summary,
                 ValueStatement = definition.ValueStatement,
