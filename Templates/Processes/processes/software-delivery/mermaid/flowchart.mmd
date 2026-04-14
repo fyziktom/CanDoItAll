@@ -1,0 +1,41 @@
+flowchart LR
+%% process-key: software-delivery
+%% definition-doc: processes/software-delivery/definition.md
+    step_feature_intake(["Clarify scope and release boundary<br/><sub>feature-intake</sub><br/><i>Value framing and no-go constraints</i>"])
+    step_architecture_review["Review architecture and canonical-model impact<br/><sub>architecture-review</sub><br/><i>Cross-module and source-of-truth decision</i>"]
+    step_implementation["Implement feature, tests, and migration notes<br/><sub>implementation</sub><br/><i>Code, tests, and reviewable proof</i>"]
+    step_peer_review["Complete peer review and integration readiness<br/><sub>peer-review</sub><br/><i>Design and implementation challenge</i>"]
+    step_qa_validation["Run QA validation and browser proof<br/><sub>qa-validation</sub><br/><i>Regression, UX, and quality evidence</i>"]
+    step_security_review{"Perform security and data-handling review<br/><sub>security-review</sub><br/><i>Tenant data, secrets, and exception posture</i>"}
+    step_release_approval{"Approve release readiness<br/><sub>release-approval</sub><br/><i>Go / no-go board decision</i>"}
+    step_execute_release_rollout["Execute controlled release rollout<br/><sub>execute-release-rollout</sub><br/><i>Live execution and first-hour telemetry watch</i>"]
+    step_post_release_learning(["Capture post-release learning and corrective actions<br/><sub>post-release-learning</sub><br/><i>Forensic replay and systemic follow-up</i>"])
+    step_feature_intake --> step_architecture_review
+    step_architecture_review --> step_implementation
+    step_implementation --> step_peer_review
+    step_peer_review --> step_qa_validation
+    step_peer_review --> step_security_review
+    step_implementation --> step_release_approval
+    step_qa_validation --> step_release_approval
+    step_security_review --> step_release_approval
+    step_release_approval --> step_execute_release_rollout
+    step_execute_release_rollout --> step_post_release_learning
+%% step-doc: feature-intake => processes/software-delivery/steps/feature-intake.md
+%% step-artifact: feature-intake => scope-boundary-packet
+%% step-doc: architecture-review => processes/software-delivery/steps/architecture-review.md
+%% step-artifact: architecture-review => architecture-decision-record
+%% step-doc: implementation => processes/software-delivery/steps/implementation.md
+%% step-artifact: implementation => implementation-change-set
+%% step-artifact: implementation => rollback-plan
+%% step-doc: peer-review => processes/software-delivery/steps/peer-review.md
+%% step-artifact: peer-review => test-evidence-pack
+%% step-doc: qa-validation => processes/software-delivery/steps/qa-validation.md
+%% step-artifact: qa-validation => regression-evidence-pack
+%% step-doc: security-review => processes/software-delivery/steps/security-review.md
+%% step-artifact: security-review => security-exception-assessment
+%% step-doc: release-approval => processes/software-delivery/steps/release-approval.md
+%% step-artifact: release-approval => release-approval-record
+%% step-doc: execute-release-rollout => processes/software-delivery/steps/execute-release-rollout.md
+%% step-artifact: execute-release-rollout => release-readiness-report
+%% step-doc: post-release-learning => processes/software-delivery/steps/post-release-learning.md
+%% step-artifact: post-release-learning => retrospective-improvement-log

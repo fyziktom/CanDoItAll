@@ -1,0 +1,29 @@
+{
+  "ProcessKey": "release-readiness-and-deployment",
+  "ProcessName": "Release readiness and deployment control",
+  "CurrentArchitectureStatus": "Aligned",
+  "BlockingIssues": [],
+  "Warnings": [
+    "The current module can represent explicit Dependencies, ArtifactInputs, DecisionRoleRequirementId, and branch outcomes directly.",
+    "Some authoring chrome actions are still hardcoded in ProcessCanvasSurfaceFactory; bundle includes a corrective subbundle for de-hardcoding."
+  ],
+  "ProjectedEnvelopeFacts": {
+    "RoleCount": 7,
+    "StepCount": 6,
+    "DependencyCount": 5,
+    "ArtifactExpectationCount": 12,
+    "ArtifactInputCount": 0,
+    "BranchOutcomeCount": 2
+  },
+  "SidecarOnlyFields": [
+    "Shared versus local resource folders and markdown sidecars remain outside the import envelope.",
+    "Role knowledge, experience, anti-pattern, and fitness-evidence metadata stay in resource sidecars.",
+    "Checklist, validation, and prompt narratives stay in resource sidecars rather than the current editor envelope.",
+    "Mermaid diagrams and architecture-review execution docs remain file-based exports."
+  ],
+  "RecommendedFollowUps": [
+    "Keep the template pack as the authored source of truth and treat the import envelope as a projection.",
+    "Run the corrective canvas-chrome subbundle before relying on toolbox chrome extensibility.",
+    "Keep bundle validation in CI so dependency and artifact-input regressions are surfaced immediately."
+  ]
+}

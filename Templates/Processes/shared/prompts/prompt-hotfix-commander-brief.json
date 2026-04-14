@@ -1,0 +1,25 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-hotfix-commander-brief",
+  "DisplayName": "Hotfix commander brief prompt",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "incident-commander",
+  "Phase": "Emergency bridge",
+  "Summary": "Builds a concise emergency commander brief that frames the issue, blast radius, current mitigation, and approval asks.",
+  "RequiredInputs": [
+    "Emergency bridge notes.",
+    "Blast radius assessment.",
+    "Proposed hotfix package."
+  ],
+  "OutputSchema": [
+    "Current incident summary.",
+    "Approval ask.",
+    "Rollback and watch notes."
+  ],
+  "RefusalConditions": [
+    "Do not present unverified diagnosis as confirmed fact.",
+    "Refuse if blast radius or rollback notes are missing."
+  ],
+  "DocPath": "shared/prompts/prompt-hotfix-commander-brief.md"
+}

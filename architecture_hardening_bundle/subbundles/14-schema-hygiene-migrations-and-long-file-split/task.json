@@ -1,0 +1,35 @@
+{
+  "Key": "14-schema-hygiene-migrations-and-long-file-split",
+  "Title": "Schema hygiene, migrations, and long-file split",
+  "Purpose": "Finish the core hardening by improving entity/configuration auditability, synchronizing provider snapshots or migrations, and reducing remaining long-file concentration in the touched process core.",
+  "DependsOn": [
+    "13-workspace-and-canvas-decomposition"
+  ],
+  "Deliverables": [
+    "Smaller, easier-to-audit entity/configuration files for the process aggregates touched by this initiative.",
+    "Explicit relationship/delete-behavior hygiene where needed.",
+    "Synchronized SQLite and PostgreSQL snapshots/migrations if the model changed.",
+    "Updated build/migration proof."
+  ],
+  "RepositoryTouchpoints": [
+    "src\\CanDoItAll.Modules.Processes\\ProcessDefinitionModels.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessRuntimeModels.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessRuntimeEntityConfigurations.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessesModuleServiceCollectionExtensions.cs",
+    "src\\CanDoItAll.Migrations.Sqlite\\Migrations\\AppDbContextModelSnapshot.cs",
+    "src\\CanDoItAll.Migrations.PostgreSql\\Migrations\\AppDbContextModelSnapshot.cs",
+    "src\\CanDoItAll.Modules.Projects\\ProjectModels.cs",
+    "tests\\CanDoItAll.Tests.Integration\\DatabaseMigrationIntegrationTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet build C:\\repositories\\CanDoItAll\\CanDoItAll.slnx -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~DatabaseMigrationIntegrationTests\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Are the touched model/configuration files easier to audit now?",
+    "Are both provider snapshots or migrations coherent?",
+    "Did we reduce long-file concentration for the right reasons?"
+  ],
+  "CorrectiveOnFailure": "If schema/configuration hygiene is still weak or providers drifted, trigger the workspace/shared-infrastructure corrective playbook before final closure begins.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-workspace-and-shared-infrastructure-reset"
+}

@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
 @if (Items.Count > 0)
 {
-    <Stack GapScale="LayoutGap.Large">
+    <Stack GapScale="@(Dense ? LayoutGap.Small : LayoutGap.Large)">
         @if (Header is not null)
         {
             <div>
@@ -14,7 +14,7 @@
             {
                 var isSelected = string.Equals(item.Key, SelectedKey, StringComparison.Ordinal);
                 <button type="button"
-                        class="rounded-full border px-4 py-2 text-sm font-semibold transition @(isSelected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50")"
+                        class="@(Dense ? "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition" : "rounded-full border px-4 py-2 text-sm font-semibold transition") @(isSelected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50")"
                         @onclick="() => SelectedKeyChanged.InvokeAsync(item.Key)">
                     <span>@item.Label</span>
                     @if (!string.IsNullOrWhiteSpace(item.Count))
@@ -25,9 +25,9 @@
             }
         </Cluster>
 
-        @if (ActiveItem?.Description is { Length: > 0 } description)
+        @if (ShowActiveDescription && ActiveItem?.Description is { Length: > 0 } description)
         {
-            <p class="text-sm leading-6 text-slate-600">@description</p>
+            <p class="@(Dense ? "text-sm leading-5 text-slate-600" : "text-sm leading-6 text-slate-600")">@description</p>
         }
     </Stack>
 }
@@ -44,6 +44,12 @@
 
     [Parameter]
     public RenderFragment? Header { get; set; }
+
+    [Parameter]
+    public bool Dense { get; set; }
+
+    [Parameter]
+    public bool ShowActiveDescription { get; set; } = true;
 
     private SecondaryTabItem? ActiveItem => Items.FirstOrDefault(item => string.Equals(item.Key, SelectedKey, StringComparison.Ordinal));
 }

@@ -39,20 +39,35 @@ public interface IProcessesCoordinator
     Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessTemplateCatalogItem>> ListTemplatesAsync(CancellationToken cancellationToken = default);
+
+    Task<ProcessTemplateDetailToolData> GetTemplateAsync(string processKey, CancellationToken cancellationToken = default);
+
+    Task<ProcessTemplateMermaidDocument> GetTemplateMermaidAsync(string processKey, CancellationToken cancellationToken = default);
+
+    Task<ProcessTemplateImportResult> ImportTemplateAsync(ProcessTemplateImportRequest request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>> ListBaselineScenariosAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessesCoordinator(IServiceScopeFactory scopeFactory) : IProcessesCoordinator
 {
     public Task<IReadOnlyList<ProcessDefinitionListItem>> ListDefinitionsAsync(Guid? projectId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(service => service.ListDefinitionsAsync(projectId, cancellationToken));
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return service.ListDefinitionsAsync(projectId, cancellationToken);
+        });
     }
 
     public Task<ProcessDefinitionEditorModel> GetDefinitionEditorAsync(Guid? definitionId, Guid? projectId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(
-            async service =>
+        return ExecuteWithScopeAsync(
+            async provider =>
             {
+                var service = provider.GetRequiredService<ProcessesService>();
                 var editor = await service.GetEditorAsync(definitionId, projectId, cancellationToken);
                 if (definitionId.HasValue && !editor.Id.HasValue)
                 {
@@ -68,23 +83,29 @@ public sealed class ProcessesCoordinator(IServiceScopeFactory scopeFactory) : IP
 
     public Task<Guid> SaveDefinitionAsync(ProcessDefinitionEditorModel model, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(async service => EnsureSuccess(await service.SaveAsync(model, cancellationToken)));
+        return ExecuteWithScopeAsync(async provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return EnsureSuccess(await service.SaveAsync(model, cancellationToken));
+        });
     }
 
     public Task PublishDefinitionAsync(Guid definitionId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(
-            async service =>
+        return ExecuteWithScopeAsync(
+            async provider =>
             {
+                var service = provider.GetRequiredService<ProcessesService>();
                 EnsureSuccess(await service.PublishAsync(definitionId, cancellationToken));
             });
     }
 
     public Task DeleteDefinitionAsync(Guid definitionId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(
-            async service =>
+        return ExecuteWithScopeAsync(
+            async provider =>
             {
+                var service = provider.GetRequiredService<ProcessesService>();
                 var definitions = await service.ListDefinitionsAsync(cancellationToken: cancellationToken);
                 if (definitions.All(item => item.Id != definitionId))
                 {
@@ -95,30 +116,42 @@ public sealed class ProcessesCoordinator(IServiceScopeFactory scopeFactory) : IP
                 }
 
                 await service.DeleteAsync(definitionId, cancellationToken);
-                return definitionId;
             });
     }
 
     public Task<ProcessImportExportEnvelope> ExportDefinitionAsync(Guid definitionId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(service => service.ExportAsync(definitionId, cancellationToken));
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return service.ExportAsync(definitionId, cancellationToken);
+        });
     }
 
     public Task<Guid> ImportDefinitionAsync(ProcessImportExportEnvelope envelope, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(async service => EnsureSuccess(await service.ImportAsync(envelope, cancellationToken)));
+        return ExecuteWithScopeAsync(async provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return EnsureSuccess(await service.ImportAsync(envelope, cancellationToken));
+        });
     }
 
     public Task<IReadOnlyList<ProcessRunListItem>> ListRunsAsync(Guid? definitionId, Guid? projectId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(service => service.ListRunsAsync(definitionId, projectId, cancellationToken));
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return service.ListRunsAsync(definitionId, projectId, cancellationToken);
+        });
     }
 
     public Task<ProcessRunDetailToolData> GetRunDetailAsync(Guid runId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(
-            async service =>
+        return ExecuteWithScopeAsync(
+            async provider =>
             {
+                var service = provider.GetRequiredService<ProcessesService>();
                 var run = (await service.ListRunsAsync(cancellationToken: cancellationToken))
                     .SingleOrDefault(item => item.Id == runId);
                 if (run is null)
@@ -143,59 +176,171 @@ public sealed class ProcessesCoordinator(IServiceScopeFactory scopeFactory) : IP
 
     public Task<ProcessAnalyticsSummary> GetAnalyticsAsync(Guid? definitionId, Guid? projectId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(service => service.GetAnalyticsAsync(definitionId, projectId, cancellationToken));
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return service.GetAnalyticsAsync(definitionId, projectId, cancellationToken);
+        });
     }
 
     public Task<Guid> StartRunAsync(ProcessRunStartRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(async service => EnsureSuccess(await service.StartRunAsync(request, cancellationToken)));
+        return ExecuteWithScopeAsync(async provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return EnsureSuccess(await service.StartRunAsync(request, cancellationToken));
+        });
     }
 
     public Task TransitionStepAsync(ProcessStepTransitionRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(
-            async service =>
+        return ExecuteWithScopeAsync(
+            async provider =>
             {
+                var service = provider.GetRequiredService<ProcessesService>();
                 EnsureSuccess(await service.TransitionStepAsync(request, cancellationToken));
             });
     }
 
     public Task ResolveAssignmentAsync(ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(
-            async service =>
+        return ExecuteWithScopeAsync(
+            async provider =>
             {
+                var service = provider.GetRequiredService<ProcessesService>();
                 EnsureSuccess(await service.ResolveAssignmentAsync(request, cancellationToken));
             });
     }
 
     public Task<Guid> RecordArtifactAsync(ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(async service => EnsureSuccess(await service.RecordArtifactAsync(request, cancellationToken)));
+        return ExecuteWithScopeAsync(async provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return EnsureSuccess(await service.RecordArtifactAsync(request, cancellationToken));
+        });
     }
 
     public Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(service => service.ListPartyOptionsAsync(projectId, cancellationToken));
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return service.ListPartyOptionsAsync(projectId, cancellationToken);
+        });
     }
 
     public Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(service => service.ListExecutorOptionsAsync(cancellationToken));
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var service = provider.GetRequiredService<ProcessesService>();
+            return service.ListExecutorOptionsAsync(cancellationToken);
+        });
     }
 
-    private async Task<T> ExecuteAsync<T>(Func<ProcessesService, Task<T>> callback)
+    public Task<IReadOnlyList<ProcessTemplateCatalogItem>> ListTemplatesAsync(CancellationToken cancellationToken = default)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var service = scope.ServiceProvider.GetRequiredService<ProcessesService>();
-        return await callback(service);
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var catalog = provider.GetRequiredService<ProcessTemplateCatalogService>();
+            return Task.FromResult(catalog.ListProcessTemplates());
+        });
     }
 
-    private async Task ExecuteAsync(Func<ProcessesService, Task> callback)
+    public Task<ProcessTemplateDetailToolData> GetTemplateAsync(string processKey, CancellationToken cancellationToken = default)
+    {
+        return ExecuteWithScopeAsync(
+            provider =>
+            {
+                var loader = provider.GetRequiredService<ProcessTemplatePackLoader>();
+                var catalog = provider.GetRequiredService<ProcessTemplateCatalogService>();
+                var projection = provider.GetRequiredService<ProcessTemplateProjectionService>();
+                var exporter = provider.GetRequiredService<ProcessTemplateMermaidExporter>();
+
+                var pack = loader.Load();
+                if (!pack.Processes.TryGetValue(processKey, out var process))
+                {
+                    throw new ToolInvocationException(
+                        "ProcessTemplateNotFound",
+                        $"Process template '{processKey}' was not found.",
+                        new { ProcessKey = processKey });
+                }
+
+                var summary = catalog.ListProcessTemplates()
+                    .Single(item => string.Equals(item.Key, processKey, StringComparison.OrdinalIgnoreCase));
+                var supportingFiles = exporter.Export(processKey).SupportingFiles;
+                return Task.FromResult(
+                    new ProcessTemplateDetailToolData(
+                        summary,
+                        process,
+                        projection.GetCompatibilityReportMarkdown(processKey),
+                        supportingFiles));
+            });
+    }
+
+    public Task<ProcessTemplateMermaidDocument> GetTemplateMermaidAsync(string processKey, CancellationToken cancellationToken = default)
+    {
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var exporter = provider.GetRequiredService<ProcessTemplateMermaidExporter>();
+            return Task.FromResult(exporter.Export(processKey));
+        });
+    }
+
+    public Task<ProcessTemplateImportResult> ImportTemplateAsync(ProcessTemplateImportRequest request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteWithScopeAsync(
+            async provider =>
+            {
+                var projection = provider.GetRequiredService<ProcessTemplateProjectionService>();
+                var processesService = provider.GetRequiredService<ProcessesService>();
+
+                var envelope = projection.GetProjectedEnvelope(request.ProcessKey, request.ProjectId, request.DefinitionName);
+                var definitionId = EnsureSuccess(await processesService.ImportAsync(envelope, cancellationToken));
+
+                if (request.AutoPublish)
+                {
+                    EnsureSuccess(await processesService.PublishAsync(definitionId, cancellationToken));
+                }
+
+                return new ProcessTemplateImportResult(
+                    request.ProcessKey,
+                    definitionId,
+                    envelope.Warnings);
+            });
+    }
+
+    public Task<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>> ListBaselineScenariosAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecuteWithScopeAsync(provider =>
+        {
+            var loader = provider.GetRequiredService<ProcessTemplatePackLoader>();
+            var pack = loader.Load();
+            return Task.FromResult<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>>(
+                pack.BaselineScenarios
+                    .Select(item => new ProcessTemplateBaselineScenarioSummary(
+                        item.Key,
+                        item.ProcessTemplateKey,
+                        item.RunName,
+                        item.OperatingMode,
+                        item.Assignments.Count,
+                        item.Transitions.Count,
+                        item.Artifacts.Count))
+                    .ToList());
+        });
+    }
+
+    private async Task<T> ExecuteWithScopeAsync<T>(Func<IServiceProvider, Task<T>> callback)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var service = scope.ServiceProvider.GetRequiredService<ProcessesService>();
-        await callback(service);
+        return await callback(scope.ServiceProvider);
+    }
+
+    private async Task ExecuteWithScopeAsync(Func<IServiceProvider, Task> callback)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        await callback(scope.ServiceProvider);
     }
 
     private static Guid EnsureSuccess(Result<Guid> result)

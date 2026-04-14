@@ -1,0 +1,15 @@
+{
+  "Kind": "process-validation-template",
+  "Key": "validate-mitigation-approved",
+  "DisplayName": "Mitigation approved",
+  "Scope": "local",
+  "ProcessKey": "incident-response",
+  "Severity": "Error",
+  "OwnerRoleKey": "approver",
+  "Gate": "Incident approval",
+  "Summary": "Prevents high-risk incident mitigation from proceeding without explicit approval when required.",
+  "PassCriteria": "Risky mitigation steps have an approval record naming owner, conditions, and rollback trigger.",
+  "FailCriteria": "High-risk mitigation would proceed without explicit approval or rollback framing.",
+  "EscalationRule": "Pause the mitigation and escalate to the approver.",
+  "DocPath": "processes/incident-response/validations/validate-mitigation-approved.md"
+}

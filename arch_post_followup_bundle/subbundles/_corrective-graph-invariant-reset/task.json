@@ -1,0 +1,22 @@
+{
+  "Key": "_corrective-graph-invariant-reset",
+  "Title": "Corrective graph invariant reset",
+  "Purpose": "Use when cyclic/self-loop process graphs still slip through save/publish or when runtime/canvas still hide invalid graphs behind silent fallbacks.",
+  "DependsOn": [],
+  "Deliverables": [
+    "A narrow corrective scope that restores the broken invariant.",
+    "Fresh proof showing the failed gate can now pass.",
+    "An updated execution report and gate memo log."
+  ],
+  "RepositoryTouchpoints": [],
+  "ValidationCommands": [
+    "Rerun the exact failed gate proof plus any direct corrective-scope tests."
+  ],
+  "ReviewQuestions": [
+    "Is the originally failed invariant now restored strongly enough for the gate to pass?",
+    "Did the corrective work stay narrow instead of widening the initiative again?",
+    "Was the failed gate rerun and recorded from live proof?"
+  ],
+  "CorrectiveOnFailure": "Do not resume the numbered queue until the failed gate is rerun successfully.",
+  "CorrectiveTemplatePath": "templates/corrective-subbundle-template.md"
+}

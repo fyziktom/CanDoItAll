@@ -1,0 +1,30 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-security-review",
+  "DisplayName": "Prompt / security review",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "security-reviewer",
+  "Phase": "security",
+  "Summary": "Prompt scaffold for change-level threat and control review.",
+  "RequiredInputs": [
+    "change summary",
+    "data sensitivity",
+    "trust boundaries",
+    "dependencies",
+    "deployment model"
+  ],
+  "OutputSchema": [
+    "risk statements",
+    "required controls",
+    "exception conditions",
+    "approval recommendation",
+    "follow-up actions"
+  ],
+  "RefusalConditions": [
+    "Refuse to approve without enough context on trust boundaries or sensitive data paths.",
+    "Refuse to normalize unresolved high-severity risk.",
+    "Escalate if compensating controls are undefined."
+  ],
+  "DocPath": "shared/prompts/prompt-security-review.md"
+}

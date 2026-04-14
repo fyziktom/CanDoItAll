@@ -2,17 +2,39 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Modules.Processes;
 
-public static class ProcessesModuleServiceCollectionExtensions {
-    public static IServiceCollection AddProcessesModule(this IServiceCollection services) {
+public static class ProcessesModuleServiceCollectionExtensions
+{
+    public static IServiceCollection AddProcessesModule(this IServiceCollection services)
+    {
+        services.AddOptions<ProcessTemplatePackOptions>()
+            .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
+        services.AddScoped<ProcessOutboxService>();
+        services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
+        services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
+        services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
+        services.AddScoped<ProcessCanvasRecompositionService>();
+        services.AddScoped<ProcessCanvasChromeCatalogService>();
+        // Keep the template pack scoped until the loaded graph becomes deeply immutable.
+        services.AddScoped(provider =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ProcessTemplatePackOptions>>().Value;
+            return new ProcessTemplatePackLoader(options.PackRoot);
+        });
+        services.AddScoped<ProcessTemplateCatalogService>();
+        services.AddScoped<ProcessTemplateLibraryService>();
+        services.AddScoped<ProcessTemplateProjectionService>();
+        services.AddScoped<ProcessTemplateMermaidExporter>();
         services.AddScoped<ProcessDevelopmentSeedService>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
+        services.AddHostedService<ProcessOutboxDrainWorker>();
         return services;
     }
 }
 
-public interface IProcessExecutorRegistryBridge {
+public interface IProcessExecutorRegistryBridge
+{
     Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListOptionsAsync(CancellationToken cancellationToken = default);
 }
 
@@ -23,10 +45,14 @@ public sealed record ProcessExecutorRegistryOption(
     string Steward,
     string CapabilitySummary);
 
-internal sealed class NoopProcessExecutorRegistryBridge : IProcessExecutorRegistryBridge {
-    public Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListOptionsAsync(CancellationToken cancellationToken = default) {
+internal sealed class NoopProcessExecutorRegistryBridge : IProcessExecutorRegistryBridge
+{
+    public Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListOptionsAsync(CancellationToken cancellationToken = default)
+    {
         return Task.FromResult<IReadOnlyList<ProcessExecutorRegistryOption>>([]);
     }
 }
 
-public static class ProcessesModuleAssemblyMarker;
+public static class ProcessesModuleAssemblyMarker
+{
+}

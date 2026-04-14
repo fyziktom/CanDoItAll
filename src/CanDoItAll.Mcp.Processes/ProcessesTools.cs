@@ -147,6 +147,41 @@ public sealed class ProcessesTools(IProcessesCoordinator coordinator, ILogger<Pr
         return ExecuteAsync("processes_executor_options_list", () => coordinator.ListExecutorOptionsAsync(cancellationToken));
     }
 
+    [McpServerTool(Name = "processes_templates_list", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Lists the folder-based process template pack entries that can be inspected or imported without hardcoding templates in code.")]
+    public Task<McpToolEnvelope<IReadOnlyList<ProcessTemplateCatalogItem>>> ProcessesTemplatesListAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("processes_templates_list", () => coordinator.ListTemplatesAsync(cancellationToken));
+    }
+
+    [McpServerTool(Name = "processes_template_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Loads a detailed template definition from the process template pack, including sidecar metadata and compatibility notes.")]
+    public Task<McpToolEnvelope<ProcessTemplateDetailToolData>> ProcessesTemplateGetAsync(string processKey, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("processes_template_get", () => coordinator.GetTemplateAsync(processKey, cancellationToken));
+    }
+
+    [McpServerTool(Name = "processes_template_mermaid_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Exports Mermaid flowchart and sequence content for a process template together with the supporting sidecar files.")]
+    public Task<McpToolEnvelope<ProcessTemplateMermaidDocument>> ProcessesTemplateMermaidGetAsync(string processKey, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("processes_template_mermaid_get", () => coordinator.GetTemplateMermaidAsync(processKey, cancellationToken));
+    }
+
+    [McpServerTool(Name = "processes_template_import", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Projects a folder-based process template into the current module import envelope, imports it, and optionally publishes it.")]
+    public Task<McpToolEnvelope<ProcessTemplateImportResult>> ProcessesTemplateImportAsync(ProcessTemplateImportRequest request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("processes_template_import", () => coordinator.ImportTemplateAsync(request, cancellationToken));
+    }
+
+    [McpServerTool(Name = "processes_template_baseline_scenarios_list", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Lists baseline runtime scenarios stored in the process template pack for seeded regression coverage.")]
+    public Task<McpToolEnvelope<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>>> ProcessesTemplateBaselineScenariosListAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("processes_template_baseline_scenarios_list", () => coordinator.ListBaselineScenariosAsync(cancellationToken));
+    }
+
     private async Task<McpToolEnvelope<T>> ExecuteAsync<T>(string toolName, Func<Task<T>> callback)
     {
         var correlationId = CorrelationIdFactory.Create("processes");

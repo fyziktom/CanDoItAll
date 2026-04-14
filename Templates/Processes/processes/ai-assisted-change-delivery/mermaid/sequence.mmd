@@ -1,0 +1,26 @@
+sequenceDiagram
+%% process-key: ai-assisted-change-delivery
+    participant role_product_owner as Product owner
+    participant role_solution_architect as Solution architect
+    participant role_ai_safety_reviewer as AI safety reviewer
+    participant role_model_risk_approver as Model risk approver
+    participant role_software_engineer as Software engineer
+    participant role_ai_evaluation_lead as AI evaluation lead
+    participant role_qa_lead as QA lead
+    participant role_security_reviewer as Security reviewer
+    participant role_release_approver as Release approver
+    participant system as AI-assisted change delivery with guarded delegation
+    role_product_owner->>system: Capture change demand and human acceptance boundary
+    system-->>role_product_owner: evidence -> Intake brief, Acceptance criteria pack
+    role_solution_architect->>system: Define delegation boundary, allowed tools, and refusal conditions
+    system-->>role_solution_architect: evidence -> Delegation contract and prompt package, Delegation configuration snapshot
+    Note over system: branches -> Delegate, Human only
+    role_software_engineer->>system: Run delegated execution and capture full trace
+    system-->>role_software_engineer: evidence -> Execution trace pack, Agent execution provenance summary
+    role_ai_evaluation_lead->>system: Evaluate outputs against benchmark and acceptance evidence
+    system-->>role_ai_evaluation_lead: evidence -> Evaluation benchmark report, Test evidence pack, Evaluation prompt package
+    role_product_owner->>system: Review safety, security, and residual risk
+    system-->>role_product_owner: evidence -> Security review note, AI-assisted merge approval note
+    Note over system: branches -> Approved, Rework
+    role_software_engineer->>system: Merge under control and capture learning signal
+    system-->>role_software_engineer: evidence -> Merged execution trace reference, AI delivery improvement log

@@ -4,8 +4,26 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProcessCanvasSurfaceFactoryTests
 {
-    private const string DecisionActionId = "process-step.decision";
     private const string AddBranchOutcomeActionId = "process-definition.add-branch-outcome";
+    private static readonly string[] ExpectedQuickCreateActionIds =
+    [
+        "process-definition.open-toolbox",
+        "process-role.product-owner",
+        "process-role.solution-architect",
+        "process-step.intake",
+        "process-step.architecture",
+        "process-step.implementation",
+        "process-step.qa",
+        "process-step.release-approval"
+    ];
+    private static readonly string[] ExpectedGroupContextActionIds =
+    [
+        "process-definition.edit-step",
+        "process-definition.add-dependent-step",
+        "process-definition.add-role-binding",
+        "process-definition.add-artifact-expectation",
+        "process-definition.remove-step"
+    ];
 
     [Fact]
     public void Definition_surface_exposes_decision_creation_and_branch_dependency_chips()
@@ -39,18 +57,17 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "db-review-step",
                     Title = "Review database impact",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = branchOutcomeId,
+                    Dependencies = CreateDependencies((decisionStepId, branchOutcomeId)),
                     OutputContractSummary = "Data review completed."
                 }
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor);
 
-        Assert.Contains(surface.Chrome.QuickCreateActions, action => action.ActionId == DecisionActionId);
-        Assert.Contains(surface.Chrome.GroupContextActions, action => action.ActionId == DecisionActionId);
+        Assert.Equal(ExpectedQuickCreateActionIds, surface.Chrome.QuickCreateActions.Select(action => action.ActionId));
+        Assert.Equal(ExpectedGroupContextActionIds, surface.Chrome.GroupContextActions.Select(action => action.ActionId));
 
         var decisionNode = Assert.Single(surface.Nodes, node => node.Title == "Route change");
         Assert.Contains(decisionNode.ContextActions, action => action.ActionId == AddBranchOutcomeActionId);
@@ -104,8 +121,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "repair-change",
                     Title = "Repair change set",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = decisionStepId,
-                    DependsOnBranchOutcomeId = fixOutcomeId
+                    Dependencies = CreateDependencies((decisionStepId, fixOutcomeId))
                 },
                 new ProcessStepEditorModel
                 {
@@ -113,12 +129,12 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "qa-lane",
                     Title = "Validate QA lane",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = decisionStepId
+                    Dependencies = CreateDependencies((decisionStepId, null))
                 }
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor);
 
         var branchNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionBranchNodeId(editor.Steps[0]));
@@ -171,7 +187,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor, mode: "delete");
 
         Assert.Equal("delete", surface.Mode);
@@ -243,15 +259,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                     Key = "peer-review",
                     Title = "Complete peer review",
                     StepKind = ProcessStepKind.Review,
-                    DependsOnStepId = implementationStepId,
-                    Dependencies =
-                    [
-                        new ProcessStepDependencyEditorModel
-                        {
-                            Id = Guid.NewGuid(),
-                            DependsOnStepId = implementationStepId
-                        }
-                    ],
+                    Dependencies = CreateDependencies((implementationStepId, null)),
                     RoleAssignments =
                     [
                         new ProcessStepRoleRequirementEditorModel
@@ -274,7 +282,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor);
 
         var implementationNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[0]));
@@ -359,8 +367,6 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                 Guid.NewGuid(),
                 stepDefinitionId,
                 null,
-                null,
-                null,
                 1,
                 "Route review outcome",
                 ProcessStepKind.Decision,
@@ -384,8 +390,6 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             new(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
-                stepDefinitionId,
-                repairOutcomeId,
                 null,
                 2,
                 "Repair change set",
@@ -422,8 +426,6 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             new(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
-                stepDefinitionId,
-                null,
                 null,
                 3,
                 "Validate QA lane",
@@ -450,7 +452,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             }
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildRunSurface(run, stepRuns);
 
         var branchNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildRuntimeBranchNodeId(stepRuns[0].Id));
@@ -470,5 +472,24 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             link.SourceId == branchNode.Id &&
             link.TargetId == ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRuns[2].Id) &&
             link.SourcePortId == ProcessCanvasBranching.BuildOutcomePortId(stepRuns[0].AvailableBranchOutcomes[1]));
+    }
+
+    private static ProcessCanvasSurfaceFactory CreateFactory(string? packRoot = null)
+    {
+        return new ProcessCanvasSurfaceFactory(
+            new ProcessCanvasChromeCatalogService(
+                new ProcessTemplatePackLoader(packRoot)));
+    }
+
+    private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)
+    {
+        return items
+            .Select(item => new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = item.StepId,
+                DependsOnBranchOutcomeId = item.BranchOutcomeId
+            })
+            .ToList();
     }
 }

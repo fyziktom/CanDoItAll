@@ -1,0 +1,573 @@
+{
+  "Definition": {
+    "Id": null,
+    "ProjectId": null,
+    "WorkingVersionId": null,
+    "WorkingVersionNumber": 1,
+    "Name": "Architecture decision governance and ADR stewardship",
+    "Summary": "Guide architecture decisions from intake through option analysis, governance review, approval, and downstream rollout guidance without losing domain accountability or reusable evidence.",
+    "ValueStatement": "Improve decision quality and prevent repeated architectural churn by forcing explicit options, trade-offs, approval reasoning, and follow-up obligations into durable ADR-style records.",
+    "CustomerName": "Product and engineering leadership",
+    "OwnerName": "Architecture governance board",
+    "InterfaceContractSummary": "Decision demand, domain context, system constraints, and change risks are transformed into a reviewable architecture decision record with named owners and adoption conditions.",
+    "GovernanceNotes": "Architecture decisions are treated as operating contracts, not slideware. The process requires evidence, option comparison, and explicit domain-owner participation.",
+    "ChangeSummary": "Merged from SAMM governance, SSDF preparation and design, and lightweight ADR discipline so the process stays reusable across product, platform, and AI-oriented decisions.",
+    "GovernancePolicySummary": "No architecture decision may be accepted without explicit context, considered options, decision rationale, risk notes, and named adoption obligations.",
+    "ConstitutionRuleSummary": "The board may delay decisions, but cannot hide uncertainty by approving vague direction that nobody owns.",
+    "OperatingModeSummary": "Assisted execution with human approval. Analysis may be AI-assisted, but acceptance and organizational commitment stay human.",
+    "SimulationReadinessSummary": "Good fit for decision-board rehearsal, architecture review automation, and portfolio-level consistency analysis.",
+    "Criticality": "High",
+    "AutonomyLevel": "Assisted",
+    "Status": "Draft",
+    "Roles": [
+      {
+        "Id": "2a7bec89-d324-5846-854f-c33214b000fd",
+        "Key": "governance-facilitator",
+        "DisplayName": "Governance facilitator",
+        "Purpose": "Keep architecture governance lightweight but rigorous by ensuring the right decision, evidence, and follow-up happen at the right time.",
+        "StaffingIntent": "A governance-capable facilitator who understands enough architecture to structure the process without dominating the decision.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 30,
+        "RoleTemplateSourceKey": "process-role-template/architecture-decision-governance/governance-facilitator",
+        "RoleTemplateSnapshotName": "Governance facilitator / template-pack v1",
+        "SnapshotSummary": "Facilitator for architecture decision workflow discipline, records, and follow-through.",
+        "RequiredSkillIds": [],
+        "CanvasX": 60,
+        "CanvasY": 40
+      },
+      {
+        "Id": "8803a32e-416a-565e-8f53-e8ef7e05769b",
+        "Key": "domain-owner",
+        "DisplayName": "Domain owner",
+        "Purpose": "Represent domain semantics, operational realities, and long-term consequences when architecture choices affect a specific capability area.",
+        "StaffingIntent": "A leader who understands the domain model deeply enough to challenge superficially convenient architecture decisions.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "TechnicalContact",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/architecture-decision-governance/domain-owner",
+        "RoleTemplateSnapshotName": "Domain owner / template-pack v1",
+        "SnapshotSummary": "Business-technical steward for a bounded domain affected by architectural change.",
+        "RequiredSkillIds": [],
+        "CanvasX": 210,
+        "CanvasY": 110
+      },
+      {
+        "Id": "a91a226c-4037-5d5c-9f35-5dcd3e6bc7bb",
+        "Key": "solution-architect",
+        "DisplayName": "Solution architect",
+        "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
+        "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 30,
+        "RoleTemplateSourceKey": "process-role-template/solution-architect",
+        "RoleTemplateSnapshotName": "Solution architect / template-pack v1",
+        "SnapshotSummary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence.",
+        "RequiredSkillIds": [],
+        "CanvasX": 360,
+        "CanvasY": 40
+      },
+      {
+        "Id": "b5d7edf2-a7e8-58c7-b754-284e56806e81",
+        "Key": "product-owner",
+        "DisplayName": "Product owner",
+        "Purpose": "Convert business intent into an explicit delivery contract with clear acceptance boundaries and prioritized value trade-offs.",
+        "StaffingIntent": "One accountable human decision-maker who can clarify scope, decide priority, accept delivered outcomes, and absorb stakeholder escalation without routing every decision through engineering.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "CustomerContact",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 35,
+        "RoleTemplateSourceKey": "process-role-template/product-owner",
+        "RoleTemplateSnapshotName": "Product owner / template-pack v1",
+        "SnapshotSummary": "Outcome and acceptance owner for value, scope, sequencing, and release acceptance.",
+        "RequiredSkillIds": [],
+        "CanvasX": 510,
+        "CanvasY": 110
+      },
+      {
+        "Id": "c5f10773-7e82-5509-840b-fd19633a925e",
+        "Key": "security-reviewer",
+        "DisplayName": "Security reviewer",
+        "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
+        "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/security-reviewer",
+        "RoleTemplateSnapshotName": "Security reviewer / template-pack v1",
+        "SnapshotSummary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions.",
+        "RequiredSkillIds": [],
+        "CanvasX": 660,
+        "CanvasY": 40
+      },
+      {
+        "Id": "20ff5826-2342-507d-9b4e-d02c29187881",
+        "Key": "compliance-steward",
+        "DisplayName": "Compliance steward",
+        "Purpose": "Ensure required compliance considerations are identified early, translated into actionable checks, and retained as evidence.",
+        "StaffingIntent": "A governance specialist who understands how policy obligations intersect with real delivery work.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Reviewer",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 20,
+        "RoleTemplateSourceKey": "process-role-template/compliance-steward",
+        "RoleTemplateSnapshotName": "Compliance steward / template-pack v1",
+        "SnapshotSummary": "Policy and evidence steward for contractual, regulatory, license, and audit-sensitive change decisions.",
+        "RequiredSkillIds": [],
+        "CanvasX": 810,
+        "CanvasY": 110
+      },
+      {
+        "Id": "e5d76f21-f3c4-5e84-bcc6-32bdcb40bf31",
+        "Key": "service-owner",
+        "DisplayName": "Service owner",
+        "Purpose": "Represent live-service constraints, operational history, and post-release accountability in change decisions.",
+        "StaffingIntent": "A domain-aligned owner with authority over service-level objectives, support load, and operational trade-offs.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "TechnicalContact",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 25,
+        "RoleTemplateSourceKey": "process-role-template/service-owner",
+        "RoleTemplateSnapshotName": "Service owner / template-pack v1",
+        "SnapshotSummary": "Operational accountability owner for a live service, product surface, or bounded business capability.",
+        "RequiredSkillIds": [],
+        "CanvasX": 960,
+        "CanvasY": 40
+      }
+    ],
+    "Steps": [
+      {
+        "Id": "59e7091e-280a-5033-ae7e-3d1f3e18ea18",
+        "Key": "decision-intake",
+        "Title": "Capture architecture decision demand",
+        "Subtitle": "Define the decision boundary and why now",
+        "Notes": "Normalize the incoming design tension into a single decision problem statement with scope, urgency, and impacted domains.",
+        "StepKind": "Start",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Design concern, change proposal, incident learning, or product demand requiring architecture direction.",
+        "OutputContractSummary": "Typed decision intake with named context owner and impacted domains.",
+        "EvidenceContractSummary": "Decision intake brief and initial affected-system list.",
+        "DecisionRightsSummary": "Governance facilitator may reject vague requests that do not define a real decision.",
+        "ExceptionPolicySummary": "Do not proceed when scope and affected domains are not explicit.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": null,
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 120,
+        "CanvasY": 220,
+        "BranchCanvasX": 320,
+        "BranchCanvasY": 220,
+        "BranchOutcomes": [],
+        "Dependencies": [],
+        "RoleAssignments": [
+          {
+            "Id": "d86d50f4-a4d4-5186-8dad-3bcc7ef99ce5",
+            "RoleRequirementId": "2a7bec89-d324-5846-854f-c33214b000fd",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Facilitation remains with trained board coordinator."
+          },
+          {
+            "Id": "b6eb55c9-6ef2-544e-8efa-1e5bceaf838c",
+            "RoleRequirementId": "8803a32e-416a-565e-8f53-e8ef7e05769b",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "A domain owner must review the intake boundary."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "7d6420c0-1b95-5e7a-97f4-e2f0b05f5440",
+            "ArtifactKind": "Evidence",
+            "Title": "Decision brief",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "8b08d178-ebb3-5eb2-baba-7bdea247d8b7",
+            "ArtifactKind": "Brief",
+            "Title": "Architecture demand intake",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "f3a76ded-81c7-5477-bdaf-211771b51569",
+        "Key": "context-and-options",
+        "Title": "Assemble context, constraints, and options",
+        "Subtitle": "Evidence before preference",
+        "Notes": "Collect current-state constraints, target outcomes, option set, and measurable trade-offs before the board debates a preferred answer.",
+        "StepKind": "Work",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Decision intake, current system context, risk drivers, and domain constraints.",
+        "OutputContractSummary": "ADR draft with options, trade-offs, and recommendation.",
+        "EvidenceContractSummary": "Draft ADR and supporting context evidence.",
+        "DecisionRightsSummary": "Solution architect authors the option analysis; domain owner confirms local reality and adoption cost.",
+        "ExceptionPolicySummary": "If fewer than two meaningful options are considered, explain why explicitly.",
+        "TargetLeadHours": 10,
+        "DependsOnStepId": "59e7091e-280a-5033-ae7e-3d1f3e18ea18",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 430,
+        "CanvasY": 220,
+        "BranchCanvasX": 630,
+        "BranchCanvasY": 220,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "3446c02b-fdc9-5527-989c-831763aa2146",
+            "DependsOnStepId": "59e7091e-280a-5033-ae7e-3d1f3e18ea18",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "0017b9e9-e4f4-5d10-b899-9a1cce7c3655",
+            "RoleRequirementId": "a91a226c-4037-5d5c-9f35-5dcd3e6bc7bb",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Architecture authorship remains explicit."
+          },
+          {
+            "Id": "16472962-2125-5d30-ab55-e9480be07bbe",
+            "RoleRequirementId": "8803a32e-416a-565e-8f53-e8ef7e05769b",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Domain-owner review is required."
+          },
+          {
+            "Id": "74874415-35d9-5ab4-b69e-47e6bf99c7db",
+            "RoleRequirementId": "b5d7edf2-a7e8-58c7-b754-284e56806e81",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Product value trade-offs are reviewed before board discussion."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "ada5899e-3b20-5067-b74f-2af05ed0d54c",
+            "ArtifactKind": "Evidence",
+            "Title": "Architecture decision record",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "4c64708f-98d4-5c7d-98b7-464513a4c583",
+            "ArtifactKind": "Decision",
+            "Title": "Option comparison brief",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "487336c7-633d-520a-8579-0869a9f360ce",
+        "Key": "security-compliance-review",
+        "Title": "Review security, compliance, and policy impact",
+        "Subtitle": "Decision quality includes control impact",
+        "Notes": "Evaluate whether the proposed options change data exposure, trust assumptions, regulatory boundaries, or operational policy obligations.",
+        "StepKind": "Review",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "ADR draft, system context, data flows, control inventory, and third-party implications.",
+        "OutputContractSummary": "Review note covering security and policy implications.",
+        "EvidenceContractSummary": "Security and compliance findings tied to decision options.",
+        "DecisionRightsSummary": "Security reviewer and compliance steward may force rework when controls are under-specified.",
+        "ExceptionPolicySummary": "No approval when control obligations are ambiguous.",
+        "TargetLeadHours": 6,
+        "DependsOnStepId": "f3a76ded-81c7-5477-bdaf-211771b51569",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 740,
+        "CanvasY": 220,
+        "BranchCanvasX": 940,
+        "BranchCanvasY": 220,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "4c543f9d-269a-5a59-aa33-6e09e1c74d88",
+            "DependsOnStepId": "f3a76ded-81c7-5477-bdaf-211771b51569",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "05cc1371-e309-5f84-b084-d25fa5005764",
+            "RoleRequirementId": "c5f10773-7e82-5509-840b-fd19633a925e",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Security review remains explicit."
+          },
+          {
+            "Id": "592388d9-01b6-5ead-85ca-678fdb8f2fa3",
+            "RoleRequirementId": "20ff5826-2342-507d-9b4e-d02c29187881",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": false,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Compliance review becomes required for regulated domains."
+          },
+          {
+            "Id": "30b9663d-2e8c-58ec-b483-73aaeaa98a7e",
+            "RoleRequirementId": "e5d76f21-f3c4-5e84-bcc6-32bdcb40bf31",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Service owner reviews operational control impact."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "bc6bff52-55c9-5f18-9401-3997f01ad4ac",
+            "ArtifactKind": "Evidence",
+            "Title": "Security review note",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "77a9fbcd-5b63-5ecd-9f5e-1ed31242b261",
+            "ArtifactKind": "Evidence",
+            "Title": "Dependency and provenance impact note",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "ed431b93-f3ca-51f6-a194-771b086484ef",
+        "Key": "board-decision",
+        "Title": "Make the board decision and record rationale",
+        "Subtitle": "Approval is a commitment, not just agreement",
+        "Notes": "Approve, defer, or reject the recommended architecture direction with explicit rationale, dissent notes, and adoption conditions.",
+        "StepKind": "Approval",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Reviewed ADR draft, option analysis, and security/compliance notes.",
+        "OutputContractSummary": "Approved or deferred architecture decision with adoption conditions.",
+        "EvidenceContractSummary": "Board decision record and named follow-up obligations.",
+        "DecisionRightsSummary": "Governance facilitator records the decision; service owner and domain owner must both acknowledge adoption obligations.",
+        "ExceptionPolicySummary": "Do not approve with placeholders for ownership or decision rationale.",
+        "TargetLeadHours": 2,
+        "DependsOnStepId": "487336c7-633d-520a-8579-0869a9f360ce",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": "e5d76f21-f3c4-5e84-bcc6-32bdcb40bf31",
+        "CanvasX": 1050,
+        "CanvasY": 220,
+        "BranchCanvasX": 1250,
+        "BranchCanvasY": 220,
+        "BranchOutcomes": [
+          {
+            "Id": "a48a3207-261a-5196-a673-91bb1a73ad1b",
+            "Key": "approved",
+            "Title": "Approved",
+            "Description": "The ADR is accepted with adoption conditions."
+          },
+          {
+            "Id": "a23a740d-75e4-5ec5-965d-75592b6ded14",
+            "Key": "deferred",
+            "Title": "Deferred",
+            "Description": "The ADR requires more evidence or narrower scope."
+          }
+        ],
+        "Dependencies": [
+          {
+            "Id": "9209e8b6-2ac7-5096-afe8-5035f65b52e9",
+            "DependsOnStepId": "487336c7-633d-520a-8579-0869a9f360ce",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "010a5db5-ea73-5bb5-be2a-3240e72bb4ec",
+            "RoleRequirementId": "e5d76f21-f3c4-5e84-bcc6-32bdcb40bf31",
+            "ResponsibilityKind": "Approver",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Operational decision approval remains with accountable owner."
+          },
+          {
+            "Id": "6034ea2e-15a7-51d0-941d-c1f36ca4c69a",
+            "RoleRequirementId": "8803a32e-416a-565e-8f53-e8ef7e05769b",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Domain owner reviews adoption burden."
+          },
+          {
+            "Id": "b0ff44e8-6fd0-5482-a16a-0136b64071c5",
+            "RoleRequirementId": "2a7bec89-d324-5846-854f-c33214b000fd",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Facilitator keeps the record durable."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "3293876b-35c5-5f64-b04d-37d6e97d0bd9",
+            "ArtifactKind": "Decision",
+            "Title": "Approved architecture decision record",
+            "IsRequired": true,
+            "TrustRequirement": "HumanApproved",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "cf7d5a6f-cb0f-5298-97d5-3ab125222dcc",
+        "Key": "rollout-guidance",
+        "Title": "Publish rollout guidance and revisit triggers",
+        "Subtitle": "Translate decision into executable downstream expectations",
+        "Notes": "Turn the approved ADR into rollout guidance, architectural guardrails, and explicit revisit triggers so implementation teams know how to apply the decision.",
+        "StepKind": "End",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Approved ADR and adoption conditions.",
+        "OutputContractSummary": "Published rollout guidance and revisit criteria.",
+        "EvidenceContractSummary": "Architecture guidance note and future revisit triggers.",
+        "DecisionRightsSummary": "Solution architect owns technical guidance; governance facilitator ensures revisit criteria are durable.",
+        "ExceptionPolicySummary": "If rollout expectations cannot be stated clearly, the decision is not ready for downstream implementation.",
+        "TargetLeadHours": 4,
+        "DependsOnStepId": "ed431b93-f3ca-51f6-a194-771b086484ef",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1360,
+        "CanvasY": 220,
+        "BranchCanvasX": 1560,
+        "BranchCanvasY": 220,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "63ce7789-aac0-5cf9-9be7-a98c410efad8",
+            "DependsOnStepId": "ed431b93-f3ca-51f6-a194-771b086484ef",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "7d0d1fc8-4e38-52ca-946d-9899e5f4b3cc",
+            "RoleRequirementId": "a91a226c-4037-5d5c-9f35-5dcd3e6bc7bb",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Architecture guidance ownership remains with the architect."
+          },
+          {
+            "Id": "9e263350-6ac6-5722-af33-0b5b2deed2cf",
+            "RoleRequirementId": "2a7bec89-d324-5846-854f-c33214b000fd",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Facilitator checks record completeness."
+          },
+          {
+            "Id": "309df930-4daa-576d-8be5-7c26bb5f2d03",
+            "RoleRequirementId": "b5d7edf2-a7e8-58c7-b754-284e56806e81",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Product owner reviews value-delivery implications."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "eacfc135-e217-5b24-a8d8-1859e795cc28",
+            "ArtifactKind": "Brief",
+            "Title": "Architecture rollout guidance",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          },
+          {
+            "Id": "af2c41a7-d1b2-57f1-abda-aa34c384f672",
+            "ArtifactKind": "Brief",
+            "Title": "Architecture revisit trigger log",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 0,
+            "AllowedFutureUsageSummary": "",
+            "ValidationRequirementSummary": ""
+          }
+        ],
+        "ArtifactInputs": []
+      }
+    ]
+  },
+  "Warnings": [
+    "Projected from template pack process 'architecture-decision-governance'.",
+    "Detailed sidecar metadata remains in the process-template pack files."
+  ],
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection"
+}

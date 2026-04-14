@@ -1,0 +1,32 @@
+{
+  "Key": "11-architecture-review-gate-c",
+  "Title": "Architecture review gate C",
+  "Purpose": "Stop after publication, runtime, and read-side work, then decide whether the module is truly moving toward smaller responsibilities and healthier behavior/projection boundaries.",
+  "DependsOn": [
+    "08-publication-versioning-and-clone-engine-decomposition",
+    "09-runtime-state-machine-and-transition-policy-extraction",
+    "10-read-side-query-splitting-and-performance-hardening"
+  ],
+  "Deliverables": [
+    "Architecture review memo C.",
+    "Explicit pass/fail decision covering publication, runtime, and query direction.",
+    "Corrective subbundle if the gate fails."
+  ],
+  "RepositoryTouchpoints": [
+    "architecture_hardening_bundle\\architecture\\01-target-solution.md",
+    "architecture_hardening_bundle\\architecture\\02-service-and-component-split-map.md",
+    "architecture_hardening_bundle\\architecture\\04-query-and-template-consolidation-strategy.md",
+    "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "architecture_hardening_bundle\\reviews\\02-architecture-gate-memo-log.md"
+  ],
+  "ValidationCommands": [
+    "Review execution-report rows, targeted test outputs, and the service split against the architecture docs."
+  ],
+  "ReviewQuestions": [
+    "Are publication and clone responsibilities genuinely separated?",
+    "Is runtime logic now materially more testable and decomposed?",
+    "Did the read-side split reduce broad-load assumptions without creating shadow truth?"
+  ],
+  "CorrectiveOnFailure": "Create a gate-C corrective subbundle from `subbundles/_corrective-runtime-and-query-reset` or `subbundles/_corrective-template`, block the queue, and rerun gate C after the correction lands.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-runtime-and-query-reset"
+}

@@ -1,0 +1,74 @@
+{
+  "Kind": "role-resource",
+  "Key": "platform-engineer",
+  "DisplayName": "Platform engineer",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Summary": "Environment and delivery-pipeline owner for build integrity, deployment mechanics, and operational guardrails.",
+  "Purpose": "Provide the reliable platform path required to build, deploy, observe, and if necessary roll back changes safely.",
+  "StaffingIntent": "A technical specialist in CI/CD, environments, infrastructure, and observability integration.",
+  "PreferredExecutorKind": "person-or-agent",
+  "PreferredProjectAssignmentRole": "TeamMember",
+  "IsRequired": false,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 30,
+  "RoleTemplateSourceKey": "process-role-template/platform-engineer",
+  "RoleTemplateSnapshotName": "Platform engineer / template-pack v1",
+  "SnapshotSummary": "Environment and delivery-pipeline owner for build integrity, deployment mechanics, and operational guardrails.",
+  "SeniorityBand": "Senior platform/SRE engineering",
+  "MinimumYearsInPrimaryDiscipline": 5,
+  "MinimumYearsInSoftwareDelivery": 7,
+  "DomainTags": [
+    "platform",
+    "ci-cd",
+    "infrastructure",
+    "observability"
+  ],
+  "KnowledgeRequirements": [
+    "Ability to manage CI/CD pipelines, deployment automation, environment controls, and configuration safety.",
+    "Knowledge of secrets, identity, access, and least-privilege controls in build and deployment systems.",
+    "Understanding of observability stacks, alerting, rollout telemetry, and rollback triggers.",
+    "Ability to assess infrastructure dependencies, schema changes, and environment drift.",
+    "Knowledge of reproducible builds, provenance, and artifact integrity signals.",
+    "Ability to guide teams on what must change in delivery mechanics before code is releasable."
+  ],
+  "ExperienceRequirements": [
+    "Has built or maintained deployment pipelines for production software.",
+    "Has executed or supported releases, rollback, and incident containment in live environments.",
+    "Has debugged environment-specific failures that blocked otherwise correct code.",
+    "Has implemented monitoring or telemetry needed for safe rollout decisions.",
+    "Has worked with security and compliance requirements around platform access and evidence retention."
+  ],
+  "DecisionRights": [
+    "Approve or block platform readiness for build and deployment activities.",
+    "Require environment or observability changes before risky releases.",
+    "Escalate when release assumptions depend on unstable platform conditions.",
+    "Choose rollout mechanics within the approved operational policy."
+  ],
+  "OwnedArtifacts": [
+    "Build provenance report",
+    "Deployment plan",
+    "Environment readiness note",
+    "Operational telemetry summary"
+  ],
+  "CollaborationExpectations": [
+    "Collaborate with engineers to make deployment and observability requirements explicit early.",
+    "Coordinate with release approvers on rollout and rollback realism.",
+    "Work with security on platform trust and access-control expectations.",
+    "Support incident response with high-fidelity operational evidence."
+  ],
+  "AntiPatterns": [
+    "Treating platform concerns as someone else's problem until release day.",
+    "Automating blindly without observability or rollback triggers.",
+    "Using production-specific knowledge that is not documented or transferable.",
+    "Assuming a successful build implies a safe deployment."
+  ],
+  "FitnessEvidence": [
+    "Reliable deployment and rollback exercises.",
+    "Evidence of improved pipeline stability or reduced release friction.",
+    "Clear platform runbooks or operational notes owned by the role holder.",
+    "Strong trust from delivery teams in platform signals and readiness calls."
+  ],
+  "DocPath": "shared/roles/platform-engineer.md"
+}

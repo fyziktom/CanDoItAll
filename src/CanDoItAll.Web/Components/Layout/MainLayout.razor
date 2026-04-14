@@ -126,6 +126,7 @@
         </Split>
     </TopBar>
     <Body>
+        <Notification />
         @if (CurrentTuningSurface is { } tuningSurface)
         {
             <TunableComponentBoundary IsEnabled="@TuningEnabled"
@@ -493,6 +494,7 @@
 
     private bool IsFocusWorkbenchRoute
         => CurrentUri.AbsolutePath.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(CurrentUri.AbsolutePath, "/processes", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(CurrentUri.AbsolutePath, "/prompt-factory", StringComparison.OrdinalIgnoreCase);
 
     private IReadOnlyList<WorkbenchTabState> OpenedProjectTabs => Workbench.Tabs

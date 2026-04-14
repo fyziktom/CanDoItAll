@@ -1,0 +1,30 @@
+{
+  "Key": "09-architecture-review-gate-c",
+  "Title": "Architecture review gate C",
+  "Purpose": "Stop after lifecycle and side-effect hardening, then decide whether the remaining work is only structural follow-up rather than unresolved correctness.",
+  "DependsOn": [
+    "07-definition-lifecycle-invariant-hardening",
+    "08-transactional-side-effects-and-outbox-alignment"
+  ],
+  "Deliverables": [
+    "A written Gate C memo with explicit pass/fail decision.",
+    "A statement of whether all red correctness/invariant gaps are now closed.",
+    "A corrective subbundle if lifecycle or side-effect hardening is still incomplete."
+  ],
+  "RepositoryTouchpoints": [
+    "02-open-findings.md",
+    "templates/review-gate-memo-template.md",
+    "subbundles/07-definition-lifecycle-invariant-hardening/README.md",
+    "subbundles/08-transactional-side-effects-and-outbox-alignment/README.md"
+  ],
+  "ValidationCommands": [
+    "Review the live repository and proof after subbundles 07-08 before continuing."
+  ],
+  "ReviewQuestions": [
+    "Are single-draft, single-published, active-version safety, and version allocation now hard invariants rather than service assumptions?",
+    "Are search/activity side effects now durable enough that command semantics are no longer post-commit fragile?",
+    "Can the remaining work honestly be treated as structural follow-up instead of unresolved correctness?"
+  ],
+  "CorrectiveOnFailure": "If any answer is no, stop and execute the lifecycle or side-effect corrective playbook before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-lifecycle-reset"
+}

@@ -1,0 +1,30 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-qa-test-design",
+  "DisplayName": "Prompt / QA test design",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "qa-lead",
+  "Phase": "verification",
+  "Summary": "Prompt scaffold for risk-based QA strategy and evidence packaging.",
+  "RequiredInputs": [
+    "change summary",
+    "acceptance criteria",
+    "affected surfaces",
+    "historical defects",
+    "environment constraints"
+  ],
+  "OutputSchema": [
+    "risk areas",
+    "coverage plan",
+    "manual checks",
+    "automation candidates",
+    "residual risk statement"
+  ],
+  "RefusalConditions": [
+    "Refuse to provide blanket release confidence without scope and environment detail.",
+    "Refuse to omit known uncovered areas.",
+    "Escalate if testability is too poor for credible validation."
+  ],
+  "DocPath": "shared/prompts/prompt-qa-test-design.md"
+}

@@ -1,0 +1,27 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-adr-question-framing",
+  "DisplayName": "Prompt / ADR question framing",
+  "Scope": "local",
+  "ProcessKey": "architecture-decision-governance",
+  "AudienceRoleKey": "governance-facilitator",
+  "Phase": "decision-readiness",
+  "Summary": "Prompt scaffold for rewriting fuzzy design debates into crisp decision questions.",
+  "RequiredInputs": [
+    "current proposal",
+    "drivers",
+    "known options",
+    "deadline"
+  ],
+  "OutputSchema": [
+    "decision question",
+    "options",
+    "decision deadline",
+    "required participants",
+    "decision consequences"
+  ],
+  "RefusalConditions": [
+    "Refuse to collapse materially different options into one fake choice."
+  ],
+  "DocPath": "processes/architecture-decision-governance/prompts/prompt-adr-question-framing.md"
+}

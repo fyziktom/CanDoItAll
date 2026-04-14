@@ -18,7 +18,7 @@
                  aria-modal="true"
                  aria-label="@ResolvedAriaLabel"
                  @onclick:stopPropagation="true">
-            <header class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 xl:px-6 xl:py-5">
+            <header class="@ResolveHeaderCssClass()">
                 <Split Breakpoint="LayoutBreakpoint.None"
                        Gap="LayoutGap.Medium"
                        AlignItems="AlignItems.Start"
@@ -31,7 +31,19 @@
                             <div class="cda-eyebrow">@Eyebrow</div>
                         }
 
-                        <h2 class="text-xl font-semibold tracking-tight text-slate-950 xl:text-2xl">@Title</h2>
+                        <div class="inline-flex min-w-0 items-center gap-2">
+                            <h2 class="text-xl font-semibold tracking-tight text-slate-950 xl:text-2xl">@Title</h2>
+                            @if (HasHelp)
+                            {
+                                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                             OpenOnHover="true"
+                                             AriaLabel="@ResolvedHelpAriaLabel"
+                                             Title="@ResolvedHelpAriaLabel"
+                                             Heading="@ResolvedHelpHeading"
+                                             Body="@(HelpText!)" />
+                            }
+                        </div>
 
                         @if (!string.IsNullOrWhiteSpace(Subtitle))
                         {
@@ -60,7 +72,7 @@
                 </Split>
             </header>
 
-            <div class="flex-1 overflow-y-auto px-5 py-5 xl:px-6 xl:py-6">
+            <div class="@ResolveBodyCssClass()">
                 @ChildContent
             </div>
 
@@ -88,6 +100,12 @@
     public string? Subtitle { get; set; }
 
     [Parameter]
+    public string? HelpText { get; set; }
+
+    [Parameter]
+    public string? HelpHeading { get; set; }
+
+    [Parameter]
     public ModalSize Size { get; set; } = ModalSize.Medium;
 
     [Parameter]
@@ -103,6 +121,9 @@
     public bool ShowCloseButton { get; set; } = true;
 
     [Parameter]
+    public bool DenseChrome { get; set; }
+
+    [Parameter]
     public RenderFragment? HeaderActions { get; set; }
 
     [Parameter]
@@ -115,6 +136,12 @@
     public EventCallback OnClose { get; set; }
 
     private string ResolvedAriaLabel => string.IsNullOrWhiteSpace(AriaLabel) ? Title : AriaLabel;
+
+    private bool HasHelp => !string.IsNullOrWhiteSpace(HelpText);
+
+    private string ResolvedHelpHeading => string.IsNullOrWhiteSpace(HelpHeading) ? Title : HelpHeading;
+
+    private string ResolvedHelpAriaLabel => $"Show help for {Title}";
 
     private string ResolveDialogCssClass()
     {
@@ -130,6 +157,20 @@
             "relative z-[71] flex max-h-[94vh] w-full flex-col overflow-hidden rounded-[1.85rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25",
             sizeCss,
             Class);
+    }
+
+    private string ResolveHeaderCssClass()
+    {
+        return DenseChrome
+            ? "flex flex-col gap-2.5 border-b border-slate-200 px-3.5 py-3 xl:px-4 xl:py-3.5"
+            : "flex flex-col gap-4 border-b border-slate-200 px-5 py-4 xl:px-6 xl:py-5";
+    }
+
+    private string ResolveBodyCssClass()
+    {
+        return DenseChrome
+            ? "flex-1 overflow-y-auto px-3.5 py-3.5 xl:px-4 xl:py-4"
+            : "flex-1 overflow-y-auto px-5 py-5 xl:px-6 xl:py-6";
     }
 
     private Task HandleCloseAsync()

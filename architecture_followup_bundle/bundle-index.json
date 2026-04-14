@@ -1,0 +1,57 @@
+{
+  "BundleKey": "cdi-process-post-codex-followup",
+  "Version": "1.0.0-prepared",
+  "GeneratedAtUtc": "2026-04-13T00:00:00Z",
+  "SourceRepositoryZip": "CanDoItAll-process-manag-modul (4).zip",
+  "Counts": {
+    "NumberedSubbundleCount": 11,
+    "ArchitectureReviewGateCount": 3,
+    "CorrectivePlaybookCount": 5,
+    "CorrectivePlaybookTotal": 6,
+    "RootDocumentCount": 5
+  },
+  "ExecutionOrder": [
+    "01-live-proof-reconciliation-and-gap-reopen",
+    "02-true-canonical-dependency-model-closure",
+    "03-architecture-review-gate-a",
+    "04-process-schema-referential-integrity-hardening",
+    "05-null-safe-dependency-uniqueness-and-db-invariants",
+    "06-architecture-review-gate-b",
+    "07-definition-lifecycle-invariant-hardening",
+    "08-transactional-side-effects-and-outbox-alignment",
+    "09-architecture-review-gate-c",
+    "10-service-seam-and-ui-orchestration-follow-up",
+    "11-final-proof-and-closure"
+  ],
+  "ReviewGates": [
+    "03-architecture-review-gate-a",
+    "06-architecture-review-gate-b",
+    "09-architecture-review-gate-c"
+  ],
+  "Sections": [
+    {
+      "Path": "subbundles",
+      "Purpose": "Execution queue and corrective playbooks"
+    },
+    {
+      "Path": "codex",
+      "Purpose": "Machine-readable tasks, validation rules, and stop rules"
+    },
+    {
+      "Path": "reviews",
+      "Purpose": "Execution report and gate memo templates"
+    },
+    {
+      "Path": "traceability",
+      "Purpose": "Finding-to-subbundle mapping"
+    },
+    {
+      "Path": "shared-prompts",
+      "Purpose": "Reusable prompts for review and corrective work"
+    },
+    {
+      "Path": "templates",
+      "Purpose": "Standard memo and corrective templates"
+    }
+  ]
+}

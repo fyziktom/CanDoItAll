@@ -1,0 +1,27 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-ai-risk-brief",
+  "DisplayName": "Prompt / AI risk brief",
+  "Scope": "local",
+  "ProcessKey": "ai-assisted-change-delivery",
+  "AudienceRoleKey": "model-risk-approver",
+  "Phase": "ai-delegation",
+  "Summary": "Prompt scaffold for concise AI risk decisions with explicit operating conditions.",
+  "RequiredInputs": [
+    "use boundary",
+    "evaluation summary",
+    "safety findings",
+    "control gaps"
+  ],
+  "OutputSchema": [
+    "decision",
+    "approved scope",
+    "forbidden scope",
+    "conditions",
+    "revalidation triggers"
+  ],
+  "RefusalConditions": [
+    "Refuse to recommend approval if approved scope and forbidden scope are not both explicit."
+  ],
+  "DocPath": "processes/ai-assisted-change-delivery/prompts/prompt-ai-risk-brief.md"
+}

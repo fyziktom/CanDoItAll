@@ -1,0 +1,36 @@
+{
+  "Key": "01-baseline-characterization-and-live-gap-reconciliation",
+  "Title": "Baseline characterization and live-gap reconciliation",
+  "Purpose": "Establish a trusted baseline from the live repository, add the minimum characterization coverage needed for safe refactoring, and prove the bundle is execution-ready before architectural mutation work begins.",
+  "DependsOn": [],
+  "Deliverables": [
+    "Prepared-stage validator pass on the target machine.",
+    "A live-gap memo confirming which findings are already covered by current tests and which are still uncovered.",
+    "Characterization tests or test updates for the current risky behaviors that later refactors must preserve.",
+    "An updated execution report with the real starting gate state."
+  ],
+  "RepositoryTouchpoints": [
+    "architecture_hardening_bundle\\README.md",
+    "architecture_hardening_bundle\\plan\\01-phase-plan.md",
+    "architecture_hardening_bundle\\reviews\\01-execution-report.md",
+    "src\\CanDoItAll.Modules.Processes\\ProcessesService.Persistence.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessesService.Publication.cs",
+    "src\\CanDoItAll.Modules.Processes\\ProcessesService.Runtime.cs",
+    "tests\\CanDoItAll.Tests.Integration\\ProcessesServiceIntegrationTests.cs",
+    "tests\\CanDoItAll.Tests.Components\\ProcessWorkspaceTests.cs",
+    "tests\\CanDoItAll.Mcp.Processes.Tests\\ProcessesToolsTests.cs"
+  ],
+  "ValidationCommands": [
+    "python C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-preparation\\scripts\\validate_bundle.py C:\\repositories\\CanDoItAll\\architecture_hardening_bundle --profile initiative --stage prepared",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests\" -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Tests.Components\\CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests\" -v:minimal",
+    "dotnet test C:\\repositories\\CanDoItAll\\tests\\CanDoItAll.Mcp.Processes.Tests\\CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessesToolsTests\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Do we now have a trustworthy regression baseline for the core mutation and UI surfaces?",
+    "Did we stay disciplined and avoid starting the refactor before the baseline was protected?",
+    "Are the remaining proof gaps explicit instead of hidden?"
+  ],
+  "CorrectiveOnFailure": "If the baseline is weak or the prepared-stage validator fails, repair the bundle or add characterization tests first. No canonical refactor may begin until this phase passes.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-template"
+}

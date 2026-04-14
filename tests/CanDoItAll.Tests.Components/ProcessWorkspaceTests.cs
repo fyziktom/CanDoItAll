@@ -2,9 +2,11 @@ using System.Reflection;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -25,9 +27,76 @@ public sealed class ProcessWorkspaceTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Process management", cut.Markup);
             Assert.Contains("Workspace-visible process", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Workspace_shell_uses_internal_scroll_regions_for_definition_list_and_detail_tabs()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Containment workspace project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workspace-visible process", cut.Markup);
+            Assert.NotNull(cut.Find("[data-testid='processes-workspace-shell']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-page-scaffold']"));
+        });
+
+        var pageScaffold = cut.Find("[data-testid='processes-page-scaffold']");
+        Assert.Contains("max-w-full", pageScaffold.ClassName, StringComparison.Ordinal);
+
+        var summaryTiles = cut.FindAll(".cda-summary-tile--badge");
+        Assert.Equal(4, summaryTiles.Count);
+
+        var definitionListScroll = cut.Find("[data-testid='processes-definition-list-scroll']");
+        Assert.Contains("h-full", definitionListScroll.ClassName, StringComparison.Ordinal);
+        Assert.Contains("overflow-y-auto", definitionListScroll.ClassName, StringComparison.Ordinal);
+
+        var detailTabs = cut.Find("[data-testid='processes-detail-tabs']");
+        Assert.Contains("cad-tabs--fill-height", detailTabs.ClassName, StringComparison.Ordinal);
+        Assert.Contains("cad-tabs--panel-overflow-auto", detailTabs.ClassName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workspace_replaces_inline_help_copy_with_compact_help_popovers()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Help popover workspace project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workspace-visible process", cut.Markup);
+            Assert.NotNull(cut.Find("button[aria-label='Show help for Definitions']"));
+            Assert.NotNull(cut.Find("button[aria-label='Show help for Process definitions']"));
+            Assert.NotNull(cut.Find("button[aria-label='Show process workspace help']"));
+        });
+
+        Assert.DoesNotContain("Persisted process definitions.", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Browse saved process contracts, filter the library, and keep selection in sync with the detail workspace without expanding the list header.", cut.Markup, StringComparison.Ordinal);
+
+        var workspaceHelpButton = cut.Find("button[aria-label='Show process workspace help']");
+        Assert.NotNull(workspaceHelpButton.ParentElement);
+
+        workspaceHelpButton.ParentElement.TriggerEvent("onmouseenter", new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence.", cut.Markup));
     }
 
     [Fact]
@@ -312,15 +381,28 @@ public sealed class ProcessWorkspaceTests
             Assert.Contains(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep), dependency => dependency.DependsOnStepId == currentImplementationStep.Id);
         });
 
-        cut.WaitForAssertion(() =>
-        {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
-            var persistedImplementationStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.ImplementationStepKey);
-            var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
-            var persistedArtifact = Assert.Single(persistedImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
-            Assert.Contains(persistedMergeStep.RoleAssignments, assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible);
-            Assert.Contains(persistedMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == persistedArtifact.Id);
-        });
+        var persistedEditor = await WaitForPersistedEditorAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            persisted =>
+            {
+                var persistedImplementationStep = persisted.Steps.FirstOrDefault(step => step.Key == process.ImplementationStepKey);
+                var persistedMergeStep = persisted.Steps.FirstOrDefault(step => step.Key == process.MergeStepKey);
+                var persistedArtifactId = persistedImplementationStep?.ArtifactExpectations
+                    .FirstOrDefault(artifact => artifact.Title == "Implementation package")?
+                    .Id;
+                return persistedMergeStep is not null &&
+                    persistedMergeStep.RoleAssignments.Any(assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible) &&
+                    persistedArtifactId.HasValue &&
+                    persistedMergeStep.ArtifactInputs.Any(input => input.ArtifactExpectationId == persistedArtifactId.Value);
+            });
+
+        var persistedImplementationStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.ImplementationStepKey);
+        var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
+        var persistedArtifact = Assert.Single(persistedImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+        Assert.Contains(persistedMergeStep.RoleAssignments, assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible);
+        Assert.Contains(persistedMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == persistedArtifact.Id);
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
             new CanvasWorkbenchContextActionRequest(
@@ -480,6 +562,202 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Steps_canvas_node_moves_coalesce_rapid_updates_into_one_persisted_definition_update()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var activityService = harness.Context.Services.GetRequiredService<ActivityService>();
+        var projectId = await CreateProjectAsync(projectsService, "Canvas movement coalescing project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var baselineUpdateCount = (await activityService.ListRecentAsync(200))
+            .Count(item =>
+                item.Category == "processes" &&
+                item.Action == "update-definition" &&
+                item.Description == process.Editor.Name);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+        var decisionStep = Assert.Single(initialEditor.Steps, step => step.Key == process.DecisionStepKey);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 320, 420),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 940, 260)
+        })));
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 360, 460),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 1000, 300)
+        })));
+
+        cut.WaitForAssertion(() =>
+        {
+            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
+            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Equal(360, persistedRole.CanvasX);
+            Assert.Equal(460, persistedRole.CanvasY);
+            Assert.Equal(1000, persistedDecisionStep.BranchCanvasX);
+            Assert.Equal(300, persistedDecisionStep.BranchCanvasY);
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentUpdateCount = activityService.ListRecentAsync(200).GetAwaiter().GetResult()
+                .Count(item =>
+                    item.Category == "processes" &&
+                    item.Action == "update-definition" &&
+                    item.Description == process.Editor.Name);
+            Assert.Equal(baselineUpdateCount + 1, currentUpdateCount);
+        });
+    }
+
+    [Fact]
+    public async Task Publish_action_flushes_pending_canvas_persistence_before_publishing()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Workspace publish quiescence project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+        var decisionStep = Assert.Single(initialEditor.Steps, step => step.Key == process.DecisionStepKey);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 360, 460),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 1000, 300)
+        })));
+
+        Assert.NotNull(GetPrivateFieldValue<CancellationTokenSource>(cut.Instance, "pendingDefinitionCanvasPersistCts"));
+
+        await InvokeWorkspaceMethodAsync(cut, "PublishAsync");
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentEditor = GetEditor(cut.Instance);
+            var currentRole = Assert.Single(currentEditor.Roles, item => item.Key == process.RoleKey);
+            var currentDecisionStep = Assert.Single(currentEditor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Equal(360, currentRole.CanvasX);
+            Assert.Equal(460, currentRole.CanvasY);
+            Assert.Equal(1000, currentDecisionStep.BranchCanvasX);
+            Assert.Equal(300, currentDecisionStep.BranchCanvasY);
+        });
+
+        Assert.Null(GetPrivateFieldValue<CancellationTokenSource>(cut.Instance, "pendingDefinitionCanvasPersistCts"));
+    }
+
+    [Fact]
+    public async Task Delete_action_cancels_pending_canvas_persistence_before_removing_the_definition()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Workspace delete quiescence project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 360, 460)
+        })));
+
+        Assert.NotNull(GetPrivateFieldValue<CancellationTokenSource>(cut.Instance, "pendingDefinitionCanvasPersistCts"));
+
+        await InvokeWorkspaceMethodAsync(cut, "DeleteAsync");
+
+        Assert.Null(GetPrivateFieldValue<CancellationTokenSource>(cut.Instance, "pendingDefinitionCanvasPersistCts"));
+        Assert.Null(GetPrivateFieldValue<Guid?>(cut.Instance, "selectedProcessId"));
+
+        await Task.Delay(500);
+
+        var definitions = await processesService.ListDefinitionsAsync(projectId);
+        Assert.Empty(definitions);
+    }
+
+    [Fact]
+    public async Task Export_action_flushes_pending_canvas_persistence_before_serializing_the_definition()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Workspace export quiescence project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+        var decisionStep = Assert.Single(initialEditor.Steps, step => step.Key == process.DecisionStepKey);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 360, 460),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 1000, 300)
+        })));
+
+        Assert.NotNull(GetPrivateFieldValue<CancellationTokenSource>(cut.Instance, "pendingDefinitionCanvasPersistCts"));
+
+        await InvokeWorkspaceMethodAsync(cut, "ExportAsync");
+
+        var exportJson = GetPrivateFieldValue<string>(cut.Instance, "exportJson");
+        Assert.NotNull(exportJson);
+        Assert.False(string.IsNullOrWhiteSpace(exportJson));
+        var envelope = JsonSerializer.Deserialize<ProcessImportExportEnvelope>(exportJson!, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.NotNull(envelope);
+        Assert.NotNull(envelope.Definition);
+
+        var exportedRole = Assert.Single(envelope.Definition.Roles, item => item.Key == process.RoleKey);
+        var exportedDecisionStep = Assert.Single(envelope.Definition.Steps, step => step.Key == process.DecisionStepKey);
+        Assert.Equal(360, exportedRole.CanvasX);
+        Assert.Equal(460, exportedRole.CanvasY);
+        Assert.Equal(1000, exportedDecisionStep.BranchCanvasX);
+        Assert.Equal(300, exportedDecisionStep.BranchCanvasY);
+        Assert.Null(GetPrivateFieldValue<CancellationTokenSource>(cut.Instance, "pendingDefinitionCanvasPersistCts"));
+    }
+
+    [Fact]
     public async Task Steps_canvas_delete_action_removes_roles_and_steps()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -530,6 +808,134 @@ public sealed class ProcessWorkspaceTests
             var currentFixStep = Assert.Single(editor.Steps, step => step.Key == process.FixStepKey);
             Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(currentFixStep));
         });
+    }
+
+    [Fact]
+    public async Task Templates_dialog_shows_process_template_preview_with_add_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template process import project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-item-ai-assisted-change-delivery']"));
+        });
+
+        cut.Find("[data-testid='processes-template-library-item-ai-assisted-change-delivery']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("AI-assisted change delivery with guarded delegation", cut.Markup);
+            Assert.Contains("Add to my processes", cut.Markup);
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+        });
+    }
+
+    [Fact]
+    public async Task Templates_dialog_uses_internal_scroll_regions_and_bounded_mermaid_viewport_markup()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template containment project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-list-scroll']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-detail-scroll']"));
+        });
+
+        var listScroll = cut.Find("[data-testid='processes-template-library-list-scroll']");
+        Assert.Contains("h-full", listScroll.ClassName, StringComparison.Ordinal);
+        Assert.Contains("overflow-y-auto", listScroll.ClassName, StringComparison.Ordinal);
+
+        var detailScroll = cut.Find("[data-testid='processes-template-library-detail-scroll']");
+        Assert.Contains("h-full", detailScroll.ClassName, StringComparison.Ordinal);
+        Assert.Contains("overflow-y-auto", detailScroll.ClassName, StringComparison.Ordinal);
+
+        await SetTemplateLibraryPreviewTabAsync(cut, "diagrams");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-diagram-flowchart-clip']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-template-library-diagram-flowchart-viewport']"));
+        });
+    }
+
+    [Fact]
+    public async Task Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template role import project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
+
+        await SetTemplateLibraryCategoryAsync(cut, "roles");
+        cut.Find("[data-testid='processes-template-library-add-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Equal(2, editor.Roles.Count);
+        });
+        Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+    }
+
+    [Fact]
+    public async Task Templates_dialog_adds_artifact_templates_into_the_selected_definition_step_without_closing_the_modal()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Template artifact import project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        cut.Find("[data-testid='processes-templates-button']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
+
+        await SetTemplateLibraryCategoryAsync(cut, "artifacts");
+        cut.Find("[data-testid='processes-template-library-add-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var targetStep = Assert.Single(editor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Single(targetStep.ArtifactExpectations);
+        });
+        Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
     }
 
     private static ProcessDefinitionEditorModel BuildDefinitionEditor(Guid projectId, Guid managerRoleId)
@@ -600,7 +1006,7 @@ public sealed class ProcessWorkspaceTests
                     DecisionRightsSummary = "Workspace owner confirms visibility.",
                     ExceptionPolicySummary = "Fail when the page does not hydrate.",
                     TargetLeadHours = 1,
-                    DependsOnStepId = intakeStepId,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
                     CanvasX = 420,
                     CanvasY = 160,
                     RoleAssignments =
@@ -616,6 +1022,7 @@ public sealed class ProcessWorkspaceTests
             ]
         };
     }
+
 
     private static CanvasAuthoringFixture BuildCanvasAuthoringDefinition(
         Guid projectId,
@@ -685,8 +1092,9 @@ public sealed class ProcessWorkspaceTests
                     Key = "repair-change",
                     Title = "Repair change",
                     StepKind = ProcessStepKind.Work,
-                    DependsOnStepId = connectFixStep ? decisionStepId : null,
-                    DependsOnBranchOutcomeId = connectFixStep ? repairsOutcomeId : null,
+                    Dependencies = connectFixStep
+                        ? CreateDependencies((decisionStepId, repairsOutcomeId))
+                        : [],
                     OutputContractSummary = "Updated implementation ready for another review.",
                     CanvasX = 760,
                     CanvasY = 60
@@ -750,11 +1158,85 @@ public sealed class ProcessWorkspaceTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<CanvasWorkbench>()));
     }
 
+    private static async Task SetTemplateLibraryCategoryAsync(IRenderedComponent<ProcessWorkspace> cut, string key)
+    {
+        var dialog = cut.FindComponent<ProcessTemplateLibraryDialog>();
+        var method = typeof(ProcessTemplateLibraryDialog).GetMethod("HandleCategoryChangedAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(dialog.Instance, [key]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() =>
+        {
+            var refreshedDialog = cut.FindComponent<ProcessTemplateLibraryDialog>();
+            Assert.Contains(key switch
+            {
+                "roles" => "Add to my roles",
+                "artifacts" => "Add to my artifacts",
+                _ => "Add to my processes"
+            }, refreshedDialog.Markup);
+        });
+    }
+
+    private static async Task SetTemplateLibraryPreviewTabAsync(IRenderedComponent<ProcessWorkspace> cut, string key)
+    {
+        var dialog = cut.FindComponent<ProcessTemplateLibraryDialog>();
+        var method = typeof(ProcessTemplateLibraryDialog).GetMethod("HandlePreviewTabChangedAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(dialog.Instance, [key]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(key switch
+            {
+                "diagrams" => "Mermaid",
+                "markdown" => "Markdown",
+                "json" => "JSON",
+                _ => "Overview"
+            }, cut.Markup);
+        });
+    }
+
     private static ProcessDefinitionEditorModel GetEditor(ProcessWorkspace component)
     {
         var field = typeof(ProcessWorkspace).GetField("editor", BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(field);
         return Assert.IsType<ProcessDefinitionEditorModel>(field!.GetValue(component));
+    }
+
+    private static T? GetPrivateFieldValue<T>(ProcessWorkspace component, string fieldName)
+    {
+        var field = typeof(ProcessWorkspace).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        return (T?)field!.GetValue(component);
+    }
+
+    private static async Task InvokeWorkspaceMethodAsync(IRenderedComponent<ProcessWorkspace> cut, string methodName)
+    {
+        var method = typeof(ProcessWorkspace).GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(cut.Instance, []) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -769,6 +1251,39 @@ public sealed class ProcessWorkspaceTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task<ProcessDefinitionEditorModel> WaitForPersistedEditorAsync(
+        ProcessesService processesService,
+        Guid definitionId,
+        Guid projectId,
+        Func<ProcessDefinitionEditorModel, bool> predicate)
+    {
+        ProcessDefinitionEditorModel? lastObserved = null;
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            lastObserved = await processesService.GetEditorAsync(definitionId, projectId);
+            if (predicate(lastObserved))
+            {
+                return lastObserved;
+            }
+
+            await Task.Delay(100);
+        }
+
+        return lastObserved ?? await processesService.GetEditorAsync(definitionId, projectId);
+    }
+
+    private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)
+    {
+        return items
+            .Select(item => new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = item.StepId,
+                DependsOnBranchOutcomeId = item.BranchOutcomeId
+            })
+            .ToList();
     }
 
     private sealed record CanvasAuthoringFixture(

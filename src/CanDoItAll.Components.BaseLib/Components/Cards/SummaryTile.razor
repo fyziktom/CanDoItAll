@@ -1,8 +1,28 @@
 @namespace CanDoItAll.Components.BaseLib
 <div class="@ResolveCssClass()">
-    <p class="cda-eyebrow">@Label</p>
-    <p class="cda-summary-tile__value">@Value</p>
-    @if (!string.IsNullOrWhiteSpace(HelperText))
+    <div class="cda-summary-tile__row">
+        @if (ShouldRenderHelperTooltip)
+        {
+            <div class="inline-flex min-w-0 max-w-full flex-nowrap items-center gap-2">
+                <p class="cda-eyebrow whitespace-nowrap">@Label</p>
+                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact shrink-0"
+                             OpenOnHover="true"
+                             AriaLabel="@($"Show help for {Label}")"
+                             Title="@($"Show help for {Label}")"
+                             Heading="@Label"
+                             Body="@(HelperText!)" />
+            </div>
+        }
+        else
+        {
+            <p class="cda-eyebrow">@Label</p>
+        }
+
+        <p class="cda-summary-tile__value">@Value</p>
+    </div>
+
+    @if (ShouldRenderInlineHelper)
     {
         <p class="cda-summary-tile__helper">@HelperText</p>
     }
@@ -19,7 +39,22 @@
     public string? HelperText { get; set; }
 
     [Parameter]
+    public bool ShowHelperTextAsTooltip { get; set; }
+
+    [Parameter]
     public string Tone { get; set; } = "neutral";
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public bool Badge { get; set; }
+
+    private bool HasHelperText => !string.IsNullOrWhiteSpace(HelperText);
+
+    private bool ShouldRenderHelperTooltip => ShowHelperTextAsTooltip && HasHelperText;
+
+    private bool ShouldRenderInlineHelper => HasHelperText && !ShowHelperTextAsTooltip;
 
     private string ResolveCssClass()
     {
@@ -34,7 +69,9 @@
             _ => string.Empty
         };
 
-        return $"cda-summary-tile {toneClass}".TrimEnd();
+        var compactClass = Compact ? "cda-summary-tile--compact" : string.Empty;
+        var badgeClass = Badge ? "cda-summary-tile--badge" : string.Empty;
+        return $"cda-summary-tile {toneClass} {compactClass} {badgeClass}".TrimEnd();
     }
 }
 

@@ -113,6 +113,64 @@ public sealed class ProcessesToolsTests
         Assert.Equal(branchOutcomeId, capturedRequest.SelectedBranchOutcomeId);
     }
 
+    [Fact]
+    public async Task ProcessesTemplatesListAsync_returns_catalog_entries()
+    {
+        var tools = new ProcessesTools(new StubCoordinator
+        {
+            OnListTemplates = _ => Task.FromResult<IReadOnlyList<ProcessTemplateCatalogItem>>(
+            [
+                new ProcessTemplateCatalogItem("software-delivery", "Software delivery", "Summary", "High", "Guarded", 9, 6, 2, "processes/software-delivery")
+            ])
+        }, NullLogger<ProcessesTools>.Instance);
+
+        var result = await tools.ProcessesTemplatesListAsync();
+
+        Assert.True(result.Ok);
+        Assert.Single(result.Data!);
+        Assert.Equal("software-delivery", result.Data![0].Key);
+    }
+
+    [Fact]
+    public async Task ProcessesTemplateGetAsync_returns_detailed_template()
+    {
+        var detail = new ProcessTemplateDetailToolData(
+            new ProcessTemplateCatalogItem("ai-assisted-change-delivery", "AI assisted", "Summary", "High", "Guarded", 6, 6, 3, "processes/ai-assisted-change-delivery"),
+            new ProcessTemplateDefinition { Key = "ai-assisted-change-delivery", DisplayName = "AI assisted", Summary = "Summary" },
+            "Compatibility report body",
+            ["processes/ai-assisted-change-delivery/definition.md"]);
+
+        var tools = new ProcessesTools(new StubCoordinator
+        {
+            OnGetTemplate = (_, _) => Task.FromResult(detail)
+        }, NullLogger<ProcessesTools>.Instance);
+
+        var result = await tools.ProcessesTemplateGetAsync("ai-assisted-change-delivery");
+
+        Assert.True(result.Ok);
+        Assert.Equal("ai-assisted-change-delivery", result.Data!.Template.Key);
+        Assert.Contains("Compatibility", result.Data!.CompatibilityReportMarkdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ProcessesTemplateImportAsync_returns_projected_import_result()
+    {
+        var definitionId = Guid.NewGuid();
+        var tools = new ProcessesTools(new StubCoordinator
+        {
+            OnImportTemplate = (_, _) => Task.FromResult(new ProcessTemplateImportResult("software-delivery", definitionId, ["Projected from template pack."]))
+        }, NullLogger<ProcessesTools>.Instance);
+
+        var result = await tools.ProcessesTemplateImportAsync(new ProcessTemplateImportRequest
+        {
+            ProcessKey = "software-delivery",
+            AutoPublish = true
+        });
+
+        Assert.True(result.Ok);
+        Assert.Equal(definitionId, result.Data!.DefinitionId);
+    }
+
     private sealed class StubCoordinator : IProcessesCoordinator
     {
         public Func<Guid?, CancellationToken, Task<IReadOnlyList<ProcessDefinitionListItem>>>? OnListDefinitions { get; init; }
@@ -146,6 +204,16 @@ public sealed class ProcessesToolsTests
         public Func<Guid, CancellationToken, Task<IReadOnlyList<ProjectPartyOption>>>? OnListPartyOptions { get; init; }
 
         public Func<CancellationToken, Task<IReadOnlyList<ProcessExecutorRegistryOption>>>? OnListExecutorOptions { get; init; }
+
+        public Func<CancellationToken, Task<IReadOnlyList<ProcessTemplateCatalogItem>>>? OnListTemplates { get; init; }
+
+        public Func<string, CancellationToken, Task<ProcessTemplateDetailToolData>>? OnGetTemplate { get; init; }
+
+        public Func<string, CancellationToken, Task<ProcessTemplateMermaidDocument>>? OnGetTemplateMermaid { get; init; }
+
+        public Func<ProcessTemplateImportRequest, CancellationToken, Task<ProcessTemplateImportResult>>? OnImportTemplate { get; init; }
+
+        public Func<CancellationToken, Task<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>>>? OnListBaselineScenarios { get; init; }
 
         public Task<IReadOnlyList<ProcessDefinitionListItem>> ListDefinitionsAsync(Guid? projectId, CancellationToken cancellationToken = default)
         {
@@ -262,6 +330,38 @@ public sealed class ProcessesToolsTests
         public Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default)
         {
             return OnListExecutorOptions?.Invoke(cancellationToken) ?? Task.FromResult<IReadOnlyList<ProcessExecutorRegistryOption>>([]);
+        }
+
+        public Task<IReadOnlyList<ProcessTemplateCatalogItem>> ListTemplatesAsync(CancellationToken cancellationToken = default)
+        {
+            return OnListTemplates?.Invoke(cancellationToken) ?? Task.FromResult<IReadOnlyList<ProcessTemplateCatalogItem>>([]);
+        }
+
+        public Task<ProcessTemplateDetailToolData> GetTemplateAsync(string processKey, CancellationToken cancellationToken = default)
+        {
+            return OnGetTemplate?.Invoke(processKey, cancellationToken)
+                ?? Task.FromResult(new ProcessTemplateDetailToolData(
+                    new ProcessTemplateCatalogItem(processKey, processKey, "Summary", "Standard", "Assisted", 0, 0, 0, "processes/" + processKey),
+                    new ProcessTemplateDefinition { Key = processKey, DisplayName = processKey, Summary = "Summary" },
+                    "Compatibility report",
+                    []));
+        }
+
+        public Task<ProcessTemplateMermaidDocument> GetTemplateMermaidAsync(string processKey, CancellationToken cancellationToken = default)
+        {
+            return OnGetTemplateMermaid?.Invoke(processKey, cancellationToken)
+                ?? Task.FromResult(new ProcessTemplateMermaidDocument(processKey, processKey, "flowchart LR", "sequenceDiagram", []));
+        }
+
+        public Task<ProcessTemplateImportResult> ImportTemplateAsync(ProcessTemplateImportRequest request, CancellationToken cancellationToken = default)
+        {
+            return OnImportTemplate?.Invoke(request, cancellationToken)
+                ?? Task.FromResult(new ProcessTemplateImportResult(request.ProcessKey, Guid.NewGuid(), []));
+        }
+
+        public Task<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>> ListBaselineScenariosAsync(CancellationToken cancellationToken = default)
+        {
+            return OnListBaselineScenarios?.Invoke(cancellationToken) ?? Task.FromResult<IReadOnlyList<ProcessTemplateBaselineScenarioSummary>>([]);
         }
     }
 }

@@ -1,0 +1,26 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-fit-gap-summary",
+  "DisplayName": "Prompt / fit-gap summary",
+  "Scope": "local",
+  "ProcessKey": "customer-onboarding",
+  "AudienceRoleKey": "solution-consultant",
+  "Phase": "solution-design",
+  "Summary": "Prompt scaffold for fit-gap summaries that convert workshop input into actionable design choices.",
+  "RequiredInputs": [
+    "customer process notes",
+    "product capability limits",
+    "open questions"
+  ],
+  "OutputSchema": [
+    "supported configuration",
+    "gaps",
+    "workarounds",
+    "required product decisions",
+    "customer actions"
+  ],
+  "RefusalConditions": [
+    "Refuse to label a gap as solved if the workaround is unsupported or still hypothetical."
+  ],
+  "DocPath": "processes/customer-onboarding/prompts/prompt-fit-gap-summary.md"
+}

@@ -1,0 +1,61 @@
+{
+  "PackKey": "candoitall-software-process-template-pack",
+  "Name": "CanDoItAll software process template pack (current architecture aligned)",
+  "Version": "2.0.0-current-architecture",
+  "GeneratedAtUtc": "2026-04-11T17:32:40Z",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "nist-ssdf-ai",
+    "owasp-samm",
+    "openchain",
+    "spdx",
+    "slsa"
+  ],
+  "FrameworkSourcesPath": "framework-sources.json",
+  "Toolbox": {
+    "RoleTemplatesPath": "toolbox/role-templates.json",
+    "StepTemplatesPath": "toolbox/step-templates.json",
+    "ChromeActionsPath": "toolbox/chrome-actions.json"
+  },
+  "SeedCatalog": {
+    "BaselineScenariosPath": "seed-catalog/baseline-scenarios.json"
+  },
+  "Processes": [
+    {
+      "Key": "software-delivery",
+      "RelativePath": "processes/software-delivery"
+    },
+    {
+      "Key": "branching-code-review",
+      "RelativePath": "processes/branching-code-review"
+    },
+    {
+      "Key": "hotfix-rollout",
+      "RelativePath": "processes/hotfix-rollout"
+    },
+    {
+      "Key": "customer-onboarding",
+      "RelativePath": "processes/customer-onboarding"
+    },
+    {
+      "Key": "incident-response",
+      "RelativePath": "processes/incident-response"
+    },
+    {
+      "Key": "architecture-decision-governance",
+      "RelativePath": "processes/architecture-decision-governance"
+    },
+    {
+      "Key": "release-readiness-and-deployment",
+      "RelativePath": "processes/release-readiness-and-deployment"
+    },
+    {
+      "Key": "oss-intake-supply-chain-governance",
+      "RelativePath": "processes/oss-intake-supply-chain-governance"
+    },
+    {
+      "Key": "ai-assisted-change-delivery",
+      "RelativePath": "processes/ai-assisted-change-delivery"
+    }
+  ]
+}

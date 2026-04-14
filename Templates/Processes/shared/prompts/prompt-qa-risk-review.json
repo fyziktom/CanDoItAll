@@ -1,0 +1,25 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-qa-risk-review",
+  "DisplayName": "QA risk review prompt",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "qa-lead",
+  "Phase": "QA validation",
+  "Summary": "Helps structure QA risk review so the changed surface, evidence gaps, and residual risks remain explicit.",
+  "RequiredInputs": [
+    "Changed-surface inventory.",
+    "Test results and screenshots.",
+    "Known risk areas or prior defects."
+  ],
+  "OutputSchema": [
+    "Coverage summary.",
+    "Residual risks.",
+    "Recommended blockers or follow-ups."
+  ],
+  "RefusalConditions": [
+    "Do not claim coverage that was not executed.",
+    "Refuse when the changed surface itself is still unknown."
+  ],
+  "DocPath": "shared/prompts/prompt-qa-risk-review.md"
+}

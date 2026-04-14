@@ -1,0 +1,272 @@
+{
+  "Definition": {
+    "Id": null,
+    "ProjectId": null,
+    "WorkingVersionId": null,
+    "WorkingVersionNumber": 1,
+    "Name": "Incident response and escalation",
+    "Summary": "Coordinate first response, diagnosis, escalation, and customer communication with explicit safe-refusal paths, artifact inputs, and emergency-governance notes.",
+    "ValueStatement": "Shorten blocked time and preserve trust under ambiguity.",
+    "CustomerName": "Managed services",
+    "OwnerName": "Response leadership",
+    "InterfaceContractSummary": "Customer-facing response depends on reliable diagnosis and explicit decision rights.",
+    "GovernanceNotes": "Critical escalations require approval notes and trust-aware evidence handling.",
+    "ChangeSummary": "Refreshed to preserve the current concise baseline scenario while enriching diagnostic, approval, and mitigation discipline around the same three-step spine.",
+    "GovernancePolicySummary": "Emergency paths stay bounded by approval, journaling, and evidence controls.",
+    "ConstitutionRuleSummary": "Policy decisions stay explicit and reviewable.",
+    "OperatingModeSummary": "Emergency operating mode is explicitly bounded by governance rules.",
+    "SimulationReadinessSummary": "Seed pack models refusal, blocking, and artifact trust scenarios.",
+    "Criticality": "High",
+    "AutonomyLevel": "Assisted",
+    "Status": "Draft",
+    "Roles": [
+      {
+        "Id": "4c3b345d-8422-5f6c-b48d-21cde958bf97",
+        "Key": "triage-lead",
+        "DisplayName": "Triage lead",
+        "Purpose": "Turn an incoming operational signal into a structured incident response posture with explicit severity, owners, and first actions.",
+        "StaffingIntent": "A disciplined incident responder who can rapidly stabilize coordination without inventing unsupported conclusions.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": true,
+        "AllowsFallback": false,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 100,
+        "RoleTemplateSourceKey": "process-role-template/incident-commander",
+        "RoleTemplateSnapshotName": "Incident commander / template-pack v1",
+        "SnapshotSummary": "Initial incident coordinator for severity framing and first containment path selection.",
+        "RequiredSkillIds": [],
+        "CanvasX": 120,
+        "CanvasY": 40
+      },
+      {
+        "Id": "c9ee4cac-47ff-5f78-8074-23d5a44c7318",
+        "Key": "resolver",
+        "DisplayName": "Resolver",
+        "Purpose": "Investigate the technical fault path, propose mitigation, and execute or coordinate the change needed to restore service.",
+        "StaffingIntent": "A hands-on technical responder who can diagnose the active failure mode and work with governance roles under time pressure.",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": "TeamMember",
+        "IsRequired": false,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": false,
+        "DefaultAllocationPercent": 100,
+        "RoleTemplateSourceKey": "process-role-template/platform-engineer",
+        "RoleTemplateSnapshotName": "Platform engineer / template-pack v1",
+        "SnapshotSummary": "Primary technical owner for diagnosis, mitigation, and restoration work.",
+        "RequiredSkillIds": [],
+        "CanvasX": 420,
+        "CanvasY": 40
+      },
+      {
+        "Id": "de1c9f81-449e-5cb8-b27d-59227283ce60",
+        "Key": "approver",
+        "DisplayName": "Approver",
+        "Purpose": "Make the accountable go / no-go decision when an incident response path requires explicit approval beyond responder discretion.",
+        "StaffingIntent": "A decision owner trusted to balance restoration urgency, risk, customer impact, and evidence quality during incidents.",
+        "PreferredExecutorKind": "person",
+        "PreferredProjectAssignmentRole": "Manager",
+        "IsRequired": true,
+        "AllowsFallback": true,
+        "RequiresExplicitApproval": true,
+        "DefaultAllocationPercent": 20,
+        "RoleTemplateSourceKey": "process-role-template/release-approver",
+        "RoleTemplateSnapshotName": "Release approver / template-pack v1",
+        "SnapshotSummary": "Explicit governance decision owner for risky mitigations and escalated incident actions.",
+        "RequiredSkillIds": [],
+        "CanvasX": 720,
+        "CanvasY": 40
+      }
+    ],
+    "Steps": [
+      {
+        "Id": "085453e7-b4cc-5978-ace3-43cac4b801df",
+        "Key": "respond",
+        "Title": "Acknowledge and classify incident",
+        "Subtitle": "First response and safe-refusal posture",
+        "Notes": "Capture the incoming alert, classify probable severity, and establish the initial response owner.",
+        "StepKind": "Start",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": true,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Inbound alert, customer impact, and available evidence.",
+        "OutputContractSummary": "Initial severity and response owner.",
+        "EvidenceContractSummary": "Timestamped acknowledgement and incident notes.",
+        "DecisionRightsSummary": "Triage lead may safely refuse malformed or irrelevant incidents.",
+        "ExceptionPolicySummary": "Do not let an ambiguous incoming signal bypass typed acknowledgement and classification.",
+        "TargetLeadHours": 1,
+        "DependsOnStepId": null,
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 120,
+        "CanvasY": 320,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [],
+        "RoleAssignments": [
+          {
+            "Id": "dd577993-b6a5-58ae-a12b-52e453e30012",
+            "RoleRequirementId": "4c3b345d-8422-5f6c-b48d-21cde958bf97",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Another triage lead may take over without invalidating the process."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "c7b802d8-cc08-5e03-87fc-34010a44fdc4",
+            "ArtifactKind": "Decision",
+            "Title": "Incident triage note",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for diagnosis, approval escalation, and post-incident timeline reconstruction.",
+            "ValidationRequirementSummary": "Must capture triggering signal, user impact, severity posture, responders, and first actions."
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "0bb361c8-8425-56d6-8f1d-a3c234f31ccf",
+        "Key": "diagnose",
+        "Title": "Diagnose probable cause",
+        "Subtitle": "Evidence-led technical assessment",
+        "Notes": "Develop a diagnosis hypothesis and proposed action from logs, traces, and responder findings.",
+        "StepKind": "Work",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Initial severity and evidence.",
+        "OutputContractSummary": "Diagnosis hypothesis and proposed action.",
+        "EvidenceContractSummary": "Logs, traces, or structured findings.",
+        "DecisionRightsSummary": "Resolver proposes action; approver decides emergency changes.",
+        "ExceptionPolicySummary": "Do not present a mitigation as safe until evidence and rollback framing exist.",
+        "TargetLeadHours": 6,
+        "DependsOnStepId": "085453e7-b4cc-5978-ace3-43cac4b801df",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 420,
+        "CanvasY": 320,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "3fc29d2e-7a70-5ac9-b2f7-204aab57d4d1",
+            "DependsOnStepId": "085453e7-b4cc-5978-ace3-43cac4b801df",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "6f7faf2e-4730-575c-a7d9-d3d9408dc9a3",
+            "RoleRequirementId": "c9ee4cac-47ff-5f78-8074-23d5a44c7318",
+            "ResponsibilityKind": "Responsible",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Resolver role may be rebound to another capable executor."
+          },
+          {
+            "Id": "79927c3b-fa0c-50bd-8ead-f0a80be7abfd",
+            "RoleRequirementId": "4c3b345d-8422-5f6c-b48d-21cde958bf97",
+            "ResponsibilityKind": "Reviewer",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Triage lead validates communication impact before escalation."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "26207b67-b30d-542d-b8dc-1b74e9914464",
+            "ArtifactKind": "Evidence",
+            "Title": "Diagnosis evidence pack",
+            "IsRequired": true,
+            "TrustRequirement": "ReviewRequired",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for approval, post-incident review, and recurring incident detection tuning.",
+            "ValidationRequirementSummary": "Evidence must capture source and review status."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "0abe1c0b-11bd-5e59-a3c2-339123bd9d8b",
+            "ArtifactExpectationId": "c7b802d8-cc08-5e03-87fc-34010a44fdc4"
+          }
+        ]
+      },
+      {
+        "Id": "55917b32-4670-59f3-b795-3a9c96fcce1e",
+        "Key": "escalate",
+        "Title": "Approve escalation path",
+        "Subtitle": "Emergency decision gate",
+        "Notes": "Approve, block, or refuse the proposed escalation or emergency change path.",
+        "StepKind": "Approval",
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Diagnosis and proposed change path.",
+        "OutputContractSummary": "Approved, blocked, or refused escalation.",
+        "EvidenceContractSummary": "Approval record and rationale.",
+        "DecisionRightsSummary": "Approver owns the escalation gate.",
+        "ExceptionPolicySummary": "Do not execute high-risk mitigation without explicit approval and rollback framing.",
+        "TargetLeadHours": 2,
+        "DependsOnStepId": "0bb361c8-8425-56d6-8f1d-a3c234f31ccf",
+        "DependsOnBranchOutcomeId": null,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 720,
+        "CanvasY": 320,
+        "BranchCanvasX": 0.0,
+        "BranchCanvasY": 0.0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "2a92e9bf-9bf1-51bd-8ea8-ed8e905650d8",
+            "DependsOnStepId": "0bb361c8-8425-56d6-8f1d-a3c234f31ccf",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "86553bd1-6271-5756-b468-457ab0add3a3",
+            "RoleRequirementId": "de1c9f81-449e-5cb8-b27d-59227283ce60",
+            "ResponsibilityKind": "Approver",
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Escalation approval always belongs to the current approver role holder."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "c9e5ebf4-cebf-5db8-85ed-05f9f4e30696",
+            "ArtifactKind": "Decision",
+            "Title": "Escalation approval record",
+            "IsRequired": true,
+            "TrustRequirement": "HumanApproved",
+            "SensitivityLevel": "Internal",
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for audit, post-incident review, and emergency change governance tuning.",
+            "ValidationRequirementSummary": "Emergency change approvals must keep explicit rationale."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "8e4f4143-1f16-57b9-bf0f-58a87ea4b841",
+            "ArtifactExpectationId": "26207b67-b30d-542d-b8dc-1b74e9914464"
+          }
+        ]
+      }
+    ]
+  },
+  "Warnings": [
+    "Projected from template pack process 'incident-response'.",
+    "Detailed sidecar metadata remains in the process-template pack files."
+  ],
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection"
+}

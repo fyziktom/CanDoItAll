@@ -1,0 +1,26 @@
+{
+  "DefinitionQuickCreateActions": [
+    "process-definition.open-toolbox",
+    "process-role.product-owner",
+    "process-role.solution-architect",
+    "process-step.intake",
+    "process-step.architecture",
+    "process-step.implementation",
+    "process-step.qa",
+    "process-step.release-approval"
+  ],
+  "DefinitionGroupContextActions": [
+    "process-definition.edit-step",
+    "process-definition.add-dependent-step",
+    "process-definition.add-role-binding",
+    "process-definition.add-artifact-expectation",
+    "process-definition.remove-step"
+  ],
+  "RuntimeQuickActions": [
+    "process-runtime.start",
+    "process-runtime.complete",
+    "process-runtime.block",
+    "process-runtime.approval",
+    "process-runtime.record-artifact"
+  ]
+}

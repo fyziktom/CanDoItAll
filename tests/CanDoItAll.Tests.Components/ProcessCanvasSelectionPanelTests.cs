@@ -105,8 +105,6 @@ public sealed class ProcessCanvasSelectionPanelTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             null,
-            null,
-            null,
             1,
             "Route requested revision",
             ProcessStepKind.Decision,

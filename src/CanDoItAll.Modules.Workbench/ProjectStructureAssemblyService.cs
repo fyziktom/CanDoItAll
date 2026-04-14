@@ -6,7 +6,6 @@ using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
 using CanDoItAll.SharedKernel;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -297,15 +296,7 @@ public sealed class ProjectStructureAssemblyService(
     }
 
     internal static bool IsSqliteBusy(Exception exception)
-    {
-        return exception switch
-        {
-            SqliteException sqliteException => sqliteException.SqliteErrorCode is 5 or 6,
-            DbUpdateException dbUpdateException when dbUpdateException.InnerException is not null => IsSqliteBusy(dbUpdateException.InnerException),
-            _ when exception.InnerException is not null => IsSqliteBusy(exception.InnerException),
-            _ => false
-        };
-    }
+        => SqliteWriteCoordination.IsBusy(exception);
 
     private static async Task SaveChangesAsync(
         AppDbContext dbContext,

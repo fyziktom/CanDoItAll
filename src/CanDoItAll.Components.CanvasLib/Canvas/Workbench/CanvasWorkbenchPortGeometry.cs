@@ -71,7 +71,9 @@ public static class CanvasWorkbenchPortGeometry
         int totalCount,
         string defaultSide)
     {
-        var (width, height) = ResolveNodeSize(node);
+        var size = CanvasWorkbenchNodeMetrics.ResolveSize(node);
+        var width = size.Width;
+        var height = size.Height;
         var side = ResolveSide(port.Side, defaultSide);
         var horizontalInset = Math.Min(28d, width * 0.11d);
         var portTop = node.Y - (height / 2d) + Math.Min(86d, height * 0.34d);
@@ -92,28 +94,6 @@ public static class CanvasWorkbenchPortGeometry
             },
             Y = y
         };
-    }
-
-    private static (double Width, double Height) ResolveNodeSize(CanvasWorkbenchNode node)
-    {
-        var baseSize = node.Family?.ToLowerInvariant() switch
-        {
-            "root" => (288d, 210d),
-            "group" => (272d, 196d),
-            "special" => (248d, 178d),
-            _ => (256d, 190d)
-        };
-        var portRows = Math.Max(node.InputPorts.Count, node.OutputPorts.Count);
-        if (portRows <= 0)
-        {
-            return baseSize;
-        }
-
-        return
-        (
-            Math.Max(baseSize.Item1, 336d),
-            Math.Max(baseSize.Item2, 188d + Math.Max(0, portRows - 1) * 28d)
-        );
     }
 
     private static string ResolveSide(string? side, string defaultSide)

@@ -43,8 +43,6 @@ public sealed class ProcessStepEditorFormTests
         {
             Id = Guid.NewGuid(),
             Title = "Review selected path",
-            DependsOnStepId = decisionStepId,
-            DependsOnBranchOutcomeId = uiOutcomeId,
             Dependencies =
             [
                 new ProcessStepDependencyEditorModel

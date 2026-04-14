@@ -564,7 +564,7 @@ public sealed class ProjectsService(
         }
 
         entity.Name = model.Name.Trim();
-        entity.Slug = BuildSlug(model.Name);
+        entity.Slug = FileSafeSlugBuilder.Build(model.Name);
         entity.Description = model.Description?.Trim() ?? string.Empty;
         entity.Objective = model.Objective?.Trim() ?? string.Empty;
         entity.Status = model.Status;
@@ -815,14 +815,7 @@ public sealed class ProjectsService(
 
     private static string BuildSlug(string input)
     {
-        var slug = input.Trim().ToLowerInvariant();
-        foreach (var character in Path.GetInvalidFileNameChars())
-        {
-            slug = slug.Replace(character.ToString(), string.Empty, StringComparison.Ordinal);
-        }
-
-        slug = slug.Replace(' ', '-');
-        return string.IsNullOrWhiteSpace(slug) ? Guid.NewGuid().ToString("N") : slug;
+        return FileSafeSlugBuilder.Build(input);
     }
 }
 

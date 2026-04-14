@@ -35,13 +35,13 @@
 }
 
 .pf-help-popover__toggle--compact {
-    width: 1.18rem;
-    height: 1.18rem;
+    width: 1.05rem;
+    height: 1.05rem;
     box-shadow: none;
 }
 
 .pf-help-popover__toggle--compact span {
-    font-size: 0.66rem;
+    font-size: 0.6rem;
 }
 
 .pf-help-popover__panel {

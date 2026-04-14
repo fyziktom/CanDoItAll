@@ -1,0 +1,13 @@
+<Project>
+  <ItemGroup>
+    <RepositoryTemplateContent Include="$(MSBuildThisFileDirectory)Templates\**\*.*" />
+  </ItemGroup>
+
+  <Target Name="CopyRepositoryTemplates" AfterTargets="Build" Condition="'@(RepositoryTemplateContent)' != ''">
+    <MakeDir Directories="$(TargetDir)Templates" />
+    <Copy
+      SourceFiles="@(RepositoryTemplateContent)"
+      DestinationFiles="@(RepositoryTemplateContent->'$(TargetDir)Templates\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>

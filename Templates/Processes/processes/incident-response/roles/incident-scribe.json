@@ -1,0 +1,72 @@
+{
+  "Kind": "role-resource",
+  "Key": "incident-scribe",
+  "DisplayName": "Incident scribe",
+  "Scope": "local",
+  "ProcessKey": "incident-response",
+  "Summary": "Structured recorder for live decisions, assignments, and status changes during incident response.",
+  "Purpose": "Preserve a reliable operational memory of what was decided, by whom, and when, so responders can focus without losing traceability.",
+  "StaffingIntent": "A disciplined operator dedicated to live note-taking, timeline hygiene, and decision capture.",
+  "PreferredExecutorKind": "person",
+  "PreferredProjectAssignmentRole": "Stakeholder",
+  "IsRequired": false,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 100,
+  "RoleTemplateSourceKey": "process-role-template/incident-response/incident-scribe",
+  "RoleTemplateSnapshotName": "Incident scribe / template-pack v1",
+  "SnapshotSummary": "Structured recorder for live decisions, assignments, and status changes during incident response.",
+  "SeniorityBand": "Experienced support, operations, or PMO contributor",
+  "MinimumYearsInPrimaryDiscipline": 3,
+  "MinimumYearsInSoftwareDelivery": 5,
+  "DomainTags": [
+    "incident-logging",
+    "note-taking",
+    "decision-traceability"
+  ],
+  "KnowledgeRequirements": [
+    "Ability to capture decisions, owners, timestamps, and open actions accurately in fast-moving situations.",
+    "Knowledge of incident cadence, meeting hygiene, and what details are worth preserving.",
+    "Understanding of the difference between claimed status and confirmed status.",
+    "Ability to keep notes structured enough for later forensic and retrospective use.",
+    "Knowledge of confidentiality and audience boundaries for incident notes.",
+    "Ability to prompt for missing ownership or unclear decisions without disrupting flow."
+  ],
+  "ExperienceRequirements": [
+    "Has supported live incident bridges, war rooms, or rapid-response coordination.",
+    "Has maintained accurate action logs or timelines under pressure.",
+    "Has turned raw live notes into usable post-incident documentation.",
+    "Has worked with executives or technical leaders in time-critical meetings.",
+    "Has enforced discipline around owner/time/next-step capture."
+  ],
+  "DecisionRights": [
+    "Require explicit owner and due time when decisions are made.",
+    "Escalate when the response lacks a clear action log.",
+    "Control the official incident note set and versioning.",
+    "Flag contradictions between successive status statements."
+  ],
+  "OwnedArtifacts": [
+    "Live action log",
+    "Incident notes",
+    "Decision timeline appendix"
+  ],
+  "CollaborationExpectations": [
+    "Work beside the incident commander without becoming a bottleneck.",
+    "Coordinate with forensics analyst on timeline integrity.",
+    "Provide communications roles with accurate, approved status inputs.",
+    "Hand off clean notes for the post-incident review."
+  ],
+  "AntiPatterns": [
+    "Trying to solve the incident instead of preserving decision quality.",
+    "Capturing minutes without owners or timestamps.",
+    "Editing history to make the response look cleaner after the fact.",
+    "Publishing notes to the wrong audience."
+  ],
+  "FitnessEvidence": [
+    "High-quality incident notes consumed after the event.",
+    "Post-incident reviews that rely on the scribe record confidently.",
+    "Evidence of improved action follow-through due to disciplined logging.",
+    "Trust from incident leaders in the scribe’s accuracy."
+  ],
+  "DocPath": "processes/incident-response/roles/incident-scribe.md"
+}

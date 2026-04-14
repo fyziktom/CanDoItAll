@@ -49,6 +49,56 @@
                 data-testid="@ToolboxTestId"
                 Click="ToggleToolboxWindow" />
     }
+
+    <div class="flex flex-col items-start gap-2"
+         data-testid="processes-canvas-recompose-menu"
+         @onmouseenter="OpenRecompositionMenu"
+         @onmouseleave="CloseRecompositionMenu">
+        <Button Icon="account_tree"
+                aria-label="Recompose canvas"
+                title="@(IsRecompositionInProgress ? "Canvas recomposition is in progress" : "Recompose canvas: resolve collisions, add spacing, or rebuild the flow layout")"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Disabled="@(!CanRecomposeCanvas)"
+                Style="@ResolveRecompositionStyle()"
+                Class="@ResolveButtonCssClass(recompositionMenuOpen)"
+                data-testid="processes-canvas-recompose-menu-toggle"
+                Click="ToggleRecompositionMenuAsync" />
+
+        @if (recompositionMenuOpen && CanRecomposeCanvas)
+        {
+            <div class="flex flex-col gap-1 overflow-y-auto rounded-[1.35rem] border border-white/70 bg-white/95 p-2 backdrop-blur"
+                 style="min-width:15.5rem;max-height:min(18rem,calc(100dvh - 12rem));box-shadow:0 18px 34px rgba(15,23,42,0.14);"
+                 data-testid="processes-canvas-recompose-menu-panel">
+                <button type="button"
+                        class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        data-testid="processes-canvas-recompose-collisions"
+                        disabled="@IsRecompositionInProgress"
+                        @onclick="TriggerResolveCollisionsAsync">
+                    <span class="text-sm font-semibold text-slate-950">Collisions</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Move nodes only enough to remove overlap with nearby neighbors.</span>
+                </button>
+
+                <button type="button"
+                        class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        data-testid="processes-canvas-recompose-spacing"
+                        disabled="@IsRecompositionInProgress"
+                        @onclick="TriggerAddSpaceAroundAsync">
+                    <span class="text-sm font-semibold text-slate-950">Add space around</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Stretch the current map outward so steps, roles, and routers have more breathing room.</span>
+                </button>
+
+                <button type="button"
+                        class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        data-testid="processes-canvas-recompose-smart"
+                        disabled="@IsRecompositionInProgress"
+                        @onclick="TriggerRecomposeCanvasAsync">
+                    <span class="text-sm font-semibold text-slate-950">Recomposition</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Rebuild the process map into a clearer fishbone-style delivery flow with branch lanes.</span>
+                </button>
+            </div>
+        }
+    </div>
 </Cluster>
 
 @code {
@@ -58,6 +108,8 @@
     private const string ActiveToolStyle = "background:rgba(14,165,233,0.14);border-color:rgba(14,165,233,0.28);box-shadow:inset 0 0 0 1px rgba(14,165,233,0.12);";
     private const string ActiveSelectionStyle = "background:rgba(14,165,233,0.14);border-color:rgba(14,165,233,0.28);box-shadow:inset 0 0 0 1px rgba(14,165,233,0.12);";
     private const string ActiveToolboxStyle = "background:rgba(15,23,42,0.08);border-color:rgba(15,23,42,0.14);box-shadow:inset 0 0 0 1px rgba(15,23,42,0.08);";
+    private const string ActiveRecompositionStyle = "background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.22);box-shadow:inset 0 0 0 1px rgba(124,58,237,0.08);";
+    private bool recompositionMenuOpen;
 
     [Parameter]
     public bool SelectionWindowVisible { get; set; }
@@ -87,6 +139,12 @@
     public string DeleteToolTestId { get; set; } = "processes-canvas-tool-delete";
 
     [Parameter]
+    public bool CanRecomposeCanvas { get; set; }
+
+    [Parameter]
+    public bool IsRecompositionInProgress { get; set; }
+
+    [Parameter]
     public EventCallback ToggleSelectionWindow { get; set; }
 
     [Parameter]
@@ -97,6 +155,15 @@
 
     [Parameter]
     public EventCallback DeleteToolClicked { get; set; }
+
+    [Parameter]
+    public EventCallback ResolveCollisionsClicked { get; set; }
+
+    [Parameter]
+    public EventCallback AddSpaceAroundClicked { get; set; }
+
+    [Parameter]
+    public EventCallback RecomposeCanvasClicked { get; set; }
 
     private string ResolveButtonCssClass(bool isActive)
     {
@@ -124,5 +191,56 @@
         return ToolboxWindowVisible
             ? $"{ToolbarButtonSizeStyle}{ActiveToolboxStyle}"
             : ToolbarButtonSizeStyle;
+    }
+
+    private string ResolveRecompositionStyle()
+    {
+        return recompositionMenuOpen
+            ? $"{ToolbarButtonSizeStyle}{ActiveRecompositionStyle}"
+            : ToolbarButtonSizeStyle;
+    }
+
+    private void OpenRecompositionMenu()
+    {
+        if (!CanRecomposeCanvas)
+        {
+            return;
+        }
+
+        recompositionMenuOpen = true;
+    }
+
+    private void CloseRecompositionMenu()
+    {
+        recompositionMenuOpen = false;
+    }
+
+    private Task ToggleRecompositionMenuAsync()
+    {
+        if (!CanRecomposeCanvas)
+        {
+            return Task.CompletedTask;
+        }
+
+        recompositionMenuOpen = !recompositionMenuOpen;
+        return Task.CompletedTask;
+    }
+
+    private async Task TriggerResolveCollisionsAsync()
+    {
+        recompositionMenuOpen = false;
+        await ResolveCollisionsClicked.InvokeAsync();
+    }
+
+    private async Task TriggerAddSpaceAroundAsync()
+    {
+        recompositionMenuOpen = false;
+        await AddSpaceAroundClicked.InvokeAsync();
+    }
+
+    private async Task TriggerRecomposeCanvasAsync()
+    {
+        recompositionMenuOpen = false;
+        await RecomposeCanvasClicked.InvokeAsync();
     }
 }

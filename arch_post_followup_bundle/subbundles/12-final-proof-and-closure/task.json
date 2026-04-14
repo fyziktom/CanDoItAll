@@ -1,0 +1,41 @@
+{
+  "Key": "12-final-proof-and-closure",
+  "Title": "Final proof and closure",
+  "Purpose": "Close the bundle only after all gates pass, fresh proof exists for the new scope, and the live execution report matches the actual repository state.",
+  "DependsOn": [
+    "11-performance-scaling-and-structural-follow-up"
+  ],
+  "Deliverables": [
+    "Fresh build, integration, component, MCP, and migration artifacts that cover the full reopened scope.",
+    "A final execution report that lists the real artifacts, real remaining risks, and a defensible closure decision.",
+    "A completed architecture-gate memo log showing Gate A, Gate B, and Gate C outcomes from the live repository.",
+    "No closure claim while any red finding from `02-open-findings.md` remains open."
+  ],
+  "RepositoryTouchpoints": [
+    "reviews/01-execution-report.md",
+    "reviews/02-architecture-gate-memo-log.md",
+    "codex/MASTER_TASKS.json",
+    "codex/TASKS.json",
+    "codex/VALIDATION_COMMANDS.md",
+    "traceability/01-finding-to-subbundle-map.md",
+    "traceability/01-requirement-traceability.md",
+    "tests/CanDoItAll.Tests.Integration",
+    "tests/CanDoItAll.Tests.Components",
+    "tests/CanDoItAll.Mcp.Processes.Tests"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessSchemaIntegrationTests|FullyQualifiedName~ProcessOutboxIntegrationTests|FullyQualifiedName~ProcessImportMetadataIntegrationTests\" -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests\" -v:minimal",
+    "dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj -v:minimal",
+    "dotnet ef migrations script --project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --startup-project src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj --context AppDbContext",
+    "dotnet ef migrations script --project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --context AppDbContext"
+  ],
+  "ReviewQuestions": [
+    "Do the fresh proof artifacts actually cover every reopened scope item in this follow-up?",
+    "Do the execution report and gate memos now agree with the live repository state?",
+    "Is any remaining risk low enough to document honestly without blocking closure?"
+  ],
+  "CorrectiveOnFailure": "If fresh proof is missing, inconsistent, or weaker than the closure claim, do not close the bundle.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-proof-reset"
+}

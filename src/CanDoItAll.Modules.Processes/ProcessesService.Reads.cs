@@ -11,170 +11,22 @@ public sealed partial class ProcessesService {
     public async Task<IReadOnlyList<ProcessRunListItem>> ListRunsAsync(
         Guid? definitionId = null,
         Guid? projectId = null,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var runsQuery = dbContext.Set<ProcessRun>().AsQueryable();
-        if (definitionId.HasValue) {
-            runsQuery = runsQuery.Where(run => run.ProcessDefinitionId == definitionId.Value);
-        }
-
-        if (projectId.HasValue) {
-            runsQuery = runsQuery.Where(run => run.ProjectId == projectId.Value);
-        }
-
-        var runs = await runsQuery.ToListAsync(cancellationToken);
-        var stepRuns = await dbContext.Set<ProcessStepRun>()
-            .Where(stepRun => runs.Select(run => run.Id).Contains(stepRun.ProcessRunId))
-            .ToListAsync(cancellationToken);
-
-        return runs
-            .OrderByDescending(run => run.UpdatedAtUtc)
-            .Select(run => {
-                var runStepRuns = stepRuns.Where(stepRun => stepRun.ProcessRunId == run.Id).ToList();
-                return new ProcessRunListItem(
-                    run.Id,
-                    run.ProcessDefinitionId,
-                    run.ProcessDefinitionVersionId,
-                    run.ProjectId,
-                    run.Name,
-                    run.Status,
-                    run.OperatingMode,
-                    runStepRuns.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Completed),
-                    runStepRuns.Count,
-                    runStepRuns.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Blocked),
-                    runStepRuns.Count(stepRun => stepRun.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None),
-                    run.EstimatedCost,
-                    run.ActualCost,
-                    run.UpdatedAtUtc);
-            })
-            .ToList();
+        return await runtimeReadQueryService.ListRunsAsync(dbContext, definitionId, projectId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(Guid runId, CancellationToken cancellationToken = default) {
+    public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(Guid runId, CancellationToken cancellationToken = default)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var stepRuns = await dbContext.Set<ProcessStepRun>()
-            .Where(item => item.ProcessRunId == runId)
-            .OrderBy(item => item.Sequence)
-            .ToListAsync(cancellationToken);
-        var stepDefinitionIds = stepRuns.Select(item => item.StepDefinitionId).Distinct().ToList();
-        var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
-            .Where(item => stepDefinitionIds.Contains(item.Id))
-            .ToListAsync(cancellationToken);
-        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
-            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
-            .OrderBy(item => item.DisplayOrder)
-            .ToListAsync(cancellationToken);
-        var stepRoleAssignments = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
-            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
-            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
-            .OrderBy(item => item.ArtifactKind)
-            .ThenBy(item => item.Title)
-            .ThenBy(item => item.Id)
-            .ToListAsync(cancellationToken);
-        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
-            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
-            .OrderBy(item => item.DisplayOrder)
-            .ToListAsync(cancellationToken);
-        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
-            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
-        var roleRequirementIds = stepRoleAssignments
-            .Select(item => item.RoleRequirementId)
-            .Concat(stepDefinitions
-                .Where(item => item.DecisionRoleRequirementId.HasValue)
-                .Select(item => item.DecisionRoleRequirementId!.Value))
-            .Distinct()
-            .ToList();
-        var rolesById = roleRequirementIds.Count == 0
-            ? new Dictionary<Guid, ProcessRoleRequirement>()
-            : await dbContext.Set<ProcessRoleRequirement>()
-                .Where(item => roleRequirementIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var branchOutcomesByStepId = branchOutcomes
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel>)group
-                    .OrderBy(item => item.DisplayOrder)
-                    .Select(item => new ProcessStepBranchOutcomeOptionViewModel(item.Id, item.Title, item.Description))
-                    .ToList());
-        var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
-        var stepDependenciesByStepId = stepDependencies
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
-        var stepRoleAssignmentsByStepId = stepRoleAssignments
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(
-                group => group.Key,
-                group => group
-                    .OrderBy(item => item.ResponsibilityKind)
-                    .ThenBy(item => item.FallbackOrder)
-                    .ThenBy(item => item.RoleRequirementId)
-                    .ToList());
-        var artifactOutputsByStepId = artifactExpectations
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<ProcessStepRunArtifactPortViewModel>)group
-                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
-                    .OrderBy(item => item.ArtifactKind)
-                    .ThenBy(item => item.Title)
-                    .ThenBy(item => item.Id)
-                    .Select(item => new ProcessStepRunArtifactPortViewModel(item.Id, item.Title, item.IsRequired))
-                    .ToList());
-        var artifactInputCountsByStepId = artifactInputs
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(group => group.Key, group => group.Count());
+        return await runtimeReadQueryService.ListStepRunsAsync(dbContext, runId, cancellationToken);
+    }
 
-        return stepRuns
-            .Select(item => {
-                stepDefinitionsById.TryGetValue(item.StepDefinitionId, out var stepDefinition);
-                var dependencies = stepDefinition is null
-                    ? []
-                    : BuildRuntimeDependencies(stepDefinition, stepDependenciesByStepId);
-                var decisionRoleTitle = stepDefinition?.DecisionRoleRequirementId.HasValue == true &&
-                                        rolesById.TryGetValue(stepDefinition.DecisionRoleRequirementId.Value, out var decisionRole)
-                    ? decisionRole.DisplayName
-                    : string.Empty;
-                return new ProcessStepRunViewModel(
-                    item.Id,
-                    item.StepDefinitionId,
-                    dependencies.FirstOrDefault()?.DependsOnStepDefinitionId,
-                    dependencies.FirstOrDefault()?.DependsOnBranchOutcomeId,
-                    stepDefinition?.DecisionRoleRequirementId,
-                    item.Sequence,
-                    item.Title,
-                    item.StepKind,
-                    item.Status,
-                    item.CurrentExecutorName,
-                    item.DecisionSummary,
-                    item.BlockedReason,
-                    item.RefusalReason,
-                    item.SelectedBranchOutcomeId,
-                    item.SelectedBranchOutcomeTitle,
-                    item.WaitMinutes,
-                    item.TouchMinutes,
-                    item.BlockedMinutes,
-                    item.ReworkCount,
-                    item.CapabilityGapSeverity,
-                    branchOutcomesByStepId.GetValueOrDefault(item.StepDefinitionId) ?? [])
-                {
-                    Dependencies = dependencies,
-                    DecisionRoleTitle = decisionRoleTitle,
-                    ResponsibilityPorts = stepDefinition is null
-                        ? []
-                        : BuildRuntimeResponsibilityPorts(stepDefinition.Id, stepRoleAssignmentsByStepId),
-                    ArtifactInputCount = stepDefinition is null
-                        ? 0
-                        : artifactInputCountsByStepId.GetValueOrDefault(stepDefinition.Id),
-                    ArtifactOutputs = stepDefinition is null
-                        ? []
-                        : artifactOutputsByStepId.GetValueOrDefault(stepDefinition.Id) ?? []
-                };
-            })
-            .ToList();
+    public async Task<ProcessWorkspaceRunDetails> GetRunDetailsAsync(Guid runId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await runtimeReadQueryService.GetRunDetailsAsync(dbContext, runId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(Guid runId, CancellationToken cancellationToken = default) {
@@ -300,94 +152,14 @@ public sealed partial class ProcessesService {
     public async Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         Guid? definitionId = null,
         Guid? projectId = null,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var runsQuery = dbContext.Set<ProcessRun>().AsQueryable();
-        if (definitionId.HasValue) {
-            runsQuery = runsQuery.Where(run => run.ProcessDefinitionId == definitionId.Value);
-        }
-
-        if (projectId.HasValue) {
-            runsQuery = runsQuery.Where(run => run.ProjectId == projectId.Value);
-        }
-
-        var runs = await runsQuery.ToListAsync(cancellationToken);
-        var runIds = runs.Select(run => run.Id).ToHashSet();
-        var stepRuns = await dbContext.Set<ProcessStepRun>()
-            .Where(stepRun => runIds.Contains(stepRun.ProcessRunId))
-            .ToListAsync(cancellationToken);
-        var conformanceObservations = await dbContext.Set<ProcessConformanceObservation>()
-            .Where(item => runIds.Contains(item.ProcessRunId))
-            .ToListAsync(cancellationToken);
-        var improvementCount = await dbContext.Set<ProcessImprovementCandidate>()
-            .CountAsync(item => !definitionId.HasValue || item.ProcessDefinitionId == definitionId.Value, cancellationToken);
-
-        return new ProcessAnalyticsSummary(
-            runs.Count,
-            runs.Count(run => run.Status == ProcessRunStatus.Active),
-            runs.Count(run => run.Status == ProcessRunStatus.Completed),
-            runs.Count(run => run.Status == ProcessRunStatus.Blocked),
-            stepRuns.Count(stepRun => stepRun.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None),
-            improvementCount,
-            conformanceObservations.Count,
-            conformanceObservations.Count(item => item.IsSafeNonAction),
-            Average(stepRuns.Select(item => item.WaitMinutes + item.TouchMinutes + item.BlockedMinutes)),
-            Average(stepRuns.Select(item => item.WaitMinutes)),
-            Average(stepRuns.Select(item => item.BlockedMinutes)),
-            runs.Sum(run => run.EstimatedCost),
-            runs.Sum(run => run.ActualCost));
+        return await runtimeReadQueryService.GetAnalyticsAsync(dbContext, definitionId, projectId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default) {
         return await projectPartyIntegrationBridge.ListPartyOptionsAsync(projectId, cancellationToken);
-    }
-
-    private static IReadOnlyList<ProcessStepDependencyViewModel> BuildRuntimeDependencies(
-        ProcessStepDefinition stepDefinition,
-        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
-        if (dependenciesByStepId.TryGetValue(stepDefinition.Id, out var dependencies) && dependencies.Count > 0) {
-            return dependencies
-                .Select(item => new ProcessStepDependencyViewModel(item.DependsOnStepId, item.DependsOnBranchOutcomeId))
-                .ToList();
-        }
-
-        if (!stepDefinition.DependsOnStepId.HasValue) {
-            return [];
-        }
-
-        return
-        [
-            new ProcessStepDependencyViewModel(stepDefinition.DependsOnStepId.Value, stepDefinition.DependsOnBranchOutcomeId)
-        ];
-    }
-
-    private static IReadOnlyList<ProcessStepRunResponsibilityPortViewModel> BuildRuntimeResponsibilityPorts(
-        Guid stepDefinitionId,
-        IReadOnlyDictionary<Guid, List<ProcessStepRoleAssignmentRequirement>> assignmentsByStepId) {
-        if (!assignmentsByStepId.TryGetValue(stepDefinitionId, out var assignments) || assignments.Count == 0) {
-            return [];
-        }
-
-        var orderedKinds = new[]
-        {
-            ProcessResponsibilityKind.Responsible,
-            ProcessResponsibilityKind.Reviewer,
-            ProcessResponsibilityKind.Approver,
-            ProcessResponsibilityKind.Backup
-        };
-
-        return orderedKinds
-            .Select(responsibilityKind => {
-                var matchingAssignments = assignments
-                    .Where(item => item.ResponsibilityKind == responsibilityKind)
-                    .ToList();
-                return new ProcessStepRunResponsibilityPortViewModel(
-                    responsibilityKind,
-                    matchingAssignments.Any(item => item.IsRequired),
-                    matchingAssignments.Count);
-            })
-            .Where(item => item.AssignmentCount > 0)
-            .ToList();
     }
 }
 

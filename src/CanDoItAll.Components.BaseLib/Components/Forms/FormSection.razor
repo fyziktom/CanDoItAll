@@ -7,7 +7,19 @@
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween">
         <Stack GapScale="LayoutGap.Tiny">
-            <h2 class="text-base font-semibold text-slate-950">@Title</h2>
+            <div class="inline-flex min-w-0 items-center gap-2">
+                <h2 class="text-base font-semibold text-slate-950">@Title</h2>
+                @if (HasHelp)
+                {
+                    <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                 OpenOnHover="true"
+                                 AriaLabel="@ResolvedHelpAriaLabel"
+                                 Title="@ResolvedHelpAriaLabel"
+                                 Heading="@ResolvedHelpHeading"
+                                 Body="@(HelpText!)" />
+                }
+            </div>
             @if (!string.IsNullOrWhiteSpace(Description))
             {
                 <p class="text-sm leading-6 text-slate-600">@Description</p>
@@ -33,10 +45,22 @@
     public string? Description { get; set; }
 
     [Parameter]
+    public string? HelpText { get; set; }
+
+    [Parameter]
+    public string? HelpHeading { get; set; }
+
+    [Parameter]
     public RenderFragment? Actions { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    private bool HasHelp => !string.IsNullOrWhiteSpace(HelpText);
+
+    private string ResolvedHelpHeading => string.IsNullOrWhiteSpace(HelpHeading) ? Title : HelpHeading;
+
+    private string ResolvedHelpAriaLabel => $"Show help for {Title}";
 }
 
 

@@ -1,0 +1,21 @@
+@media (max-width: 767.98px) {
+    .processes-workspace-root ::deep .cad-tabs--fill-height {
+        display: block;
+        height: auto !important;
+        min-height: 0;
+        flex: initial;
+    }
+
+    .processes-workspace-root ::deep .cad-tabs--fill-height .cad-tabs__panels,
+    .processes-workspace-root ::deep .cad-tabs--fill-height .cad-tabs__panel {
+        display: block;
+        height: auto;
+        min-height: 0;
+        flex: initial;
+    }
+
+    .processes-workspace-root ::deep .cad-tabs--panel-overflow-auto .cad-tabs__panel {
+        overflow: visible;
+        scrollbar-gutter: auto;
+    }
+}

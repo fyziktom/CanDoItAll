@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validation-ai-evidence-sufficient",
+  "DisplayName": "Validate AI evidence sufficiency",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "critical",
+  "OwnerRoleKey": "ai-evaluation-lead",
+  "Gate": "ai-governance",
+  "Summary": "Confirms AI-related evaluation evidence is good enough for the intended operating boundary.",
+  "PassCriteria": "Evaluation scope, benchmark logic, failure modes, and control assumptions are explicit and decision-grade.",
+  "FailCriteria": "Evidence is narrow, cherry-picked, or silent about important failure modes and operational limits.",
+  "EscalationRule": "Escalate to model risk approver and AI safety reviewer; do not delegate release acceptance.",
+  "DocPath": "shared/validations/validation-ai-evidence-sufficient.md"
+}
