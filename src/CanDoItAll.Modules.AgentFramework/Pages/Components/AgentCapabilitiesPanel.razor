@@ -1,0 +1,144 @@
+<ListDetailShell ListPaneWidth="23rem"
+                 data-testid="agents-capabilities-panel">
+    <ListHeader>
+        <ListPanelHeader Title="Agents"
+                         Description="Select the technical agent whose runtime capabilities you want to inspect, assign, or verify."
+                         Count="@($"{agents.Count} agent(s)")" />
+    </ListHeader>
+
+    <ListContent>
+        @if (agents.Count == 0)
+        {
+            <EmptyState Eyebrow="No agents"
+                        Title="Create a technical agent first"
+                        Description="Capability assignment only makes sense after the technical runtime catalog exists." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small">
+                @foreach (var agent in agents)
+                {
+                    <SelectionListItem Title="@agent.Name"
+                                       Eyebrow="@agent.RoleTitle"
+                                       Meta="@ResolveAgentMeta(agent)"
+                                       Summary="@agent.Summary"
+                                       IsSelected="@(selectedAgentId == agent.Id)"
+                                       OnSelect="@(() => SelectAgentAsync(agent.Id))">
+                        <Status>
+                            <StatusBadge Tone="@ResolveAgentTone(agent.Status)"
+                                         Text="@agent.Status.ToString()" />
+                        </Status>
+                    </SelectionListItem>
+                }
+            </Stack>
+        }
+    </ListContent>
+
+    <DetailHeader>
+        <Stack GapScale="LayoutGap.Small">
+            <p class="cda-eyebrow">Capability assignment</p>
+            <h2 class="text-xl font-semibold text-slate-950">@(selectedAgent?.Name ?? "Select an agent")</h2>
+            <p class="text-sm leading-6 text-slate-600">Keep attached skills and MCP servers explicit. Verification stays visible instead of becoming a hidden configuration detail.</p>
+        </Stack>
+    </DetailHeader>
+
+    <DetailContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <SurfaceCard Soft="true">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@messageTone" Text="@messageLabel" />
+                        <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
+                    </Cluster>
+                </SurfaceCard>
+            }
+
+            @if (selectedAgent is null || selectedAgentEditor is null)
+            {
+                <EmptyState Eyebrow="Select an agent"
+                            Title="Choose a technical agent from the left rail"
+                            Description="The right pane shows the capability inventory and the attached runtime set for the selected agent." />
+            }
+            else if (capabilities.Count == 0)
+            {
+                <EmptyState Eyebrow="No capabilities"
+                            Title="No capabilities are cataloged yet"
+                            Description="Add skills or MCP servers before assigning them to this agent." />
+            }
+            else
+            {
+                <SummaryTiles GapScale="LayoutGap.Small"
+                              ColumnsMd="4">
+                    <SummaryTile Label="Attached"
+                                 Value="@selectedAgentEditor.SelectedCapabilityIds.Count.ToString()"
+                                 HelperText="Capabilities currently assigned to this agent."
+                                 Tone="info"
+                                 Badge="true"
+                                 Compact="true" />
+                    <SummaryTile Label="Skills"
+                                 Value="@capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
+                                 HelperText="Prompt and workflow skills."
+                                 Tone="success"
+                                 Badge="true"
+                                 Compact="true" />
+                    <SummaryTile Label="MCP servers"
+                                 Value="@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
+                                 HelperText="Connector-backed tool surfaces."
+                                 Tone="warning"
+                                 Badge="true"
+                                 Compact="true" />
+                    <SummaryTile Label="Verified"
+                                 Value="@capabilities.Count(item => item.ProofStatus == CapabilityProofStatus.Verified).ToString()"
+                                 HelperText="Capabilities with successful proof status."
+                                 Tone="mint"
+                                 Badge="true"
+                                 Compact="true" />
+                </SummaryTiles>
+
+                <Stack GapScale="LayoutGap.Medium">
+                    @foreach (var capability in capabilities.OrderBy(item => item.Kind).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                    {
+                        var isAttached = selectedAgentEditor.SelectedCapabilityIds.Contains(capability.Id);
+                        <SurfaceCard Soft="true">
+                            <Split Gap="LayoutGap.Medium">
+                                <div>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="info" Text="@ResolveCapabilityKindLabel(capability.Kind)" />
+                                        <StatusBadge Tone="@ResolveProofTone(capability.ProofStatus)"
+                                                     Text="@ResolveProofLabel(capability.ProofStatus)" />
+                                        <StatusBadge Tone="@(isAttached ? "success" : "neutral")"
+                                                     Text="@(isAttached ? "Attached" : "Available")" />
+                                    </Cluster>
+                                    <h3 class="mt-3 text-lg font-semibold text-slate-950">@capability.Name</h3>
+                                    @if (!string.IsNullOrWhiteSpace(capability.Description))
+                                    {
+                                        <p class="mt-2 text-sm leading-6 text-slate-600">@capability.Description</p>
+                                    }
+                                    <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Path or endpoint</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700"
+                                       style="overflow-wrap:anywhere;">@ResolveEndpointSummary(capability)</p>
+                                    @if (!string.IsNullOrWhiteSpace(capability.ProofNotes))
+                                    {
+                                        <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Proof notes</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">@capability.ProofNotes</p>
+                                    }
+                                </div>
+                                <Stack GapScale="LayoutGap.Small">
+                                    <Button Text="@(isAttached ? "Remove" : "Assign")"
+                                            ButtonStyle="@(isAttached ? ButtonStyle.Light : ButtonStyle.Primary)"
+                                            Disabled="@isBusy"
+                                            Click="@(async () => await ToggleCapabilityAsync(capability.Id))" />
+                                    <Button Text="Verify"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@(!isAttached || isBusy)"
+                                            Click="@(async () => await VerifyCapabilityAsync(capability.Id))" />
+                                </Stack>
+                            </Split>
+                        </SurfaceCard>
+                    }
+                </Stack>
+            }
+        </Stack>
+    </DetailContent>
+</ListDetailShell>

@@ -10,6 +10,7 @@ public static class ProcessesModuleServiceCollectionExtensions
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
+        services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();

@@ -254,6 +254,75 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
     }
 }
 
+public sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
+{
+    public const string PluginKey = "provider.scenario-harness";
+    public const string BaseUrl = "scenario://harness";
+    public const string DefaultModel = "scenario-local";
+
+    private static readonly ConnectorPluginManifest PluginManifest = new(
+        PluginKey,
+        "Scenario harness provider",
+        "1.0.0",
+        ConnectorManifestCapability.ProviderExecution | ConnectorManifestCapability.AgentExposure,
+        new ConnectorConfigurationSchema(
+            "1.0",
+            [
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.BaseUrl, "Base URL", ConnectorConfigFieldType.Url, true, "Deterministic scenario harness endpoint."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.DefaultModel, "Default model", ConnectorConfigFieldType.Text, true, "Scenario harness model alias."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.TimeoutSeconds, "Timeout", ConnectorConfigFieldType.Number, true, "Execution timeout in seconds.")
+            ]),
+        [],
+        new ConnectorHealthCheckDescriptor("scenario-harness", "Confirms that the deterministic scenario harness route is configured."),
+        new ConnectorAgentExposure("workspace.prompt.send", true, true, "Allows deterministic scenario execution without an external secret."),
+        null);
+
+    public ConnectorPluginManifest Manifest => PluginManifest;
+
+    public ProviderKind? LegacyProviderKind => null;
+
+    public Task<ProviderHealthResult> CheckHealthAsync(
+        ProviderProfile profile,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        var isConfigured = string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase);
+        var message = isConfigured
+            ? "Scenario harness provider is available for deterministic proof runs."
+            : $"Scenario harness profiles must use '{BaseUrl}'.";
+
+        return Task.FromResult(new ProviderHealthResult(isConfigured, message));
+    }
+
+    public Task<Result<ProviderExecutionResponse>> SendAsync(
+        ProviderProfile profile,
+        ProviderExecutionRequest request,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(Result<ProviderExecutionResponse>.Failure(
+                Error.Validation($"Scenario harness profiles must use '{BaseUrl}'.")));
+        }
+
+        return Task.FromResult(Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+            profile.Name,
+            string.IsNullOrWhiteSpace(request.ModelOverride) ? ResolveModel(profile) : request.ModelOverride!,
+            "Scenario harness provider routes execution through the integrated AgentFramework runtime. Run SC03, SC04, SC10, or SC11 from the integrated shell instead of a raw provider send.",
+            request.OutputFormat,
+            request.ContainsSensitiveContent,
+            request.ContainsSensitiveContent ? "Sensitive content was included in the deterministic scenario request." : null)));
+    }
+
+    private static string ResolveModel(ProviderProfile profile)
+    {
+        return string.IsNullOrWhiteSpace(profile.DefaultModel)
+            ? DefaultModel
+            : profile.DefaultModel;
+    }
+}
+
 public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
     public const string PluginKey = "provider.ollama.local";
@@ -381,47 +450,11 @@ inputs: ProviderExecutionRequest
 outputs: ProviderExecutionResponse
 */
 public sealed class ProviderExecutionService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    ProviderRegistry providerRegistry,
-    SecretService secretService,
-    IActivityStream activityStream)
+    IProviderRuntimeGateway providerRuntimeGateway)
 {
-    public async Task<Result<ProviderExecutionResponse>> SendAsync(ProviderExecutionRequest request, CancellationToken cancellationToken = default)
+    public Task<Result<ProviderExecutionResponse>> SendAsync(ProviderExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var profile = await dbContext.Set<ProviderProfile>()
-            .FirstOrDefaultAsync(item => item.Id == request.ProviderProfileId && item.IsEnabled, cancellationToken);
-
-        if (profile is null)
-        {
-            return Result<ProviderExecutionResponse>.Failure(Error.Validation("Provider profile not found or disabled."));
-        }
-
-        var adapter = providerRegistry.Resolve(profile);
-        if (adapter is null)
-        {
-            return Result<ProviderExecutionResponse>.Failure(Error.Failure(
-                $"No adapter is registered for provider profile '{profile.Name}'."));
-        }
-
-        string? secretValue = null;
-        if (profile.ApiKeySecretId.HasValue)
-        {
-            secretValue = (await secretService.GetAsync(profile.ApiKeySecretId.Value, cancellationToken))?.SecretValue;
-        }
-
-        var result = await adapter.SendAsync(profile, request, secretValue, cancellationToken);
-        if (result.IsSuccess)
-        {
-            await activityStream.RecordAsync(new ActivityWriteRequest(
-                "providers",
-                "send",
-                $"Sent prompt through {profile.Name}",
-                $"Plugin: {adapter.Manifest.PluginKey}. Model: {result.Value!.Model}.",
-                Route: "/settings"), cancellationToken);
-        }
-
-        return result;
+        return providerRuntimeGateway.SendAsync(request, cancellationToken);
     }
 }
 

@@ -1,0 +1,153 @@
+<ListDetailShell ListPaneWidth="25rem">
+    <ListHeader>
+        <ListPanelHeader Title="Technical agents" Description="This catalog is the canonical technical AI runtime registry. CRM-HR binds business resources to these records instead of storing a second technical profile." Count="@($"{FilteredAgents.Count} agent(s)")">
+            <Actions>
+                <Button Text="New agent" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentAsync" />
+            </Actions>
+            <Filters>
+                <FilterBar ResultText="@($"{FilteredAgents.Count} matching agent(s)")">
+                    <input @bind="agentSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search agents" />
+                    <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentSearch" />
+                </FilterBar>
+            </Filters>
+        </ListPanelHeader>
+    </ListHeader>
+
+    <ListContent>
+        @if (FilteredAgents.Count == 0)
+        {
+            <EmptyState Eyebrow="No technical agents" Title="Create the first technical agent" Description="Technical agents define runtime prompts, provider bindings, and tool-ready execution policy." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var agent in FilteredAgents)
+                {
+                    <SelectionListItem Title="@agent.Name"
+                                       Eyebrow="@agent.RoleTitle"
+                                       Meta="@ResolveProviderLabel(agent)"
+                                       Summary="@agent.Summary"
+                                       IsSelected="@(editorModel.Id == agent.Id)"
+                                       OnSelect="@(() => EditAgentAsync(agent.Id))">
+                        <Status>
+                            <StatusBadge Tone="@ResolveStatusTone(agent.Status)" Text="@agent.Status.ToString()" />
+                        </Status>
+                    </SelectionListItem>
+                }
+            </Stack>
+        }
+    </ListContent>
+
+    <DetailHeader>
+        <Stack GapScale="LayoutGap.Tiny">
+            <p class="cda-eyebrow">Technical editor</p>
+            <h2 class="cda-title-xl">@(editorModel.Id.HasValue ? editorModel.Name : "New technical agent")</h2>
+            <p class="cda-body-muted">Use this surface for runtime prompts, provider selection, and the technical record that CRM-HR binds to.</p>
+        </Stack>
+    </DetailHeader>
+
+    <DetailContent>
+        <EditForm Model="editorModel" OnValidSubmit="SaveAgentAsync">
+            <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                @if (linkedPartyId.HasValue)
+                {
+                    <Alert AlertStyle="AlertStyle.Info">
+                        <p class="font-semibold">Bound CRM-HR resource</p>
+                        <p class="mt-1">This technical agent is linked to business resource <a class="text-slate-900 underline" href="@($"/crm-hr/agents?partyId={linkedPartyId.Value:D}")">/crm-hr/agents</a>.</p>
+                    </Alert>
+                }
+
+                <FormSection Title="Identity" Description="Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label">Name</label>
+                            <InputText @bind-Value="editorModel.Name" class="cda-input" data-testid="agents-catalog-name" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Role title</label>
+                            <InputText @bind-Value="editorModel.RoleTitle" class="cda-input" data-testid="agents-catalog-role" />
+                        </div>
+                    </Grid>
+                    <div>
+                        <label class="cda-field-label">Summary</label>
+                        <InputTextArea @bind-Value="editorModel.Summary" class="cda-input cda-input--textarea min-h-24" data-testid="agents-catalog-summary" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Instructions</label>
+                        <InputTextArea @bind-Value="editorModel.Instructions" class="cda-input cda-input--textarea min-h-48" data-testid="agents-catalog-instructions" />
+                    </div>
+                </FormSection>
+
+                <FormSection Title="Runtime" Description="Pick the provider and model that the imported AgentFramework runtime will actually execute.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label">Provider</label>
+                            <InputSelect @bind-Value="editorModel.ProviderProfileId" class="cda-input" data-testid="agents-catalog-provider">
+                                <option value="">None</option>
+                                @foreach (var provider in providers)
+                                {
+                                    <option value="@provider.Id">@provider.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Model</label>
+                            <InputText @bind-Value="editorModel.Model" class="cda-input" data-testid="agents-catalog-model" />
+                        </div>
+                    </Grid>
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                        <div>
+                            <label class="cda-field-label">Status</label>
+                            <InputSelect @bind-Value="editorModel.Status" class="cda-input">
+                                @foreach (var status in Enum.GetValues<AgentLifecycleStatus>())
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Workload</label>
+                            <InputSelect @bind-Value="editorModel.Workload" class="cda-input">
+                                @foreach (var workload in Enum.GetValues<AgentWorkloadKind>())
+                                {
+                                    <option value="@workload">@workload</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Chat history</label>
+                            <InputSelect @bind-Value="editorModel.ChatHistoryMode" class="cda-input">
+                                @foreach (var mode in Enum.GetValues<AgentChatHistoryMode>())
+                                {
+                                    <option value="@mode">@mode</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </Grid>
+                </FormSection>
+
+                <FormSection Title="Tags" Description="Tags keep ownership and routing visible without introducing a second registry.">
+                    <div>
+                        <label class="cda-field-label">Comma-separated tags</label>
+                        <InputTextArea @bind-Value="tagText" class="cda-input cda-input--textarea min-h-20" />
+                    </div>
+                </FormSection>
+
+                <StickyActionFooter StatusLabel="Technical agents" StatusMessage="@message" StatusTone="success">
+                    <SecondaryActions>
+                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
+                    </SecondaryActions>
+                    <PrimaryActions>
+                        <Button Text="Save agent" Type="submit" data-testid="agents-catalog-save" />
+                    </PrimaryActions>
+                    <DangerActions>
+                        @if (editorModel.Id.HasValue)
+                        {
+                            <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteAgentAsync" />
+                        }
+                    </DangerActions>
+                </StickyActionFooter>
+            </Stack>
+        </EditForm>
+    </DetailContent>
+</ListDetailShell>

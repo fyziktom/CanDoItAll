@@ -330,6 +330,22 @@ public partial class ProcessWorkspace
             return "Unbound";
         }
 
+        var runtimeRoleName = assignments
+            .FirstOrDefault(item => item.RoleRequirementId == roleId.Value && !string.IsNullOrWhiteSpace(item.RoleDisplayName))
+            ?.RoleDisplayName;
+        if (!string.IsNullOrWhiteSpace(runtimeRoleName))
+        {
+            return runtimeRoleName;
+        }
+
+        var launchPlanRoleName = selectedLaunchPlan?.Roles
+            .FirstOrDefault(item => item.RoleRequirementId == roleId.Value)
+            ?.DisplayName;
+        if (!string.IsNullOrWhiteSpace(launchPlanRoleName))
+        {
+            return launchPlanRoleName;
+        }
+
         return editor.Roles.FirstOrDefault(role => role.Id == roleId.Value)?.DisplayName ?? "Unknown role";
     }
 

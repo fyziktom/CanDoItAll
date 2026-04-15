@@ -1,8 +1,10 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -13,7 +15,11 @@ public sealed partial class ProcessesService(
     IProcessDefinitionListQueryService definitionListQueryService,
     IProcessRuntimeReadQueryService runtimeReadQueryService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
-    IProcessExecutorRegistryBridge executorRegistryBridge)
+    IProcessExecutorRegistryBridge executorRegistryBridge,
+    HrService hrService,
+    AiAgentService aiAgentService,
+    CollaborationService collaborationService,
+    ILogger<ProcessesService> logger)
 {
     private const string DefaultActor = "process-management";
 

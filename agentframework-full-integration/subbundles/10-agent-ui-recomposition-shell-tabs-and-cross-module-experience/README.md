@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready; current shell still has no /agents route`
+- `Completed`
 
 ## Objective
 

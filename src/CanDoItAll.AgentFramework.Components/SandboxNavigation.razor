@@ -1,0 +1,111 @@
+<Stack GapScale="LayoutGap.Large"
+       FillHeight="true"
+       Class="min-h-0 overflow-hidden p-4 text-white"
+       Style="@ResolveRailStyle()">
+    <Stack GapScale="LayoutGap.Small">
+        <p class="text-[0.68rem] font-semibold uppercase tracking-[0.34em]" style="color:#dbe7f5;">CanDoItAll</p>
+        <div>
+            <p class="text-lg font-semibold tracking-tight" style="color:#ffffff;">Agent Framework</p>
+            <p class="mt-2 text-sm leading-6" style="color:#e8f1fb;">Desktop sandbox surfaces for registry, runtime, memory, and hosting.</p>
+        </div>
+    </Stack>
+
+    <nav aria-label="Sandbox surfaces" class="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1" style="scrollbar-gutter:stable;">
+        @foreach (var item in Items)
+        {
+            var isActive = IsCurrentRoute(item);
+            <a href="@item.Href" class="@ResolveItemClass()" style="@ResolveItemStyle(isActive)">
+                <div class="flex min-w-0 items-start gap-3">
+                    <span class="@ResolveIconClass()" style="@ResolveIconStyle(isActive)" aria-hidden="true">
+                        <Icon Name="@item.Icon" Class="text-[1.05rem]" />
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold"
+                           style="@($"overflow-wrap:anywhere;color:{ResolveLabelColor(isActive)};")">@item.Label</p>
+                        <p class="mt-1 text-xs leading-5"
+                           style="@($"overflow-wrap:anywhere;color:{ResolveDescriptionColor(isActive)};")">@item.Description</p>
+                    </div>
+                </div>
+            </a>
+        }
+    </nav>
+
+    <div class="px-4 py-3" style="border-radius:1.4rem;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.10);">
+        <p class="text-[0.68rem] font-semibold uppercase tracking-[0.3em]" style="color:#dbe7f5;">Desktop shell</p>
+        <p class="mt-2 text-sm leading-6" style="color:#e8f1fb;">The rail stays fixed on the left so the center pane can carry the current task without competing intro blocks.</p>
+    </div>
+</Stack>
+
+@code {
+[Parameter]
+public required string CurrentPath { get; set; }
+
+private static readonly IReadOnlyList<NavigationItem> Items =
+[
+new("/", "Overview", "dashboard", "High-level snapshot and seeded research surfaces."),
+new("/agents", "Agents", "smart_toy", "Design agent profiles, rights, and packaging."),
+new("/providers", "Providers", "dns", "Manage runtime providers, transports, and model defaults."),
+new("/capabilities", "Capabilities", "extension", "Catalog skills, MCP servers, tools, plugins, and context entries."),
+new("/chat", "Chat", "forum", "Work through threads, transcript state, and runtime activity."),
+new("/scenarios", "Scenarios", "labs", "Run the remediation scenario harness with receipts, artifacts, and approvals."),
+new("/memory", "Memory", "note", "Persist durable notes, facts, and follow-up context."),
+new("/hosting", "Hosting", "public", "Inspect framework-owned hosted routes and catalogs."),
+new("/integration-map", "Integration map", "account_tree", "Keep the long-term CanDoItAll merge target visible.")
+];
+
+private bool IsCurrentRoute(NavigationItem item)
+{
+    if (string.Equals(item.Href, "/", StringComparison.OrdinalIgnoreCase))
+    {
+        return string.Equals(CurrentPath, "/", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(CurrentPath, "/dashboard", StringComparison.OrdinalIgnoreCase);
+    }
+
+    return string.Equals(CurrentPath, item.Href, StringComparison.OrdinalIgnoreCase);
+}
+
+private static string ResolveRailStyle()
+{
+    return "background:linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.94) 100%);border:1px solid rgba(15,23,42,0.88);border-radius:2rem;box-shadow:0 28px 80px -50px rgba(15,23,42,0.75);";
+}
+
+private static string ResolveItemClass()
+{
+    return "block transition";
+}
+
+private static string ResolveItemStyle(bool isActive)
+{
+    return isActive
+        ? "display:block;padding:0.75rem 0.875rem;border-radius:1.4rem;border:1px solid rgba(255,255,255,0.92);background:#ffffff;box-shadow:0 16px 30px -20px rgba(15,23,42,0.45);"
+        : "display:block;padding:0.75rem 0.875rem;border-radius:1.2rem;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.10);";
+}
+
+private static string ResolveIconClass()
+{
+    return "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center";
+}
+
+private static string ResolveIconStyle(bool isActive)
+{
+    return isActive
+        ? "border-radius:1rem;background:#0f172a;color:#ffffff;"
+        : "border-radius:1rem;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.12);color:#ffffff;";
+}
+
+private static string ResolveLabelColor(bool isActive)
+{
+    return isActive
+        ? "#0f172a"
+        : "#ffffff";
+}
+
+private static string ResolveDescriptionColor(bool isActive)
+{
+    return isActive
+        ? "#334155"
+        : "#dbe7f5";
+}
+
+private sealed record NavigationItem(string Href, string Label, string Icon, string Description);
+}

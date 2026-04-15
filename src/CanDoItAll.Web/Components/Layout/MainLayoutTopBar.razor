@@ -1,0 +1,114 @@
+@namespace CanDoItAll.Web.Components.Layout
+@using CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Infrastructure.ControlPlane
+
+@if (!string.IsNullOrWhiteSpace(DatabaseSwitchAlert))
+{
+    <div class="mb-3 rounded-[1.35rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+         data-testid="database-switch-alert">
+        @DatabaseSwitchAlert
+    </div>
+}
+
+<Split Breakpoint="LayoutBreakpoint.None"
+       Gap="LayoutGap.Medium"
+       AlignItems="AlignItems.Center"
+       JustifyContent="JustifyContent.SpaceBetween"
+       Wrap="FlexWrap.Wrap">
+    <Cluster Wrap="FlexWrap.NoWrap"
+             Gap="LayoutGap.Small"
+             Class="min-w-0">
+        <span class="cda-shell-pill cda-shell-pill--neutral">@ActiveWorkspaceTitle</span>
+        <h2 class="text-sm font-semibold tracking-tight text-slate-950">@ActiveNavigationTitle</h2>
+        @if (ShellMode == AppShellMode.FocusWorkbench && !string.IsNullOrWhiteSpace(ActiveProjectTitle))
+        {
+            <span class="cda-shell-pill cda-shell-pill--info">@ActiveProjectTitle</span>
+        }
+        <span class="hidden truncate text-xs text-slate-400 lg:inline">@CurrentRouteDisplay</span>
+        @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
+        {
+            <span class="hidden text-xs text-slate-400 lg:inline">/ phase: @ActivePhaseTitle</span>
+        }
+    </Cluster>
+
+    <Cluster Wrap="FlexWrap.Wrap"
+             Gap="LayoutGap.Small"
+             Class="flex-shrink-0 justify-end">
+        <div class="min-w-[16rem] rounded-[1.35rem] border border-slate-200 bg-slate-50/90 px-4 py-3"
+             data-testid="active-database-indicator">
+            <p class="cda-eyebrow">Active database</p>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-2">
+                <p class="text-sm font-semibold text-slate-950">@(DatabaseSelection?.DisplayName ?? "Loading runtime profile")</p>
+                @if (DatabaseSelection is not null)
+                {
+                    <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(DatabaseSelection.ProviderKind)" />
+                    @if (DatabaseSelection.IsRuntimeLocked)
+                    {
+                        <StatusBadge Tone="warning" Text="Config lock" />
+                    }
+                }
+                @if (!string.IsNullOrWhiteSpace(DatabaseSelection?.Descriptor))
+                {
+                    <HelpPopover RootClass="pf-help-popover flex items-center"
+                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                 AriaLabel="Show db details"
+                                 Title="Show db details"
+                                 Heading="Description"
+                                 Body="@DatabaseSelection.Descriptor" />
+                }
+            </Cluster>
+        </div>
+        <Button Text="Switch database"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Disabled="@DatabaseDialogBusy"
+                Click="OpenDatabaseDialog"
+                data-testid="database-topbar-switcher" />
+        <StatusBadge Tone="info" Text="Interactive Server" />
+        <StatusBadge Tone="success" Text="@($"Live items {OpenedItemCount}")" />
+        <StatusBadge Tone="neutral" Text="@($"Tabs {TabCount}")" />
+    </Cluster>
+</Split>
+
+@code {
+    [Parameter]
+    public string? DatabaseSwitchAlert { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ActiveWorkspaceTitle { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ActiveNavigationTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public AppShellMode ShellMode { get; set; }
+
+    [Parameter]
+    public string? ActiveProjectTitle { get; set; }
+
+    [Parameter, EditorRequired]
+    public string CurrentRouteDisplay { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ActivePhaseTitle { get; set; }
+
+    [Parameter]
+    public DatabaseSelectionStateModel? DatabaseSelection { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<DatabaseProviderKind, string> DescribeDatabaseProvider { get; set; } = static kind => kind.ToString();
+
+    [Parameter]
+    public bool DatabaseDialogBusy { get; set; }
+
+    [Parameter]
+    public int OpenedItemCount { get; set; }
+
+    [Parameter]
+    public int TabCount { get; set; }
+
+    [Parameter]
+    public EventCallback OpenDatabaseDialog { get; set; }
+}

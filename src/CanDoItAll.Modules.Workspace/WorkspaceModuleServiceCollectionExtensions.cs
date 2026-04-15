@@ -9,9 +9,12 @@ public static class WorkspaceModuleServiceCollectionExtensions
     {
         services.AddHttpClient();
         services.AddScoped<IProviderAdapter, OpenAiProviderAdapter>();
+        services.AddScoped<IProviderAdapter, ScenarioHarnessProviderAdapter>();
         services.AddScoped<IProviderAdapter, OllamaProviderAdapter>();
         services.AddScoped<IProviderAdapter, OllamaRemoteProviderAdapter>();
         services.AddScoped<ProviderRegistry>();
+        services.TryAddScoped<LegacyProviderRuntimeGateway>();
+        services.TryAddScoped<IProviderRuntimeGateway>(serviceProvider => serviceProvider.GetRequiredService<LegacyProviderRuntimeGateway>());
         services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
         services.TryAddScoped<ConnectorPluginRegistry>();
         services.AddScoped<ConnectorCommandProcessor>();

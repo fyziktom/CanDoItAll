@@ -1,0 +1,151 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SectionCard Title="Run history"
+             Description=""
+             HelpText="Launch planning creates runs only after staffing, approval, and provisioning are satisfied. Runtime execution, assignments, and evidence stay attached to the same durable process identity after launch execution.">
+    @if (!Presenter.HasSelectedProcess)
+    {
+        <EmptyState Eyebrow="Definition required"
+                    Title="Save a process definition first"
+                    Description="Runtime execution starts only after the process contract, roles, and steps exist on a durable definition." />
+    }
+    else
+    {
+        <SurfaceCard Soft="true">
+            <p class="cda-eyebrow">Run creation path</p>
+            <p class="mt-2 text-sm leading-6 text-slate-700">
+                Create and execute a launch plan above. Direct run creation is intentionally blocked so staffing,
+                approval, human substitution, and provisioning stay auditable before work starts.
+            </p>
+        </SurfaceCard>
+
+        @if (Presenter.Runs.Count == 0)
+        {
+            <EmptyState Eyebrow="No runtime runs"
+                        Title="Execute the first ready launch"
+                        Description="Runs appear here after a launch plan reaches ready state and is executed into durable runtime state." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="mt-5">
+                @foreach (var run in Presenter.Runs)
+                {
+                    <SelectionListItem Title="@run.Name"
+                                       Eyebrow="@run.OperatingMode.ToString()"
+                                       Meta="@Presenter.BuildRunSummary(run)"
+                                       Summary="@($"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual")"
+                                       IsSelected="@(Presenter.SelectedRun?.Id == run.Id)"
+                                       OnSelect="@(() => Presenter.SelectRunAsync(run.Id))">
+                        <Status>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@Presenter.ResolveRunTone(run.Status)"
+                                             Text="@run.Status.ToString()" />
+                                <StatusBadge Tone="neutral"
+                                             Text="@($"{run.BlockedStepCount} blocked")" />
+                            </Cluster>
+                        </Status>
+                    </SelectionListItem>
+                }
+            </Stack>
+        }
+    }
+</SectionCard>
+
+@if (Presenter.SelectedRun is not null)
+{
+    <SectionCard Title="Step execution"
+                 Description=""
+                 HelpText="Update runtime state explicitly so blocked work, safe refusals, approvals, and failures become durable evidence instead of disappearing into chat.">
+        @if (Presenter.StepRuns.Count == 0)
+        {
+            <EmptyState Eyebrow="No step runs"
+                        Title="No runtime step data yet"
+                        Description="Step runs populate after the selected run is loaded from storage." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var stepRun in Presenter.StepRuns)
+                {
+                    var selectedBranchOutcomeId = Presenter.ResolveSelectedBranchOutcomeId(stepRun.Id);
+                    <SurfaceCard data-testid="processes-step-run-card">
+                        <Split Gap="LayoutGap.Medium">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <p class="cda-eyebrow">Step @(stepRun.Sequence + 1)</p>
+                                <h3 class="text-lg font-semibold text-slate-950">@stepRun.Title</h3>
+                                <p class="text-sm leading-6 text-slate-600">Executor: @(string.IsNullOrWhiteSpace(stepRun.CurrentExecutorName) ? "Unassigned" : stepRun.CurrentExecutorName)</p>
+                            </Stack>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@Presenter.ResolveStepTone(stepRun.Status)"
+                                             Text="@stepRun.Status.ToString()" />
+                                <StatusBadge Tone="neutral"
+                                             Text="@stepRun.StepKind.ToString()" />
+                            </Cluster>
+                        </Split>
+
+                        <Grid Gap="LayoutGap.Medium"
+                              ColumnsMd="4"
+                              Class="mt-5">
+                            <MetricCard Label="Wait" Value="@($"{stepRun.WaitMinutes}m")" />
+                            <MetricCard Label="Touch" Value="@($"{stepRun.TouchMinutes}m")" />
+                            <MetricCard Label="Blocked" Value="@($"{stepRun.BlockedMinutes}m")" />
+                            <MetricCard Label="Rework" Value="@stepRun.ReworkCount.ToString()" />
+                        </Grid>
+
+                        @if (stepRun.AvailableBranchOutcomes.Count > 0)
+                        {
+                            <div class="mt-5">
+                                <label class="cda-field-label">Branch outcome</label>
+                                <InputSelect TValue="Guid?"
+                                             Value="@selectedBranchOutcomeId"
+                                             ValueChanged="@(value => Presenter.UpdateRuntimeBranchOutcomeSelectionAsync(stepRun.Id, value))"
+                                             ValueExpression="@(() => selectedBranchOutcomeId)"
+                                             class="cda-input"
+                                             data-testid="processes-branch-outcome-select">
+                                    <option value="">Select outcome</option>
+                                    @foreach (var outcome in stepRun.AvailableBranchOutcomes)
+                                    {
+                                        <option value="@outcome.Id">@outcome.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+
+                        <Cluster Gap="LayoutGap.Small"
+                                 Class="mt-5">
+                            <Button Text="Start"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.InProgress))"
+                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.InProgress))" />
+                            <Button Text="Complete"
+                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Completed))"
+                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Completed))" />
+                            <Button Text="Block"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Blocked))"
+                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Blocked))" />
+                            <Button Text="Approval"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.WaitingApproval))"
+                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.WaitingApproval))" />
+                            <Button Text="Refuse"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Refused))"
+                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Refused))" />
+                            <Button Text="Fail"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Failed))"
+                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Failed))" />
+                        </Cluster>
+                    </SurfaceCard>
+                }
+            </Stack>
+        }
+    </SectionCard>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+}

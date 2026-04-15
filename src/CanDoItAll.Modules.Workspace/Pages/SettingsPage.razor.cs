@@ -173,6 +173,12 @@ public partial class SettingsPage
 
     private Task HandleSettingsTabChanged(string key)
     {
+        if (string.Equals(key, "providers", StringComparison.Ordinal))
+        {
+            Navigation.NavigateTo("/agents?tab=providers", replace: true);
+            return Task.CompletedTask;
+        }
+
         settingsTab = key;
         Navigation.NavigateTo(BuildSettingsRoute(key), replace: true);
         return Task.CompletedTask;
@@ -180,6 +186,12 @@ public partial class SettingsPage
 
     private void ApplyRequestedTab()
     {
+        if (string.Equals(RequestedTab, "providers", StringComparison.Ordinal))
+        {
+            settingsTab = "providers";
+            return;
+        }
+
         if (IsValidSettingsTab(RequestedTab))
         {
             settingsTab = RequestedTab!;

@@ -1,8 +1,9 @@
 @namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
 <Grid Gap="@(Dense ? LayoutGap.Medium : LayoutGap.XLarge)"
-      Class="h-full min-h-0 w-full flex-1"
-      ColumnTemplateXl="minmax(0,var(--list-pane-width)) minmax(0,1fr)"
-      Style="@($"--list-pane-width:{ListPaneWidth};")">
+      @attributes='BuildAttributes("h-full min-h-0 w-full flex-1", $"--list-pane-width:{ListPaneWidth};")'
+      ColumnTemplateXl="minmax(0,var(--list-pane-width)) minmax(0,1fr)">
     <section class="@ResolvePaneClass(ListPaneClass)">
         @if (ListHeader is not null)
         {

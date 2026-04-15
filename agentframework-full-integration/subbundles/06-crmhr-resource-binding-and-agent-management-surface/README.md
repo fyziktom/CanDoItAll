@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready with existing CRM-HR baseline already in place`
+- `Completed`
 
 ## Objective
 

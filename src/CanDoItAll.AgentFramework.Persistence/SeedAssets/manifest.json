@@ -1,0 +1,27 @@
+{
+  "skillRoots": {
+    "candoitall-bundle-workflow": "~/.codex/skills/candoitall-bundle-workflow",
+    "aspnet-core": "~/.codex/skills/aspnet-core",
+    "spreadsheet": "~/.codex/skills/spreadsheet",
+    "repository-playbook": "skills/repository-playbook"
+  },
+  "textAssets": {
+    "agents/portfolio-architect.instructions": "instructions/agents/portfolio-architect.md",
+    "agents/programming-workspace-analyst.instructions": "instructions/agents/programming-workspace-analyst.md",
+    "agents/spreadsheet-analyst.instructions": "instructions/agents/spreadsheet-analyst.md",
+    "agents/mail-triage-analyst.instructions": "instructions/agents/mail-triage-analyst.md",
+    "agents/research-deep-dive-analyst.instructions": "instructions/agents/research-deep-dive-analyst.md",
+    "skills/mail-triage-inline.instructions": "instructions/skills/mail-triage-inline.md",
+    "skills/office-order-analysis.instructions": "instructions/skills/office-order-analysis.md",
+    "skills/blazor-calculator-build.instructions": "instructions/skills/blazor-calculator-build.md",
+    "skills/generated-app-summary.instructions": "instructions/skills/generated-app-summary.md",
+    "skills/architecture-review.instructions": "instructions/skills/architecture-review.md",
+    "skills/architecture-map.instructions": "instructions/skills/architecture-map.md",
+    "skills/mail-summary.instructions": "instructions/skills/mail-summary.md",
+    "resources/office-comparison-example": "resources/office-comparison-example.json",
+    "resources/net10-program-scaffold": "resources/net10-program-scaffold.txt",
+    "resources/net10-home-page-example": "resources/net10-home-page-example.razor",
+    "resources/dotnet-command-examples": "resources/dotnet-command-examples.md",
+    "resources/generated-app-summary-checklist": "resources/generated-app-summary-checklist.md"
+  }
+}

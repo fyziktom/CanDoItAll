@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Closed`
+- `Completed`
 
 ## Objective
 

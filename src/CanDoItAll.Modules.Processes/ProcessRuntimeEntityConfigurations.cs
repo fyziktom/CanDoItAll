@@ -269,3 +269,144 @@ internal sealed class ProcessImprovementCandidateConfiguration : IEntityTypeConf
             .OnDelete(DeleteBehavior.SetNull);
     }
 }
+
+internal sealed class ProcessLaunchPlanConfiguration : IEntityTypeConfiguration<ProcessLaunchPlan>
+{
+    public void Configure(EntityTypeBuilder<ProcessLaunchPlan> builder)
+    {
+        builder.ToTable("Processes_LaunchPlans");
+        builder.HasKey(plan => plan.Id);
+        builder.Property(plan => plan.Name).HasMaxLength(200).IsRequired();
+        builder.Property(plan => plan.OperatingMode).HasConversion<string>().HasMaxLength(48);
+        builder.Property(plan => plan.TriggerReason).HasColumnType("TEXT");
+        builder.Property(plan => plan.Status).HasConversion<string>().HasMaxLength(48);
+        builder.Property(plan => plan.RecommendationStrategy).HasColumnType("TEXT");
+        builder.Property(plan => plan.FallbackStrategy).HasColumnType("TEXT");
+        builder.Property(plan => plan.Summary).HasColumnType("TEXT");
+        builder.Property(plan => plan.RequestedBy).HasMaxLength(160);
+        builder.Property(plan => plan.ConcurrencyToken).IsConcurrencyToken();
+        builder.HasIndex(plan => new { plan.ProcessDefinitionId, plan.CreatedAtUtc });
+        builder.HasIndex(plan => new { plan.ProjectId, plan.CreatedAtUtc });
+        builder.HasIndex(plan => plan.Status);
+        builder.HasIndex(plan => plan.GeneratedRunId);
+        builder.HasOne<ProcessDefinition>()
+            .WithMany()
+            .HasForeignKey(plan => plan.ProcessDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessDefinitionVersion>()
+            .WithMany()
+            .HasForeignKey(plan => new { plan.ProcessDefinitionId, plan.ProcessDefinitionVersionId })
+            .HasPrincipalKey(version => new { version.ProcessDefinitionId, version.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(plan => plan.GeneratedRunId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+internal sealed class ProcessLaunchPlanRoleConfiguration : IEntityTypeConfiguration<ProcessLaunchPlanRole>
+{
+    public void Configure(EntityTypeBuilder<ProcessLaunchPlanRole> builder)
+    {
+        builder.ToTable("Processes_LaunchPlanRoles");
+        builder.HasKey(role => role.Id);
+        builder.Property(role => role.RoleKey).HasMaxLength(120).IsRequired();
+        builder.Property(role => role.DisplayName).HasMaxLength(200).IsRequired();
+        builder.Property(role => role.PreferredExecutorKind).HasMaxLength(80);
+        builder.Property(role => role.RequiredSkillIdsJson).HasColumnType("TEXT");
+        builder.Property(role => role.RecommendationSummary).HasColumnType("TEXT");
+        builder.Property(role => role.SelectionSummary).HasColumnType("TEXT");
+        builder.Property(role => role.ReadinessSummary).HasColumnType("TEXT");
+        builder.HasIndex(role => new { role.LaunchPlanId, role.DisplayOrder });
+        builder.HasIndex(role => new { role.LaunchPlanId, role.RoleRequirementId })
+            .IsUnique()
+            .HasDatabaseName(ProcessPersistenceConstraintNames.LaunchPlanRoleUniqueIndex);
+        builder.HasIndex(role => role.SelectedCandidateId);
+        builder.HasOne<ProcessLaunchPlan>()
+            .WithMany()
+            .HasForeignKey(role => role.LaunchPlanId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessRoleRequirement>()
+            .WithMany()
+            .HasForeignKey(role => role.RoleRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ProcessLaunchCandidateConfiguration : IEntityTypeConfiguration<ProcessLaunchCandidate>
+{
+    public void Configure(EntityTypeBuilder<ProcessLaunchCandidate> builder)
+    {
+        builder.ToTable("Processes_LaunchCandidates");
+        builder.HasKey(candidate => candidate.Id);
+        builder.Property(candidate => candidate.CandidateKind).HasConversion<string>().HasMaxLength(48);
+        builder.Property(candidate => candidate.DisplayName).HasMaxLength(200).IsRequired();
+        builder.Property(candidate => candidate.ExecutorKind).HasMaxLength(80);
+        builder.Property(candidate => candidate.RecommendationSummary).HasColumnType("TEXT");
+        builder.Property(candidate => candidate.AvailabilitySummary).HasColumnType("TEXT");
+        builder.Property(candidate => candidate.SourceRegistryKey).HasMaxLength(160);
+        builder.Property(candidate => candidate.MetadataJson).HasColumnType("TEXT");
+        builder.HasIndex(candidate => new { candidate.LaunchPlanRoleId, candidate.Score });
+        builder.HasIndex(candidate => candidate.PartyId);
+        builder.HasIndex(candidate => candidate.TechnicalAgentId);
+        builder.HasOne<ProcessLaunchPlanRole>()
+            .WithMany()
+            .HasForeignKey(candidate => candidate.LaunchPlanRoleId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class ProcessLaunchApprovalRecordConfiguration : IEntityTypeConfiguration<ProcessLaunchApprovalRecord>
+{
+    public void Configure(EntityTypeBuilder<ProcessLaunchApprovalRecord> builder)
+    {
+        builder.ToTable("Processes_LaunchApprovals");
+        builder.HasKey(approval => approval.Id);
+        builder.Property(approval => approval.Status).HasConversion<string>().HasMaxLength(48);
+        builder.Property(approval => approval.ApproverDisplayName).HasMaxLength(200).IsRequired();
+        builder.Property(approval => approval.ApproverKind).HasMaxLength(80);
+        builder.Property(approval => approval.HumanSubstituteName).HasMaxLength(200);
+        builder.Property(approval => approval.RequestMessage).HasColumnType("TEXT");
+        builder.Property(approval => approval.ResolutionSummary).HasColumnType("TEXT");
+        builder.Property(approval => approval.DecidedBy).HasMaxLength(160);
+        builder.HasIndex(approval => new { approval.LaunchPlanId, approval.CreatedAtUtc });
+        builder.HasIndex(approval => approval.Status);
+        builder.HasIndex(approval => approval.CollaborationThreadId);
+        builder.HasOne<ProcessLaunchPlan>()
+            .WithMany()
+            .HasForeignKey(approval => approval.LaunchPlanId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class ProcessLaunchProvisioningRequestConfiguration : IEntityTypeConfiguration<ProcessLaunchProvisioningRequest>
+{
+    public void Configure(EntityTypeBuilder<ProcessLaunchProvisioningRequest> builder)
+    {
+        builder.ToTable("Processes_LaunchProvisioningRequests");
+        builder.HasKey(request => request.Id);
+        builder.Property(request => request.Status).HasConversion<string>().HasMaxLength(48);
+        builder.Property(request => request.RequestKind).HasMaxLength(80);
+        builder.Property(request => request.Title).HasMaxLength(200).IsRequired();
+        builder.Property(request => request.RequestPayloadJson).HasColumnType("TEXT");
+        builder.Property(request => request.ResultSummary).HasColumnType("TEXT");
+        builder.HasIndex(request => new { request.LaunchPlanId, request.Status });
+        builder.HasIndex(request => request.SelectedCandidateId);
+        builder.HasIndex(request => new { request.LaunchPlanId, request.LaunchPlanRoleId })
+            .IsUnique()
+            .HasDatabaseName(ProcessPersistenceConstraintNames.LaunchPlanProvisioningRoleUniqueIndex);
+        builder.HasOne<ProcessLaunchPlan>()
+            .WithMany()
+            .HasForeignKey(request => request.LaunchPlanId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessLaunchPlanRole>()
+            .WithMany()
+            .HasForeignKey(request => request.LaunchPlanRoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessLaunchCandidate>()
+            .WithMany()
+            .HasForeignKey(request => request.SelectedCandidateId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

@@ -122,6 +122,7 @@ public sealed partial class ProcessesService
             AllowedFutureUsageSummary = request.AllowedFutureUsageSummary.Trim(),
             ReviewSummary = request.ReviewSummary.Trim(),
             ManagedStoragePath = request.ManagedStoragePath.Trim(),
+            ExternalReferenceKey = request.ExternalReferenceKey.Trim(),
             CreatedAtUtc = clock.GetUtcNow()
         };
         await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);

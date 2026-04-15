@@ -1,0 +1,160 @@
+<Stack GapScale="LayoutGap.Large"
+       Class="flex-1 min-h-0"
+       data-testid="agents-chat-panel">
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <SurfaceCard Soft="true">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="@messageTone" Text="@messageLabel" />
+                <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
+            </Cluster>
+        </SurfaceCard>
+    }
+
+    <Grid Gap="LayoutGap.Large"
+          Class="flex-1 min-h-0 overflow-hidden"
+          ColumnTemplateXl="minmax(18rem,0.8fr) minmax(0,1.35fr) minmax(18rem,0.82fr)">
+        <WorkspacePanel Class="h-full min-h-0 overflow-hidden">
+            <div class="border-b border-slate-200 pb-4">
+                <Split Gap="LayoutGap.Small">
+                    <div>
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="Agent threads" />
+                        <TextBlock TextStyle="TextStyle.Body2" Value="Select a technical agent, then pick a thread or create a new one. The live runtime stays in the center, while the right rail keeps execution evidence visible." />
+                    </div>
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <Button Text="Refresh"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@isBusy"
+                                Click="RefreshAsync" />
+                        <Button Text="New thread"
+                                Size="ButtonSize.Small"
+                                Disabled="@(isBusy || selectedAgentId is null)"
+                                Click="CreateThreadAsync" />
+                    </Cluster>
+                </Split>
+            </div>
+
+            <div class="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+                 style="scrollbar-gutter:stable;">
+                @if (agents.Count == 0)
+                {
+                    <EmptyState Eyebrow="No agents"
+                                Title="Create a technical agent first"
+                                Description="Chat is only available after a technical agent exists and is bound to a provider." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        <SurfaceCard Soft="true">
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Agents" />
+                                @foreach (var agent in agents)
+                                {
+                                    <SelectionListItem Title="@agent.Name"
+                                                       Eyebrow="@agent.RoleTitle"
+                                                       Meta="@ResolveAgentMeta(agent)"
+                                                       Summary="@agent.Summary"
+                                                       IsSelected="@(selectedAgentId == agent.Id)"
+                                                       OnSelect="@(() => SelectAgentAsync(agent.Id))">
+                                        <Status>
+                                            <StatusBadge Tone="@ResolveAgentTone(agent.Status)"
+                                                         Text="@agent.Status.ToString()" />
+                                        </Status>
+                                    </SelectionListItem>
+                                }
+                            </Stack>
+                        </SurfaceCard>
+
+                        <SurfaceCard Soft="true">
+                            <Stack GapScale="LayoutGap.Small">
+                                <Split Gap="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Threads" />
+                                    @if (workspace is not null)
+                                    {
+                                        <StatusBadge Tone="info" Text="@($"{workspace.Sessions.Count} thread(s)")" />
+                                    }
+                                </Split>
+
+                                @if (workspace?.Sessions.Count > 0)
+                                {
+                                    @foreach (var session in workspace.Sessions.OrderByDescending(item => item.UpdatedAtUtc))
+                                    {
+                                        <SelectionListItem Title="@session.Title"
+                                                           Eyebrow="@session.UpdatedAtUtc.LocalDateTime.ToString("g")"
+                                                           Meta="@BuildSessionMeta(session)"
+                                                           Summary="@session.LastMessagePreview"
+                                                           IsSelected="@(selectedSessionId == session.Id)"
+                                                           OnSelect="@(() => SelectSessionAsync(session.Id))">
+                                            <Status>
+                                                <Cluster Gap="LayoutGap.Small">
+                                                    @if (session.PendingApprovalCount > 0)
+                                                    {
+                                                        <StatusBadge Tone="warning"
+                                                                     Text="@($"{session.PendingApprovalCount} approval(s)")" />
+                                                    }
+                                                    @if (session.AutoApprovePendingToolCalls)
+                                                    {
+                                                        <StatusBadge Tone="success" Text="Auto approve" />
+                                                    }
+                                                </Cluster>
+                                            </Status>
+                                        </SelectionListItem>
+                                    }
+                                }
+                                else
+                                {
+                                    <TextBlock TextStyle="TextStyle.Body2" Value="The selected agent does not have a thread yet." />
+                                }
+                            </Stack>
+                        </SurfaceCard>
+                    </Stack>
+                }
+            </div>
+        </WorkspacePanel>
+
+        <ChatWorkspacePanel Agent="@selectedAgent"
+                            Session="@workspace?.SelectedSession"
+                            ActiveRun="@workspace?.SelectedRun"
+                            DraftPrompt="@draftPrompt"
+                            DraftPromptChanged="HandleDraftPromptChangedAsync"
+                            IsBusy="@isBusy"
+                            ComposerKey="@composerKey"
+                            RunStateText="@runStateText"
+                            RunStateTone="@runStateTone"
+                            PendingUserPrompt="@pendingUserPrompt"
+                            DraftAttachmentPaths="@draftAttachmentPaths"
+                            SendRequested="SendMessageAsync"
+                            ApprovalDecisionRequested="HandleApprovalDecisionAsync"
+                            ApprovalDecisionForConversationRequested="ApproveConversationAsync"
+                            AttachmentRequested="StageAttachmentsAsync" />
+
+        <Stack GapScale="LayoutGap.Large"
+               Class="h-full min-h-0">
+            <WorkspacePanel Tone="WorkspacePanelTone.Ghost">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="Selected execution" />
+                    @if (workspace?.SelectedRun is null)
+                    {
+                        <TextBlock TextStyle="TextStyle.Body2" Value="No execution run is selected yet. Sending a prompt creates or reuses the thread runtime." />
+                    }
+                    else
+                    {
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@runStateTone" Text="@runStateText" />
+                            @if (workspace.SelectedRun.Outcome.HasValue)
+                            {
+                                <StatusBadge Tone="info" Text="@workspace.SelectedRun.Outcome.Value.ToString()" />
+                            }
+                        </Cluster>
+                        <TextBlock TextStyle="TextStyle.Body2" Value="@workspace.SelectedRun.Title" />
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Provider {workspace.SelectedRun.ProviderName} / {workspace.SelectedRun.Model}")" />
+                    }
+                </Stack>
+            </WorkspacePanel>
+
+            <ExecutionTimelinePanel Entries="@executionLog" />
+            <MetricSummaryPanel Metrics="@metrics" />
+        </Stack>
+    </Grid>
+</Stack>

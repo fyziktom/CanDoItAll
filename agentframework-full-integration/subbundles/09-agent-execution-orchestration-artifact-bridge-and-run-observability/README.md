@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -22,7 +22,7 @@
 ## Exact Source References
 
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessOutbox.cs
-- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRunAutomationDispatchService.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.Operations.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeViewModels.cs

@@ -26,6 +26,13 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     public string? StorageWorkspaceRoot => _activeProfile?.WorkspaceRootPath;
 
+    public string GetLogSnapshot(int maxLines = 200)
+    {
+        return string.Join(
+            Environment.NewLine,
+            _logs.Reverse().Take(maxLines).Reverse());
+    }
+
     public async Task InitializeAsync()
     {
         if (await IsRuntimeReadyAsync(TimeSpan.FromSeconds(3)))

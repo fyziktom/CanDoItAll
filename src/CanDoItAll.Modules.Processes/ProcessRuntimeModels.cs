@@ -85,6 +85,41 @@ public enum ProcessImprovementStatus {
     Closed
 }
 
+public enum ProcessLaunchPlanStatus {
+    Draft,
+    PendingApproval,
+    ChangesRequested,
+    Rejected,
+    Approved,
+    Provisioning,
+    Ready,
+    Executing,
+    Completed,
+    Cancelled
+}
+
+public enum ProcessLaunchCandidateKind {
+    ProjectAssignment,
+    Workforce,
+    AiResource,
+    NewAiAgentProposal,
+    Gap
+}
+
+public enum ProcessLaunchApprovalStatus {
+    Pending,
+    Approved,
+    ChangesRequested,
+    Rejected
+}
+
+public enum ProcessLaunchProvisioningStatus {
+    NotRequired,
+    Pending,
+    Provisioned,
+    Rejected
+}
+
 public sealed class ProcessRun : IHasConcurrencyToken {
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -361,5 +396,175 @@ public sealed class ProcessImprovementCandidate {
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset? ClosedAtUtc { get; set; }
+}
+
+public sealed class ProcessLaunchPlan : IHasConcurrencyToken {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid ProcessDefinitionVersionId { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public string TriggerReason { get; set; } = string.Empty;
+
+    public ProcessLaunchPlanStatus Status { get; set; } = ProcessLaunchPlanStatus.Draft;
+
+    public string RecommendationStrategy { get; set; } = string.Empty;
+
+    public string FallbackStrategy { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public Guid? ApprovalThreadId { get; set; }
+
+    public Guid? LatestApprovalRecordId { get; set; }
+
+    public Guid? GeneratedRunId { get; set; }
+
+    public string RequestedBy { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    public DateTimeOffset? SubmittedAtUtc { get; set; }
+
+    public DateTimeOffset? ApprovedAtUtc { get; set; }
+
+    public DateTimeOffset? ExecutedAtUtc { get; set; }
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
+}
+
+public sealed class ProcessLaunchPlanRole {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid RoleRequirementId { get; set; }
+
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public string RequiredSkillIdsJson { get; set; } = "[]";
+
+    public string RecommendationSummary { get; set; } = string.Empty;
+
+    public string SelectionSummary { get; set; } = string.Empty;
+
+    public string ReadinessSummary { get; set; } = string.Empty;
+
+    public Guid? SelectedCandidateId { get; set; }
+
+    public bool IsRequired { get; set; } = true;
+
+    public bool RequiresExplicitApproval { get; set; }
+
+    public bool RequiresProvisioning { get; set; }
+
+    public bool IsResolved { get; set; }
+
+    public int DisplayOrder { get; set; }
+}
+
+public sealed class ProcessLaunchCandidate {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public ProcessLaunchCandidateKind CandidateKind { get; set; } = ProcessLaunchCandidateKind.Gap;
+
+    public Guid? PartyId { get; set; }
+
+    public Guid? TechnicalAgentId { get; set; }
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public decimal Score { get; set; }
+
+    public bool IsRecommended { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; }
+
+    public bool RequiresProvisioning { get; set; }
+
+    public string RecommendationSummary { get; set; } = string.Empty;
+
+    public string AvailabilitySummary { get; set; } = string.Empty;
+
+    public string SourceRegistryKey { get; set; } = string.Empty;
+
+    public string MetadataJson { get; set; } = "{}";
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessLaunchApprovalRecord {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanId { get; set; }
+
+    public ProcessLaunchApprovalStatus Status { get; set; } = ProcessLaunchApprovalStatus.Pending;
+
+    public Guid? ApproverPartyId { get; set; }
+
+    public string ApproverDisplayName { get; set; } = string.Empty;
+
+    public string ApproverKind { get; set; } = string.Empty;
+
+    public Guid? HumanSubstitutePartyId { get; set; }
+
+    public string HumanSubstituteName { get; set; } = string.Empty;
+
+    public Guid? CollaborationThreadId { get; set; }
+
+    public string RequestMessage { get; set; } = string.Empty;
+
+    public string ResolutionSummary { get; set; } = string.Empty;
+
+    public string DecidedBy { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? DecidedAtUtc { get; set; }
+}
+
+public sealed class ProcessLaunchProvisioningRequest {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public Guid SelectedCandidateId { get; set; }
+
+    public ProcessLaunchProvisioningStatus Status { get; set; } = ProcessLaunchProvisioningStatus.Pending;
+
+    public string RequestKind { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string RequestPayloadJson { get; set; } = "{}";
+
+    public Guid? ResultPartyId { get; set; }
+
+    public Guid? ResultTechnicalAgentId { get; set; }
+
+    public string ResultSummary { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? CompletedAtUtc { get; set; }
 }
 

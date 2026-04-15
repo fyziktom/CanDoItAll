@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready; current repo still starts runs directly without a launch plan`
+- `Completed`
 
 ## Objective
 
@@ -24,7 +24,7 @@
 
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Launch.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs

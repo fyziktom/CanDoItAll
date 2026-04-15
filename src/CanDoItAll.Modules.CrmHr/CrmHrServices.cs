@@ -602,6 +602,9 @@ public sealed record AiAgentListItemModel(
     string DisplayName,
     string Summary,
     PartyLifecycleStatus LifecycleStatus,
+    Guid? TechnicalAgentId,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
     AiExecutionMode? ExecutionMode,
     AiValidationStatus? ValidationStatus,
     string ProviderName,
@@ -609,6 +612,7 @@ public sealed record AiAgentListItemModel(
     string OwnerName,
     int CapabilityCount,
     bool HasProfile,
+    string AgentsRoute,
     DateTimeOffset UpdatedAtUtc);
 
 public sealed record AiAgentWorkspaceModel(
@@ -618,6 +622,10 @@ public sealed record AiAgentWorkspaceModel(
     PartyLifecycleStatus LifecycleStatus,
     string PrimaryEmail,
     string PrimaryPhone,
+    Guid? TechnicalAgentId,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
+    string AgentsRoute,
     string ProviderName,
     string OwnerName,
     AiAgentProfileEditorModel Profile,
@@ -3827,7 +3835,8 @@ public sealed partial class AiAgentService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    IAiTechnicalAgentBridge technicalAgentBridge)
 {
     public async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryAsync(CancellationToken cancellationToken = default)
     {
@@ -3853,14 +3862,10 @@ public sealed partial class AiAgentService(
         var profiles = await dbContext.Set<AiAgentProfile>()
             .Where(item => partyIds.Contains(item.PartyId))
             .ToListAsync(cancellationToken);
+        var technicalSummaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds, cancellationToken);
         var ownerIds = profiles
             .Where(item => item.OwnerPartyId.HasValue)
             .Select(item => item.OwnerPartyId!.Value)
-            .Distinct()
-            .ToList();
-        var providerIds = profiles
-            .Where(item => item.ProviderProfileId.HasValue)
-            .Select(item => item.ProviderProfileId!.Value)
             .Distinct()
             .ToList();
 
@@ -3869,29 +3874,29 @@ public sealed partial class AiAgentService(
             : await dbContext.Set<Party>()
                 .Where(item => ownerIds.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
-        var providerNames = providerIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : await dbContext.Set<ProviderProfile>()
-                .Where(item => providerIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
         var profileByPartyId = profiles.ToDictionary(item => item.PartyId);
 
         return parties
             .Select(item =>
             {
                 profileByPartyId.TryGetValue(item.Id, out var profile);
+                technicalSummaries.TryGetValue(item.Id, out var technicalSummary);
                 return new AiAgentListItemModel(
                     item.Id,
                     item.DisplayName,
                     item.Summary,
                     item.LifecycleStatus,
-                    profile?.ExecutionMode,
+                    technicalSummary?.TechnicalAgentId,
+                    technicalSummary?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    technicalSummary?.BindingSummary ?? "No technical binding.",
+                    technicalSummary?.ExecutionMode ?? profile?.ExecutionMode,
                     profile?.ValidationStatus,
-                    profile?.ProviderProfileId is Guid providerProfileId ? providerNames.GetValueOrDefault(providerProfileId) ?? string.Empty : string.Empty,
-                    profile?.DefaultModel ?? string.Empty,
+                    technicalSummary?.ProviderName ?? string.Empty,
+                    technicalSummary?.DefaultModel ?? string.Empty,
                     profile?.OwnerPartyId is Guid ownerPartyId ? ownerNames.GetValueOrDefault(ownerPartyId) ?? string.Empty : string.Empty,
-                    profile is null ? 0 : DeserializeCapabilities(profile.CapabilityJson, profile.Id).Count,
+                    technicalSummary?.CapabilityCount ?? 0,
                     profile is not null,
+                    technicalSummary?.AgentsRoute ?? "/agents?tab=agents",
                     item.UpdatedAtUtc);
             })
             .ToList();
@@ -3922,32 +3927,14 @@ public sealed partial class AiAgentService(
             .ToListAsync(cancellationToken);
         var profile = await dbContext.Set<AiAgentProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var providerOptions = (await dbContext.Set<ProviderProfile>()
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken))
-            .Select(item => new AiProviderOptionModel(
-                item.Id,
-                item.Name,
-                item.ProviderKind?.ToString() ?? item.ConnectorPluginKey,
-                item.DefaultModel,
-                item.IsEnabled))
-            .ToList();
+        var technicalWorkspace = await technicalAgentBridge.GetWorkspaceAsync(partyId, cancellationToken);
         var ownerOptions = await dbContext.Set<Party>()
             .Where(item => item.Id != partyId && item.PartyType == PartyType.Person)
             .OrderBy(item => item.DisplayName)
             .Select(item => new PartyOptionModel(item.Id, item.DisplayName, item.PartyType))
             .ToListAsync(cancellationToken);
 
-        var providerName = string.Empty;
         var ownerName = string.Empty;
-        if (profile?.ProviderProfileId is Guid providerProfileId)
-        {
-            providerName = providerOptions
-                .FirstOrDefault(item => item.Id == providerProfileId)?
-                .Name
-                ?? string.Empty;
-        }
-
         if (profile?.OwnerPartyId is Guid ownerPartyId)
         {
             ownerName = ownerOptions
@@ -3960,10 +3947,6 @@ public sealed partial class AiAgentService(
                 ?? string.Empty;
         }
 
-        var resolvedDefaultModel = profile is null
-            ? string.Empty
-            : ResolveDefaultModel(profile.DefaultModel, providerOptions.FirstOrDefault(item => item.Id == profile.ProviderProfileId)?.DefaultModel);
-
         return new AiAgentWorkspaceModel(
             party.Id,
             party.DisplayName,
@@ -3971,25 +3954,38 @@ public sealed partial class AiAgentService(
             party.LifecycleStatus,
             ResolvePrimaryContactValue(contactPoints, PartyContactType.Email),
             ResolvePrimaryContactValue(contactPoints, PartyContactType.Phone),
-            providerName,
+            technicalWorkspace.TechnicalAgentId,
+            technicalWorkspace.BindingStatus,
+            technicalWorkspace.BindingSummary,
+            technicalWorkspace.AgentsRoute,
+            technicalWorkspace.ProviderName,
             ownerName,
             new AiAgentProfileEditorModel
             {
                 Id = profile?.Id,
                 PartyId = party.Id,
-                ProviderProfileId = profile?.ProviderProfileId,
-                DefaultModel = resolvedDefaultModel,
-                ExecutionMode = profile?.ExecutionMode ?? AiExecutionMode.Remote,
+                ProviderProfileId = technicalWorkspace.ProviderProfileId,
+                DefaultModel = technicalWorkspace.DefaultModel,
+                ExecutionMode = technicalWorkspace.ExecutionMode,
                 OwnerPartyId = profile?.OwnerPartyId,
                 ValidationStatus = profile?.ValidationStatus ?? AiValidationStatus.Draft,
                 LastReviewedOn = profile?.LastReviewedAtUtc is DateTimeOffset reviewedAtUtc ? DateOnly.FromDateTime(reviewedAtUtc.UtcDateTime) : null,
                 Notes = profile?.Notes ?? string.Empty,
                 ExtendedDataJson = profile?.ExtendedDataJson ?? "{}",
                 LastChangedBy = "crm-hr-ui",
-                Capabilities = profile is null ? [] : DeserializeCapabilities(profile.CapabilityJson, profile.Id)
+                Capabilities = technicalWorkspace.Capabilities
+                    .Select(capability => new AiCapabilityEditorModel
+                    {
+                        Name = capability.Name,
+                        Scope = capability.Scope,
+                        ToolAccess = capability.ToolAccess,
+                        Limitations = capability.Limitations,
+                        Notes = capability.Notes
+                    })
+                    .ToList()
             },
             ownerOptions,
-            providerOptions);
+            technicalWorkspace.ProviderOptions);
     }
 
     public async Task<Result<Guid>> SaveAgentProfileAsync(AiAgentProfileEditorModel model, CancellationToken cancellationToken = default)
@@ -4019,17 +4015,6 @@ public sealed partial class AiAgentService(
             return Result<Guid>.Failure(Error.Validation("An AI agent cannot own itself.", "crmhr.ai-agent.self-owner"));
         }
 
-        ProviderProfile? provider = null;
-        if (model.ProviderProfileId is Guid providerProfileId)
-        {
-            provider = await dbContext.Set<ProviderProfile>()
-                .SingleOrDefaultAsync(item => item.Id == providerProfileId, cancellationToken);
-            if (provider is null)
-            {
-                return Result<Guid>.Failure(Error.Validation("Provider profile must reference an existing workspace provider.", "crmhr.ai-agent.provider-invalid"));
-            }
-        }
-
         Party? owner = null;
         if (model.OwnerPartyId is Guid ownerPartyId)
         {
@@ -4046,27 +4031,6 @@ public sealed partial class AiAgentService(
         {
             return Result<Guid>.Failure(Error.Validation("Extended data must be valid JSON.", "crmhr.ai-agent.extended-data-invalid"));
         }
-
-        var profile = await dbContext.Set<AiAgentProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-        if (profile is null)
-        {
-            profile = new AiAgentProfile
-            {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<AiAgentProfile>().Add(profile);
-        }
-
-        profile.ProviderProfileId = model.ProviderProfileId;
-        profile.DefaultModel = ResolveDefaultModel(model.DefaultModel, provider?.DefaultModel);
-        profile.ExecutionMode = model.ExecutionMode;
-        profile.OwnerPartyId = model.OwnerPartyId;
-        profile.CapabilityJson = SerializeCapabilities(model.Capabilities);
-        profile.ValidationStatus = model.ValidationStatus;
-        profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
-        profile.Notes = model.Notes.Trim();
-        profile.ExtendedDataJson = normalizedExtendedData;
 
         if (owner is not null)
         {
@@ -4085,6 +4049,29 @@ public sealed partial class AiAgentService(
             }
         }
 
+        var technicalSaveResult = await technicalAgentBridge.SaveAsync(model, cancellationToken);
+        if (technicalSaveResult.IsFailure)
+        {
+            return Result<Guid>.Failure(technicalSaveResult.Errors);
+        }
+
+        var profile = await dbContext.Set<AiAgentProfile>()
+            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
+        if (profile is null)
+        {
+            profile = new AiAgentProfile
+            {
+                PartyId = model.PartyId
+            };
+            dbContext.Set<AiAgentProfile>().Add(profile);
+        }
+
+        profile.OwnerPartyId = model.OwnerPartyId;
+        profile.ValidationStatus = model.ValidationStatus;
+        profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
+        profile.Notes = model.Notes.Trim();
+        profile.ExtendedDataJson = normalizedExtendedData;
+
         party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
         party.UpdatedAtUtc = clock.GetUtcNow();
         CrmHrAuditWriter.AddEntry(
@@ -4095,10 +4082,12 @@ public sealed partial class AiAgentService(
             $"Saved AI agent profile for '{party.DisplayName}'.",
             new
             {
-                profile.ExecutionMode,
+                model.ExecutionMode,
                 profile.ValidationStatus,
-                profile.ProviderProfileId,
-                profile.OwnerPartyId
+                model.ProviderProfileId,
+                profile.OwnerPartyId,
+                TechnicalAgentId = technicalSaveResult.Value.TechnicalAgentId,
+                technicalSaveResult.Value.BindingStatus
             },
             party.LastChangedBy,
             party.IsSensitive,
@@ -4110,7 +4099,7 @@ public sealed partial class AiAgentService(
                 "CRM / HR",
                 "AiAgentProfileSaved",
                 $"Saved AI agent profile for {party.DisplayName}",
-                $"{profile.ExecutionMode} / {profile.ValidationStatus}",
+                $"{model.ExecutionMode} / {profile.ValidationStatus}",
                 ArtifactKind: nameof(AiAgentProfile),
                 ArtifactId: party.Id,
                 Route: $"/crm-hr/agents?partyId={party.Id}",

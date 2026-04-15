@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Closed`
+- `Completed`
 
 ## Objective
 
@@ -23,7 +23,7 @@
 
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessDefinitionEntities.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessRuntimeModels.cs
-- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.Runtime.cs
+- C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessesService.DirectMessaging.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessCanvasCatalog.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/ProcessCanvasSurfaceFactory.Links.cs
 - C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Links.cs

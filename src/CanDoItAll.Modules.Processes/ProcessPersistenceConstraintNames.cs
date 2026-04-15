@@ -16,6 +16,10 @@ internal static class ProcessPersistenceConstraintNames
 
     public const string RunAssignmentStepScopedUniqueIndex = "UX_ProcessRunAssignments_StepScoped";
 
+    public const string LaunchPlanRoleUniqueIndex = "UX_ProcessLaunchPlanRoles_Role";
+
+    public const string LaunchPlanProvisioningRoleUniqueIndex = "UX_ProcessLaunchProvisioning_Role";
+
     public const string VersionDraftPerDefinitionUniqueIndex = "UX_ProcessVersions_DraftPerDef";
 
     public const string VersionPublishedPerDefinitionUniqueIndex = "UX_ProcessVersions_PubPerDef";

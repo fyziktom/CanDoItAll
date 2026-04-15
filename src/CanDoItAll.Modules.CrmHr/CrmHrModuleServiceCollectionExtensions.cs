@@ -1,6 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Modules.CrmHr;
 
@@ -18,6 +19,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<ProjectPartyIntegrationService>();
         services.AddScoped<IAutomationSignalSource, CrmHrAutomationSignalProvider>();
         services.AddScoped<IProjectPartyIntegrationBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
+        services.TryAddScoped<IAiTechnicalAgentBridge, LegacyAiTechnicalAgentBridge>();
         return services;
     }
 }

@@ -1,0 +1,40 @@
+@page "/"
+@using System.Globalization
+
+<form method="get">
+    <input type="number" step="any" name="left" value="@LeftText" />
+    <select name="operation" value="@SelectedOperation">
+        <option value="add">Add</option>
+        <option value="subtract">Subtract</option>
+        <option value="multiply">Multiply</option>
+        <option value="divide">Divide</option>
+    </select>
+    <input type="number" step="any" name="right" value="@RightText" />
+    <button type="submit">Calculate</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(ResultMessage))
+{
+    <p>@ResultMessage</p>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "left")]
+    public decimal? Left { get; set; }
+
+    [SupplyParameterFromQuery(Name = "right")]
+    public decimal? Right { get; set; }
+
+    [SupplyParameterFromQuery(Name = "operation")]
+    public string? Operation { get; set; }
+
+    private string SelectedOperation => Operation is "subtract" or "multiply" or "divide" ? Operation : "add";
+    private string LeftText => Left?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+    private string RightText => Right?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private string ResultMessage => SelectedOperation switch
+    {
+        "divide" when Right == 0 => "Division by zero is not allowed.",
+        _ => "..."
+    };
+}
