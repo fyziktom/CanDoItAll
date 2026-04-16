@@ -85,9 +85,9 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
         => ExecutePlanAsync(
-            () => planBuilder.BuildPowerShellRunScript(path, arguments, workingDirectory, timeoutSeconds),
+            () => planBuilder.BuildPowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds),
             "workspace_pwsh_run_script",
             "pwsh_run_script",
             "LocalExecution",

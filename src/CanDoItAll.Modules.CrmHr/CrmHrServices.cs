@@ -3840,6 +3840,8 @@ public sealed partial class AiAgentService(
 {
     public async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryAsync(CancellationToken cancellationToken = default)
     {
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var parties = await dbContext.Set<Party>()
             .Where(item => item.PartyType == PartyType.AiAgent)

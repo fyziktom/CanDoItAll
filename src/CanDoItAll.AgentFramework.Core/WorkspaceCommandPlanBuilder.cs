@@ -257,7 +257,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
     {
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".ps1", StringComparison.OrdinalIgnoreCase))
@@ -266,6 +266,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         var workingDirectoryRelative = ResolveScriptWorkingDirectory(workingDirectory, scriptResolution.FullPath, allowedExternalRoots: null, out var workingDirectoryPath);
+        var resolvedOutputPaths = ResolveWorkspacePaths(outputPaths);
         var normalizedArguments = new List<string>
         {
             "-NoLogo",
@@ -281,8 +282,10 @@ internal sealed class WorkspaceCommandPlanBuilder
             riskClass: "LocalExecution",
             approvalRequired: true,
             networkAllowed: false,
-            mutatesWorkspace: false,
-            targetPaths: [scriptResolution.RelativePath],
+            mutatesWorkspace: resolvedOutputPaths.Count > 0,
+            targetPaths: resolvedOutputPaths.Count > 0
+                ? resolvedOutputPaths
+                : [scriptResolution.RelativePath],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryPath,
             executableCandidates: ["pwsh", "powershell"],
@@ -535,6 +538,21 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         return resolution;
+    }
+
+    private IReadOnlyList<string> ResolveWorkspacePaths(string[]? paths)
+    {
+        if (paths is null || paths.Length == 0)
+        {
+            return [];
+        }
+
+        return paths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(ResolveWorkspacePath)
+            .Select(resolution => resolution.RelativePath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private WorkspacePathResolution ResolveExistingPath(string path, bool allowFiles, bool allowDirectories, IReadOnlyList<string>? allowedExternalRoots = null)

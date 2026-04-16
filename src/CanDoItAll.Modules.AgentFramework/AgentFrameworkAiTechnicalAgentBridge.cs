@@ -12,6 +12,172 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IClock clock) : IAiTechnicalAgentBridge
 {
+    public async Task SynchronizeDirectoryProjectionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        if (agents.Count == 0)
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var candidatePartyIds = agents
+            .SelectMany(agent =>
+            {
+                var metadata = AgentFrameworkCrmHrMetadata.Read(agent.ConfigurationJson);
+                var taggedPartyId = ResolveTaggedPartyId(agent.Tags);
+                return new Guid?[]
+                {
+                    metadata is null ? null : metadata.PartyId,
+                    taggedPartyId
+                };
+            })
+            .Where(item => item.HasValue)
+            .Select(item => item!.Value)
+            .ToHashSet();
+        var bindings = await dbContext.Set<AiResourceBinding>()
+            .ToListAsync(cancellationToken);
+        var parties = await dbContext.Set<Party>()
+            .Where(item => item.PartyType == PartyType.AiAgent || candidatePartyIds.Contains(item.Id))
+            .ToListAsync(cancellationToken);
+        var partiesById = parties.ToDictionary(item => item.Id);
+        var bindingByTechnicalAgentId = bindings
+            .Where(item => item.TechnicalAgentId.HasValue)
+            .GroupBy(item => item.TechnicalAgentId!.Value)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.UpdatedAtUtc).First());
+        var bindingByPartyId = bindings.ToDictionary(item => item.PartyId);
+        var timestamp = clock.GetUtcNow();
+        var changed = false;
+
+        foreach (var agent in agents)
+        {
+            var metadata = AgentFrameworkCrmHrMetadata.Read(agent.ConfigurationJson);
+            var taggedPartyId = ResolveTaggedPartyId(agent.Tags);
+            var preferredPartyId = metadata is null
+                ? taggedPartyId
+                : metadata.PartyId;
+
+            var binding = bindingByTechnicalAgentId.GetValueOrDefault(agent.Id);
+            var partyId = binding?.PartyId ?? preferredPartyId;
+            Party? party = null;
+            if (partyId.HasValue)
+            {
+                partiesById.TryGetValue(partyId.Value, out party);
+            }
+
+            if (party is not null && party.PartyType != PartyType.AiAgent)
+            {
+                party = null;
+                partyId = null;
+            }
+
+            if (party is null)
+            {
+                party = new Party
+                {
+                    Id = partyId ?? Guid.NewGuid(),
+                    PartyType = PartyType.AiAgent,
+                    LifecycleStatus = MapLifecycleStatus(agent.Status),
+                    DisplayName = agent.Name.Trim(),
+                    Summary = BuildPartySummary(agent),
+                    ExtendedDataJson = "{}",
+                    TagsJson = "[]",
+                    LastChangedBy = "agent-framework-sync",
+                    CreatedAtUtc = timestamp,
+                    UpdatedAtUtc = timestamp
+                };
+                dbContext.Set<Party>().Add(party);
+                partiesById[party.Id] = party;
+                changed = true;
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(party.DisplayName))
+                {
+                    party.DisplayName = agent.Name.Trim();
+                    changed = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(party.Summary))
+                {
+                    party.Summary = BuildPartySummary(agent);
+                    changed = true;
+                }
+            }
+
+            if (binding is null)
+            {
+                binding = bindingByPartyId.GetValueOrDefault(party.Id);
+            }
+
+            if (binding is null)
+            {
+                binding = new AiResourceBinding
+                {
+                    PartyId = party.Id,
+                    TechnicalAgentId = agent.Id,
+                    BindingStatus = AiResourceBindingStatus.Bound,
+                    BindingReason = "Projected from AgentFramework organization catalog.",
+                    LastError = string.Empty,
+                    CreatedAtUtc = timestamp,
+                    UpdatedAtUtc = timestamp
+                };
+                dbContext.Set<AiResourceBinding>().Add(binding);
+                bindingByTechnicalAgentId[agent.Id] = binding;
+                bindingByPartyId[party.Id] = binding;
+                changed = true;
+            }
+            else
+            {
+                var bindingChanged = false;
+                if (binding.PartyId != party.Id)
+                {
+                    bindingByPartyId.Remove(binding.PartyId);
+                    binding.PartyId = party.Id;
+                    bindingByPartyId[party.Id] = binding;
+                    bindingChanged = true;
+                }
+
+                if (binding.TechnicalAgentId != agent.Id)
+                {
+                    binding.TechnicalAgentId = agent.Id;
+                    bindingChanged = true;
+                }
+
+                if (binding.BindingStatus != AiResourceBindingStatus.Bound)
+                {
+                    binding.BindingStatus = AiResourceBindingStatus.Bound;
+                    bindingChanged = true;
+                }
+
+                if (!string.Equals(binding.BindingReason, "Projected from AgentFramework organization catalog.", StringComparison.Ordinal))
+                {
+                    binding.BindingReason = "Projected from AgentFramework organization catalog.";
+                    bindingChanged = true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(binding.LastError))
+                {
+                    binding.LastError = string.Empty;
+                    bindingChanged = true;
+                }
+
+                if (bindingChanged)
+                {
+                    binding.UpdatedAtUtc = timestamp;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     public async Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default)
@@ -298,5 +464,56 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         return agentId.HasValue
             ? $"/agents?tab=agents&agentId={agentId.Value:D}"
             : "/agents?tab=agents";
+    }
+
+    private static PartyLifecycleStatus MapLifecycleStatus(
+        AgentLifecycleStatus status)
+    {
+        return status switch
+        {
+            AgentLifecycleStatus.Active => PartyLifecycleStatus.Active,
+            AgentLifecycleStatus.Suspended => PartyLifecycleStatus.Inactive,
+            AgentLifecycleStatus.Archived => PartyLifecycleStatus.Archived,
+            _ => PartyLifecycleStatus.Draft
+        };
+    }
+
+    private static string BuildPartySummary(
+        AgentDefinition agent)
+    {
+        return string.IsNullOrWhiteSpace(agent.Summary)
+            ? $"{agent.RoleTitle} technical runtime profile.".Trim()
+            : agent.Summary.Trim();
+    }
+
+    private static Guid? ResolveTaggedPartyId(
+        IReadOnlyList<string> tags)
+    {
+        foreach (var tag in tags)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                continue;
+            }
+
+            const string prefix = "party-";
+            if (!tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = tag[prefix.Length..];
+            if (Guid.TryParseExact(value, "N", out var partyId))
+            {
+                return partyId;
+            }
+
+            if (Guid.TryParse(value, out partyId))
+            {
+                return partyId;
+            }
+        }
+
+        return null;
     }
 }

@@ -169,8 +169,8 @@ internal sealed class WorkspaceFileReceiptWriter
             return true;
         }
 
-        zone = string.Empty;
-        return false;
+        zone = "generated-output";
+        return true;
     }
 
     private static string GuessContentType(string relativePath)

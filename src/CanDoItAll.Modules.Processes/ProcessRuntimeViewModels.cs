@@ -225,6 +225,8 @@ public sealed record ProcessExecutionRunViewModel(
     DateTimeOffset? CompletedAtUtc,
     int LogEntryCount)
 {
+    public bool HasBrowserEvidenceToolInvocation { get; init; }
+
     public IReadOnlyList<ProcessExecutionApprovalViewModel> Approvals { get; init; } = [];
 
     public IReadOnlyList<ProcessExecutionArtifactViewModel> Artifacts { get; init; } = [];
@@ -442,6 +444,8 @@ public sealed class ProcessArtifactRecordRequest
     public Guid ProcessRunId { get; set; }
 
     public Guid? StepRunId { get; set; }
+
+    public Guid? ArtifactExpectationId { get; set; }
 
     public ProcessArtifactKind ArtifactKind { get; set; } = ProcessArtifactKind.Evidence;
 

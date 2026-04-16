@@ -52,6 +52,7 @@ public sealed partial class ProcessesService
             await dbContext.Set<ProcessRun>().AddAsync(run, cancellationToken);
 
             var resolvedAssignments = new List<ProcessRunAssignment>();
+            var createdStepRuns = new List<ProcessStepRun>(context.Steps.Count);
             foreach (var role in context.Roles)
             {
                 var assignment = ResolveRunAssignment(role, run.Id, context);
@@ -76,10 +77,6 @@ public sealed partial class ProcessesService
                     cancellationToken);
             }
 
-            var unresolvedRoleIds = resolvedAssignments
-                .Where(assignment => assignment.IsCapabilityGap)
-                .Select(assignment => assignment.RoleRequirementId)
-                .ToHashSet();
             var stepDependenciesByStepId = context.StepDependencies
                 .GroupBy(item => item.StepDefinitionId)
                 .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
@@ -101,23 +98,14 @@ public sealed partial class ProcessesService
             for (var index = 0; index < context.Steps.Count; index++)
             {
                 var step = context.Steps[index];
-                var stepRoleIds = context.StepRoleRequirements
+                var stepRoleRequirements = context.StepRoleRequirements
                     .Where(item => item.StepDefinitionId == step.Id)
-                    .Select(item => item.RoleRequirementId)
-                    .Distinct()
-                    .ToHashSet();
-                var hasCapabilityGap = stepRoleIds.Count > 0 && stepRoleIds.Any(unresolvedRoleIds.Contains);
+                    .ToList();
+                var currentAssignment = ResolveCurrentExecutorAssignment(step, stepRoleRequirements, resolvedAssignments);
+                var capabilityGapSeverity = ResolveStepCapabilityGapSeverity(step, stepRoleRequirements, resolvedAssignments);
                 var status = rootStepIds.Contains(step.Id)
                     ? (step.RequiresApproval ? ProcessStepRunStatus.WaitingApproval : ProcessStepRunStatus.Ready)
                     : ProcessStepRunStatus.Pending;
-                var currentAssignment = context.StepRoleRequirements
-                    .Where(item => item.StepDefinitionId == step.Id && item.ResponsibilityKind == ProcessResponsibilityKind.Responsible)
-                    .Join(
-                        resolvedAssignments,
-                        requirement => requirement.RoleRequirementId,
-                        assignment => assignment.RoleRequirementId,
-                        (_, assignment) => assignment)
-                    .FirstOrDefault();
 
                 var stepRun = new ProcessStepRun
                 {
@@ -132,9 +120,10 @@ public sealed partial class ProcessesService
                     CurrentExecutorPartyId = currentAssignment?.PartyId,
                     DecisionSummary = step.RequiresDecisionRecord ? "Decision record required." : string.Empty,
                     ReadyAtUtc = status is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval ? now : null,
-                    CapabilityGapSeverity = hasCapabilityGap ? ProcessCapabilityGapSeverity.Attention : ProcessCapabilityGapSeverity.None
+                    CapabilityGapSeverity = capabilityGapSeverity
                 };
                 await dbContext.Set<ProcessStepRun>().AddAsync(stepRun, cancellationToken);
+                createdStepRuns.Add(stepRun);
 
                 await dbContext.Set<ProcessWorkBrief>().AddAsync(
                     new ProcessWorkBrief
@@ -175,6 +164,12 @@ public sealed partial class ProcessesService
                 context.LaunchPlan.UpdatedAtUtc = now;
                 context.LaunchPlan.Status = ProcessLaunchPlanStatus.Executing;
             }
+
+            await projectStructureBridge.SyncRunAsync(
+                dbContext,
+                run,
+                createdStepRuns,
+                cancellationToken);
 
             outboxId = await processOutboxService.EnqueueRunStartAsync(dbContext, run, cancellationToken);
             automationDispatchOutboxId = await processOutboxService.EnqueueAutomationDispatchAsync(
@@ -454,4 +449,107 @@ public sealed partial class ProcessesService
         string DefaultRunName,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> SelectedLaunchCandidatesByRoleRequirementId,
         IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup);
+
+    private static ProcessRunAssignment? ResolveCurrentExecutorAssignment(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyList<ProcessRunAssignment> runAssignments)
+    {
+        if (stepRoleRequirements.Count == 0 || runAssignments.Count == 0)
+        {
+            return null;
+        }
+
+        var assignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
+        foreach (var responsibilityKind in GetExecutorPriority(stepDefinition.StepKind))
+        {
+            var candidate = stepRoleRequirements
+                .Where(item => item.ResponsibilityKind == responsibilityKind)
+                .OrderBy(item => item.FallbackOrder)
+                .Select(item => assignmentsByRoleRequirementId.GetValueOrDefault(item.RoleRequirementId))
+                .FirstOrDefault(item => item is not null);
+            if (candidate is not null)
+            {
+                return candidate;
+            }
+        }
+
+        return stepRoleRequirements
+            .OrderBy(item => item.IsRequired ? 0 : 1)
+            .ThenBy(item => item.FallbackOrder)
+            .Select(item => assignmentsByRoleRequirementId.GetValueOrDefault(item.RoleRequirementId))
+            .FirstOrDefault(item => item is not null);
+    }
+
+    private static ProcessCapabilityGapSeverity ResolveStepCapabilityGapSeverity(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyList<ProcessRunAssignment> runAssignments)
+    {
+        if (stepRoleRequirements.Count == 0)
+        {
+            return ProcessCapabilityGapSeverity.None;
+        }
+
+        var assignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (!assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
+            {
+                if (requirement.IsRequired)
+                {
+                    return ProcessCapabilityGapSeverity.Attention;
+                }
+
+                continue;
+            }
+
+            if (assignment.IsCapabilityGap)
+            {
+                return ProcessCapabilityGapSeverity.Attention;
+            }
+        }
+
+        return ProcessCapabilityGapSeverity.None;
+    }
+
+    private static Dictionary<Guid, ProcessRunAssignment> BuildEffectiveAssignmentsByRoleRequirementId(
+        Guid stepDefinitionId,
+        IReadOnlyList<ProcessRunAssignment> runAssignments)
+    {
+        return runAssignments
+            .Where(item => !item.StepDefinitionId.HasValue || item.StepDefinitionId == stepDefinitionId)
+            .GroupBy(item => item.RoleRequirementId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(item => item.StepDefinitionId == stepDefinitionId)
+                    .ThenByDescending(item => item.PartyId.HasValue)
+                    .First());
+    }
+
+    private static IReadOnlyList<ProcessResponsibilityKind> GetExecutorPriority(ProcessStepKind stepKind)
+    {
+        return stepKind switch
+        {
+            ProcessStepKind.Approval => [
+                ProcessResponsibilityKind.Approver,
+                ProcessResponsibilityKind.Responsible,
+                ProcessResponsibilityKind.Reviewer,
+                ProcessResponsibilityKind.Backup
+            ],
+            ProcessStepKind.Review => [
+                ProcessResponsibilityKind.Responsible,
+                ProcessResponsibilityKind.Reviewer,
+                ProcessResponsibilityKind.Approver,
+                ProcessResponsibilityKind.Backup
+            ],
+            _ => [
+                ProcessResponsibilityKind.Responsible,
+                ProcessResponsibilityKind.Approver,
+                ProcessResponsibilityKind.Reviewer,
+                ProcessResponsibilityKind.Backup
+            ]
+        };
+    }
 }

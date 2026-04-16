@@ -303,6 +303,8 @@ public sealed class ProcessArtifactRecord {
 
     public Guid? StepRunId { get; set; }
 
+    public Guid? ArtifactExpectationId { get; set; }
+
     public ProcessArtifactKind ArtifactKind { get; set; } = ProcessArtifactKind.Evidence;
 
     public string Title { get; set; } = string.Empty;

@@ -1,4 +1,6 @@
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -28,9 +30,34 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();
         services.AddScoped<ProcessDevelopmentSeedService>();
+        services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
         services.AddHostedService<ProcessOutboxDrainWorker>();
         return services;
+    }
+}
+
+public interface IProcessProjectStructureBridge
+{
+    Task SyncRunAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        IReadOnlyCollection<ProcessStepRun> stepRuns,
+        CancellationToken cancellationToken = default);
+}
+
+internal sealed class NoopProcessProjectStructureBridge : IProcessProjectStructureBridge
+{
+    public Task SyncRunAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        IReadOnlyCollection<ProcessStepRun> stepRuns,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(stepRuns);
+        return Task.CompletedTask;
     }
 }
 

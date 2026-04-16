@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -538,13 +539,22 @@ public sealed partial class ProcessesService
     }
 
     private static string BuildWorkBrief(ProcessDefinition definition, ProcessStepDefinition step, string? executorName) {
-        return $"{definition.Name}: {step.Title}{Environment.NewLine}" +
-            $"Customer value: {definition.ValueStatement}{Environment.NewLine}" +
-            $"Owner: {definition.OwnerName}{Environment.NewLine}" +
-            $"Executor: {(string.IsNullOrWhiteSpace(executorName) ? "Unassigned" : executorName)}{Environment.NewLine}" +
-            $"Inputs: {step.InputContractSummary}{Environment.NewLine}" +
-            $"Outputs: {step.OutputContractSummary}{Environment.NewLine}" +
-            $"Evidence: {step.EvidenceContractSummary}";
+        var builder = new StringBuilder()
+            .AppendLine($"{definition.Name}: {step.Title}")
+            .AppendLine($"Customer value: {definition.ValueStatement}")
+            .AppendLine($"Owner: {definition.OwnerName}")
+            .AppendLine($"Executor: {(string.IsNullOrWhiteSpace(executorName) ? "Unassigned" : executorName)}")
+            .AppendLine($"Inputs: {step.InputContractSummary}")
+            .AppendLine($"Outputs: {step.OutputContractSummary}")
+            .AppendLine($"Evidence: {step.EvidenceContractSummary}");
+
+        if (!string.IsNullOrWhiteSpace(step.Notes)) {
+            builder.AppendLine($"Instructions: {step.Notes}");
+        }
+
+        return builder
+            .ToString()
+            .TrimEnd();
     }
 
     private static string BuildRunRoute(ProcessRun run) {

@@ -71,8 +71,8 @@ public sealed partial class MafAgentRuntime
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
             => commandExecutionService.PythonRunFile(path, arguments, workingDirectory, timeoutSeconds);
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
-            => commandExecutionService.PowerShellRunScript(path, arguments, workingDirectory, timeoutSeconds);
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
+            => commandExecutionService.PowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds);
 
         public Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(string path, string? outputPath = null, int previewCharacters = 4000)
             => artifactToolService.ConvertDocumentToMarkdown(path, outputPath, previewCharacters);

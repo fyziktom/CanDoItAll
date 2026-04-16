@@ -18,6 +18,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 public sealed partial class MafAgentRuntime
 {
     private static readonly IAgentProviderCredentialResolver FallbackProviderCredentialResolver = new EnvironmentVariableAgentProviderCredentialResolver();
+    private static readonly TimeSpan ModelNetworkTimeout = TimeSpan.FromMinutes(10);
 
     public async Task<AIAgent> CreateHostedAgentAsync(
         AgentDefinition agent,
@@ -114,20 +115,10 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(credential.FailureMessage);
         }
 
-        OpenAIClient client;
-        if (ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))
-        {
-            client = new OpenAIClient(credential.ApiKey);
-        }
-        else
-        {
-            client = new OpenAIClient(
-                credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
-                options: new OpenAIClientOptions
-                {
-                    Endpoint = new Uri(provider.BaseUrl, UriKind.Absolute)
-                });
-        }
+        var clientOptions = CreateOpenAiClientOptions(provider.BaseUrl);
+        var client = new OpenAIClient(
+            credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
+            options: clientOptions);
 
         return provider.Transport switch
         {
@@ -159,7 +150,11 @@ public sealed partial class MafAgentRuntime
 
         var client = new AzureOpenAIClient(
             new Uri(provider.BaseUrl, UriKind.Absolute),
-            new System.ClientModel.ApiKeyCredential(credential.ApiKey));
+            new System.ClientModel.ApiKeyCredential(credential.ApiKey),
+            new AzureOpenAIClientOptions
+            {
+                NetworkTimeout = ModelNetworkTimeout
+            });
 
         return provider.Transport switch
         {
@@ -184,6 +179,20 @@ public sealed partial class MafAgentRuntime
     {
         IChatClient chatClient = new OllamaApiClient(new Uri(provider.BaseUrl, UriKind.Absolute), model);
         return chatClient.AsAIAgent(options: options);
+    }
+
+    private static OpenAIClientOptions CreateOpenAiClientOptions(string baseUrl)
+    {
+        var options = new OpenAIClientOptions
+        {
+            NetworkTimeout = ModelNetworkTimeout
+        };
+        if (!ShouldUseDefaultOpenAiEndpoint(baseUrl))
+        {
+            options.Endpoint = new Uri(baseUrl, UriKind.Absolute);
+        }
+
+        return options;
     }
 
     private AIAgent CreateInstrumentedAgent(AIAgent agent, ProviderProfile provider)

@@ -58,8 +58,23 @@
 
     private static string ResolvePaneClass(string? customClass)
     {
-        var baseClass = "flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/60";
-        return string.IsNullOrWhiteSpace(customClass) ? baseClass : $"{baseClass} {customClass}";
+        var usesExplicitMinHeight = HasExplicitMinHeight(customClass);
+        var baseClass = CssClassBuilder.Join(
+            "flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/60",
+            usesExplicitMinHeight ? null : "min-h-[26rem]");
+        return CssClassBuilder.Join(baseClass, customClass);
+    }
+
+    private static bool HasExplicitMinHeight(string? customClass)
+    {
+        if (string.IsNullOrWhiteSpace(customClass))
+        {
+            return false;
+        }
+
+        return customClass
+            .Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(segment => segment.StartsWith("min-h-", StringComparison.Ordinal));
     }
 }
 

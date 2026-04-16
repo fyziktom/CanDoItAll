@@ -83,6 +83,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             detail.Run.CompletedAtUtc,
             detail.ExecutionLog.Count)
         {
+            HasBrowserEvidenceToolInvocation = HasBrowserEvidenceToolInvocation(detail.ExecutionLog),
             Approvals = detail.Approvals
                 .OrderByDescending(item => item.RequestedAtUtc)
                 .Select(
@@ -137,6 +138,14 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
                         item.CompletedAtUtc))
                 .ToList()
         };
+    }
+
+    private static bool HasBrowserEvidenceToolInvocation(IReadOnlyList<ExecutionLogEntry> executionLog)
+    {
+        return executionLog.Any(item =>
+            item.Message.Contains("Invoking tool 'browser_navigate'", StringComparison.OrdinalIgnoreCase) ||
+            item.Message.Contains("Invoking tool 'browser_snapshot'", StringComparison.OrdinalIgnoreCase) ||
+            item.Message.Contains("Invoking tool 'browser_take_screenshot'", StringComparison.OrdinalIgnoreCase));
     }
 }
 

@@ -23,6 +23,7 @@ Review the change set against the approved design, integration consequences, and
 - Requires decision record: False
 
 ## Dependencies
+- architecture-review
 - implementation
 
 ## Role assignments
@@ -35,6 +36,7 @@ Review the change set against the approved design, integration consequences, and
 
 ## Artifact inputs
 - From step `implementation` expectation `implementation-change-set`
+- From step `architecture-review` expectation `architecture-decision-record`
 
 ## Branch outcomes
 - No explicit branch outcomes.

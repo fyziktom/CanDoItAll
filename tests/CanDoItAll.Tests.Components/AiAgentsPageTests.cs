@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using CanDoItAll.Modules.Workspace;
@@ -9,6 +10,52 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class AiAgentsPageTests
 {
+    [Fact]
+    public async Task Existing_technical_agents_are_projected_into_crm_hr_agent_roster()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Runtime Calculator Builder";
+        editor.RoleTitle = "UI builder";
+        editor.Summary = "Builds SSR calculator surfaces through the technical agent catalog.";
+        editor.Instructions = "Focus on calculator delivery tasks.";
+        editor.Status = CanDoItAll.AgentFramework.Models.AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        editor.Tags =
+        [
+            "showcase",
+            "calculator"
+        ];
+
+        var technicalAgentId = await workspaceService.SaveAgentAsync(editor);
+
+        var cut = harness.Context.RenderComponent<CrmHrAgentsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Runtime Calculator Builder", cut.Markup);
+            Assert.DoesNotContain("No AI agents yet", cut.Markup);
+        });
+
+        var projectedItem = Assert.Single(
+            await aiAgentService.ListAgentDirectoryAsync(),
+            item => item.TechnicalAgentId == technicalAgentId);
+        var workspace = await aiAgentService.GetAgentWorkspaceAsync(projectedItem.PartyId);
+        var parties = await partyDirectoryService.ListDirectoryAsync();
+
+        Assert.NotNull(workspace);
+        Assert.Equal(technicalAgentId, workspace!.TechnicalAgentId);
+        Assert.Contains(
+            parties,
+            item => item.DisplayName == "Runtime Calculator Builder" && item.PartyType == PartyType.AiAgent);
+    }
+
     [Fact]
     public async Task Creates_ai_agent_party_from_agents_page()
     {

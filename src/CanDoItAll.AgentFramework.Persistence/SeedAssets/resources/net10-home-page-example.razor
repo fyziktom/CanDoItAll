@@ -1,6 +1,8 @@
 @page "/"
 @using System.Globalization
 
+<h1>Simple Calculator</h1>
+
 <form method="get">
     <input type="number" step="any" name="left" value="@LeftText" />
     <select name="operation" value="@SelectedOperation">
@@ -11,6 +13,7 @@
     </select>
     <input type="number" step="any" name="right" value="@RightText" />
     <button type="submit">Calculate</button>
+    <a href="/">Clear</a>
 </form>
 
 @if (!string.IsNullOrWhiteSpace(ResultMessage))
@@ -35,6 +38,10 @@
     private string ResultMessage => SelectedOperation switch
     {
         "divide" when Right == 0 => "Division by zero is not allowed.",
-        _ => "..."
+        "add" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value + Right.Value).ToString(CultureInfo.InvariantCulture)}",
+        "subtract" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value - Right.Value).ToString(CultureInfo.InvariantCulture)}",
+        "multiply" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value * Right.Value).ToString(CultureInfo.InvariantCulture)}",
+        "divide" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value / Right.Value).ToString(CultureInfo.InvariantCulture)}",
+        _ => string.Empty
     };
 }

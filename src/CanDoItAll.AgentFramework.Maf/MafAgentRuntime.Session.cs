@@ -38,10 +38,19 @@ public sealed partial class MafAgentRuntime
             ];
         }
 
-        return session.Messages
+        var transcriptMessages = session.Messages
             .OrderBy(item => item.CreatedAtUtc)
             .Select(message => new ChatMessage(MapRole(message.Role), message.Content))
             .ToList();
+        if (transcriptMessages.Count == 0)
+        {
+            return
+            [
+                new ChatMessage(ChatRole.User, prompt.Trim())
+            ];
+        }
+
+        return transcriptMessages;
     }
 
     private static IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(

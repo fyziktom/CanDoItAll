@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
@@ -24,6 +25,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureProjectionContributor, ValidationProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, TestPlanProjectionContributor>();
         services.AddScoped<ProjectWorkbenchService>();
+        services.AddScoped<IProcessProjectStructureBridge, ProjectStructureProcessRunSyncBridge>();
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
         services.AddScoped<ProjectStructureLeaseService>();

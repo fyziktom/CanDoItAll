@@ -54,6 +54,22 @@ public sealed class MainLayoutDatabaseProfileTests
     }
 
     [Fact]
+    public async Task Main_layout_database_dialog_renders_copy_buttons_for_visible_database_targets()
+    {
+        await using var harness = await CreateUnlockedHarnessAsync();
+
+        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='database-dialog-copy-active-target']"));
+            Assert.NotNull(cut.Find("[data-testid='database-dialog-copy-workspace-root']"));
+            Assert.Single(cut.FindAll("[data-testid^='database-dialog-copy-profile-']"));
+        });
+    }
+
+    [Fact]
     public async Task Main_layout_hosts_notification_surface_for_runtime_toasts()
     {
         await using var harness = await CreateUnlockedHarnessAsync();

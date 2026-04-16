@@ -14,14 +14,22 @@ internal static class Program
 
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("CanDoItAll.ScenarioSeeder");
-        var seeder = scope.ServiceProvider.GetRequiredService<AgentFrameworkIntegrationSimulationSeeder>();
-
         logger.LogInformation(
-            "Seeding simulation into profile root {ProfileRoot}. Database {DatabasePath}",
+            "Seeding scenario {ScenarioName} into profile root {ProfileRoot}. Database {DatabasePath}",
+            options.ScenarioName,
             options.ProfileRootPath,
             options.DatabasePath);
 
-        var result = await seeder.SeedAsync();
+        object result = options.ScenarioName switch
+        {
+            ScenarioSeederOptions.AgentShowcaseCalculatorScenario => await scope.ServiceProvider
+                .GetRequiredService<AgentShowcaseCalculatorSeeder>()
+                .SeedAsync(),
+            _ => await scope.ServiceProvider
+                .GetRequiredService<AgentFrameworkIntegrationSimulationSeeder>()
+                .SeedAsync()
+        };
+
         Console.WriteLine(JsonSerializer.Serialize(
             result,
             new JsonSerializerOptions(JsonSerializerDefaults.Web)

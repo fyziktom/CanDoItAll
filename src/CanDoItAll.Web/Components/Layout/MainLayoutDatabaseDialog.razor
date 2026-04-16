@@ -27,7 +27,6 @@
                         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
                             <p class="cda-eyebrow">Resolved profile</p>
                             <p class="text-base font-semibold text-slate-950">@DatabaseSelection.DisplayName</p>
-                            <p class="text-sm leading-6 text-slate-600">@DatabaseSelection.Descriptor</p>
                         </Stack>
 
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -40,8 +39,46 @@
                         </Cluster>
                     </Split>
 
-                    <p class="mt-3 text-xs text-slate-500">Workspace root: @DatabaseSelection.WorkspaceRoot</p>
-                    <p class="mt-1 text-xs text-slate-500">Selection source: @DescribeResolutionSource(DatabaseSelection.ResolutionSource)</p>
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="mt-3">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Stack GapScale="LayoutGap.Tiny"
+                                   Class="min-w-0 flex-1">
+                                <p class="cda-eyebrow">Resolved target</p>
+                                <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
+                                   data-testid="database-dialog-active-target">@DatabaseSelection.Descriptor</p>
+                            </Stack>
+                            <CopyButton Value="@DatabaseSelection.Descriptor"
+                                        DisplayMode="CopyButtonDisplayMode.IconButton"
+                                        Size="CopyButtonSize.Small"
+                                        AriaLabel="Copy active database target"
+                                        data-testid="database-dialog-copy-active-target" />
+                        </Split>
+
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Stack GapScale="LayoutGap.Tiny"
+                                   Class="min-w-0 flex-1">
+                                <p class="cda-eyebrow">Workspace root</p>
+                                <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
+                                   data-testid="database-dialog-workspace-root">@DatabaseSelection.WorkspaceRoot</p>
+                            </Stack>
+                            <CopyButton Value="@DatabaseSelection.WorkspaceRoot"
+                                        DisplayMode="CopyButtonDisplayMode.IconButton"
+                                        Size="CopyButtonSize.Small"
+                                        AriaLabel="Copy active database workspace root"
+                                        data-testid="database-dialog-copy-workspace-root" />
+                        </Split>
+                    </Stack>
+
+                    <p class="mt-3 text-xs text-slate-500">Selection source: @DescribeResolutionSource(DatabaseSelection.ResolutionSource)</p>
                 </div>
             }
 
@@ -92,6 +129,13 @@
                                     }
                                 </Cluster>
                             </Status>
+                            <Actions>
+                                <CopyButton Value="@profile.Descriptor"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            Size="CopyButtonSize.Small"
+                                            AriaLabel="@($"Copy database target for {profile.DisplayName}")"
+                                            data-testid="@($"database-dialog-copy-profile-{profile.Id:N}")" />
+                            </Actions>
                         </SelectionListItem>
                     }
                 </Stack>

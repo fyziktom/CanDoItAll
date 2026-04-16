@@ -2655,6 +2655,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ArtifactExpectationId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ArtifactKind")
                         .IsRequired()
                         .HasMaxLength(48)
@@ -2703,6 +2706,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ArtifactExpectationId");
 
                     b.HasIndex("ProcessRunId");
 
@@ -5939,6 +5944,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactExpectationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
                         .WithMany()
                         .HasForeignKey("ProcessRunId")

@@ -321,7 +321,12 @@
           "ValidationRequirementSummary": "Must capture selected option, rejected options, source-of-truth choice, and migration ownership."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "architecture-gate-checklist"
@@ -361,6 +366,10 @@
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
+        {
+          "DependsOnStepKey": "feature-intake",
+          "DependsOnBranchOutcomeKey": ""
+        },
         {
           "DependsOnStepKey": "architecture-review",
           "DependsOnBranchOutcomeKey": ""
@@ -408,7 +417,16 @@
           "ValidationRequirementSummary": "Must name data changes, operational preconditions, and rollback steps."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "implementation-readiness-checklist",
@@ -449,6 +467,10 @@
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
         {
           "DependsOnStepKey": "implementation",
           "DependsOnBranchOutcomeKey": ""
@@ -495,6 +517,10 @@
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
         }
       ],
       "BranchOutcomes": [],
@@ -531,6 +557,10 @@
       "BranchCanvasY": 0.0,
       "Dependencies": [
         {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
           "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
@@ -565,7 +595,16 @@
           "ValidationRequirementSummary": "Must name changed flows, assertion depth, screenshots, and unresolved risks."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "peer-review-note",
+          "SourceStepKey": "peer-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "qa-evidence-checklist"
@@ -604,6 +643,10 @@
       "BranchCanvasY": 0.0,
       "Dependencies": [
         {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
           "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
@@ -631,7 +674,16 @@
           "ValidationRequirementSummary": "Must capture controls, residual risk owner, and approval or block rationale."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "peer-review-note",
+          "SourceStepKey": "peer-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "security-review-checklist"

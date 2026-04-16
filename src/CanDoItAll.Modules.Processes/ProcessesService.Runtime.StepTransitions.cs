@@ -35,6 +35,18 @@ public sealed partial class ProcessesService
             }
 
             var selectedBranchOutcome = transitionResolutionResult.Value!.SelectedBranchOutcome;
+            if (request.TargetStatus == ProcessStepRunStatus.Completed)
+            {
+                var artifactValidationResult = ValidateRequiredArtifactsForCompletion(
+                    transitionContext.StepRun,
+                    transitionContext.RequiredArtifactExpectations,
+                    transitionContext.StepArtifacts);
+                if (artifactValidationResult.IsFailure)
+                {
+                    return Result.Failure(artifactValidationResult.Errors);
+                }
+            }
+
             var trimmedReason = request.Reason.Trim();
             var now = clock.GetUtcNow();
 
@@ -129,6 +141,12 @@ public sealed partial class ProcessesService
                 await MaybeCreateImprovementCandidateAsync(dbContext, transitionContext.Run, transitionContext.StepRun, request, cancellationToken);
             }
 
+            await projectStructureBridge.SyncRunAsync(
+                dbContext,
+                transitionContext.Run,
+                stepRunsByDefinitionId.Values.ToList(),
+                cancellationToken);
+
             if (!request.SuppressAutomationDispatch)
             {
                 automationDispatchOutboxId = await processOutboxService.EnqueueAutomationDispatchAsync(
@@ -197,9 +215,20 @@ public sealed partial class ProcessesService
             : await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessArtifactExpectation> requiredArtifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(item => item.StepDefinitionId == stepRun.StepDefinitionId && item.IsRequired)
+            .OrderBy(item => item.Title)
+            .ToListAsync(cancellationToken);
         var persistedStepRuns = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.ProcessRunId == run.Id)
             .ToListAsync(cancellationToken);
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts = (await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item =>
+                item.ProcessRunId == run.Id &&
+                item.StepRunId == stepRun.Id)
+            .ToListAsync(cancellationToken))
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToList();
 
         var currentStepDefinition = stepDefinitions.Single(item => item.Id == stepRun.StepDefinitionId);
         var branchOutcomesByStepId = branchOutcomes
@@ -219,7 +248,84 @@ public sealed partial class ProcessesService
                 stepDefinitionsById,
                 stepDependenciesByStepId,
                 branchOutcomesByStepId,
-                persistedStepRuns));
+                persistedStepRuns,
+                requiredArtifactExpectations,
+                stepArtifacts));
+    }
+
+    private static Result ValidateRequiredArtifactsForCompletion(
+        ProcessStepRun stepRun,
+        IReadOnlyList<ProcessArtifactExpectation> requiredArtifactExpectations,
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+    {
+        if (requiredArtifactExpectations.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        var unmetRequirements = new List<string>();
+        foreach (var expectation in requiredArtifactExpectations)
+        {
+            var artifact = stepArtifacts.FirstOrDefault(item => SatisfiesArtifactExpectation(item, expectation));
+            if (artifact is null)
+            {
+                unmetRequirements.Add(expectation.Title);
+            }
+        }
+
+        if (unmetRequirements.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        return Result.Failure(
+            Error.Validation(
+                $"Step '{stepRun.Title}' cannot be completed until the required artifacts are recorded: {string.Join(", ", unmetRequirements)}.",
+                "processes.step-completion-missing-required-artifacts"));
+    }
+
+    private static bool SatisfiesArtifactExpectation(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectation expectation)
+    {
+        if (artifact.ArtifactKind != expectation.ArtifactKind)
+        {
+            return false;
+        }
+
+        if (artifact.SensitivityLevel < expectation.SensitivityLevel)
+        {
+            return false;
+        }
+
+        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
+        {
+            return false;
+        }
+
+        if (artifact.ArtifactExpectationId.HasValue)
+        {
+            return artifact.ArtifactExpectationId.Value == expectation.Id;
+        }
+
+        return string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool SatisfiesTrustRequirement(
+        ProcessArtifactTrustStatus trustStatus,
+        ProcessArtifactTrustRequirement trustRequirement)
+    {
+        return trustRequirement switch
+        {
+            ProcessArtifactTrustRequirement.None => true,
+            ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
+                ProcessArtifactTrustStatus.ReviewRequired or
+                ProcessArtifactTrustStatus.Approved or
+                ProcessArtifactTrustStatus.TrustedSource,
+            ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
+            _ => false
+        };
     }
 
     private static void ApplyStepRunTransitionState(
@@ -288,5 +394,7 @@ public sealed partial class ProcessesService
         IReadOnlyDictionary<Guid, ProcessStepDefinition> StepDefinitionsById,
         IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> StepDependenciesByStepId,
         IReadOnlyDictionary<Guid, List<ProcessStepBranchOutcomeDefinition>> BranchOutcomesByStepId,
-        IReadOnlyList<ProcessStepRun> PersistedStepRuns);
+        IReadOnlyList<ProcessStepRun> PersistedStepRuns,
+        IReadOnlyList<ProcessArtifactExpectation> RequiredArtifactExpectations,
+        IReadOnlyList<ProcessArtifactRecord> StepArtifacts);
 }

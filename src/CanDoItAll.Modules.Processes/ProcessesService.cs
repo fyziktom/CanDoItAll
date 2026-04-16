@@ -16,6 +16,7 @@ public sealed partial class ProcessesService(
     IProcessRuntimeReadQueryService runtimeReadQueryService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IProcessExecutorRegistryBridge executorRegistryBridge,
+    IProcessProjectStructureBridge projectStructureBridge,
     HrService hrService,
     AiAgentService aiAgentService,
     CollaborationService collaborationService,

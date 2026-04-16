@@ -256,6 +256,7 @@
     private string searchText = string.Empty;
     private string validationFilter = string.Empty;
     private string? handledPartyKey;
+    private string? messageRetentionPartyKey;
     private string? message;
     private string messageTone = "success";
 
@@ -292,7 +293,13 @@
 
             if (workspace is not null)
             {
-                ApplyLoadedWorkspace(workspace, clearMessage: true);
+                var preserveMessage = string.Equals(messageRetentionPartyKey, targetKey, StringComparison.Ordinal);
+                ApplyLoadedWorkspace(workspace, clearMessage: !preserveMessage);
+                if (preserveMessage)
+                {
+                    messageRetentionPartyKey = null;
+                }
+
                 handledPartyKey = targetKey;
                 return;
             }
@@ -406,6 +413,7 @@
         quickCreateEditor.Summary = string.Empty;
 
         await LoadItemsAsync();
+        messageRetentionPartyKey = result.Value.ToString("N");
         var workspace = await AiAgentService.GetAgentWorkspaceAsync(result.Value);
         if (workspace is not null)
         {

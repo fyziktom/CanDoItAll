@@ -184,6 +184,7 @@ internal sealed class ProcessArtifactRecordConfiguration : IEntityTypeConfigurat
         builder.Property(record => record.ExternalReferenceKey).HasMaxLength(200);
         builder.HasIndex(record => record.ProcessRunId);
         builder.HasIndex(record => record.StepRunId);
+        builder.HasIndex(record => record.ArtifactExpectationId);
         builder.HasOne<ProcessRun>()
             .WithMany()
             .HasForeignKey(record => record.ProcessRunId)
@@ -191,6 +192,10 @@ internal sealed class ProcessArtifactRecordConfiguration : IEntityTypeConfigurat
         builder.HasOne<ProcessStepRun>()
             .WithMany()
             .HasForeignKey(record => record.StepRunId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<ProcessArtifactExpectation>()
+            .WithMany()
+            .HasForeignKey(record => record.ArtifactExpectationId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

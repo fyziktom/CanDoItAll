@@ -2660,6 +2660,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ArtifactExpectationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ArtifactKind")
                         .IsRequired()
                         .HasMaxLength(48)
@@ -2708,6 +2711,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(48)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ArtifactExpectationId");
 
                     b.HasIndex("ProcessRunId");
 
@@ -5945,6 +5950,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactExpectationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
                         .WithMany()
                         .HasForeignKey("ProcessRunId")

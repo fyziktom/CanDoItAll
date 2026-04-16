@@ -30,7 +30,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             .ToList();
         await UpsertCatalogProvidersAsync(mappedProviders, cancellationToken);
 
-        return mappedProviders;
+        return await MergeWithCatalogProvidersAsync(mappedProviders, cancellationToken);
     }
 
     public async Task<AgentFrameworkProviderProfile?> GetProviderAsync(
@@ -43,7 +43,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
         if (provider is null)
         {
-            return null;
+            return await LoadCatalogProviderAsync(providerId, cancellationToken);
         }
 
         var mappedProvider = MapToAgentFrameworkProvider(provider);
@@ -206,6 +206,27 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                     .ToList()
             };
         }, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<AgentFrameworkProviderProfile>> MergeWithCatalogProvidersAsync(
+        IReadOnlyList<AgentFrameworkProviderProfile> providers,
+        CancellationToken cancellationToken)
+    {
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        return catalog.Providers
+            .Concat(providers)
+            .GroupBy(item => item.Id)
+            .Select(group => group.Last())
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task<AgentFrameworkProviderProfile?> LoadCatalogProviderAsync(
+        Guid providerId,
+        CancellationToken cancellationToken)
+    {
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        return catalog.Providers.FirstOrDefault(item => item.Id == providerId);
     }
 
     private AgentFrameworkProviderProfile MapToAgentFrameworkProvider(

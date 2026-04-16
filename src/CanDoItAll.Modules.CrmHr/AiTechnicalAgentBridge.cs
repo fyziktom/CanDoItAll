@@ -79,6 +79,9 @@ public sealed record AiTechnicalAgentSaveResult(
 
 public interface IAiTechnicalAgentBridge
 {
+    Task SynchronizeDirectoryProjectionAsync(
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default);
@@ -96,6 +99,12 @@ internal sealed class LegacyAiTechnicalAgentBridge(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock) : IAiTechnicalAgentBridge
 {
+    public Task SynchronizeDirectoryProjectionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     public async Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default)

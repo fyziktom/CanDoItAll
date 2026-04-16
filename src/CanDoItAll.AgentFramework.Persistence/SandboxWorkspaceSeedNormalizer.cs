@@ -266,6 +266,13 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool ShouldRefreshManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)
     {
+        if (string.Equals(seededCapability.Key, "blazor-calculator-inline-skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.ConfigurationJson.Contains("do not pre-create a nested `SimpleCalculatorApp` project directory", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.ConfigurationJson.Contains("The page must include an explicit clear or reset path", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.ConfigurationJson.Contains("Add targeted validation for the calculator behavior", StringComparison.OrdinalIgnoreCase);
+        }
+
         if (string.Equals(seededCapability.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.ConfigurationJson.Contains("Use this skill only when the user explicitly asks for a Mermaid or class-diagram output.", StringComparison.OrdinalIgnoreCase);

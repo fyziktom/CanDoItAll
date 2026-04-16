@@ -6,6 +6,9 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
 {
+    private static readonly TimeSpan StreamDrainTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan StreamCancellationTimeout = TimeSpan.FromSeconds(1);
+
     private static readonly ExecutionBoundaryDescriptor Boundary = new(
         Mode: "PolicyOnlyLocal",
         FilesystemScope: "Workspace-relative request shaping only. Child processes still inherit the host OS filesystem rights.",
@@ -68,8 +71,12 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Clamp(request.TimeoutSeconds, 1, 3600)));
             using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken);
-            var stdoutTask = ReadStreamAsync(process.StandardOutput, request.StdoutLimitCharacters, CancellationToken.None);
-            var stderrTask = ReadStreamAsync(process.StandardError, request.StderrLimitCharacters, CancellationToken.None);
+            using var stdoutReadCancellation = new CancellationTokenSource();
+            using var stderrReadCancellation = new CancellationTokenSource();
+            var stdoutCapture = new CappedTextCapture(request.StdoutLimitCharacters);
+            var stderrCapture = new CappedTextCapture(request.StderrLimitCharacters);
+            var stdoutTask = ReadStreamAsync(process.StandardOutput, stdoutCapture, stdoutReadCancellation.Token);
+            var stderrTask = ReadStreamAsync(process.StandardError, stderrCapture, stderrReadCancellation.Token);
             var timedOut = false;
             var canceled = false;
             var failureMessage = string.Empty;
@@ -93,8 +100,13 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
                 await WaitForExitAfterCancellationAsync(process).ConfigureAwait(false);
             }
 
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
+            var stdoutCompletionTask = CompleteStreamReadAsync(stdoutTask, stdoutCapture, stdoutReadCancellation);
+            var stderrCompletionTask = CompleteStreamReadAsync(stderrTask, stderrCapture, stderrReadCancellation);
+
+            await Task.WhenAll(stdoutCompletionTask, stderrCompletionTask).ConfigureAwait(false);
+
+            var stdout = await stdoutCompletionTask.ConfigureAwait(false);
+            var stderr = await stderrCompletionTask.ConfigureAwait(false);
             completedAtUtc = DateTimeOffset.UtcNow;
 
             return new WorkspaceProcessExecutionResult(
@@ -132,38 +144,35 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
         }
     }
 
-    private static async Task<CappedTextResult> ReadStreamAsync(StreamReader reader, int limit, CancellationToken cancellationToken)
+    private static async Task ReadStreamAsync(StreamReader reader, CappedTextCapture capture, CancellationToken cancellationToken)
     {
-        var safeLimit = Math.Clamp(limit, 256, 1024 * 1024);
-        var builder = new StringBuilder();
-        var buffer = new char[4096];
-        var truncated = false;
-
-        while (true)
+        try
         {
-            var read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
+            var buffer = new char[4096];
 
-            if (builder.Length < safeLimit)
+            while (true)
             {
-                var available = safeLimit - builder.Length;
-                var toAppend = Math.Min(available, read);
-                builder.Append(buffer, 0, toAppend);
-                if (toAppend < read)
+                var read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+                if (read == 0)
                 {
-                    truncated = true;
+                    break;
                 }
-            }
-            else
-            {
-                truncated = true;
+
+                capture.Append(buffer, read);
             }
         }
-
-        return new CappedTextResult(builder.ToString().Trim(), truncated);
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            capture.MarkTruncated();
+        }
+        catch (ObjectDisposedException)
+        {
+            capture.MarkTruncated();
+        }
+        catch (IOException)
+        {
+            capture.MarkTruncated();
+        }
     }
 
     private static async Task WaitForExitAfterCancellationAsync(Process process)
@@ -178,6 +187,39 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
         }
     }
 
+    private static async Task<CappedTextResult> CompleteStreamReadAsync(
+        Task readTask,
+        CappedTextCapture capture,
+        CancellationTokenSource cancellation)
+    {
+        if (readTask.IsCompleted)
+        {
+            await readTask.ConfigureAwait(false);
+            return capture.Snapshot();
+        }
+
+        try
+        {
+            await readTask.WaitAsync(StreamDrainTimeout).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            capture.MarkTruncated();
+            cancellation.Cancel();
+
+            try
+            {
+                await readTask.WaitAsync(StreamCancellationTimeout).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Best-effort only. We return the partial capture instead of blocking the command receipt forever.
+            }
+        }
+
+        return capture.Snapshot();
+    }
+
     private static void TryKillProcessTree(Process process)
     {
         try
@@ -187,6 +229,56 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
         catch
         {
             // Best-effort only. The timeout result remains more useful than throwing here.
+        }
+    }
+
+    private sealed class CappedTextCapture
+    {
+        private readonly StringBuilder builder = new();
+        private readonly object sync = new();
+        private readonly int safeLimit;
+        private bool truncated;
+
+        public CappedTextCapture(int limit)
+        {
+            safeLimit = Math.Clamp(limit, 256, 1024 * 1024);
+        }
+
+        public void Append(char[] buffer, int read)
+        {
+            lock (sync)
+            {
+                if (builder.Length < safeLimit)
+                {
+                    var available = safeLimit - builder.Length;
+                    var toAppend = Math.Min(available, read);
+                    builder.Append(buffer, 0, toAppend);
+                    if (toAppend < read)
+                    {
+                        truncated = true;
+                    }
+                }
+                else
+                {
+                    truncated = true;
+                }
+            }
+        }
+
+        public void MarkTruncated()
+        {
+            lock (sync)
+            {
+                truncated = true;
+            }
+        }
+
+        public CappedTextResult Snapshot()
+        {
+            lock (sync)
+            {
+                return new CappedTextResult(builder.ToString().Trim(), truncated);
+            }
         }
     }
 

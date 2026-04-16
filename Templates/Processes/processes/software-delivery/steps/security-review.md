@@ -23,6 +23,7 @@ Review tenant-data handling, secrets, boundary changes, and policy exceptions be
 - Requires decision record: False
 
 ## Dependencies
+- implementation
 - peer-review
 
 ## Role assignments
@@ -32,7 +33,8 @@ Review tenant-data handling, secrets, boundary changes, and policy exceptions be
 - `security-exception-assessment` -> `security-exception-assessment` / Security exception assessment | kind=Decision | trust=HumanApproved | sensitivity=Confidential | validation=Must capture controls, residual risk owner, and approval or block rationale.
 
 ## Artifact inputs
-- No explicit artifact inputs.
+- From step `implementation` expectation `implementation-change-set`
+- From step `peer-review` expectation `peer-review-note`
 
 ## Branch outcomes
 - No explicit branch outcomes.

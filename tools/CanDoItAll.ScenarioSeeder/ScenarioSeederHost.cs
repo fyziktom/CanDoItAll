@@ -1,7 +1,9 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Modules.Activity;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
@@ -26,8 +28,12 @@ namespace CanDoItAll.ScenarioSeeder;
 internal sealed class ScenarioSeederOptions
 {
     private const string DefaultManagedProfileRoot = @"C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\fe8c1138e1b541cc97a32dbead3a2394";
+    public const string DefaultScenario = "agentframework-integration-simulation";
+    public const string AgentShowcaseCalculatorScenario = "agent-showcase-calculator";
 
     public required string RepositoryRootPath { get; init; }
+
+    public required string ScenarioName { get; init; }
 
     public required string ProfileRootPath { get; init; }
 
@@ -43,6 +49,7 @@ internal sealed class ScenarioSeederOptions
     {
         var repositoryRootPath = currentDirectory;
         var profileRootPath = DefaultManagedProfileRoot;
+        var scenarioName = DefaultScenario;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -54,6 +61,9 @@ internal sealed class ScenarioSeederOptions
                 case "--profile-root":
                     profileRootPath = GetRequiredValue(args, ref index);
                     break;
+                case "--scenario":
+                    scenarioName = GetRequiredValue(args, ref index);
+                    break;
             }
         }
 
@@ -64,6 +74,9 @@ internal sealed class ScenarioSeederOptions
         return new ScenarioSeederOptions
         {
             RepositoryRootPath = Path.GetFullPath(repositoryRootPath),
+            ScenarioName = string.IsNullOrWhiteSpace(scenarioName)
+                ? DefaultScenario
+                : scenarioName.Trim(),
             ProfileRootPath = Path.GetFullPath(profileRootPath),
             DatabasePath = Path.GetFullPath(databasePath),
             WorkspaceRootPath = Path.GetFullPath(workspaceRootPath),
@@ -116,6 +129,7 @@ internal static class ScenarioSeederHost
             builder.SetMinimumLevel(LogLevel.Information);
         });
         services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton(options);
         services.AddSingleton<SeederHostApplicationLifetime>();
         services.AddSingleton<IHostApplicationLifetime>(provider => provider.GetRequiredService<SeederHostApplicationLifetime>());
         services.AddCanDoItAllInfrastructure(configuration, environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
@@ -133,8 +147,11 @@ internal static class ScenarioSeederHost
         services.AddTestLabModule();
         services.AddActivityModule();
         services.AddAutomationModule();
+        services.AddCollaborationModule();
         services.AddCrmHrModule();
+        services.AddAgentFrameworkModule();
         services.AddScoped<AgentFrameworkIntegrationSimulationSeeder>();
+        services.AddScoped<AgentShowcaseCalculatorSeeder>();
 
         var serviceProvider = services.BuildServiceProvider(ServiceProviderOptions);
         await using var scope = serviceProvider.CreateAsyncScope();

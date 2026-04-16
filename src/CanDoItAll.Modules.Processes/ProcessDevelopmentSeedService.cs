@@ -152,6 +152,16 @@ public sealed partial class ProcessDevelopmentSeedService
     {
         return EnumValueParser.ParseOrDefault(value, fallback);
     }
+
+    private static ProcessArtifactTrustStatus ParseArtifactTrustStatus(string? value)
+    {
+        if (string.Equals(value, "HumanApproved", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactTrustStatus.Approved;
+        }
+
+        return ParseEnum(value, ProcessArtifactTrustStatus.ReviewRequired);
+    }
 }
 
 public sealed record ProcessSeedReport(
