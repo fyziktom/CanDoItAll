@@ -1479,7 +1479,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Interview clip", cut.Markup);
             Assert.Contains("project-structure-audio-preview", cut.Markup);
             Assert.Contains("audio/mpeg", cut.Markup);
-            Assert.Contains("Open locally", cut.Markup);
+            Assert.Contains("Open in File Explorer", cut.Markup);
             Assert.Contains("Expand preview", cut.Markup);
         });
     }
@@ -1762,6 +1762,11 @@ public sealed class ProjectStructurePageTests
                 })));
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
+
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create")
+            .SetResult(true);
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update")
+            .SetResult(true);
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));

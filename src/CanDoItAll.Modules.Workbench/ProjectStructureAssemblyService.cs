@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Processes;
@@ -978,6 +981,40 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                     group.Count(item => item.Status == ProcessStepRunStatus.Blocked),
                     group.Count(item => item.Status == ProcessStepRunStatus.WaitingApproval)))
                 .ToDictionaryAsync(item => item.RunId, cancellationToken);
+        var outputFoldersByRunId = runIds.Length == 0
+            ? new Dictionary<Guid, IReadOnlyList<ProcessRunOutputFolderProjection>>()
+            : (await context.DbContext.Set<ProcessArtifactRecord>()
+                    .Where(item => runIds.Contains(item.ProcessRunId) && !string.IsNullOrWhiteSpace(item.ManagedStoragePath))
+                    .ToListAsync(cancellationToken))
+                .Select(item => new
+                {
+                    item.ProcessRunId,
+                    item.Title,
+                    item.CreatedAtUtc,
+                    DirectoryPath = ResolveManagedOutputDirectoryPath(item.ManagedStoragePath)
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.DirectoryPath))
+                .GroupBy(item => new
+                {
+                    item.ProcessRunId,
+                    DirectoryPath = item.DirectoryPath!
+                })
+                .Select(group => new ProcessRunOutputFolderProjection(
+                    group.Key.ProcessRunId,
+                    group.Key.DirectoryPath,
+                    group.Count(),
+                    group.Select(item => item.Title.Trim())
+                        .Where(item => !string.IsNullOrWhiteSpace(item))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                        .ToList(),
+                    group.Max(item => item.CreatedAtUtc)))
+                .GroupBy(item => item.RunId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => (IReadOnlyList<ProcessRunOutputFolderProjection>)group
+                        .OrderBy(item => item.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+                        .ToList());
         var runsByDefinitionId = runs
             .GroupBy(item => item.ProcessDefinitionId)
             .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.UpdatedAtUtc).ToList());
@@ -1026,6 +1063,7 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                 var stats = stepRunStatsByRunId.GetValueOrDefault(run.Run.Id, new ProcessRunProjectionStats(run.Run.Id, 0, 0, 0, 0));
                 var runNodeKey = BuildProcessRunNodeKey(run.Run.Id);
                 var runPosition = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ProcessRun, definition.Index + run.Index);
+                var runNodeY = definitionPosition.Y + 70 + (run.Index * 120);
 
                 context.AddNode(new ProjectObjectRecord
                 {
@@ -1042,11 +1080,56 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                         run.Run.Id),
                     ParentNodeKey = definitionNodeKey,
                     PositionX = runPosition.X,
-                    PositionY = definitionPosition.Y + 70 + (run.Index * 120),
+                    PositionY = runNodeY,
                     CreatedAtUtc = run.Run.CreatedAtUtc,
                     UpdatedAtUtc = run.Run.UpdatedAtUtc
                 });
                 context.AddLink(definitionNodeKey, runNodeKey, ProjectObjectLinkKind.Contains);
+
+                if (!outputFoldersByRunId.TryGetValue(run.Run.Id, out var outputFolders))
+                {
+                    continue;
+                }
+
+                foreach (var outputFolder in outputFolders.Select((item, index) => new { Folder = item, Index = index }))
+                {
+                    var outputNodeKey = BuildProcessRunOutputFolderNodeKey(run.Run.Id, outputFolder.Folder.DirectoryPath);
+                    var storageReference = CreateManagedStorageReference(outputFolder.Folder.DirectoryPath);
+                    var metadata = new ProjectObjectMetadataEnvelope
+                    {
+                        File = new ProjectFileMetadata
+                        {
+                            SourceHint = "Process run output folder",
+                            ExternalPath = outputFolder.Folder.DirectoryPath
+                        }
+                    };
+
+                    context.AddNode(new ProjectObjectRecord
+                    {
+                        ProjectId = context.ProjectId,
+                        NodeKey = outputNodeKey,
+                        ObjectType = ProjectObjectType.File,
+                        Title = BuildProcessRunOutputFolderTitle(outputFolder.Folder.DirectoryPath),
+                        Subtitle = BuildProcessRunOutputFolderSubtitle(outputFolder.Folder.ArtifactCount),
+                        Status = "Stored",
+                        Notes = BuildProcessRunOutputFolderNotes(outputFolder.Folder),
+                        MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata),
+                        Binding = new ProjectNodeBindingState(
+                            $"/projects/{context.ProjectId}/processes?runId={run.Run.Id}",
+                            "process-run-output-folder",
+                            run.Run.Id,
+                            outputFolder.Folder.DirectoryPath,
+                            "application/x-directory",
+                            string.Empty,
+                            StorageJson.SerializeReference(storageReference)),
+                        ParentNodeKey = runNodeKey,
+                        PositionX = runPosition.X + 320,
+                        PositionY = runNodeY + 34 + (outputFolder.Index * 72),
+                        CreatedAtUtc = outputFolder.Folder.LastRecordedAtUtc,
+                        UpdatedAtUtc = outputFolder.Folder.LastRecordedAtUtc
+                    });
+                    context.AddLink(runNodeKey, outputNodeKey, ProjectObjectLinkKind.Contains);
+                }
             }
         }
     }
@@ -1059,6 +1142,13 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
     private static string BuildProcessRunNodeKey(Guid runId)
     {
         return $"process-run:{runId}";
+    }
+
+    private static string BuildProcessRunOutputFolderNodeKey(Guid runId, string directoryPath)
+    {
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(directoryPath)))
+            .ToLowerInvariant();
+        return $"process-run-output:{runId}:{hash[..12]}";
     }
 
     private static string BuildProcessDefinitionSubtitle(ProcessDefinition definition, int roleCount, int stepCount)
@@ -1113,12 +1203,101 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
             }.Where(item => !string.IsNullOrWhiteSpace(item)));
     }
 
+    private static string BuildProcessRunOutputFolderTitle(string directoryPath)
+    {
+        var leaf = directoryPath
+            .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .LastOrDefault();
+        return string.IsNullOrWhiteSpace(leaf)
+            ? "Run outputs"
+            : leaf.Trim();
+    }
+
+    private static string BuildProcessRunOutputFolderSubtitle(int artifactCount)
+    {
+        return artifactCount == 1
+            ? "1 stored artifact"
+            : $"{artifactCount} stored artifacts";
+    }
+
+    private static string BuildProcessRunOutputFolderNotes(ProcessRunOutputFolderProjection folder)
+    {
+        var noteLines = new List<string>
+        {
+            $"Managed path: {folder.DirectoryPath}"
+        };
+        if (folder.ArtifactTitles.Count == 1)
+        {
+            noteLines.Add($"Artifact: {folder.ArtifactTitles[0]}");
+        }
+        else if (folder.ArtifactTitles.Count > 1)
+        {
+            noteLines.Add($"Artifacts: {string.Join(", ", folder.ArtifactTitles.Take(4))}");
+            if (folder.ArtifactTitles.Count > 4)
+            {
+                noteLines.Add($"+{folder.ArtifactTitles.Count - 4} more artifact title(s)");
+            }
+        }
+
+        return string.Join(Environment.NewLine, noteLines);
+    }
+
+    private static string ResolveManagedOutputDirectoryPath(string managedStoragePath)
+    {
+        var normalizedPath = managedStoragePath
+            .Trim()
+            .Replace('\\', '/')
+            .Trim('/');
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return string.Empty;
+        }
+
+        var platformPath = normalizedPath.Replace('/', Path.DirectorySeparatorChar);
+        var directoryPath = Path.GetDirectoryName(platformPath);
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return normalizedPath;
+        }
+
+        return directoryPath.Replace(Path.DirectorySeparatorChar, '/');
+    }
+
+    private static StorageObjectReference CreateManagedStorageReference(string relativePath)
+    {
+        var normalizedPath = relativePath
+            .Trim()
+            .Replace('\\', '/')
+            .TrimStart('/');
+        var route = normalizedPath.StartsWith("managed-files/", StringComparison.OrdinalIgnoreCase)
+            ? "/" + normalizedPath
+            : $"/managed-files/{normalizedPath}";
+
+        return new StorageObjectReference(
+            null,
+            StorageProviderKind.FileSystem,
+            StorageLocatorKind.RelativePath,
+            normalizedPath,
+            string.Empty,
+            "application/x-directory",
+            null,
+            route,
+            "{}");
+    }
+
     private sealed record ProcessRunProjectionStats(
         Guid RunId,
         int TotalStepCount,
         int CompletedStepCount,
         int BlockedStepCount,
         int WaitingApprovalCount);
+
+    private sealed record ProcessRunOutputFolderProjection(
+        Guid RunId,
+        string DirectoryPath,
+        int ArtifactCount,
+        IReadOnlyList<string> ArtifactTitles,
+        DateTimeOffset LastRecordedAtUtc);
 }
 
 internal sealed class ValidationProjectionContributor : IProjectStructureProjectionContributor

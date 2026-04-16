@@ -1,6 +1,5 @@
 @page "/crm-hr/agents"
 @inject AiAgentService AiAgentService
-@inject PartyDirectoryService PartyDirectoryService
 @inject NavigationManager Navigation
 
 <PageTitle>CRM / HR Agents</PageTitle>
@@ -392,15 +391,11 @@
             return;
         }
 
-        var result = await PartyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
-            PartyType = PartyType.AiAgent,
-            LifecycleStatus = PartyLifecycleStatus.Active,
-            DisplayName = quickCreateEditor.Name.Trim(),
-            ExternalCode = quickCreateEditor.ExternalCode.Trim(),
-            Summary = quickCreateEditor.Summary.Trim(),
-            LastChangedBy = "crm-hr-ui"
-        });
+        var result = await AiAgentService.CreateAgentAsync(
+            quickCreateEditor.Name,
+            quickCreateEditor.ExternalCode,
+            quickCreateEditor.Summary,
+            "crm-hr-ui");
         if (result.IsFailure)
         {
             message = string.Join(" ", result.Errors.Select(error => error.Message));

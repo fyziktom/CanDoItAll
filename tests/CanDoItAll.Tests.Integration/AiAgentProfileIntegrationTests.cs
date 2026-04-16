@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
@@ -114,6 +115,97 @@ public sealed class AiAgentProfileIntegrationTests
 
         Assert.True(result.IsFailure);
         Assert.Contains(result.Errors, error => error.Code == "crmhr.ai-agent.owner-invalid");
+    }
+
+    [Fact]
+    public async Task CreateAgentAsync_creates_agentframework_backed_agent_and_excludes_orphan_ai_parties()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var orphanResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
+        {
+            PartyType = PartyType.AiAgent,
+            LifecycleStatus = PartyLifecycleStatus.Active,
+            DisplayName = "Orphan CRM Agent",
+            Summary = "Exists only in CRM-HR.",
+            LastChangedBy = "integration-tests"
+        });
+        Assert.True(orphanResult.IsSuccess);
+
+        var createResult = await aiAgentService.CreateAgentAsync(
+            "Bound Delivery Agent",
+            "AI-BIND",
+            "Provisioned through CRM-HR and backed by AgentFramework.",
+            "integration-tests");
+        Assert.True(createResult.IsSuccess);
+
+        var roster = await aiAgentService.ListAgentDirectoryAsync();
+        var rosterItem = Assert.Single(roster, item => item.PartyId == createResult.Value);
+        var workspace = await aiAgentService.GetAgentWorkspaceAsync(createResult.Value);
+        var technicalAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+
+        Assert.DoesNotContain(roster, item => item.PartyId == orphanResult.Value);
+        Assert.Equal("Bound Delivery Agent", rosterItem.DisplayName);
+        Assert.NotNull(rosterItem.TechnicalAgentId);
+        Assert.NotNull(workspace);
+        Assert.NotNull(workspace!.TechnicalAgentId);
+        Assert.Contains(technicalAgents, item => item.Id == rosterItem.TechnicalAgentId);
+    }
+
+    [Fact]
+    public async Task ListAgentDirectoryAsync_prefers_agentframework_party_projection_over_duplicate_crm_binding()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var createResult = await aiAgentService.CreateAgentAsync(
+            "Canonical Delivery Agent",
+            "AI-CANON",
+            "Provisioned through CRM-HR.",
+            "integration-tests");
+        Assert.True(createResult.IsSuccess);
+
+        var workspace = await aiAgentService.GetAgentWorkspaceAsync(createResult.Value);
+        Assert.NotNull(workspace);
+        Assert.True(workspace!.TechnicalAgentId.HasValue);
+
+        var stalePartyId = await CreateAgentAsync(partyDirectoryService, "Stale Duplicate Binding");
+        var duplicateBindingCreatedAt = DateTimeOffset.UtcNow.AddMinutes(5);
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<AiResourceBinding>().Add(new AiResourceBinding
+            {
+                PartyId = stalePartyId,
+                TechnicalAgentId = workspace.TechnicalAgentId,
+                BindingStatus = AiResourceBindingStatus.Bound,
+                BindingReason = "Stale duplicate CRM binding.",
+                LastError = string.Empty,
+                CreatedAtUtc = duplicateBindingCreatedAt,
+                UpdatedAtUtc = duplicateBindingCreatedAt
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var roster = await aiAgentService.ListAgentDirectoryAsync();
+        var canonicalItem = Assert.Single(roster, item => item.TechnicalAgentId == workspace.TechnicalAgentId);
+
+        Assert.Equal(createResult.Value, canonicalItem.PartyId);
+        Assert.DoesNotContain(roster, item => item.PartyId == stalePartyId);
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+        var staleBinding = await verificationContext.Set<AiResourceBinding>()
+            .SingleAsync(item => item.PartyId == stalePartyId);
+        Assert.Null(staleBinding.TechnicalAgentId);
+        Assert.Equal(AiResourceBindingStatus.Error, staleBinding.BindingStatus);
+        Assert.Contains("Superseded by AgentFramework party projection", staleBinding.BindingReason, StringComparison.Ordinal);
     }
 
     private static async Task<Guid> CreatePersonAsync(PartyDirectoryService partyDirectoryService, string displayName, string email)

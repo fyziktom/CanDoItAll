@@ -145,6 +145,70 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task GetStructureAsync_projects_process_run_output_folders_into_the_structure_surface()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench process output folders");
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Workbench process output folder run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Projection validation for managed output folders"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var managedOutputFolder = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            "managed-files",
+            "processes",
+            runResult.Value.ToString("N"));
+        Directory.CreateDirectory(managedOutputFolder);
+        await File.WriteAllTextAsync(
+            Path.Combine(managedOutputFolder, "execution-report.md"),
+            "# Output proof");
+
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "execution-report.md",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected managed output folder proof.",
+            AllowedFutureUsageSummary = "Workbench projection validation.",
+            ReviewSummary = "Managed output folder should surface in the structure graph.",
+            ManagedStoragePath = $"managed-files/processes/{runResult.Value:N}/execution-report.md"
+        })).IsSuccess);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var outputNode = Assert.Single(surface.Nodes, node =>
+            string.Equals(node.ParentId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
+            string.Equals(node.ObjectType.ToString(), ProjectObjectType.File.ToString(), StringComparison.Ordinal) &&
+            node.StorageObjectReferenceJson.Contains($"managed-files/processes/{runResult.Value:N}", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal("Stored", outputNode.Status);
+        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", outputNode.Route);
+        Assert.Contains($"managed-files/processes/{runResult.Value:N}", outputNode.StorageObjectReferenceJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, outputNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_completes_process_bound_workbench_nodes_and_rolls_up_parent_progress()
     {
         await using var application = await TestApplication.CreateAsync();

@@ -422,14 +422,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        return await LoadExecutionRunDetailAsync(executionRunId, cancellationToken);
+        return EnrichProviderNativeMcpDetail(
+            await LoadExecutionRunDetailAsync(executionRunId, cancellationToken));
     }
 
     public async Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        return (await LoadExecutionRunDetailAsync(executionRunId, cancellationToken)).Artifacts;
+        return (await GetExecutionRunDetailAsync(executionRunId, cancellationToken)).Artifacts;
     }
 
     public async Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(
@@ -443,7 +444,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        return (await LoadExecutionRunDetailAsync(executionRunId, cancellationToken)).ToolReceipts;
+        return (await GetExecutionRunDetailAsync(executionRunId, cancellationToken)).ToolReceipts;
     }
 
     private async Task<ExecutionRunResult> ExecuteRunCoreAsync(

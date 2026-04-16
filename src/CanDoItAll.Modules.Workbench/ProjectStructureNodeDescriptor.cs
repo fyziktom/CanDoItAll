@@ -123,6 +123,7 @@ internal static class ProjectStructureNodeDescriptor
                 {
                     AddIfValue(facts, "Storage", StoragePresentation.DescribeProvider(storageReference.ProviderKind));
                     AddIfValue(facts, "Locator", StoragePresentation.DescribeLocator(storageReference.LocatorKind));
+                    AddIfValue(facts, "Path", storageReference.Locator);
                 }
                 break;
             case ProjectObjectType.Script:

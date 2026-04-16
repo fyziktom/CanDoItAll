@@ -24,6 +24,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
 
         var projectStructureCapabilityId = CreateStableGuid("capabilities/project-structure-central");
+        var playwrightLocalMcpCapabilityId = CreateStableGuid("capabilities/playwright-local-mcp");
         var bundleWorkflowCapabilityId = CreateStableGuid("capabilities/candoitall-bundle-workflow");
         var aspNetCoreCapabilityId = CreateStableGuid("capabilities/aspnet-core-skill");
         var spreadsheetCapabilityId = CreateStableGuid("capabilities/spreadsheet-skill");
@@ -90,6 +91,51 @@ internal static class SandboxWorkspaceSeedBuilder
                 SerializeConfiguration(new { transport = "logical" }),
                 CapabilityProofStatus.PendingReview,
                 "Seeded as a future integration seam. Host-level execution proof is still required.",
+                null,
+                true),
+            new(
+                playwrightLocalMcpCapabilityId,
+                CapabilityKind.McpServer,
+                "playwright-local-mcp",
+                "Playwright Local MCP",
+                "Local Playwright MCP for browser control, console inspection, and screenshot-backed UI proof inside agent workspaces.",
+                "npx",
+                SerializeConfiguration(new
+                {
+                    transport = "stdio",
+                    serverName = "playwright-local",
+                    command = "npx",
+                    arguments = new[]
+                    {
+                        "@playwright/mcp@latest",
+                        "--headless",
+                        "--caps",
+                        "vision",
+                        "--ignore-https-errors",
+                        "--isolated"
+                    },
+                    workingDirectory = ".",
+                    allowedTools = new[]
+                    {
+                        "browser_navigate",
+                        "browser_snapshot",
+                        "browser_console_messages",
+                        "browser_take_screenshot",
+                        "browser_click",
+                        "browser_type",
+                        "browser_fill_form",
+                        "browser_wait_for",
+                        "browser_select_option",
+                        "browser_hover",
+                        "browser_press_key",
+                        "browser_evaluate",
+                        "browser_resize",
+                        "browser_close"
+                    },
+                    approvalMode = "NeverRequire"
+                }),
+                CapabilityProofStatus.NotRun,
+                "Seeded built-in for UI-capable delivery agents. Runtime proof should confirm browser navigation, screenshot capture, and console evidence through real agent execution.",
                 null,
                 true),
             CreateFileSkillCapability(
@@ -450,6 +496,7 @@ internal static class SandboxWorkspaceSeedBuilder
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
             [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(workspaceDeliverySkillCapabilityId, "workspace-delivery-skill", CapabilityKind.Skill),
                 CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
@@ -470,6 +517,7 @@ internal static class SandboxWorkspaceSeedBuilder
             SerializeConfiguration(new { preferredSkillRoots = new[] { GetSeedSkillRoot("repository-playbook") }, enableCompaction = true, slidingWindowTurns = 10, maxLocalRagResults = 5 }),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(calculatorInlineSkillCapabilityId, "blazor-calculator-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),

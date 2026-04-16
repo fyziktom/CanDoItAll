@@ -43,10 +43,17 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             .Where(item => item.PartyType == PartyType.AiAgent || candidatePartyIds.Contains(item.Id))
             .ToListAsync(cancellationToken);
         var partiesById = parties.ToDictionary(item => item.Id);
-        var bindingByTechnicalAgentId = bindings
+        var bindingsByTechnicalAgentId = bindings
             .Where(item => item.TechnicalAgentId.HasValue)
             .GroupBy(item => item.TechnicalAgentId!.Value)
-            .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.UpdatedAtUtc).First());
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(item => item.UpdatedAtUtc)
+                    .ThenByDescending(item => item.CreatedAtUtc)
+                    .ToList());
+        var bindingByTechnicalAgentId = bindingsByTechnicalAgentId
+            .ToDictionary(group => group.Key, group => group.Value[0]);
         var bindingByPartyId = bindings.ToDictionary(item => item.PartyId);
         var timestamp = clock.GetUtcNow();
         var changed = false;
@@ -59,8 +66,16 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 ? taggedPartyId
                 : metadata.PartyId;
 
-            var binding = bindingByTechnicalAgentId.GetValueOrDefault(agent.Id);
+            var binding = preferredPartyId.HasValue
+                ? bindingByPartyId.GetValueOrDefault(preferredPartyId.Value)
+                : null;
+            binding ??= bindingByTechnicalAgentId.GetValueOrDefault(agent.Id);
             var partyId = binding?.PartyId ?? preferredPartyId;
+            if (preferredPartyId.HasValue)
+            {
+                partyId = preferredPartyId.Value;
+            }
+
             Party? party = null;
             if (partyId.HasValue)
             {
@@ -168,6 +183,45 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 {
                     binding.UpdatedAtUtc = timestamp;
                     changed = true;
+                }
+            }
+
+            if (bindingsByTechnicalAgentId.TryGetValue(agent.Id, out var duplicateBindings))
+            {
+                foreach (var duplicateBinding in duplicateBindings.Where(item => item.Id != binding.Id))
+                {
+                    var duplicateChanged = false;
+                    if (duplicateBinding.TechnicalAgentId.HasValue)
+                    {
+                        duplicateBinding.TechnicalAgentId = null;
+                        duplicateChanged = true;
+                    }
+
+                    if (duplicateBinding.BindingStatus != AiResourceBindingStatus.Error)
+                    {
+                        duplicateBinding.BindingStatus = AiResourceBindingStatus.Error;
+                        duplicateChanged = true;
+                    }
+
+                    var duplicateReason = $"Superseded by AgentFramework party projection for '{agent.Name}'.";
+                    if (!string.Equals(duplicateBinding.BindingReason, duplicateReason, StringComparison.Ordinal))
+                    {
+                        duplicateBinding.BindingReason = duplicateReason;
+                        duplicateChanged = true;
+                    }
+
+                    var duplicateError = $"Technical agent '{agent.Name}' is already bound to CRM party '{party.Id:D}'.";
+                    if (!string.Equals(duplicateBinding.LastError, duplicateError, StringComparison.Ordinal))
+                    {
+                        duplicateBinding.LastError = duplicateError;
+                        duplicateChanged = true;
+                    }
+
+                    if (duplicateChanged)
+                    {
+                        duplicateBinding.UpdatedAtUtc = timestamp;
+                        changed = true;
+                    }
                 }
             }
         }

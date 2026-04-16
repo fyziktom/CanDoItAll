@@ -248,7 +248,7 @@
         <Actions>
             @if (CanShowLocalOpen.Invoke(previewNode))
             {
-                <Button Text="Open locally"
+                <Button Text="Open in File Explorer"
                         ButtonStyle="ButtonStyle.Primary"
                         Click="@(() => OpenAttachmentLocally.InvokeAsync(previewNode))" />
             }

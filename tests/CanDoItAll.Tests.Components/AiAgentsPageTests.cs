@@ -57,10 +57,45 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
-    public async Task Creates_ai_agent_party_from_agents_page()
+    public async Task Agent_roster_excludes_ai_parties_without_agentframework_profiles()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        await CreateAgentAsync(partyDirectoryService, "CRM Only Agent");
+
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "AgentFramework QA";
+        editor.RoleTitle = "QA";
+        editor.Summary = "Lives in AgentFramework and should be visible in CRM-HR.";
+        editor.Status = CanDoItAll.AgentFramework.Models.AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+
+        await workspaceService.SaveAgentAsync(editor);
+
+        var cut = harness.Context.RenderComponent<CrmHrAgentsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("AgentFramework QA", cut.Markup);
+            Assert.DoesNotContain("CRM Only Agent", cut.Markup);
+        });
+
+        var roster = await aiAgentService.ListAgentDirectoryAsync();
+        Assert.Contains(roster, item => item.DisplayName == "AgentFramework QA");
+        Assert.DoesNotContain(roster, item => item.DisplayName == "CRM Only Agent");
+    }
+
+    [Fact]
+    public async Task Creates_agentframework_backed_ai_agent_from_agents_page()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
 
         var cut = harness.Context.RenderComponent<CrmHrAgentsPage>();
 
@@ -79,6 +114,15 @@ public sealed class AiAgentsPageTests
         Assert.Contains(
             directoryItems,
             item => item.DisplayName == "Release Copilot" && item.PartyType == PartyType.AiAgent);
+
+        var rosterItem = Assert.Single(
+            await aiAgentService.ListAgentDirectoryAsync(),
+            item => item.DisplayName == "Release Copilot");
+        var workspace = await aiAgentService.GetAgentWorkspaceAsync(rosterItem.PartyId);
+
+        Assert.NotNull(rosterItem.TechnicalAgentId);
+        Assert.NotNull(workspace);
+        Assert.NotNull(workspace!.TechnicalAgentId);
     }
 
     [Fact]
