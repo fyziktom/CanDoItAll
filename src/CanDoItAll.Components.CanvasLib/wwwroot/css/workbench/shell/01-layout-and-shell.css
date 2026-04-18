@@ -20,17 +20,20 @@
 .cw-editor-shell {
     display: grid;
     gap: 1.5rem;
+    width:100%;
 }
 
 .cw-main-grid {
     display: grid;
     gap: 1.25rem;
+    width:100%;
     align-items: start;
     grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
 }
 
 .cw-main-grid--canvas-only {
     grid-template-columns: minmax(0, 1fr);
+    width:100%;
 }
 
 .cw-stage-column,
