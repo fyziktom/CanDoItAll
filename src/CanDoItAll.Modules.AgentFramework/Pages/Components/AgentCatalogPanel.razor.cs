@@ -32,7 +32,7 @@ public partial class AgentCatalogPanel
     private AgentEditorModel editorModel = new();
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ProviderProfile> providers = [];
-    private IReadOnlyList<ProjectSummary> projectStructureProjects = [];
+    private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
     private string tagText = string.Empty;
     private string agentSearch = string.Empty;
     private string? message;
@@ -41,10 +41,13 @@ public partial class AgentCatalogPanel
     private bool isLoading = true;
     private bool areProvidersLoaded;
     private bool areProjectStructureProjectsLoaded;
+    private bool isLoadingProjectStructureProjects;
+    private bool projectStructureProjectsRequested;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
     private bool interactiveReloadAttempted;
     private Task? loadTask;
+    private Task? projectStructureProjectsLoadTask;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(agent =>
@@ -124,7 +127,7 @@ public partial class AgentCatalogPanel
             ResetEditorState();
             hasLoaded = true;
 
-            _ = LoadSupportingDataAsync(providersTask);
+            _ = LoadProvidersAsync(providersTask);
         }
         finally
         {
@@ -133,7 +136,7 @@ public partial class AgentCatalogPanel
         }
     }
 
-    private async Task LoadSupportingDataAsync(Task<IReadOnlyList<ProviderProfile>> providersTask)
+    private async Task LoadProvidersAsync(Task<IReadOnlyList<ProviderProfile>> providersTask)
     {
         try
         {
@@ -145,19 +148,52 @@ public partial class AgentCatalogPanel
             providerLoadErrorMessage = $"Failed to load providers. {exception.Message}";
         }
 
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task RequestProjectStructureProjectsAsync()
+    {
+        projectStructureProjectsRequested = true;
+        return EnsureProjectStructureProjectsLoadedAsync();
+    }
+
+    private Task EnsureProjectStructureProjectsLoadedAsync()
+    {
+        if (areProjectStructureProjectsLoaded)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (projectStructureProjectsLoadTask is not null)
+        {
+            return projectStructureProjectsLoadTask;
+        }
+
+        projectStructureProjectsLoadTask = LoadProjectStructureProjectsAsync();
+        return projectStructureProjectsLoadTask;
+    }
+
+    private async Task LoadProjectStructureProjectsAsync()
+    {
+        isLoadingProjectStructureProjects = true;
+        projectStructureProjectsErrorMessage = null;
+        await InvokeAsync(StateHasChanged);
+
         try
         {
-            projectStructureProjects = (await ProjectsService.ListAsync())
-                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            projectStructureProjects = await ProjectsService.ListAccessListAsync();
             areProjectStructureProjectsLoaded = true;
         }
         catch (Exception exception)
         {
             projectStructureProjectsErrorMessage = $"Failed to load projects. {exception.Message}";
         }
-
-        await InvokeAsync(StateHasChanged);
+        finally
+        {
+            isLoadingProjectStructureProjects = false;
+            projectStructureProjectsLoadTask = null;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task SaveAgentAsync()
@@ -240,6 +276,12 @@ public partial class AgentCatalogPanel
     {
         var isEnabled = rawValue is bool value && value;
         editorModel.ProjectStructureAccess.CanRead = isEnabled;
+        if (isEnabled)
+        {
+            projectStructureProjectsRequested = true;
+            _ = EnsureProjectStructureProjectsLoadedAsync();
+        }
+
         if (!isEnabled)
         {
             editorModel.ProjectStructureAccess.CanWrite = false;
@@ -253,6 +295,8 @@ public partial class AgentCatalogPanel
         if (isEnabled)
         {
             editorModel.ProjectStructureAccess.CanRead = true;
+            projectStructureProjectsRequested = true;
+            _ = EnsureProjectStructureProjectsLoadedAsync();
         }
     }
 

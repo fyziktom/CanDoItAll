@@ -29,9 +29,6 @@ public partial class AgentsHomePage
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
-    public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
-
-    [Inject]
     private AgentFrameworkCatalogWarmupService CatalogWarmupService { get; set; } = default!;
 
     [Inject]
@@ -55,7 +52,6 @@ public partial class AgentsHomePage
     private bool isFeedingDefaults;
     private string statusMessage = string.Empty;
     private bool statusMessageIsError;
-    private bool backgroundRepairStarted;
     private SandboxDashboardSnapshot dashboard = new(
         0,
         0,
@@ -107,7 +103,6 @@ public partial class AgentsHomePage
     private async Task InitializeShellAsync()
     {
         await RefreshShellAsync();
-        await RefreshCatalogRepairAsync();
     }
 
     private async Task RefreshShellAsync()
@@ -119,30 +114,6 @@ public partial class AgentsHomePage
         catch (Exception exception)
         {
             SetStatusError($"Failed to load agent runtime summary. {exception.Message}");
-        }
-        finally
-        {
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task RefreshCatalogRepairAsync()
-    {
-        if (backgroundRepairStarted)
-        {
-            return;
-        }
-
-        backgroundRepairStarted = true;
-
-        try
-        {
-            await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
-            await LoadDashboardAsync();
-        }
-        catch (Exception exception)
-        {
-            SetStatusError($"Failed to refresh the canonical agent catalog. {exception.Message}");
         }
         finally
         {

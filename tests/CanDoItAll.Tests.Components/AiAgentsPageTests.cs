@@ -355,14 +355,20 @@ public sealed class AiAgentsPageTests
         var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
 
         cut.WaitForElement("[data-testid='agents-catalog-project-structure-access']");
+
+        Assert.Contains("Project Structure Access", cut.Markup);
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-read']"));
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-write']"));
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-load']"));
+        Assert.DoesNotContain("Workbench Access Project", cut.Markup);
+
+        cut.Find("[data-testid='agents-catalog-project-structure-load']").Click();
+
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Workbench Access Project", cut.Markup);
         });
 
-        Assert.Contains("Project Structure Access", cut.Markup);
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-read']"));
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-write']"));
         Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-projects']"));
     }
 
@@ -433,7 +439,7 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
-    public async Task Agents_page_starts_catalog_repair_in_background_without_blocking_the_agent_panel()
+    public async Task Agents_page_does_not_start_catalog_repair_when_opening_the_agent_panel()
     {
         var repairService = new BlockingRepairService();
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
@@ -447,12 +453,7 @@ public sealed class AiAgentsPageTests
 
         cut.WaitForElement("[data-testid='agents-catalog-name']");
         Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Equal(1, repairService.CallCount);
-        });
-
-        repairService.Release();
+        Assert.Equal(0, repairService.CallCount);
     }
 
     private static async Task<Guid> CreatePersonAsync(PartyDirectoryService partyDirectoryService, string displayName, string email)
