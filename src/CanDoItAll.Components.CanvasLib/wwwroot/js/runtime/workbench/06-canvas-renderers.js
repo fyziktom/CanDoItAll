@@ -648,12 +648,14 @@
         surface.clear();
         state.renderedLinks = [];
         state.previewLink = null;
-        const visible = new Set((visibleNodes || []).map(node => node.id));
+        // Keep links visible when one endpoint moves outside the viewport.
+        // Only collapsed or otherwise hidden nodes should suppress a connection.
+        const graphVisibleNodeIds = new Set(getVisibleNodes(state).map(node => node.id));
         const nextEntries = new Map();
         let renderedLinkCount = 0;
 
         for (const [index, link] of state.surface.links.entries()) {
-            if (!visible.has(link.sourceId) || !visible.has(link.targetId)) {
+            if (!graphVisibleNodeIds.has(link.sourceId) || !graphVisibleNodeIds.has(link.targetId)) {
                 continue;
             }
 
@@ -712,12 +714,12 @@
         const dependencySourceId = state.surface?.dependencySourceId || "";
         if (state.surface?.mode === "dependency" &&
             dependencySourceId &&
-            visible.has(dependencySourceId) &&
+            graphVisibleNodeIds.has(dependencySourceId) &&
             state.lookups.byId.has(dependencySourceId)) {
             const previewSource = state.lookups.byId.get(dependencySourceId);
             const hoveredTargetId = state.hoveredNodeId &&
                 state.hoveredNodeId !== dependencySourceId &&
-                visible.has(state.hoveredNodeId)
+                graphVisibleNodeIds.has(state.hoveredNodeId)
                 ? state.hoveredNodeId
                 : null;
             const previewLink = {
