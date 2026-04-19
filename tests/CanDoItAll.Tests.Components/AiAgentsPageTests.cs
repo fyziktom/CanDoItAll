@@ -411,9 +411,9 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
-    public async Task Agents_page_uses_loading_counts_until_the_canonical_catalog_finishes_refreshing()
+    public async Task Agents_page_uses_loading_counts_until_the_shell_summary_finishes_loading()
     {
-        var repairService = new BlockingRepairService();
+        var repairService = new CountingRepairService();
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
         {
             services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService>(_ => repairService);
@@ -426,14 +426,16 @@ public sealed class AiAgentsPageTests
         Assert.Contains("Loading canonical agent runtime", cut.Markup);
         Assert.Contains("...", cut.Markup);
 
-        repairService.Release();
-        await Task.Yield();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
+        });
     }
 
     [Fact]
-    public async Task Agents_page_repairs_the_catalog_once_before_opening_the_agent_panel()
+    public async Task Agents_page_starts_catalog_repair_in_background_without_blocking_the_agent_panel()
     {
-        var repairService = new CountingRepairService();
+        var repairService = new BlockingRepairService();
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
         {
             services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService>(_ => repairService);
@@ -444,7 +446,13 @@ public sealed class AiAgentsPageTests
         var cut = harness.Context.RenderComponent<AgentsHomePage>();
 
         cut.WaitForElement("[data-testid='agents-catalog-name']");
-        Assert.Equal(1, repairService.CallCount);
+        Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, repairService.CallCount);
+        });
+
+        repairService.Release();
     }
 
     private static async Task<Guid> CreatePersonAsync(PartyDirectoryService partyDirectoryService, string displayName, string email)
@@ -509,9 +517,11 @@ public sealed class AiAgentsPageTests
     private sealed class BlockingRepairService : IAgentFrameworkOrganizationCatalogRepairService
     {
         private readonly TaskCompletionSource repairGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int CallCount { get; private set; }
 
         public Task EnsureCurrentOrganizationCatalogAsync(CancellationToken cancellationToken = default)
         {
+            CallCount++;
             return repairGate.Task.WaitAsync(cancellationToken);
         }
 

@@ -70,7 +70,7 @@
     </Lead>
 
     <ChildContent>
-        @if (!isLoaded)
+        @if (ShouldShowOverviewLoadingCard)
         {
             <SurfaceCard>
                 <p class="cda-eyebrow">AgentFramework</p>
@@ -87,8 +87,8 @@
         else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
         {
             <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
-                               InitialAgents="@catalogAgents"
-                               InitialProviders="@catalogProviders"
+                               InitialAgents="@AgentCatalogInitialAgents"
+                               InitialProviders="@AgentCatalogInitialProviders"
                                SkipCatalogRepair="true" />
         }
         else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))

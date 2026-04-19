@@ -57,6 +57,7 @@ public partial class AgentsHomePage
     private IReadOnlyList<ProviderProfile> catalogProviders = [];
     private string statusMessage = string.Empty;
     private bool statusMessageIsError;
+    private bool backgroundRepairStarted;
     private SandboxDashboardSnapshot dashboard = new(
         0,
         0,
@@ -80,9 +81,23 @@ public partial class AgentsHomePage
         new("diagnostics", "Diagnostics", ResolveSummaryValue(failedRunCount))
     ];
 
-    protected override async Task OnInitializedAsync()
+    private bool ShouldShowOverviewLoadingCard =>
+        !isLoaded &&
+        string.Equals(selectedTab, "overview", StringComparison.Ordinal);
+
+    private IReadOnlyList<AgentDefinition>? AgentCatalogInitialAgents =>
+        isLoaded
+            ? catalogAgents
+            : null;
+
+    private IReadOnlyList<ProviderProfile>? AgentCatalogInitialProviders =>
+        isLoaded
+            ? catalogProviders
+            : null;
+
+    protected override Task OnInitializedAsync()
     {
-        await LoadAsync();
+        return Task.CompletedTask;
     }
 
     protected override void OnParametersSet()
@@ -90,10 +105,61 @@ public partial class AgentsHomePage
         ApplyRequestedTab();
     }
 
-    private async Task LoadAsync()
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
-        await LoadDashboardAsync();
+        if (!firstRender)
+        {
+            return Task.CompletedTask;
+        }
+
+        _ = InitializeShellAsync();
+        return Task.CompletedTask;
+    }
+
+    private async Task InitializeShellAsync()
+    {
+        await RefreshShellAsync();
+        await RefreshCatalogRepairAsync();
+    }
+
+    private async Task RefreshShellAsync()
+    {
+        try
+        {
+            await LoadDashboardAsync();
+        }
+        catch (Exception exception)
+        {
+            SetStatusError($"Failed to load agent runtime summary. {exception.Message}");
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshCatalogRepairAsync()
+    {
+        if (backgroundRepairStarted)
+        {
+            return;
+        }
+
+        backgroundRepairStarted = true;
+
+        try
+        {
+            await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
+            await LoadDashboardAsync();
+        }
+        catch (Exception exception)
+        {
+            SetStatusError($"Failed to refresh the canonical agent catalog. {exception.Message}");
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadDashboardAsync()
