@@ -154,7 +154,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ApprovalCount: currentIndex.ApprovalCount + normalizedDetail.Approvals.Count - (previousDetail?.Approvals.Count ?? 0),
             ArtifactCount: currentIndex.ArtifactCount + normalizedDetail.Artifacts.Count - (previousDetail?.Artifacts.Count ?? 0),
             CheckpointCount: currentIndex.CheckpointCount + normalizedDetail.Checkpoints.Count - (previousDetail?.Checkpoints.Count ?? 0),
-            ReceiptCount: currentIndex.ReceiptCount + normalizedDetail.ToolReceipts.Count - (previousDetail?.ToolReceipts.Count ?? 0));
+            ReceiptCount: currentIndex.ReceiptCount + normalizedDetail.ToolReceipts.Count - (previousDetail?.ToolReceipts.Count ?? 0),
+            ActiveRunCount: currentIndex.ActiveRunCount + CountIndexedActiveRuns(normalizedDetail.Run) - CountIndexedActiveRuns(previousDetail?.Run),
+            FailedRunCount: currentIndex.FailedRunCount + CountIndexedFailedRuns(normalizedDetail.Run) - CountIndexedFailedRuns(previousDetail?.Run));
 
         if (changed || !File.Exists(layout.ExecutionIndexPath) || jsonStore.RequiresSave(currentIndex, nextIndex))
         {
@@ -291,7 +293,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ApprovalCount: executionState.ExecutionApprovals.Count,
             ArtifactCount: executionState.ExecutionArtifacts.Count,
             CheckpointCount: executionState.ExecutionWorkflowCheckpoints.Count,
-            ReceiptCount: executionState.ToolExecutionReceipts.Count);
+            ReceiptCount: executionState.ToolExecutionReceipts.Count,
+            ActiveRunCount: executionState.ExecutionRuns.Count(IsIndexedActiveRun),
+            FailedRunCount: executionState.ExecutionRuns.Count(IsIndexedFailedRun));
 
         if (changed || currentIndex is null || jsonStore.RequiresSave(currentIndex, nextIndex))
         {
@@ -477,6 +481,18 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         var existing = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(layout.ExecutionIndexPath, cancellationToken);
         if (existing is not null)
         {
+            if (await ExecutionIndexNeedsDashboardCountUpgradeAsync(cancellationToken))
+            {
+                var upgraded = existing with
+                {
+                    ActiveRunCount = await CountRunFilesAsync(IsIndexedActiveRun, cancellationToken),
+                    FailedRunCount = await CountRunFilesAsync(IsIndexedFailedRun, cancellationToken)
+                };
+
+                await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, upgraded, cancellationToken);
+                return upgraded;
+            }
+
             return existing;
         }
 
@@ -491,7 +507,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ApprovalCount: CountRunScopedJsonFiles(runId => layout.RunApprovalsRoot(runId)) + CountJsonFiles(layout.OrphanApprovalsRoot),
             ArtifactCount: CountRunScopedJsonFiles(runId => layout.RunArtifactsRoot(runId)) + CountJsonFiles(layout.OrphanArtifactsRoot),
             CheckpointCount: CountRunScopedJsonFiles(runId => layout.RunWorkflowCheckpointsRoot(runId)),
-            ReceiptCount: CountRunScopedJsonFiles(runId => layout.RunReceiptsRoot(runId)) + CountJsonFiles(layout.OrphanReceiptsRoot));
+            ReceiptCount: CountRunScopedJsonFiles(runId => layout.RunReceiptsRoot(runId)) + CountJsonFiles(layout.OrphanReceiptsRoot),
+            ActiveRunCount: await CountRunFilesAsync(IsIndexedActiveRun, cancellationToken),
+            FailedRunCount: await CountRunFilesAsync(IsIndexedFailedRun, cancellationToken));
     }
 
     private int CountRunFiles()
@@ -503,6 +521,38 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         return Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
             .Count(runDirectory => File.Exists(Path.Combine(runDirectory, "run.json")));
+    }
+
+    private async Task<bool> ExecutionIndexNeedsDashboardCountUpgradeAsync(CancellationToken cancellationToken)
+    {
+        if (!File.Exists(layout.ExecutionIndexPath))
+        {
+            return false;
+        }
+
+        var rawJson = await File.ReadAllTextAsync(layout.ExecutionIndexPath, cancellationToken);
+        return !rawJson.Contains("\"activeRunCount\"", StringComparison.Ordinal) ||
+               !rawJson.Contains("\"failedRunCount\"", StringComparison.Ordinal);
+    }
+
+    private async Task<int> CountRunFilesAsync(Func<ExecutionRunRecord, bool> predicate, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(layout.ExecutionRunsRoot))
+        {
+            return 0;
+        }
+
+        var count = 0;
+        foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot))
+        {
+            var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(Path.Combine(runDirectory, "run.json"), cancellationToken);
+            if (run is not null && predicate(run))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private int CountRunScopedJsonFiles(Func<Guid, string> pathSelector)
@@ -531,6 +581,27 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return Directory.Exists(directoryPath)
             ? Directory.EnumerateFiles(directoryPath, "*.json").Count()
             : 0;
+    }
+
+    private static int CountIndexedActiveRuns(ExecutionRunRecord? run)
+    {
+        return run is not null && IsIndexedActiveRun(run) ? 1 : 0;
+    }
+
+    private static int CountIndexedFailedRuns(ExecutionRunRecord? run)
+    {
+        return run is not null && IsIndexedFailedRun(run) ? 1 : 0;
+    }
+
+    private static bool IsIndexedActiveRun(ExecutionRunRecord run)
+    {
+        return run.UpdatedAtUtc >= DateTimeOffset.UtcNow.AddHours(-1) &&
+               run.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting;
+    }
+
+    private static bool IsIndexedFailedRun(ExecutionRunRecord run)
+    {
+        return run.Outcome == RunOutcome.Failed;
     }
 
     private static ExecutionRunDetail NormalizeRunDetail(ExecutionRunDetail detail)
@@ -607,7 +678,9 @@ internal sealed record ExecutionStorageIndex(
     int ApprovalCount,
     int ArtifactCount,
     int CheckpointCount,
-    int ReceiptCount);
+    int ReceiptCount,
+    int ActiveRunCount,
+    int FailedRunCount);
 
 internal sealed record ExecutionChatIndex(
     string Version,

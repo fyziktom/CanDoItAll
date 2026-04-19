@@ -87,8 +87,6 @@
         else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
         {
             <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
-                               InitialAgents="@AgentCatalogInitialAgents"
-                               InitialProviders="@AgentCatalogInitialProviders"
                                SkipCatalogRepair="true" />
         }
         else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))

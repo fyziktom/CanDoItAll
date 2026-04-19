@@ -39,6 +39,10 @@ public partial class AgentCatalogPanel
     private Guid? linkedPartyId;
     private bool hasLoaded;
     private bool isLoading = true;
+    private bool areProvidersLoaded;
+    private bool areProjectStructureProjectsLoaded;
+    private string? providerLoadErrorMessage;
+    private string? projectStructureProjectsErrorMessage;
     private bool interactiveReloadAttempted;
     private Task? loadTask;
 
@@ -114,24 +118,46 @@ public partial class AgentCatalogPanel
                 : Task.FromResult(InitialAgents);
             var providersTask = InitialProviders is null
                 ? WorkspaceService.ListProvidersAsync()
-                : Task.FromResult(InitialProviders);
-            var projectsTask = ProjectsService.ListAsync();
-
-            await Task.WhenAll(agentsTask, providersTask, projectsTask);
+                : Task.FromResult<IReadOnlyList<ProviderProfile>>(InitialProviders);
 
             agents = (await agentsTask).ToList();
-            providers = (await providersTask).ToList();
-            projectStructureProjects = (await projectsTask)
-                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
             ResetEditorState();
             hasLoaded = true;
+
+            _ = LoadSupportingDataAsync(providersTask);
         }
         finally
         {
             isLoading = false;
             loadTask = null;
         }
+    }
+
+    private async Task LoadSupportingDataAsync(Task<IReadOnlyList<ProviderProfile>> providersTask)
+    {
+        try
+        {
+            providers = (await providersTask).ToList();
+            areProvidersLoaded = true;
+        }
+        catch (Exception exception)
+        {
+            providerLoadErrorMessage = $"Failed to load providers. {exception.Message}";
+        }
+
+        try
+        {
+            projectStructureProjects = (await ProjectsService.ListAsync())
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            areProjectStructureProjectsLoaded = true;
+        }
+        catch (Exception exception)
+        {
+            projectStructureProjectsErrorMessage = $"Failed to load projects. {exception.Message}";
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SaveAgentAsync()
@@ -190,6 +216,12 @@ public partial class AgentCatalogPanel
         if (!agent.ProviderProfileId.HasValue)
         {
             return "No provider";
+        }
+
+        if (!areProvidersLoaded &&
+            string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+        {
+            return "Loading provider...";
         }
 
         return providers.FirstOrDefault(item => item.Id == agent.ProviderProfileId.Value)?.Name

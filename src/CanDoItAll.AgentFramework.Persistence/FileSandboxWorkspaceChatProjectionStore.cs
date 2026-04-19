@@ -37,6 +37,14 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             .ToList();
     }
 
+    public async Task<IReadOnlyList<ChatRunSummaryRecord>> ListAllRunSummariesAsync(CancellationToken cancellationToken)
+    {
+        var chatIndex = await LoadOrBuildChatIndexAsync(cancellationToken);
+        return chatIndex.RunSummaries
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList();
+    }
+
     public async Task<ChatRuntimeSnapshot> LoadChatRuntimeSnapshotAsync(
         Guid agentId,
         Guid? chatSessionId,

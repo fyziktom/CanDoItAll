@@ -92,13 +92,25 @@
                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                         <div>
                             <label class="cda-field-label">Provider</label>
-                            <InputSelect @bind-Value="editorModel.ProviderProfileId" class="cda-input" data-testid="agents-catalog-provider">
+                            <InputSelect @bind-Value="editorModel.ProviderProfileId"
+                                         class="cda-input"
+                                         disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                         data-testid="agents-catalog-provider">
                                 <option value="">None</option>
                                 @foreach (var provider in providers)
                                 {
                                     <option value="@provider.Id">@provider.Name</option>
                                 }
                             </InputSelect>
+                            @if (!areProvidersLoaded &&
+                                 string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                            {
+                                <p class="mt-2 text-sm leading-6 text-slate-500">Loading providers for runtime binding...</p>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                            {
+                                <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
+                            }
                         </div>
                         <div>
                             <label class="cda-field-label">Model</label>
@@ -173,15 +185,30 @@
                                     <Button Text="Select all"
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
-                                            Click="SelectAllProjectStructureProjects" />
+                                            Click="SelectAllProjectStructureProjects"
+                                            Disabled="@(!areProjectStructureProjectsLoaded || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))" />
                                     <Button Text="Clear"
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
-                                            Click="ClearProjectStructureProjects" />
+                                            Click="ClearProjectStructureProjects"
+                                            Disabled="@(!areProjectStructureProjectsLoaded || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))" />
                                 </Cluster>
                             </Split>
 
-                            @if (projectStructureProjects.Count == 0)
+                            @if (!areProjectStructureProjectsLoaded &&
+                                 string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))
+                            {
+                                <div class="mt-3 cda-admin-empty">
+                                    Loading projects that can be granted to this agent...
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))
+                            {
+                                <div class="mt-3 cda-admin-empty text-rose-700">
+                                    @projectStructureProjectsErrorMessage
+                                </div>
+                            }
+                            else if (projectStructureProjects.Count == 0)
                             {
                                 <div class="mt-3 cda-admin-empty">
                                     No projects exist yet. Create a project before granting project-structure access.

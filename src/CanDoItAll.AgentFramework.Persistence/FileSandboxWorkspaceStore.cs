@@ -519,14 +519,14 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     {
         var recentWindow = DateTimeOffset.UtcNow.AddHours(-1);
         var executionIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
-        var runs = await executionSliceStore.ListRunsAsync(cancellationToken);
+        var runSummaries = await chatProjectionStore.ListAllRunSummariesAsync(cancellationToken);
 
         return new SandboxWorkspaceExecutionSummary(
             SessionCount: executionIndex.SessionCount,
-            ActiveRuns: runs.Count(item =>
+            ActiveRuns: runSummaries.Count(item =>
                 item.UpdatedAtUtc >= recentWindow &&
                 item.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting),
-            FailedRuns: runs.Count(item => item.Outcome == RunOutcome.Failed));
+            FailedRuns: runSummaries.Count(item => item.Outcome == RunOutcome.Failed));
     }
 
     private Task<bool> SaveCatalogCoreAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken)

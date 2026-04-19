@@ -53,8 +53,6 @@ public partial class AgentsHomePage
     private Guid? effectiveRequestedAgentId;
     private bool isLoaded;
     private bool isFeedingDefaults;
-    private IReadOnlyList<AgentDefinition> catalogAgents = [];
-    private IReadOnlyList<ProviderProfile> catalogProviders = [];
     private string statusMessage = string.Empty;
     private bool statusMessageIsError;
     private bool backgroundRepairStarted;
@@ -84,16 +82,6 @@ public partial class AgentsHomePage
     private bool ShouldShowOverviewLoadingCard =>
         !isLoaded &&
         string.Equals(selectedTab, "overview", StringComparison.Ordinal);
-
-    private IReadOnlyList<AgentDefinition>? AgentCatalogInitialAgents =>
-        isLoaded
-            ? catalogAgents
-            : null;
-
-    private IReadOnlyList<ProviderProfile>? AgentCatalogInitialProviders =>
-        isLoaded
-            ? catalogProviders
-            : null;
 
     protected override Task OnInitializedAsync()
     {
@@ -165,37 +153,28 @@ public partial class AgentsHomePage
     private async Task LoadDashboardAsync()
     {
         var dashboardTask = WorkspaceService.GetDashboardAsync();
-        var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        var providersTask = WorkspaceService.ListProvidersAsync();
-        await Task.WhenAll(dashboardTask, agentsTask, providersTask);
+        var boundResourceCountTask = LoadBoundResourceCountAsync();
+        await Task.WhenAll(dashboardTask, boundResourceCountTask);
 
         dashboard = await dashboardTask;
-        catalogAgents = (await agentsTask).ToList();
-        catalogProviders = (await providersTask).ToList();
-        technicalAgentCount = catalogAgents.Count;
-        providerCount = catalogProviders.Count;
+        technicalAgentCount = dashboard.AgentCount;
+        providerCount = dashboard.ProviderCount;
         capabilityCount = dashboard.CapabilityCount;
         activeRunCount = dashboard.ActiveRuns;
         failedRunCount = dashboard.FailedRuns;
-        if (catalogAgents.Count == 0)
-        {
-            boundResourceCount = 0;
-        }
-        else
-        {
-            var technicalAgentIds = catalogAgents
-                .Select(item => item.Id)
-                .ToList();
-            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-            boundResourceCount = await dbContext.Set<AiResourceBinding>()
-                .CountAsync(
-                    item => item.TechnicalAgentId.HasValue &&
-                            technicalAgentIds.Contains(item.TechnicalAgentId.Value) &&
-                            item.BindingStatus == AiResourceBindingStatus.Bound);
-        }
+        boundResourceCount = await boundResourceCountTask;
 
         isLoaded = true;
         ApplyRequestedTab();
+    }
+
+    private async Task<int> LoadBoundResourceCountAsync()
+    {
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        return await dbContext.Set<AiResourceBinding>()
+            .CountAsync(item =>
+                item.TechnicalAgentId.HasValue &&
+                item.BindingStatus == AiResourceBindingStatus.Bound);
     }
 
     private async Task FeedDefaultsAsync()
