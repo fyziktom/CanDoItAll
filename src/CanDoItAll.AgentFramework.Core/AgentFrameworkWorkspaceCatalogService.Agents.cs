@@ -36,6 +36,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var now = DateTimeOffset.UtcNow;
         var normalizedTemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(model.TemplateKey, model.Name);
         var id = model.Id ?? Guid.NewGuid();
+        var configurationJson = AgentProjectStructureAccessMetadata.Write(model.ConfigurationJson, model.ProjectStructureAccess);
         await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);
@@ -71,7 +72,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 Temperature: model.Temperature,
                 RequirePerServiceCallChatHistoryPersistence: model.RequirePerServiceCallChatHistoryPersistence,
                 EnableBackgroundResponses: model.EnableBackgroundResponses,
-                ConfigurationJson: model.ConfigurationJson.Trim(),
+                ConfigurationJson: configurationJson.Trim(),
                 IsTemplate: model.IsTemplate,
                 TemplateKey: normalizedTemplateKey,
                 Permissions: model.Permissions,

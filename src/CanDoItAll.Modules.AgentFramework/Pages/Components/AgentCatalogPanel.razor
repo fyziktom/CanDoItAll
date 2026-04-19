@@ -136,6 +136,78 @@
                     </Grid>
                 </FormSection>
 
+                <FormSection Title="Project Structure Access" Description="Internal agents always carry the project-structure tool family. These settings decide whether the current agent can read or mutate project data and which projects it may touch.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">
+                        <div class="cda-admin-subpanel">
+                            <p class="cda-field-label mb-2">Access mode</p>
+                            <Stack GapScale="LayoutGap.Small">
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.ProjectStructureAccess.CanRead"
+                                           @onchange="args => ToggleProjectStructureRead(args.Value)"
+                                           data-testid="agents-catalog-project-structure-read" />
+                                    Can read project structure
+                                </label>
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.ProjectStructureAccess.CanWrite"
+                                           @onchange="args => ToggleProjectStructureWrite(args.Value)"
+                                           data-testid="agents-catalog-project-structure-write" />
+                                    Can write project structure
+                                </label>
+                            </Stack>
+                        </div>
+                        <div class="cda-admin-subpanel md:col-span-2">
+                            <Split Breakpoint="LayoutBreakpoint.Md"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <div>
+                                    <p class="cda-field-label mb-1">Allowed projects</p>
+                                    <p class="text-sm leading-6 text-slate-600">
+                                        @CountAllowedProjectStructureProjects(editorModel) selected
+                                    </p>
+                                </div>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    <Button Text="Select all"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="SelectAllProjectStructureProjects" />
+                                    <Button Text="Clear"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="ClearProjectStructureProjects" />
+                                </Cluster>
+                            </Split>
+
+                            @if (projectStructureProjects.Count == 0)
+                            {
+                                <div class="mt-3 cda-admin-empty">
+                                    No projects exist yet. Create a project before granting project-structure access.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mt-3 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"
+                                     data-testid="agents-catalog-project-structure-projects">
+                                    <Stack GapScale="LayoutGap.Small">
+                                        @foreach (var project in projectStructureProjects)
+                                        {
+                                            <label class="cda-inline-option cda-inline-option--muted">
+                                                <input type="checkbox"
+                                                       checked="@HasProjectStructureProjectAccess(project.Id)"
+                                                       @onchange="args => ToggleProjectStructureProject(project.Id, args.Value)" />
+                                                @project.Name
+                                            </label>
+                                        }
+                                    </Stack>
+                                </div>
+                            }
+                        </div>
+                    </Grid>
+                </FormSection>
+
                 <FormSection Title="Tags" Description="Tags keep ownership and routing visible without introducing a second registry.">
                     <div>
                         <label class="cda-field-label">Comma-separated tags</label>

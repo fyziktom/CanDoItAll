@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -11,6 +12,12 @@ public partial class AgentCatalogPanel
     public Guid? RequestedAgentId { get; set; }
 
     [Parameter]
+    public IReadOnlyList<AgentDefinition>? InitialAgents { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ProviderProfile>? InitialProviders { get; set; }
+
+    [Parameter]
     public bool SkipCatalogRepair { get; set; }
 
     [Inject]
@@ -19,9 +26,13 @@ public partial class AgentCatalogPanel
     [Inject]
     public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
 
+    [Inject]
+    public ProjectsService ProjectsService { get; set; } = default!;
+
     private AgentEditorModel editorModel = new();
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ProviderProfile> providers = [];
+    private IReadOnlyList<ProjectSummary> projectStructureProjects = [];
     private string tagText = string.Empty;
     private string agentSearch = string.Empty;
     private string? message;
@@ -98,11 +109,22 @@ public partial class AgentCatalogPanel
                 await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
             }
 
-            agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-            providers = await WorkspaceService.ListProvidersAsync();
-            editorModel = await WorkspaceService.GetAgentEditorAsync();
-            tagText = string.Empty;
-            linkedPartyId = null;
+            var agentsTask = InitialAgents is null
+                ? WorkspaceService.ListAgentsAsync(includeTemplates: false)
+                : Task.FromResult(InitialAgents);
+            var providersTask = InitialProviders is null
+                ? WorkspaceService.ListProvidersAsync()
+                : Task.FromResult(InitialProviders);
+            var projectsTask = ProjectsService.ListAsync();
+
+            await Task.WhenAll(agentsTask, providersTask, projectsTask);
+
+            agents = (await agentsTask).ToList();
+            providers = (await providersTask).ToList();
+            projectStructureProjects = (await projectsTask)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            ResetEditorState();
             hasLoaded = true;
         }
         finally
@@ -119,32 +141,29 @@ public partial class AgentCatalogPanel
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         var agentId = await WorkspaceService.SaveAgentAsync(editorModel);
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        providers = await WorkspaceService.ListProvidersAsync();
+        await ReloadAgentsAsync(agentId);
         message = "Technical agent saved.";
-        await EditAgentAsync(agentId);
     }
 
-    private async Task EditAgentAsync(
+    private Task EditAgentAsync(
         Guid agentId)
     {
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-
-        editorModel = await WorkspaceService.GetAgentEditorAsync(agentId);
-        tagText = string.Join(", ", editorModel.Tags);
         var definition = agents.FirstOrDefault(item => item.Id == agentId);
-        var metadata = definition is null
-            ? AgentFrameworkCrmHrMetadata.Read(editorModel.ConfigurationJson)
-            : AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson);
-        linkedPartyId = metadata?.PartyId;
+        if (definition is null)
+        {
+            ResetEditorState();
+            return Task.CompletedTask;
+        }
+
+        ApplySelectedAgent(definition);
+        return Task.CompletedTask;
     }
 
-    private async Task ResetAgentAsync()
+    private Task ResetAgentAsync()
     {
-        editorModel = await WorkspaceService.GetAgentEditorAsync();
-        tagText = string.Empty;
-        linkedPartyId = null;
+        ResetEditorState();
         message = null;
+        return Task.CompletedTask;
     }
 
     private async Task DeleteAgentAsync()
@@ -155,7 +174,7 @@ public partial class AgentCatalogPanel
         }
 
         await WorkspaceService.DeleteAgentAsync(editorModel.Id.Value);
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        await ReloadAgentsAsync();
         message = "Technical agent deleted.";
         await ResetAgentAsync();
     }
@@ -177,6 +196,75 @@ public partial class AgentCatalogPanel
             ?? "Unknown provider";
     }
 
+    private static int CountAllowedProjectStructureProjects(AgentEditorModel editor)
+    {
+        return editor.ProjectStructureAccess.AllowedProjectIds
+            .Where(projectId => projectId != Guid.Empty)
+            .Distinct()
+            .Count();
+    }
+
+    private void ToggleProjectStructureRead(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProjectStructureAccess.CanRead = isEnabled;
+        if (!isEnabled)
+        {
+            editorModel.ProjectStructureAccess.CanWrite = false;
+        }
+    }
+
+    private void ToggleProjectStructureWrite(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProjectStructureAccess.CanWrite = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.ProjectStructureAccess.CanRead = true;
+        }
+    }
+
+    private bool HasProjectStructureProjectAccess(Guid projectId)
+    {
+        return editorModel.ProjectStructureAccess.AllowedProjectIds.Contains(projectId);
+    }
+
+    private void ToggleProjectStructureProject(Guid projectId, object? rawValue)
+    {
+        var selectedProjects = editorModel.ProjectStructureAccess.AllowedProjectIds.ToList();
+        var isEnabled = rawValue is bool value && value;
+        if (isEnabled)
+        {
+            if (!selectedProjects.Contains(projectId))
+            {
+                selectedProjects.Add(projectId);
+            }
+        }
+        else
+        {
+            selectedProjects.RemoveAll(item => item == projectId);
+        }
+
+        editorModel.ProjectStructureAccess.AllowedProjectIds = selectedProjects
+            .Distinct()
+            .OrderBy(item => item)
+            .ToList();
+    }
+
+    private void SelectAllProjectStructureProjects()
+    {
+        editorModel.ProjectStructureAccess.AllowedProjectIds = projectStructureProjects
+            .Select(item => item.Id)
+            .Distinct()
+            .OrderBy(item => item)
+            .ToList();
+    }
+
+    private void ClearProjectStructureProjects()
+    {
+        editorModel.ProjectStructureAccess.AllowedProjectIds = [];
+    }
+
     private static string ResolveStatusTone(
         AgentLifecycleStatus status)
     {
@@ -187,5 +275,35 @@ public partial class AgentCatalogPanel
             AgentLifecycleStatus.Archived => "neutral",
             _ => "info"
         };
+    }
+
+    private async Task ReloadAgentsAsync(Guid? selectedAgentId = null)
+    {
+        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        if (selectedAgentId.HasValue)
+        {
+            var definition = agents.FirstOrDefault(item => item.Id == selectedAgentId.Value);
+            if (definition is not null)
+            {
+                ApplySelectedAgent(definition);
+                return;
+            }
+        }
+
+        ResetEditorState();
+    }
+
+    private void ApplySelectedAgent(AgentDefinition definition)
+    {
+        editorModel = AgentEditorModel.FromDefinition(definition);
+        tagText = string.Join(", ", editorModel.Tags);
+        linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
+    }
+
+    private void ResetEditorState()
+    {
+        editorModel = new AgentEditorModel();
+        tagText = string.Empty;
+        linkedPartyId = null;
     }
 }

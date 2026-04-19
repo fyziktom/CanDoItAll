@@ -3,10 +3,12 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -236,6 +238,75 @@ public sealed class AiAgentProfileIntegrationTests
         Assert.Equal("Current Profile Projected Agent", party.DisplayName);
         Assert.Equal("Projected directly from the current AgentFramework workspace.", party.Summary);
         Assert.Equal(PartyLifecycleStatus.Active, party.LifecycleStatus);
+    }
+
+    [Fact]
+    public async Task SaveAgentAsync_roundtrips_project_structure_access_settings_inside_configuration_json()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+
+        var alphaProjectResult = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Alpha Access Project"
+        });
+        var betaProjectResult = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Beta Access Project"
+        });
+
+        Assert.True(alphaProjectResult.IsSuccess);
+        Assert.True(betaProjectResult.IsSuccess);
+
+        var alphaProjectId = alphaProjectResult.Value;
+        var betaProjectId = betaProjectResult.Value;
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Project Structure Runtime Agent";
+        editor.RoleTitle = "Runtime engineer";
+        editor.Summary = "Carries native project structure access settings.";
+        editor.Instructions = "Use project structure access only within the assigned scope.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        editor.ConfigurationJson = JsonSerializer.Serialize(new
+        {
+            crmHr = new
+            {
+                source = "integration-tests"
+            }
+        });
+        editor.ProjectStructureAccess = new AgentProjectStructureAccessSettings
+        {
+            CanWrite = true,
+            AllowedProjectIds =
+            [
+                betaProjectId,
+                alphaProjectId,
+                Guid.Empty,
+                betaProjectId
+            ]
+        };
+
+        var agentId = await workspaceService.SaveAgentAsync(editor);
+        var savedEditor = await workspaceService.GetAgentEditorAsync(agentId);
+
+        Assert.True(savedEditor.ProjectStructureAccess.CanRead);
+        Assert.True(savedEditor.ProjectStructureAccess.CanWrite);
+        Assert.Equal(
+            new[]
+            {
+                alphaProjectId,
+                betaProjectId
+            }.OrderBy(item => item).ToList(),
+            savedEditor.ProjectStructureAccess.AllowedProjectIds);
+
+        var configurationRoot = JsonNode.Parse(savedEditor.ConfigurationJson)?.AsObject();
+
+        Assert.NotNull(configurationRoot);
+        Assert.NotNull(configurationRoot["crmHr"]);
+        Assert.NotNull(configurationRoot["projectStructure"]);
     }
 
     [Fact]

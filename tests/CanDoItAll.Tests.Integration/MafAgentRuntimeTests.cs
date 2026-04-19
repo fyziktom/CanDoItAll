@@ -181,8 +181,81 @@ public sealed class MafAgentRuntimeTests
                     item.Contains("Remote Ollama", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task CreateCapabilityState_attaches_internal_project_structure_tools_by_default_when_workspace_services_are_available()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = true,
+                    AllowedProjectIds =
+                    [
+                        Guid.NewGuid()
+                    ]
+                })
+        };
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(application.RootPath, scope.ServiceProvider);
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var expectedToolNames = new[]
+        {
+            "project_structure_projects_list",
+            "project_structure_project_create",
+            "project_structure_project_update",
+            "project_structure_hierarchy_get",
+            "project_structure_subproject_link",
+            "project_structure_read",
+            "project_structure_checklist",
+            "project_structure_dependencies_query",
+            "project_structure_node_create",
+            "project_structure_node_update",
+            "project_structure_node_recompose",
+            "project_structure_node_reparent",
+            "project_structure_approval_request",
+            "project_structure_asset_get",
+            "project_structure_asset_create_revision",
+            "project_structure_import",
+            "project_structure_knowledge_query",
+            "project_structure_analytics_query",
+            "project_structure_project_lease_acquire",
+            "project_structure_repo_branch_lease_acquire",
+            "project_structure_lease_get",
+            "project_structure_lease_release"
+        };
+
+        foreach (var toolName in expectedToolNames)
+        {
+            Assert.Contains(toolName, toolNames);
+        }
+
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("Attached internal project-structure tools", StringComparison.Ordinal));
+    }
+
     private sealed class OpaqueToolCallContent(
-        string? callId,
+        string callId,
         string name,
         IDictionary<string, object?> arguments) : ToolCallContent(callId)
     {

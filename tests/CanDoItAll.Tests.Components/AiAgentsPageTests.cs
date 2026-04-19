@@ -6,6 +6,7 @@ using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
@@ -337,6 +338,75 @@ public sealed class AiAgentsPageTests
         {
             Assert.Contains("Visible Runtime Engineer", cut.Markup);
             Assert.DoesNotContain("No technical agents", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Agent_catalog_exposes_project_structure_access_controls_and_project_choices()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var saveResult = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Access Project"
+        });
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
+
+        cut.WaitForElement("[data-testid='agents-catalog-project-structure-access']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workbench Access Project", cut.Markup);
+        });
+
+        Assert.Contains("Project Structure Access", cut.Markup);
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-read']"));
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-write']"));
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-projects']"));
+    }
+
+    [Fact]
+    public async Task Agent_catalog_switches_requested_agent_without_reloading_the_editor_from_storage()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var firstEditor = await workspaceService.GetAgentEditorAsync();
+        firstEditor.Name = "First Runtime Agent";
+        firstEditor.RoleTitle = "First role";
+        firstEditor.Summary = "First summary";
+        firstEditor.Instructions = "First instructions";
+        firstEditor.Status = AgentLifecycleStatus.Active;
+        firstEditor.IsTemplate = false;
+        firstEditor.TemplateKey = string.Empty;
+        var firstAgentId = await workspaceService.SaveAgentAsync(firstEditor);
+
+        var secondEditor = await workspaceService.GetAgentEditorAsync();
+        secondEditor.Name = "Second Runtime Agent";
+        secondEditor.RoleTitle = "Second role";
+        secondEditor.Summary = "Second summary";
+        secondEditor.Instructions = "Second instructions";
+        secondEditor.Status = AgentLifecycleStatus.Active;
+        secondEditor.IsTemplate = false;
+        secondEditor.TemplateKey = string.Empty;
+        var secondAgentId = await workspaceService.SaveAgentAsync(secondEditor);
+
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.RequestedAgentId, firstAgentId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("First Runtime Agent", cut.Find("[data-testid='agents-catalog-name']").GetAttribute("value"));
+        });
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.RequestedAgentId, secondAgentId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("Second Runtime Agent", cut.Find("[data-testid='agents-catalog-name']").GetAttribute("value"));
         });
     }
 

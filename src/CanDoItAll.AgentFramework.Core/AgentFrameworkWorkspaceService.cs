@@ -7,7 +7,6 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
     private readonly ISandboxWorkspaceStore store;
     private readonly AgentFrameworkWorkspaceCatalogService catalogService;
     private readonly AgentFrameworkWorkspaceExecutionService executionService;
-    private readonly IProviderProfileRegistry providerProfileRegistry;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
 
     public AgentFrameworkWorkspaceService(
@@ -32,7 +31,6 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
         var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService);
-        this.providerProfileRegistry = resolvedProviderProfileRegistry;
         var resolvedProviderDiagnosticsService = providerDiagnosticsService ?? new ProviderDiagnosticsService(runtime);
         var resolvedExecutionGovernanceBridge = executionGovernanceBridge ?? new NullAgentExecutionGovernanceBridge();
         var resolvedExecutionEventSink = executionEventSink ?? new NullAgentExecutionEventSink();
@@ -65,13 +63,12 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         var document = await store.LoadAsync(cancellationToken);
         var catalog = document.ToCatalog();
         var executionState = document.ToExecutionState();
-        var providers = await providerProfileRegistry.ListProvidersAsync(cancellationToken);
         var recentWindow = DateTimeOffset.UtcNow.AddHours(-1);
 
         return new SandboxDashboardSnapshot(
             AgentCount: catalog.Agents.Count(item => !item.IsTemplate),
             TemplateCount: catalog.Agents.Count(item => item.IsTemplate),
-            ProviderCount: providers.Count,
+            ProviderCount: catalog.Providers.Count,
             CapabilityCount: catalog.Capabilities.Count,
             SessionCount: executionState.ChatSessions.Count,
             MemoryCount: catalog.Memory.Count,

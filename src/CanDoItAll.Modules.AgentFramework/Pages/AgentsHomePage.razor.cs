@@ -53,6 +53,8 @@ public partial class AgentsHomePage
     private Guid? effectiveRequestedAgentId;
     private bool isLoaded;
     private bool isFeedingDefaults;
+    private IReadOnlyList<AgentDefinition> catalogAgents = [];
+    private IReadOnlyList<ProviderProfile> catalogProviders = [];
     private string statusMessage = string.Empty;
     private bool statusMessageIsError;
     private SandboxDashboardSnapshot dashboard = new(
@@ -99,23 +101,23 @@ public partial class AgentsHomePage
         var dashboardTask = WorkspaceService.GetDashboardAsync();
         var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
         var providersTask = WorkspaceService.ListProvidersAsync();
-        var capabilitiesTask = WorkspaceService.ListCapabilitiesAsync();
-        await Task.WhenAll(dashboardTask, agentsTask, providersTask, capabilitiesTask);
+        await Task.WhenAll(dashboardTask, agentsTask, providersTask);
 
         dashboard = await dashboardTask;
-        var currentAgents = (await agentsTask).ToList();
-        technicalAgentCount = currentAgents.Count;
-        providerCount = (await providersTask).Count;
-        capabilityCount = (await capabilitiesTask).Count;
+        catalogAgents = (await agentsTask).ToList();
+        catalogProviders = (await providersTask).ToList();
+        technicalAgentCount = catalogAgents.Count;
+        providerCount = catalogProviders.Count;
+        capabilityCount = dashboard.CapabilityCount;
         activeRunCount = dashboard.ActiveRuns;
         failedRunCount = dashboard.FailedRuns;
-        if (currentAgents.Count == 0)
+        if (catalogAgents.Count == 0)
         {
             boundResourceCount = 0;
         }
         else
         {
-            var technicalAgentIds = currentAgents
+            var technicalAgentIds = catalogAgents
                 .Select(item => item.Id)
                 .ToList();
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
