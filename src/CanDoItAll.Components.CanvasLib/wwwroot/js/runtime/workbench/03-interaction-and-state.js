@@ -358,8 +358,7 @@
         }
 
         return !!action?.requiresInput ||
-            (action?.createMode && action.createMode !== "command") ||
-            (action?.actionId || "").startsWith("add-");
+            (action?.createMode && action.createMode !== "command");
     }
 
     function buildCreateRequest(state, action, sourceNode, worldPoint, placementKind) {

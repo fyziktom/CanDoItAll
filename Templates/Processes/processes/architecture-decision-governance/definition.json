@@ -91,7 +91,7 @@
       "ExceptionPolicySummary": "Do not proceed when scope and affected domains are not explicit.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
-      "DependsOnBranchOutcomeKey": "",
+"DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 120,
       "CanvasY": 220,
@@ -455,7 +455,7 @@
       "ExceptionPolicySummary": "If rollout expectations cannot be stated clearly, the decision is not ready for downstream implementation.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "board-decision",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
       "CanvasX": 1360,
       "CanvasY": 220,
@@ -524,7 +524,61 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "board-decision",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "approved"
+        }
+      ],
+      "ArtifactInputs": []
+    },
+    {
+      "Order": 5,
+      "Key": "defer-and-revisit",
+      "Title": "Capture deferral and revisit triggers",
+      "Subtitle": "Deferred decisions still need a durable outcome",
+      "Notes": "Record why the board deferred the ADR, what evidence is missing, and which revisit trigger must reopen the decision instead of letting the request disappear.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Deferred board decision and unresolved evidence gaps.",
+      "OutputContractSummary": "Deferred ADR with explicit revisit conditions and named owner.",
+      "EvidenceContractSummary": "Deferral note and revisit trigger list.",
+      "DecisionRightsSummary": "Governance facilitator records the deferment; domain owner confirms the next review trigger is actionable.",
+      "ExceptionPolicySummary": "Do not defer without naming the missing evidence or the condition that reopens the decision.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "board-decision",
+      "DependsOnBranchOutcomeKey": "deferred",
+      "DecisionRoleKey": "",
+      "CanvasX": 1360,
+      "CanvasY": 340,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "governance-facilitator",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Facilitator owns the durable deferral record."
+        },
+        {
+          "RoleKey": "domain-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Domain owner confirms the revisit trigger is concrete."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "BranchCanvasX": 1560,
+      "BranchCanvasY": 340,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "board-decision",
+          "DependsOnBranchOutcomeKey": "deferred"
         }
       ],
       "ArtifactInputs": []

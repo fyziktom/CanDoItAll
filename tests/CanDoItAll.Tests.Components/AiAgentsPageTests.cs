@@ -253,6 +253,21 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
+    public async Task Agents_page_exposes_feed_defaults_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents?tab=agents");
+        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='agents-shell-feed-defaults']"));
+        });
+    }
+
+    [Fact]
     public async Task Current_projected_agents_visible_in_crm_hr_must_also_be_visible_in_agents_page()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

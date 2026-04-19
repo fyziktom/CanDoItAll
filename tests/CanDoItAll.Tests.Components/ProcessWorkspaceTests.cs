@@ -100,6 +100,19 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Process_workspace_exposes_feed_defaults_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-feed-defaults-button']"));
+        });
+    }
+
+    [Fact]
     public async Task Steps_canvas_toolbar_switches_between_authoring_and_delete_modes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

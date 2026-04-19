@@ -47,6 +47,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     [Inject]
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
 
+    [Inject]
+    private ProcessCatalogWarmupService CatalogWarmupService { get; set; } = default!;
+
     [Parameter]
     public Guid? ProjectId { get; set; }
 
@@ -108,6 +111,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string projectName = string.Empty;
     private string message = string.Empty;
     private bool isError;
+    private bool isFeedingDefaults;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
     private Guid? loadedProcessQueryId;
@@ -212,5 +216,32 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     {
         message = string.Empty;
         isError = false;
+    }
+
+    private async Task FeedDefaultsAsync()
+    {
+        if (isFeedingDefaults)
+        {
+            return;
+        }
+
+        isFeedingDefaults = true;
+        ClearMessage();
+
+        try
+        {
+            await CatalogWarmupService.WarmupAsync(synchronizeExistingDefinitions: true);
+            await LoadWorkspaceAsync();
+            SetMessage("Default processes were synchronized from the current template pack.");
+        }
+        catch (Exception exception)
+        {
+            SetError($"Failed to synchronize default processes. {exception.Message}");
+        }
+        finally
+        {
+            isFeedingDefaults = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

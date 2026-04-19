@@ -20,7 +20,14 @@ internal sealed class ProcessCatalogWarmupService(
         "release-readiness-and-deployment"
     ];
 
-    public async Task WarmupAsync(CancellationToken cancellationToken = default)
+    public Task WarmupAsync(CancellationToken cancellationToken = default)
+    {
+        return WarmupAsync(synchronizeExistingDefinitions: false, cancellationToken);
+    }
+
+    public async Task WarmupAsync(
+        bool synchronizeExistingDefinitions,
+        CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var pack = packLoader.Load();
@@ -28,6 +35,7 @@ internal sealed class ProcessCatalogWarmupService(
             .Where(item => item.ProjectId == null)
             .ToList();
         var importedCount = 0;
+        var synchronizedCount = 0;
         var publishedCount = 0;
 
         foreach (var processKey in DefaultProcessKeys)
@@ -40,6 +48,7 @@ internal sealed class ProcessCatalogWarmupService(
 
             var definition = existingGlobalDefinitions.FirstOrDefault(item =>
                 string.Equals(item.Name, template.DisplayName, StringComparison.OrdinalIgnoreCase));
+            var synchronized = false;
             if (definition is null)
             {
                 var importResult = await processesService.ImportAsync(
@@ -59,8 +68,30 @@ internal sealed class ProcessCatalogWarmupService(
                 existingGlobalDefinitions.Add(definition);
                 importedCount++;
             }
+            else if (synchronizeExistingDefinitions)
+            {
+                var synchronizeResult = await processesService.SynchronizeImportedDefinitionAsync(
+                    definition.Id,
+                    projectionService.GetProjectedEnvelope(processKey, projectId: null),
+                    cancellationToken);
+                if (synchronizeResult.IsFailure)
+                {
+                    logger.LogWarning(
+                        "Failed to synchronize default process template '{ProcessKey}' into definition '{DefinitionId}': {Errors}",
+                        processKey,
+                        definition.Id,
+                        string.Join(" | ", synchronizeResult.Errors.Select(item => item.Message)));
+                    continue;
+                }
 
-            if (definition.HasPublishedVersion)
+                synchronized = synchronizeResult.Value;
+                if (synchronized)
+                {
+                    synchronizedCount++;
+                }
+            }
+
+            if (definition.HasPublishedVersion && !synchronized)
             {
                 continue;
             }
@@ -81,9 +112,10 @@ internal sealed class ProcessCatalogWarmupService(
 
         stopwatch.Stop();
         logger.LogInformation(
-            "Completed process catalog warmup in {ElapsedMilliseconds} ms. Imported {ImportedCount} definitions and published {PublishedCount} definitions.",
+            "Completed process catalog warmup in {ElapsedMilliseconds} ms. Imported {ImportedCount} definitions, synchronized {SynchronizedCount} definitions, and published {PublishedCount} definitions.",
             stopwatch.ElapsedMilliseconds,
             importedCount,
+            synchronizedCount,
             publishedCount);
     }
 }
@@ -98,7 +130,7 @@ internal sealed class ProcessCatalogWarmupWorker(
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var warmupService = scope.ServiceProvider.GetRequiredService<ProcessCatalogWarmupService>();
-            await warmupService.WarmupAsync(stoppingToken);
+            await warmupService.WarmupAsync(cancellationToken: stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

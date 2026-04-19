@@ -32,6 +32,9 @@ public partial class AgentsHomePage
     public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
 
     [Inject]
+    private AgentFrameworkCatalogWarmupService CatalogWarmupService { get; set; } = default!;
+
+    [Inject]
     public IDbContextFactory<AppDbContext> DbContextFactory { get; set; } = default!;
 
     [SupplyParameterFromQuery(Name = "tab")]
@@ -49,6 +52,9 @@ public partial class AgentsHomePage
     private string selectedTab = "overview";
     private Guid? effectiveRequestedAgentId;
     private bool isLoaded;
+    private bool isFeedingDefaults;
+    private string statusMessage = string.Empty;
+    private bool statusMessageIsError;
     private SandboxDashboardSnapshot dashboard = new(
         0,
         0,
@@ -85,7 +91,11 @@ public partial class AgentsHomePage
     private async Task LoadAsync()
     {
         await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
+        await LoadDashboardAsync();
+    }
 
+    private async Task LoadDashboardAsync()
+    {
         var dashboardTask = WorkspaceService.GetDashboardAsync();
         var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
         var providersTask = WorkspaceService.ListProvidersAsync();
@@ -118,6 +128,33 @@ public partial class AgentsHomePage
 
         isLoaded = true;
         ApplyRequestedTab();
+    }
+
+    private async Task FeedDefaultsAsync()
+    {
+        if (isFeedingDefaults)
+        {
+            return;
+        }
+
+        isFeedingDefaults = true;
+        ClearStatusMessage();
+
+        try
+        {
+            await CatalogWarmupService.WarmupAsync();
+            await LoadDashboardAsync();
+            SetStatusMessage("Default agents, capabilities, and CRM-HR projection were synchronized.");
+        }
+        catch (Exception exception)
+        {
+            SetStatusError($"Failed to synchronize default agents. {exception.Message}");
+        }
+        finally
+        {
+            isFeedingDefaults = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private Task HandleTabChangedAsync(
@@ -206,6 +243,24 @@ public partial class AgentsHomePage
     private string ResolveSummaryValue(int value)
     {
         return isLoaded ? value.ToString() : "...";
+    }
+
+    private void SetStatusMessage(string value)
+    {
+        statusMessage = value;
+        statusMessageIsError = false;
+    }
+
+    private void SetStatusError(string value)
+    {
+        statusMessage = value;
+        statusMessageIsError = true;
+    }
+
+    private void ClearStatusMessage()
+    {
+        statusMessage = string.Empty;
+        statusMessageIsError = false;
     }
 
     private void OpenCrmHrAgents()

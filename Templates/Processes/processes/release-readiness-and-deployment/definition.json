@@ -96,7 +96,7 @@
       "ExceptionPolicySummary": "No readiness claim is valid if scope can still silently drift.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
-      "DependsOnBranchOutcomeKey": "",
+"DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 120,
       "CanvasY": 200,
@@ -498,7 +498,7 @@
       "ExceptionPolicySummary": "Rollback immediately when thresholds or instructions dictate it.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "security-and-go-no-go",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "go",
       "DecisionRoleKey": "",
       "CanvasX": 1360,
       "CanvasY": 200,
@@ -567,7 +567,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "security-and-go-no-go",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "go"
         }
       ],
       "ArtifactInputs": []
@@ -660,6 +660,60 @@
         {
           "DependsOnStepKey": "execute-cutover",
           "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": []
+    },
+    {
+      "Order": 6,
+      "Key": "hold-release-and-track-gap-closure",
+      "Title": "Hold the release and track gap closure",
+      "Subtitle": "A held release still needs a typed end state",
+      "Notes": "Record the hold decision, missing controls, and required gap-closure plan so the release can resume from an explicit governance checkpoint instead of an informal retry.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Held release decision with unresolved gaps or exception requests.",
+      "OutputContractSummary": "Closed release attempt with explicit hold conditions and reopening trigger.",
+      "EvidenceContractSummary": "Release hold note and gap-closure summary.",
+      "DecisionRightsSummary": "Release approver and change manager define the hold boundary and required next checkpoint.",
+      "ExceptionPolicySummary": "Do not reopen the release path until the recorded hold conditions are satisfied explicitly.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "security-and-go-no-go",
+      "DependsOnBranchOutcomeKey": "hold",
+      "DecisionRoleKey": "",
+      "CanvasX": 1360,
+      "CanvasY": 340,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "release-approver",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release approver owns the held decision."
+        },
+        {
+          "RoleKey": "change-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Change manager preserves the reopening conditions."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "BranchCanvasX": 1560,
+      "BranchCanvasY": 340,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "security-and-go-no-go",
+          "DependsOnBranchOutcomeKey": "hold"
         }
       ],
       "ArtifactInputs": []

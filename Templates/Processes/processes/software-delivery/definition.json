@@ -578,6 +578,10 @@
           "DependsOnBranchOutcomeKey": ""
         },
         {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
           "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
@@ -668,6 +672,10 @@
           "DependsOnBranchOutcomeKey": ""
         },
         {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
           "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
@@ -748,6 +756,10 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
           "DependsOnBranchOutcomeKey": ""
         },
         {

@@ -103,7 +103,7 @@
       "ExceptionPolicySummary": "Do not delegate ambiguous or ownerless tasks.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
-      "DependsOnBranchOutcomeKey": "",
+"DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 120,
       "CanvasY": 180,
@@ -303,7 +303,7 @@
       "ExceptionPolicySummary": "Stop immediately if the agent attempts disallowed files, tools, or data domains.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "delegation-design",
-      "DependsOnBranchOutcomeKey": "",
+"DependsOnBranchOutcomeKey": "delegate",
       "DecisionRoleKey": "",
       "CanvasX": 740,
       "CanvasY": 180,
@@ -372,7 +372,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "delegation-design",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "delegate"
         }
       ],
       "ArtifactInputs": [
@@ -486,6 +486,10 @@
         {
           "DependsOnStepKey": "agent-execution",
           "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "delegation-design",
+          "DependsOnBranchOutcomeKey": "delegate"
         }
       ],
       "ArtifactInputs": [
@@ -599,6 +603,10 @@
         {
           "DependsOnStepKey": "evaluation-and-benchmarking",
           "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "delegation-design",
+          "DependsOnBranchOutcomeKey": "delegate"
         }
       ],
       "ArtifactInputs": [
@@ -626,7 +634,7 @@
       "ExceptionPolicySummary": "Do not lose traceability between approved artifact and merged change.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "safety-and-security-review",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
       "CanvasX": 1670,
       "CanvasY": 180,
@@ -695,7 +703,115 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "safety-and-security-review",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "approved"
+        }
+      ],
+      "ArtifactInputs": []
+    },
+    {
+      "Order": 6,
+      "Key": "manual-delivery-handoff",
+      "Title": "Keep delivery human-owned and close delegation request",
+      "Subtitle": "Unsafe delegation becomes an explicit human handoff",
+      "Notes": "Record why delegation was refused, preserve the human-owned boundary decision, and close the agent lane without pretending automated execution happened.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Delegation decision and human-only rationale.",
+      "OutputContractSummary": "Closed delegation request with clear human follow-up ownership.",
+      "EvidenceContractSummary": "Delegation refusal note and handoff summary.",
+      "DecisionRightsSummary": "Product owner and solution architect confirm that the work remains human-executed.",
+      "ExceptionPolicySummary": "Do not reopen an agent lane until the delegation boundary is redesigned explicitly.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "delegation-design",
+      "DependsOnBranchOutcomeKey": "human-only",
+      "DecisionRoleKey": "",
+      "CanvasX": 740,
+      "CanvasY": 340,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "product-owner",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Product owner accepts the human-only path."
+        },
+        {
+          "RoleKey": "solution-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture owner confirms the delegation boundary remains closed."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "BranchCanvasX": 940,
+      "BranchCanvasY": 340,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "delegation-design",
+          "DependsOnBranchOutcomeKey": "human-only"
+        }
+      ],
+      "ArtifactInputs": []
+    },
+    {
+      "Order": 7,
+      "Key": "capture-rework-decision",
+      "Title": "Capture rework decision and stop the merge lane",
+      "Subtitle": "Rejected output must exit through a typed decision",
+      "Notes": "Preserve the rework decision, residual concerns, and required next actions so the change can be revised deliberately instead of drifting through an implicit retry loop.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Safety and security review result with explicit rework findings.",
+      "OutputContractSummary": "Closed merge attempt with a typed rework directive.",
+      "EvidenceContractSummary": "Rework decision record and next-step note.",
+      "DecisionRightsSummary": "Security reviewer and release approver jointly define what must change before re-entry.",
+      "ExceptionPolicySummary": "Do not treat rework as approved-by-delay; the merge lane stays closed until a new review cycle starts.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "safety-and-security-review",
+      "DependsOnBranchOutcomeKey": "rework",
+      "DecisionRoleKey": "",
+      "CanvasX": 1670,
+      "CanvasY": 340,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "security-reviewer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Security owner records the blocking reason."
+        },
+        {
+          "RoleKey": "release-approver",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release approver confirms the merge lane stays closed."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "BranchCanvasX": 1870,
+      "BranchCanvasY": 340,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "safety-and-security-review",
+          "DependsOnBranchOutcomeKey": "rework"
         }
       ],
       "ArtifactInputs": []
