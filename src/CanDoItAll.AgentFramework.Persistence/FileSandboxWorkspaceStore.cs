@@ -46,8 +46,8 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         try
         {
             await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
-            return (await LoadSnapshotCoreAsync(cancellationToken)).Document.ToCatalog();
+            await EnsureCatalogReadCoreAsync(cancellationToken);
+            return await LoadNormalizedCatalogCoreAsync(cancellationToken);
         }
         finally
         {
@@ -104,6 +104,21 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
             await EnsureSplitFilesCoreAsync(cancellationToken);
             return (await LoadSnapshotCoreAsync(cancellationToken)).Document.ToExecutionState();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
+            return await LoadExecutionSummaryCoreAsync(cancellationToken);
         }
         finally
         {
@@ -442,6 +457,38 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         await PersistNormalizedWorkspaceDocumentCoreAsync(cancellationToken);
     }
 
+    private async Task EnsureCatalogReadCoreAsync(CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+
+        if (executionSliceStore.ExecutionStorageExists())
+        {
+            if (!File.Exists(layout.CatalogPath))
+            {
+                var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
+                await SaveCatalogCoreAsync(seededCatalog, cancellationToken);
+            }
+
+            await EnsureWorkspaceIndexCoreAsync(cancellationToken);
+            return;
+        }
+
+        await EnsureSplitFilesCoreAsync(cancellationToken);
+    }
+
+    private async Task EnsureExecutionSummaryReadCoreAsync(CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+
+        if (executionSliceStore.ExecutionStorageExists())
+        {
+            await EnsureWorkspaceIndexCoreAsync(cancellationToken);
+            return;
+        }
+
+        await EnsureSplitFilesCoreAsync(cancellationToken);
+    }
+
     private async Task<SandboxWorkspaceCatalog> LoadCatalogCoreAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(layout.CatalogPath))
@@ -453,8 +500,34 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             ?? SandboxWorkspaceCatalog.Empty;
     }
 
+    private async Task<SandboxWorkspaceCatalog> LoadNormalizedCatalogCoreAsync(CancellationToken cancellationToken)
+    {
+        var catalog = await LoadCatalogCoreAsync(cancellationToken);
+        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        if (!EqualityComparer<SandboxWorkspaceCatalog>.Default.Equals(catalog, normalizedCatalog))
+        {
+            await SaveCatalogCoreAsync(normalizedCatalog, cancellationToken);
+        }
+
+        return normalizedCatalog;
+    }
+
     private Task<SandboxWorkspaceExecutionState> LoadExecutionCoreAsync(CancellationToken cancellationToken)
         => executionSliceStore.LoadAsync(cancellationToken);
+
+    private async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryCoreAsync(CancellationToken cancellationToken)
+    {
+        var recentWindow = DateTimeOffset.UtcNow.AddHours(-1);
+        var executionIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
+        var runs = await executionSliceStore.ListRunsAsync(cancellationToken);
+
+        return new SandboxWorkspaceExecutionSummary(
+            SessionCount: executionIndex.SessionCount,
+            ActiveRuns: runs.Count(item =>
+                item.UpdatedAtUtc >= recentWindow &&
+                item.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting),
+            FailedRuns: runs.Count(item => item.Outcome == RunOutcome.Failed));
+    }
 
     private Task<bool> SaveCatalogCoreAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken)
         => jsonStore.WriteJsonIfChangedAsync(layout.CatalogPath, catalog, cancellationToken);

@@ -113,6 +113,11 @@ public sealed record SandboxWorkspaceExecutionState(
         Metrics: []);
 }
 
+public sealed record SandboxWorkspaceExecutionSummary(
+    int SessionCount,
+    int ActiveRuns,
+    int FailedRuns);
+
 public sealed record SandboxDashboardSnapshot(
     int AgentCount,
     int TemplateCount,

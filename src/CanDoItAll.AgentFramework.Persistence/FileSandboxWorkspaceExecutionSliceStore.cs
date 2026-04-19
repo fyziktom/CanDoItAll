@@ -20,6 +20,37 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ?? SandboxWorkspaceExecutionState.Empty;
     }
 
+    public Task<ExecutionStorageIndex> LoadIndexAsync(CancellationToken cancellationToken)
+    {
+        return ResolveExecutionIndexAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ExecutionRunRecord>> ListRunsAsync(CancellationToken cancellationToken)
+    {
+        if (!ExecutionStorageExists())
+        {
+            return (await TryLoadLegacyExecutionStateAsync(cancellationToken))?.ExecutionRuns
+                   ?? [];
+        }
+
+        var runs = new List<ExecutionRunRecord>();
+        if (!Directory.Exists(layout.ExecutionRunsRoot))
+        {
+            return runs;
+        }
+
+        foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+        {
+            var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(Path.Combine(runDirectory, "run.json"), cancellationToken);
+            if (run is not null)
+            {
+                runs.Add(run);
+            }
+        }
+
+        return runs;
+    }
+
     public Task<SandboxWorkspaceExecutionState?> TryLoadLegacyExecutionStateAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(layout.LegacyExecutionPath))

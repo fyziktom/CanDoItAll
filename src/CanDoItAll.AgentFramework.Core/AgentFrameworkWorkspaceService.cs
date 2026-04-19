@@ -60,22 +60,22 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
 
     public async Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default)
     {
-        var document = await store.LoadAsync(cancellationToken);
-        var catalog = document.ToCatalog();
-        var executionState = document.ToExecutionState();
-        var recentWindow = DateTimeOffset.UtcNow.AddHours(-1);
+        var catalogTask = store.LoadCatalogAsync(cancellationToken);
+        var executionSummaryTask = store.LoadExecutionSummaryAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, executionSummaryTask);
+
+        var catalog = await catalogTask;
+        var executionSummary = await executionSummaryTask;
 
         return new SandboxDashboardSnapshot(
             AgentCount: catalog.Agents.Count(item => !item.IsTemplate),
             TemplateCount: catalog.Agents.Count(item => item.IsTemplate),
             ProviderCount: catalog.Providers.Count,
             CapabilityCount: catalog.Capabilities.Count,
-            SessionCount: executionState.ChatSessions.Count,
+            SessionCount: executionSummary.SessionCount,
             MemoryCount: catalog.Memory.Count,
-            ActiveRuns: executionState.ExecutionRuns.Count(item =>
-                item.UpdatedAtUtc >= recentWindow &&
-                item.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting),
-            FailedRuns: executionState.ExecutionRuns.Count(item => item.Outcome == RunOutcome.Failed),
+            ActiveRuns: executionSummary.ActiveRuns,
+            FailedRuns: executionSummary.FailedRuns,
             ToolExecutionBoundary: toolExecutionBoundary);
     }
 }

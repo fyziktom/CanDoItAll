@@ -18,6 +18,7 @@ public interface ISandboxWorkspaceCatalogStore
 public interface ISandboxWorkspaceExecutionStore
 {
     Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default);
+    Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default);
     Task SaveExecutionAsync(SandboxWorkspaceExecutionState executionState, CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceExecutionState> UpdateExecutionAsync(
         Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,

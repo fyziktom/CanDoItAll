@@ -8,6 +8,56 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
 {
     [Fact]
+    public async Task GetDashboardAsync_counts_recent_active_and_failed_runs_from_split_execution_storage()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var workspaceStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunStore>(
+            scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+
+        var baseline = await workspaceService.GetDashboardAsync();
+        var agent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
+
+        var now = DateTimeOffset.UtcNow;
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                agent.Id,
+                Guid.NewGuid(),
+                now,
+                ExecutionState.Running,
+                outcome: null,
+                updatedAtUtc: now),
+            CancellationToken.None);
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                agent.Id,
+                Guid.NewGuid(),
+                now,
+                ExecutionState.Completed,
+                RunOutcome.Failed,
+                updatedAtUtc: now),
+            CancellationToken.None);
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                agent.Id,
+                Guid.NewGuid(),
+                now.AddHours(-2),
+                ExecutionState.Running,
+                outcome: null,
+                updatedAtUtc: now.AddHours(-2)),
+            CancellationToken.None);
+
+        var dashboard = await workspaceService.GetDashboardAsync();
+
+        Assert.Equal(baseline.SessionCount, dashboard.SessionCount);
+        Assert.Equal(baseline.ActiveRuns + 1, dashboard.ActiveRuns);
+        Assert.Equal(baseline.FailedRuns + 1, dashboard.FailedRuns);
+    }
+
+    [Fact]
     public async Task GetExecutionRunDetailAsync_projects_successful_playwright_browser_calls_into_tool_receipts()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -122,6 +172,45 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         {
             ExecutionRunId = executionRunId
         };
+    }
+
+    private static ExecutionRunDetail CreateExecutionRunDetail(
+        Guid agentId,
+        Guid runId,
+        DateTimeOffset createdAtUtc,
+        ExecutionState state,
+        RunOutcome? outcome,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Id: runId,
+                AgentId: agentId,
+                ChatSessionId: null,
+                Title: "Dashboard summary test",
+                SourceKind: "integration-test",
+                SourceId: $"run-{runId:N}",
+                CorrelationId: $"corr-{runId:N}",
+                CausationId: string.Empty,
+                RequestedBy: "test",
+                RequestedByKind: "system",
+                MetadataJson: "{}",
+                InputSummary: "summary",
+                ResultSummary: outcome?.ToString() ?? state.ToString(),
+                ProviderName: "OpenAI default",
+                Model: "gpt-4.1",
+                State: state,
+                Outcome: outcome,
+                CreatedAtUtc: createdAtUtc,
+                UpdatedAtUtc: updatedAtUtc,
+                StartedAtUtc: createdAtUtc,
+                CompletedAtUtc: outcome.HasValue ? updatedAtUtc : null,
+                RuntimeSessionKey: string.Empty,
+                SerializedSessionStateJson: string.Empty,
+                PendingApprovals: []),
+            null,
+            [],
+            []);
     }
 
     private static string BuildSerializedSessionState(params (string ToolName, IReadOnlyDictionary<string, object?> Arguments, object Result)[] toolCalls)
