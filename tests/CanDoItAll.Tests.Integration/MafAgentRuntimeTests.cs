@@ -1,8 +1,10 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -134,6 +136,51 @@ public sealed class MafAgentRuntimeTests
         Assert.False(includeReasoningEncryptedContent);
     }
 
+    [Fact]
+    public async Task CreateCapabilityState_skips_unsupported_provider_native_web_search_for_ollama()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var architectAgent = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
+        var ollamaProvider = Assert.Single(
+            seed.Providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Remote Ollama", StringComparison.Ordinal));
+        var selectedCapabilityIds = architectAgent.Capabilities
+            .Where(item =>
+                string.Equals(item.CapabilityKey, "provider-native-web-search", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(item.CapabilityKey, "provider-health", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(item.CapabilityKey, "workspace-search", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.CapabilityId)
+            .ToHashSet();
+        var capabilities = seed.Capabilities
+            .Where(item => selectedCapabilityIds.Contains(item.Id))
+            .ToList();
+        var agent = architectAgent with
+        {
+            ProviderProfileId = ollamaProvider.Id,
+            Model = ollamaProvider.DefaultModel
+        };
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, ollamaProvider, capabilities, progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToList();
+
+        Assert.Contains(toolNames, item => string.Equals(item, "workspace_search", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(toolNames, item => string.Equals(item, "provider_health", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(toolNames, item => string.Equals(item, "provider-native-web-search", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("Skipping capability 'Provider-Native Web Search'", StringComparison.Ordinal) &&
+                    item.Contains("Remote Ollama", StringComparison.Ordinal));
+    }
+
     private sealed class OpaqueToolCallContent(
         string? callId,
         string name,
@@ -142,5 +189,38 @@ public sealed class MafAgentRuntimeTests
         public string Name { get; } = name;
 
         public IDictionary<string, object?> Arguments { get; } = arguments;
+    }
+
+    private static async Task<object> InvokeCreateCapabilityStateAsync(
+        MafAgentRuntime runtime,
+        AgentDefinition agent,
+        ProviderProfile provider,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        List<string> progressMessages)
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "CreateCapabilityStateAsync",
+                         BindingFlags.NonPublic | BindingFlags.Instance)
+                     ?? throw new InvalidOperationException("CreateCapabilityStateAsync method was not found.");
+        var invocation = method.Invoke(
+            runtime,
+            [
+                agent,
+                provider,
+                capabilities,
+                Array.Empty<AgentMemoryRecord>(),
+                (Func<ExecutionState, string, string, Task>)((_, _, message) =>
+                {
+                    progressMessages.Add(message);
+                    return Task.CompletedTask;
+                }),
+                CancellationToken.None,
+                false
+            ]);
+        var task = Assert.IsAssignableFrom<Task>(invocation);
+        await task;
+
+        return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
+               ?? throw new InvalidOperationException("CreateCapabilityStateAsync did not produce a result.");
     }
 }

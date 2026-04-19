@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
+    <ProjectReference Include="..\..\tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+  </ItemGroup>
+</Project>

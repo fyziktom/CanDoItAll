@@ -158,6 +158,11 @@ public sealed partial class MafAgentRuntime
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements)
     {
+        if (await TrySkipUnsupportedProviderNativeCapabilityAsync(capability, provider, progressCallback))
+        {
+            return;
+        }
+
         switch (capability.Kind)
         {
             case CapabilityKind.Tool:
@@ -197,6 +202,48 @@ public sealed partial class MafAgentRuntime
                 await composition.ContextBuilder.AddMemoryProviderAsync(composition.State, capability, agent, progressCallback, cancellationToken);
                 break;
         }
+    }
+
+    private static async Task<bool> TrySkipUnsupportedProviderNativeCapabilityAsync(
+        CapabilityCatalogItem capability,
+        ProviderProfile provider,
+        Func<ExecutionState, string, string, Task> progressCallback)
+    {
+        if (capability.Kind == CapabilityKind.Tool)
+        {
+            var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
+            var toolKey = configuration.Tool ?? capability.Key;
+            if (ProviderNativeToolKeys.TryResolveFamily(toolKey, out var family))
+            {
+                var support = ProviderFeatureService.GetNativeToolSupport(provider, family);
+                if (!support.IsSupported)
+                {
+                    await progressCallback(
+                        ExecutionState.Preparing,
+                        "Capability compatibility",
+                        $"Skipping capability '{capability.Name}' for provider '{provider.Name}'. {support.Summary} {support.Remediation}");
+                    return true;
+                }
+            }
+        }
+        else if (capability.Kind == CapabilityKind.McpServer)
+        {
+            var configuration = DeserializeConfiguration<McpCapabilityConfiguration>(capability.ConfigurationJson);
+            if (configuration?.Hosted == true)
+            {
+                var support = ProviderFeatureService.GetNativeToolSupport(provider, ProviderNativeToolFamily.HostedMcpServer);
+                if (!support.IsSupported)
+                {
+                    await progressCallback(
+                        ExecutionState.Preparing,
+                        "Capability compatibility",
+                        $"Skipping capability '{capability.Name}' for provider '{provider.Name}'. {support.Summary} {support.Remediation}");
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private async Task AttachCompactionAsync(

@@ -23,17 +23,17 @@
             </label>
             break;
         case ConnectorConfigFieldType.Json:
-            <InputTextArea Value="TextValue"
+            <InputTextArea Value="@TextValue"
                            ValueChanged="HandleTextChanged"
-                           ValueExpression="() => TextValue"
+                           ValueExpression="@(() => TextValue)"
                            class="@($"{InputClass} cda-input--textarea min-h-24")"
                            data-testid="@TestId" />
             break;
         case ConnectorConfigFieldType.SecretReference:
             <InputSelect TValue="string"
-                         Value="TextValue"
+                         Value="@TextValue"
                          ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
-                         ValueExpression="() => TextValue"
+                         ValueExpression="@(() => TextValue)"
                          class="@InputClass"
                          data-testid="@TestId">
                 <option value="">None</option>
@@ -44,9 +44,9 @@
             </InputSelect>
             break;
         default:
-            <InputText Value="TextValue"
+            <InputText Value="@TextValue"
                        ValueChanged="HandleTextChanged"
-                       ValueExpression="() => TextValue"
+                       ValueExpression="@(() => TextValue)"
                        class="@InputClass"
                        data-testid="@TestId" />
             break;
