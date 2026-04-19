@@ -31,6 +31,63 @@
         }
     }
 
+    function wrapCanvasInlineTextParagraphs(primitives, context, text, maxWidth, maxLines) {
+        const normalized = typeof text === "string"
+            ? text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+            : "";
+        const paragraphs = normalized.split("\n");
+        const lines = [];
+        let remainingLines = Math.max(1, maxLines || 1);
+
+        for (let index = 0; index < paragraphs.length; index += 1) {
+            if (remainingLines <= 0) {
+                break;
+            }
+
+            const paragraph = paragraphs[index];
+            if (!paragraph.trim()) {
+                lines.push("");
+                remainingLines -= 1;
+                continue;
+            }
+
+            const wrappedLines = primitives?.wrapText
+                ? primitives.wrapText(context, paragraph, maxWidth, remainingLines)
+                : [paragraph];
+            const normalizedLines = Array.isArray(wrappedLines) && wrappedLines.length > 0
+                ? wrappedLines
+                : [paragraph];
+
+            for (const line of normalizedLines) {
+                if (remainingLines <= 0) {
+                    break;
+                }
+
+                lines.push(line);
+                remainingLines -= 1;
+            }
+        }
+
+        return lines.length > 0
+            ? lines
+            : [""];
+    }
+
+    function countCanvasInlineTextMetaItems(node) {
+        const markerCount = Array.isArray(node?.markers) && node.markers.length > 0
+            ? Math.min(3, node.markers.length)
+            : node?.markerIcon
+                ? 1
+                : 0;
+        const annotationCount = Array.isArray(node?.annotations)
+            ? Math.min(3, node.annotations.length)
+            : 0;
+        const statusCount = node?.statusPill ? 1 : 0;
+        const priorityCount = node?.priority > 0 ? 1 : 0;
+
+        return 1 + markerCount + annotationCount + statusCount + priorityCount;
+    }
+
     function traceRoundedPanelPath(context, bounds, radius) {
         const width = Math.max(0, bounds.width || 0);
         const height = Math.max(0, bounds.height || 0);
@@ -1100,17 +1157,26 @@
         const padding = Math.max(12, 18 * state.ui.zoom);
         const contentWidth = Math.max(24, hostBounds.width - (padding * 2));
         const noteText = node.inlineText || node.title || node.leadText || "Write note";
+        const lineHeight = Math.max(14, 18 * state.ui.zoom);
+        const metaRows = Math.max(1, Math.ceil(countCanvasInlineTextMetaItems(node) / 4));
+        const reservedBottom = Math.max(26, 30 * state.ui.zoom) + ((metaRows - 1) * Math.max(12, 16 * state.ui.zoom));
+        const maxTextLines = detailMode === "compact"
+            ? 2
+            : Math.max(2, Math.floor(Math.max(lineHeight, hostBounds.height - (padding * 2) - reservedBottom) / lineHeight));
         setCanvasFont(context, 600, Math.max(10, 13 * state.ui.zoom));
         const primitives = getCanvasRuntimePrimitives();
-        const lines = primitives?.wrapText
-            ? primitives.wrapText(context, noteText, contentWidth, detailMode === "compact" ? 2 : 5)
-            : [noteText];
+        const lines = wrapCanvasInlineTextParagraphs(
+            primitives,
+            context,
+            noteText,
+            contentWidth,
+            maxTextLines);
         drawCanvasTextLines(
             context,
             lines,
             hostBounds.left + padding,
             hostBounds.top + padding + Math.max(10, 14 * state.ui.zoom),
-            Math.max(12, 16 * state.ui.zoom),
+            lineHeight,
             paletteStyle.titleText);
         context.restore();
 

@@ -754,6 +754,31 @@
                     }
                 }
 
+                if ((event.key === "Delete" || event.key === "Backspace") &&
+                    !event.shiftKey &&
+                    !event.ctrlKey &&
+                    !event.metaKey &&
+                    !event.altKey) {
+                    const selectedNodeId = state.ui?.selectedNodeIds?.length === 1
+                        ? state.ui.selectedNodeIds[0]
+                        : null;
+                    const selectedNode = selectedNodeId
+                        ? state.lookups?.byId?.get?.(selectedNodeId) || null
+                        : null;
+                    if (selectedNode?.isInlineTextNode) {
+                        event.preventDefault();
+                        clearContextMenu(state);
+                        dispatchContextActionRequest(state, {
+                            nodeId: selectedNodeId,
+                            actionId: "delete",
+                            x: 0,
+                            y: 0,
+                            targetKind: "node"
+                        });
+                        return;
+                    }
+                }
+
                 if (event.key === "Tab" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
                     event.preventDefault();
                     openKeyboardNoteComposer(state, "child");
