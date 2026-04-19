@@ -1,23 +1,132 @@
 @namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
 
-<ProcessWorkspaceRunsCanvasSection Presenter="Presenter" />
+<Stack GapScale="LayoutGap.Large"
+       Class="processes-runs-tab-shell"
+       data-testid="processes-runs-tab-shell">
+    @if (Presenter.HasSelectedProcess)
+    {
+        <SurfaceCard Soft="true"
+                     data-testid="processes-selected-run-summary">
+            @if (Presenter.SelectedRun is null)
+            {
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">Run focus</p>
+                    <h3 class="text-lg font-semibold text-slate-950">Select a run from Activity to inspect its details</h3>
+                    <p class="text-sm leading-6 text-slate-600">
+                        Launch planning and live monitoring stay available without a selected run.
+                        Execution controls, coordination, and evidence open once you choose a runtime run from history.
+                    </p>
+                </Stack>
+            }
+            else
+            {
+                var selectedRun = Presenter.SelectedRun!;
+                <Split Gap="LayoutGap.Medium">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Selected run</p>
+                        <h3 class="text-lg font-semibold text-slate-950">@selectedRun.Name</h3>
+                        <p class="text-sm leading-6 text-slate-600">@Presenter.BuildRunSummary(selectedRun)</p>
+                        <p class="text-sm leading-6 text-slate-500">
+                            @selectedRun.EstimatedCost.ToString("C") estimated / @selectedRun.ActualCost.ToString("C") actual
+                        </p>
+                    </Stack>
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@Presenter.ResolveRunTone(selectedRun.Status)"
+                                     Text="@selectedRun.Status.ToString()" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@selectedRun.OperatingMode.ToString()" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@($"{selectedRun.TotalStepCount} steps")" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@($"updated {selectedRun.UpdatedAtUtc.LocalDateTime:g}")" />
+                    </Cluster>
+                </Split>
+            }
+        </SurfaceCard>
+    }
 
-<ProcessWorkspaceRunsLaunchSection Presenter="Presenter" />
+    <Tabs SelectedIndex="@selectedRunViewIndex"
+          SelectedIndexChanged="HandleSelectedRunViewChanged"
+          Variant="@(TabsVariant.WorkspaceSecondary)"
+          BorderMode="@(TabsBorderMode.Soft)"
+          Tone="@(TabsTone.Secondary)"
+          OverflowMode="@(TabsOverflowMode.Scroll)"
+          PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
+          Class="w-full min-w-0"
+          AriaLabel="Process runs workspace sections"
+          data-testid="processes-runs-tabs">
+        <TabItems>
+            <TabsItem Text="Launch">
+                <ProcessWorkspaceRunsLaunchSection Presenter="Presenter" />
+            </TabsItem>
 
-<ProcessWorkspaceRunsActiveSection Presenter="Presenter" />
+            <TabsItem Text="Activity">
+                <Stack GapScale="LayoutGap.Large">
+                    <ProcessWorkspaceRunsActiveSection Presenter="Presenter" />
+                    <ProcessWorkspaceRunsLifecycleSection Presenter="Presenter" />
+                </Stack>
+            </TabsItem>
 
-<ProcessWorkspaceRunsLifecycleSection Presenter="Presenter" />
+            <TabsItem Text="Execution">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run from Activity first"
+                                Description="Execution metrics, runtime canvas state, and technical execution telemetry are attached to the selected runtime run." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Large">
+                        <ProcessWorkspaceRunsSummarySection Presenter="Presenter" />
+                        <ProcessWorkspaceRunsCanvasSection Presenter="Presenter" />
+                        <ProcessWorkspaceRunsExecutionSection Presenter="Presenter" />
+                    </Stack>
+                }
+            </TabsItem>
 
-@if (Presenter.SelectedRun is not null)
-{
-    <ProcessWorkspaceRunsSummarySection Presenter="Presenter" />
-    <ProcessWorkspaceRunsExecutionSection Presenter="Presenter" />
-    <ProcessWorkspaceRunsAssignmentsSection Presenter="Presenter" />
-    <ProcessWorkspaceRunsMessagingSection Presenter="Presenter" />
-    <ProcessWorkspaceRunsArtifactsSection Presenter="Presenter" />
-}
+            <TabsItem Text="Coordination">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run before editing coordination data"
+                                Description="Assignments and direct role messaging stay attached to one durable run so staffing decisions remain reviewable." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Large">
+                        <ProcessWorkspaceRunsAssignmentsSection Presenter="Presenter" />
+                        <ProcessWorkspaceRunsMessagingSection Presenter="Presenter" />
+                    </Stack>
+                }
+            </TabsItem>
+
+            <TabsItem Text="Evidence">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run before reviewing its evidence"
+                                Description="Artifacts, decisions, work briefs, and conformance observations remain grouped under the selected runtime run." />
+                }
+                else
+                {
+                    <ProcessWorkspaceRunsArtifactsSection Presenter="Presenter" />
+                }
+            </TabsItem>
+        </TabItems>
+    </Tabs>
+</Stack>
 
 @code {
+    private int selectedRunViewIndex = 1;
+
     [Parameter, EditorRequired]
     public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+
+    private Task HandleSelectedRunViewChanged(int index)
+    {
+        selectedRunViewIndex = index;
+        return Task.CompletedTask;
+    }
 }
