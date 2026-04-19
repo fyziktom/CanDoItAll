@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,13 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        existingNodes = await AugmentProcessDefinitionNodesAsync(
+            dbContext,
+            projectId,
+            existingNodes,
+            sourceNodeKey,
+            targetNodeKey,
+            cancellationToken);
         InvariantService.ValidateUserAuthoredLink(projectId, sourceNodeKey, targetNodeKey, linkKind, existingNodes);
         await UpsertUserAuthoredLinkAsync(
             dbContext,
@@ -32,6 +40,78 @@ public sealed class ProjectWorkbenchRelationService(
             clock.GetUtcNow(),
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<ProjectObjectRecord>> AugmentProcessDefinitionNodesAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        IReadOnlyList<ProjectObjectRecord> existingNodes,
+        string sourceNodeKey,
+        string targetNodeKey,
+        CancellationToken cancellationToken)
+    {
+        var nodeKeys = new[] { sourceNodeKey, targetNodeKey };
+        var missingDefinitionIds = nodeKeys
+            .Where(nodeKey => !existingNodes.Any(existing => string.Equals(existing.NodeKey, nodeKey, StringComparison.Ordinal)))
+            .Select(TryResolveProcessDefinitionId)
+            .Where(definitionId => definitionId.HasValue)
+            .Select(definitionId => definitionId!.Value)
+            .Distinct()
+            .ToList();
+        if (missingDefinitionIds.Count == 0)
+        {
+            return existingNodes;
+        }
+
+        var definitions = await dbContext.Set<ProcessDefinition>()
+            .Where(item =>
+                missingDefinitionIds.Contains(item.Id) &&
+                (item.ProjectId == projectId || item.ProjectId == null))
+            .ToListAsync(cancellationToken);
+        if (definitions.Count == 0)
+        {
+            return existingNodes;
+        }
+
+        var augmentedNodes = existingNodes.ToList();
+        foreach (var definition in definitions)
+        {
+            var nodeKey = BuildProcessDefinitionNodeKey(definition.Id);
+            if (augmentedNodes.Any(item => string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            augmentedNodes.Add(new ProjectObjectRecord
+            {
+                ProjectId = projectId,
+                NodeKey = nodeKey,
+                ObjectType = ProjectObjectType.ProcessDefinition,
+                Title = definition.Name,
+                ObjectSubtype = string.Empty,
+                Status = definition.Status.ToString(),
+                Notes = definition.Summary ?? string.Empty,
+                ParentNodeKey = $"project:{projectId}",
+                IsSystemManaged = true,
+                CreatedAtUtc = definition.CreatedAtUtc,
+                UpdatedAtUtc = definition.UpdatedAtUtc
+            });
+        }
+
+        return augmentedNodes;
+    }
+
+    private static Guid? TryResolveProcessDefinitionId(string nodeKey)
+    {
+        return nodeKey.StartsWith("process-definition:", StringComparison.Ordinal) &&
+               Guid.TryParse(nodeKey["process-definition:".Length..], out var definitionId)
+            ? definitionId
+            : null;
+    }
+
+    private static string BuildProcessDefinitionNodeKey(Guid definitionId)
+    {
+        return $"process-definition:{definitionId:D}";
     }
 
     public async Task<bool> UnlinkObjectsAsync(

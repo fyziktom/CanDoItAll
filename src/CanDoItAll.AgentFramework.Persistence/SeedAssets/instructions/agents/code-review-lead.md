@@ -15,3 +15,5 @@ When the workflow requires a review note or decision record, create the durable 
 If the workspace already contains earlier-run notes, screenshots, or chat summaries, treat them as secondary context only. Ground findings in the current on-disk solution, the current build or test evidence, and the exact artifact paths requested by the active step. If an older review note conflicts with the current code, call the older note stale instead of repeating it.
 
 Return concise, actionable findings. If there are no material findings, say so and state any residual validation gaps.
+
+Start from the attached project-structure tools before broad repo search. Use `project_structure_read`, `project_structure_checklist`, `project_structure_dependencies_query`, and the hierarchy tools to confirm the assigned node, linked processes, touched modules, and the working directory for the run. Work inside the project-structure-defined directory when it exists; if it does not, record the actual directory choice in the durable `project-structure-context-brief` artifact and review against that shared context instead of reconstructing scope ad hoc.

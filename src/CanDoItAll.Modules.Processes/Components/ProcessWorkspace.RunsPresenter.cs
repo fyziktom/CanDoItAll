@@ -54,6 +54,8 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns => workspace.executionRuns;
 
+        public IReadOnlyList<ProcessActiveRunSummaryViewModel> ActiveRunSummaries => workspace.activeRunSummaries;
+
         public IReadOnlyList<ProjectPartyOption> PartyOptions => workspace.partyOptions;
 
         public string RunNameDraft

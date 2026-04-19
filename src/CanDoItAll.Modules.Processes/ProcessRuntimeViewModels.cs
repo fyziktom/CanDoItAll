@@ -252,6 +252,32 @@ public sealed record ProcessExecutionRunViewModel(
     public IReadOnlyList<ProcessExecutionToolReceiptViewModel> ToolReceipts { get; init; } = [];
 }
 
+public sealed record ProcessActiveAgentViewModel(
+    Guid ExecutionRunId,
+    Guid AgentId,
+    string AgentName,
+    string AgentRoleTitle,
+    string StepTitle,
+    ExecutionState State,
+    RunOutcome? Outcome,
+    DateTimeOffset UpdatedAtUtc)
+{
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+}
+
+public sealed record ProcessActiveRunSummaryViewModel(
+    Guid RunId,
+    string RunName,
+    ProcessRunStatus RunStatus,
+    DateTimeOffset UpdatedAtUtc,
+    int ActiveExecutionCount,
+    int PendingApprovalCount)
+{
+    public IReadOnlyList<ProcessActiveAgentViewModel> Agents { get; init; } = [];
+}
+
 public sealed record ProcessImprovementViewModel(
     Guid Id,
     string Title,

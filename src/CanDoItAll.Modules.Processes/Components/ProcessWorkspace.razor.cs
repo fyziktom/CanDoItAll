@@ -65,6 +65,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
     private IReadOnlyList<ProcessExecutionRunViewModel> executionRuns = [];
+    private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];

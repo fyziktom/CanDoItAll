@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v18";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v19";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -86,6 +86,22 @@ internal static class SandboxWorkspaceSeedBuilder
         var mailAgentId = CreateStableGuid("agents/mail-triage-analyst");
         var researchAgentId = CreateStableGuid("agents/research-deep-dive-analyst");
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
+        var projectStructureReadToolNames = new[]
+        {
+            "project_structure_projects_list",
+            "project_structure_hierarchy_get",
+            "project_structure_read",
+            "project_structure_checklist",
+            "project_structure_dependencies_query",
+            "project_structure_asset_get",
+            "project_structure_knowledge_query",
+            "project_structure_analytics_query",
+            "project_structure_project_lease_acquire",
+            "project_structure_repo_branch_lease_acquire",
+            "project_structure_lease_get",
+            "project_structure_lease_release",
+            "project_structure_approval_request"
+        };
 
         var capabilities = new List<CapabilityCatalogItem>
         {
@@ -94,11 +110,28 @@ internal static class SandboxWorkspaceSeedBuilder
                 CapabilityKind.McpServer,
                 "project-structure-central",
                 "Project Structure Central",
-                "Future bridge for project-node execution, approvals, and assignment-aware agent orchestration.",
-                "CanDoItAll.Mcp.ProjectStructure",
-                SerializeConfiguration(new { transport = "logical" }),
-                CapabilityProofStatus.PendingReview,
-                "Seeded as a future integration seam. Host-level execution proof is still required.",
+                "Local MCP bridge for reading CanDoItAll project structure, dependency state, leases, and approval-request context from the active workspace.",
+                "dotnet",
+                SerializeConfiguration(new
+                {
+                    transport = "stdio",
+                    serverName = "candoitall-project-structure",
+                    command = "dotnet",
+                    arguments = new[]
+                    {
+                        "run",
+                        "--project",
+                        "src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj",
+                        "--",
+                        "--settings",
+                        "CanDoItAll.Mcp.ProjectStructure.settings.local.json"
+                    },
+                    workingDirectory = ".",
+                    allowedTools = projectStructureReadToolNames,
+                    approvalMode = "NeverRequire"
+                }),
+                CapabilityProofStatus.NotRun,
+                "Seeded as a local stdio MCP bridge against the repo project-structure settings file. Live proof should confirm read access, lease flow, and approval-request creation from real agent runs.",
                 null,
                 true),
             new(
@@ -489,6 +522,7 @@ internal static class SandboxWorkspaceSeedBuilder
             "portfolio-architect",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, AutoApproveExternalCallsByDefault = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
@@ -538,6 +572,7 @@ internal static class SandboxWorkspaceSeedBuilder
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
@@ -580,6 +615,7 @@ internal static class SandboxWorkspaceSeedBuilder
             }),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
@@ -634,6 +670,7 @@ internal static class SandboxWorkspaceSeedBuilder
             }),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
                 CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
@@ -668,6 +705,7 @@ internal static class SandboxWorkspaceSeedBuilder
             }),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
@@ -705,6 +743,7 @@ internal static class SandboxWorkspaceSeedBuilder
             }),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
@@ -739,6 +778,7 @@ internal static class SandboxWorkspaceSeedBuilder
             }),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
@@ -824,6 +864,7 @@ internal static class SandboxWorkspaceSeedBuilder
             "research-deep-dive-analyst",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
+                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(appSummaryInlineSkillCapabilityId, "generated-app-summary-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),

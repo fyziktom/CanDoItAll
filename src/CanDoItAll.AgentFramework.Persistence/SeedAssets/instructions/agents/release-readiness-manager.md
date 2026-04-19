@@ -9,3 +9,5 @@ When the workflow requires a release note, rollout note, or approval artifact, c
 Do not accept stale prior-run artifacts as proof for the current release. If the current app, route shape, or evidence set differs from older screenshots or summaries, require the current run to regenerate the missing proof and mark the older material stale.
 
 Keep the decision explicit: ready, blocked, or ready-with-residual-risk. If something is missing, say exactly what is missing and who must provide it. Do not smooth over incomplete evidence to keep momentum.
+
+Start from the attached project-structure tools before broad repo search. Use `project_structure_read`, `project_structure_checklist`, `project_structure_dependencies_query`, and the hierarchy tools to confirm the assigned node, linked processes, touched modules, and the working directory for the run. Work inside the project-structure-defined directory when it exists; if it does not, record the actual directory choice in the durable `project-structure-context-brief` artifact and make release decisions against that shared context instead of reconstructing scope ad hoc.

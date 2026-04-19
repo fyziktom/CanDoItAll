@@ -7,6 +7,8 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
     ProcessesService processesService,
     IAgentFrameworkWorkspaceService workspaceService)
 {
+    private static readonly string RunLevelAutomationLabel = "Run-level automation";
+
     public async Task<ProcessWorkspaceRunDetails> LoadAsync(Guid runId, CancellationToken cancellationToken = default)
     {
         var runDetails = await processesService.GetRunDetailsAsync(runId, cancellationToken);
@@ -15,6 +17,57 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         {
             ExecutionRuns = executionRuns
         };
+    }
+
+    public async Task<IReadOnlyList<ProcessActiveRunSummaryViewModel>> LoadActiveRunSummariesAsync(
+        IReadOnlyList<ProcessRunListItem> runs,
+        CancellationToken cancellationToken = default)
+    {
+        if (runs.Count == 0)
+        {
+            return [];
+        }
+
+        var agentsById = (await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken))
+            .ToDictionary(item => item.Id);
+        var summaries = new List<ProcessActiveRunSummaryViewModel>();
+
+        foreach (var run in runs.OrderByDescending(item => item.UpdatedAtUtc))
+        {
+            var executionRuns = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    ProcessRunId: run.Id.ToString("D"),
+                    Take: 200),
+                cancellationToken);
+            var activeExecutionRuns = executionRuns
+                .Where(ExecutionRunBlocksSession)
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ToList();
+            if (activeExecutionRuns.Count == 0)
+            {
+                continue;
+            }
+
+            var stepTitlesById = await LoadStepTitlesByIdAsync(run.Id, activeExecutionRuns, cancellationToken);
+            var activeAgents = activeExecutionRuns
+                .Select(item => MapActiveAgent(item, stepTitlesById, agentsById))
+                .ToList();
+
+            summaries.Add(new ProcessActiveRunSummaryViewModel(
+                run.Id,
+                run.Name,
+                run.Status,
+                run.UpdatedAtUtc,
+                activeAgents.Count,
+                activeExecutionRuns.Sum(item => item.PendingApprovals.Count))
+            {
+                Agents = activeAgents
+            });
+        }
+
+        return summaries
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList();
     }
 
     private async Task<IReadOnlyList<ProcessExecutionRunViewModel>> LoadExecutionRunsAsync(
@@ -64,6 +117,20 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         }
 
         return mappedRuns;
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, string>> LoadStepTitlesByIdAsync(
+        Guid runId,
+        IReadOnlyCollection<ExecutionRunRecord> executionRuns,
+        CancellationToken cancellationToken)
+    {
+        if (!executionRuns.Any(item => Guid.TryParse(item.ProcessStepId, out _)))
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        return (await processesService.ListStepRunsAsync(runId, cancellationToken))
+            .ToDictionary(item => item.Id, item => item.Title);
     }
 
     private static ProcessExecutionRunViewModel MapExecutionRun(
@@ -173,12 +240,53 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         };
     }
 
+    private static ProcessActiveAgentViewModel MapActiveAgent(
+        ExecutionRunRecord executionRun,
+        IReadOnlyDictionary<Guid, string> stepTitlesById,
+        IReadOnlyDictionary<Guid, AgentDefinition> agentsById)
+    {
+        Guid? stepRunId = null;
+        if (Guid.TryParse(executionRun.ProcessStepId, out var parsedStepRunId))
+        {
+            stepRunId = parsedStepRunId;
+        }
+
+        var stepTitle = stepRunId.HasValue &&
+                        stepTitlesById.TryGetValue(stepRunId.Value, out var resolvedStepTitle)
+            ? resolvedStepTitle
+            : RunLevelAutomationLabel;
+        agentsById.TryGetValue(executionRun.AgentId, out var agent);
+
+        return new ProcessActiveAgentViewModel(
+            executionRun.Id,
+            executionRun.AgentId,
+            agent?.Name ?? executionRun.AgentId.ToString("D"),
+            agent?.RoleTitle ?? string.Empty,
+            stepTitle,
+            executionRun.State,
+            executionRun.Outcome,
+            executionRun.UpdatedAtUtc)
+        {
+            StatusBadgeText = ProcessExecutionRunDisplayProjector.BuildRawBadge(executionRun.State, executionRun.Outcome),
+            StatusTone = ProcessExecutionRunDisplayProjector.ResolveRawTone(executionRun.State, executionRun.Outcome)
+        };
+    }
+
     private static bool HasBrowserEvidenceToolInvocation(IReadOnlyList<ExecutionLogEntry> executionLog)
     {
         return executionLog.Any(item =>
             item.Message.Contains("Invoking tool 'browser_navigate'", StringComparison.OrdinalIgnoreCase) ||
             item.Message.Contains("Invoking tool 'browser_snapshot'", StringComparison.OrdinalIgnoreCase) ||
             item.Message.Contains("Invoking tool 'browser_take_screenshot'", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ExecutionRunBlocksSession(ExecutionRunRecord run)
+    {
+        return run.PendingApprovals.Count > 0 ||
+               run.State is ExecutionState.Preparing or
+                   ExecutionState.Running or
+                   ExecutionState.WaitingOnTool or
+                   ExecutionState.Persisting;
     }
 }
 

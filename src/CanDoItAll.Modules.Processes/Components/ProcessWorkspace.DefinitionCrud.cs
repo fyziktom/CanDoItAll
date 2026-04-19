@@ -15,6 +15,7 @@ public partial class ProcessWorkspace
         editor = await ProcessesService.GetEditorAsync(null, ProjectId);
         detailTab = "definition";
         runs = [];
+        activeRunSummaries = [];
         improvements = [];
         analytics = await ProcessesService.GetAnalyticsAsync(null, ProjectId);
         await LoadRunDetailsAsync();

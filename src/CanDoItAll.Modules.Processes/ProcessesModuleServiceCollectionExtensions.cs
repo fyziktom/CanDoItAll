@@ -31,8 +31,10 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();
         services.AddScoped<ProcessDevelopmentSeedService>();
+        services.AddScoped<ProcessCatalogWarmupService>();
         services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
+        services.AddHostedService<ProcessCatalogWarmupWorker>();
         services.AddHostedService<ProcessOutboxDrainWorker>();
         services.AddHostedService<ProcessRunRecoveryWorker>();
         return services;

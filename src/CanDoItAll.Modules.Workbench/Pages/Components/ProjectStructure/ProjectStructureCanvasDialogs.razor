@@ -190,6 +190,80 @@
     </ProjectStructureOverlayDialog>
 }
 
+@if (ProcessLinkDialog is not null)
+{
+    var processDialog = ProcessLinkDialog;
+    var selectedOption = processDialog.SelectedDefinitionId.HasValue
+        ? processDialog.Options.FirstOrDefault(option => option.DefinitionId == processDialog.SelectedDefinitionId.Value)
+        : null;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@processDialog.Title"
+                                   Kicker="Process link"
+                                   Title="@processDialog.Title"
+                                   Summary="@processDialog.Copy"
+                                   DataTestId="project-structure-process-link-dialog"
+                                   Close="CloseProcessLink">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseProcessLink" />
+            <Button Text="@processDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-process-link-submit"
+                    Disabled="@(processDialog.Options.Count == 0)"
+                    Click="ExecuteProcessLink" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Process" Class="cw-panel-copy" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-process-link-select"
+                                value="@(processDialog.SelectedDefinitionId?.ToString() ?? string.Empty)"
+                                @onchange="ProcessLinkSelectionChanged">
+                            <option value="">Select a process</option>
+                            @foreach (var option in processDialog.Options)
+                            {
+                                <option value="@option.DefinitionId">@option.DisplayName</option>
+                            }
+                        </select>
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected process" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{selectedOption.ScopeLabel} scope • {selectedOption.Status}")"
+                                       Class="cw-panel-copy" />
+                            @if (!selectedOption.HasPublishedVersion)
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="This process is not published yet, so execution will fail until a published version exists."
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(processDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @processDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
 @if (QuickActionDialog is not null)
 {
     var quickActionDialog = QuickActionDialog;
@@ -332,6 +406,18 @@
 
     [Parameter]
     public EventCallback OpenProjectCreateDialog { get; set; }
+
+    [Parameter]
+    public ProjectStructureProcessLinkDialogState? ProcessLinkDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProcessLink { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> ProcessLinkSelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteProcessLink { get; set; }
 
     [Parameter]
     public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }

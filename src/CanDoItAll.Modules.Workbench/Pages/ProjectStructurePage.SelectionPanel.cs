@@ -298,6 +298,20 @@ public partial class ProjectStructurePage
             builder.Append("|subproject:");
         }
 
+        if (processLinkDialog is not null)
+        {
+            builder.Append("|process-link:")
+                .Append(processLinkDialog.SourceNodeId)
+                .Append(':')
+                .Append(processLinkDialog.SelectedDefinitionId?.ToString() ?? string.Empty)
+                .Append(':')
+                .Append(processLinkDialog.Error);
+        }
+        else
+        {
+            builder.Append("|process-link:");
+        }
+
         if (quickActionDialog is not null)
         {
             builder.Append("|quick:")

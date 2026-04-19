@@ -936,8 +936,24 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
 {
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
+        var linkedGlobalDefinitionIds = (await context.DbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item => item.ProjectId == context.ProjectId && !item.IsSystemManaged)
+                .Select(item => new
+                {
+                    item.SourceNodeKey,
+                    item.TargetNodeKey
+                })
+                .ToListAsync(cancellationToken))
+            .SelectMany(item => new[] { item.SourceNodeKey, item.TargetNodeKey })
+            .Select(TryResolveLinkedProcessDefinitionId)
+            .Where(definitionId => definitionId.HasValue)
+            .Select(definitionId => definitionId!.Value)
+            .ToHashSet();
+
         var definitions = await context.DbContext.Set<ProcessDefinition>()
-            .Where(item => item.ProjectId == context.ProjectId)
+            .Where(item =>
+                item.ProjectId == context.ProjectId ||
+                (!item.ProjectId.HasValue && linkedGlobalDefinitionIds.Contains(item.Id)))
             .OrderBy(item => item.Name)
             .ToListAsync(cancellationToken);
         if (definitions.Count == 0)
@@ -1137,6 +1153,18 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
     private static string BuildProcessDefinitionNodeKey(Guid definitionId)
     {
         return $"process-definition:{definitionId}";
+    }
+
+    private static Guid? TryResolveLinkedProcessDefinitionId(string? nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey) ||
+            !nodeKey.StartsWith("process-definition:", StringComparison.Ordinal) ||
+            !Guid.TryParse(nodeKey["process-definition:".Length..], out var definitionId))
+        {
+            return null;
+        }
+
+        return definitionId;
     }
 
     private static string BuildProcessRunNodeKey(Guid runId)

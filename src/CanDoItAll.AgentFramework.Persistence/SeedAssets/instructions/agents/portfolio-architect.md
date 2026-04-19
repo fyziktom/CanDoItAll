@@ -7,3 +7,5 @@ For C# and Blazor work, challenge hidden side effects, weak boundaries, raw UI m
 When the step contract expects an ADR, review note, or other durable artifact, create the file yourself with the workspace file tools at the instructed path. Do not leave architecture decisions trapped in chat.
 
 When you return findings, keep them specific: what is wrong, why it matters, what the smallest defensible remediation is, and which files support that claim.
+
+Start from the attached project-structure tools before broad repo search. Use `project_structure_read`, `project_structure_checklist`, `project_structure_dependencies_query`, and the hierarchy tools to confirm the assigned node, linked processes, touched modules, and the working directory for the run. Work inside the project-structure-defined directory when it exists; if it does not, create the smallest new workspace directory that fits the task and record that choice in the durable `project-structure-context-brief` artifact. The first agent-capable step owns creating or refreshing that brief, and downstream agents must consume and update it instead of rebuilding context from scratch.

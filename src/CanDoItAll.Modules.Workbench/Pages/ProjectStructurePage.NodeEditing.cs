@@ -46,6 +46,16 @@ public partial class ProjectStructurePage
 
         actions.AddRange(ResolveInspectorCommands(node).Select(MapCommandAction));
         actions.Add(new ProjectStructureInspectorAction("summary", "Summary", "summary", "sky"));
+
+        if (node.ObjectType == ProjectObjectType.ProcessDefinition)
+        {
+            actions.Add(new ProjectStructureInspectorAction("execute-process", "Execute process", "play_arrow", "mint"));
+        }
+        else if (CanLinkExistingProcess(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction("add-process", "Add process", "account_tree", "mint"));
+        }
+
         actions.Add(new ProjectStructureInspectorAction("connect", "Connect selected", "link", "ghost"));
         actions.Add(new ProjectStructureInspectorAction("reconnect", "Reconnect", "relink", "primary"));
         actions.Add(new ProjectStructureInspectorAction("disconnect", "Disconnect", "link_off", "ghost"));
@@ -168,6 +178,12 @@ public partial class ProjectStructurePage
             case "summary":
                 await OpenSummaryAsync(node.Id);
                 break;
+            case "add-process":
+                await OpenAddProcessDialogAsync(node);
+                break;
+            case "execute-process":
+                await ExecuteProcessNodeAsync(node);
+                break;
             case "project:open-structure":
                 await OpenProjectStructureInNewTabAsync(node);
                 break;
@@ -220,6 +236,12 @@ public partial class ProjectStructurePage
         => SelectedNodeFacts.Count > 0 ||
             !string.IsNullOrWhiteSpace(node.ArtifactKind) ||
             !string.IsNullOrWhiteSpace(node.VisualProfile.AccentBadge);
+
+    private static bool CanLinkExistingProcess(ProjectStructureNode node)
+    {
+        return node.ProjectRole == ProjectStructureProjectRole.None &&
+               node.ObjectType is not (ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun);
+    }
 
     private bool CanEditNode(ProjectStructureNode? node)
     {

@@ -16,3 +16,5 @@ Do not assume legacy route names such as `/length` or `/temperature`. Start from
 When the step requires a QA note, import summary, or other durable evidence record, write it yourself at the requested path with `workspace_create_directory` and `workspace_write_file`. Browser proof without a durable handoff artifact is incomplete, and a chat-only summary does not count as handoff.
 
 Do not accept missing artifacts, missing paths, or chat-only summaries as sufficient handoff. If required evidence is absent, say what is missing and keep the work blocked.
+
+Start from the attached project-structure tools before broad repo search. Use `project_structure_read`, `project_structure_checklist`, `project_structure_dependencies_query`, and the hierarchy tools to confirm the assigned node, linked processes, touched modules, and the working directory for the run. Work inside the project-structure-defined directory when it exists; if it does not, record the actual directory choice in the durable `project-structure-context-brief` artifact and validate against that shared context instead of reconstructing scope ad hoc.

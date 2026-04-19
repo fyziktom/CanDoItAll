@@ -198,6 +198,10 @@ else
                                                            SubprojectTransferNameChanged="HandleSubprojectTransferNameChanged"
                                                            ExecuteSubprojectTransfer="ExecuteSubprojectTransferAsync"
                                                            OpenProjectCreateDialog="OpenProjectCreateDialogAsync"
+                                                           ProcessLinkDialog="@processLinkDialog"
+                                                           CloseProcessLink="CloseProcessLinkDialog"
+                                                           ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
+                                                           ExecuteProcessLink="ExecuteProcessLinkAsync"
                                                            QuickActionDialog="@quickActionDialog"
                                                            CloseQuickActionDialog="CloseQuickActionDialog"
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
@@ -1007,6 +1011,18 @@ else
         {
             case "summary":
                 await OpenSummaryAsync(nodeId);
+                break;
+            case "add-process":
+                if (ResolveNode(nodeId) is { } processLinkNode)
+                {
+                    await OpenAddProcessDialogAsync(processLinkNode);
+                }
+                break;
+            case "execute-process":
+                if (ResolveNode(nodeId) is { } processDefinitionNode)
+                {
+                    await ExecuteProcessNodeAsync(processDefinitionNode);
+                }
                 break;
             case "project:open-structure":
                 if (ResolveNode(nodeId) is { } projectNodeForOpen)

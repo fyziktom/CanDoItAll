@@ -77,7 +77,9 @@ public sealed partial class ProcessDevelopmentSeedService
         }
 
         var existingDefinition = (await processesService.ListDefinitionsAsync(projectId, cancellationToken))
-            .FirstOrDefault(item => string.Equals(item.Name, process.DisplayName, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(item =>
+                string.Equals(item.Name, process.DisplayName, StringComparison.OrdinalIgnoreCase) &&
+                item.ProjectId == projectId);
 
         Guid definitionId;
         if (existingDefinition is null)

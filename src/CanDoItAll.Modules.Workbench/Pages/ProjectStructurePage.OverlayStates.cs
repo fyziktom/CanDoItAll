@@ -97,6 +97,27 @@ public sealed record ProjectStructureSubprojectTransferDialogState(
     public string SubmitLabel => "Create subproject";
 }
 
+public sealed record ProjectStructureProcessLinkOption(
+    Guid DefinitionId,
+    string DisplayName,
+    string ScopeLabel,
+    string Status,
+    bool HasPublishedVersion);
+
+public sealed record ProjectStructureProcessLinkDialogState(
+    string SourceNodeId,
+    string SourceNodeTitle,
+    IReadOnlyList<ProjectStructureProcessLinkOption> Options,
+    Guid? SelectedDefinitionId,
+    string Error)
+{
+    public string Title => $"Add process for {SourceNodeTitle}";
+
+    public string Copy => "Choose an existing process definition to link to this node. The link stays explicit in the project structure and does not create a new process.";
+
+    public string SubmitLabel => "Add process";
+}
+
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
     string Title,

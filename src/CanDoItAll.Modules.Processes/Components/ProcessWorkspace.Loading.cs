@@ -74,6 +74,7 @@ public partial class ProcessWorkspace
             selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
             await LoadLaunchPlanDetailsAsync();
             runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId);
+            activeRunSummaries = await RunDetailsLoader.LoadActiveRunSummariesAsync(runs);
         }
         else
         {
@@ -81,6 +82,7 @@ public partial class ProcessWorkspace
             selectedLaunchPlanId = null;
             selectedLaunchPlan = null;
             runs = [];
+            activeRunSummaries = [];
         }
 
         var nextSelectedRunId = ResolveSelectedRunId();

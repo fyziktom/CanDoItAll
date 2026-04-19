@@ -1932,10 +1932,10 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             branchOutcomes.SetValue(branchOutcome, index);
         }
 
-        return Activator.CreateInstance(
-                   candidateType,
-                   new object?[]
-                   {
+        var constructor = candidateType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+            .Single();
+        return constructor.Invoke(
+                   [
                        new ProcessRun
                        {
                            Name = "Showcase run",
@@ -1965,10 +1965,11 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                        artifactInputs,
                        new HashSet<string>(StringComparer.Ordinal),
                        null,
+                       null,
                        branchOutcomes,
                        requiresExplicitBranchOutcomeSelection
-                    })
-                 ?? throw new InvalidOperationException("DispatchCandidate could not be constructed.");
+                   ])
+               ?? throw new InvalidOperationException("DispatchCandidate could not be constructed.");
     }
 
     private static ExecutionRunRecord CreateExecutionRun(string requestedBy, ExecutionState state, RunOutcome? outcome)

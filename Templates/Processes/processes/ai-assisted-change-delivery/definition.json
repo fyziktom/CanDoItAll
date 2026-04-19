@@ -248,6 +248,18 @@
           "AllowedFutureUsageSummary": "",
           "ValidationRequirementSummary": "",
           "Key": "delegation-design-execution-trace-pack"
+        },
+        {
+          "TemplateKey": "project-structure-context-brief",
+          "Title": "Project structure context brief",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by delegated agents and reviewers so they stay aligned on the same project node, directory, dependencies, and downstream artifact plan.",
+          "ValidationRequirementSummary": "Must capture the originating project-structure node, resolved working directory, touched modules or routes, dependency boundaries, and downstream artifact expectations.",
+          "Key": "project-structure-context-brief"
         }
       ],
       "ChecklistRefs": [
@@ -363,7 +375,12 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "delegation-design"
+        }
+      ]
     },
     {
       "Order": 3,
@@ -471,7 +488,12 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "delegation-design"
+        }
+      ]
     },
     {
       "Order": 4,
@@ -579,7 +601,12 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "delegation-design"
+        }
+      ]
     },
     {
       "Order": 5,
@@ -1154,5 +1181,7 @@
       "Notes": "Final go-live decision owner for production promotion and rollback preparedness."
     }
   ],
-  "SharedArtifactRefs": []
+  "SharedArtifactRefs": [
+    "project-structure-context-brief"
+  ]
 }
