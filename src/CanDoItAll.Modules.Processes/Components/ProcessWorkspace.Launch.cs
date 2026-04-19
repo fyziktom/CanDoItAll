@@ -207,7 +207,10 @@ public partial class ProcessWorkspace
 
     private static string BuildLaunchPlanSummary(ProcessLaunchPlanListItem plan)
     {
-        return $"{plan.Status} / {plan.ResolvedRoleCount} of {plan.TotalRoleCount} roles resolved / {plan.PendingProvisioningCount} provisioning";
+        var statusText = string.IsNullOrWhiteSpace(plan.StatusBadgeText)
+            ? plan.Status.ToString()
+            : plan.StatusBadgeText;
+        return $"{statusText} / {plan.ResolvedRoleCount} of {plan.TotalRoleCount} roles resolved / {plan.PendingProvisioningCount} provisioning";
     }
 
     private static string ResolveLaunchPlanTone(ProcessLaunchPlanStatus status)

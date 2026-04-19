@@ -6,7 +6,7 @@
     <Header>
         <PageHeader Eyebrow="AgentFramework"
                     Title="Integrated technical agent runtime"
-                    Description="This shell owns the technical runtime, durable execution evidence, provider diagnostics, and scenario proof. CRM-HR stays canonical for business resources, while Processes and Collaboration stay canonical for launch, run, and approval governance.">
+                    Description="This shell owns the technical agent catalog, durable execution evidence, provider diagnostics, and scenario proof. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.">
             <Actions>
                 <Button Text="Open CRM / HR agents"
                         Click="OpenCrmHrAgents"
@@ -22,27 +22,27 @@
     <Lead>
         <SummaryTiles>
             <SummaryTile Label="Technical agents"
-                         Value="@technicalAgentCount.ToString()"
+                         Value="@ResolveSummaryValue(technicalAgentCount)"
                          HelperText="Organization-scoped technical runtime records."
                          Tone="info" />
             <SummaryTile Label="Providers"
-                         Value="@providerCount.ToString()"
+                         Value="@ResolveSummaryValue(providerCount)"
                          HelperText="Workspace-owned providers executed through AgentFramework."
                          Tone="success" />
             <SummaryTile Label="Bound resources"
-                         Value="@boundResourceCount.ToString()"
+                         Value="@ResolveSummaryValue(boundResourceCount)"
                          HelperText="CRM-HR AI resources already bound to a technical agent."
                          Tone="warning" />
             <SummaryTile Label="Capabilities"
-                         Value="@capabilityCount.ToString()"
+                         Value="@ResolveSummaryValue(capabilityCount)"
                          HelperText="Reusable skills, MCP servers, and other runtime capabilities."
                          Tone="mint" />
             <SummaryTile Label="Active runs"
-                         Value="@activeRunCount.ToString()"
+                         Value="@ResolveSummaryValue(activeRunCount)"
                          HelperText="Durable technical executions still in progress."
                          Tone="info" />
             <SummaryTile Label="Failed runs"
-                         Value="@failedRunCount.ToString()"
+                         Value="@ResolveSummaryValue(failedRunCount)"
                          HelperText="Recent execution failures that still need governance attention."
                          Tone="danger" />
         </SummaryTiles>
@@ -55,25 +55,36 @@
     </Lead>
 
     <ChildContent>
-        @if (string.Equals(selectedTab, "providers", StringComparison.Ordinal))
+        @if (!isLoaded)
+        {
+            <SurfaceCard>
+                <p class="cda-eyebrow">AgentFramework</p>
+                <h2 class="mt-1 text-lg font-semibold text-slate-950">Loading canonical agent runtime</h2>
+                <p class="mt-3 text-sm leading-6 text-slate-600">
+                    Refreshing the organization catalog, CRM-HR projection, and runtime counts before opening the selected surface.
+                </p>
+            </SurfaceCard>
+        }
+        else if (string.Equals(selectedTab, "providers", StringComparison.Ordinal))
         {
             <ProviderManagementPanel />
         }
         else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
         {
-            <AgentCatalogPanel RequestedAgentId="@RequestedAgentId" />
+            <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
+                               SkipCatalogRepair="true" />
         }
         else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))
         {
-            <AgentChatPanel PreferredAgentId="@RequestedAgentId" />
+            <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId" />
         }
         else if (string.Equals(selectedTab, "capabilities", StringComparison.Ordinal))
         {
-            <AgentCapabilitiesPanel PreferredAgentId="@RequestedAgentId" />
+            <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId" />
         }
         else if (string.Equals(selectedTab, "governance", StringComparison.Ordinal))
         {
-            <AgentGovernancePanel PreferredAgentId="@RequestedAgentId" />
+            <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId" />
         }
         else if (string.Equals(selectedTab, "scenarios", StringComparison.Ordinal))
         {
@@ -90,7 +101,7 @@
                     <p class="cda-eyebrow">Canonical boundary</p>
                     <h2 class="mt-1 text-lg font-semibold text-slate-950">One technical runtime, no duplicated ownership</h2>
                     <p class="mt-3 text-sm leading-6 text-slate-600">
-                        Workspace and Security still own provider master data and secrets. CRM-HR still owns AI resource parties. This shell owns the technical runtime catalog and the execution path that actually talks to providers.
+                        Workspace and Security still own provider master data and secrets. CRM-HR still carries business-facing directory context, but AgentFramework owns the editable AI-agent runtime catalog and the execution path that actually talks to providers.
                     </p>
                     <Cluster Gap="LayoutGap.Small"
                              Wrap="FlexWrap.Wrap"
@@ -124,7 +135,7 @@
                     <p class="cda-eyebrow">Cross-module flow</p>
                     <h2 class="mt-1 text-lg font-semibold text-slate-950">Business resources, launch staffing, and technical execution are connected</h2>
                     <p class="mt-3 text-sm leading-6 text-slate-600">
-                        CRM-HR binds business-facing AI resources to technical agents. Processes selects those resources through launch planning, approval, and provisioning. This shell exposes the runtime and proof surfaces behind that business flow.
+                        CRM-HR projects business-facing AI resources over AgentFramework-owned agents. Processes selects those resources through launch planning, approval, and provisioning. This shell exposes the runtime and proof surfaces behind that connected flow.
                     </p>
                     <Cluster Gap="LayoutGap.Small"
                              Wrap="FlexWrap.Wrap"

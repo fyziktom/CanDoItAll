@@ -357,6 +357,11 @@ public sealed class DatabaseProfileControlPlaneService(
         var providerKind = ParseProviderKind(configuredProvider, configuredConnection);
         var workspaceRoot = ResolveOverrideWorkspaceRoot(providerKind, configuredConnection);
         var now = clock.GetUtcNow();
+        if (providerKind == DatabaseProviderKind.Sqlite &&
+            TryResolveCatalogBackedSqliteOverrideLocked(configuredConnection) is { } catalogBackedOverride)
+        {
+            return catalogBackedOverride;
+        }
 
         return providerKind switch
         {
@@ -365,6 +370,33 @@ public sealed class DatabaseProfileControlPlaneService(
             DatabaseProviderKind.InMemory => BuildInMemoryOverrideProfile(configuredConnection, workspaceRoot, now),
             _ => throw new InvalidOperationException($"Unsupported database provider '{providerKind}'.")
         };
+    }
+
+    private ResolvedDatabaseProfile? TryResolveCatalogBackedSqliteOverrideLocked(string? configuredConnection)
+    {
+        var databasePath = TryExtractSqliteDatabasePath(configuredConnection);
+        if (string.IsNullOrWhiteSpace(databasePath))
+        {
+            return null;
+        }
+
+        var normalizedDatabasePath = Path.GetFullPath(databasePath);
+        var document = ReadCatalogLocked();
+        var matchedProfile = document.Profiles.FirstOrDefault(item =>
+            item.ProviderKind == DatabaseProviderKind.Sqlite &&
+            !string.IsNullOrWhiteSpace(item.Sqlite?.DatabasePath) &&
+            string.Equals(
+                Path.GetFullPath(item.Sqlite!.DatabasePath),
+                normalizedDatabasePath,
+                StringComparison.OrdinalIgnoreCase));
+        if (matchedProfile is null)
+        {
+            return null;
+        }
+
+        return BuildResolvedProfile(
+            CloneProfileForRuntimeOverride(matchedProfile),
+            DatabaseProfileResolutionSource.ExplicitOverride);
     }
 
     private ResolvedDatabaseProfile BuildSqliteOverrideProfile(string? configuredConnection, string workspaceRoot, DateTimeOffset now)
@@ -488,6 +520,62 @@ public sealed class DatabaseProfileControlPlaneService(
 
         profile.Runtime.Fingerprint = BuildFingerprint(profile);
         return BuildResolvedProfile(profile, DatabaseProfileResolutionSource.ExplicitOverride);
+    }
+
+    private static DatabaseProfileRecord CloneProfileForRuntimeOverride(DatabaseProfileRecord profile)
+    {
+        return new DatabaseProfileRecord
+        {
+            Id = profile.Id,
+            DisplayName = profile.DisplayName,
+            ProviderKind = profile.ProviderKind,
+            SourceKind = profile.SourceKind,
+            Sqlite = profile.Sqlite is null
+                ? null
+                : new SqliteDatabaseProfileConnection
+                {
+                    DatabasePath = profile.Sqlite.DatabasePath
+                },
+            PostgreSql = profile.PostgreSql is null
+                ? null
+                : new PostgreSqlDatabaseProfileConnection
+                {
+                    Host = profile.PostgreSql.Host,
+                    Port = profile.PostgreSql.Port,
+                    DatabaseName = profile.PostgreSql.DatabaseName,
+                    Username = profile.PostgreSql.Username,
+                    EncryptedPassword = profile.PostgreSql.EncryptedPassword,
+                    AdminDatabaseName = profile.PostgreSql.AdminDatabaseName,
+                    TrustServerCertificate = profile.PostgreSql.TrustServerCertificate
+                },
+            InMemory = profile.InMemory is null
+                ? null
+                : new InMemoryDatabaseProfileConnection
+                {
+                    DatabaseName = profile.InMemory.DatabaseName
+                },
+            Storage = new DatabaseProfileStorageDescriptor
+            {
+                Mode = profile.Storage.Mode,
+                WorkspaceRoot = profile.Storage.WorkspaceRoot
+            },
+            Clone = new DatabaseProfileCloneMetadata
+            {
+                OriginProfileId = profile.Clone.OriginProfileId,
+                OriginSnapshotId = profile.Clone.OriginSnapshotId
+            },
+            Runtime = new DatabaseProfileRuntimeMetadata
+            {
+                Fingerprint = profile.Runtime.Fingerprint,
+                LockedByRuntimeOverride = true
+            },
+            Audit = new DatabaseProfileAuditMetadata
+            {
+                CreatedUtc = profile.Audit.CreatedUtc,
+                LastUsedUtc = profile.Audit.LastUsedUtc,
+                LastSuccessfulOpenUtc = profile.Audit.LastSuccessfulOpenUtc
+            }
+        };
     }
 
     private DatabaseProfileRecord? TryCreateLegacyProfileLocked()

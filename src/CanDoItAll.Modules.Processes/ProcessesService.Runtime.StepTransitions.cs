@@ -10,8 +10,6 @@ public sealed partial class ProcessesService
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        Guid? automationDispatchOutboxId = null;
-
         try
         {
             var transitionContextResult = await LoadTransitionContextAsync(dbContext, request, cancellationToken);
@@ -68,6 +66,10 @@ public sealed partial class ProcessesService
             if (transitionContext.Run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled)
             {
                 transitionContext.Run.CompletedAtUtc = now;
+            }
+            else
+            {
+                transitionContext.Run.CompletedAtUtc = null;
             }
 
             var decisionKind = request.TargetStatus switch
@@ -149,7 +151,7 @@ public sealed partial class ProcessesService
 
             if (!request.SuppressAutomationDispatch)
             {
-                automationDispatchOutboxId = await processOutboxService.EnqueueAutomationDispatchAsync(
+                await processOutboxService.EnqueueAutomationDispatchAsync(
                     dbContext,
                     transitionContext.Run.ProjectId,
                     transitionContext.Run.ProcessDefinitionId,
@@ -161,10 +163,6 @@ public sealed partial class ProcessesService
 
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            if (automationDispatchOutboxId.HasValue)
-            {
-                await processOutboxService.ProcessAsync(automationDispatchOutboxId.Value, cancellationToken);
-            }
 
             return Result.Success();
         }
@@ -177,6 +175,14 @@ public sealed partial class ProcessesService
         {
             await transaction.RollbackAsync(cancellationToken);
             return Result.Failure(CreateStepTransitionConflictError());
+        }
+        catch (DbUpdateException exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Result.Failure(
+                Error.Failure(
+                    $"Process step transition could not be persisted: {DbUpdateExceptionClassifier.GetProviderMessage(exception)}",
+                    "processes.step-transition-persistence-failed"));
         }
     }
 
@@ -335,20 +341,34 @@ public sealed partial class ProcessesService
         string trimmedReason,
         DateTimeOffset now)
     {
+        var previousStatus = stepRun.Status;
+        var previousStartedAtUtc = stepRun.StartedAtUtc;
+
+        if (request.TargetStatus != ProcessStepRunStatus.InProgress &&
+            previousStatus == ProcessStepRunStatus.InProgress &&
+            previousStartedAtUtc.HasValue)
+        {
+            stepRun.TouchMinutes += Math.Max(0, (int)(now - previousStartedAtUtc.Value).TotalMinutes);
+        }
+
         if (request.TargetStatus == ProcessStepRunStatus.InProgress)
         {
-            stepRun.StartedAtUtc ??= now;
-            stepRun.WaitMinutes = stepRun.ReadyAtUtc.HasValue
-                ? Math.Max(0, (int)(now - stepRun.ReadyAtUtc.Value).TotalMinutes)
-                : stepRun.WaitMinutes;
+            stepRun.CompletedAtUtc = null;
+            stepRun.BlockedReason = string.Empty;
+            stepRun.RefusalReason = string.Empty;
+            stepRun.ExceptionSummary = string.Empty;
+            if (previousStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval &&
+                stepRun.ReadyAtUtc.HasValue)
+            {
+                stepRun.WaitMinutes += Math.Max(0, (int)(now - stepRun.ReadyAtUtc.Value).TotalMinutes);
+            }
+
+            stepRun.StartedAtUtc = now;
         }
 
         if (request.TargetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed or ProcessStepRunStatus.Skipped)
         {
             stepRun.CompletedAtUtc = now;
-            stepRun.TouchMinutes = stepRun.StartedAtUtc.HasValue
-                ? Math.Max(0, (int)(now - stepRun.StartedAtUtc.Value).TotalMinutes)
-                : stepRun.TouchMinutes;
         }
 
         if (request.TargetStatus == ProcessStepRunStatus.Blocked)

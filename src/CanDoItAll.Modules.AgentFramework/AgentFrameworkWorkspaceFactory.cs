@@ -32,7 +32,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
 
     public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService()
     {
-        return GetWorkspaceService(GetOrganizationScope());
+        return serviceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
     }
 
     public IAgentFrameworkWorkspaceService GetWorkspaceService(WorkspaceScopeDescriptor scope)

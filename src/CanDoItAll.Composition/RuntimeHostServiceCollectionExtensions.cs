@@ -1,9 +1,18 @@
-using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Activity;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Modules.Resources;
+using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.TestLab;
+using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -11,10 +20,30 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Web.Infrastructure;
+namespace CanDoItAll.Composition;
 
-public static class RuntimeDatabaseSwitchingServiceCollectionExtensions
+public static class RuntimeHostServiceCollectionExtensions
 {
+    public static IServiceCollection AddCanDoItAllRuntimeModules(this IServiceCollection services)
+    {
+        services.AddSecurityModule();
+        services.AddWorkspaceModule();
+        services.AddProjectsModule();
+        services.AddWorkbenchModule();
+        services.AddResourcesModule();
+        services.AddPromptsModule();
+        services.AddFactoryModule();
+        services.AddProcessesModule();
+        services.AddValidationModule();
+        services.AddTestLabModule();
+        services.AddActivityModule();
+        services.AddAgentFrameworkModule();
+        services.AddAutomationModule();
+        services.AddCollaborationModule();
+        services.AddCrmHrModule();
+        return services;
+    }
+
     public static IServiceCollection AddCanDoItAllRuntimeDatabaseSwitching(this IServiceCollection services)
     {
         services.AddSingleton<IAppDatabaseBootstrapper, AppDatabaseBootstrapper>();

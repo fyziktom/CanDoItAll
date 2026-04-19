@@ -253,6 +253,271 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task TransitionStepAsync_accepts_required_artifact_recorded_by_title_without_explicit_expectation_id()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process artifact title resolution project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Artifact Title Resolution");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var managerRoleId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, managerRoleId);
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Process artifact title resolution run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifact = Assert.Single(deliveryStep.ArtifactOutputs);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = requiredArtifact.Title,
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded with title-only matching.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Expectation id should be inferred."
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Evidence recorded by title.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        Assert.Equal(ProcessStepRunStatus.Completed, stepRuns.Single(item => item.Id == deliveryStep.Id).Status);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifact = await dbContext.Set<ProcessArtifactRecord>()
+            .SingleAsync(item => item.Id == recordedArtifactResult.Value);
+        Assert.Equal(requiredArtifact.ArtifactExpectationId, persistedArtifact.ArtifactExpectationId);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_returns_existing_record_for_duplicate_external_reference_key()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process artifact deduplication project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Artifact deduplication validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify artifact idempotency"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var externalReferenceKey = "agentframework-artifact:dedupe-proof";
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Brief,
+            Title = "Scope boundary packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "First projection pass.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "First record.",
+            ManagedStoragePath = "artifacts/test/scope-boundary-packet.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.True(firstRecordResult.IsSuccess);
+
+        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Brief,
+            Title = "Scope boundary packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Second projection pass.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Duplicate record should be collapsed.",
+            ManagedStoragePath = "artifacts/test/scope-boundary-packet.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.True(duplicateRecordResult.IsSuccess);
+        Assert.Equal(firstRecordResult.Value, duplicateRecordResult.Value);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var matchingArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item =>
+                item.ProcessRunId == runResult.Value &&
+                item.ExternalReferenceKey == externalReferenceKey)
+            .ToListAsync();
+
+        var persistedArtifact = Assert.Single(matchingArtifacts);
+        Assert.Equal(firstRecordResult.Value, persistedArtifact.Id);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_allows_restarting_failed_step_and_reactivates_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process failed step retry project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Failed step retry validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify failed steps can be restarted."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started the failed-step retry validation.",
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        })).IsSuccess);
+
+        var originalStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5);
+        await using (var timingContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var timingStep = await timingContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+            timingStep.StartedAtUtc = originalStartedAtUtc;
+            await timingContext.SaveChangesAsync();
+        }
+
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.Failed,
+            Reason = "Validation forced a recoverable failure.",
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        })).IsSuccess);
+
+        var failedStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Id == firstStep.Id);
+        Assert.Equal(ProcessStepRunStatus.Failed, failedStep.Status);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedFailedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        Assert.Contains("recoverable failure", persistedFailedStep.ExceptionSummary, StringComparison.OrdinalIgnoreCase);
+
+        var retryResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Retry the failed governed step.",
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        });
+
+        Assert.True(retryResult.IsSuccess, string.Join(" | ", retryResult.Errors.Select(error => error.Message)));
+
+        var retriedStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Id == firstStep.Id);
+        Assert.Equal(ProcessStepRunStatus.InProgress, retriedStep.Status);
+        Assert.Equal(1, retriedStep.ReworkCount);
+        Assert.True(retriedStep.TouchMinutes >= 5);
+        Assert.Equal(failedStep.WaitMinutes, retriedStep.WaitMinutes);
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedStep = await verificationContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        var persistedRun = await verificationContext.Set<ProcessRun>().SingleAsync(item => item.Id == runResult.Value);
+
+        Assert.Equal(ProcessStepRunStatus.InProgress, persistedStep.Status);
+        Assert.Null(persistedStep.CompletedAtUtc);
+        Assert.True(string.IsNullOrWhiteSpace(persistedStep.ExceptionSummary));
+        Assert.True(persistedStep.StartedAtUtc > originalStartedAtUtc);
+        Assert.True(persistedStep.TouchMinutes >= 5);
+        Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
+        Assert.Null(persistedRun.CompletedAtUtc);
+    }
+
+    [Fact]
     public async Task SendDirectMessageAsync_persists_collaboration_transcript_when_policy_assignment_permissions_and_governance_allow_it()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -678,6 +943,34 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(saveResult.IsFailure);
         Assert.Contains(saveResult.Errors, error => error.Code == "processes.branch-dependency-cycle-invalid");
+    }
+
+    [Fact]
+    public async Task SaveAsync_rejects_step_role_assignments_without_resolved_role_ids()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Missing role assignment validation project");
+        var managerRoleId = Guid.NewGuid();
+        var model = BuildDefinitionEditor(projectId, managerRoleId);
+        var firstStep = Assert.Single(model.Steps, item => item.Key == "intake");
+        firstStep.RoleAssignments =
+        [
+            new ProcessStepRoleRequirementEditorModel
+            {
+                RoleRequirementId = null,
+                ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                RebindPolicySummary = "This assignment should be rejected before save."
+            }
+        ];
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        Assert.True(saveResult.IsFailure);
+        Assert.Contains(saveResult.Errors, error => error.Code == "processes.step-role-assignment-role-required");
     }
 
     [Fact]

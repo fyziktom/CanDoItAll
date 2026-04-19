@@ -26,7 +26,7 @@ public sealed partial class ProcessesService
                     .OrderByDescending(item => item.IsPrimary)
                     .ThenBy(item => item.PartyDisplayName)
                     .ToList());
-        var aiDirectory = await aiAgentService.ListAgentDirectoryAsync(cancellationToken);
+        var aiDirectory = await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken);
         var aiDirectoryByPartyId = aiDirectory.ToDictionary(item => item.PartyId);
         var roleRecommendations = new List<ProcessLaunchRoleRecommendation>(publishedContext.Roles.Count);
 
@@ -105,10 +105,19 @@ public sealed partial class ProcessesService
 
         var preferredProjectRole = role.PreferredProjectAssignmentRole
             ?? (IsAiRole(role) ? ProjectPartyAssignmentRole.AiAgent : ProjectPartyAssignmentRole.TeamMember);
-        if (projectAssignmentsByRole.TryGetValue(preferredProjectRole, out var matchingAssignments))
+        projectAssignmentsByRole.TryGetValue(preferredProjectRole, out var matchingAssignments);
+        var assignmentMatchedSkillsByPartyId = await LoadMatchedSkillsByPartyIdAsync(
+            dbContext,
+            matchingAssignments?.Select(item => item.PartyId).Distinct().ToList() ?? [],
+            requiredSkillIds,
+            cancellationToken);
+
+        if (matchingAssignments is not null)
         {
             foreach (var assignment in matchingAssignments)
             {
+                assignmentMatchedSkillsByPartyId.TryGetValue(assignment.PartyId, out var matchedSkillSet);
+                var matchedSkillCount = matchedSkillSet?.Count ?? 0;
                 var requiresProvisioning = IsAiRole(role) &&
                     (!aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var linkedAiResource) ||
                         !linkedAiResource.TechnicalAgentId.HasValue ||
@@ -127,11 +136,15 @@ public sealed partial class ProcessesService
                         : null,
                     DisplayName = assignment.PartyDisplayName,
                     ExecutorKind = assignment.PartyTypeLabel,
-                    Score = assignment.IsPrimary ? 100m : 92m,
+                    Score = (assignment.IsPrimary ? 100m : 92m) + matchedSkillCount * 2m,
                     IsRecommended = assignment.IsPrimary,
                     AllowsDirectMessaging = true,
                     RequiresProvisioning = requiresProvisioning,
-                    RecommendationSummary = $"Matched project assignment role {assignment.Role}.",
+                    RecommendationSummary = requiredSkillIds.Count == 0
+                        ? $"Matched project assignment role {assignment.Role}."
+                        : matchedSkillCount > 0
+                            ? $"Matched project assignment role {assignment.Role} and {matchedSkillCount} required skill(s)."
+                            : $"Matched project assignment role {assignment.Role}, but none of the explicit required skills are currently recorded on the assigned party.",
                     AvailabilitySummary = requiresProvisioning
                         ? "Project assignment exists, but the technical AI binding must be provisioned before execution."
                         : "Project assignment is already attached to the project.",
@@ -145,11 +158,33 @@ public sealed partial class ProcessesService
 
         if (IsAiRole(role))
         {
+            var aiMatchedSkillsByPartyId = await LoadMatchedSkillsByPartyIdAsync(
+                dbContext,
+                aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
+                requiredSkillIds,
+                cancellationToken);
+            var hasRecommendedCandidate = candidates.Any(item => item.IsRecommended);
+            var hasReadySkillMatchedAiCandidate = false;
+
             foreach (var aiResource in aiDirectory
                          .Where(item => !seenPartyIds.Contains(item.PartyId))
                          .OrderByDescending(item => item.BindingStatus == AiResourceBindingStatus.Bound)
                          .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
+                aiMatchedSkillsByPartyId.TryGetValue(aiResource.PartyId, out var matchedSkillSet);
+                var matchedSkillCount = matchedSkillSet?.Count ?? 0;
+                var hasAllRequiredSkills = requiredSkillIds.Count == 0 || matchedSkillCount == requiredSkillIds.Count;
+                var isReadyBoundCandidate =
+                    aiResource.BindingStatus == AiResourceBindingStatus.Bound &&
+                    aiResource.TechnicalAgentId.HasValue &&
+                    hasAllRequiredSkills;
+                var isRecommended = !hasRecommendedCandidate && isReadyBoundCandidate;
+
+                if (isReadyBoundCandidate)
+                {
+                    hasReadySkillMatchedAiCandidate = true;
+                }
+
                 candidates.Add(new ProcessLaunchCandidate
                 {
                     CandidateKind = ProcessLaunchCandidateKind.AiResource,
@@ -157,13 +192,11 @@ public sealed partial class ProcessesService
                     TechnicalAgentId = aiResource.TechnicalAgentId,
                     DisplayName = aiResource.DisplayName,
                     ExecutorKind = "AI agent",
-                    Score = aiResource.BindingStatus == AiResourceBindingStatus.Bound ? 88m : 70m,
-                    IsRecommended = aiResource.BindingStatus == AiResourceBindingStatus.Bound && candidates.Count == 0,
+                    Score = ResolveAiResourceScore(aiResource, matchedSkillCount, requiredSkillIds.Count),
+                    IsRecommended = isRecommended,
                     AllowsDirectMessaging = true,
                     RequiresProvisioning = !aiResource.TechnicalAgentId.HasValue || aiResource.BindingStatus != AiResourceBindingStatus.Bound,
-                    RecommendationSummary = string.IsNullOrWhiteSpace(aiResource.BindingSummary)
-                        ? "Discovered from the CRM-HR AI resource directory."
-                        : aiResource.BindingSummary,
+                    RecommendationSummary = BuildAiResourceRecommendationSummary(aiResource, matchedSkillCount, requiredSkillIds.Count),
                     AvailabilitySummary = string.IsNullOrWhiteSpace(aiResource.ProviderName)
                         ? "AI resource is available in the directory."
                         : $"{aiResource.ProviderName} / {aiResource.DefaultModel}",
@@ -175,16 +208,24 @@ public sealed partial class ProcessesService
                         aiResource.PartyId),
                     CreatedAtUtc = clock.GetUtcNow()
                 });
+                hasRecommendedCandidate = hasRecommendedCandidate || isRecommended;
                 seenPartyIds.Add(aiResource.PartyId);
             }
 
+            var recommendNewAiProposal = !hasRecommendedCandidate &&
+                                         requiredSkillIds.Count > 0 &&
+                                         !hasReadySkillMatchedAiCandidate;
             candidates.Add(new ProcessLaunchCandidate
             {
                 CandidateKind = ProcessLaunchCandidateKind.NewAiAgentProposal,
                 DisplayName = $"{role.DisplayName} AI agent",
                 ExecutorKind = "AI agent",
-                Score = candidates.Count == 0 ? 72m : 48m,
-                IsRecommended = candidates.Count == 0,
+                Score = recommendNewAiProposal
+                    ? 86m
+                    : candidates.Count == 0
+                        ? 72m
+                        : 48m,
+                IsRecommended = recommendNewAiProposal || (candidates.Count == 0 && requiredSkillIds.Count == 0),
                 AllowsDirectMessaging = true,
                 RequiresProvisioning = true,
                 RecommendationSummary = "Provision a new technical AI resource for this process role.",
@@ -215,15 +256,11 @@ public sealed partial class ProcessesService
             .Select(item => item.PartyId)
             .Distinct()
             .ToList();
-        var matchedSkillsByPartyId = staffingPartyIds.Count == 0 || requiredSkillIds.Count == 0
-            ? new Dictionary<Guid, HashSet<Guid>>()
-            : await dbContext.Set<PartySkill>()
-                .Where(item => staffingPartyIds.Contains(item.PartyId) && requiredSkillIds.Contains(item.SkillId))
-                .GroupBy(item => item.PartyId)
-                .ToDictionaryAsync(
-                    group => group.Key,
-                    group => group.Select(item => item.SkillId).ToHashSet(),
-                    cancellationToken);
+        var matchedSkillsByPartyId = await LoadMatchedSkillsByPartyIdAsync(
+            dbContext,
+            staffingPartyIds,
+            requiredSkillIds,
+            cancellationToken);
 
         foreach (var staffingCandidate in staffingCandidates.Where(item => !seenPartyIds.Contains(item.PartyId)))
         {
@@ -261,6 +298,69 @@ public sealed partial class ProcessesService
             .OrderByDescending(item => item.Score)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static async Task<Dictionary<Guid, HashSet<Guid>>> LoadMatchedSkillsByPartyIdAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<Guid> partyIds,
+        IReadOnlyCollection<Guid> requiredSkillIds,
+        CancellationToken cancellationToken)
+    {
+        if (partyIds.Count == 0 || requiredSkillIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.Set<PartySkill>()
+            .Where(item => partyIds.Contains(item.PartyId) && requiredSkillIds.Contains(item.SkillId))
+            .GroupBy(item => item.PartyId)
+            .ToDictionaryAsync(
+                group => group.Key,
+                group => group.Select(item => item.SkillId).ToHashSet(),
+                cancellationToken);
+    }
+
+    private static decimal ResolveAiResourceScore(
+        AiAgentListItemModel aiResource,
+        int matchedSkillCount,
+        int requiredSkillCount)
+    {
+        var score = aiResource.BindingStatus == AiResourceBindingStatus.Bound ? 72m : 54m;
+        score += matchedSkillCount * 10m;
+
+        if (requiredSkillCount > 0)
+        {
+            if (matchedSkillCount == requiredSkillCount)
+            {
+                score += 8m;
+            }
+            else if (matchedSkillCount == 0)
+            {
+                score -= aiResource.BindingStatus == AiResourceBindingStatus.Bound ? 12m : 18m;
+            }
+        }
+
+        return score;
+    }
+
+    private static string BuildAiResourceRecommendationSummary(
+        AiAgentListItemModel aiResource,
+        int matchedSkillCount,
+        int requiredSkillCount)
+    {
+        var parts = new List<string>();
+        parts.Add(string.IsNullOrWhiteSpace(aiResource.BindingSummary)
+            ? "Discovered from the CRM-HR AI resource directory."
+            : aiResource.BindingSummary.Trim());
+
+        if (requiredSkillCount > 0)
+        {
+            parts.Add(matchedSkillCount > 0
+                ? $"Matches {matchedSkillCount} of {requiredSkillCount} required skill(s)."
+                : "Does not currently match the explicit required skills recorded for this role.");
+        }
+
+        return string.Join(" ", parts.Where(item => !string.IsNullOrWhiteSpace(item)));
     }
 
     private static ProcessLaunchCandidate CreateGapCandidate(ProcessRoleRequirement role)

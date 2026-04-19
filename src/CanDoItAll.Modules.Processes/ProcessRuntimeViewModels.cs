@@ -33,6 +33,14 @@ public sealed record ProcessLaunchPlanListItem(
     DateTimeOffset UpdatedAtUtc)
 {
     public Guid? GeneratedRunId { get; init; }
+
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+
+    public string PlanningStatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusDetail { get; init; } = string.Empty;
 }
 
 public sealed record ProcessStepBranchOutcomeOptionViewModel(
@@ -225,6 +233,14 @@ public sealed record ProcessExecutionRunViewModel(
     DateTimeOffset? CompletedAtUtc,
     int LogEntryCount)
 {
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+
+    public string RawStatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusDetail { get; init; } = string.Empty;
+
     public bool HasBrowserEvidenceToolInvocation { get; init; }
 
     public IReadOnlyList<ProcessExecutionApprovalViewModel> Approvals { get; init; } = [];
@@ -327,7 +343,16 @@ public sealed record ProcessLaunchPlanDetails(
     DateTimeOffset? ExecutedAtUtc,
     IReadOnlyList<ProcessLaunchRoleViewModel> Roles,
     IReadOnlyList<ProcessLaunchApprovalViewModel> Approvals,
-    IReadOnlyList<ProcessLaunchProvisioningViewModel> ProvisioningRequests);
+    IReadOnlyList<ProcessLaunchProvisioningViewModel> ProvisioningRequests)
+{
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+
+    public string PlanningStatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusDetail { get; init; } = string.Empty;
+}
 
 public sealed record ProcessAnalyticsSummary(
     int TotalRuns,

@@ -15,19 +15,18 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     public async Task SynchronizeDirectoryProjectionAsync(
         CancellationToken cancellationToken = default)
     {
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        if (agents.Count == 0)
-        {
-            return;
-        }
+        var currentAgentIds = agents
+            .Select(item => item.Id)
+            .ToHashSet();
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var candidatePartyIds = agents
             .SelectMany(agent =>
             {
                 var metadata = AgentFrameworkCrmHrMetadata.Read(agent.ConfigurationJson);
-                var taggedPartyId = ResolveTaggedPartyId(agent.Tags);
+                var taggedPartyId = AgentFrameworkCrmHrMetadata.ResolveTaggedPartyId(agent.Tags);
                 return new Guid?[]
                 {
                     metadata is null ? null : metadata.PartyId,
@@ -61,10 +60,13 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         foreach (var agent in agents)
         {
             var metadata = AgentFrameworkCrmHrMetadata.Read(agent.ConfigurationJson);
-            var taggedPartyId = ResolveTaggedPartyId(agent.Tags);
+            var taggedPartyId = AgentFrameworkCrmHrMetadata.ResolveTaggedPartyId(agent.Tags);
             var preferredPartyId = metadata is null
                 ? taggedPartyId
                 : metadata.PartyId;
+            var projectedDisplayName = agent.Name.Trim();
+            var projectedSummary = BuildPartySummary(agent);
+            var projectedLifecycleStatus = MapLifecycleStatus(agent.Status);
 
             var binding = preferredPartyId.HasValue
                 ? bindingByPartyId.GetValueOrDefault(preferredPartyId.Value)
@@ -94,9 +96,9 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 {
                     Id = partyId ?? Guid.NewGuid(),
                     PartyType = PartyType.AiAgent,
-                    LifecycleStatus = MapLifecycleStatus(agent.Status),
-                    DisplayName = agent.Name.Trim(),
-                    Summary = BuildPartySummary(agent),
+                    LifecycleStatus = projectedLifecycleStatus,
+                    DisplayName = projectedDisplayName,
+                    Summary = projectedSummary,
                     ExtendedDataJson = "{}",
                     TagsJson = "[]",
                     LastChangedBy = "agent-framework-sync",
@@ -109,15 +111,29 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(party.DisplayName))
+                var partyChanged = false;
+                if (!string.Equals(party.DisplayName, projectedDisplayName, StringComparison.Ordinal))
                 {
-                    party.DisplayName = agent.Name.Trim();
-                    changed = true;
+                    party.DisplayName = projectedDisplayName;
+                    partyChanged = true;
                 }
 
-                if (string.IsNullOrWhiteSpace(party.Summary))
+                if (!string.Equals(party.Summary, projectedSummary, StringComparison.Ordinal))
                 {
-                    party.Summary = BuildPartySummary(agent);
+                    party.Summary = projectedSummary;
+                    partyChanged = true;
+                }
+
+                if (party.LifecycleStatus != projectedLifecycleStatus)
+                {
+                    party.LifecycleStatus = projectedLifecycleStatus;
+                    partyChanged = true;
+                }
+
+                if (partyChanged)
+                {
+                    party.LastChangedBy = "agent-framework-sync";
+                    party.UpdatedAtUtc = timestamp;
                     changed = true;
                 }
             }
@@ -226,6 +242,44 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             }
         }
 
+        foreach (var staleBinding in bindings.Where(item =>
+                     item.TechnicalAgentId.HasValue &&
+                     !currentAgentIds.Contains(item.TechnicalAgentId.Value)))
+        {
+            var staleChanged = false;
+            if (staleBinding.TechnicalAgentId.HasValue)
+            {
+                staleBinding.TechnicalAgentId = null;
+                staleChanged = true;
+            }
+
+            if (staleBinding.BindingStatus != AiResourceBindingStatus.Error)
+            {
+                staleBinding.BindingStatus = AiResourceBindingStatus.Error;
+                staleChanged = true;
+            }
+
+            const string staleReason = "Referenced AgentFramework agent is missing from the organization catalog.";
+            if (!string.Equals(staleBinding.BindingReason, staleReason, StringComparison.Ordinal))
+            {
+                staleBinding.BindingReason = staleReason;
+                staleChanged = true;
+            }
+
+            const string staleError = "Referenced technical agent no longer exists in AgentFramework.";
+            if (!string.Equals(staleBinding.LastError, staleError, StringComparison.Ordinal))
+            {
+                staleBinding.LastError = staleError;
+                staleChanged = true;
+            }
+
+            if (staleChanged)
+            {
+                staleBinding.UpdatedAtUtc = timestamp;
+                changed = true;
+            }
+        }
+
         if (changed)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -241,7 +295,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             return new Dictionary<Guid, AiTechnicalAgentDirectorySummary>();
         }
 
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
         var providerNames = providers.ToDictionary(item => item.Id, item => item.Name);
@@ -277,12 +331,12 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                     ? providers.FirstOrDefault(item => item.Id == providerId)?.DefaultModel ?? string.Empty
                     : string.Empty
                 : resolved.Agent.Model;
-            var capabilityCount = metadata?.Capabilities.Count ?? resolved.Agent.Capabilities.Count;
+            var capabilityCount = ResolveCapabilityCount(metadata, resolved.Agent);
             result[partyId] = new AiTechnicalAgentDirectorySummary(
                 resolved.Agent.Id,
                 resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Bound,
                 ResolveBindingSummary(resolved.Binding, missingAgent: false),
-                metadata?.ExecutionMode,
+                ResolveExecutionMode(metadata, resolved.Agent),
                 resolved.Agent.ProviderProfileId is Guid resolvedProviderId ? providerNames.GetValueOrDefault(resolvedProviderId) ?? string.Empty : string.Empty,
                 resolvedModel,
                 capabilityCount,
@@ -297,8 +351,9 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         Guid partyId,
         CancellationToken cancellationToken = default)
     {
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var capabilities = await workspaceService.ListCapabilitiesAsync(cancellationToken);
         var providerOptions = providers
             .Select(item => new AiProviderOptionModel(
                 item.Id,
@@ -322,6 +377,8 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 ? providerOptions.FirstOrDefault(item => item.Id == resolvedProviderId)?.DefaultModel ?? string.Empty
                 : string.Empty
             : resolved.Agent.Model;
+        var capabilityNamesById = capabilities.ToDictionary(item => item.Id, item => item.Name);
+        var resolvedCapabilities = ResolveCapabilities(metadata, resolved.Agent, capabilityNamesById);
 
         return new AiTechnicalAgentWorkspaceModel(
             resolved.Agent?.Id ?? binding?.TechnicalAgentId,
@@ -330,9 +387,9 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             BuildAgentsRoute(resolved.Agent?.Id ?? binding?.TechnicalAgentId),
             resolved.Agent?.ProviderProfileId,
             providerName,
-            metadata?.ExecutionMode ?? AiExecutionMode.Remote,
+            ResolveExecutionMode(metadata, resolved.Agent) ?? AiExecutionMode.Remote,
             defaultModel,
-            metadata?.Capabilities ?? [],
+            resolvedCapabilities,
             providerOptions);
     }
 
@@ -353,7 +410,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                     Error.Validation("AI agent party was not found.", "crmhr.ai-agent.party-not-found"));
             }
 
-            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+            var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
             var providers = await workspaceService.ListProvidersAsync(cancellationToken);
             var selectedProvider = model.ProviderProfileId.HasValue
                 ? providers.FirstOrDefault(item => item.Id == model.ProviderProfileId.Value)
@@ -482,9 +539,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         {
             agent = agents.FirstOrDefault(item =>
             {
-                var metadata = AgentFrameworkCrmHrMetadata.Read(item.ConfigurationJson);
-                return metadata?.PartyId == partyId ||
-                       item.Tags.Contains(AgentFrameworkCrmHrMetadata.BuildPartyTag(partyId), StringComparer.OrdinalIgnoreCase);
+                return AgentFrameworkCrmHrMetadata.ResolvePartyId(item.ConfigurationJson, item.Tags) == partyId;
             });
         }
 
@@ -540,34 +595,58 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             : agent.Summary.Trim();
     }
 
-    private static Guid? ResolveTaggedPartyId(
-        IReadOnlyList<string> tags)
+    private static AiExecutionMode? ResolveExecutionMode(
+        AgentFrameworkCrmHrMetadataModel? metadata,
+        AgentDefinition? agent)
     {
-        foreach (var tag in tags)
+        if (metadata is not null)
         {
-            if (string.IsNullOrWhiteSpace(tag))
-            {
-                continue;
-            }
-
-            const string prefix = "party-";
-            if (!tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var value = tag[prefix.Length..];
-            if (Guid.TryParseExact(value, "N", out var partyId))
-            {
-                return partyId;
-            }
-
-            if (Guid.TryParse(value, out partyId))
-            {
-                return partyId;
-            }
+            return metadata.ExecutionMode;
         }
 
-        return null;
+        return agent is null
+            ? null
+            : AiExecutionMode.Remote;
+    }
+
+    private static int ResolveCapabilityCount(
+        AgentFrameworkCrmHrMetadataModel? metadata,
+        AgentDefinition agent)
+    {
+        if (metadata?.Capabilities.Count > 0)
+        {
+            return metadata.Capabilities.Count;
+        }
+
+        return agent.Capabilities.Count;
+    }
+
+    private static IReadOnlyList<AiCapabilityEditorModel> ResolveCapabilities(
+        AgentFrameworkCrmHrMetadataModel? metadata,
+        AgentDefinition? agent,
+        IReadOnlyDictionary<Guid, string> capabilityNamesById)
+    {
+        if (metadata?.Capabilities.Count > 0)
+        {
+            return metadata.Capabilities;
+        }
+
+        if (agent is null || agent.Capabilities.Count == 0)
+        {
+            return metadata?.Capabilities ?? [];
+        }
+
+        return agent.Capabilities
+            .Select(item => new AiCapabilityEditorModel
+            {
+                Name = capabilityNamesById.GetValueOrDefault(item.CapabilityId) ?? item.CapabilityKey,
+                Scope = string.Empty,
+                ToolAccess = item.Kind.ToString(),
+                Limitations = item.ProofStatus == CapabilityProofStatus.Verified
+                    ? string.Empty
+                    : $"Proof status: {item.ProofStatus}",
+                Notes = item.ProofNotes
+            })
+            .ToList();
     }
 }

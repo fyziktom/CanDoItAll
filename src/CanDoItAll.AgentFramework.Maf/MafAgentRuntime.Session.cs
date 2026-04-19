@@ -69,6 +69,156 @@ public sealed partial class MafAgentRuntime
         };
     }
 
+    private static AgentResponseUpdate SnapshotUpdate(
+        AgentResponseUpdate update)
+    {
+        return new AgentResponseUpdate(update.Role, update.Contents.Select(SnapshotContent).ToList())
+        {
+            AdditionalProperties = SnapshotAdditionalProperties(update.AdditionalProperties),
+            AuthorName = update.AuthorName,
+            ContinuationToken = update.ContinuationToken,
+            CreatedAt = update.CreatedAt,
+            FinishReason = update.FinishReason,
+            MessageId = update.MessageId,
+            RawRepresentation = null,
+            ResponseId = update.ResponseId
+        };
+    }
+
+    private static AIContent SnapshotContent(AIContent content)
+    {
+        return content switch
+        {
+            ToolApprovalRequestContent approval => new ToolApprovalRequestContent(
+                approval.RequestId,
+                SnapshotToolCall(approval.ToolCall)),
+            FunctionCallContent functionCall => new FunctionCallContent(
+                functionCall.CallId,
+                functionCall.Name,
+                SnapshotArguments(functionCall.Arguments)),
+            McpServerToolCallContent mcpToolCall => new McpServerToolCallContent(
+                mcpToolCall.CallId,
+                mcpToolCall.Name,
+                mcpToolCall.ServerName)
+            {
+                Arguments = SnapshotArguments(mcpToolCall.Arguments)
+            },
+            ToolCallContent toolCall => SnapshotToolCall(toolCall),
+            TextContent textContent => new TextContent(textContent.Text),
+            _ => content
+        };
+    }
+
+    private static ToolCallContent SnapshotToolCall(ToolCallContent toolCall)
+    {
+        return toolCall switch
+        {
+            FunctionCallContent functionCall => new FunctionCallContent(
+                functionCall.CallId,
+                functionCall.Name,
+                SnapshotArguments(functionCall.Arguments)),
+            McpServerToolCallContent mcpToolCall => new McpServerToolCallContent(
+                mcpToolCall.CallId,
+                mcpToolCall.Name,
+                mcpToolCall.ServerName)
+            {
+                Arguments = SnapshotArguments(mcpToolCall.Arguments)
+            },
+            _ => new FunctionCallContent(
+                toolCall.CallId ?? Guid.NewGuid().ToString("N"),
+                ResolveOpaqueToolCallName(toolCall),
+                SnapshotNamedValues(ResolveOpaqueToolCallArguments(toolCall)))
+        };
+    }
+
+    private static IDictionary<string, object?>? SnapshotArguments(IDictionary<string, object?>? arguments)
+    {
+        if (arguments is null)
+        {
+            return null;
+        }
+
+        return arguments.ToDictionary(
+            pair => pair.Key,
+            pair => SnapshotArgumentValue(pair.Value),
+            StringComparer.Ordinal);
+    }
+
+    private static object? SnapshotArgumentValue(object? value)
+    {
+        return value switch
+        {
+            null => null,
+            JsonElement jsonElement => jsonElement.Clone(),
+            IDictionary<string, object?> dictionary => SnapshotArguments(dictionary),
+            IReadOnlyDictionary<string, object?> readOnlyDictionary => readOnlyDictionary.ToDictionary(
+                pair => pair.Key,
+                pair => SnapshotArgumentValue(pair.Value),
+                StringComparer.Ordinal),
+            IEnumerable<object?> values when value is not string => values
+                .Select(SnapshotArgumentValue)
+                .ToList(),
+            _ => value
+        };
+    }
+
+    private static IDictionary<string, object?>? SnapshotNamedValues(object? value)
+    {
+        return value switch
+        {
+            null => null,
+            IDictionary<string, object?> dictionary => SnapshotArguments(dictionary),
+            IReadOnlyDictionary<string, object?> readOnlyDictionary => readOnlyDictionary.ToDictionary(
+                pair => pair.Key,
+                pair => SnapshotArgumentValue(pair.Value),
+                StringComparer.Ordinal),
+            IEnumerable<KeyValuePair<string, object?>> pairs => pairs.ToDictionary(
+                pair => pair.Key,
+                pair => SnapshotArgumentValue(pair.Value),
+                StringComparer.Ordinal),
+            JsonElement { ValueKind: JsonValueKind.Object } jsonObject => jsonObject
+                .EnumerateObject()
+                .ToDictionary(
+                    property => property.Name,
+                    property => SnapshotArgumentValue(property.Value.Clone()),
+                    StringComparer.Ordinal),
+            _ => null
+        };
+    }
+
+    private static AdditionalPropertiesDictionary? SnapshotAdditionalProperties(AdditionalPropertiesDictionary? properties)
+    {
+        var snapshot = SnapshotNamedValues(properties);
+        if (snapshot is null)
+        {
+            return null;
+        }
+
+        var clone = new AdditionalPropertiesDictionary();
+        foreach (var pair in snapshot)
+        {
+            clone[pair.Key] = pair.Value;
+        }
+
+        return clone;
+    }
+
+    private static string ResolveOpaqueToolCallName(ToolCallContent toolCall)
+    {
+        var toolType = toolCall.GetType();
+        return toolType.GetProperty("Name")?.GetValue(toolCall) as string
+            ?? toolType.GetProperty("ToolName")?.GetValue(toolCall) as string
+            ?? toolType.Name;
+    }
+
+    private static object? ResolveOpaqueToolCallArguments(ToolCallContent toolCall)
+    {
+        var toolType = toolCall.GetType();
+        return toolType.GetProperty("Arguments")?.GetValue(toolCall)
+            ?? toolType.GetProperty("Input")?.GetValue(toolCall)
+            ?? toolType.GetProperty("Parameters")?.GetValue(toolCall);
+    }
+
     private static ChatClientAgentRunOptions CreateRunOptions(
         AgentDefinition agent,
         ProviderProfile provider,

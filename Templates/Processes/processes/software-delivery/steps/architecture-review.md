@@ -30,7 +30,7 @@ Validate process/workspace/billing seams, canonical model implications, migratio
 - `lead-engineer` / Lead engineer => Reviewer; required=True; fallback-order=0; rebind=Implementation owner must confirm the design is buildable before approval.
 
 ## Artifact expectations
-- `architecture-decision-record` -> `architecture-decision-record` / Architecture decision record | kind=Decision | trust=HumanApproved | sensitivity=Internal | validation=Must capture selected option, rejected options, source-of-truth choice, and migration ownership.
+- `architecture-decision-record` -> `architecture-decision-record` / Architecture decision record | kind=Decision | trust=ReviewRequired | sensitivity=Internal | validation=Must capture selected option, rejected options, source-of-truth choice, and migration ownership.
 
 ## Artifact inputs
 - From step `feature-intake` expectation `scope-boundary-packet`

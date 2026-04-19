@@ -1,11 +1,11 @@
 <ListDetailShell ListPaneWidth="25rem">
     <ListHeader>
-        <ListPanelHeader Title="Technical agents" Description="This catalog is the canonical technical AI runtime registry. CRM-HR binds business resources to these records instead of storing a second technical profile." Count="@($"{FilteredAgents.Count} agent(s)")">
+        <ListPanelHeader Title="Technical agents" Description="This catalog is the canonical technical AI runtime registry. CRM-HR binds business resources to these records instead of storing a second technical profile." Count="@(isLoading ? "Loading..." : $"{FilteredAgents.Count} agent(s)")">
             <Actions>
                 <Button Text="New agent" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentAsync" />
             </Actions>
             <Filters>
-                <FilterBar ResultText="@($"{FilteredAgents.Count} matching agent(s)")">
+                <FilterBar ResultText="@(isLoading ? "Refreshing technical catalog..." : $"{FilteredAgents.Count} matching agent(s)")">
                     <input @bind="agentSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search agents" />
                     <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentSearch" />
                 </FilterBar>
@@ -14,7 +14,17 @@
     </ListHeader>
 
     <ListContent>
-        @if (FilteredAgents.Count == 0)
+        @if (isLoading)
+        {
+            <SurfaceCard Soft="true">
+                <p class="cda-eyebrow">Refreshing catalog</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Loading technical agents</h3>
+                <p class="mt-3 text-sm leading-6 text-slate-600">
+                    AgentFramework is refreshing the canonical runtime before the roster is rendered.
+                </p>
+            </SurfaceCard>
+        }
+        else if (FilteredAgents.Count == 0)
         {
             <EmptyState Eyebrow="No technical agents" Title="Create the first technical agent" Description="Technical agents define runtime prompts, provider bindings, and tool-ready execution policy." />
         }

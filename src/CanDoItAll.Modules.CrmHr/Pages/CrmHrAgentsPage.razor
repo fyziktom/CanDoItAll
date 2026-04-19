@@ -7,12 +7,15 @@
 <PageScaffold>
     <Header>
         <PageHeader Eyebrow="CRM / HR"
-                    Title="Agent workspace"
-                    Description="Treat AI agents as first-class directory parties, then bind provider configuration, capabilities, stewardship, and review state without creating a second registry.">
+                    Title="Agent directory projection"
+                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. Create and edit the technical runtime, instructions, skills, and provider setup in AgentFramework; CRM-HR consumes that catalog instead of creating a second source of truth.">
             <Actions>
+                <Button Text="Open technical catalog"
+                        data-testid="crmhr-agent-open-catalog"
+                        Click="OpenTechnicalCatalog" />
                 <Button Text="Open directory"
                         ButtonStyle="ButtonStyle.Light"
-                        Click="OpenDirectory" />
+                        Click="OpenDirectoryRecord" />
             </Actions>
         </PageHeader>
     </Header>
@@ -22,35 +25,30 @@
             <CrmHrSecondaryTabs SelectedKey="agents" />
 
             <SummaryTiles>
-                <SummaryTile Label="Agent parties"
-                             Value="@agentItems.Count.ToString()"
-                             HelperText="Directory parties typed as AI agents." />
+                <SummaryTile Label="Projected agents"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count.ToString())"
+                             HelperText="CRM-HR AI resources currently projected from AgentFramework." />
                 <SummaryTile Label="Bound providers"
-                             Value="@agentItems.Count(item => item.HasProfile && !string.IsNullOrWhiteSpace(item.ProviderName)).ToString()"
-                             HelperText="Agents already linked to a Workspace provider profile." Tone="info" />
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.HasProfile && !string.IsNullOrWhiteSpace(item.ProviderName)).ToString())"
+                             HelperText="Projected agents already linked to a technical provider profile."
+                             Tone="info" />
                 <SummaryTile Label="Review required"
-                             Value="@agentItems.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString()"
-                             HelperText="Profiles waiting for governance review." Tone="warning" />
-                <SummaryTile Label="Without profile"
-                             Value="@agentItems.Count(item => !item.HasProfile).ToString()"
-                             HelperText="Agent identities that still need operational metadata." Tone="success" />
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
+                             HelperText="Projected agents whose governance review is still pending."
+                             Tone="warning" />
+                <SummaryTile Label="Capability-backed"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.CapabilityCount > 0).ToString())"
+                             HelperText="Projected agents that already expose runtime capabilities."
+                             Tone="success" />
             </SummaryTiles>
-
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <div class="@ResolveMessageClasses()"
-                     data-testid="crmhr-agent-message">
-                    @message
-                </div>
-            }
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>
                     <ListPanelHeader Title="Agent roster"
-                                     Description="Create AI-agent parties, then bind their provider profile, owner, capabilities, and review state on the same durable directory identity."
-                                     Count="@($"{FilteredItems.Count} visible agent(s)")">
+                                     Description="This directory shows AgentFramework-backed AI resources. Technical editing stays in AgentFramework, while CRM-HR exposes the linked business-facing record."
+                                     Count="@(ShouldShowListLoadingState ? "Loading..." : $"{FilteredItems.Count} visible agent(s)")">
                         <Filters>
-                            <FilterBar ResultText="@($"{FilteredItems.Count} matching agent(s)")">
+                            <FilterBar ResultText="@(ShouldShowListLoadingState ? "Refreshing projected roster..." : $"{FilteredItems.Count} matching agent(s)")">
                                 <input @bind="searchText"
                                        @bind:event="oninput"
                                        class="cda-input min-w-[16rem] flex-1"
@@ -74,53 +72,25 @@
                 </ListHeader>
 
                 <ListContent>
-                    <EditForm Model="quickCreateEditor" OnValidSubmit="CreateAgentAsync">
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Quick create</p>
-                            <h3 class="mt-1 text-lg font-semibold text-slate-950">AI agent party</h3>
-                            <p class="mt-2 text-sm leading-6 text-slate-600">
-                                Create the durable directory identity first. Provider binding, ownership, capabilities, and governance land on the same record in the detail pane.
-                            </p>
-
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
-                                <div>
-                                    <label class="cda-field-label">Agent name</label>
-                                    <InputText @bind-Value="quickCreateEditor.Name"
-                                               class="cda-input"
-                                               data-testid="crmhr-agent-name" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">External code</label>
-                                    <InputText @bind-Value="quickCreateEditor.ExternalCode"
-                                               class="cda-input"
-                                               data-testid="crmhr-agent-code" />
-                                </div>
-                            </Grid>
-
-                            <div class="mt-4">
-                                <label class="cda-field-label">Summary</label>
-                                <InputTextArea @bind-Value="quickCreateEditor.Summary"
-                                               class="cda-input min-h-[6rem]"
-                                               data-testid="crmhr-agent-summary" />
-                            </div>
-
-                            <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                <Button Text="Create AI agent"
-                                        Type="submit"
-                                        data-testid="crmhr-agent-save-button" />
-                            </Cluster>
-                        </SurfaceCard>
-                    </EditForm>
-
-                    @if (FilteredItems.Count == 0)
+                    @if (ShouldShowListLoadingState)
                     {
-                        <EmptyState Eyebrow="No AI agents yet"
-                                    Title="Create the first reusable agent identity"
-                                    Description="Use the quick-create form to register an AI agent as a directory party before provider and governance details are added." />
+                        <SurfaceCard Soft="true">
+                            <p class="cda-eyebrow">Refreshing projection</p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Loading projected AI agents</h3>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                CRM-HR is reading the AgentFramework-owned catalog before the business-facing roster is shown.
+                            </p>
+                        </SurfaceCard>
+                    }
+                    else if (FilteredItems.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No projected AI agents"
+                                    Title="Create technical agents in AgentFramework"
+                                    Description="CRM-HR will display them here after AgentFramework projects the technical runtime into the business directory." />
                     }
                     else
                     {
-                        <Stack GapScale="LayoutGap.Medium" Class="mt-5">
+                        <Stack GapScale="LayoutGap.Medium">
                             @foreach (var item in FilteredItems)
                             {
                                 <div data-testid="crmhr-agent-item">
@@ -144,18 +114,30 @@
                 </ListContent>
 
                 <DetailHeader>
-                    @if (selectedWorkspace is null)
+                    @if (ShouldShowDetailLoadingState)
+                    {
+                        <SurfaceCard Soft="true">
+                            <p class="cda-eyebrow">Projection refresh</p>
+                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Loading agent details</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                CRM-HR is waiting for the current AgentFramework-backed projection before opening the linked directory detail.
+                            </p>
+                        </SurfaceCard>
+                    }
+                    else if (selectedWorkspace is null)
                     {
                         <SurfaceCard Soft="true">
                             <p class="cda-eyebrow">No AI agent selected</p>
                             <h2 class="mt-1 text-lg font-semibold text-slate-950">Choose an agent from the list</h2>
                             <p class="mt-3 text-sm leading-6 text-slate-600">
-                                The detail surface shows provider binding, steward ownership, execution mode, and capability guardrails after you select an AI-agent party.
+                                CRM-HR shows the projected directory record, while technical editing stays in AgentFramework.
                             </p>
                             <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                                <Button Text="Open technical catalog"
+                                        Click="OpenTechnicalCatalog" />
                                 <Button Text="Open directory"
                                         ButtonStyle="ButtonStyle.Light"
-                                        Click="OpenDirectory" />
+                                        Click="OpenDirectoryRecord" />
                             </Cluster>
                         </SurfaceCard>
                     }
@@ -170,10 +152,13 @@
                                     {
                                         <p class="mt-3 text-sm leading-6 text-slate-600">@selectedWorkspace.Summary</p>
                                     }
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        Technical instructions, skills, and runtime configuration are edited in AgentFramework. CRM-HR exposes the linked business-facing record and current projection state.
+                                    </p>
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">
-                                    <StatusBadge Tone="@ResolveValidationTone(profileEditor.ValidationStatus)" Text="@profileEditor.ValidationStatus.ToString()" />
-                                    <StatusBadge Tone="@ResolveExecutionTone(profileEditor.ExecutionMode)" Text="@profileEditor.ExecutionMode.ToString()" />
+                                    <StatusBadge Tone="@ResolveValidationTone(selectedWorkspace.Profile.ValidationStatus)" Text="@selectedWorkspace.Profile.ValidationStatus.ToString()" />
+                                    <StatusBadge Tone="@ResolveExecutionTone(selectedWorkspace.Profile.ExecutionMode)" Text="@selectedWorkspace.Profile.ExecutionMode.ToString()" />
                                 </Cluster>
                             </Split>
 
@@ -190,43 +175,90 @@
                                 </div>
                                 <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                     <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Execution mode</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@profileEditor.ExecutionMode</p>
+                                    <p class="mt-1 text-sm font-medium text-slate-950">@selectedWorkspace.Profile.ExecutionMode</p>
                                 </div>
                                 <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                     <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Capabilities</p>
                                     <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-agent-summary-capabilities">@profileEditor.Capabilities.Count</p>
+                                       data-testid="crmhr-agent-summary-capabilities">@selectedWorkspace.Profile.Capabilities.Count</p>
                                 </div>
                             </Grid>
+
+                            <Cluster Gap="LayoutGap.Small" Class="mt-5">
+                                <Button Text="Open technical record"
+                                        data-testid="crmhr-agent-open-technical-record"
+                                        Click="OpenTechnicalRecord" />
+                                <Button Text="Open directory record"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        data-testid="crmhr-agent-open-directory-record"
+                                        Click="OpenDirectoryRecord" />
+                            </Cluster>
                         </SurfaceCard>
                     }
                 </DetailHeader>
 
                 <DetailContent>
-                    @if (selectedWorkspace is null)
+                    @if (ShouldShowDetailLoadingState)
                     {
-                        <EmptyState Eyebrow="Agent workspace ready"
+                        <SurfaceCard Soft="true">
+                            <p class="cda-eyebrow">Projection refresh</p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Waiting for the linked technical record</h3>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                Once the AgentFramework projection is loaded, CRM-HR will show the business-facing summary and the route back to the technical runtime.
+                            </p>
+                        </SurfaceCard>
+                    }
+                    else if (selectedWorkspace is null)
+                    {
+                        <EmptyState Eyebrow="Projection ready"
                                     Title="Select an agent to continue"
-                                    Description="Provider binding, capabilities, owner, and review state appear here after you choose an AI agent from the roster." />
+                                    Description="Projection details, provider binding, and the linked AgentFramework route appear here after you choose an AI agent from the roster." />
                     }
                     else
                     {
-                        <EditForm Model="profileEditor" OnValidSubmit="SaveAgentProfileAsync">
-                            <Stack GapScale="LayoutGap.Large">
-                                <AiAgentProfileEditor Model="profileEditor"
-                                                      OwnerOptions="selectedWorkspace.OwnerOptions"
-                                                      ProviderOptions="selectedWorkspace.ProviderOptions" />
-
-                                <Cluster Gap="LayoutGap.Small">
-                                    <Button Text="Save AI agent profile"
-                                            Type="submit"
-                                            data-testid="crmhr-agent-profile-save-button" />
-                                    <Button Text="Open directory record"
+                        <Stack GapScale="LayoutGap.Large">
+                            <SurfaceCard Soft="true">
+                                <p class="cda-eyebrow">Technical ownership</p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-950">AgentFramework owns the editable runtime</h3>
+                                <p class="mt-3 text-sm leading-6 text-slate-600">
+                                    Use the technical record for instructions, provider selection, model, capabilities, and runtime-facing changes. CRM-HR intentionally stays read-only for that technical surface.
+                                </p>
+                                <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                                    <Button Text="Open technical record"
+                                            Click="OpenTechnicalRecord" />
+                                    <Button Text="Open technical catalog"
                                             ButtonStyle="ButtonStyle.Light"
-                                            Click="OpenDirectory" />
+                                            Click="OpenTechnicalCatalog" />
                                 </Cluster>
-                            </Stack>
-                        </EditForm>
+                            </SurfaceCard>
+
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Binding summary</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@selectedWorkspace.BindingSummary</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Default model</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@FormatValue(selectedWorkspace.Profile.DefaultModel)</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary email</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary phone</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
+                                </SurfaceCard>
+                            </Grid>
+
+                            @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Profile.Notes))
+                            {
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Current notes</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@selectedWorkspace.Profile.Notes</p>
+                                </SurfaceCard>
+                            }
+                        </Stack>
                     }
                 </DetailContent>
             </ListDetailShell>
@@ -238,9 +270,8 @@
     private static readonly IReadOnlyList<ValidationFilterOption> ValidationFilters =
     [
         new(string.Empty, "All validation states"),
-        new("unconfigured", "Without profile"),
         new(nameof(AiValidationStatus.Draft), "Draft"),
-        new(nameof(AiValidationStatus.ReviewRequired), "ReviewRequired"),
+        new(nameof(AiValidationStatus.ReviewRequired), "Review required"),
         new(nameof(AiValidationStatus.Approved), "Approved"),
         new(nameof(AiValidationStatus.Suspended), "Suspended")
     ];
@@ -248,16 +279,17 @@
     [SupplyParameterFromQuery(Name = "partyId")]
     public Guid? PartyIdQuery { get; set; }
 
-    private readonly QuickCreateAgentModel quickCreateEditor = new();
     private IReadOnlyList<AiAgentListItemModel> agentItems = [];
     private AiAgentWorkspaceModel? selectedWorkspace;
-    private AiAgentProfileEditorModel profileEditor = new();
     private string searchText = string.Empty;
     private string validationFilter = string.Empty;
     private string? handledPartyKey;
-    private string? messageRetentionPartyKey;
-    private string? message;
-    private string messageTone = "success";
+    private bool isListLoading = true;
+    private bool isWorkspaceLoading = true;
+    private bool interactiveReloadAttempted;
+
+    private bool ShouldShowListLoadingState => isListLoading || (!interactiveReloadAttempted && agentItems.Count == 0);
+    private bool ShouldShowDetailLoadingState => isListLoading || isWorkspaceLoading;
 
     private IReadOnlyList<AiAgentListItemModel> FilteredItems => agentItems
         .Where(MatchesSearch)
@@ -267,47 +299,78 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadItemsAsync();
+        await LoadAsync(PartyIdQuery);
+    }
 
-        var targetPartyId = PartyIdQuery;
-        if (!targetPartyId.HasValue && agentItems.Count > 0)
-        {
-            targetPartyId = agentItems[0].PartyId;
-        }
-
-        var targetKey = targetPartyId?.ToString("N") ?? "none";
-        if (handledPartyKey == targetKey && selectedWorkspace is not null)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || interactiveReloadAttempted || agentItems.Count > 0)
         {
             return;
         }
 
-        if (targetPartyId.HasValue)
+        interactiveReloadAttempted = true;
+        await LoadAsync(PartyIdQuery);
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync(Guid? requestedPartyId)
+    {
+        isListLoading = true;
+        isWorkspaceLoading = true;
+
+        try
         {
-            var workspace = await AiAgentService.GetAgentWorkspaceAsync(targetPartyId.Value);
-            if (workspace is null && agentItems.Count > 0)
-            {
-                workspace = await AiAgentService.GetAgentWorkspaceAsync(agentItems[0].PartyId);
-                targetKey = agentItems[0].PartyId.ToString("N");
-            }
-
-            if (workspace is not null)
-            {
-                var preserveMessage = string.Equals(messageRetentionPartyKey, targetKey, StringComparison.Ordinal);
-                ApplyLoadedWorkspace(workspace, clearMessage: !preserveMessage);
-                if (preserveMessage)
-                {
-                    messageRetentionPartyKey = null;
-                }
-
-                handledPartyKey = targetKey;
-                return;
-            }
+            await LoadItemsAsync();
+        }
+        finally
+        {
+            isListLoading = false;
         }
 
-        selectedWorkspace = null;
-        profileEditor = new();
-        handledPartyKey = "none";
-        message = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var targetPartyId = requestedPartyId;
+            if (!targetPartyId.HasValue && agentItems.Count > 0)
+            {
+                targetPartyId = agentItems[0].PartyId;
+            }
+
+            var targetKey = targetPartyId?.ToString("N") ?? "none";
+            if (handledPartyKey == targetKey && selectedWorkspace is not null)
+            {
+                isWorkspaceLoading = false;
+                return;
+            }
+
+            selectedWorkspace = null;
+
+            if (targetPartyId.HasValue)
+            {
+                var workspace = await AiAgentService.GetAgentWorkspaceAsync(targetPartyId.Value);
+                if (workspace is null && agentItems.Count > 0)
+                {
+                    workspace = await AiAgentService.GetAgentWorkspaceAsync(agentItems[0].PartyId);
+                    targetKey = agentItems[0].PartyId.ToString("N");
+                }
+
+                if (workspace is not null)
+                {
+                    ApplyLoadedWorkspace(workspace);
+                    handledPartyKey = targetKey;
+                    return;
+                }
+            }
+
+            selectedWorkspace = null;
+            handledPartyKey = "none";
+        }
+        finally
+        {
+            isWorkspaceLoading = false;
+        }
     }
 
     private async Task LoadItemsAsync()
@@ -315,54 +378,9 @@
         agentItems = await AiAgentService.ListAgentDirectoryAsync();
     }
 
-    private void ApplyLoadedWorkspace(AiAgentWorkspaceModel workspace, bool clearMessage)
+    private void ApplyLoadedWorkspace(AiAgentWorkspaceModel workspace)
     {
         selectedWorkspace = workspace;
-        profileEditor = new AiAgentProfileEditorModel
-        {
-            Id = workspace.Profile.Id,
-            PartyId = workspace.Profile.PartyId,
-            ProviderProfileId = workspace.Profile.ProviderProfileId,
-            DefaultModel = workspace.Profile.DefaultModel,
-            ExecutionMode = workspace.Profile.ExecutionMode,
-            OwnerPartyId = workspace.Profile.OwnerPartyId,
-            ValidationStatus = workspace.Profile.ValidationStatus,
-            LastReviewedOn = workspace.Profile.LastReviewedOn,
-            Notes = workspace.Profile.Notes,
-            ExtendedDataJson = workspace.Profile.ExtendedDataJson,
-            LastChangedBy = workspace.Profile.LastChangedBy,
-            Capabilities = workspace.Profile.Capabilities
-                .Select(capability => new AiCapabilityEditorModel
-                {
-                    Name = capability.Name,
-                    Scope = capability.Scope,
-                    ToolAccess = capability.ToolAccess,
-                    Limitations = capability.Limitations,
-                    Notes = capability.Notes
-                })
-                .ToList()
-        };
-
-        if (clearMessage)
-        {
-            message = null;
-            messageTone = "success";
-        }
-    }
-
-    private async Task ReloadSelectedAgentAsync(bool clearMessage)
-    {
-        if (selectedWorkspace is null)
-        {
-            return;
-        }
-
-        await LoadItemsAsync();
-        var workspace = await AiAgentService.GetAgentWorkspaceAsync(selectedWorkspace.PartyId);
-        if (workspace is not null)
-        {
-            ApplyLoadedWorkspace(workspace, clearMessage);
-        }
     }
 
     private Task SelectPartyAsync(Guid partyId)
@@ -371,7 +389,23 @@
         return Task.CompletedTask;
     }
 
-    private void OpenDirectory()
+    private void OpenTechnicalCatalog()
+    {
+        Navigation.NavigateTo("/agents?tab=agents");
+    }
+
+    private void OpenTechnicalRecord()
+    {
+        if (selectedWorkspace is null)
+        {
+            OpenTechnicalCatalog();
+            return;
+        }
+
+        Navigation.NavigateTo(selectedWorkspace.AgentsRoute);
+    }
+
+    private void OpenDirectoryRecord()
     {
         if (selectedWorkspace is null)
         {
@@ -380,60 +414,6 @@
         }
 
         Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId}");
-    }
-
-    private async Task CreateAgentAsync()
-    {
-        if (string.IsNullOrWhiteSpace(quickCreateEditor.Name))
-        {
-            message = "AI agent name is required.";
-            messageTone = "danger";
-            return;
-        }
-
-        var result = await AiAgentService.CreateAgentAsync(
-            quickCreateEditor.Name,
-            quickCreateEditor.ExternalCode,
-            quickCreateEditor.Summary,
-            "crm-hr-ui");
-        if (result.IsFailure)
-        {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
-            return;
-        }
-
-        quickCreateEditor.Name = string.Empty;
-        quickCreateEditor.ExternalCode = string.Empty;
-        quickCreateEditor.Summary = string.Empty;
-
-        await LoadItemsAsync();
-        messageRetentionPartyKey = result.Value.ToString("N");
-        var workspace = await AiAgentService.GetAgentWorkspaceAsync(result.Value);
-        if (workspace is not null)
-        {
-            ApplyLoadedWorkspace(workspace, clearMessage: false);
-            handledPartyKey = workspace.PartyId.ToString("N");
-        }
-
-        message = "AI agent created.";
-        messageTone = "success";
-        Navigation.NavigateTo($"/crm-hr/agents?partyId={result.Value}", replace: true);
-    }
-
-    private async Task SaveAgentProfileAsync()
-    {
-        var result = await AiAgentService.SaveAgentProfileAsync(profileEditor);
-        if (result.IsFailure)
-        {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
-            return;
-        }
-
-        await ReloadSelectedAgentAsync(clearMessage: false);
-        message = "AI agent profile saved.";
-        messageTone = "success";
     }
 
     private void ResetFilters()
@@ -463,11 +443,6 @@
             return true;
         }
 
-        if (string.Equals(validationFilter, "unconfigured", StringComparison.OrdinalIgnoreCase))
-        {
-            return !item.HasProfile;
-        }
-
         return string.Equals(item.ValidationStatus?.ToString(), validationFilter, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -475,7 +450,7 @@
     {
         var parts = new List<string>
         {
-            item.HasProfile ? ResolveValidationText(item) : "No profile"
+            ResolveValidationText(item)
         };
 
         if (!string.IsNullOrWhiteSpace(item.ProviderName))
@@ -510,13 +485,13 @@
         }
 
         return string.IsNullOrWhiteSpace(item.Summary)
-            ? "Agent identity exists, but provider and governance metadata still need to be captured."
+            ? "Projected business record is available; open the technical record in AgentFramework for runtime edits."
             : item.Summary;
     }
 
     private static string ResolveValidationText(AiAgentListItemModel item)
     {
-        return item.ValidationStatus?.ToString() ?? "No profile";
+        return item.ValidationStatus?.ToString() ?? "Draft";
     }
 
     private static string ResolveExecutionText(AiAgentListItemModel item)
@@ -547,23 +522,9 @@
         };
     }
 
-    private string ResolveMessageClasses()
-    {
-        return messageTone == "danger"
-            ? "rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700"
-            : "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-700";
-    }
-
     private static string FormatValue(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
-    }
-
-    private sealed class QuickCreateAgentModel
-    {
-        public string Name { get; set; } = string.Empty;
-        public string ExternalCode { get; set; } = string.Empty;
-        public string Summary { get; set; } = string.Empty;
     }
 
     private sealed record ValidationFilterOption(string Value, string Label);

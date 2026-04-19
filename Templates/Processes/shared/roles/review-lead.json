@@ -7,7 +7,7 @@
   "Summary": "Governed reviewer who owns code-review lane selection, normalization, and escalation discipline.",
   "Purpose": "Convert review findings into an explicit next lane and preserve replayable routing for every reviewed change.",
   "StaffingIntent": "Decision owner for review routing, normalization, and escalation safety.",
-  "PreferredExecutorKind": "person",
+  "PreferredExecutorKind": "person-or-agent",
   "PreferredProjectAssignmentRole": "Reviewer",
   "IsRequired": true,
   "AllowsFallback": true,

@@ -121,6 +121,14 @@ internal static class AgentFrameworkCrmHrMetadata
         return $"party-{partyId:N}";
     }
 
+    public static Guid? ResolvePartyId(
+        string? configurationJson,
+        IReadOnlyList<string> tags)
+    {
+        return Read(configurationJson)?.PartyId
+               ?? ResolveTaggedPartyId(tags);
+    }
+
     public static string BuildInstructions(
         string? existingInstructions,
         string displayName,
@@ -216,5 +224,36 @@ internal static class AgentFrameworkCrmHrMetadata
         {
             return new JsonObject();
         }
+    }
+
+    public static Guid? ResolveTaggedPartyId(
+        IReadOnlyList<string> tags)
+    {
+        foreach (var tag in tags)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                continue;
+            }
+
+            const string prefix = "party-";
+            if (!tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = tag[prefix.Length..];
+            if (Guid.TryParseExact(value, "N", out var partyId))
+            {
+                return partyId;
+            }
+
+            if (Guid.TryParse(value, out partyId))
+            {
+                return partyId;
+            }
+        }
+
+        return null;
     }
 }

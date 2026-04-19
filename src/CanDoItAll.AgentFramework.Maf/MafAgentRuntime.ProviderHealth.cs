@@ -73,7 +73,7 @@ public sealed partial class MafAgentRuntime
 
         await foreach (var update in RunStreamingAsync(agent, session, inputMessages, runOptions, cancellationToken))
         {
-            updates.Add(update);
+            updates.Add(SnapshotUpdate(update));
         }
 
         var response = updates.ToAgentResponse();

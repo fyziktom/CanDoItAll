@@ -150,6 +150,24 @@ public sealed partial class ProcessesService {
         return items;
     }
 
+    public async Task<IReadOnlyList<ProcessImprovementViewModel>> ListRunImprovementsAsync(
+        Guid runId,
+        CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var items = await dbContext.Set<ProcessImprovementCandidate>()
+            .Where(item => item.ProcessRunId == runId)
+            .Select(item => new ProcessImprovementViewModel(
+                item.Id,
+                item.Title,
+                item.Category,
+                item.ProblemSummary,
+                item.Status,
+                item.IsTrainingOpportunity,
+                item.RequiresGovernanceReview))
+            .ToListAsync(cancellationToken);
+        return items;
+    }
+
     public async Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         Guid? definitionId = null,
         Guid? projectId = null,

@@ -1,5 +1,6 @@
 using CanDoItAll.Components;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
@@ -27,6 +28,7 @@ using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Web;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
@@ -39,8 +41,9 @@ builder.Services.AddRazorComponents()
     .AddHubOptions(options => options.MaximumReceiveMessageSize = promptAttachmentMessageLimitBytes);
 
 builder.Services.AddCanDoItAllBaseLib();
-builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
+builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
+builder.Services.AddCanDoItAllRuntimeModules();
 builder.Services.AddMermaidJS();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
@@ -51,21 +54,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
-builder.Services.AddSecurityModule();
-builder.Services.AddWorkspaceModule();
-builder.Services.AddProjectsModule();
-builder.Services.AddWorkbenchModule();
-builder.Services.AddResourcesModule();
-builder.Services.AddPromptsModule();
-builder.Services.AddFactoryModule();
-builder.Services.AddProcessesModule();
-builder.Services.AddValidationModule();
-builder.Services.AddTestLabModule();
-builder.Services.AddActivityModule();
-builder.Services.AddAgentFrameworkModule();
-builder.Services.AddAutomationModule();
-builder.Services.AddCollaborationModule();
-builder.Services.AddCrmHrModule();
 
 var app = builder.Build();
 
@@ -243,11 +231,207 @@ if (app.Environment.IsDevelopment())
             Route = $"/projects/{saveResult.Value:D}/structure"
         });
     });
+
+    app.MapGet("/_dev/agentframework/diagnostics", async (
+        AiAgentService aiAgentService,
+        IAiTechnicalAgentBridge technicalAgentBridge,
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+        IDbContextFactory<AppDbContext> dbContextFactory) =>
+    {
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync();
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var parties = await dbContext.Set<Party>()
+            .Where(item => item.PartyType == PartyType.AiAgent)
+            .OrderBy(item => item.DisplayName)
+            .Select(item => new
+            {
+                item.Id,
+                item.DisplayName
+            })
+            .ToListAsync();
+        var partyIds = parties.Select(item => item.Id).ToList();
+        var bindings = await dbContext.Set<AiResourceBinding>()
+            .Where(item => partyIds.Contains(item.PartyId))
+            .Select(item => new
+            {
+                item.PartyId,
+                item.TechnicalAgentId,
+                item.BindingStatus,
+                item.BindingReason
+            })
+            .ToListAsync();
+        var summaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds);
+        var roster = await aiAgentService.ListAgentDirectoryAsync();
+        var workspaceAgents = await workspaceFactory.GetOrganizationWorkspaceService().ListAgentsAsync(includeTemplates: false);
+
+        return Results.Ok(new
+        {
+            PartyCount = parties.Count,
+            BindingCount = bindings.Count,
+            WorkspaceAgentCount = workspaceAgents.Count,
+            RosterCount = roster.Count,
+            Parties = parties.Select(item => new
+            {
+                item.Id,
+                item.DisplayName,
+                Summary = summaries.TryGetValue(item.Id, out var summary)
+                    ? new
+                    {
+                        summary.TechnicalAgentId,
+                        summary.BindingStatus,
+                        summary.HasTechnicalProfile,
+                        summary.ProviderName,
+                        summary.DefaultModel,
+                        summary.CapabilityCount,
+                        summary.BindingSummary,
+                        summary.AgentsRoute
+                    }
+                    : null
+            }),
+            Bindings = bindings,
+            WorkspaceAgents = workspaceAgents.Select(item => new
+            {
+                item.Id,
+                item.Name,
+                item.Status,
+                item.TemplateKey,
+                item.IsTemplate,
+                item.ProviderProfileId,
+                item.ConfigurationJson,
+                item.Tags
+            }),
+            Roster = roster.Select(item => new
+            {
+                item.PartyId,
+                item.DisplayName,
+                item.TechnicalAgentId,
+                item.BindingStatus,
+                item.HasProfile,
+                item.ProviderName,
+                item.DefaultModel,
+                item.CapabilityCount
+            })
+        });
+    });
+
+    app.MapGet("/_dev/agentframework/diagnostics-step/{step}", async (
+        string step,
+        AiAgentService aiAgentService,
+        IAiTechnicalAgentBridge technicalAgentBridge,
+        IAgentFrameworkOrganizationCatalogRepairService organizationCatalogRepairService,
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+        IDbContextFactory<AppDbContext> dbContextFactory) =>
+    {
+        var stopwatch = Stopwatch.StartNew();
+        switch (step.Trim().ToLowerInvariant())
+        {
+            case "repair":
+            {
+                await organizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
+                stopwatch.Stop();
+                return Results.Ok(new
+                {
+                    Step = "repair",
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds
+                });
+            }
+            case "sync":
+            {
+                await technicalAgentBridge.SynchronizeDirectoryProjectionAsync();
+                stopwatch.Stop();
+                return Results.Ok(new
+                {
+                    Step = "sync",
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds
+                });
+            }
+            case "workspace-agents":
+            {
+                var agents = await workspaceFactory.GetOrganizationWorkspaceService().ListAgentsAsync(includeTemplates: false);
+                stopwatch.Stop();
+                return Results.Ok(new
+                {
+                    Step = "workspace-agents",
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                    Count = agents.Count,
+                    Names = agents.Select(item => item.Name).ToArray()
+                });
+            }
+            case "parties":
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+                var parties = await dbContext.Set<Party>()
+                    .Where(item => item.PartyType == PartyType.AiAgent)
+                    .OrderBy(item => item.DisplayName)
+                    .Select(item => new
+                    {
+                        item.Id,
+                        item.DisplayName
+                    })
+                    .ToListAsync();
+                stopwatch.Stop();
+                return Results.Ok(new
+                {
+                    Step = "parties",
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                    Count = parties.Count,
+                    Parties = parties
+                });
+            }
+            case "summaries":
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+                var partyIds = await dbContext.Set<Party>()
+                    .Where(item => item.PartyType == PartyType.AiAgent)
+                    .OrderBy(item => item.DisplayName)
+                    .Select(item => item.Id)
+                    .ToListAsync();
+                var summaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds);
+                stopwatch.Stop();
+                return Results.Ok(new
+                {
+                    Step = "summaries",
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                    Count = summaries.Count
+                });
+            }
+            case "roster":
+            {
+                var roster = await aiAgentService.ListAgentDirectoryAsync();
+                stopwatch.Stop();
+                return Results.Ok(new
+                {
+                    Step = "roster",
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                    Count = roster.Count,
+                    Names = roster.Select(item => item.DisplayName).ToArray()
+                });
+            }
+            default:
+            {
+                stopwatch.Stop();
+                return Results.BadRequest(new
+                {
+                    Error = "Unknown diagnostics step.",
+                    SupportedSteps = new[]
+                    {
+                        "repair",
+                        "sync",
+                        "workspace-agents",
+                        "parties",
+                        "summaries",
+                        "roster"
+                    }
+                });
+            }
+        }
+    });
 }
 
 app.MapProjectStructureAgentApi();
 app.MapRazorComponents<App>()
-    .AddAdditionalAssemblies(ModuleAssemblies.All)
+    .AddAdditionalAssemblies(CanDoItAll.Web.Composition.ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();
 app.MapHealthChecks("/health");
 

@@ -458,6 +458,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             Decision: decision,
             MutatesWorkspace: mutatesWorkspace,
             TargetPaths: targetPaths,
+            WorkspaceRootPath: pathPolicy.WorkspaceRoot,
             WorkingDirectory: workingDirectory,
             WorkingDirectoryPath: workingDirectoryPath,
             ExecutableCandidates: executableCandidates,

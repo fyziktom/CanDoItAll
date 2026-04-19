@@ -7,7 +7,7 @@
   "Summary": "Quality owner for coverage depth, evidence quality, and release confidence.",
   "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
   "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
-  "PreferredExecutorKind": "person",
+  "PreferredExecutorKind": "person-or-agent",
   "PreferredProjectAssignmentRole": "Reviewer",
   "IsRequired": true,
   "AllowsFallback": true,

@@ -202,6 +202,110 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.True(approval.CollaborationThreadId.HasValue);
     }
 
+    [Fact]
+    public async Task CreateLaunchPlanAsync_prefers_ai_candidates_that_match_required_skills()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var hrService = scope.ServiceProvider.GetRequiredService<HrService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(projectsService, $"Skill Guided Launch {suffix}");
+        var ownerId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Skill Guided Owner {suffix}",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Employee,
+            $"owner.skill.{suffix}@example.test");
+        var genericAgentId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Aardvark Generic Agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"generic.skill.{suffix}@example.test");
+        var skilledAgentId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Skilled Delivery Agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"skilled.skill.{suffix}@example.test");
+
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            genericAgentId,
+            ownerId,
+            "General AI work",
+            "Provides a generic AI resource profile.",
+            "Workspace build",
+            "Generic AI resource for skill-sensitive launch planning.");
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            skilledAgentId,
+            ownerId,
+            "Skill-guided implementation",
+            "Provides a skill-matched AI resource profile.",
+            "Workspace build",
+            "Skilled AI resource for skill-sensitive launch planning.");
+
+        var skillDefinition = await hrService.SaveSkillDefinitionAsync(new SkillDefinitionEditorModel
+        {
+            Name = $"Blazor SSR delivery {suffix}",
+            Category = "Engineering",
+            Description = "Serious Blazor SSR delivery capability."
+        });
+        Assert.True(skillDefinition.IsSuccess, string.Join(" | ", skillDefinition.Errors.Select(error => error.Message)));
+
+        var skillAssignment = await hrService.SavePartySkillAsync(new PartySkillEditorModel
+        {
+            PartyId = skilledAgentId,
+            SkillId = skillDefinition.Value,
+            Proficiency = SkillProficiencyLevel.Expert,
+            YearsExperience = 6,
+            CertificationStatus = "Validated",
+            Notes = "Explicitly skilled for Blazor SSR delivery."
+        });
+        Assert.True(skillAssignment.IsSuccess, string.Join(" | ", skillAssignment.Errors.Select(error => error.Message)));
+
+        var definition = BuildSkillGuidedLaunchPlanningDefinition(projectId, skillDefinition.Value);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Skill guided launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration test skill-guided launch validation.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var role = Assert.Single(details!.Roles);
+        Assert.True(role.SelectedCandidateId.HasValue);
+        var selectedCandidate = Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
+
+        Assert.Equal(skilledAgentId, selectedCandidate.PartyId);
+        Assert.Equal(ProcessLaunchCandidateKind.AiResource, selectedCandidate.CandidateKind);
+        Assert.Contains("1 of 1 required skill", selectedCandidate.RecommendationSummary, StringComparison.Ordinal);
+
+        var genericCandidate = Assert.Single(role.Candidates, item => item.PartyId == genericAgentId);
+        Assert.Contains("does not currently match", genericCandidate.RecommendationSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static LaunchPlanningDefinitionFixture BuildLaunchPlanningDefinition(Guid projectId)
     {
         var builderRoleId = Guid.NewGuid();
@@ -317,6 +421,68 @@ public sealed class ProcessLaunchPlanningIntegrationTests
             },
             builderRoleName,
             reviewerRoleName);
+    }
+
+    private static ProcessDefinitionEditorModel BuildSkillGuidedLaunchPlanningDefinition(Guid projectId, Guid requiredSkillId)
+    {
+        var builderRoleId = Guid.NewGuid();
+        var buildStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Skill-guided launch planning proof process",
+            Summary = "Prefers AI candidates whose CRM-HR party skills match the role requirements.",
+            ValueStatement = "AI launch planning must not recommend an arbitrary bound agent when an explicit skill-matched resource exists.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "Required skills remain explicit in launch planning.",
+            ChangeSummary = "Skill-guided launch planning integration proof.",
+            ConstitutionRuleSummary = "Do not ignore required skills for AI staffing.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = builderRoleId,
+                    Key = "skill-guided-builder-ai",
+                    DisplayName = "Skill-guided builder agent",
+                    Purpose = "Generate the requested delivery artifact.",
+                    StaffingIntent = "Technical AI builder selected from CRM-HR and AgentFramework.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    RequiredSkillIds = [requiredSkillId],
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = buildStepId,
+                    Key = "build-artifact",
+                    Title = "Build artifact",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Skill-guided delivery request.",
+                    OutputContractSummary = "Delivery artifact prepared.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected AI resource completes the work.",
+                    ExceptionPolicySummary = "Fail when no suitable AI resource is selected.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = builderRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

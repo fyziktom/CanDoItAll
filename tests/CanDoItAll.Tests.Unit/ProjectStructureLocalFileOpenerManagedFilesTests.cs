@@ -105,6 +105,38 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
         }
     }
 
+    [Fact]
+    public void CanOpen_returns_true_for_an_existing_directory_inside_the_managed_artifact_root()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+
+        try
+        {
+            var artifactDirectoryPath = Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "demo", "deliveries", "units-converter", "process", "qa-validation");
+            Directory.CreateDirectory(artifactDirectoryPath);
+
+            var sut = CreateSut(workspaceRoot);
+            var node = CreateNode(
+                mediaRelativePath: string.Empty,
+                storageObjectReferenceJson: StorageJson.SerializeReference(
+                    new StorageObjectReference(
+                        null,
+                        StorageProviderKind.FileSystem,
+                        StorageLocatorKind.RelativePath,
+                        "artifacts/scopes/organization/demo/deliveries/units-converter/process/qa-validation",
+                        string.Empty,
+                        "application/x-directory",
+                        null,
+                        "/managed-files/artifacts/scopes/organization/demo/deliveries/units-converter/process/qa-validation")));
+
+            Assert.True(sut.CanOpen(node));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     private static ProjectStructureLocalFileOpener CreateSut(string workspaceRoot)
         => new(
             new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot)),

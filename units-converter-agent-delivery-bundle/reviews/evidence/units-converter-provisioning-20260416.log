@@ -1,0 +1,108 @@
+18:30:43 info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0] Resolved database profile Managed SQLite workspace (529c1206-0808-489f-ad29-feb5bc60dda1) via PersistedActiveProfile. Provider=Sqlite. Fingerprint=sqlite:managed:529c12060808489fad29feb5bc60dda1. RuntimeLocked=False.
+18:30:49 info: CanDoItAll.ScenarioSeeder[0] Seeding scenario units-converter-delivery into profile root C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1. Database C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db
+18:31:08 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=projects Action=update Title=Updated project IdempotencyKey=<none>.
+18:31:08 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=projects Action=update Title=Updated project.
+18:31:10 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:a547df8cb87d45e88755af1ad8abba64:activity.
+18:31:10 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+18:31:35 info: CanDoItAll.Modules.Processes.ProcessesService[0] Submitting launch plan 9fe1f2bf-fada-459f-a07e-19e158d9b10f for approval. RequestedBy=units-converter-delivery-seeder.
+18:31:35 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9fe1f2bf-fada-459f-a07e-19e158d9b10f resolved approval authority Human Delivery Steward (Person). ExistingApprovalThread=False.
+18:31:35 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9fe1f2bf-fada-459f-a07e-19e158d9b10f is creating a new collaboration approval thread.
+18:31:35 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Creating collaboration thread for context ProcessLaunch/9fe1f2bf-fada-459f-a07e-19e158d9b10f. Subject=Launch approval / Blazor SSR basic units converter / 2026-04-17 22:31:10.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Created collaboration thread c399c89d-6696-4474-aba8-3f3be54a845c. Recording activity mirror next.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread c399c89d-6696-4474-aba8-3f3be54a845c because an ambient transaction is active.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration thread creation for c399c89d-6696-4474-aba8-3f3be54a845c.
+18:31:36 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9fe1f2bf-fada-459f-a07e-19e158d9b10f created collaboration approval thread c399c89d-6696-4474-aba8-3f3be54a845c.
+18:31:36 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9fe1f2bf-fada-459f-a07e-19e158d9b10f moved to PendingApproval with approval record b360c3d8-b567-4c3d-a227-64df6f15e1ea.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appending collaboration message to thread c399c89d-6696-4474-aba8-3f3be54a845c. Kind=Standard. Author=units-converter-delivery-seeder.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appended collaboration message to thread c399c89d-6696-4474-aba8-3f3be54a845c. Recording activity mirror next.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread c399c89d-6696-4474-aba8-3f3be54a845c message Standard because an ambient transaction is active.
+18:31:36 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration message append for thread c399c89d-6696-4474-aba8-3f3be54a845c.
+18:31:36 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=start-run Title=Started process run IdempotencyKey=process-outbox:58c2a5208cce47ccbe1331ce113b39d5:activity.
+18:31:36 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=start-run Title=Started process run.
+18:31:52 info: CanDoItAll.ScenarioSeeder.UnitsConverterDeliveryProvisioningSeeder[0] Provisioned units-converter delivery. ProjectId=9a817692-c632-43a4-9c0e-01e49e76360a DefinitionId=885c1099-cbfb-4c8c-bedd-57b26556c574 LaunchPlanId=9fe1f2bf-fada-459f-a07e-19e158d9b10f RunId=4c542918-7330-41a9-af9b-4d3a6ba93500
+{
+  "projectId": "9a817692-c632-43a4-9c0e-01e49e76360a",
+  "projectName": "Blazor SSR basic units converter",
+  "definitionId": "885c1099-cbfb-4c8c-bedd-57b26556c574",
+  "launchPlanId": "9fe1f2bf-fada-459f-a07e-19e158d9b10f",
+  "runId": "4c542918-7330-41a9-af9b-4d3a6ba93500",
+  "humanPartyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+  "processRoute": "/projects/9a817692-c632-43a4-9c0e-01e49e76360a/processes?processId=885c1099-cbfb-4c8c-bedd-57b26556c574\u0026runId=4c542918-7330-41a9-af9b-4d3a6ba93500",
+  "scopePhaseNodeId": "custom:045498674f724c0c963ec5ff0de4bf2f",
+  "buildPhaseNodeId": "custom:f521b21eb9cb448a9b8c19242cdabfe4",
+  "releasePhaseNodeId": "custom:12717eca802047eebec323663211c7f9",
+  "deliveryFeatureNodeId": "custom:69a30496d1cc4580a1b75f8e7ac13fb6",
+  "solutionRelativePath": "deliveries/units-converter/Units.slnx",
+  "webProjectRelativePath": "deliveries/units-converter/src/Units.Web/Units.Web.csproj",
+  "coreProjectRelativePath": "deliveries/units-converter/src/Units.Core/Units.Core.csproj",
+  "testsProjectRelativePath": "deliveries/units-converter/tests/Units.Tests/Units.Tests.csproj",
+  "briefRelativePath": "deliveries/units-converter/PROJECT-BRIEF.md",
+  "bootstrapScriptRelativePath": "deliveries/units-converter/Bootstrap-UnitsSolution.ps1",
+  "launchScriptRelativePath": "deliveries/units-converter/Launch-UnitsApp.ps1",
+  "uiEvidenceRelativePath": "artifacts/deliveries/units-converter/ui",
+  "roleBindings": [
+    {
+      "roleKey": "delivery-manager",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "lead-engineer",
+      "displayName": "Programming Workspace Analyst",
+      "partyId": "88e22e04-a72b-4633-85b6-488a222adc41",
+      "technicalAgentId": "b3636a1c-f005-fe5c-b7a7-35a04c133f76",
+      "isHuman": false
+    },
+    {
+      "roleKey": "product-owner",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "qa-lead",
+      "displayName": "Delivery QA Observer",
+      "partyId": "fd97549a-21ee-441e-bb53-463b4d5a5a03",
+      "technicalAgentId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+      "isHuman": false
+    },
+    {
+      "roleKey": "release-manager",
+      "displayName": "Release Readiness Manager",
+      "partyId": "1ab27389-390d-4944-857e-62fdb811d714",
+      "technicalAgentId": "6f674c92-3347-dd55-96d3-851db9739b35",
+      "isHuman": false
+    },
+    {
+      "roleKey": "review-lead",
+      "displayName": "Code Review Lead",
+      "partyId": "19228d28-881d-43fd-9525-8115f8e75d42",
+      "technicalAgentId": "33183e52-4c54-b852-8c24-bd1d13cf1f23",
+      "isHuman": false
+    },
+    {
+      "roleKey": "security-reviewer",
+      "displayName": "Security Reviewer",
+      "partyId": "fef12e80-ccd0-436c-90f1-aa4df868209c",
+      "technicalAgentId": "5ab2958c-08de-b251-8ead-caa321248b91",
+      "isHuman": false
+    },
+    {
+      "roleKey": "solution-architect",
+      "displayName": "Portfolio Architect",
+      "partyId": "6aaa001e-768e-4437-9ce0-40751b056676",
+      "technicalAgentId": "952b041a-aba0-385b-8e4e-494c4b21d831",
+      "isHuman": false
+    },
+    {
+      "roleKey": "ui-review-lead",
+      "displayName": "UI Review Lead",
+      "partyId": "3b183c45-95e8-41f9-aaac-ea8623a5bdd0",
+      "technicalAgentId": "9ebea979-0d33-8e53-a69a-ca1555c73afe",
+      "isHuman": false
+    }
+  ]
+}

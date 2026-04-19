@@ -9,8 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string WorkspaceDeliverySkillType = "CanDoItAll.AgentFramework.Sandbox.Hosting.WorkspaceDeliverySkill, CanDoItAll.AgentFramework.Sandbox";
-    private const string WorkspaceInspectorPluginType = "CanDoItAll.AgentFramework.Sandbox.Hosting.WorkspaceInspectorPlugin, CanDoItAll.AgentFramework.Sandbox";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v18";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -27,12 +26,18 @@ internal static class SandboxWorkspaceSeedBuilder
         var playwrightLocalMcpCapabilityId = CreateStableGuid("capabilities/playwright-local-mcp");
         var bundleWorkflowCapabilityId = CreateStableGuid("capabilities/candoitall-bundle-workflow");
         var aspNetCoreCapabilityId = CreateStableGuid("capabilities/aspnet-core-skill");
+        var codeanalyticsCapabilityId = CreateStableGuid("capabilities/candoitall-codeanalytics-mcp");
+        var componentsCapabilityId = CreateStableGuid("capabilities/candoitall-components-mcp");
+        var frontendThemeCapabilityId = CreateStableGuid("capabilities/candoitall-frontend-theme");
+        var frontendSkillCapabilityId = CreateStableGuid("capabilities/frontend-skill");
+        var playwrightWorkflowCapabilityId = CreateStableGuid("capabilities/candoitall-watch-playwright-loop");
         var spreadsheetCapabilityId = CreateStableGuid("capabilities/spreadsheet-skill");
+        var runTestsCapabilityId = CreateStableGuid("capabilities/run-tests-skill");
+        var mstestCapabilityId = CreateStableGuid("capabilities/writing-mstest-tests");
         var repositoryPlaybookCapabilityId = CreateStableGuid("capabilities/repository-playbook");
-        var workspaceDeliverySkillCapabilityId = CreateStableGuid("capabilities/workspace-delivery-skill");
         var mailInlineSkillCapabilityId = CreateStableGuid("capabilities/mail-triage-inline-skill");
         var officeInlineSkillCapabilityId = CreateStableGuid("capabilities/office-order-inline-skill");
-        var calculatorInlineSkillCapabilityId = CreateStableGuid("capabilities/blazor-calculator-inline-skill");
+        var blazorSsrDeliveryInlineSkillCapabilityId = CreateStableGuid("capabilities/blazor-ssr-delivery-inline-skill");
         var appSummaryInlineSkillCapabilityId = CreateStableGuid("capabilities/generated-app-summary-inline-skill");
         var architectureReviewInlineSkillCapabilityId = CreateStableGuid("capabilities/architecture-review-inline-skill");
         var architectureInlineSkillCapabilityId = CreateStableGuid("capabilities/architecture-map-inline-skill");
@@ -64,7 +69,6 @@ internal static class SandboxWorkspaceSeedBuilder
         var workspacePwshRunScriptCapabilityId = CreateStableGuid("capabilities/workspace-pwsh-run-script");
         var workspaceConvertDocumentCapabilityId = CreateStableGuid("capabilities/workspace-convert-document");
         var workspaceInspectSpreadsheetCapabilityId = CreateStableGuid("capabilities/workspace-inspect-spreadsheet");
-        var workspaceInspectorPluginCapabilityId = CreateStableGuid("capabilities/workspace-inspector-plugin");
         var localDocsCapabilityId = CreateStableGuid("capabilities/workspace-source-rag");
         var architectureDocsCapabilityId = CreateStableGuid("capabilities/architecture-source-rag");
         var mailContextCapabilityId = CreateStableGuid("capabilities/mail-triage-context");
@@ -74,6 +78,10 @@ internal static class SandboxWorkspaceSeedBuilder
         var architectAgentId = CreateStableGuid("agents/portfolio-architect");
         var qaAgentId = CreateStableGuid("agents/delivery-qa-observer");
         var programmingAgentId = CreateStableGuid("agents/programming-workspace-analyst");
+        var codeReviewAgentId = CreateStableGuid("agents/code-review-lead");
+        var uiReviewAgentId = CreateStableGuid("agents/ui-review-lead");
+        var securityReviewerAgentId = CreateStableGuid("agents/security-reviewer");
+        var releaseManagerAgentId = CreateStableGuid("agents/release-readiness-manager");
         var spreadsheetAgentId = CreateStableGuid("agents/spreadsheet-analyst");
         var mailAgentId = CreateStableGuid("agents/mail-triage-analyst");
         var researchAgentId = CreateStableGuid("agents/research-deep-dive-analyst");
@@ -153,6 +161,41 @@ internal static class SandboxWorkspaceSeedBuilder
                 GetSeedSkillRoot("aspnet-core"),
                 "Seeded from the shared Codex skill registry for programming-oriented workflows."),
             CreateFileSkillCapability(
+                codeanalyticsCapabilityId,
+                "candoitall-codeanalytics-mcp",
+                "Codeanalytics MCP Skill",
+                "Repository-guided C# architecture and symbol inspection through the CanDoItAll codeanalytics MCP.",
+                GetSeedSkillRoot("candoitall-codeanalytics-mcp"),
+                "Seeded from the shared Codex skill registry for architecture, review, and source-of-truth investigations."),
+            CreateFileSkillCapability(
+                componentsCapabilityId,
+                "candoitall-components-mcp",
+                "Components MCP Skill",
+                "Guidance for using the shared CanDoItAll component library before falling back to raw Blazor markup.",
+                GetSeedSkillRoot("candoitall-components-mcp"),
+                "Seeded from the shared Codex skill registry for Blazor UI work and review."),
+            CreateFileSkillCapability(
+                frontendThemeCapabilityId,
+                "candoitall-frontend-theme",
+                "Frontend Theme Skill",
+                "Guidance for intentional CanDoItAll frontend theming, composition, and semantic-token usage in Blazor delivery.",
+                GetSeedSkillRoot("candoitall-frontend-theme"),
+                "Seeded from the shared Codex skill registry for serious Blazor delivery and UI review."),
+            CreateFileSkillCapability(
+                frontendSkillCapabilityId,
+                "frontend-skill",
+                "Frontend Delivery Skill",
+                "Guidance for strong, intentional product surfaces that avoid generic scaffold output in UI delivery.",
+                GetSeedSkillRoot("frontend-skill"),
+                "Seeded from the shared Codex skill registry for product-facing UI implementation, QA, and UI review."),
+            CreateFileSkillCapability(
+                playwrightWorkflowCapabilityId,
+                "candoitall-watch-playwright-loop",
+                "Watch And Playwright Loop Skill",
+                "Guidance for fast, real-browser validation with Playwright and the shared CanDoItAll watch workflow.",
+                GetSeedSkillRoot("candoitall-watch-playwright-loop"),
+                "Seeded from the shared Codex skill registry for UI delivery, QA, and release smoke validation."),
+            CreateFileSkillCapability(
                 spreadsheetCapabilityId,
                 "spreadsheet-skill",
                 "Spreadsheet Skill",
@@ -160,24 +203,26 @@ internal static class SandboxWorkspaceSeedBuilder
                 GetSeedSkillRoot("spreadsheet"),
                 "Seeded from the shared Codex skill registry for spreadsheet-oriented workflows."),
             CreateFileSkillCapability(
+                runTestsCapabilityId,
+                "run-tests",
+                "Run Tests Skill",
+                "Guidance for selecting and executing the right focused dotnet test command for the active .NET test framework and runner.",
+                GetSeedSkillRoot("run-tests"),
+                "Seeded from the shared Codex skill registry for targeted build and test execution in serious delivery workflows."),
+            CreateFileSkillCapability(
+                mstestCapabilityId,
+                "writing-mstest-tests",
+                "Writing MSTest Tests Skill",
+                "Guidance for writing targeted MSTest validation in C# delivery workflows.",
+                GetSeedSkillRoot("writing-mstest-tests"),
+                "Seeded from the shared Codex skill registry for implementation and QA validation work."),
+            CreateFileSkillCapability(
                 repositoryPlaybookCapabilityId,
                 "repository-playbook",
                 "Repository Playbook",
                 "Local workspace skill with references and scripts for delivery-oriented repository work.",
                 GetSeedSkillRoot("repository-playbook"),
                 "Repo-local file skill that demonstrates Microsoft Agent Framework file-skill loading over workspace assets."),
-            new(
-                workspaceDeliverySkillCapabilityId,
-                CapabilityKind.Skill,
-                "workspace-delivery-skill",
-                "Workspace Delivery Skill",
-                "DI-backed skill that exposes the current sandbox dashboard and hosted route inventory.",
-                $"service://{WorkspaceDeliverySkillType}",
-                SerializeConfiguration(new { skillSource = "service", registeredSkillServiceType = WorkspaceDeliverySkillType }),
-                CapabilityProofStatus.NotRun,
-                "DI-backed skill remains framework-owned through AgentSkillsProvider and host registration.",
-                null,
-                true),
             new(
                 mailInlineSkillCapabilityId,
                 CapabilityKind.Skill,
@@ -222,12 +267,12 @@ internal static class SandboxWorkspaceSeedBuilder
                         "Reference JSON response shape for Mouser comparison tasks.")
                 ]),
             CreateInlineSkillCapability(
-                calculatorInlineSkillCapabilityId,
-                "blazor-calculator-inline-skill",
-                "Blazor Calculator Build Skill",
-                "Task-specific workflow for creating and validating the .NET 10 Blazor SSR calculator app.",
-                "blazor-calculator-build",
-                GetSeedText("skills/blazor-calculator-build.instructions"),
+                blazorSsrDeliveryInlineSkillCapabilityId,
+                "blazor-ssr-delivery-inline-skill",
+                "Blazor SSR Delivery Skill",
+                "Reusable workflow guidance for creating and validating a .NET 10 Blazor SSR application.",
+                "blazor-ssr-delivery",
+                GetSeedText("skills/blazor-ssr-delivery.instructions"),
                 [
                     new InlineSkillResourceSeed(
                         "net10-program-scaffold",
@@ -303,18 +348,6 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", "Workspace PowerShell Run Script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane.", "workspace_pwsh_run_script", approvalRequired: true),
             CreateToolCapability(workspaceConvertDocumentCapabilityId, "workspace-convert-document", "Workspace Convert Document", "Converts a workspace document such as a PDF into markdown using markitdown.", "workspace_convert_document", approvalRequired: true),
             CreateToolCapability(workspaceInspectSpreadsheetCapabilityId, "workspace-inspect-spreadsheet", "Workspace Inspect Spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview.", "workspace_inspect_spreadsheet", approvalRequired: true),
-            new(
-                workspaceInspectorPluginCapabilityId,
-                CapabilityKind.Plugin,
-                "workspace-inspector-plugin",
-                "Workspace Inspector Plugin",
-                "DI-backed plugin that exposes sandbox dashboard details, hosted routes, and spreadsheet inspection through framework-native plugin tools.",
-                $"service://{WorkspaceInspectorPluginType}",
-                SerializeConfiguration(new { registeredPluginServiceType = WorkspaceInspectorPluginType, approvalRequired = false }),
-                CapabilityProofStatus.NotRun,
-                "Plugin tools remain wrapper-light and framework-owned through Microsoft Agent Framework plugin registration.",
-                null,
-                true),
             new(
                 localDocsCapabilityId,
                 CapabilityKind.Rag,
@@ -431,7 +464,7 @@ internal static class SandboxWorkspaceSeedBuilder
             architectAgentId,
             "Portfolio Architect",
             "Architecture steward",
-            "Explores integration seams, rights boundaries, and long-term CanDoItAll alignment.",
+            "Owns architecture direction, source-of-truth choices, and bounded design guidance for governed delivery work.",
             GetSeedText("agents/portfolio-architect.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
@@ -443,6 +476,7 @@ internal static class SandboxWorkspaceSeedBuilder
             false,
             SerializeConfiguration(new
             {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
                 maxLocalRagResults = 4,
                 hostedExposure = new
                 {
@@ -457,13 +491,16 @@ internal static class SandboxWorkspaceSeedBuilder
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(architectureReviewInlineSkillCapabilityId, "architecture-review-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(architectureInlineSkillCapabilityId, "architecture-map-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
                 CreateAssignment(workspaceExecutionBoundaryCapabilityId, "workspace-execution-boundary", CapabilityKind.Tool),
                 CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
@@ -480,28 +517,47 @@ internal static class SandboxWorkspaceSeedBuilder
         var qaAgent = new AgentDefinition(
             qaAgentId,
             "Delivery QA Observer",
-            "Quality reviewer",
-            "Tracks what agents are doing, reviews proofs, and highlights missing gates.",
-            "You are the QA observer for the CanDoItAll agent sandbox. Be precise about proof, regressions, and whether downstream work should continue.",
+            "QA lead and browser-proof reviewer",
+            "Owns validation depth, screenshot-backed browser proof, and explicit QA gating for governed delivery work.",
+            GetSeedText("agents/delivery-qa-observer.instructions"),
             AgentLifecycleStatus.Active,
-            ollamaProviderId,
-            "qwen3.5:9b",
-            AgentWorkloadKind.General,
+            openAiProviderId,
+            "gpt-4.1",
+            AgentWorkloadKind.Qa,
             AgentChatHistoryMode.FrameworkManaged,
             0.1d,
             false,
             false,
-            string.Empty,
+            SerializeConfiguration(new
+            {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                enableCompaction = true,
+                maxLocalRagResults = 4
+            }),
             false,
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(workspaceDeliverySkillCapabilityId, "workspace-delivery-skill", CapabilityKind.Skill),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
+                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
             ],
-            ["qa", "governance"],
+            ["qa", "browser", "governance"],
             now,
             now);
 
@@ -509,17 +565,31 @@ internal static class SandboxWorkspaceSeedBuilder
             programmingAgentId,
             "Programming Workspace Analyst",
             "Programming and repository worker",
-            "Uses skills, RAG, approval-aware tools, and workspace execution helpers to inspect and improve the current repository or build sample applications.",
+            "Implements C# and Blazor changes with bounded source inspection, concrete validation, and real UI proof when needed.",
             GetSeedText("agents/programming-workspace-analyst.instructions"),
-            openAiChatProviderId,
+            openAiProviderId,
             AgentWorkloadKind.Programming,
             "programming-workspace-analyst",
-            SerializeConfiguration(new { preferredSkillRoots = new[] { GetSeedSkillRoot("repository-playbook") }, enableCompaction = true, slidingWindowTurns = 10, maxLocalRagResults = 5 }),
+            SerializeConfiguration(new
+            {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                preferredSkillRoots = new[] { GetSeedSkillRoot("repository-playbook") },
+                enableCompaction = true,
+                slidingWindowTurns = 10,
+                maxLocalRagResults = 5
+            }),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(calculatorInlineSkillCapabilityId, "blazor-calculator-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
+                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -544,7 +614,146 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
             ],
             ["programming", "workspace", "approval"],
-            now);
+            now,
+            "gpt-4.1");
+
+        var codeReviewAgent = CreateWorkloadAgent(
+            codeReviewAgentId,
+            "Code Review Lead",
+            "Code reviewer",
+            "Reviews C# and Blazor changes for regressions, architectural drift, weak evidence, and reviewable quality.",
+            GetSeedText("agents/code-review-lead.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "code-review-lead",
+            SerializeConfiguration(new
+            {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                enableCompaction = true,
+                maxLocalRagResults = 5
+            }),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag)
+            ],
+            ["review", "code", "quality"],
+            now,
+            "gpt-4.1");
+
+        var uiReviewAgent = CreateWorkloadAgent(
+            uiReviewAgentId,
+            "UI Review Lead",
+            "UI reviewer",
+            "Reviews rendered Blazor UI with Playwright, screenshot analysis, and component-library expectations.",
+            GetSeedText("agents/ui-review-lead.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "ui-review-lead",
+            SerializeConfiguration(new
+            {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                enableCompaction = true,
+                maxLocalRagResults = 4
+            }),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
+            ],
+            ["ui", "review", "browser"],
+            now,
+            "gpt-4.1");
+
+        var securityReviewerAgent = CreateWorkloadAgent(
+            securityReviewerAgentId,
+            "Security Reviewer",
+            "Security reviewer",
+            "Reviews C# and Blazor changes for trust-boundary risk, hidden fallbacks, and explicit security posture.",
+            GetSeedText("agents/security-reviewer.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "security-reviewer",
+            SerializeConfiguration(new
+            {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                enableCompaction = true,
+                maxLocalRagResults = 4
+            }),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
+                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag)
+            ],
+            ["security", "review", "risk"],
+            now,
+            "gpt-4.1");
+
+        var releaseManagerAgent = CreateWorkloadAgent(
+            releaseManagerAgentId,
+            "Release Readiness Manager",
+            "Release readiness manager",
+            "Synthesizes QA, security, rollback, and smoke-proof evidence into an explicit release-readiness decision.",
+            GetSeedText("agents/release-readiness-manager.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Management,
+            "release-readiness-manager",
+            SerializeConfiguration(new
+            {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                enableCompaction = true,
+                maxLocalRagResults = 4
+            }),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
+            ],
+            ["release", "readiness", "operations"],
+            now,
+            "gpt-4.1");
 
         var spreadsheetAgent = CreateWorkloadAgent(
             spreadsheetAgentId,
@@ -637,7 +846,7 @@ internal static class SandboxWorkspaceSeedBuilder
 
         return new SandboxWorkspaceDocument(
             LatestVersion,
-            [architectAgent, qaAgent, programmingAgent, spreadsheetAgent, mailAgent, researchAgent],
+            [architectAgent, qaAgent, programmingAgent, codeReviewAgent, uiReviewAgent, securityReviewerAgent, releaseManagerAgent, spreadsheetAgent, mailAgent, researchAgent],
             providers,
             capabilities,
             [
@@ -680,7 +889,8 @@ internal static class SandboxWorkspaceSeedBuilder
         AgentPermissionsPolicy permissions,
         IReadOnlyList<AgentCapabilityAssignment> capabilities,
         IReadOnlyList<string> tags,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string model = "gpt-4o-mini")
     {
         return new AgentDefinition(
             id,
@@ -690,7 +900,7 @@ internal static class SandboxWorkspaceSeedBuilder
             instructions,
             AgentLifecycleStatus.Active,
             providerId,
-            "gpt-4o-mini",
+            model,
             workload,
             AgentChatHistoryMode.FrameworkManaged,
             0.2d,

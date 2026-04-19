@@ -53,10 +53,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         if (TryGetExecutionRunStore() is { } executionRunStore)
         {
             var currentDetail = await LoadExecutionRunDetailAsync(executionRunId, cancellationToken);
+            var updatedRun = UpdateRunProgressFromLog(currentDetail.Run, entry);
+            var updatedSession = currentDetail.ChatSession is null
+                ? null
+                : UpdateChatSessionProgressFromRun(currentDetail.ChatSession, updatedRun);
             var persistedDetail = await executionRunStore.SaveExecutionRunDetailAsync(
                 CreateExecutionRunDetail(
-                    currentDetail.Run,
-                    currentDetail.ChatSession,
+                    updatedRun,
+                    updatedSession,
                     InsertExecutionLogEntry(currentDetail.ExecutionLog, entry),
                     currentDetail.Metrics,
                     currentDetail.Approvals,
@@ -72,6 +76,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         var persistedExecutionState = await UpdateExecutionStateAsync(executionState => executionState with
         {
+            ExecutionRuns = ReplaceExecutionRunProgress(executionState.ExecutionRuns, executionRunId, entry),
+            ChatSessions = ReplaceChatSessionProgress(executionState.ChatSessions, executionState.ExecutionRuns, executionRunId, entry),
             ExecutionLog = InsertExecutionLogEntry(executionState.ExecutionLog, entry)
         }, cancellationToken);
 
@@ -457,6 +463,42 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             item => item.CreatedAtUtc);
     }
 
+    private static IReadOnlyList<ExecutionRunRecord> ReplaceExecutionRunProgress(
+        IReadOnlyList<ExecutionRunRecord> runs,
+        Guid executionRunId,
+        ExecutionLogEntry entry)
+    {
+        var currentRun = runs.FirstOrDefault(item => item.Id == executionRunId);
+        if (currentRun is null)
+        {
+            return runs;
+        }
+
+        return ReplaceExecutionRun(runs, UpdateRunProgressFromLog(currentRun, entry));
+    }
+
+    private static IReadOnlyList<ChatSessionRecord> ReplaceChatSessionProgress(
+        IReadOnlyList<ChatSessionRecord> sessions,
+        IReadOnlyList<ExecutionRunRecord> runs,
+        Guid executionRunId,
+        ExecutionLogEntry entry)
+    {
+        var currentRun = runs.FirstOrDefault(item => item.Id == executionRunId);
+        if (currentRun?.ChatSessionId is not Guid chatSessionId)
+        {
+            return sessions;
+        }
+
+        var currentSession = sessions.FirstOrDefault(item => item.Id == chatSessionId);
+        if (currentSession is null)
+        {
+            return sessions;
+        }
+
+        var updatedRun = UpdateRunProgressFromLog(currentRun, entry);
+        return ReplaceChatSession(sessions, UpdateChatSessionProgressFromRun(currentSession, updatedRun));
+    }
+
     private static IReadOnlyList<AgentRunMetric> InsertMetric(
         IReadOnlyList<AgentRunMetric> metrics,
         AgentRunMetric metric)
@@ -500,6 +542,43 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         return updated;
+    }
+
+    private static ExecutionRunRecord UpdateRunProgressFromLog(
+        ExecutionRunRecord run,
+        ExecutionLogEntry entry)
+    {
+        if (run.State is ExecutionState.Completed or ExecutionState.Failed)
+        {
+            return run;
+        }
+
+        var nextState = entry.State == ExecutionState.Idle
+            ? run.State
+            : entry.State;
+        var nextUpdatedAtUtc = entry.CreatedAtUtc > run.UpdatedAtUtc
+            ? entry.CreatedAtUtc
+            : run.UpdatedAtUtc;
+        if (nextState == run.State && nextUpdatedAtUtc == run.UpdatedAtUtc)
+        {
+            return run;
+        }
+
+        return run with
+        {
+            State = nextState,
+            UpdatedAtUtc = nextUpdatedAtUtc
+        };
+    }
+
+    private static ChatSessionRecord UpdateChatSessionProgressFromRun(
+        ChatSessionRecord session,
+        ExecutionRunRecord run)
+    {
+        return ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+            session,
+            run.UpdatedAtUtc,
+            run.Id);
     }
 
     private static bool TryGetBlockingSessionRun(

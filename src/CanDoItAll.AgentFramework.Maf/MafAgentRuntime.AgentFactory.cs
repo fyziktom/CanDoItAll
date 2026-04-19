@@ -127,7 +127,9 @@ public sealed partial class MafAgentRuntime
                 .AsAIAgent(options: options, services: services),
             ProviderTransportKind.Responses when frameworkManagedHistory => client
                 .GetResponsesClient()
-                .AsIChatClientWithStoredOutputDisabled(model: model)
+                .AsIChatClientWithStoredOutputDisabled(
+                    model: model,
+                    includeReasoningEncryptedContent: ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(provider, frameworkManagedHistory))
                 .AsAIAgent(options: options, services: services),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
@@ -163,7 +165,9 @@ public sealed partial class MafAgentRuntime
                 .AsAIAgent(options: options, services: services),
             ProviderTransportKind.Responses when frameworkManagedHistory => client
                 .GetResponsesClient()
-                .AsIChatClientWithStoredOutputDisabled(model: model)
+                .AsIChatClientWithStoredOutputDisabled(
+                    model: model,
+                    includeReasoningEncryptedContent: ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(provider, frameworkManagedHistory))
                 .AsAIAgent(options: options, services: services),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
@@ -193,6 +197,25 @@ public sealed partial class MafAgentRuntime
         }
 
         return options;
+    }
+
+    private static bool ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(
+        ProviderProfile provider,
+        bool frameworkManagedHistory)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (!frameworkManagedHistory)
+        {
+            return false;
+        }
+
+        if (provider.Transport != ProviderTransportKind.Responses)
+        {
+            return false;
+        }
+
+        return false;
     }
 
     private AIAgent CreateInstrumentedAgent(AIAgent agent, ProviderProfile provider)
@@ -243,6 +266,7 @@ public sealed partial class MafAgentRuntime
             StorageInputRequestMessageFilter = messages => messages.Where(message =>
                 message.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.AIContextProvider &&
                 message.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.ChatHistory)
+                .ToList()
         });
     }
 

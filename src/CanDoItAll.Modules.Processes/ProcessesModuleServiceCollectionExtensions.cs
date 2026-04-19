@@ -16,6 +16,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
+        services.AddScoped<ProcessRunRecoveryService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();
@@ -33,6 +34,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
         services.AddHostedService<ProcessOutboxDrainWorker>();
+        services.AddHostedService<ProcessRunRecoveryWorker>();
         return services;
     }
 }

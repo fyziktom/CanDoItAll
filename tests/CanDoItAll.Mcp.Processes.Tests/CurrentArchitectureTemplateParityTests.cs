@@ -59,6 +59,28 @@ public sealed class CurrentArchitectureTemplateParityTests
     }
 
     [Fact]
+    public void Software_delivery_keeps_agent_owned_review_artifacts_review_required_and_human_release_gate()
+    {
+        var pack = new ProcessTemplatePackLoader().Load();
+        var software = pack.Processes["software-delivery"];
+
+        Assert.Equal("ReviewRequired", pack.SharedArtifacts["architecture-decision-record"].DefaultTrustRequirement);
+        Assert.Equal("ReviewRequired", pack.SharedArtifacts["regression-evidence-pack"].DefaultTrustRequirement);
+        Assert.Equal("ReviewRequired", pack.SharedArtifacts["security-exception-assessment"].DefaultTrustRequirement);
+        Assert.Equal("HumanApproved", pack.SharedArtifacts["release-approval-record"].DefaultTrustRequirement);
+
+        var architectureReview = software.Steps.Single(step => step.Key == "architecture-review");
+        var qaValidation = software.Steps.Single(step => step.Key == "qa-validation");
+        var securityReview = software.Steps.Single(step => step.Key == "security-review");
+        var releaseApproval = software.Steps.Single(step => step.Key == "release-approval");
+
+        Assert.Equal("ReviewRequired", Assert.Single(architectureReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal("ReviewRequired", Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
+        Assert.Equal("ReviewRequired", Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal("HumanApproved", Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);
+    }
+
+    [Fact]
     public void Ai_assisted_change_delivery_keeps_explicit_delegation_decision_authority()
     {
         var pack = new ProcessTemplatePackLoader().Load();

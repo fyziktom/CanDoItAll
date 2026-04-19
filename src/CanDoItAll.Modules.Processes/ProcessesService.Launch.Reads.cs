@@ -34,6 +34,7 @@ public sealed partial class ProcessesService
         }
 
         var planIds = plans.Select(item => item.Id).ToList();
+        var generatedRunStatusesByPlanId = await ResolveGeneratedRunStatusesByPlanIdAsync(dbContext, plans, cancellationToken);
         var roleSummaries = await dbContext.Set<ProcessLaunchPlanRole>()
             .AsNoTracking()
             .Where(item => planIds.Contains(item.LaunchPlanId))
@@ -51,6 +52,9 @@ public sealed partial class ProcessesService
             .Select(item =>
             {
                 roleSummaries.TryGetValue(item.Id, out var summary);
+                var displayProjection = ProcessLaunchPlanDisplayProjector.Resolve(
+                    item.Status,
+                    generatedRunStatusesByPlanId.GetValueOrDefault(item.Id));
                 return new ProcessLaunchPlanListItem(
                     item.Id,
                     item.ProcessDefinitionId,
@@ -64,7 +68,11 @@ public sealed partial class ProcessesService
                     summary?.PendingProvisioningCount ?? 0,
                     item.UpdatedAtUtc)
                 {
-                    GeneratedRunId = item.GeneratedRunId
+                    GeneratedRunId = item.GeneratedRunId,
+                    StatusBadgeText = displayProjection.StatusBadgeText,
+                    StatusTone = displayProjection.StatusTone,
+                    PlanningStatusBadgeText = displayProjection.PlanningStatusBadgeText,
+                    StatusDetail = displayProjection.StatusDetail
                 };
             })
             .ToList();
@@ -89,6 +97,16 @@ public sealed partial class ProcessesService
         if (plan is null)
         {
             return null;
+        }
+
+        ProcessRunStatus? generatedRunStatus = null;
+        if (plan.GeneratedRunId.HasValue)
+        {
+            generatedRunStatus = await dbContext.Set<ProcessRun>()
+                .AsNoTracking()
+                .Where(item => item.Id == plan.GeneratedRunId.Value)
+                .Select(item => (ProcessRunStatus?)item.Status)
+                .SingleOrDefaultAsync(cancellationToken);
         }
 
         var roles = await dbContext.Set<ProcessLaunchPlanRole>()
@@ -137,6 +155,7 @@ public sealed partial class ProcessesService
                         item.AvailabilitySummary,
                         item.SourceRegistryKey))
                     .ToList());
+        var displayProjection = ProcessLaunchPlanDisplayProjector.Resolve(plan.Status, generatedRunStatus);
 
         return new ProcessLaunchPlanDetails(
             plan.Id,
@@ -205,7 +224,41 @@ public sealed partial class ProcessesService
                     item.ResultSummary,
                     item.CreatedAtUtc,
                     item.CompletedAtUtc))
-                .ToList());
+                .ToList())
+        {
+            StatusBadgeText = displayProjection.StatusBadgeText,
+            StatusTone = displayProjection.StatusTone,
+            PlanningStatusBadgeText = displayProjection.PlanningStatusBadgeText,
+            StatusDetail = displayProjection.StatusDetail
+        };
+    }
+
+    private static async Task<Dictionary<Guid, ProcessRunStatus?>> ResolveGeneratedRunStatusesByPlanIdAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<ProcessLaunchPlan> plans,
+        CancellationToken cancellationToken)
+    {
+        var generatedRunIdsByPlanId = plans
+            .Where(item => item.GeneratedRunId.HasValue)
+            .ToDictionary(item => item.Id, item => item.GeneratedRunId!.Value);
+        if (generatedRunIdsByPlanId.Count == 0)
+        {
+            return [];
+        }
+
+        var generatedRunIds = generatedRunIdsByPlanId.Values
+            .Distinct()
+            .ToList();
+        var runStatusesById = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(item => generatedRunIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.Status, cancellationToken);
+
+        return generatedRunIdsByPlanId.ToDictionary(
+            pair => pair.Key,
+            pair => runStatusesById.TryGetValue(pair.Value, out var runStatus)
+                ? (ProcessRunStatus?)runStatus
+                : null);
     }
 
     private async Task<PublishedProcessLaunchContext?> LoadPublishedContextAsync(

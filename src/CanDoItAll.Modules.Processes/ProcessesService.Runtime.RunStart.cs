@@ -19,7 +19,6 @@ public sealed partial class ProcessesService
 
         ProcessRun run;
         Guid outboxId;
-        Guid? automationDispatchOutboxId = null;
         try
         {
             var contextResult = await LoadRunStartContextAsync(dbContext, request, cancellationToken);
@@ -172,7 +171,7 @@ public sealed partial class ProcessesService
                 cancellationToken);
 
             outboxId = await processOutboxService.EnqueueRunStartAsync(dbContext, run, cancellationToken);
-            automationDispatchOutboxId = await processOutboxService.EnqueueAutomationDispatchAsync(
+            await processOutboxService.EnqueueAutomationDispatchAsync(
                 dbContext,
                 run.ProjectId,
                 run.ProcessDefinitionId,
@@ -195,10 +194,6 @@ public sealed partial class ProcessesService
         }
 
         await processOutboxService.ProcessAsync(outboxId, cancellationToken);
-        if (automationDispatchOutboxId.HasValue)
-        {
-            await processOutboxService.ProcessAsync(automationDispatchOutboxId.Value, cancellationToken);
-        }
 
         return Result<Guid>.Success(run.Id);
     }

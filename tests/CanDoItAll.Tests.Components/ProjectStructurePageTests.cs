@@ -10,8 +10,10 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Persistence;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -1481,6 +1483,69 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("audio/mpeg", cut.Markup);
             Assert.Contains("Open in File Explorer", cut.Markup);
             Assert.Contains("Expand preview", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Artifact_folder_nodes_render_open_in_file_explorer_as_a_node_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Artifact Folder Action");
+        var artifactRelativePath = "artifacts/scopes/organization/component-tests/process/qa-validation";
+        Directory.CreateDirectory(Path.Combine(
+            harness.ActiveProfile.WorkspaceRootPath,
+            artifactRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+        var artifactNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "QA evidence folder",
+                "Stored run output",
+                "Artifact folders should expose the local open action from the inspector.",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "artifact-folder"));
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var record = await dbContext.Set<ProjectObjectRecord>()
+                .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == artifactNode.Id);
+            var binding = await dbContext.Set<ProjectNodeBindingRecord>()
+                .SingleAsync(item => item.ProjectObjectId == record.Id);
+            binding.Route = $"/managed-files/{artifactRelativePath}";
+            binding.ExternalArtifactKind = ProjectObjectType.File.ToString();
+            binding.StorageObjectReferenceJson = StorageJson.SerializeReference(
+                new StorageObjectReference(
+                    null,
+                    StorageProviderKind.FileSystem,
+                    StorageLocatorKind.RelativePath,
+                    artifactRelativePath,
+                    string.Empty,
+                    "application/x-directory",
+                    null,
+                    $"/managed-files/{artifactRelativePath}"));
+            await dbContext.SaveChangesAsync();
+        }
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, artifactNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var actionGrid = cut.Find("[data-testid='project-structure-node-actions']");
+            Assert.Contains("QA evidence folder", cut.Markup);
+            Assert.Contains("Open in File Explorer", actionGrid.TextContent);
         });
     }
 

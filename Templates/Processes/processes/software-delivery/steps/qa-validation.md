@@ -31,7 +31,7 @@ Execute targeted regression, browser proof, and defect triage against the review
 - `lead-engineer` / Lead engineer => Reviewer; required=True; fallback-order=0; rebind=Implementation owner reviews failures and fixes before release approval.
 
 ## Artifact expectations
-- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=HumanApproved | sensitivity=Internal | validation=Must name changed flows, assertion depth, screenshots, and unresolved risks.
+- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=ReviewRequired | sensitivity=Internal | validation=Must name changed flows, assertion depth, screenshots, and unresolved risks.
 
 ## Artifact inputs
 - From step `implementation` expectation `implementation-change-set`

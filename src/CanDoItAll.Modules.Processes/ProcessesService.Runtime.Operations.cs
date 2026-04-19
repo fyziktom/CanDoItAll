@@ -147,6 +147,21 @@ public sealed partial class ProcessesService
             return Result<Guid>.Failure(Error.Validation("Process run was not found.", "processes.artifact.run-not-found"));
         }
 
+        var externalReferenceKey = request.ExternalReferenceKey.Trim();
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
+                .Where(item =>
+                    item.ProcessRunId == request.ProcessRunId &&
+                    item.ExternalReferenceKey == externalReferenceKey)
+                .Select(item => (Guid?)item.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifactId.HasValue)
+            {
+                return Result<Guid>.Success(existingArtifactId.Value);
+            }
+        }
+
         ProcessStepRun? stepRun = null;
         if (request.StepRunId.HasValue)
         {
@@ -163,6 +178,7 @@ public sealed partial class ProcessesService
         }
 
         ProcessArtifactExpectation? artifactExpectation = null;
+        IReadOnlyList<ProcessArtifactExpectation> stepArtifactExpectations = [];
         if (request.ArtifactExpectationId.HasValue)
         {
             artifactExpectation = await dbContext.Set<ProcessArtifactExpectation>()
@@ -185,12 +201,20 @@ public sealed partial class ProcessesService
                     Error.Validation("Artifact expectation does not belong to the selected step run.", "processes.artifact.expectation-step-mismatch"));
             }
         }
+        else if (stepRun is not null)
+        {
+            stepArtifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+                .Where(item => item.StepDefinitionId == stepRun.StepDefinitionId)
+                .OrderBy(item => item.Title)
+                .ToListAsync(cancellationToken);
+            artifactExpectation = ResolveArtifactExpectation(stepArtifactExpectations, request.ArtifactKind, request.Title);
+        }
 
         var artifact = new ProcessArtifactRecord
         {
             ProcessRunId = request.ProcessRunId,
             StepRunId = request.StepRunId,
-            ArtifactExpectationId = request.ArtifactExpectationId,
+            ArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId,
             ArtifactKind = request.ArtifactKind,
             Title = request.Title.Trim(),
             TrustStatus = request.TrustStatus,
@@ -199,7 +223,7 @@ public sealed partial class ProcessesService
             AllowedFutureUsageSummary = request.AllowedFutureUsageSummary.Trim(),
             ReviewSummary = request.ReviewSummary.Trim(),
             ManagedStoragePath = request.ManagedStoragePath.Trim(),
-            ExternalReferenceKey = request.ExternalReferenceKey.Trim(),
+            ExternalReferenceKey = externalReferenceKey,
             CreatedAtUtc = clock.GetUtcNow()
         };
         await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
@@ -216,6 +240,74 @@ public sealed partial class ProcessesService
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Success(artifact.Id);
+    }
+
+    private static ProcessArtifactExpectation? ResolveArtifactExpectation(
+        IReadOnlyList<ProcessArtifactExpectation> expectations,
+        ProcessArtifactKind artifactKind,
+        string title)
+    {
+        if (expectations.Count == 0)
+        {
+            return null;
+        }
+
+        var normalizedTitle = title.Trim();
+        var matchingKind = expectations
+            .Where(item => item.ArtifactKind == artifactKind)
+            .ToList();
+        if (matchingKind.Count == 0)
+        {
+            return null;
+        }
+
+        var exactMatch = matchingKind.FirstOrDefault(item =>
+            string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase));
+        if (exactMatch is not null)
+        {
+            return exactMatch;
+        }
+
+        var overlappingMatches = matchingKind
+            .Where(item => ArtifactTitlesOverlap(item.Title, normalizedTitle))
+            .ToList();
+        if (overlappingMatches.Count == 1)
+        {
+            return overlappingMatches[0];
+        }
+
+        var requiredMatches = matchingKind
+            .Where(item => item.IsRequired)
+            .ToList();
+        return requiredMatches.Count == 1
+            ? requiredMatches[0]
+            : null;
+    }
+
+    private static bool ArtifactTitlesOverlap(string left, string right)
+    {
+        var normalizedLeft = NormalizeArtifactTitle(left);
+        var normalizedRight = NormalizeArtifactTitle(right);
+        if (normalizedLeft.Length == 0 || normalizedRight.Length == 0)
+        {
+            return false;
+        }
+
+        return normalizedLeft.Contains(normalizedRight, StringComparison.Ordinal) ||
+               normalizedRight.Contains(normalizedLeft, StringComparison.Ordinal);
+    }
+
+    private static string NormalizeArtifactTitle(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
     }
 
     public async Task<ProcessImportExportEnvelope> ExportAsync(Guid definitionId, CancellationToken cancellationToken = default)

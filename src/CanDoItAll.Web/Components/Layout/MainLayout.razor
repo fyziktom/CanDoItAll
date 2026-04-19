@@ -72,7 +72,13 @@
     </TopBar>
     <Body>
         <Notification />
-        @if (CurrentTuningSurface is { } tuningSurface)
+        @if (databaseDialogStartupMode && databaseDialogOpen)
+        {
+            <EmptyState Eyebrow="Database startup"
+                        Title="Continue with the active database to load the workspace"
+                        Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
+        }
+        else if (CurrentTuningSurface is { } tuningSurface)
         {
             <TunableComponentBoundary IsEnabled="@TuningEnabled"
                                       CapsuleKey="@tuningSurface.CapsuleKey"

@@ -6,6 +6,7 @@ internal sealed record WorkspaceCommandPlan(
     ToolExecutionDecision Decision,
     bool MutatesWorkspace,
     IReadOnlyList<string> TargetPaths,
+    string WorkspaceRootPath,
     string WorkingDirectory,
     string WorkingDirectoryPath,
     IReadOnlyList<string> ExecutableCandidates,

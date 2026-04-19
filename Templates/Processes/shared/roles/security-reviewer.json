@@ -7,7 +7,7 @@
   "Summary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions.",
   "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
   "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
-  "PreferredExecutorKind": "person",
+  "PreferredExecutorKind": "person-or-agent",
   "PreferredProjectAssignmentRole": "Reviewer",
   "IsRequired": true,
   "AllowsFallback": true,

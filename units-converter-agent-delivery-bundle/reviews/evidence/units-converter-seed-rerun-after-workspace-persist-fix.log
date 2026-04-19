@@ -1,0 +1,110 @@
+09:53:25 info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0] Resolved database profile Managed SQLite workspace (529c1206-0808-489f-ad29-feb5bc60dda1) via PersistedActiveProfile. Provider=Sqlite. Fingerprint=sqlite:managed:529c12060808489fad29feb5bc60dda1. RuntimeLocked=False.
+09:53:32 info: CanDoItAll.ScenarioSeeder[0] Seeding scenario units-converter-delivery into profile root C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1. Database C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db
+09:53:48 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=projects Action=update Title=Updated project IdempotencyKey=<none>.
+09:53:48 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=projects Action=update Title=Updated project.
+09:53:50 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:4bda662bdbbb4bd8b00e21d4f8da227e:activity.
+09:53:50 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+09:53:50 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:1a8c36d7c9714fbab92cdf72c024861d:activity.
+09:53:50 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+09:54:13 info: CanDoItAll.Modules.Processes.ProcessesService[0] Submitting launch plan 7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0 for approval. RequestedBy=units-converter-delivery-seeder.
+09:54:13 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0 resolved approval authority Human Delivery Steward (Person). ExistingApprovalThread=False.
+09:54:13 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0 is creating a new collaboration approval thread.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Creating collaboration thread for context ProcessLaunch/7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0. Subject=Launch approval / Blazor SSR basic units converter / 2026-04-17 13:53:50.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Created collaboration thread 1849b23d-6702-4f4f-9116-3f87a058892c. Recording activity mirror next.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread 1849b23d-6702-4f4f-9116-3f87a058892c because an ambient transaction is active.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration thread creation for 1849b23d-6702-4f4f-9116-3f87a058892c.
+09:54:13 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0 created collaboration approval thread 1849b23d-6702-4f4f-9116-3f87a058892c.
+09:54:13 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0 moved to PendingApproval with approval record 0bbed24d-cfb7-44e2-b13c-2800f8151b11.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appending collaboration message to thread 1849b23d-6702-4f4f-9116-3f87a058892c. Kind=Standard. Author=units-converter-delivery-seeder.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appended collaboration message to thread 1849b23d-6702-4f4f-9116-3f87a058892c. Recording activity mirror next.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread 1849b23d-6702-4f4f-9116-3f87a058892c message Standard because an ambient transaction is active.
+09:54:13 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration message append for thread 1849b23d-6702-4f4f-9116-3f87a058892c.
+09:54:14 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=start-run Title=Started process run IdempotencyKey=process-outbox:7f4a34c58113464983b46e3d11898930:activity.
+09:54:14 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=start-run Title=Started process run.
+09:54:27 info: CanDoItAll.ScenarioSeeder.UnitsConverterDeliveryProvisioningSeeder[0] Provisioned units-converter delivery. ProjectId=9a817692-c632-43a4-9c0e-01e49e76360a DefinitionId=885c1099-cbfb-4c8c-bedd-57b26556c574 LaunchPlanId=7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0 RunId=68d0df3a-391e-477e-b63b-2895bb3efe8b
+{
+  "projectId": "9a817692-c632-43a4-9c0e-01e49e76360a",
+  "projectName": "Blazor SSR basic units converter",
+  "definitionId": "885c1099-cbfb-4c8c-bedd-57b26556c574",
+  "launchPlanId": "7a09a6f4-5e04-4c2d-8546-89ebf1edd0c0",
+  "runId": "68d0df3a-391e-477e-b63b-2895bb3efe8b",
+  "humanPartyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+  "processRoute": "/projects/9a817692-c632-43a4-9c0e-01e49e76360a/processes?processId=885c1099-cbfb-4c8c-bedd-57b26556c574\u0026runId=68d0df3a-391e-477e-b63b-2895bb3efe8b",
+  "scopePhaseNodeId": "custom:045498674f724c0c963ec5ff0de4bf2f",
+  "buildPhaseNodeId": "custom:f521b21eb9cb448a9b8c19242cdabfe4",
+  "releasePhaseNodeId": "custom:12717eca802047eebec323663211c7f9",
+  "deliveryFeatureNodeId": "custom:69a30496d1cc4580a1b75f8e7ac13fb6",
+  "solutionRelativePath": "deliveries/blazor-ssr-basic-units-converter/BasicUnitsConverter.slnx",
+  "webProjectRelativePath": "deliveries/blazor-ssr-basic-units-converter/src/BasicUnitsConverter.Web/BasicUnitsConverter.Web.csproj",
+  "coreProjectRelativePath": "deliveries/blazor-ssr-basic-units-converter/src/BasicUnitsConverter.Core/BasicUnitsConverter.Core.csproj",
+  "testsProjectRelativePath": "deliveries/blazor-ssr-basic-units-converter/tests/BasicUnitsConverter.Core.Tests/BasicUnitsConverter.Core.Tests.csproj",
+  "briefRelativePath": "deliveries/blazor-ssr-basic-units-converter/PROJECT-BRIEF.md",
+  "bootstrapScriptRelativePath": "deliveries/blazor-ssr-basic-units-converter/Bootstrap-UnitsConverterSolution.ps1",
+  "launchScriptRelativePath": "deliveries/blazor-ssr-basic-units-converter/Launch-UnitsConverterApp.ps1",
+  "uiEvidenceRelativePath": "artifacts/deliveries/blazor-ssr-basic-units-converter/ui",
+  "roleBindings": [
+    {
+      "roleKey": "delivery-manager",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "lead-engineer",
+      "displayName": "Programming Workspace Analyst",
+      "partyId": "88e22e04-a72b-4633-85b6-488a222adc41",
+      "technicalAgentId": "b3636a1c-f005-fe5c-b7a7-35a04c133f76",
+      "isHuman": false
+    },
+    {
+      "roleKey": "product-owner",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "qa-lead",
+      "displayName": "Delivery QA Observer",
+      "partyId": "fd97549a-21ee-441e-bb53-463b4d5a5a03",
+      "technicalAgentId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+      "isHuman": false
+    },
+    {
+      "roleKey": "release-manager",
+      "displayName": "Release Readiness Manager",
+      "partyId": "1ab27389-390d-4944-857e-62fdb811d714",
+      "technicalAgentId": "6f674c92-3347-dd55-96d3-851db9739b35",
+      "isHuman": false
+    },
+    {
+      "roleKey": "review-lead",
+      "displayName": "Code Review Lead",
+      "partyId": "19228d28-881d-43fd-9525-8115f8e75d42",
+      "technicalAgentId": "33183e52-4c54-b852-8c24-bd1d13cf1f23",
+      "isHuman": false
+    },
+    {
+      "roleKey": "security-reviewer",
+      "displayName": "Security Reviewer",
+      "partyId": "fef12e80-ccd0-436c-90f1-aa4df868209c",
+      "technicalAgentId": "5ab2958c-08de-b251-8ead-caa321248b91",
+      "isHuman": false
+    },
+    {
+      "roleKey": "solution-architect",
+      "displayName": "Portfolio Architect",
+      "partyId": "6aaa001e-768e-4437-9ce0-40751b056676",
+      "technicalAgentId": "952b041a-aba0-385b-8e4e-494c4b21d831",
+      "isHuman": false
+    },
+    {
+      "roleKey": "ui-review-lead",
+      "displayName": "UI Review Lead",
+      "partyId": "3b183c45-95e8-41f9-aaac-ea8623a5bdd0",
+      "technicalAgentId": "9ebea979-0d33-8e53-a69a-ca1555c73afe",
+      "isHuman": false
+    }
+  ]
+}

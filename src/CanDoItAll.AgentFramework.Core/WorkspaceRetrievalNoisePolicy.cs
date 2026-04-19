@@ -4,8 +4,11 @@ public static class WorkspaceRetrievalNoisePolicy
 {
     private static readonly string[] SeedWorkspaceRagExcludedPaths =
     [
+        "data",
         "artifacts",
         "output",
+        "process-runs",
+        ".playwright-mcp",
         ".playwright-cli",
         ".vs",
         "data/workspace.json",
@@ -88,6 +91,15 @@ public static class WorkspaceRetrievalNoisePolicy
             if (string.IsNullOrWhiteSpace(normalized))
             {
                 continue;
+            }
+
+            if (!normalized.Contains('/', StringComparison.Ordinal))
+            {
+                var segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (segments.Any(segment => string.Equals(segment, normalized, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
             }
 
             if (string.Equals(relativePath, normalized, StringComparison.OrdinalIgnoreCase)

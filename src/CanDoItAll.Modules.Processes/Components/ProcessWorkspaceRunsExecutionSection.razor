@@ -37,8 +37,13 @@
                             </p>
                         </div>
                         <Cluster Gap="LayoutGap.Small">
-                            <StatusBadge Tone="@ResolveExecutionTone(executionRun)"
-                                         Text="@BuildExecutionBadge(executionRun)" />
+                            <StatusBadge Tone="@executionRun.StatusTone"
+                                         Text="@executionRun.StatusBadgeText" />
+                            @if (!string.IsNullOrWhiteSpace(executionRun.RawStatusBadgeText))
+                            {
+                                <StatusBadge Tone="neutral"
+                                             Text="@executionRun.RawStatusBadgeText" />
+                            }
                             <StatusBadge Tone="neutral"
                                          Text="@($"{executionRun.LogEntryCount} logs")" />
                         </Cluster>
@@ -57,6 +62,14 @@
                         <p class="mt-3 text-sm leading-6 text-slate-600">
                             <span class="font-semibold text-slate-950">Result</span>
                             <span>: @executionRun.ResultSummary</span>
+                        </p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(executionRun.StatusDetail))
+                    {
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            <span class="font-semibold text-slate-950">Process status</span>
+                            <span>: @executionRun.StatusDetail</span>
                         </p>
                     }
 
@@ -209,33 +222,6 @@
 @code {
     [Parameter, EditorRequired]
     public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
-
-    private static string BuildExecutionBadge(ProcessExecutionRunViewModel executionRun)
-    {
-        return executionRun.Outcome.HasValue
-            ? $"{executionRun.State} / {executionRun.Outcome.Value}"
-            : executionRun.State.ToString();
-    }
-
-    private static string ResolveExecutionTone(ProcessExecutionRunViewModel executionRun)
-    {
-        if (executionRun.Outcome == RunOutcome.Succeeded)
-        {
-            return "mint";
-        }
-
-        if (executionRun.Outcome == RunOutcome.Failed || executionRun.State == ExecutionState.Failed)
-        {
-            return "danger";
-        }
-
-        return executionRun.State switch
-        {
-            ExecutionState.WaitingOnTool => "warning",
-            ExecutionState.Running or ExecutionState.Preparing or ExecutionState.Persisting => "info",
-            _ => "neutral"
-        };
-    }
 
     private static string ResolveApprovalTone(ProcessExecutionApprovalViewModel approval)
     {

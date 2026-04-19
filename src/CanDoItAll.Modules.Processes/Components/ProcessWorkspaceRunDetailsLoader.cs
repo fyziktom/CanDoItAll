@@ -33,6 +33,26 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         }
 
         var stepTitlesById = stepRuns.ToDictionary(item => item.Id, item => item.Title);
+        var stepRunsById = stepRuns.ToDictionary(item => item.Id);
+        var latestExecutionRunIdsByStepId = executionRuns
+            .Select(
+                item => new
+                {
+                    RunId = item.Id,
+                    StepRunId = Guid.TryParse(item.ProcessStepId, out var parsedStepRunId)
+                        ? parsedStepRunId
+                        : (Guid?)null,
+                    SortAtUtc = item.CompletedAtUtc ?? item.UpdatedAtUtc
+                })
+            .Where(item => item.StepRunId.HasValue)
+            .GroupBy(item => item.StepRunId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(item => item.SortAtUtc)
+                    .ThenByDescending(item => item.RunId)
+                    .Select(item => item.RunId)
+                    .First());
         var agentsById = (await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken))
             .ToDictionary(item => item.Id);
         var mappedRuns = new List<ProcessExecutionRunViewModel>(executionRuns.Count);
@@ -40,7 +60,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         foreach (var executionRun in executionRuns.OrderByDescending(item => item.CreatedAtUtc))
         {
             var detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken);
-            mappedRuns.Add(MapExecutionRun(detail, stepTitlesById, agentsById));
+            mappedRuns.Add(MapExecutionRun(detail, stepTitlesById, stepRunsById, latestExecutionRunIdsByStepId, agentsById));
         }
 
         return mappedRuns;
@@ -49,6 +69,8 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
     private static ProcessExecutionRunViewModel MapExecutionRun(
         ExecutionRunDetail detail,
         IReadOnlyDictionary<Guid, string> stepTitlesById,
+        IReadOnlyDictionary<Guid, ProcessStepRunViewModel> stepRunsById,
+        IReadOnlyDictionary<Guid, Guid> latestExecutionRunIdsByStepId,
         IReadOnlyDictionary<Guid, AgentDefinition> agentsById)
     {
         var stepRunId = Guid.TryParse(detail.Run.ProcessStepId, out var parsedStepRunId)
@@ -57,6 +79,13 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         var stepTitle = stepRunId.HasValue && stepTitlesById.TryGetValue(stepRunId.Value, out var resolvedStepTitle)
             ? resolvedStepTitle
             : string.Empty;
+        var stepRun = stepRunId.HasValue && stepRunsById.TryGetValue(stepRunId.Value, out var resolvedStepRun)
+            ? resolvedStepRun
+            : null;
+        var isLatestRunForStep = stepRunId.HasValue &&
+                                 latestExecutionRunIdsByStepId.TryGetValue(stepRunId.Value, out var latestExecutionRunId) &&
+                                 latestExecutionRunId == detail.Run.Id;
+        var displayProjection = ProcessExecutionRunDisplayProjector.Resolve(detail.Run, stepRun, isLatestRunForStep);
         agentsById.TryGetValue(detail.Run.AgentId, out var agent);
 
         return new ProcessExecutionRunViewModel(
@@ -83,6 +112,10 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             detail.Run.CompletedAtUtc,
             detail.ExecutionLog.Count)
         {
+            StatusBadgeText = displayProjection.StatusBadgeText,
+            StatusTone = displayProjection.StatusTone,
+            RawStatusBadgeText = displayProjection.RawStatusBadgeText,
+            StatusDetail = displayProjection.StatusDetail,
             HasBrowserEvidenceToolInvocation = HasBrowserEvidenceToolInvocation(detail.ExecutionLog),
             Approvals = detail.Approvals
                 .OrderByDescending(item => item.RequestedAtUtc)

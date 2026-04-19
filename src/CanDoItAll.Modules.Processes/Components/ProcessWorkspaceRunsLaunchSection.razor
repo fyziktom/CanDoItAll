@@ -60,12 +60,12 @@
                                                OnSelect="@(() => Presenter.SelectLaunchPlanAsync(launchPlan.Id))">
                                 <Status>
                                     <Cluster Gap="LayoutGap.Small">
-                                        <StatusBadge Tone="@Presenter.ResolveLaunchPlanTone(launchPlan.Status)"
-                                                     Text="@launchPlan.Status.ToString()" />
-                                        @if (launchPlan.GeneratedRunId.HasValue)
+                                        <StatusBadge Tone="@launchPlan.StatusTone"
+                                                     Text="@launchPlan.StatusBadgeText" />
+                                        @if (!string.IsNullOrWhiteSpace(launchPlan.PlanningStatusBadgeText))
                                         {
-                                            <StatusBadge Tone="info"
-                                                         Text="Run created" />
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@launchPlan.PlanningStatusBadgeText" />
                                         }
                                     </Cluster>
                                 </Status>
@@ -92,12 +92,22 @@
                                     <p class="text-sm leading-6 text-slate-600">@launchPlan.Summary</p>
                                 </Stack>
                                 <Cluster Gap="LayoutGap.Small">
-                                    <StatusBadge Tone="@Presenter.ResolveLaunchPlanTone(launchPlan.Status)"
-                                                 Text="@launchPlan.Status.ToString()" />
+                                    <StatusBadge Tone="@launchPlan.StatusTone"
+                                                 Text="@launchPlan.StatusBadgeText" />
+                                    @if (!string.IsNullOrWhiteSpace(launchPlan.PlanningStatusBadgeText))
+                                    {
+                                        <StatusBadge Tone="neutral"
+                                                     Text="@launchPlan.PlanningStatusBadgeText" />
+                                    }
                                     <StatusBadge Tone="neutral"
                                                  Text="@($"{launchPlan.Roles.Count} roles")" />
                                 </Cluster>
                             </Split>
+
+                            @if (!string.IsNullOrWhiteSpace(launchPlan.StatusDetail))
+                            {
+                                <p class="text-sm leading-6 text-slate-600">@launchPlan.StatusDetail</p>
+                            }
 
                             @if (!string.IsNullOrWhiteSpace(launchPlan.TriggerReason))
                             {

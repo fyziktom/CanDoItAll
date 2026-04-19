@@ -22,13 +22,24 @@ public sealed class ProcessTemplatePackLoaderTests
     }
 
     [Fact]
-    public void FindPackRoot_resolves_manifest_from_templates_directory_in_build_output()
+    public void FindPackRoot_prefers_templates_directory_reachable_from_current_working_directory()
     {
-        var root = ProcessTemplatePackLoader.FindPackRoot();
-        var expectedRoot = Path.Combine(AppContext.BaseDirectory, "Templates", "Processes");
+        using var repoClone = CreateRepoLayoutClone(ProcessTemplatePackLoader.FindPackRoot());
+        var originalCurrentDirectory = Directory.GetCurrentDirectory();
 
-        Assert.True(File.Exists(Path.Combine(root, "manifest.json")));
-        Assert.Equal(expectedRoot, root, ignoreCase: true);
+        try
+        {
+            Directory.SetCurrentDirectory(repoClone.RootPath);
+
+            var root = ProcessTemplatePackLoader.FindPackRoot();
+
+            Assert.True(File.Exists(Path.Combine(root, "manifest.json")));
+            Assert.Equal(Path.Combine(repoClone.RootPath, "Templates", "Processes"), root, ignoreCase: true);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalCurrentDirectory);
+        }
     }
 
     [Fact]
@@ -45,7 +56,7 @@ public sealed class ProcessTemplatePackLoaderTests
     [Fact]
     public void AddProcessesModule_resolves_loader_from_configured_pack_root()
     {
-        using var packClone = CreatePackClone();
+        using var packClone = CreatePackClone(ProcessTemplatePackLoader.FindPackRoot());
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         services.AddLogging();
@@ -59,20 +70,20 @@ public sealed class ProcessTemplatePackLoaderTests
         Assert.Equal(packClone.RootPath, pack.RootPath);
     }
 
-    private static PackClone CreatePackClone()
-    {
-        return new PackClone(ProcessTemplatePackLoader.FindPackRoot());
-    }
-
     private sealed class PackClone : IDisposable
     {
-        public PackClone(string sourceRoot)
+        public PackClone(string sourceRoot, string? relativeDestinationPath = null)
         {
             RootPath = Path.Combine(Path.GetTempPath(), "candoitall-pack-loader-" + Guid.NewGuid().ToString("N"));
-            CopyDirectory(sourceRoot, RootPath);
+            PackRootPath = string.IsNullOrWhiteSpace(relativeDestinationPath)
+                ? RootPath
+                : Path.Combine(RootPath, relativeDestinationPath);
+            CopyDirectory(sourceRoot, PackRootPath);
         }
 
         public string RootPath { get; }
+
+        public string PackRootPath { get; }
 
         public void Dispose()
         {
@@ -99,5 +110,15 @@ public sealed class ProcessTemplatePackLoaderTests
                 File.Copy(filePath, destinationPath, overwrite: true);
             }
         }
+    }
+
+    private static PackClone CreatePackClone(string sourceRoot)
+    {
+        return new PackClone(sourceRoot);
+    }
+
+    private static PackClone CreateRepoLayoutClone(string sourceRoot)
+    {
+        return new PackClone(sourceRoot, Path.Combine("Templates", "Processes"));
     }
 }

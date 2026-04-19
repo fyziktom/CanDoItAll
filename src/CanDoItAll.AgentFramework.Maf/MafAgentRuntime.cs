@@ -169,15 +169,16 @@ public sealed partial class MafAgentRuntime(
                 {
                     await foreach (var update in RunStreamingAsync(runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
                     {
-                        updates.Add(update);
+                        var snapshot = SnapshotUpdate(update);
+                        updates.Add(snapshot);
 
-                        if (!announcedStreaming && !string.IsNullOrWhiteSpace(update.Text))
+                        if (!announcedStreaming && !string.IsNullOrWhiteSpace(snapshot.Text))
                         {
                             announcedStreaming = true;
                             await progressCallback(ExecutionState.Running, "Streaming", "The agent is producing streamed output.");
                         }
 
-                        foreach (var toolCall in update.Contents.OfType<ToolCallContent>())
+                        foreach (var toolCall in snapshot.Contents.OfType<ToolCallContent>())
                         {
                             var toolKey = ResolveToolCallKey(toolCall);
                             if (!announcedToolCalls.Add(toolKey))

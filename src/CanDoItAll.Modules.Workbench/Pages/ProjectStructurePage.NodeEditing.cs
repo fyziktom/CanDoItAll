@@ -39,6 +39,11 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("runtime:admin", "Open PowerShell (Admin)", "admin_panel_settings", "warn"));
         }
 
+        if (CanShowLocalOpen(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction("open-local", "Open in File Explorer", "folder_open", "primary"));
+        }
+
         actions.AddRange(ResolveInspectorCommands(node).Select(MapCommandAction));
         actions.Add(new ProjectStructureInspectorAction("summary", "Summary", "summary", "sky"));
         actions.Add(new ProjectStructureInspectorAction("connect", "Connect selected", "link", "ghost"));
@@ -130,6 +135,9 @@ public partial class ProjectStructurePage
                 break;
             case "runtime:admin":
                 await LaunchRuntimeAsync(node, true);
+                break;
+            case "open-local":
+                await OpenAttachmentLocallyAsync(node);
                 break;
             case "command:open":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Open, node.Id);

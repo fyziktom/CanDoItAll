@@ -9,8 +9,8 @@ internal static class Program
     public static async Task<int> Main(string[] args)
     {
         var options = ScenarioSeederOptions.Parse(args, Directory.GetCurrentDirectory());
-        await using var serviceProvider = await ScenarioSeederHost.BuildServiceProviderAsync(options);
-        await using var scope = serviceProvider.CreateAsyncScope();
+        var serviceProvider = await ScenarioSeederHost.BuildServiceProviderAsync(options);
+        var scope = serviceProvider.CreateAsyncScope();
 
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("CanDoItAll.ScenarioSeeder");
@@ -20,10 +20,15 @@ internal static class Program
             options.ProfileRootPath,
             options.DatabasePath);
 
-        object result = options.ScenarioName switch
+        object result = !string.IsNullOrWhiteSpace(options.ActionName)
+            ? await ExecuteActionAsync(scope.ServiceProvider, options)
+            : options.ScenarioName switch
         {
             ScenarioSeederOptions.AgentShowcaseCalculatorScenario => await scope.ServiceProvider
                 .GetRequiredService<AgentShowcaseCalculatorSeeder>()
+                .SeedAsync(),
+            ScenarioSeederOptions.UnitsConverterDeliveryScenario => await scope.ServiceProvider
+                .GetRequiredService<UnitsConverterDeliveryProvisioningSeeder>()
                 .SeedAsync(),
             _ => await scope.ServiceProvider
                 .GetRequiredService<AgentFrameworkIntegrationSimulationSeeder>()
@@ -36,7 +41,21 @@ internal static class Program
             {
                 WriteIndented = true
             }));
+        await Console.Out.FlushAsync();
 
         return 0;
+    }
+
+    private static async Task<object> ExecuteActionAsync(
+        IServiceProvider serviceProvider,
+        ScenarioSeederOptions options)
+    {
+        return options.ActionName switch
+        {
+            ScenarioSeederOptions.CompleteUnitsConverterHumanStepAction => await serviceProvider
+                .GetRequiredService<UnitsConverterDeliveryProvisioningSeeder>()
+                .CompleteHumanStepAsync(options.RunId!.Value, options.StepSequence!.Value),
+            _ => throw new InvalidOperationException($"Unknown scenario-seeder action '{options.ActionName}'.")
+        };
     }
 }

@@ -210,7 +210,7 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<AgentMemoryRecord> memory,
         int maxItems) : MessageAIContextProvider
     {
-        private readonly IReadOnlyList<AgentMemoryRecord> memory = memory;
+        private readonly IReadOnlyList<AgentMemoryRecord> memory = memory.ToList();
         private readonly int maxItems = Math.Clamp(maxItems, 1, 20);
 
         protected override ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(InvokingContext context, CancellationToken cancellationToken = default)
@@ -244,7 +244,8 @@ public sealed partial class MafAgentRuntime
 
         private IEnumerable<AgentMemoryRecord> SelectRelevantMemory(IEnumerable<ChatMessage> requestMessages)
         {
-            var requestText = string.Join(Environment.NewLine, requestMessages.Select(message => message.Text));
+            var requestMessageSnapshot = requestMessages as IReadOnlyList<ChatMessage> ?? requestMessages.ToList();
+            var requestText = string.Join(Environment.NewLine, requestMessageSnapshot.Select(message => message.Text));
             var terms = WorkspaceSearchSupport.TokenizeQuery(requestText);
 
             return memory

@@ -1,8 +1,10 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
@@ -27,7 +29,10 @@ public partial class AgentsHomePage
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
-    public AiAgentService AiAgentService { get; set; } = default!;
+    public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
+
+    [Inject]
+    public IDbContextFactory<AppDbContext> DbContextFactory { get; set; } = default!;
 
     [SupplyParameterFromQuery(Name = "tab")]
     public string? RequestedTab { get; set; }
@@ -42,6 +47,8 @@ public partial class AgentsHomePage
     private int activeRunCount;
     private int failedRunCount;
     private string selectedTab = "overview";
+    private Guid? effectiveRequestedAgentId;
+    private bool isLoaded;
     private SandboxDashboardSnapshot dashboard = new(
         0,
         0,
@@ -56,13 +63,13 @@ public partial class AgentsHomePage
     private IReadOnlyList<SecondaryTabItem> Tabs =>
     [
         new("overview", "Overview"),
-        new("agents", "Agents", technicalAgentCount.ToString()),
-        new("providers", "Providers", providerCount.ToString()),
+        new("agents", "Agents", ResolveSummaryValue(technicalAgentCount)),
+        new("providers", "Providers", ResolveSummaryValue(providerCount)),
         new("chat", "Chat"),
-        new("capabilities", "Capabilities", capabilityCount.ToString()),
-        new("governance", "Governance", activeRunCount.ToString()),
+        new("capabilities", "Capabilities", ResolveSummaryValue(capabilityCount)),
+        new("governance", "Governance", ResolveSummaryValue(activeRunCount)),
         new("scenarios", "Scenarios"),
-        new("diagnostics", "Diagnostics", failedRunCount.ToString())
+        new("diagnostics", "Diagnostics", ResolveSummaryValue(failedRunCount))
     ];
 
     protected override async Task OnInitializedAsync()
@@ -77,14 +84,39 @@ public partial class AgentsHomePage
 
     private async Task LoadAsync()
     {
-        dashboard = await WorkspaceService.GetDashboardAsync();
-        technicalAgentCount = dashboard.AgentCount;
-        providerCount = dashboard.ProviderCount;
-        capabilityCount = dashboard.CapabilityCount;
+        await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
+
+        var dashboardTask = WorkspaceService.GetDashboardAsync();
+        var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        var providersTask = WorkspaceService.ListProvidersAsync();
+        var capabilitiesTask = WorkspaceService.ListCapabilitiesAsync();
+        await Task.WhenAll(dashboardTask, agentsTask, providersTask, capabilitiesTask);
+
+        dashboard = await dashboardTask;
+        var currentAgents = (await agentsTask).ToList();
+        technicalAgentCount = currentAgents.Count;
+        providerCount = (await providersTask).Count;
+        capabilityCount = (await capabilitiesTask).Count;
         activeRunCount = dashboard.ActiveRuns;
         failedRunCount = dashboard.FailedRuns;
-        boundResourceCount = (await AiAgentService.ListAgentDirectoryAsync())
-            .Count(item => item.TechnicalAgentId.HasValue && item.BindingStatus == AiResourceBindingStatus.Bound);
+        if (currentAgents.Count == 0)
+        {
+            boundResourceCount = 0;
+        }
+        else
+        {
+            var technicalAgentIds = currentAgents
+                .Select(item => item.Id)
+                .ToList();
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            boundResourceCount = await dbContext.Set<AiResourceBinding>()
+                .CountAsync(
+                    item => item.TechnicalAgentId.HasValue &&
+                            technicalAgentIds.Contains(item.TechnicalAgentId.Value) &&
+                            item.BindingStatus == AiResourceBindingStatus.Bound);
+        }
+
+        isLoaded = true;
         ApplyRequestedTab();
     }
 
@@ -92,16 +124,65 @@ public partial class AgentsHomePage
         string key)
     {
         selectedTab = key;
-        Navigation.NavigateTo(BuildAgentsRoute(key, RequestedAgentId), replace: true);
+        Navigation.NavigateTo(BuildAgentsRoute(key, effectiveRequestedAgentId), replace: true);
         return Task.CompletedTask;
     }
 
     private void ApplyRequestedTab()
     {
-        selectedTab = !string.IsNullOrWhiteSpace(RequestedTab) &&
-                      AllowedTabs.Contains(RequestedTab)
-            ? RequestedTab
+        var requestedTab = ResolveRequestedTab();
+        effectiveRequestedAgentId = ResolveRequestedAgentId();
+        selectedTab = !string.IsNullOrWhiteSpace(requestedTab) &&
+                      AllowedTabs.Contains(requestedTab)
+            ? requestedTab
             : "overview";
+    }
+
+    private string? ResolveRequestedTab()
+    {
+        if (!string.IsNullOrWhiteSpace(RequestedTab))
+        {
+            return RequestedTab;
+        }
+
+        return TryGetQueryValue("tab");
+    }
+
+    private Guid? ResolveRequestedAgentId()
+    {
+        if (RequestedAgentId.HasValue)
+        {
+            return RequestedAgentId;
+        }
+
+        return Guid.TryParse(TryGetQueryValue("agentId"), out var agentId)
+            ? agentId
+            : null;
+    }
+
+    private string? TryGetQueryValue(
+        string key)
+    {
+        var query = Navigation.ToAbsoluteUri(Navigation.Uri).Query;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return null;
+        }
+
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var segments = pair.Split('=', 2);
+            if (!string.Equals(Uri.UnescapeDataString(segments[0]), key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return segments.Length > 1
+                ? Uri.UnescapeDataString(segments[1])
+                : string.Empty;
+        }
+
+        return null;
     }
 
     private static string BuildAgentsRoute(
@@ -120,6 +201,11 @@ public partial class AgentsHomePage
         }
 
         return $"/agents?tab={Uri.EscapeDataString(tab)}";
+    }
+
+    private string ResolveSummaryValue(int value)
+    {
+        return isLoaded ? value.ToString() : "...";
     }
 
     private void OpenCrmHrAgents()

@@ -1,5 +1,6 @@
 using System.Reflection;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
@@ -19,7 +20,6 @@ using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
-using CanDoItAll.Web.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,23 +61,9 @@ public static class TestApplicationBootstrap
         services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
+        services.AddCanDoItAllRuntimeModules();
         services.AddMermaidJS();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
-        services.AddSecurityModule();
-        services.AddWorkspaceModule();
-        services.AddProjectsModule();
-        services.AddWorkbenchModule();
-        services.AddResourcesModule();
-        services.AddPromptsModule();
-        services.AddFactoryModule();
-        services.AddProcessesModule();
-        services.AddValidationModule();
-        services.AddTestLabModule();
-        services.AddActivityModule();
-        services.AddAgentFrameworkModule();
-        services.AddAutomationModule();
-        services.AddCollaborationModule();
-        services.AddCrmHrModule();
     }
 
     public static async Task<ServiceProvider> BuildServiceProviderAsync(

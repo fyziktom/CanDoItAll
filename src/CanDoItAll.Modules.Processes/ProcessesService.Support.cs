@@ -69,6 +69,18 @@ public sealed partial class ProcessesService
                 return Error.Validation("Every branch outcome requires a title.", "processes.branch-outcome-title-required");
             }
 
+            if (step.RoleAssignments.Any(assignment => !assignment.RoleRequirementId.HasValue || assignment.RoleRequirementId.Value == Guid.Empty)) {
+                return Error.Validation(
+                    $"Step '{step.Title}' contains a role assignment that does not resolve to a process role.",
+                    "processes.step-role-assignment-role-required");
+            }
+
+            if (step.RoleAssignments.Any(assignment => assignment.RoleRequirementId.HasValue && !roleIds.Contains(assignment.RoleRequirementId.Value))) {
+                return Error.Validation(
+                    $"Step '{step.Title}' references a role that is not part of the same process definition.",
+                    "processes.step-role-assignment-role-invalid");
+            }
+
             if (step.BranchOutcomes.Count > 0 && !step.DecisionRoleRequirementId.HasValue) {
                 return Error.Validation("Branching steps require an explicit decision-maker role.", "processes.branch-decision-role-required");
             }

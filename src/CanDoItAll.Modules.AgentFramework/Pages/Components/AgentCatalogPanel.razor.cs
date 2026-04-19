@@ -1,5 +1,6 @@
-using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.CrmHr;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -9,8 +10,14 @@ public partial class AgentCatalogPanel
     [Parameter]
     public Guid? RequestedAgentId { get; set; }
 
+    [Parameter]
+    public bool SkipCatalogRepair { get; set; }
+
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
 
     private AgentEditorModel editorModel = new();
     private IReadOnlyList<AgentDefinition> agents = [];
@@ -19,6 +26,10 @@ public partial class AgentCatalogPanel
     private string agentSearch = string.Empty;
     private string? message;
     private Guid? linkedPartyId;
+    private bool hasLoaded;
+    private bool isLoading = true;
+    private bool interactiveReloadAttempted;
+    private Task? loadTask;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(agent =>
@@ -32,11 +43,13 @@ public partial class AgentCatalogPanel
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
+        await EnsureLoadedAsync();
     }
 
     protected override async Task OnParametersSetAsync()
     {
+        await EnsureLoadedAsync();
+
         if (RequestedAgentId.HasValue &&
             editorModel.Id != RequestedAgentId)
         {
@@ -44,13 +57,59 @@ public partial class AgentCatalogPanel
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender ||
+            interactiveReloadAttempted ||
+            hasLoaded)
+        {
+            return;
+        }
+
+        interactiveReloadAttempted = true;
+        await EnsureLoadedAsync();
+        StateHasChanged();
+    }
+
+    private Task EnsureLoadedAsync()
+    {
+        if (hasLoaded)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (loadTask is not null)
+        {
+            return loadTask;
+        }
+
+        loadTask = LoadAsync();
+        return loadTask;
+    }
+
     private async Task LoadAsync()
     {
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        providers = await WorkspaceService.ListProvidersAsync();
-        editorModel = await WorkspaceService.GetAgentEditorAsync();
-        tagText = string.Empty;
-        linkedPartyId = null;
+        isLoading = true;
+
+        try
+        {
+            if (!SkipCatalogRepair)
+            {
+                await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
+            }
+
+            agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+            providers = await WorkspaceService.ListProvidersAsync();
+            editorModel = await WorkspaceService.GetAgentEditorAsync();
+            tagText = string.Empty;
+            linkedPartyId = null;
+            hasLoaded = true;
+        }
+        finally
+        {
+            isLoading = false;
+            loadTask = null;
+        }
     }
 
     private async Task SaveAgentAsync()
@@ -69,6 +128,8 @@ public partial class AgentCatalogPanel
     private async Task EditAgentAsync(
         Guid agentId)
     {
+        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+
         editorModel = await WorkspaceService.GetAgentEditorAsync(agentId);
         tagText = string.Join(", ", editorModel.Tags);
         var definition = agents.FirstOrDefault(item => item.Id == agentId);

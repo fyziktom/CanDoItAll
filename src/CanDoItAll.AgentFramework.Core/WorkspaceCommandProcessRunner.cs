@@ -109,13 +109,19 @@ internal sealed class WorkspaceCommandProcessRunner
     public async Task<WorkspaceCommandExecutionResult> ExecuteAsync(WorkspaceCommandPlan plan, CancellationToken cancellationToken = default)
     {
         var executablePath = executableLocator.ResolveExecutablePath(plan.ExecutableCandidates);
+        using var pathAliasSession = WorkspacePathAliasSession.TryCreate(
+            plan.WorkspaceRootPath,
+            plan.WorkingDirectoryPath,
+            plan.Arguments);
+        var effectiveWorkingDirectoryPath = pathAliasSession?.RewritePath(plan.WorkingDirectoryPath) ?? plan.WorkingDirectoryPath;
+        var effectiveArguments = pathAliasSession?.RewriteArguments(plan.Arguments) ?? plan.Arguments;
         var processResult = await processHost.ExecuteAsync(
             new WorkspaceProcessExecutionRequest(
                 ToolName: plan.Decision.ToolName,
                 RecipeId: plan.Decision.RecipeId,
                 ExecutablePath: executablePath,
-                Arguments: plan.Arguments,
-                WorkingDirectory: plan.WorkingDirectoryPath,
+                Arguments: effectiveArguments,
+                WorkingDirectory: effectiveWorkingDirectoryPath,
                 EnvironmentVariables: environmentPolicy.MergeEnvironmentVariables(plan.EnvironmentVariables),
                 TimeoutSeconds: plan.TimeoutSeconds,
                 StdoutLimitCharacters: plan.StdoutLimitCharacters,

@@ -7,7 +7,7 @@
   "Summary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence.",
   "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
   "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
-  "PreferredExecutorKind": "person",
+  "PreferredExecutorKind": "person-or-agent",
   "PreferredProjectAssignmentRole": "Reviewer",
   "IsRequired": true,
   "AllowsFallback": true,

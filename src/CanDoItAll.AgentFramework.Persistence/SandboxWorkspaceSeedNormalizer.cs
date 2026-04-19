@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -8,6 +9,16 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedNormalizer
 {
     private static readonly ProviderProfileService ProviderProfileService = new();
+    private static readonly HashSet<string> ManagedSeriousDeliveryTemplateKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "portfolio-architect",
+        "delivery-qa-observer",
+        "programming-workspace-analyst",
+        "code-review-lead",
+        "ui-review-lead",
+        "security-reviewer",
+        "release-readiness-manager"
+    };
 
     internal static SandboxWorkspaceDocument Normalize(SandboxWorkspaceDocument document)
     {
@@ -220,27 +231,18 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool ShouldRefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
     {
-        if (!string.Equals(seededAgent.TemplateKey, "portfolio-architect", StringComparison.OrdinalIgnoreCase))
+        if (!TryGetManagedSeedVersion(seededAgent, out var managedSeedVersion))
         {
             return false;
         }
 
-        return existingAgent.Capabilities.Any(capability =>
-                   string.Equals(capability.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase)
-                   || string.Equals(capability.CapabilityKey, "workspace-delivery-skill", StringComparison.OrdinalIgnoreCase)
-                   || string.Equals(capability.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase))
-               || !existingAgent.Capabilities.Any(capability => string.Equals(capability.CapabilityKey, "architecture-source-rag", StringComparison.OrdinalIgnoreCase))
-               || string.Equals(
-                   existingAgent.Instructions,
-                   "You are the architectural steward for the CanDoItAll agent sandbox. Keep the design modular, future-project aware, and explicit about rights, reporting, and escalation.",
-                   StringComparison.Ordinal)
-               || !existingAgent.Instructions.Contains("call `load_skill` with `architecture-review`", StringComparison.OrdinalIgnoreCase)
-               || !existingAgent.Instructions.Contains("Do not start with a broad root inventory", StringComparison.OrdinalIgnoreCase)
-               || !existingAgent.Instructions.Contains("Do not flag `net10.0`", StringComparison.OrdinalIgnoreCase)
-               || !existingAgent.Instructions.Contains("AgentFrameworkWorkspaceService.cs", StringComparison.OrdinalIgnoreCase)
-               || !existingAgent.Instructions.Contains("Do not claim missing abstractions", StringComparison.OrdinalIgnoreCase)
-               || !existingAgent.Instructions.Contains("return 2 to 4 bullets only", StringComparison.OrdinalIgnoreCase)
-               || !string.Equals(existingAgent.Model, seededAgent.Model, StringComparison.OrdinalIgnoreCase);
+        if (TryGetManagedSeedVersion(existingAgent, out var currentSeedVersion) &&
+            string.Equals(currentSeedVersion, managedSeedVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return ManagedSeriousDeliveryTemplateKeys.Contains(seededAgent.TemplateKey);
     }
 
     private static AgentDefinition RefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
@@ -262,6 +264,31 @@ internal static class SandboxWorkspaceSeedNormalizer
             Capabilities = seededAgent.Capabilities,
             Tags = seededAgent.Tags
         };
+    }
+
+    private static bool TryGetManagedSeedVersion(AgentDefinition agent, out string version)
+    {
+        version = string.Empty;
+        if (string.IsNullOrWhiteSpace(agent.ConfigurationJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(agent.ConfigurationJson);
+            if (!document.RootElement.TryGetProperty("managedSeedVersion", out var versionElement))
+            {
+                return false;
+            }
+
+            version = versionElement.GetString() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(version);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static bool ShouldRefreshManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)
@@ -292,6 +319,13 @@ internal static class SandboxWorkspaceSeedNormalizer
         {
             return !existingCapability.ConfigurationJson.Contains("\"tools\"", StringComparison.OrdinalIgnoreCase)
                    || !existingCapability.ConfigurationJson.Contains("src/CanDoItAll.AgentFramework.Sandbox/Components/Pages", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (string.Equals(seededCapability.Key, "workspace-source-rag", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.ConfigurationJson.Contains(".playwright-mcp", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.ConfigurationJson.Contains("process-runs", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.ConfigurationJson.Contains("\"data\"", StringComparison.OrdinalIgnoreCase);
         }
 
         return false;

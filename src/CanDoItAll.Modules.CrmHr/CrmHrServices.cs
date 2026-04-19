@@ -3844,6 +3844,22 @@ public sealed partial class AiAgentService(
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectorySnapshotAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        return ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryFromProjectionAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
         var parties = await dbContext.Set<Party>()
             .Where(item => item.PartyType == PartyType.AiAgent)
             .OrderBy(item => item.DisplayName)
@@ -3885,6 +3901,10 @@ public sealed partial class AiAgentService(
             {
                 profileByPartyId.TryGetValue(item.Id, out var profile);
                 technicalSummaries.TryGetValue(item.Id, out var technicalSummary);
+                var hasTechnicalProfile = technicalSummary?.HasTechnicalProfile == true;
+                var hasProfile = hasTechnicalProfile || profile is not null;
+                var validationStatus = profile?.ValidationStatus ?? (hasTechnicalProfile ? AiValidationStatus.Draft : null);
+                var executionMode = technicalSummary?.ExecutionMode ?? profile?.ExecutionMode ?? (hasTechnicalProfile ? AiExecutionMode.Remote : null);
                 return new AiAgentListItemModel(
                     item.Id,
                     item.DisplayName,
@@ -3893,13 +3913,13 @@ public sealed partial class AiAgentService(
                     technicalSummary?.TechnicalAgentId,
                     technicalSummary?.BindingStatus ?? AiResourceBindingStatus.Unbound,
                     technicalSummary?.BindingSummary ?? "No technical binding.",
-                    technicalSummary?.ExecutionMode ?? profile?.ExecutionMode,
-                    profile?.ValidationStatus,
+                    executionMode,
+                    validationStatus,
                     technicalSummary?.ProviderName ?? string.Empty,
                     technicalSummary?.DefaultModel ?? string.Empty,
                     profile?.OwnerPartyId is Guid ownerPartyId ? ownerNames.GetValueOrDefault(ownerPartyId) ?? string.Empty : string.Empty,
                     technicalSummary?.CapabilityCount ?? 0,
-                    profile is not null,
+                    hasProfile,
                     technicalSummary?.AgentsRoute ?? "/agents?tab=agents",
                     item.UpdatedAtUtc);
             })

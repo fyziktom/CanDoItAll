@@ -100,10 +100,12 @@ public sealed class ProjectStructureLocalFileOpener(
             return false;
         }
 
-        var resolution = pathAccessGuard.ResolveManagedFilePath(relativePath);
+        var resolution = TryResolveTrustedArtifactPath(relativePath, out var artifactResolution)
+            ? artifactResolution
+            : pathAccessGuard.ResolveManagedFilePath(relativePath);
         if (!resolution.IsSuccess)
         {
-            failureMessage = "Only files or folders stored under managed project file roots can open in File Explorer.";
+            failureMessage = "Only files or folders stored under managed files or managed artifact roots can open in File Explorer.";
             return false;
         }
 
@@ -128,6 +130,24 @@ public sealed class ProjectStructureLocalFileOpener(
 
         fullPath = candidatePath;
         return true;
+    }
+
+    private bool TryResolveTrustedArtifactPath(string relativePath, out WorkspacePathAccessResult resolution)
+    {
+        resolution = WorkspacePathAccessResult.Failure("A trusted artifact path is required.");
+        var normalizedPath = relativePath
+            .Trim()
+            .Replace('/', Path.DirectorySeparatorChar)
+            .TrimStart(Path.DirectorySeparatorChar);
+        var firstSegment = normalizedPath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        if (!string.Equals(firstSegment, "artifacts", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        resolution = pathAccessGuard.ResolveWorkspacePath(normalizedPath);
+        return resolution.IsSuccess;
     }
 
     private static string ResolveRelativePath(ProjectStructureNode node)

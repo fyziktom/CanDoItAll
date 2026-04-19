@@ -1,0 +1,186 @@
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Composition\CanDoItAll.Composition.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Composition\CanDoItAll.Composition.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf [C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Composition\CanDoItAll.Composition.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Composition\CanDoItAll.Composition.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-37gx-xxp4-5rgx
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj : warning NU1903: Balíček „System.Security.Cryptography.Xml“ 10.0.4 má známé vysoké ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-w3x6-4m5h-cxqf
+13:55:42 info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0] Resolved database profile Managed SQLite workspace (529c1206-0808-489f-ad29-feb5bc60dda1) via PersistedActiveProfile. Provider=Sqlite. Fingerprint=sqlite:managed:529c12060808489fad29feb5bc60dda1. RuntimeLocked=False.
+13:55:46 info: CanDoItAll.ScenarioSeeder[0] Seeding scenario units-converter-delivery into profile root C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1. Database C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db
+13:55:58 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=projects Action=update Title=Updated project IdempotencyKey=<none>.
+13:55:58 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=projects Action=update Title=Updated project.
+13:56:00 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:b0232f80c6ea48269d0f206c64855fab:activity.
+13:56:00 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+13:56:00 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:b556412c58aa466e9dd36970490f13ee:activity.
+13:56:00 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+13:56:12 info: CanDoItAll.Modules.Processes.ProcessesService[0] Submitting launch plan 575601e7-f383-438b-b448-e025413e0d84 for approval. RequestedBy=units-converter-delivery-seeder.
+13:56:12 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 575601e7-f383-438b-b448-e025413e0d84 resolved approval authority Human Delivery Steward (Person). ExistingApprovalThread=False.
+13:56:12 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 575601e7-f383-438b-b448-e025413e0d84 is creating a new collaboration approval thread.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Creating collaboration thread for context ProcessLaunch/575601e7-f383-438b-b448-e025413e0d84. Subject=Launch approval / Blazor SSR basic units converter / 2026-04-18 17:56:00.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Created collaboration thread 5e15e619-77fe-451a-b719-c1c3d5aa32da. Recording activity mirror next.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread 5e15e619-77fe-451a-b719-c1c3d5aa32da because an ambient transaction is active.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration thread creation for 5e15e619-77fe-451a-b719-c1c3d5aa32da.
+13:56:12 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 575601e7-f383-438b-b448-e025413e0d84 created collaboration approval thread 5e15e619-77fe-451a-b719-c1c3d5aa32da.
+13:56:12 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 575601e7-f383-438b-b448-e025413e0d84 moved to PendingApproval with approval record 1eaba6d8-1bc8-4ebf-8487-3bf522b31e11.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appending collaboration message to thread 5e15e619-77fe-451a-b719-c1c3d5aa32da. Kind=Standard. Author=units-converter-delivery-seeder.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appended collaboration message to thread 5e15e619-77fe-451a-b719-c1c3d5aa32da. Recording activity mirror next.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread 5e15e619-77fe-451a-b719-c1c3d5aa32da message Standard because an ambient transaction is active.
+13:56:12 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration message append for thread 5e15e619-77fe-451a-b719-c1c3d5aa32da.
+13:56:12 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=start-run Title=Started process run IdempotencyKey=process-outbox:3614073e8dd746bebb470f8edd7b5bad:activity.
+13:56:12 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=start-run Title=Started process run.
+13:56:28 info: CanDoItAll.ScenarioSeeder.UnitsConverterDeliveryProvisioningSeeder[0] Provisioned units-converter delivery. ProjectId=9a817692-c632-43a4-9c0e-01e49e76360a DefinitionId=885c1099-cbfb-4c8c-bedd-57b26556c574 LaunchPlanId=575601e7-f383-438b-b448-e025413e0d84 RunId=a2df69ad-b54e-4120-99fe-45eab48b8bb0
+{
+  "projectId": "9a817692-c632-43a4-9c0e-01e49e76360a",
+  "projectName": "Blazor SSR basic units converter",
+  "definitionId": "885c1099-cbfb-4c8c-bedd-57b26556c574",
+  "launchPlanId": "575601e7-f383-438b-b448-e025413e0d84",
+  "runId": "a2df69ad-b54e-4120-99fe-45eab48b8bb0",
+  "humanPartyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+  "processRoute": "/projects/9a817692-c632-43a4-9c0e-01e49e76360a/processes?processId=885c1099-cbfb-4c8c-bedd-57b26556c574\u0026runId=a2df69ad-b54e-4120-99fe-45eab48b8bb0",
+  "scopePhaseNodeId": "custom:045498674f724c0c963ec5ff0de4bf2f",
+  "buildPhaseNodeId": "custom:f521b21eb9cb448a9b8c19242cdabfe4",
+  "releasePhaseNodeId": "custom:12717eca802047eebec323663211c7f9",
+  "deliveryFeatureNodeId": "custom:69a30496d1cc4580a1b75f8e7ac13fb6",
+  "solutionRelativePath": "deliveries/units-converter/Units.slnx",
+  "webProjectRelativePath": "deliveries/units-converter/src/Units.Web/Units.Web.csproj",
+  "coreProjectRelativePath": "deliveries/units-converter/src/Units.Core/Units.Core.csproj",
+  "testsProjectRelativePath": "deliveries/units-converter/tests/Units.Tests/Units.Tests.csproj",
+  "briefRelativePath": "deliveries/units-converter/PROJECT-BRIEF.md",
+  "bootstrapScriptRelativePath": "deliveries/units-converter/Bootstrap-UnitsSolution.ps1",
+  "launchScriptRelativePath": "deliveries/units-converter/Launch-UnitsApp.ps1",
+  "uiEvidenceRelativePath": "artifacts/deliveries/units-converter/ui",
+  "roleBindings": [
+    {
+      "roleKey": "delivery-manager",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "lead-engineer",
+      "displayName": "Programming Workspace Analyst",
+      "partyId": "88e22e04-a72b-4633-85b6-488a222adc41",
+      "technicalAgentId": "b3636a1c-f005-fe5c-b7a7-35a04c133f76",
+      "isHuman": false
+    },
+    {
+      "roleKey": "product-owner",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "qa-lead",
+      "displayName": "Delivery QA Observer",
+      "partyId": "fd97549a-21ee-441e-bb53-463b4d5a5a03",
+      "technicalAgentId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+      "isHuman": false
+    },
+    {
+      "roleKey": "release-manager",
+      "displayName": "Release Readiness Manager",
+      "partyId": "1ab27389-390d-4944-857e-62fdb811d714",
+      "technicalAgentId": "6f674c92-3347-dd55-96d3-851db9739b35",
+      "isHuman": false
+    },
+    {
+      "roleKey": "review-lead",
+      "displayName": "Code Review Lead",
+      "partyId": "19228d28-881d-43fd-9525-8115f8e75d42",
+      "technicalAgentId": "33183e52-4c54-b852-8c24-bd1d13cf1f23",
+      "isHuman": false
+    },
+    {
+      "roleKey": "security-reviewer",
+      "displayName": "Security Reviewer",
+      "partyId": "fef12e80-ccd0-436c-90f1-aa4df868209c",
+      "technicalAgentId": "5ab2958c-08de-b251-8ead-caa321248b91",
+      "isHuman": false
+    },
+    {
+      "roleKey": "solution-architect",
+      "displayName": "Portfolio Architect",
+      "partyId": "6aaa001e-768e-4437-9ce0-40751b056676",
+      "technicalAgentId": "952b041a-aba0-385b-8e4e-494c4b21d831",
+      "isHuman": false
+    },
+    {
+      "roleKey": "ui-review-lead",
+      "displayName": "UI Review Lead",
+      "partyId": "3b183c45-95e8-41f9-aaac-ea8623a5bdd0",
+      "technicalAgentId": "9ebea979-0d33-8e53-a69a-ca1555c73afe",
+      "isHuman": false
+    }
+  ]
+}

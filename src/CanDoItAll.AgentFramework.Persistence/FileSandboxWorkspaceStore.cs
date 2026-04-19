@@ -405,6 +405,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             }
 
             await EnsureWorkspaceIndexCoreAsync(cancellationToken);
+            await PersistNormalizedWorkspaceDocumentCoreAsync(cancellationToken);
             return;
         }
 
@@ -438,6 +439,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             SandboxWorkspaceSeedFactory.NormalizeExecutionState(executionState),
             cancellationToken);
         await EnsureWorkspaceIndexCoreAsync(cancellationToken);
+        await PersistNormalizedWorkspaceDocumentCoreAsync(cancellationToken);
     }
 
     private async Task<SandboxWorkspaceCatalog> LoadCatalogCoreAsync(CancellationToken cancellationToken)
@@ -482,6 +484,23 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     {
         return await jsonStore.ReadJsonAsync<WorkspaceStorageIndex>(layout.WorkspaceIndexPath, cancellationToken)
             ?? new WorkspaceStorageIndex(1L, DateTimeOffset.UtcNow);
+    }
+
+    private async Task PersistNormalizedWorkspaceDocumentCoreAsync(CancellationToken cancellationToken)
+    {
+        var currentDocument = SandboxWorkspaceDocument.Combine(
+            await LoadCatalogCoreAsync(cancellationToken),
+            await LoadExecutionCoreAsync(cancellationToken));
+        var normalizedDocument = NormalizeAndValidateDocument(currentDocument);
+        if (EqualityComparer<SandboxWorkspaceDocument>.Default.Equals(currentDocument, normalizedDocument))
+        {
+            return;
+        }
+
+        var currentRevision = File.Exists(layout.WorkspaceIndexPath)
+            ? (await LoadWorkspaceIndexCoreAsync(cancellationToken)).Revision
+            : 0L;
+        await SaveCoreAsync(currentDocument, normalizedDocument, currentRevision, cancellationToken);
     }
 
     private Task SaveWorkspaceIndexCoreAsync(WorkspaceStorageIndex index, CancellationToken cancellationToken)
