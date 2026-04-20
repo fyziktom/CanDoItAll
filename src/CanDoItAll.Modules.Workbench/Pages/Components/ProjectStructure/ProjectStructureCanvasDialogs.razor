@@ -312,6 +312,13 @@
 @if (ProcessStartDialog is not null)
 {
     var startDialog = ProcessStartDialog;
+    var isStaffingStage = startDialog.Stage == ProjectStructureProcessStartStage.Staffing;
+    var processStartCancelKey = $"project-structure-process-start-cancel-{startDialog.Stage}-{startDialog.ConfirmHrManagerMatch}";
+    const string processStartKeepManualKey = "project-structure-process-start-keep-manual";
+    const string processStartConfirmHrKey = "project-structure-process-start-confirm-hr";
+    const string processStartStartKey = "project-structure-process-start-start";
+    const string processStartRequestHrKey = "project-structure-process-start-request-hr";
+    const string processStartContinueKey = "project-structure-process-start-continue";
 
     <ProjectStructureOverlayDialog CanvasScoped="true"
                                    AriaLabel="@startDialog.Title"
@@ -321,14 +328,57 @@
                                    DataTestId="project-structure-process-start-dialog"
                                    Close="CloseProcessStart">
         <Actions>
-            <Button Text="Cancel"
+            <Button @key="processStartCancelKey"
+                    Text="Cancel"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
+                    Disabled="@startDialog.IsBusy"
                     Click="CloseProcessStart" />
-            <Button Text="@startDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Warning"
-                    data-testid="project-structure-process-start-submit"
-                    Click="ExecuteProcessStart" />
+            @if (isStaffingStage)
+            {
+                if (startDialog.ConfirmHrManagerMatch)
+                {
+                    <Button @key="processStartKeepManualKey"
+                            Text="Keep manual matching"
+                            Variant="Variant.Text"
+                            ButtonStyle="ButtonStyle.Base"
+                            Disabled="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-cancel-hr-match"
+                            Click="CancelHrManagerMatch" />
+                    <Button @key="processStartConfirmHrKey"
+                            Text="Confirm HR match"
+                            ButtonStyle="ButtonStyle.Info"
+                            IsBusy="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-confirm-hr-match"
+                            Click="ExecuteHrManagerMatch" />
+                }
+                else
+                {
+                    <Button @key="processStartStartKey"
+                            Text="@startDialog.SubmitLabel"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Disabled="@(!startDialog.CanStart || startDialog.IsBusy)"
+                            IsBusy="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-start"
+                            Click="ExecuteProcessStart" />
+                    <Button @key="processStartRequestHrKey"
+                            Text="Use HR manager suggestions"
+                            Variant="Variant.Text"
+                            ButtonStyle="ButtonStyle.Base"
+                            Disabled="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-request-hr-match"
+                            Click="RequestHrManagerMatch" />
+                }
+            }
+            else
+            {
+                <Button @key="processStartContinueKey"
+                        Text="@startDialog.SubmitLabel"
+                        ButtonStyle="ButtonStyle.Warning"
+                        IsBusy="@startDialog.IsBusy"
+                        data-testid="project-structure-process-start-continue"
+                        Click="ExecuteProcessStart" />
+            }
         </Actions>
         <Body>
             <Stack GapScale="LayoutGap.Medium">
@@ -348,14 +398,187 @@
                     </Stack>
                 </PanelCard>
 
-                <PanelCard>
-                    <Stack GapScale="LayoutGap.Tiny">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
-                        <TextBlock TextStyle="TextStyle.Note"
-                                   Value="The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context."
-                                   Class="cw-panel-copy" />
-                    </Stack>
-                </PanelCard>
+                @if (!isStaffingStage)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context."
+                                       Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+                else
+                {
+                    <PanelCard data-testid="project-structure-process-start-staffing-summary">
+                        <Stack GapScale="LayoutGap.Small">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Pill Tone="PillTone.Info"
+                                      Text="@($"Resolved {startDialog.ResolvedRoleCount} of {startDialog.Roles.Count}")" />
+                                <Pill Tone="@(startDialog.RequiredGapCount == 0 ? PillTone.Ok : PillTone.Warn)"
+                                      Text="@(startDialog.RequiredGapCount == 0 ? "Ready to start" : $"{startDialog.RequiredGapCount} required role gaps")" />
+                                @if (startDialog.LaunchPlanId.HasValue)
+                                {
+                                    <Pill Tone="PillTone.Neutral"
+                                          Text="@($"Launch plan {startDialog.LaunchPlanId.Value:D}")" />
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(startDialog.StatusMessage))
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@startDialog.StatusMessage"
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+
+                    <PanelCard>
+                        <label class="flex items-start gap-3"
+                               data-testid="project-structure-process-start-review-panel">
+                            <input type="checkbox"
+                                   class="mt-1"
+                                   data-testid="project-structure-process-start-review-confirmation"
+                                   checked="@startDialog.AssignmentsReviewed"
+                                   @onchange="ProcessStartAssignmentsReviewedChanged" />
+                            <span class="cw-panel-copy">
+                                I reviewed these role assignments and want the process to start with them after every required role is resolved.
+                            </span>
+                        </label>
+                    </PanelCard>
+
+                    @if (startDialog.ConfirmHrManagerMatch)
+                    {
+                        <PanelCard Class="project-structure-inline-feedback"
+                                   data-tone="warn"
+                                   data-testid="project-structure-process-start-hr-confirmation">
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                           Value="@($"Let {startDialog.HrManagerName} pair the roles?")" />
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="The HR manager will review the required roles, current project assignments, CRM-HR workforce records, and AI agent catalog facts to propose the best matches. The suggestions will stay visible here so you can review them before the process starts."
+                                           Class="cw-panel-copy" />
+                            </Stack>
+                        </PanelCard>
+                    }
+
+                    <div class="space-y-4"
+                         data-testid="project-structure-process-start-staffing-roles">
+                        @foreach (var role in startDialog.Roles)
+                        {
+                            var orderedCandidates = role.Candidates
+                                .OrderByDescending(candidate => candidate.IsSelected)
+                                .ThenByDescending(candidate => candidate.IsRecommended)
+                                .ThenByDescending(candidate => candidate.IsResolvable)
+                                .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+                                .ToList();
+
+                            <PanelCard data-testid="@($"project-structure-process-start-role-{role.LaunchPlanRoleId:D}")">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                   Value="@role.DisplayName" />
+                                        <Pill Tone="@(role.IsRequired ? PillTone.Warn : PillTone.Neutral)"
+                                              Text="@(role.IsRequired ? "Required" : "Optional")" />
+                                        <Pill Tone="@(role.IsResolved ? PillTone.Ok : PillTone.Warn)"
+                                              Text="@(role.IsResolved ? "Resolved" : "Needs selection")" />
+                                        @if (role.RequiresProvisioning)
+                                        {
+                                            <Pill Tone="PillTone.Info"
+                                                  Text="Provisioning required" />
+                                        }
+                                    </div>
+
+                                    <TextBlock TextStyle="TextStyle.Note"
+                                               Value="@($"{role.PreferredExecutorKind} / {role.SelectionSummary}")"
+                                               Class="cw-panel-copy" />
+                                    @if (!string.IsNullOrWhiteSpace(role.ReadinessSummary))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@role.ReadinessSummary"
+                                                   Class="cw-panel-copy" />
+                                    }
+
+                                    @if (orderedCandidates.Count == 0)
+                                    {
+                                        <PanelCard Class="project-structure-inline-feedback"
+                                                   data-tone="warn">
+                                            No staffing candidates are available for this role yet.
+                                        </PanelCard>
+                                    }
+                                    else
+                                    {
+                                        <div class="space-y-3">
+                                            @foreach (var candidate in orderedCandidates)
+                                            {
+                                                <PanelCard Class="@(candidate.IsSelected ? "ring-2 ring-emerald-400/70" : string.Empty)"
+                                                           data-testid="@($"project-structure-process-start-candidate-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")">
+                                                    <Stack GapScale="LayoutGap.Small">
+                                                        <div class="flex flex-wrap items-start justify-between gap-3">
+                                                            <div class="space-y-1">
+                                                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                                           Value="@candidate.DisplayName" />
+                                                                <TextBlock TextStyle="TextStyle.Note"
+                                                                           Value="@($"{candidate.CandidateKindLabel} / {candidate.ExecutorKind}")"
+                                                                           Class="cw-panel-copy" />
+                                                            </div>
+                                                            <div class="flex flex-wrap items-center gap-2">
+                                                                <Pill Tone="PillTone.Neutral"
+                                                                      Text="@candidate.ScoreLabel" />
+                                                                @if (candidate.IsRecommended)
+                                                                {
+                                                                    <Pill Tone="PillTone.Info"
+                                                                          Text="Recommended" />
+                                                                }
+                                                                @if (candidate.RequiresProvisioning)
+                                                                {
+                                                                    <Pill Tone="PillTone.Warn"
+                                                                          Text="Provisioning" />
+                                                                }
+                                                                @if (candidate.IsSelected)
+                                                                {
+                                                                    <Pill Tone="PillTone.Ok"
+                                                                          Text="Selected" />
+                                                                }
+                                                            </div>
+                                                        </div>
+
+                                                        @if (!string.IsNullOrWhiteSpace(candidate.RecommendationSummary))
+                                                        {
+                                                            <TextBlock TextStyle="TextStyle.Note"
+                                                                       Value="@candidate.RecommendationSummary"
+                                                                       Class="cw-panel-copy" />
+                                                        }
+
+                                                        @if (!string.IsNullOrWhiteSpace(candidate.AvailabilitySummary))
+                                                        {
+                                                            <TextBlock TextStyle="TextStyle.Note"
+                                                                       Value="@candidate.AvailabilitySummary"
+                                                                       Class="cw-panel-copy" />
+                                                        }
+
+                                                        <div class="flex flex-wrap items-center justify-between gap-3">
+                                                            <TextBlock TextStyle="TextStyle.Note"
+                                                                       Value="@candidate.SourceRegistryKey"
+                                                                       Class="cw-panel-copy" />
+                                                            <Button Text="@(candidate.IsSelected ? "Selected" : "Select")"
+                                                                    Variant="@(candidate.IsSelected ? Variant.Filled : Variant.Outlined)"
+                                                                    ButtonStyle="@(candidate.IsSelected ? ButtonStyle.Success : ButtonStyle.Info)"
+                                                                    Disabled="@(!candidate.IsResolvable || startDialog.IsBusy || candidate.IsSelected)"
+                                                                    data-testid="@($"project-structure-process-start-select-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")"
+                                                                    Click="@(() => SelectProcessStartCandidate.InvokeAsync(new ProjectStructureProcessStartCandidateSelection(role.LaunchPlanRoleId, candidate.CandidateId)))" />
+                                                        </div>
+                                                    </Stack>
+                                                </PanelCard>
+                                            }
+                                        </div>
+                                    }
+                                </Stack>
+                            </PanelCard>
+                        }
+                    </div>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(startDialog.Error))
                 {
@@ -487,6 +710,21 @@
 
     [Parameter]
     public EventCallback ExecuteProcessStart { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureProcessStartCandidateSelection> SelectProcessStartCandidate { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> ProcessStartAssignmentsReviewedChanged { get; set; }
+
+    [Parameter]
+    public EventCallback RequestHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback CancelHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteHrManagerMatch { get; set; }
 
     [Parameter]
     public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }

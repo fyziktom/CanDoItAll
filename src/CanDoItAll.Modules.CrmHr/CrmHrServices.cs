@@ -632,6 +632,23 @@ public sealed record AiAgentWorkspaceModel(
     IReadOnlyList<PartyOptionModel> OwnerOptions,
     IReadOnlyList<AiProviderOptionModel> ProviderOptions);
 
+public sealed record AiAgentStaffingFactListItemModel(
+    Guid PartyId,
+    Guid? TechnicalAgentId,
+    string DisplayName,
+    string RoleTitle,
+    string Summary,
+    string Instructions,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
+    AiExecutionMode? ExecutionMode,
+    string ProviderName,
+    string DefaultModel,
+    string TemplateKey,
+    IReadOnlyList<string> Tags,
+    IReadOnlyList<AiCapabilityEditorModel> Capabilities,
+    string AgentsRoute);
+
 public sealed record AiAgentProfileSummaryModel(Guid Id, Guid PartyId, Guid? ProviderProfileId, AiExecutionMode ExecutionMode, AiValidationStatus ValidationStatus);
 
 public sealed record ProjectPartyAssignmentSummaryModel(Guid Id, Guid ProjectId, Guid PartyId, ProjectPartyAssignmentKind AssignmentKind, string NodeKey, bool IsPrimary);
@@ -3854,6 +3871,40 @@ public sealed partial class AiAgentService(
         ArgumentNullException.ThrowIfNull(dbContext);
 
         return ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsAsync(
+        IReadOnlyList<Guid>? partyIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+
+        var resolvedPartyIds = partyIds?
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToList()
+            ?? [];
+        var facts = await technicalAgentBridge.GetStaffingFactsAsync(resolvedPartyIds, cancellationToken);
+
+        return facts.Values
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new AiAgentStaffingFactListItemModel(
+                item.PartyId,
+                item.TechnicalAgentId,
+                item.DisplayName,
+                item.RoleTitle,
+                item.Summary,
+                item.Instructions,
+                item.BindingStatus,
+                item.BindingSummary,
+                item.ExecutionMode,
+                item.ProviderName,
+                item.DefaultModel,
+                item.TemplateKey,
+                item.Tags,
+                item.Capabilities,
+                item.AgentsRoute))
+            .ToList();
     }
 
     private async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryFromProjectionAsync(

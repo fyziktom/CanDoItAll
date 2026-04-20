@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v22";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v23";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -82,6 +82,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var uiReviewAgentId = CreateStableGuid("agents/ui-review-lead");
         var securityReviewerAgentId = CreateStableGuid("agents/security-reviewer");
         var releaseManagerAgentId = CreateStableGuid("agents/release-readiness-manager");
+        var hrStaffingManagerAgentId = CreateStableGuid("agents/hr-staffing-manager");
         var spreadsheetAgentId = CreateStableGuid("agents/spreadsheet-analyst");
         var mailAgentId = CreateStableGuid("agents/mail-triage-analyst");
         var researchAgentId = CreateStableGuid("agents/research-deep-dive-analyst");
@@ -869,6 +870,43 @@ internal static class SandboxWorkspaceSeedBuilder
             ["spreadsheet", "analysis", "tabular"],
             now);
 
+        var hrStaffingManagerAgent = CreateWorkloadAgent(
+            hrStaffingManagerAgentId,
+            "HR Staffing Manager",
+            "HR staffing and assignment manager",
+            "Matches governed process roles to actual project assignments, workforce records, and AI agents using factual fit instead of convenience or guesswork.",
+            GetSeedText("agents/hr-staffing-manager.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Management,
+            "hr-staffing-manager",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+            ],
+            ["hr", "staffing", "assignment"],
+            now,
+            "gpt-4.1");
+
         var mailAgent = CreateWorkloadAgent(
             mailAgentId,
             "Mail Triage Analyst",
@@ -949,7 +987,7 @@ internal static class SandboxWorkspaceSeedBuilder
 
         return new SandboxWorkspaceDocument(
             LatestVersion,
-            [architectAgent, qaAgent, programmingAgent, codeReviewAgent, uiReviewAgent, securityReviewerAgent, releaseManagerAgent, spreadsheetAgent, mailAgent, researchAgent],
+            [architectAgent, qaAgent, programmingAgent, codeReviewAgent, uiReviewAgent, securityReviewerAgent, releaseManagerAgent, hrStaffingManagerAgent, spreadsheetAgent, mailAgent, researchAgent],
             providers,
             capabilities,
             [
@@ -973,6 +1011,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 new AgentMemoryRecord(CreateStableGuid("memory/future-candoitall-seam"), architectAgentId, MemoryKind.Architecture, "Future CanDoItAll seam", "Align with CRM and HR agent identity, project-node assignments, provider profiles, automation telemetry, and rights masks.", "seed", 5, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/proof-discipline"), qaAgentId, MemoryKind.FollowUp, "Proof discipline", "Reopen any phase when browser proof or dependency gates are weak.", "seed", 4, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/framework-first-coding"), programmingAgentId, MemoryKind.Context, "Framework-first coding", "Prefer Microsoft Agent Framework primitives before adding wrapper-specific coding behavior.", "seed", 4, "{}", now),
+                new AgentMemoryRecord(CreateStableGuid("memory/staffing-grounding"), hrStaffingManagerAgentId, MemoryKind.Context, "Staffing grounding", "Prefer currently assigned project resources and bound AI agents when they satisfy the role facts. Escalate unresolved gaps instead of inventing a confident-looking match.", "seed", 4, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/spreadsheet-review-checklist"), spreadsheetAgentId, MemoryKind.Context, "Spreadsheet review checklist", "Explain key metrics, anomalies, and any rows that deserve follow-up.", "seed", 3, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/reply-style"), mailAgentId, MemoryKind.Preference, "Reply style", "Keep drafted replies concise, direct, and explicit about the next action.", "seed", 3, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/evidence-first-claims"), researchAgentId, MemoryKind.Context, "Evidence-first claims", "Separate proven repo evidence from inference and capture any validation gap honestly.", "seed", 5, "{}", now)

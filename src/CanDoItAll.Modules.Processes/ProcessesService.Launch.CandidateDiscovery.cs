@@ -26,7 +26,7 @@ public sealed partial class ProcessesService
                     .OrderByDescending(item => item.IsPrimary)
                     .ThenBy(item => item.PartyDisplayName)
                     .ToList());
-        var aiDirectory = await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken);
+        var aiDirectory = await aiAgentService.ListAgentDirectoryAsync(cancellationToken);
         var aiDirectoryByPartyId = aiDirectory.ToDictionary(item => item.PartyId);
         var roleRecommendations = new List<ProcessLaunchRoleRecommendation>(publishedContext.Roles.Count);
 
@@ -287,6 +287,51 @@ public sealed partial class ProcessesService
                 CreatedAtUtc = clock.GetUtcNow()
             });
             seenPartyIds.Add(staffingCandidate.PartyId);
+        }
+
+        if (candidates.Count == 0)
+        {
+            var broaderStaffingCandidates = await hrService.SearchStaffingCandidatesAsync(
+                null,
+                staffingSearchText,
+                cancellationToken: cancellationToken);
+            var broaderPartyIds = broaderStaffingCandidates
+                .Where(item => !seenPartyIds.Contains(item.PartyId))
+                .Select(item => item.PartyId)
+                .Distinct()
+                .ToList();
+            var broaderMatchedSkillsByPartyId = await LoadMatchedSkillsByPartyIdAsync(
+                dbContext,
+                broaderPartyIds,
+                requiredSkillIds,
+                cancellationToken);
+
+            foreach (var staffingCandidate in broaderStaffingCandidates.Where(item => !seenPartyIds.Contains(item.PartyId)))
+            {
+                broaderMatchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
+                var matchedSkillCount = matchedSkillSet?.Count ?? 0;
+                candidates.Add(new ProcessLaunchCandidate
+                {
+                    CandidateKind = ProcessLaunchCandidateKind.Workforce,
+                    PartyId = staffingCandidate.PartyId,
+                    DisplayName = staffingCandidate.DisplayName,
+                    ExecutorKind = string.IsNullOrWhiteSpace(staffingCandidate.JobTitle)
+                        ? staffingCandidate.PartyType.ToString()
+                        : staffingCandidate.JobTitle,
+                    Score = 48m + staffingCandidate.AvailablePercent / 5m + matchedSkillCount * 7m,
+                    IsRecommended = candidates.Count == 0,
+                    AllowsDirectMessaging = true,
+                    RequiresProvisioning = false,
+                    RecommendationSummary = matchedSkillCount > 0
+                        ? $"Broad workforce fallback matched {matchedSkillCount} required skill(s) for this role."
+                        : "Broad workforce fallback matched the CRM-HR directory by role wording and current availability.",
+                    AvailabilitySummary = $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
+                    SourceRegistryKey = $"crmhr-workforce-broad:{staffingCandidate.PartyId:D}",
+                    MetadataJson = "{}",
+                    CreatedAtUtc = clock.GetUtcNow()
+                });
+                seenPartyIds.Add(staffingCandidate.PartyId);
+            }
         }
 
         if (candidates.Count == 0)

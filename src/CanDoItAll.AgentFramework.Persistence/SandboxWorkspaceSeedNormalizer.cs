@@ -18,6 +18,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         "ui-review-lead",
         "security-reviewer",
         "release-readiness-manager",
+        "hr-staffing-manager",
         "research-deep-dive-analyst"
     };
 

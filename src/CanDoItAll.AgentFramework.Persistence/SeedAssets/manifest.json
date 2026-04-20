@@ -15,6 +15,7 @@
   "textAssets": {
     "agents/code-review-lead.instructions": "instructions/agents/code-review-lead.md",
     "agents/delivery-qa-observer.instructions": "instructions/agents/delivery-qa-observer.md",
+    "agents/hr-staffing-manager.instructions": "instructions/agents/hr-staffing-manager.md",
     "agents/portfolio-architect.instructions": "instructions/agents/portfolio-architect.md",
     "agents/programming-workspace-analyst.instructions": "instructions/agents/programming-workspace-analyst.md",
     "agents/release-readiness-manager.instructions": "instructions/agents/release-readiness-manager.md",

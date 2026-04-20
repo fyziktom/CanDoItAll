@@ -77,6 +77,23 @@ public sealed record AiTechnicalAgentSaveResult(
     string BindingSummary,
     string AgentsRoute);
 
+public sealed record AiAgentStaffingFactModel(
+    Guid PartyId,
+    Guid? TechnicalAgentId,
+    string DisplayName,
+    string RoleTitle,
+    string Summary,
+    string Instructions,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
+    AiExecutionMode? ExecutionMode,
+    string ProviderName,
+    string DefaultModel,
+    string TemplateKey,
+    IReadOnlyList<string> Tags,
+    IReadOnlyList<AiCapabilityEditorModel> Capabilities,
+    string AgentsRoute);
+
 public interface IAiTechnicalAgentBridge
 {
     Task SynchronizeDirectoryProjectionAsync(
@@ -88,6 +105,10 @@ public interface IAiTechnicalAgentBridge
 
     Task<AiTechnicalAgentWorkspaceModel> GetWorkspaceAsync(
         Guid partyId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<Guid, AiAgentStaffingFactModel>> GetStaffingFactsAsync(
+        IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default);
 
     Task<Result<AiTechnicalAgentSaveResult>> SaveAsync(
@@ -190,6 +211,52 @@ internal sealed class LegacyAiTechnicalAgentBridge(
             resolvedDefaultModel,
             profile is null ? [] : DeserializeCapabilities(profile.CapabilityJson, profile.Id),
             providerOptions);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, AiAgentStaffingFactModel>> GetStaffingFactsAsync(
+        IReadOnlyList<Guid> partyIds,
+        CancellationToken cancellationToken = default)
+    {
+        var summaries = await GetDirectorySummariesAsync(partyIds, cancellationToken);
+        if (summaries.Count == 0)
+        {
+            return new Dictionary<Guid, AiAgentStaffingFactModel>();
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var partyIdsToLoad = summaries.Keys.ToList();
+        var parties = await dbContext.Set<Party>()
+            .Where(item => partyIdsToLoad.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var profiles = await dbContext.Set<AiAgentProfile>()
+            .Where(item => partyIdsToLoad.Contains(item.PartyId))
+            .ToDictionaryAsync(item => item.PartyId, cancellationToken);
+
+        return partyIdsToLoad.ToDictionary(
+            partyId => partyId,
+            partyId =>
+            {
+                summaries.TryGetValue(partyId, out var summary);
+                parties.TryGetValue(partyId, out var party);
+                profiles.TryGetValue(partyId, out var profile);
+
+                return new AiAgentStaffingFactModel(
+                    partyId,
+                    summary?.TechnicalAgentId,
+                    party?.DisplayName ?? string.Empty,
+                    string.Empty,
+                    party?.Summary ?? string.Empty,
+                    profile?.Notes ?? string.Empty,
+                    summary?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    summary?.BindingSummary ?? "No technical binding.",
+                    summary?.ExecutionMode,
+                    summary?.ProviderName ?? string.Empty,
+                    summary?.DefaultModel ?? string.Empty,
+                    string.Empty,
+                    [],
+                    profile is null ? [] : DeserializeCapabilities(profile.CapabilityJson, profile.Id),
+                    summary?.AgentsRoute ?? "/agents?tab=agents");
+            });
     }
 
     public async Task<Result<AiTechnicalAgentSaveResult>> SaveAsync(

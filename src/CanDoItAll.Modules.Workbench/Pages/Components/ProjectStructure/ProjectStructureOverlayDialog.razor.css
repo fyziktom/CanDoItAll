@@ -14,7 +14,7 @@
 .project-structure-preview-backdrop--canvas {
     position: absolute;
     inset: 0;
-    z-index: 48;
+    z-index: 720;
     border-radius: inherit;
 }
 

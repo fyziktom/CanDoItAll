@@ -393,6 +393,107 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             providerOptions);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, AiAgentStaffingFactModel>> GetStaffingFactsAsync(
+        IReadOnlyList<Guid> partyIds,
+        CancellationToken cancellationToken = default)
+    {
+        var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        if (agents.Count == 0)
+        {
+            return new Dictionary<Guid, AiAgentStaffingFactModel>();
+        }
+
+        IReadOnlyList<Guid> resolvedPartyIds;
+        if (partyIds.Count == 0)
+        {
+            resolvedPartyIds = agents
+                .Select(agent => AgentFrameworkCrmHrMetadata.ResolvePartyId(agent.ConfigurationJson, agent.Tags))
+                .Where(item => item.HasValue)
+                .Select(item => item!.Value)
+                .Distinct()
+                .ToList();
+        }
+        else
+        {
+            resolvedPartyIds = partyIds;
+        }
+
+        if (resolvedPartyIds.Count == 0)
+        {
+            return new Dictionary<Guid, AiAgentStaffingFactModel>();
+        }
+
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var providerNames = providers.ToDictionary(item => item.Id, item => item.Name);
+        var capabilities = await workspaceService.ListCapabilitiesAsync(cancellationToken);
+        var capabilityNamesById = capabilities.ToDictionary(item => item.Id, item => item.Name);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var bindings = await dbContext.Set<AiResourceBinding>()
+            .Where(item => resolvedPartyIds.Contains(item.PartyId))
+            .ToDictionaryAsync(item => item.PartyId, cancellationToken);
+        var parties = await dbContext.Set<Party>()
+            .Where(item => resolvedPartyIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        var result = new Dictionary<Guid, AiAgentStaffingFactModel>(resolvedPartyIds.Count);
+        foreach (var partyId in resolvedPartyIds)
+        {
+            bindings.TryGetValue(partyId, out var binding);
+            parties.TryGetValue(partyId, out var party);
+            var resolved = ResolveBoundAgent(binding, agents, partyId);
+            if (resolved.Agent is null)
+            {
+                var bindingSummary = ResolveBindingSummary(resolved.Binding, missingAgent: resolved.Binding?.TechnicalAgentId is not null);
+                result[partyId] = new AiAgentStaffingFactModel(
+                    partyId,
+                    resolved.Binding?.TechnicalAgentId,
+                    party?.DisplayName ?? string.Empty,
+                    string.Empty,
+                    party?.Summary ?? string.Empty,
+                    string.Empty,
+                    resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    bindingSummary,
+                    null,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    [],
+                    [],
+                    BuildAgentsRoute(resolved.Binding?.TechnicalAgentId));
+                continue;
+            }
+
+            var metadata = AgentFrameworkCrmHrMetadata.Read(resolved.Agent.ConfigurationJson);
+            var resolvedCapabilities = ResolveCapabilities(metadata, resolved.Agent, capabilityNamesById);
+            var resolvedModel = string.IsNullOrWhiteSpace(resolved.Agent.Model)
+                ? resolved.Agent.ProviderProfileId is Guid providerId
+                    ? providers.FirstOrDefault(item => item.Id == providerId)?.DefaultModel ?? string.Empty
+                    : string.Empty
+                : resolved.Agent.Model;
+
+            result[partyId] = new AiAgentStaffingFactModel(
+                partyId,
+                resolved.Agent.Id,
+                party?.DisplayName ?? resolved.Agent.Name,
+                resolved.Agent.RoleTitle,
+                string.IsNullOrWhiteSpace(party?.Summary) ? resolved.Agent.Summary : party.Summary,
+                resolved.Agent.Instructions,
+                resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Bound,
+                ResolveBindingSummary(resolved.Binding, missingAgent: false),
+                ResolveExecutionMode(metadata, resolved.Agent),
+                resolved.Agent.ProviderProfileId is Guid resolvedProviderId ? providerNames.GetValueOrDefault(resolvedProviderId) ?? string.Empty : string.Empty,
+                resolvedModel,
+                resolved.Agent.TemplateKey,
+                resolved.Agent.Tags,
+                resolvedCapabilities,
+                BuildAgentsRoute(resolved.Agent.Id));
+        }
+
+        return result;
+    }
+
     public async Task<Result<AiTechnicalAgentSaveResult>> SaveAsync(
         AiAgentProfileEditorModel model,
         CancellationToken cancellationToken = default)
