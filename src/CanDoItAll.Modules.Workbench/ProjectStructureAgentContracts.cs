@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -150,6 +151,7 @@ public sealed record ProjectStructureReadResponse(
     IReadOnlyList<ProjectStructureLinkSummary> Links,
     IReadOnlyList<string> Warnings);
 
+[JsonConverter(typeof(ProjectStructureNodeCreateInputJsonConverter))]
 public sealed record ProjectStructureNodeCreateInput(
     ProjectObjectType ObjectType,
     string Title,
@@ -166,10 +168,13 @@ public sealed record ProjectStructureNodeCreateInput(
     string? LeaseToken = null,
     int? DurationSeconds = null);
 
+[JsonConverter(typeof(ProjectStructureNodeEditInputJsonConverter))]
 public sealed record ProjectStructureNodeEditInput(
     string Title,
     string Subtitle,
     string Notes,
+    ProjectObjectType? ObjectType = null,
+    string? ObjectSubtype = null,
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
     string? MetadataJson = null,

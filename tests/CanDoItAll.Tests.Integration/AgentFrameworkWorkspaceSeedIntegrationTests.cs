@@ -340,8 +340,12 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Architecture block", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Project block", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Work item", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not invent enum names like `FeatureBlock`", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("`ProjectBlock` + `feature`", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("`WorkItem` + `task`", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("siblings should usually be separated by about 280", editor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("child branches by about 480", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project_structure_node_move", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("run subtree recomposition", editor.Instructions, StringComparison.OrdinalIgnoreCase);
     }
 

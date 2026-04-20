@@ -230,6 +230,7 @@ public sealed class MafAgentRuntimeTests
             "project_structure_dependencies_query",
             "project_structure_node_create",
             "project_structure_node_update",
+            "project_structure_node_move",
             "project_structure_node_recompose",
             "project_structure_node_reparent",
             "project_structure_approval_request",

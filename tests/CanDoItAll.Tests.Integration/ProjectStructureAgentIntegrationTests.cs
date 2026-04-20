@@ -221,6 +221,101 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task AgentService_UpdateNodeAsync_reclassifies_placeholder_nodes_into_typed_blocks()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+
+        var projectId = await CreateProjectAsync(projects, "Node reclassification");
+        var placeholder = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Features",
+                "Scratch",
+                "Placeholder note that should become a typed block.",
+                $"project:{projectId}",
+                420,
+                220));
+        var lease = await leaseService.AcquireAsync(
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                "Reclassify structure node",
+                15),
+            DefaultAgent);
+
+        var updated = await agentService.UpdateNodeAsync(
+            projectId,
+            placeholder.Id,
+            new ProjectStructureNodeEditInput(
+                "Features",
+                "Feature area",
+                "Promoted into a typed feature block.",
+                ObjectType: ProjectObjectType.ProjectBlock,
+                ObjectSubtype: "feature",
+                LeaseToken: lease.LeaseToken),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var updatedNode = Assert.Single(surface.Nodes, node => node.Id == placeholder.Id);
+
+        Assert.Equal(ProjectObjectType.ProjectBlock, updated.ObjectType);
+        Assert.Equal("feature", updated.ObjectSubtype);
+        Assert.Equal(ProjectObjectType.ProjectBlock, updatedNode.ObjectType);
+        Assert.Equal("feature", updatedNode.ObjectSubtype);
+        Assert.Equal("Feature area", updatedNode.Subtitle);
+    }
+
+    [Fact]
+    public async Task AgentService_MoveNodeAsync_updates_canvas_coordinates()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+
+        var projectId = await CreateProjectAsync(projects, "Node move");
+        var node = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Features",
+                string.Empty,
+                "Move this branch away from overlap.",
+                $"project:{projectId}",
+                420,
+                220,
+                null,
+                null,
+                "feature"));
+        var lease = await leaseService.AcquireAsync(
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                "Move structure node",
+                15),
+            DefaultAgent);
+
+        await agentService.MoveNodeAsync(
+            projectId,
+            new ProjectStructureNodeMoveInput(node.Id, 980, 540, lease.LeaseToken),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var movedNode = Assert.Single(surface.Nodes, item => item.Id == node.Id);
+
+        Assert.Equal(980d, movedNode.X);
+        Assert.Equal(540d, movedNode.Y);
+    }
+
+    [Fact]
     public async Task AgentService_CreateAssetRevisionAsync_creates_child_asset_and_derivedfrom_link()
     {
         await using var application = await TestApplication.CreateAsync();

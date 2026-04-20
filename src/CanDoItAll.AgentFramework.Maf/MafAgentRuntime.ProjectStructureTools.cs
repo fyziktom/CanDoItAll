@@ -93,11 +93,15 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new project-structure node through the internal workspace service."),
+                    "Creates a new project-structure node through the internal workspace service. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates the title, subtitle, notes, and optional metadata of an existing project-structure node."),
+                    "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeMoveAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_move",
+                    "Moves an existing project-structure node to exact canvas coordinates. Use this when recomposition still leaves overlap, crowding, or unreadable spacing."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeRecomposeAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_recompose",
@@ -400,6 +404,31 @@ public sealed partial class MafAgentRuntime
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationAck> ProjectStructureNodeMoveAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureNodeMoveInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-move",
+                projectId,
+                request.NodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    await agentService.MoveNodeAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return new OperationAck(true);
                 },
                 cancellationToken);
         }
