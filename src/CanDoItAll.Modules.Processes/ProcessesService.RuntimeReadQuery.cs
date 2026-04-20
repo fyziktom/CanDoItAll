@@ -11,6 +11,11 @@ public interface IProcessRuntimeReadQueryService
         Guid? projectId,
         CancellationToken cancellationToken);
 
+    Task<ProcessRunListItem?> GetRunAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(
         AppDbContext dbContext,
         Guid runId,
@@ -24,6 +29,12 @@ public interface IProcessRuntimeReadQueryService
     Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         AppDbContext dbContext,
         Guid? definitionId,
+        Guid? projectId,
+        CancellationToken cancellationToken);
+
+    Task<ProcessAnalyticsSummary> GetAnalyticsForDefinitionsAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<Guid> definitionIds,
         Guid? projectId,
         CancellationToken cancellationToken);
 }
@@ -51,66 +62,24 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
             runsQuery = runsQuery.Where(run => run.ProjectId == projectId.Value);
         }
 
-        var runs = (await runsQuery
-            .Select(
-                run => new ProcessRunListProjection(
-                    run.Id,
-                    run.ProcessDefinitionId,
-                    run.ProcessDefinitionVersionId,
-                    run.ProjectId,
-                    run.Name,
-                    run.Status,
-                    run.OperatingMode,
-                    run.EstimatedCost,
-                    run.ActualCost,
-                    run.UpdatedAtUtc))
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(run => run.UpdatedAtUtc)
-            .ToList();
-        if (runs.Count == 0)
-        {
-            return [];
-        }
+        return await LoadRunListAsync(dbContext, runsQuery, cancellationToken);
+    }
 
-        var runIds = runs.Select(run => run.Id).ToList();
-        var stepRunSummariesByRunId = await dbContext.Set<ProcessStepRun>()
-            .AsNoTracking()
-            .Where(stepRun => runIds.Contains(stepRun.ProcessRunId))
-            .GroupBy(stepRun => stepRun.ProcessRunId)
-            .Select(
-                group => new ProcessRunStepSummaryProjection(
-                    group.Key,
-                    group.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Completed),
-                    group.Count(),
-                    group.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Blocked),
-                    group.Count(stepRun => stepRun.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None)))
-            .ToDictionaryAsync(item => item.ProcessRunId, cancellationToken);
+    public async Task<ProcessRunListItem?> GetRunAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
 
-        return runs
-            .Select(
-                run =>
-                {
-                    var stepRunSummary = stepRunSummariesByRunId.TryGetValue(run.Id, out var resolvedStepRunSummary)
-                        ? resolvedStepRunSummary
-                        : ProcessRunStepSummaryProjection.Empty(run.Id);
+        var runs = await LoadRunListAsync(
+            dbContext,
+            dbContext.Set<ProcessRun>()
+                .AsNoTracking()
+                .Where(run => run.Id == runId),
+            cancellationToken);
 
-                    return new ProcessRunListItem(
-                        run.Id,
-                        run.ProcessDefinitionId,
-                        run.ProcessDefinitionVersionId,
-                        run.ProjectId,
-                        run.Name,
-                        run.Status,
-                        run.OperatingMode,
-                        stepRunSummary.CompletedCount,
-                        stepRunSummary.TotalCount,
-                        stepRunSummary.BlockedCount,
-                        stepRunSummary.CapabilityGapCount,
-                        run.EstimatedCost,
-                        run.ActualCost,
-                        run.UpdatedAtUtc);
-                })
-            .ToList();
+        return runs.SingleOrDefault();
     }
 
     public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(
@@ -305,6 +274,129 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
             runsQuery = runsQuery.Where(run => run.ProjectId == projectId.Value);
         }
 
+        return await BuildAnalyticsAsync(
+            dbContext,
+            runsQuery,
+            improvementQueryBuilder: improvementQuery =>
+            {
+                if (definitionId.HasValue)
+                {
+                    improvementQuery = improvementQuery.Where(item => item.ProcessDefinitionId == definitionId.Value);
+                }
+
+                return improvementQuery;
+            },
+            cancellationToken);
+    }
+
+    public async Task<ProcessAnalyticsSummary> GetAnalyticsForDefinitionsAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<Guid> definitionIds,
+        Guid? projectId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(definitionIds);
+
+        var normalizedDefinitionIds = definitionIds
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToList();
+        if (normalizedDefinitionIds.Count == 0)
+        {
+            return EmptyAnalytics;
+        }
+
+        var runsQuery = dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(run => normalizedDefinitionIds.Contains(run.ProcessDefinitionId));
+        if (projectId.HasValue)
+        {
+            runsQuery = runsQuery.Where(run => run.ProjectId == projectId.Value);
+        }
+
+        return await BuildAnalyticsAsync(
+            dbContext,
+            runsQuery,
+            improvementQuery => improvementQuery.Where(item => normalizedDefinitionIds.Contains(item.ProcessDefinitionId)),
+            cancellationToken);
+    }
+
+    private static readonly ProcessAnalyticsSummary EmptyAnalytics = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    private static async Task<IReadOnlyList<ProcessRunListItem>> LoadRunListAsync(
+        AppDbContext dbContext,
+        IQueryable<ProcessRun> runsQuery,
+        CancellationToken cancellationToken)
+    {
+        var runs = (await runsQuery
+                .Select(
+                    run => new ProcessRunListProjection(
+                        run.Id,
+                        run.ProcessDefinitionId,
+                        run.ProcessDefinitionVersionId,
+                        run.ProjectId,
+                        run.Name,
+                        run.Status,
+                        run.OperatingMode,
+                        run.EstimatedCost,
+                        run.ActualCost,
+                        run.UpdatedAtUtc))
+                .ToListAsync(cancellationToken))
+            .OrderByDescending(run => run.UpdatedAtUtc)
+            .ToList();
+        if (runs.Count == 0)
+        {
+            return [];
+        }
+
+        var runIds = runs.Select(run => run.Id).ToList();
+        var stepRunSummariesByRunId = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(stepRun => runIds.Contains(stepRun.ProcessRunId))
+            .GroupBy(stepRun => stepRun.ProcessRunId)
+            .Select(
+                group => new ProcessRunStepSummaryProjection(
+                    group.Key,
+                    group.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Completed),
+                    group.Count(),
+                    group.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Blocked),
+                    group.Count(stepRun => stepRun.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None)))
+            .ToDictionaryAsync(item => item.ProcessRunId, cancellationToken);
+
+        return runs
+            .Select(
+                run =>
+                {
+                    var stepRunSummary = stepRunSummariesByRunId.TryGetValue(run.Id, out var resolvedStepRunSummary)
+                        ? resolvedStepRunSummary
+                        : ProcessRunStepSummaryProjection.Empty(run.Id);
+
+                    return new ProcessRunListItem(
+                        run.Id,
+                        run.ProcessDefinitionId,
+                        run.ProcessDefinitionVersionId,
+                        run.ProjectId,
+                        run.Name,
+                        run.Status,
+                        run.OperatingMode,
+                        stepRunSummary.CompletedCount,
+                        stepRunSummary.TotalCount,
+                        stepRunSummary.BlockedCount,
+                        stepRunSummary.CapabilityGapCount,
+                        run.EstimatedCost,
+                        run.ActualCost,
+                        run.UpdatedAtUtc);
+                })
+            .ToList();
+    }
+
+    private static async Task<ProcessAnalyticsSummary> BuildAnalyticsAsync(
+        AppDbContext dbContext,
+        IQueryable<ProcessRun> runsQuery,
+        Func<IQueryable<ProcessImprovementCandidate>, IQueryable<ProcessImprovementCandidate>> improvementQueryBuilder,
+        CancellationToken cancellationToken)
+    {
         var runs = await runsQuery
             .Select(
                 run => new ProcessAnalyticsRunProjection(
@@ -329,19 +421,15 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
         var conformanceFlags = runIds.Count == 0
             ? []
             : await dbContext.Set<ProcessConformanceObservation>()
-                .AsNoTracking()
-                .Where(item => runIds.Contains(item.ProcessRunId))
-                .Select(item => item.IsSafeNonAction)
-                .ToListAsync(cancellationToken);
-        var improvementQuery = dbContext.Set<ProcessImprovementCandidate>()
             .AsNoTracking()
-            .AsQueryable();
-        if (definitionId.HasValue)
-        {
-            improvementQuery = improvementQuery.Where(item => item.ProcessDefinitionId == definitionId.Value);
-        }
-
-        var improvementCount = await improvementQuery.CountAsync(cancellationToken);
+            .Where(item => runIds.Contains(item.ProcessRunId))
+            .Select(item => item.IsSafeNonAction)
+            .ToListAsync(cancellationToken);
+        var improvementCount = await improvementQueryBuilder(
+                dbContext.Set<ProcessImprovementCandidate>()
+                    .AsNoTracking()
+                    .AsQueryable())
+            .CountAsync(cancellationToken);
 
         return new ProcessAnalyticsSummary(
             runs.Count,

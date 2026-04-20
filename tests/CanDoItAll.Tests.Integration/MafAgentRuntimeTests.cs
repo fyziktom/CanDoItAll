@@ -254,6 +254,78 @@ public sealed class MafAgentRuntimeTests
             item => item.Contains("Attached internal project-structure tools", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task CreateCapabilityState_attaches_internal_process_tools_by_default_when_workspace_services_are_available()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProcessAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProcessAccessSettings
+                {
+                    CanRead = true,
+                    AllowedDefinitionIds =
+                    [
+                        Guid.NewGuid()
+                    ]
+                })
+        };
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(application.RootPath, scope.ServiceProvider);
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var expectedToolNames = new[]
+        {
+            "processes_definitions_list",
+            "processes_definition_editor_get",
+            "processes_definition_save",
+            "processes_definition_publish",
+            "processes_definition_delete",
+            "processes_definition_export",
+            "processes_definition_import",
+            "processes_runs_list",
+            "processes_run_detail_get",
+            "processes_analytics_get",
+            "processes_run_start",
+            "processes_step_transition",
+            "processes_assignment_resolve",
+            "processes_artifact_record",
+            "processes_party_options_list",
+            "processes_executor_options_list",
+            "processes_templates_list",
+            "processes_template_get",
+            "processes_template_mermaid_get",
+            "processes_template_import",
+            "processes_template_baseline_scenarios_list"
+        };
+
+        foreach (var toolName in expectedToolNames)
+        {
+            Assert.Contains(toolName, toolNames);
+        }
+
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("Attached internal process-module tools", StringComparison.Ordinal));
+    }
+
     private sealed class OpaqueToolCallContent(
         string callId,
         string name,

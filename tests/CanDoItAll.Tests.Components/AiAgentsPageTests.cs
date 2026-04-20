@@ -6,6 +6,7 @@ using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
@@ -373,6 +374,34 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
+    public async Task Agent_catalog_exposes_process_access_controls_and_process_choices()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var saveResult = await processesService.SaveAsync(CreateProcessDefinition("Workbench Access Process"));
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
+
+        cut.WaitForElement("[data-testid='agents-catalog-process-access']");
+
+        Assert.Contains("Process Access", cut.Markup);
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-process-read']"));
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-process-write']"));
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-process-load']"));
+        Assert.DoesNotContain("Workbench Access Process", cut.Markup);
+
+        cut.Find("[data-testid='agents-catalog-process-load']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workbench Access Process", cut.Markup);
+        });
+
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-processes']"));
+    }
+
+    [Fact]
     public async Task Agent_catalog_switches_requested_agent_without_reloading_the_editor_from_storage()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -505,6 +534,58 @@ public sealed class AiAgentsPageTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static ProcessDefinitionEditorModel CreateProcessDefinition(string name)
+    {
+        var roleId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            Name = name,
+            Summary = $"{name} summary",
+            ValueStatement = "Deliver the expected process outcome.",
+            CustomerName = "Internal customer",
+            OwnerName = "Process owner",
+            GovernanceNotes = "Follow the standard governance path.",
+            ChangeSummary = "Initial draft.",
+            GovernancePolicySummary = "Review before irreversible changes.",
+            ConstitutionRuleSummary = "Escalate exceptions explicitly.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Ready for controlled execution.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "owner",
+                    DisplayName = "Owner",
+                    Purpose = "Owns the process outcome."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = stepId,
+                    Key = "plan",
+                    Title = "Plan work",
+                    InputContractSummary = "Structured request",
+                    OutputContractSummary = "Approved plan",
+                    EvidenceContractSummary = "Decision note",
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
     }
 
     private static async Task RepairAndSynchronizeAsync(IServiceProvider serviceProvider)

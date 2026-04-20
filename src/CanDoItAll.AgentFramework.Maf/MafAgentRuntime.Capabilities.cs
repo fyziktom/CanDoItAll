@@ -23,6 +23,7 @@ public sealed partial class MafAgentRuntime
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
+        await AttachInternalProcessToolsAsync(composition, agent, progressCallback);
         await AttachCatalogCapabilitiesAsync(
             composition,
             agent,
@@ -53,6 +54,7 @@ public sealed partial class MafAgentRuntime
         var contextBuilder = new ContextCapabilityBuilder(this);
         var mcpBuilder = new McpCapabilityBuilder(this);
         var projectStructureToolBuilder = CreateProjectStructureToolBuilder(workspaceCommandExecutionService);
+        var processToolBuilder = CreateProcessToolBuilder();
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, workspaceCommandExecutionService, fileSkillExecutionPolicies);
 
@@ -63,6 +65,7 @@ public sealed partial class MafAgentRuntime
             contextBuilder,
             mcpBuilder,
             projectStructureToolBuilder,
+            processToolBuilder,
             toolBuilder);
     }
 
@@ -174,6 +177,30 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "Project structure",
             "Attached internal project-structure tools backed by the workspace services and current agent policy.");
+    }
+
+    private async Task AttachInternalProcessToolsAsync(
+        RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
+        Func<ExecutionState, string, string, Task> progressCallback)
+    {
+        if (!agent.Permissions.CanUseTools ||
+            composition.ProcessToolBuilder is null)
+        {
+            return;
+        }
+
+        var tools = composition.ProcessToolBuilder.CreateTools(agent);
+        if (tools.Count == 0)
+        {
+            return;
+        }
+
+        composition.State.Tools.AddRange(tools);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Processes",
+            "Attached internal process-module tools backed by the workspace services and current agent policy.");
     }
 
     private async Task AttachCapabilityAsync(
@@ -480,6 +507,7 @@ public sealed partial class MafAgentRuntime
         ContextCapabilityBuilder ContextBuilder,
         McpCapabilityBuilder McpBuilder,
         ProjectStructureToolBuilder? ProjectStructureToolBuilder,
+        ProcessToolBuilder? ProcessToolBuilder,
         ToolCapabilityBuilder ToolBuilder);
 
     private sealed class SkillCapabilityConfiguration

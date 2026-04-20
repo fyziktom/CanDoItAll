@@ -37,6 +37,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var normalizedTemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(model.TemplateKey, model.Name);
         var id = model.Id ?? Guid.NewGuid();
         var configurationJson = AgentProjectStructureAccessMetadata.Write(model.ConfigurationJson, model.ProjectStructureAccess);
+        configurationJson = AgentProcessAccessMetadata.Write(configurationJson, model.ProcessAccess);
         await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);

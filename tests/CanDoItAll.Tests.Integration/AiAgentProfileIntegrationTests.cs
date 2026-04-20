@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
@@ -307,6 +308,69 @@ public sealed class AiAgentProfileIntegrationTests
         Assert.NotNull(configurationRoot);
         Assert.NotNull(configurationRoot["crmHr"]);
         Assert.NotNull(configurationRoot["projectStructure"]);
+    }
+
+    [Fact]
+    public async Task SaveAgentAsync_roundtrips_process_access_settings_inside_configuration_json()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var alphaProcessResult = await processesService.SaveAsync(CreateProcessDefinition("Alpha Access Process"));
+        var betaProcessResult = await processesService.SaveAsync(CreateProcessDefinition("Beta Access Process"));
+
+        Assert.True(alphaProcessResult.IsSuccess);
+        Assert.True(betaProcessResult.IsSuccess);
+
+        var alphaProcessId = alphaProcessResult.Value;
+        var betaProcessId = betaProcessResult.Value;
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Process Runtime Agent";
+        editor.RoleTitle = "Process engineer";
+        editor.Summary = "Carries native process access settings.";
+        editor.Instructions = "Use process access only within the assigned scope.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        editor.ConfigurationJson = JsonSerializer.Serialize(new
+        {
+            crmHr = new
+            {
+                source = "integration-tests"
+            }
+        });
+        editor.ProcessAccess = new AgentProcessAccessSettings
+        {
+            CanWrite = true,
+            AllowedDefinitionIds =
+            [
+                betaProcessId,
+                alphaProcessId,
+                Guid.Empty,
+                betaProcessId
+            ]
+        };
+
+        var agentId = await workspaceService.SaveAgentAsync(editor);
+        var savedEditor = await workspaceService.GetAgentEditorAsync(agentId);
+
+        Assert.True(savedEditor.ProcessAccess.CanRead);
+        Assert.True(savedEditor.ProcessAccess.CanWrite);
+        Assert.Equal(
+            new[]
+            {
+                alphaProcessId,
+                betaProcessId
+            }.OrderBy(item => item).ToList(),
+            savedEditor.ProcessAccess.AllowedDefinitionIds);
+
+        var configurationRoot = JsonNode.Parse(savedEditor.ConfigurationJson)?.AsObject();
+
+        Assert.NotNull(configurationRoot);
+        Assert.NotNull(configurationRoot["crmHr"]);
+        Assert.NotNull(configurationRoot["processes"]);
     }
 
     [Fact]
@@ -618,5 +682,57 @@ public sealed class AiAgentProfileIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static ProcessDefinitionEditorModel CreateProcessDefinition(string name)
+    {
+        var roleId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            Name = name,
+            Summary = $"{name} summary",
+            ValueStatement = "Deliver the expected process outcome.",
+            CustomerName = "Internal customer",
+            OwnerName = "Process owner",
+            GovernanceNotes = "Follow the standard governance path.",
+            ChangeSummary = "Initial draft.",
+            GovernancePolicySummary = "Review before irreversible changes.",
+            ConstitutionRuleSummary = "Escalate exceptions explicitly.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Ready for controlled execution.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "owner",
+                    DisplayName = "Owner",
+                    Purpose = "Owns the process outcome."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = stepId,
+                    Key = "plan",
+                    Title = "Plan work",
+                    InputContractSummary = "Structured request",
+                    OutputContractSummary = "Approved plan",
+                    EvidenceContractSummary = "Decision note",
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
     }
 }

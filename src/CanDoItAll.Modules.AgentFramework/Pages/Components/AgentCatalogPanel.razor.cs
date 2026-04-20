@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
 
@@ -29,10 +30,14 @@ public partial class AgentCatalogPanel
     [Inject]
     public ProjectsService ProjectsService { get; set; } = default!;
 
+    [Inject]
+    public ProcessesService ProcessesService { get; set; } = default!;
+
     private AgentEditorModel editorModel = new();
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
+    private IReadOnlyList<ProcessDefinitionListItem> processDefinitions = [];
     private string tagText = string.Empty;
     private string agentSearch = string.Empty;
     private string? message;
@@ -43,11 +48,16 @@ public partial class AgentCatalogPanel
     private bool areProjectStructureProjectsLoaded;
     private bool isLoadingProjectStructureProjects;
     private bool projectStructureProjectsRequested;
+    private bool areProcessDefinitionsLoaded;
+    private bool isLoadingProcessDefinitions;
+    private bool processDefinitionsRequested;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
+    private string? processDefinitionsErrorMessage;
     private bool interactiveReloadAttempted;
     private Task? loadTask;
     private Task? projectStructureProjectsLoadTask;
+    private Task? processDefinitionsLoadTask;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(agent =>
@@ -157,6 +167,12 @@ public partial class AgentCatalogPanel
         return EnsureProjectStructureProjectsLoadedAsync();
     }
 
+    private Task RequestProcessDefinitionsAsync()
+    {
+        processDefinitionsRequested = true;
+        return EnsureProcessDefinitionsLoadedAsync();
+    }
+
     private Task EnsureProjectStructureProjectsLoadedAsync()
     {
         if (areProjectStructureProjectsLoaded)
@@ -192,6 +208,45 @@ public partial class AgentCatalogPanel
         {
             isLoadingProjectStructureProjects = false;
             projectStructureProjectsLoadTask = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task EnsureProcessDefinitionsLoadedAsync()
+    {
+        if (areProcessDefinitionsLoaded)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (processDefinitionsLoadTask is not null)
+        {
+            return processDefinitionsLoadTask;
+        }
+
+        processDefinitionsLoadTask = LoadProcessDefinitionsAsync();
+        return processDefinitionsLoadTask;
+    }
+
+    private async Task LoadProcessDefinitionsAsync()
+    {
+        isLoadingProcessDefinitions = true;
+        processDefinitionsErrorMessage = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            processDefinitions = await ProcessesService.ListDefinitionsAsync(cancellationToken: default);
+            areProcessDefinitionsLoaded = true;
+        }
+        catch (Exception exception)
+        {
+            processDefinitionsErrorMessage = $"Failed to load processes. {exception.Message}";
+        }
+        finally
+        {
+            isLoadingProcessDefinitions = false;
+            processDefinitionsLoadTask = null;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -272,6 +327,14 @@ public partial class AgentCatalogPanel
             .Count();
     }
 
+    private static int CountAllowedProcesses(AgentEditorModel editor)
+    {
+        return editor.ProcessAccess.AllowedDefinitionIds
+            .Where(definitionId => definitionId != Guid.Empty)
+            .Distinct()
+            .Count();
+    }
+
     private void ToggleProjectStructureRead(object? rawValue)
     {
         var isEnabled = rawValue is bool value && value;
@@ -297,6 +360,34 @@ public partial class AgentCatalogPanel
             editorModel.ProjectStructureAccess.CanRead = true;
             projectStructureProjectsRequested = true;
             _ = EnsureProjectStructureProjectsLoadedAsync();
+        }
+    }
+
+    private void ToggleProcessRead(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProcessAccess.CanRead = isEnabled;
+        if (isEnabled)
+        {
+            processDefinitionsRequested = true;
+            _ = EnsureProcessDefinitionsLoadedAsync();
+        }
+
+        if (!isEnabled)
+        {
+            editorModel.ProcessAccess.CanWrite = false;
+        }
+    }
+
+    private void ToggleProcessWrite(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProcessAccess.CanWrite = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.ProcessAccess.CanRead = true;
+            processDefinitionsRequested = true;
+            _ = EnsureProcessDefinitionsLoadedAsync();
         }
     }
 
@@ -339,6 +430,47 @@ public partial class AgentCatalogPanel
     private void ClearProjectStructureProjects()
     {
         editorModel.ProjectStructureAccess.AllowedProjectIds = [];
+    }
+
+    private bool HasProcessAccess(Guid definitionId)
+    {
+        return editorModel.ProcessAccess.AllowedDefinitionIds.Contains(definitionId);
+    }
+
+    private void ToggleProcess(Guid definitionId, object? rawValue)
+    {
+        var selectedDefinitions = editorModel.ProcessAccess.AllowedDefinitionIds.ToList();
+        var isEnabled = rawValue is bool value && value;
+        if (isEnabled)
+        {
+            if (!selectedDefinitions.Contains(definitionId))
+            {
+                selectedDefinitions.Add(definitionId);
+            }
+        }
+        else
+        {
+            selectedDefinitions.RemoveAll(item => item == definitionId);
+        }
+
+        editorModel.ProcessAccess.AllowedDefinitionIds = selectedDefinitions
+            .Distinct()
+            .OrderBy(item => item)
+            .ToList();
+    }
+
+    private void SelectAllProcesses()
+    {
+        editorModel.ProcessAccess.AllowedDefinitionIds = processDefinitions
+            .Select(item => item.Id)
+            .Distinct()
+            .OrderBy(item => item)
+            .ToList();
+    }
+
+    private void ClearProcesses()
+    {
+        editorModel.ProcessAccess.AllowedDefinitionIds = [];
     }
 
     private static string ResolveStatusTone(
