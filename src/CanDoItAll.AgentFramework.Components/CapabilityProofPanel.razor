@@ -1,0 +1,360 @@
+@inject NavigationManager Navigation
+
+<SectionCard Title="Skills, MCP servers, and capability proof"
+             Description="Attach or remove reusable capabilities here, keep details one click away, and only run proof on items the agent actually uses.">
+    <Stack GapScale="LayoutGap.Large">
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <StatusBadge Tone="info" Text="@($"{SelectedCapabilityIds.Count} attached")" />
+            <StatusBadge Tone="neutral" Text="@($"{Capabilities.Count(item => item.Kind == CapabilityKind.Skill)} skills")" />
+            <StatusBadge Tone="neutral" Text="@($"{Capabilities.Count(item => item.Kind == CapabilityKind.McpServer)} MCP servers")" />
+            <StatusBadge Tone="neutral" Text="@($"{Capabilities.Count(item => item.Kind is not (CapabilityKind.Skill or CapabilityKind.McpServer))} other capability types")" />
+        </Cluster>
+
+        <SecondaryTabs Items="CapabilityTabs"
+                       SelectedKey="@selectedTab"
+                       SelectedKeyChanged="HandleSelectedTabChanged" />
+
+        @if (FilteredCapabilities.Count == 0)
+        {
+            <EmptyState Eyebrow="Capability list"
+                        Title="@ResolveEmptyStateTitle()"
+                        Description="@ResolveEmptyStateDescription()" />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var capability in FilteredCapabilities)
+                {
+                    var isAttached = SelectedCapabilityIds.Contains(capability.Id);
+                    <SurfaceCard Soft="true">
+                        <Stack GapScale="LayoutGap.Medium">
+                            <div class="flex flex-wrap items-start justify-between gap-4">
+                                <div class="min-w-0 flex-1">
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="info" Text="@ResolveCapabilityKindLabel(capability.Kind)" />
+                                        <StatusBadge Tone="@(isAttached ? "success" : "neutral")"
+                                                     Text="@(isAttached ? "Attached" : "Available")" />
+                                        <StatusBadge Tone="@ResolveTone(capability.ProofStatus)"
+                                                     Text="@ResolveCapabilityStatusLabel(capability.ProofStatus)" />
+                                        @if (capability.IsBuiltIn)
+                                        {
+                                            <StatusBadge Tone="neutral" Text="Built in" />
+                                        }
+                                    </Cluster>
+
+                                    <p class="mt-3 text-base font-semibold leading-6 text-slate-950" style="overflow-wrap:anywhere;">@capability.Name</p>
+
+                                    @if (!string.IsNullOrWhiteSpace(capability.Description))
+                                    {
+                                        <p class="mt-2 text-sm leading-6 text-slate-600">@capability.Description</p>
+                                    }
+                                </div>
+
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    <Button Text="@(isAttached ? "Remove" : "Assign")"
+                                            ButtonStyle="@(isAttached ? ButtonStyle.Light : ButtonStyle.Primary)"
+                                            Size="ButtonSize.Small"
+                                            Click="@(async () => await ToggleCapabilityRequested.InvokeAsync(capability.Id))" />
+                                    <Button Text="Details"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(async () => await OpenDetailsAsync(capability))" />
+                                    <Button Text="Verify"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(!isAttached)"
+                                            Click="@(async () => await VerifyCapabilityRequested.InvokeAsync(capability.Id))" />
+                                </Cluster>
+                            </div>
+
+                            <div class="rounded-[1.2rem] border border-slate-200 bg-white/85 px-4 py-3">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Path or endpoint</p>
+                                    <CopyButton Value="@capability.EndpointOrPath"
+                                                Disabled="@string.IsNullOrWhiteSpace(capability.EndpointOrPath)"
+                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                Size="CopyButtonSize.ExtraSmall"
+                                                AriaLabel="Copy capability path or endpoint" />
+                                </div>
+                                <p class="mt-2 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@ResolveEndpointSummary(capability)</p>
+                            </div>
+
+                            @if (capability.LastVerifiedAtUtc.HasValue || !string.IsNullOrWhiteSpace(capability.ProofNotes))
+                            {
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-white/85 px-4 py-3">
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Proof</p>
+                                    @if (capability.LastVerifiedAtUtc.HasValue)
+                                    {
+                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Checked @capability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
+                                    }
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@ResolveProofNotes(capability)</p>
+                                </div>
+                            }
+                        </Stack>
+                    </SurfaceCard>
+                }
+            </Stack>
+        }
+    </Stack>
+</SectionCard>
+
+<Dialog IsOpen="@detailsDialogOpen"
+        Eyebrow="Capability details"
+        Title="@selectedCapability?.Name"
+        Subtitle="Review the exact key, path, proof state, and configuration before you attach or verify it."
+        Size="ModalSize.Wide"
+        CloseOnBackdrop="true"
+        OnClose="CloseDetailsDialog">
+    <ChildContent>
+        <div class="pr-1" style="max-height:calc(80vh - 9rem);overflow:auto;">
+            @if (selectedCapability is not null)
+            {
+                <Stack GapScale="LayoutGap.Large">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="info" Text="@ResolveCapabilityKindLabel(selectedCapability.Kind)" />
+                        <StatusBadge Tone="@ResolveTone(selectedCapability.ProofStatus)"
+                                     Text="@ResolveCapabilityStatusLabel(selectedCapability.ProofStatus)" />
+                        <StatusBadge Tone="@(SelectedCapabilityIds.Contains(selectedCapability.Id) ? "success" : "neutral")"
+                                     Text="@(SelectedCapabilityIds.Contains(selectedCapability.Id) ? "Attached" : "Not attached")" />
+                    </Cluster>
+
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)">
+                        <WorkspacePanel Tone="WorkspacePanelTone.Ghost">
+                            <Stack GapScale="LayoutGap.Medium">
+                                <div>
+                                    <p class="cda-eyebrow">Catalog identity</p>
+                                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedCapability.Name" />
+                                </div>
+
+                                <div>
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Key</p>
+                                        <CopyButton Value="@selectedCapability.Key"
+                                                    Disabled="@string.IsNullOrWhiteSpace(selectedCapability.Key)"
+                                                    DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                    Size="CopyButtonSize.ExtraSmall"
+                                                    AriaLabel="Copy capability key" />
+                                    </div>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@selectedCapability.Key</p>
+                                </div>
+
+                                <div>
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Path or endpoint</p>
+                                        <CopyButton Value="@selectedCapability.EndpointOrPath"
+                                                    Disabled="@string.IsNullOrWhiteSpace(selectedCapability.EndpointOrPath)"
+                                                    DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                    Size="CopyButtonSize.ExtraSmall"
+                                                    AriaLabel="Copy capability path or endpoint" />
+                                    </div>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@ResolveEndpointSummary(selectedCapability)</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Description</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@selectedCapability.Description</p>
+                                </div>
+                            </Stack>
+                        </WorkspacePanel>
+
+                        <WorkspacePanel Tone="WorkspacePanelTone.Ghost">
+                            <Stack GapScale="LayoutGap.Medium">
+                                <div>
+                                    <p class="cda-eyebrow">Proof and configuration</p>
+                                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@ResolveProofNotes(selectedCapability)" />
+                                </div>
+
+                                @if (selectedCapability.LastVerifiedAtUtc.HasValue)
+                                {
+                                    <div>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Last verified</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">@selectedCapability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
+                                    </div>
+                                }
+
+                                <div>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Configuration JSON</p>
+                                    <pre class="mt-2 overflow-x-auto rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">@ResolveConfigurationJson(selectedCapability)</pre>
+                                </div>
+                            </Stack>
+                        </WorkspacePanel>
+                    </Grid>
+                </Stack>
+            }
+        </div>
+    </ChildContent>
+
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <Button Text="Open on capabilities page"
+                    Click="OpenCapabilityPage" />
+            <Button Text="Close"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="CloseDetailsDialog" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private const string SkillsTabKey = "skills";
+    private const string McpTabKey = "mcp";
+    private const string OtherTabKey = "other";
+    private const string AttachedTabKey = "attached";
+
+    private string selectedTab = SkillsTabKey;
+    private bool detailsDialogOpen;
+    private CapabilityCatalogItem? selectedCapability;
+
+    [Parameter]
+    public required IReadOnlyList<CapabilityCatalogItem> Capabilities { get; set; }
+
+    [Parameter]
+    public required IReadOnlyList<Guid> SelectedCapabilityIds { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> ToggleCapabilityRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> VerifyCapabilityRequested { get; set; }
+
+    private IReadOnlyList<SecondaryTabItem> CapabilityTabs =>
+    [
+        new(SkillsTabKey, "Skills", CountByKind(CapabilityKind.Skill), "Attach prompt and workflow skills the agent should actively use."),
+        new(McpTabKey, "MCP servers", CountByKind(CapabilityKind.McpServer), "Attach connector-backed MCP servers and inspect their paths before use."),
+        new(OtherTabKey, "Other", CountOtherCapabilities(), "Tools, plugins, RAG sources, AI context, and memory providers."),
+        new(AttachedTabKey, "Attached", SelectedCapabilityIds.Count.ToString(), "Review only the capabilities already assigned to the current agent.")
+    ];
+
+    private IReadOnlyList<CapabilityCatalogItem> FilteredCapabilities => selectedTab switch
+    {
+        McpTabKey => Capabilities
+            .Where(item => item.Kind == CapabilityKind.McpServer)
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        OtherTabKey => Capabilities
+            .Where(item => item.Kind is not (CapabilityKind.Skill or CapabilityKind.McpServer))
+            .OrderBy(item => item.Kind)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        AttachedTabKey => Capabilities
+            .Where(item => SelectedCapabilityIds.Contains(item.Id))
+            .OrderBy(item => item.Kind)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        _ => Capabilities
+            .Where(item => item.Kind == CapabilityKind.Skill)
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+    };
+
+    private Task HandleSelectedTabChanged(string value)
+    {
+        selectedTab = string.IsNullOrWhiteSpace(value) ? SkillsTabKey : value;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenDetailsAsync(CapabilityCatalogItem capability)
+    {
+        selectedCapability = capability;
+        detailsDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseDetailsDialog()
+    {
+        detailsDialogOpen = false;
+        selectedCapability = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenCapabilityPage()
+    {
+        if (selectedCapability is not null)
+        {
+            Navigation.NavigateTo($"/capabilities?capabilityId={selectedCapability.Id}");
+        }
+
+        return CloseDetailsDialog();
+    }
+
+    private string CountByKind(CapabilityKind kind)
+        => Capabilities.Count(item => item.Kind == kind).ToString();
+
+    private string CountOtherCapabilities()
+        => Capabilities.Count(item => item.Kind is not (CapabilityKind.Skill or CapabilityKind.McpServer)).ToString();
+
+    private string ResolveEmptyStateTitle()
+    {
+        return selectedTab switch
+        {
+            McpTabKey => "No MCP servers are cataloged yet",
+            OtherTabKey => "No additional capability types are cataloged yet",
+            AttachedTabKey => "No capabilities are attached to this agent yet",
+            _ => "No skills are cataloged yet"
+        };
+    }
+
+    private string ResolveEmptyStateDescription()
+    {
+        return selectedTab switch
+        {
+            McpTabKey => "Create MCP server entries on the capabilities page, then return here to assign them to the agent.",
+            OtherTabKey => "Create tools, plugins, RAG, AI context, or memory entries on the capabilities page, then return here to assign them.",
+            AttachedTabKey => "Use the Skills, MCP servers, or Other tabs to assign the capabilities this agent should carry.",
+            _ => "Create skill entries on the capabilities page, then return here to assign them to the agent."
+        };
+    }
+
+    private static string ResolveTone(CapabilityProofStatus status)
+    {
+        return status switch
+        {
+            CapabilityProofStatus.Verified => "success",
+            CapabilityProofStatus.Failed => "danger",
+            CapabilityProofStatus.PendingReview => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveCapabilityKindLabel(CapabilityKind kind)
+    {
+        return kind switch
+        {
+            CapabilityKind.McpServer => "MCP server",
+            CapabilityKind.AiContext => "AI context",
+            _ => kind.ToString()
+        };
+    }
+
+    private static string ResolveCapabilityStatusLabel(CapabilityProofStatus status)
+    {
+        return status switch
+        {
+            CapabilityProofStatus.Verified => "Verified",
+            CapabilityProofStatus.PendingReview => "Pending review",
+            CapabilityProofStatus.Failed => "Failed",
+            _ => "Not run"
+        };
+    }
+
+    private static string ResolveEndpointSummary(CapabilityCatalogItem capability)
+    {
+        return string.IsNullOrWhiteSpace(capability.EndpointOrPath)
+            ? "No endpoint or path is stored for this capability."
+            : capability.EndpointOrPath;
+    }
+
+    private static string ResolveProofNotes(CapabilityCatalogItem capability)
+    {
+        return string.IsNullOrWhiteSpace(capability.ProofNotes)
+            ? "No proof notes have been captured yet."
+            : capability.ProofNotes;
+    }
+
+    private static string ResolveConfigurationJson(CapabilityCatalogItem capability)
+    {
+        return string.IsNullOrWhiteSpace(capability.ConfigurationJson)
+            ? "{}"
+            : capability.ConfigurationJson;
+    }
+}

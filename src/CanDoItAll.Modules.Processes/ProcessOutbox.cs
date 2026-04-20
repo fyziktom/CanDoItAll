@@ -89,17 +89,24 @@ internal sealed class ProcessOutboxRecordConfiguration : IEntityTypeConfiguratio
 internal sealed record ProcessOutboxPayload(
     SearchDocumentInput? SearchUpsert,
     ProcessOutboxSearchDeleteRequest? SearchDelete,
-    ActivityWriteRequest? Activity);
+    ActivityWriteRequest? Activity,
+    ProcessOutboxAutomationDispatchRequest? AutomationDispatch = null);
 
 internal sealed record ProcessOutboxSearchDeleteRequest(
     string SourceType,
     string SourceKey);
+
+internal sealed record ProcessOutboxAutomationDispatchRequest(
+    Guid ProcessRunId,
+    Guid? StepRunId,
+    string Trigger);
 
 public sealed class ProcessOutboxService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
+    IProcessRunAutomationDispatchService automationDispatchService,
     ILogger<ProcessOutboxService> logger)
 {
     private const int MaxAttempts = 3;
@@ -125,28 +132,29 @@ public sealed class ProcessOutboxService(
             definition.Id,
             null,
             "save-definition",
-            new ProcessOutboxPayload(
-                new SearchDocumentInput(
-                    "process-definition",
-                    definition.Id.ToString(),
-                    "Processes",
+             new ProcessOutboxPayload(
+                 new SearchDocumentInput(
+                     "process-definition",
+                     definition.Id.ToString(),
+                     "Processes",
                     definition.Name,
                     definition.Summary,
                     $"{definition.ValueStatement}\nCustomer: {definition.CustomerName}\nOwner: {definition.OwnerName}\nVersion: {workingVersion.VersionNumber}",
                     route,
-                    definition.ProjectId),
-                null,
-                new ActivityWriteRequest(
-                    "processes",
+                     definition.ProjectId),
+                 null,
+                 new ActivityWriteRequest(
+                     "processes",
                     isNew ? "create-definition" : "update-definition",
                     isNew ? "Created process definition" : "Updated process definition",
                     definition.Name,
                     definition.ProjectId,
                     "process-definition",
-                    definition.Id,
-                    route,
-                    "process-management")),
-            cancellationToken);
+                     definition.Id,
+                     route,
+                     "process-management"),
+                 null),
+             cancellationToken);
     }
 
     public Task<Guid> EnqueueDefinitionPublishAsync(
@@ -165,20 +173,21 @@ public sealed class ProcessOutboxService(
             definition.Id,
             null,
             "publish-definition",
-            new ProcessOutboxPayload(
-                null,
-                null,
-                new ActivityWriteRequest(
+             new ProcessOutboxPayload(
+                 null,
+                 null,
+                 new ActivityWriteRequest(
                     "processes",
                     "publish-definition",
                     "Published process definition",
                     $"{definition.Name} v{publishedVersion.VersionNumber} is now immutable for runtime use.",
-                    definition.ProjectId,
-                    "process-definition",
-                    definition.Id,
-                    BuildDefinitionRoute(definition.Id, definition.ProjectId),
-                    "process-management")),
-            cancellationToken);
+                     definition.ProjectId,
+                     "process-definition",
+                     definition.Id,
+                     BuildDefinitionRoute(definition.Id, definition.ProjectId),
+                     "process-management"),
+                 null),
+             cancellationToken);
     }
 
     public Task<Guid> EnqueueDefinitionDeleteAsync(
@@ -198,6 +207,7 @@ public sealed class ProcessOutboxService(
             new ProcessOutboxPayload(
                 null,
                 new ProcessOutboxSearchDeleteRequest("process-definition", definitionId.ToString()),
+                null,
                 null),
             cancellationToken);
     }
@@ -228,7 +238,38 @@ public sealed class ProcessOutboxService(
                     "process-run",
                     run.Id,
                     BuildRunRoute(run),
-                    "process-management")),
+                    "process-management"),
+                null),
+            cancellationToken);
+    }
+
+    public Task<Guid> EnqueueAutomationDispatchAsync(
+        AppDbContext dbContext,
+        Guid? projectId,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        return EnqueueAsync(
+            dbContext,
+            projectId,
+            definitionId,
+            runId,
+            "dispatch-run-automation",
+            new ProcessOutboxPayload(
+                null,
+                null,
+                null,
+                new ProcessOutboxAutomationDispatchRequest(
+                    runId,
+                    stepRunId,
+                    string.IsNullOrWhiteSpace(trigger)
+                        ? "process-runtime"
+                        : trigger.Trim())),
             cancellationToken);
     }
 
@@ -465,6 +506,15 @@ public sealed class ProcessOutboxService(
                         ? $"process-outbox:{record.Id:N}:activity"
                         : payload.Activity.IdempotencyKey.Trim()
                 },
+                cancellationToken);
+        }
+
+        if (payload.AutomationDispatch is not null)
+        {
+            await automationDispatchService.DispatchAsync(
+                payload.AutomationDispatch.ProcessRunId,
+                payload.AutomationDispatch.StepRunId,
+                payload.AutomationDispatch.Trigger,
                 cancellationToken);
         }
     }

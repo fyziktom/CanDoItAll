@@ -23,6 +23,7 @@ Execute targeted regression, browser proof, and defect triage against the review
 - Requires decision record: False
 
 ## Dependencies
+- implementation
 - peer-review
 
 ## Role assignments
@@ -30,10 +31,11 @@ Execute targeted regression, browser proof, and defect triage against the review
 - `lead-engineer` / Lead engineer => Reviewer; required=True; fallback-order=0; rebind=Implementation owner reviews failures and fixes before release approval.
 
 ## Artifact expectations
-- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=HumanApproved | sensitivity=Internal | validation=Must name changed flows, assertion depth, screenshots, and unresolved risks.
+- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=ReviewRequired | sensitivity=Internal | validation=Must name changed flows, assertion depth, screenshots, and unresolved risks.
 
 ## Artifact inputs
-- No explicit artifact inputs.
+- From step `implementation` expectation `implementation-change-set`
+- From step `peer-review` expectation `peer-review-note`
 
 ## Branch outcomes
 - No explicit branch outcomes.

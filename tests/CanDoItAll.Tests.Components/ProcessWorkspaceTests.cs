@@ -100,6 +100,19 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Process_workspace_exposes_feed_defaults_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-feed-defaults-button']"));
+        });
+    }
+
+    [Fact]
     public async Task Steps_canvas_toolbar_switches_between_authoring_and_delete_modes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1142,6 +1155,151 @@ public sealed class ProcessWorkspaceTests
             "merge-change");
     }
 
+    [Fact]
+    public async Task Steps_canvas_connection_actions_create_and_delete_messaging_links_and_classify_them_visually()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var process = BuildMessagingCanvasDefinition(await CreateProjectAsync(projectsService, "Canvas messaging project"));
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var sourceRole = Assert.Single(initialEditor.Roles, item => item.Key == process.SourceRoleKey);
+        var targetRole = Assert.Single(initialEditor.Roles, item => item.Key == process.TargetRoleKey);
+        var sourceNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(sourceRole);
+        var targetNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(targetRole);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                targetNodeId,
+                "connection:create",
+                0,
+                0,
+                "link",
+                sourceNodeId,
+                targetNodeId,
+                "messaging",
+                ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput,
+                ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Contains(editor.MessagingPolicies, item =>
+                item.SourceRoleRequirementId == sourceRole.Id &&
+                item.TargetRoleRequirementId == targetRole.Id);
+
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            var currentSourceNode = Assert.Single(surface.Nodes, item => item.Id == sourceNodeId);
+            var currentTargetNode = Assert.Single(surface.Nodes, item => item.Id == targetNodeId);
+            Assert.Contains(currentSourceNode.OutputPorts, port =>
+                port.Id == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput &&
+                port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.Messaging);
+            Assert.Contains(currentTargetNode.InputPorts, port =>
+                port.Id == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput &&
+                port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.Messaging);
+            Assert.Contains(surface.Links, link =>
+                link.SourceId == sourceNodeId &&
+                link.TargetId == targetNodeId &&
+                link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput &&
+                link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput &&
+                string.Equals(link.Kind, "messaging", StringComparison.Ordinal));
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                targetNodeId,
+                "delete-link",
+                0,
+                0,
+                "link",
+                sourceNodeId,
+                targetNodeId,
+                "messaging",
+                ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput,
+                ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Empty(editor.MessagingPolicies);
+
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.DoesNotContain(surface.Links, link =>
+                link.SourceId == sourceNodeId &&
+                link.TargetId == targetNodeId &&
+                link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput &&
+                link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput &&
+                string.Equals(link.Kind, "messaging", StringComparison.Ordinal));
+        });
+    }
+
+    private static MessagingCanvasFixture BuildMessagingCanvasDefinition(Guid projectId)
+    {
+        var sourceRoleId = Guid.NewGuid();
+        var targetRoleId = Guid.NewGuid();
+
+        var editor = new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Canvas messaging policy process",
+            Summary = "Exercise process-owned Messaging links on the authoring canvas.",
+            ValueStatement = "Messaging links must stay explicit, directional, and visually distinct.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Messaging owner",
+            GovernancePolicySummary = "Direct role messaging requires an explicit process-owned policy link.",
+            ChangeSummary = "Component-test coverage for Messaging canvas links.",
+            ConstitutionRuleSummary = "No role may bypass the Messaging graph in authoring or runtime.",
+            OperatingModeSummary = "Authoring-first validation.",
+            SimulationReadinessSummary = "Safe for component validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = sourceRoleId,
+                    Key = "delivery-lead",
+                    DisplayName = "Delivery lead",
+                    Purpose = "Initiate direct role-to-role delivery handoffs.",
+                    StaffingIntent = "Primary delivery contact.",
+                    PreferredExecutorKind = "person",
+                    DefaultAllocationPercent = 60
+                },
+                new ProcessRoleEditorModel
+                {
+                    Id = targetRoleId,
+                    Key = "review-lead",
+                    DisplayName = "Review lead",
+                    Purpose = "Receive delivery-side direct role messaging.",
+                    StaffingIntent = "Primary review contact.",
+                    PreferredExecutorKind = "person",
+                    DefaultAllocationPercent = 40
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Key = "capture-handoff",
+                    Title = "Capture delivery handoff",
+                    StepKind = ProcessStepKind.Start,
+                    OutputContractSummary = "Visible role nodes with a valid process definition.",
+                    CanvasX = 360,
+                    CanvasY = 200
+                }
+            ]
+        };
+
+        return new MessagingCanvasFixture(editor, "delivery-lead", "review-lead");
+    }
+
     private static async Task ActivateStepsTabAsync(IRenderedComponent<ProcessWorkspace> cut)
     {
         var method = typeof(ProcessWorkspace).GetMethod("HandleDetailTabChanged", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -1293,4 +1451,9 @@ public sealed class ProcessWorkspaceTests
         string FixStepKey,
         string ImplementationStepKey,
         string MergeStepKey);
+
+    private sealed record MessagingCanvasFixture(
+        ProcessDefinitionEditorModel Editor,
+        string SourceRoleKey,
+        string TargetRoleKey);
 }

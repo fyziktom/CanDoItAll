@@ -171,7 +171,7 @@ public sealed class ProjectStructureAgentService(
                         request.Y,
                         request.StartUtc,
                         request.EndUtc,
-                        request.ObjectSubtype,
+                        ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
                         request.Media,
                         request.MetadataJson,
                         request.DurationSeconds),
@@ -196,18 +196,74 @@ public sealed class ProjectStructureAgentService(
             async cancellationToken =>
             {
                 var existingNode = await GetNodeAsync(projectId, nodeId, cancellationToken);
-                var updatedNode = await projectWorkbenchService.UpdateObjectAsync(
-                    projectId,
-                    nodeId,
-                    new ProjectObjectEditRequest(
-                        request.Title,
-                        request.Subtitle,
-                        request.Notes,
-                        request.StartUtc,
-                        request.EndUtc,
-                        request.MetadataJson ?? existingNode.MetadataJson,
-                        request.DurationSeconds),
-                    cancellationToken);
+                var targetObjectType = request.ObjectType ?? existingNode.ObjectType;
+                var targetObjectSubtype = request.ObjectSubtype is not null
+                    ? ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(targetObjectType, request.ObjectSubtype) ?? string.Empty
+                    : request.ObjectType.HasValue && request.ObjectType.Value != existingNode.ObjectType
+                        ? string.Empty
+                        : existingNode.ObjectSubtype;
+                var metadataJson = string.IsNullOrWhiteSpace(request.MetadataJson)
+                    ? string.IsNullOrWhiteSpace(existingNode.MetadataJson) ? "{}" : existingNode.MetadataJson
+                    : request.MetadataJson;
+
+                ProjectStructureNode? updatedNode;
+                var requiresReclassification = targetObjectType != existingNode.ObjectType ||
+                    !string.Equals(targetObjectSubtype, existingNode.ObjectSubtype, StringComparison.OrdinalIgnoreCase);
+                if (requiresReclassification)
+                {
+                    updatedNode = await projectWorkbenchService.ReclassifyObjectAsync(
+                        projectId,
+                        nodeId,
+                        new ProjectObjectReclassificationRequest(
+                            targetObjectType,
+                            targetObjectSubtype,
+                            request.Title,
+                            request.Subtitle,
+                            request.Notes,
+                            metadataJson),
+                        cancellationToken);
+                    if (updatedNode is null)
+                    {
+                        throw new ProjectStructureAgentException(
+                            400,
+                            "NodeReclassificationUnavailable",
+                            $"Node '{nodeId}' cannot be reclassified from '{existingNode.ObjectType}:{existingNode.ObjectSubtype}' to '{targetObjectType}:{targetObjectSubtype}'.");
+                    }
+
+                    if (request.StartUtc.HasValue ||
+                        request.EndUtc.HasValue ||
+                        request.DurationSeconds.HasValue)
+                    {
+                        updatedNode = await projectWorkbenchService.UpdateObjectAsync(
+                            projectId,
+                            nodeId,
+                            new ProjectObjectEditRequest(
+                                updatedNode.Title,
+                                updatedNode.Subtitle,
+                                updatedNode.Notes,
+                                request.StartUtc,
+                                request.EndUtc,
+                                metadataJson,
+                                request.DurationSeconds),
+                            cancellationToken);
+                    }
+                }
+                else
+                {
+                    updatedNode = await projectWorkbenchService.UpdateObjectAsync(
+                        projectId,
+                        nodeId,
+                        new ProjectObjectEditRequest(
+                            request.Title,
+                            request.Subtitle,
+                            request.Notes,
+                            request.StartUtc,
+                            request.EndUtc,
+                            metadataJson,
+                            request.DurationSeconds),
+                        cancellationToken);
+                }
+
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);

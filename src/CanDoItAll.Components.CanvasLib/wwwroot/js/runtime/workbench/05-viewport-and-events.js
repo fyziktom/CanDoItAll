@@ -808,12 +808,12 @@
         publishSelection(state);
         publishState(state);
 
-        const collapseOnDoubleClick = state?.surface?.chrome?.collapseOnDoubleClick !== false;
-        if (collapseOnDoubleClick && node.isInlineTextNode) {
+        if (node.isInlineTextNode) {
             openExistingNoteEditor(state, node);
             return;
         }
 
+        const collapseOnDoubleClick = state?.surface?.chrome?.collapseOnDoubleClick !== false;
         if (collapseOnDoubleClick && node.isCollapsible) {
             toggleCollapse(state, node.id);
             return;

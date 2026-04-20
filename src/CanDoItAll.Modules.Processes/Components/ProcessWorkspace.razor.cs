@@ -47,6 +47,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     [Inject]
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
 
+    [Inject]
+    private ProcessCatalogWarmupService CatalogWarmupService { get; set; } = default!;
+
     [Parameter]
     public Guid? ProjectId { get; set; }
 
@@ -64,6 +67,8 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessRunAssignmentViewModel> assignments = [];
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
+    private IReadOnlyList<ProcessExecutionRunViewModel> executionRuns = [];
+    private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
@@ -95,12 +100,18 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string assignmentExecutorKind = "person";
     private string assignmentBindingReason = string.Empty;
     private bool assignmentIsFallback;
+    private bool assignmentAllowsDirectMessaging = true;
+    private Guid? directMessageSourceRoleRequirementId;
+    private Guid? directMessageTargetRoleRequirementId;
+    private string directMessageBody = string.Empty;
     private Dictionary<Guid, Guid?> runtimeBranchOutcomeSelections = [];
+    private IReadOnlyList<ProcessDirectMessageThreadViewModel> directMessageThreads = [];
     private string exportJson = string.Empty;
     private string importJson = string.Empty;
     private string projectName = string.Empty;
     private string message = string.Empty;
     private bool isError;
+    private bool isFeedingDefaults;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
     private Guid? loadedProcessQueryId;
@@ -130,6 +141,16 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
             ? assignments.FirstOrDefault(item => item.Id == selectedAssignmentId.Value)
             : null;
 
+    private IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments
+        => assignments
+            .Where(item => !item.StepDefinitionId.HasValue)
+            .OrderBy(
+                item => string.IsNullOrWhiteSpace(item.RoleDisplayName)
+                    ? ResolveRoleName(item.RoleRequirementId)
+                    : item.RoleDisplayName,
+                StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     private string PageEyebrow
         => ProjectId.HasValue
             ? "Project processes"
@@ -150,318 +171,6 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private int SelectedDetailTabIndex
         => ResolveDetailTabIndex(detailTab);
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (hasLoadedParameters &&
-            loadedProjectId == ProjectId &&
-            loadedProcessQueryId == ProcessIdQuery &&
-            loadedRunQueryId == RunIdQuery)
-        {
-            return;
-        }
-
-        hasLoadedParameters = true;
-        loadedProjectId = ProjectId;
-        loadedProcessQueryId = ProcessIdQuery;
-        loadedRunQueryId = RunIdQuery;
-        await LoadWorkspaceAsync();
-    }
-
-    public void Dispose()
-    {
-        CancelPendingDefinitionCanvasPersistence();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
-    }
-
-    private async Task LoadWorkspaceAsync()
-    {
-        if (ProjectId.HasValue)
-        {
-            var project = await ProjectsService.GetAsync(ProjectId.Value);
-            projectName = project.Name;
-        }
-        else
-        {
-            projectName = string.Empty;
-        }
-
-        definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
-        var nextSelectedProcessId = ResolveSelectedProcessId();
-        if (nextSelectedProcessId != selectedProcessId)
-        {
-            await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
-            selectedCanvasNodeId = null;
-            ResetDefinitionCanvasState();
-            ResetRuntimeCanvasState();
-        }
-
-        selectedProcessId = nextSelectedProcessId;
-        editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId);
-        executorOptions = await ProcessesService.ListExecutorOptionsAsync();
-        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
-        improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId);
-
-        if (ProjectId.HasValue)
-        {
-            partyOptions = await ProcessesService.ListPartyOptionsAsync(ProjectId.Value);
-        }
-        else
-        {
-            partyOptions = [];
-        }
-
-        if (selectedProcessId.HasValue)
-        {
-            runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId);
-        }
-        else
-        {
-            runs = [];
-        }
-
-        var nextSelectedRunId = ResolveSelectedRunId();
-        if (nextSelectedRunId != selectedRunId)
-        {
-            selectedCanvasNodeId = null;
-            ResetRuntimeCanvasState();
-        }
-
-        selectedRunId = nextSelectedRunId;
-        await LoadRunDetailsAsync();
-        RefreshCanvasSurface();
-        StateHasChanged();
-    }
-
-    private async Task LoadRunDetailsAsync()
-    {
-        if (!selectedRunId.HasValue)
-        {
-            stepRuns = [];
-            decisions = [];
-            artifacts = [];
-            assignments = [];
-            workBriefs = [];
-            conformanceObservations = [];
-            selectedAssignmentId = null;
-            artifactStepRunId = null;
-            return;
-        }
-
-        var runDetails = await RunDetailsLoader.LoadAsync(selectedRunId.Value);
-        stepRuns = runDetails.StepRuns;
-        decisions = runDetails.Decisions;
-        artifacts = runDetails.Artifacts;
-        assignments = runDetails.Assignments;
-        workBriefs = runDetails.WorkBriefs;
-        conformanceObservations = runDetails.ConformanceObservations;
-        var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
-        foreach (var stepRun in stepRuns) {
-            runtimeBranchOutcomeSelections.TryGetValue(stepRun.Id, out var selectedBranchOutcomeId);
-            if (selectedBranchOutcomeId.HasValue &&
-                stepRun.AvailableBranchOutcomes.All(item => item.Id != selectedBranchOutcomeId.Value)) {
-                selectedBranchOutcomeId = null;
-            }
-
-            refreshedRuntimeBranchSelections[stepRun.Id] = selectedBranchOutcomeId ?? stepRun.SelectedBranchOutcomeId;
-        }
-
-        runtimeBranchOutcomeSelections = refreshedRuntimeBranchSelections;
-
-        if (!selectedAssignmentId.HasValue || assignments.All(item => item.Id != selectedAssignmentId.Value))
-        {
-            selectedAssignmentId = assignments.FirstOrDefault()?.Id;
-        }
-
-        ApplyAssignmentSelection();
-
-        if (!artifactStepRunId.HasValue || stepRuns.All(item => item.Id != artifactStepRunId.Value))
-        {
-            artifactStepRunId = stepRuns.FirstOrDefault()?.Id;
-        }
-    }
-
-    private Guid? ResolveSelectedProcessId()
-    {
-        if (ProcessIdQuery.HasValue && definitions.Any(definition => definition.Id == ProcessIdQuery.Value))
-        {
-            return ProcessIdQuery.Value;
-        }
-
-        if (selectedProcessId.HasValue && definitions.Any(definition => definition.Id == selectedProcessId.Value))
-        {
-            return selectedProcessId.Value;
-        }
-
-        return definitions.FirstOrDefault()?.Id;
-    }
-
-    private Guid? ResolveSelectedRunId()
-    {
-        if (RunIdQuery.HasValue && runs.Any(run => run.Id == RunIdQuery.Value))
-        {
-            return RunIdQuery.Value;
-        }
-
-        if (selectedRunId.HasValue && runs.Any(run => run.Id == selectedRunId.Value))
-        {
-            return selectedRunId.Value;
-        }
-
-        return runs.FirstOrDefault()?.Id;
-    }
-
-    private void RefreshCanvasSurface()
-    {
-        NormalizeEditorForAuthoring();
-        canvasSurface = detailTab == "runs" && SelectedRun is not null
-            ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
-            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId, definitionCanvasTool);
-
-        var uiState = BuildCanvasUiState(canvasSurface, ResolveStoredCanvasUiState());
-        canvasSurface.UiState = uiState;
-        StoreCanvasUiState(uiState);
-
-        if (string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var synchronizedSelection = uiState.SelectedNodeIds.FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(synchronizedSelection))
-        {
-            selectedCanvasNodeId = synchronizedSelection;
-            return;
-        }
-
-        if (selectedCanvasNodeId is not null)
-        {
-            selectedCanvasNodeId = null;
-        }
-    }
-
-    private void NormalizeEditorForAuthoring()
-    {
-        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
-    }
-
-    private static void NormalizeStepDraftForAuthoring(ProcessStepEditorModel step)
-    {
-        ProcessCanvasBranching.NormalizeStepDraft(step);
-    }
-
-    private CanvasWorkbenchUiState ResolveStoredCanvasUiState()
-        => IsRuntimeCanvasActive
-            ? runtimeCanvasUiState
-            : definitionCanvasUiState;
-
-    private void StoreCanvasUiState(CanvasWorkbenchUiState uiState)
-    {
-        var storedState = CloneCanvasUiState(uiState);
-        if (IsRuntimeCanvasActive)
-        {
-            runtimeCanvasUiState = storedState;
-        }
-        else
-        {
-            definitionCanvasUiState = storedState;
-        }
-    }
-
-    private CanvasWorkbenchUiState BuildCanvasUiState(CanvasWorkbenchSurface surface, CanvasWorkbenchUiState storedUiState)
-    {
-        ArgumentNullException.ThrowIfNull(surface);
-        ArgumentNullException.ThrowIfNull(storedUiState);
-
-        var uiState = CloneCanvasUiState(storedUiState);
-        var availableNodeIds = surface.Nodes
-            .Select(node => node.Id)
-            .ToHashSet(StringComparer.Ordinal);
-
-        if (string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal))
-        {
-            uiState.SelectedNodeIds = [];
-        }
-        else if (!string.IsNullOrWhiteSpace(selectedCanvasNodeId) && availableNodeIds.Contains(selectedCanvasNodeId))
-        {
-            uiState.SelectedNodeIds = [selectedCanvasNodeId];
-        }
-        else
-        {
-            uiState.SelectedNodeIds = uiState.SelectedNodeIds
-                .Where(availableNodeIds.Contains)
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
-
-            if (uiState.SelectedNodeIds.Count == 0)
-            {
-                uiState.SelectedNodeIds = surface.UiState.SelectedNodeIds
-                    .Where(availableNodeIds.Contains)
-                    .Distinct(StringComparer.Ordinal)
-                    .ToList();
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(uiState.ActiveInspectorTab))
-        {
-            uiState.ActiveInspectorTab = surface.UiState.ActiveInspectorTab;
-        }
-
-        return uiState;
-    }
-
-    private void ResetDefinitionCanvasState()
-    {
-        definitionCanvasTool = DefinitionCanvasSelectTool;
-        definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
-    }
-
-    private void ResetRuntimeCanvasState()
-    {
-        runtimeCanvasUiState = CreateDefaultRuntimeCanvasUiState();
-    }
-
-    private static CanvasWorkbenchUiState CreateDefaultDefinitionCanvasUiState()
-        => new()
-        {
-            ActiveInspectorTab = "definition"
-        };
-
-    private Task SelectDefinitionCanvasToolAsync()
-    {
-        SetDefinitionCanvasTool(DefinitionCanvasSelectTool);
-        return Task.CompletedTask;
-    }
-
-    private Task DeleteDefinitionCanvasToolAsync()
-    {
-        SetDefinitionCanvasTool(DefinitionCanvasDeleteTool);
-        return Task.CompletedTask;
-    }
-
-    private void SetDefinitionCanvasTool(string tool)
-    {
-        definitionCanvasTool = string.Equals(tool, DefinitionCanvasDeleteTool, StringComparison.Ordinal)
-            ? DefinitionCanvasDeleteTool
-            : DefinitionCanvasSelectTool;
-        if (IsDefinitionCanvasActive)
-        {
-            RefreshCanvasSurface();
-        }
-    }
-
-    private static CanvasWorkbenchUiState CreateDefaultRuntimeCanvasUiState()
-        => new()
-        {
-            ActiveInspectorTab = "runtime"
-        };
-
-    private static CanvasWorkbenchUiState CloneCanvasUiState(CanvasWorkbenchUiState uiState)
-        => CanvasWorkbenchUiState.Parse(uiState.ToJson());
 
     private static int ResolveDetailTabIndex(string key)
     {
@@ -507,5 +216,32 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     {
         message = string.Empty;
         isError = false;
+    }
+
+    private async Task FeedDefaultsAsync()
+    {
+        if (isFeedingDefaults)
+        {
+            return;
+        }
+
+        isFeedingDefaults = true;
+        ClearMessage();
+
+        try
+        {
+            await CatalogWarmupService.WarmupAsync(synchronizeExistingDefinitions: true);
+            await LoadWorkspaceAsync();
+            SetMessage("Default processes were synchronized from the current template pack.");
+        }
+        catch (Exception exception)
+        {
+            SetError($"Failed to synchronize default processes. {exception.Message}");
+        }
+        finally
+        {
+            isFeedingDefaults = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

@@ -27,6 +27,8 @@ public interface IProjectStructureCoordinator
 
     Task<ProjectStructureNodeSummary> UpdateNodeAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
+    Task<OperationAck> MoveNodeAsync(Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
+
     Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
     Task<ProjectStructureNodeSummary> ReparentNodeAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
@@ -136,6 +138,15 @@ public sealed class ProjectStructureCoordinator(
     {
         return httpClient.PutAsync<ProjectStructureNodeEditInput, ProjectStructureNodeSummary>(
             $"/api/project-structure-mcp/projects/{projectId}/nodes/{Uri.EscapeDataString(nodeId)}",
+            request,
+            estimatedMinutes,
+            cancellationToken);
+    }
+
+    public Task<OperationAck> MoveNodeAsync(Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+    {
+        return httpClient.PostAsync<ProjectStructureNodeMoveInput, OperationAck>(
+            $"/api/project-structure-mcp/projects/{projectId}/nodes/move",
             request,
             estimatedMinutes,
             cancellationToken);

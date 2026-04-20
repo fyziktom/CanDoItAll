@@ -1,4 +1,6 @@
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -10,9 +12,11 @@ public static class ProcessesModuleServiceCollectionExtensions
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
+        services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
+        services.AddScoped<ProcessRunRecoveryService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();
@@ -27,9 +31,37 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();
         services.AddScoped<ProcessDevelopmentSeedService>();
+        services.AddScoped<ProcessCatalogWarmupService>();
+        services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
+        services.AddHostedService<ProcessCatalogWarmupWorker>();
         services.AddHostedService<ProcessOutboxDrainWorker>();
+        services.AddHostedService<ProcessRunRecoveryWorker>();
         return services;
+    }
+}
+
+public interface IProcessProjectStructureBridge
+{
+    Task SyncRunAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        IReadOnlyCollection<ProcessStepRun> stepRuns,
+        CancellationToken cancellationToken = default);
+}
+
+internal sealed class NoopProcessProjectStructureBridge : IProcessProjectStructureBridge
+{
+    public Task SyncRunAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        IReadOnlyCollection<ProcessStepRun> stepRuns,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(stepRuns);
+        return Task.CompletedTask;
     }
 }
 

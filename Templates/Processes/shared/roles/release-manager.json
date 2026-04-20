@@ -7,7 +7,7 @@
   "Summary": "Operational owner for release window control, rollback readiness, and live-watch discipline.",
   "Purpose": "Coordinate go-live preparation and keep rollback and telemetry watch ownership explicit before and during release execution.",
   "StaffingIntent": "Operational owner for production execution, release windows, and rollback decisions.",
-  "PreferredExecutorKind": "person",
+  "PreferredExecutorKind": "person-or-agent",
   "PreferredProjectAssignmentRole": "Manager",
   "IsRequired": true,
   "AllowsFallback": true,

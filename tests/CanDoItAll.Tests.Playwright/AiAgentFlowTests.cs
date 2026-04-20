@@ -17,7 +17,7 @@ public sealed class AiAgentFlowTests
     }
 
     [Fact]
-    public async Task Agents_workspace_supports_creation_and_governance_profile()
+    public async Task Agentframework_catalog_projects_agents_into_crm_hr_directory()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b09";
         Directory.CreateDirectory(evidenceDirectory);
@@ -32,58 +32,52 @@ public sealed class AiAgentFlowTests
         });
         var page = await context.NewPageAsync();
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
-        var ownerName = $"B09 Steward {suffix}";
         var providerName = $"B09 Provider {suffix}";
         var agentName = $"B09 Agent {suffix}";
-        var seededDependencies = await SeedAgentDependenciesAsync(ownerName, providerName);
+        var seededDependencies = await SeedAgentDependenciesAsync(providerName);
 
-        await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/agents");
+        await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=agents");
         await DismissStartupModalIfPresentAsync(page);
-        await page.GetByTestId("crmhr-agent-name").WaitForAsync();
+        await page.GetByTestId("agents-catalog-name").WaitForAsync();
 
-        await page.GetByTestId("crmhr-agent-name").FillAsync(agentName);
-        await page.GetByTestId("crmhr-agent-code").FillAsync("B09-AI");
-        await page.GetByTestId("crmhr-agent-summary").FillAsync("Coordinates structured analysis and guarded delivery support.");
-        await page.GetByTestId("crmhr-agent-save-button").ClickAsync();
+        await page.GetByTestId("agents-catalog-name").FillAsync(agentName);
+        await page.GetByTestId("agents-catalog-role").FillAsync("Delivery analyst");
+        await page.GetByTestId("agents-catalog-summary").FillAsync("Coordinates structured analysis and guarded delivery support.");
+        await page.GetByTestId("agents-catalog-instructions").FillAsync("Review the brief, keep the runtime explicit, and create durable delivery evidence.");
+        await page.GetByTestId("agents-catalog-provider").SelectOptionAsync(new[] { seededDependencies.ProviderId.ToString() });
+        await page.GetByTestId("agents-catalog-model").FillAsync("llama3.2");
+        await page.GetByTestId("agents-catalog-save").ClickAsync();
 
-        await page.GetByTestId("crmhr-agent-profile-save-button").WaitForAsync();
-        await page.GetByTestId("crmhr-agent-provider").SelectOptionAsync(new[] { seededDependencies.ProviderId.ToString() });
-        await page.GetByTestId("crmhr-agent-default-model").FillAsync("llama3.2");
-        await page.GetByTestId("crmhr-agent-execution-mode").SelectOptionAsync(AiExecutionMode.ThirdParty.ToString());
-        await page.GetByTestId("crmhr-agent-owner").SelectOptionAsync(new[] { seededDependencies.OwnerId.ToString() });
-        await page.GetByTestId("crmhr-agent-validation-status").SelectOptionAsync(AiValidationStatus.ReviewRequired.ToString());
-        await page.GetByTestId("crmhr-agent-last-reviewed-on").FillAsync("2026-04-03");
-        await page.GetByTestId("crmhr-agent-notes").FillAsync("Requires human approval before any customer-facing recommendation.");
-        await page.GetByTestId("crmhr-agent-capability-add").ClickAsync();
-        await page.GetByTestId("crmhr-agent-capability-name-0").WaitForAsync();
-        await page.GetByTestId("crmhr-agent-capability-name-0").FillAsync("Architecture review");
-        await page.GetByTestId("crmhr-agent-capability-scope-0").FillAsync("Solution design and impact analysis");
-        await page.GetByTestId("crmhr-agent-capability-tool-access-0").FillAsync("Read-only repository and project metadata");
-        await page.GetByTestId("crmhr-agent-capability-limitations-0").FillAsync("No production execution or customer commitments");
-        await page.GetByTestId("crmhr-agent-capability-notes-0").FillAsync("Escalate unresolved ambiguity to the steward.");
-        await page.GetByTestId("crmhr-agent-profile-save-button").ClickAsync();
-
-        await page.GetByTestId("crmhr-agent-message").WaitForAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-message"), "AI agent profile saved.");
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-provider"), providerName);
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-owner"), ownerName);
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-capabilities"), "1");
+        await ExpectTextContainsAsync(page.Locator("body"), "Technical agent saved.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-agents-b09-desktop.png"),
+            Path = Path.Combine(evidenceDirectory, "agentframework-agents-b09-desktop.png"),
             FullPage = true
         });
 
         await page.SetViewportSizeAsync(1100, 900);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-agents-b09-tablet.png"),
+            Path = Path.Combine(evidenceDirectory, "agentframework-agents-b09-tablet.png"),
             FullPage = true
         });
 
-        await page.GetByRole(AriaRole.Button, new() { Name = "Open directory record", Exact = true }).First.ClickAsync();
+        await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/agents");
+        await page.GetByTestId("crmhr-agent-search").WaitForAsync();
+        await page.GetByTestId("crmhr-agent-search").FillAsync(agentName);
+        await page.GetByText(agentName, new PageGetByTextOptions { Exact = true }).First.ClickAsync();
+        await page.GetByTestId("crmhr-agent-open-technical-record").WaitForAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-provider"), providerName);
+        await page.GetByTestId("crmhr-agent-open-technical-record").ClickAsync();
+        await WaitForUrlContainsAsync(page, "/agents?tab=agents&agentId=");
+        await ExpectInputValueContainsAsync(page.GetByTestId("agents-catalog-name"), agentName);
+        await ExpectInputValueContainsAsync(page.GetByTestId("agents-catalog-model"), "llama3.2");
+        await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/agents");
+        await page.GetByTestId("crmhr-agent-search").FillAsync(agentName);
+        await page.GetByText(agentName, new PageGetByTextOptions { Exact = true }).First.ClickAsync();
+        await page.GetByTestId("crmhr-agent-open-directory-record").ClickAsync();
         await WaitForUrlContainsAsync(page, "/crm-hr/directory?partyId=");
         await page.GetByTestId("crmhr-party-display-name").WaitForAsync();
         await ExpectInputValueContainsAsync(page.GetByTestId("crmhr-party-display-name"), agentName);
@@ -91,7 +85,7 @@ public sealed class AiAgentFlowTests
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
-    private async Task<SeededAiAgentDependencies> SeedAgentDependenciesAsync(string ownerName, string providerName)
+    private async Task<SeededAiAgentDependencies> SeedAgentDependenciesAsync(string providerName)
     {
         var activeProfile = CreateActiveProfile();
         await using var serviceProvider = await TestApplicationBootstrap.BuildServiceProviderAsync(
@@ -103,13 +97,7 @@ public sealed class AiAgentFlowTests
                 ["DevelopmentManager:TuningModeEnabled"] = "false"
             });
         await using var scope = serviceProvider.CreateAsyncScope();
-        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var workspaceService = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
-
-        var ownerId = await CreatePersonAsync(
-            partyDirectoryService,
-            ownerName,
-            $"owner.{ownerName[^6..].ToLowerInvariant()}@example.test");
         var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = providerName,
@@ -125,7 +113,7 @@ public sealed class AiAgentFlowTests
         });
         Assert.True(providerSave.IsSuccess);
 
-        return new SeededAiAgentDependencies(ownerId, providerSave.Value);
+        return new SeededAiAgentDependencies(providerSave.Value);
     }
 
     private TestDatabaseProfile CreateActiveProfile()
@@ -153,42 +141,6 @@ public sealed class AiAgentFlowTests
             fixture.DatabaseConnectionString,
             workspaceRoot,
             Path.Combine(profileRoot, "manager-artifacts"));
-    }
-
-    private static async Task<Guid> CreatePersonAsync(PartyDirectoryService partyDirectoryService, string displayName, string email)
-    {
-        var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
-            PartyType = PartyType.Person,
-            LifecycleStatus = PartyLifecycleStatus.Active,
-            DisplayName = displayName,
-            Summary = $"{displayName} summary",
-            LastChangedBy = "playwright-tests",
-            Roles =
-            [
-                new PartyRoleAssignmentEditorModel
-                {
-                    RoleKind = PartyRoleKind.Employee,
-                    Title = "Employee",
-                    IsPrimary = true
-                }
-            ],
-            ContactPoints =
-            [
-                new PartyContactPointEditorModel
-                {
-                    ContactType = PartyContactType.Email,
-                    Label = "Primary email",
-                    Value = email,
-                    NormalizedValue = email.ToLowerInvariant(),
-                    IsPrimary = true,
-                    IsPublic = true
-                }
-            ]
-        });
-
-        Assert.True(result.IsSuccess);
-        return result.Value;
     }
 
     private static async Task ExpectInputValueContainsAsync(ILocator locator, string expectedValue, int timeoutMs = 10_000)
@@ -261,5 +213,5 @@ public sealed class AiAgentFlowTests
         throw new TimeoutException($"Timed out waiting for URL to contain '{fragment}'. Current URL: {page.Url}");
     }
 
-    private sealed record SeededAiAgentDependencies(Guid OwnerId, Guid ProviderId);
+    private sealed record SeededAiAgentDependencies(Guid ProviderId);
 }

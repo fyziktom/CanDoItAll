@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -33,12 +34,51 @@ public sealed partial class ProcessesService
             return Error.Validation("Every step requires a title.", "processes.step-title-required");
         }
 
+        var roleIds = model.Roles
+            .Where(role => role.Id.HasValue && role.Id.Value != Guid.Empty)
+            .Select(role => role.Id!.Value)
+            .ToHashSet();
+        var duplicateMessagingPolicy = model.MessagingPolicies
+            .Where(item => item.SourceRoleRequirementId.HasValue && item.TargetRoleRequirementId.HasValue)
+            .GroupBy(item => (item.SourceRoleRequirementId!.Value, item.TargetRoleRequirementId!.Value))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateMessagingPolicy is not null) {
+            return Error.Validation("Messaging policy links must remain unique per source and target role pair.", "processes.messaging-policy-duplicate");
+        }
+
+        foreach (var messagingPolicy in model.MessagingPolicies) {
+            if (!messagingPolicy.SourceRoleRequirementId.HasValue || !messagingPolicy.TargetRoleRequirementId.HasValue) {
+                return Error.Validation("Messaging policy links must resolve both the source and target process role.", "processes.messaging-policy-role-required");
+            }
+
+            if (messagingPolicy.SourceRoleRequirementId == messagingPolicy.TargetRoleRequirementId) {
+                return Error.Validation("Messaging policy links cannot target the same role as both source and destination.", "processes.messaging-policy-self-reference");
+            }
+
+            if (!roleIds.Contains(messagingPolicy.SourceRoleRequirementId.Value) ||
+                !roleIds.Contains(messagingPolicy.TargetRoleRequirementId.Value)) {
+                return Error.Validation("Messaging policy links must reference roles in the same process definition.", "processes.messaging-policy-role-invalid");
+            }
+        }
+
         var stepsById = model.Steps
             .Where(step => step.Id.HasValue)
             .ToDictionary(step => step.Id!.Value);
         foreach (var step in model.Steps) {
             if (step.BranchOutcomes.Any(outcome => string.IsNullOrWhiteSpace(outcome.Title))) {
                 return Error.Validation("Every branch outcome requires a title.", "processes.branch-outcome-title-required");
+            }
+
+            if (step.RoleAssignments.Any(assignment => !assignment.RoleRequirementId.HasValue || assignment.RoleRequirementId.Value == Guid.Empty)) {
+                return Error.Validation(
+                    $"Step '{step.Title}' contains a role assignment that does not resolve to a process role.",
+                    "processes.step-role-assignment-role-required");
+            }
+
+            if (step.RoleAssignments.Any(assignment => assignment.RoleRequirementId.HasValue && !roleIds.Contains(assignment.RoleRequirementId.Value))) {
+                return Error.Validation(
+                    $"Step '{step.Title}' references a role that is not part of the same process definition.",
+                    "processes.step-role-assignment-role-invalid");
             }
 
             if (step.BranchOutcomes.Count > 0 && !step.DecisionRoleRequirementId.HasValue) {
@@ -211,6 +251,7 @@ public sealed partial class ProcessesService
         ProcessDefinition definition,
         ProcessDefinitionVersion version,
         IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessRoleMessagingPolicyDefinition> messagingPolicies,
         IReadOnlyList<ProcessStepDefinition> steps,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
         IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes,
@@ -228,6 +269,11 @@ public sealed partial class ProcessesService
 
         if (roles.Count == 0 || steps.Count == 0) {
             return Error.Validation("Publishing requires at least one role and one step.", "processes.publish-shape-required");
+        }
+
+        var publishMessagingPolicyError = ValidatePublishMessagingPolicies(roles, messagingPolicies);
+        if (publishMessagingPolicyError is not null) {
+            return publishMessagingPolicyError;
         }
 
         if (steps.Any(step => !stepRoleRequirements.Any(requirement => requirement.StepDefinitionId == step.Id))) {
@@ -319,6 +365,37 @@ public sealed partial class ProcessesService
                         $"Branch outcome '{branchOutcome.Title}' on process '{definition.Name}' is not routed to any downstream step.",
                         "processes.publish-branch-outcome-unused");
                 }
+            }
+        }
+
+        return null;
+    }
+
+    private static Error? ValidatePublishMessagingPolicies(
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessRoleMessagingPolicyDefinition> messagingPolicies) {
+        if (messagingPolicies.Count == 0) {
+            return null;
+        }
+
+        var roleIds = roles
+            .Select(role => role.Id)
+            .ToHashSet();
+        var duplicatePolicy = messagingPolicies
+            .GroupBy(item => (item.SourceRoleRequirementId, item.TargetRoleRequirementId))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicatePolicy is not null) {
+            return Error.Validation("Publishing requires messaging policy links to remain unique per source and target role pair.", "processes.publish-messaging-policy-duplicate");
+        }
+
+        foreach (var messagingPolicy in messagingPolicies) {
+            if (messagingPolicy.SourceRoleRequirementId == messagingPolicy.TargetRoleRequirementId) {
+                return Error.Validation("Publishing requires messaging policy links to connect two distinct roles.", "processes.publish-messaging-policy-self-reference");
+            }
+
+            if (!roleIds.Contains(messagingPolicy.SourceRoleRequirementId) ||
+                !roleIds.Contains(messagingPolicy.TargetRoleRequirementId)) {
+                return Error.Validation("Publishing requires messaging policy links to reference published roles.", "processes.publish-messaging-policy-role-invalid");
             }
         }
 
@@ -473,14 +550,33 @@ public sealed partial class ProcessesService
             : "Unnamed step";
     }
 
-    private static string BuildWorkBrief(ProcessDefinition definition, ProcessStepDefinition step, string? executorName) {
-        return $"{definition.Name}: {step.Title}{Environment.NewLine}" +
-            $"Customer value: {definition.ValueStatement}{Environment.NewLine}" +
-            $"Owner: {definition.OwnerName}{Environment.NewLine}" +
-            $"Executor: {(string.IsNullOrWhiteSpace(executorName) ? "Unassigned" : executorName)}{Environment.NewLine}" +
-            $"Inputs: {step.InputContractSummary}{Environment.NewLine}" +
-            $"Outputs: {step.OutputContractSummary}{Environment.NewLine}" +
-            $"Evidence: {step.EvidenceContractSummary}";
+    private static string BuildWorkBrief(
+        ProcessDefinition definition,
+        ProcessStepDefinition step,
+        string? executorName,
+        ProcessProjectStructureContext? projectStructureContext = null) {
+        var builder = new StringBuilder()
+            .AppendLine($"{definition.Name}: {step.Title}")
+            .AppendLine($"Customer value: {definition.ValueStatement}")
+            .AppendLine($"Owner: {definition.OwnerName}")
+            .AppendLine($"Executor: {(string.IsNullOrWhiteSpace(executorName) ? "Unassigned" : executorName)}")
+            .AppendLine($"Inputs: {step.InputContractSummary}")
+            .AppendLine($"Outputs: {step.OutputContractSummary}")
+            .AppendLine($"Evidence: {step.EvidenceContractSummary}");
+
+        if (!string.IsNullOrWhiteSpace(step.Notes)) {
+            builder.AppendLine($"Instructions: {step.Notes}");
+        }
+
+        if (projectStructureContext is not null) {
+            builder.AppendLine($"Project structure target: {projectStructureContext.ResolveTargetNodeTitle()} ({projectStructureContext.ResolveTargetNodeId()})");
+            builder.AppendLine($"Project structure node: {projectStructureContext.NodeTitle} ({projectStructureContext.NodeId})");
+            builder.AppendLine($"Project id: {projectStructureContext.ProjectId:D}");
+        }
+
+        return builder
+            .ToString()
+            .TrimEnd();
     }
 
     private static string BuildRunRoute(ProcessRun run) {

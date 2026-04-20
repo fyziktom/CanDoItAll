@@ -327,12 +327,7 @@ public sealed partial class AiAgentService
             return;
         }
 
-        var providerName = profile.ProviderProfileId.HasValue
-            ? await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-                .Where(item => item.Id == profile.ProviderProfileId.Value)
-                .Select(item => item.Name)
-                .FirstOrDefaultAsync(cancellationToken)
-            : string.Empty;
+        var technicalWorkspace = await technicalAgentBridge.GetWorkspaceAsync(partyId, cancellationToken);
         var ownerName = profile.OwnerPartyId.HasValue
             ? await dbContext.Set<Party>()
                 .Where(item => item.Id == profile.OwnerPartyId.Value)
@@ -346,16 +341,17 @@ public sealed partial class AiAgentService
                 partyId.ToString("N"),
                 "CRM / HR AI agent",
                 party.DisplayName,
-                $"{profile.ExecutionMode} / {profile.ValidationStatus}",
+                $"{technicalWorkspace.ExecutionMode} / {profile.ValidationStatus}",
                 string.Join(
                     Environment.NewLine,
                     new[]
                     {
                         party.DisplayName,
                         party.Summary,
-                        providerName,
-                        profile.DefaultModel,
+                        technicalWorkspace.ProviderName,
+                        technicalWorkspace.DefaultModel,
                         ownerName,
+                        technicalWorkspace.BindingSummary,
                         profile.Notes
                     }.Where(item => !string.IsNullOrWhiteSpace(item))),
                 $"/crm-hr/agents?partyId={partyId}"),

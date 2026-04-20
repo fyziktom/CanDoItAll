@@ -24,6 +24,15 @@ public sealed class ProcessTemplateProjectionServiceTests
         Assert.Equal("Approve release readiness", releaseApproval.Title);
         Assert.Equal(3, releaseApproval.Dependencies.Count);
         Assert.Equal(3, releaseApproval.ArtifactInputs.Count);
+
+        var architectureReview = envelope.Definition.Steps.Single(step => step.Key == "architecture-review");
+        var qaValidation = envelope.Definition.Steps.Single(step => step.Key == "qa-validation");
+        var securityReview = envelope.Definition.Steps.Single(step => step.Key == "security-review");
+
+        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(architectureReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(ProcessArtifactTrustRequirement.HumanApproved, Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);
     }
 
     [Fact]

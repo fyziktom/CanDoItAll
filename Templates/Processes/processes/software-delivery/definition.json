@@ -33,6 +33,7 @@
   ],
   "SharedArtifactRefs": [
     "scope-boundary-packet",
+    "project-structure-context-brief",
     "architecture-decision-record",
     "implementation-change-set",
     "rollback-plan",
@@ -117,7 +118,7 @@
       "DisplayName": "Solution architect",
       "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
       "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
@@ -149,7 +150,7 @@
       "DisplayName": "QA lead",
       "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
       "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
@@ -165,7 +166,7 @@
       "DisplayName": "Security reviewer",
       "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
       "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
@@ -181,7 +182,7 @@
       "DisplayName": "Release manager",
       "Purpose": "Coordinate go-live preparation and keep rollback and telemetry watch ownership explicit before and during release execution.",
       "StaffingIntent": "Operational owner for production execution, release windows, and rollback decisions.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Manager",
       "IsRequired": true,
       "AllowsFallback": true,
@@ -309,19 +310,36 @@
       ],
       "ArtifactExpectations": [
         {
+          "Key": "project-structure-context-brief",
+          "TemplateKey": "project-structure-context-brief",
+          "Title": "Project structure context brief",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, and release decisions that must stay aligned to the same project node and working directory.",
+          "ValidationRequirementSummary": "Must capture the originating project-structure node, resolved working directory, touched modules or routes, dependency boundaries, and downstream artifact expectations."
+        },
+        {
           "Key": "architecture-decision-record",
           "TemplateKey": "architecture-decision-record",
           "Title": "Architecture decision record",
           "ArtifactKind": "Decision",
           "IsRequired": true,
-          "TrustRequirement": "HumanApproved",
+          "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 730,
           "AllowedFutureUsageSummary": "Reusable for implementation, review, and later forensic replay.",
           "ValidationRequirementSummary": "Must capture selected option, rejected options, source-of-truth choice, and migration ownership."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "architecture-gate-checklist"
@@ -361,6 +379,10 @@
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
+        {
+          "DependsOnStepKey": "feature-intake",
+          "DependsOnBranchOutcomeKey": ""
+        },
         {
           "DependsOnStepKey": "architecture-review",
           "DependsOnBranchOutcomeKey": ""
@@ -408,7 +430,20 @@
           "ValidationRequirementSummary": "Must name data changes, operational preconditions, and rollback steps."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "implementation-readiness-checklist",
@@ -449,6 +484,10 @@
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
         {
           "DependsOnStepKey": "implementation",
           "DependsOnBranchOutcomeKey": ""
@@ -495,6 +534,10 @@
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
         }
       ],
       "BranchOutcomes": [],
@@ -531,6 +574,14 @@
       "BranchCanvasY": 0.0,
       "Dependencies": [
         {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
           "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
@@ -558,14 +609,27 @@
           "Title": "Regression evidence pack",
           "ArtifactKind": "Evidence",
           "IsRequired": true,
-          "TrustRequirement": "HumanApproved",
+          "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release approval, incident review, and later regression comparison.",
           "ValidationRequirementSummary": "Must name changed flows, assertion depth, screenshots, and unresolved risks."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "peer-review-note",
+          "SourceStepKey": "peer-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "qa-evidence-checklist"
@@ -604,6 +668,14 @@
       "BranchCanvasY": 0.0,
       "Dependencies": [
         {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
           "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
@@ -624,14 +696,27 @@
           "Title": "Security exception assessment",
           "ArtifactKind": "Decision",
           "IsRequired": true,
-          "TrustRequirement": "HumanApproved",
+          "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Confidential",
           "RetentionDays": 1095,
           "AllowedFutureUsageSummary": "Reusable for release governance, audit, and post-incident review.",
           "ValidationRequirementSummary": "Must capture controls, residual risk owner, and approval or block rationale."
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "peer-review-note",
+          "SourceStepKey": "peer-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [
         "security-review-checklist"
@@ -671,6 +756,10 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
           "DependsOnBranchOutcomeKey": ""
         },
         {
@@ -724,6 +813,10 @@
         {
           "ArtifactExpectationKey": "security-exception-assessment",
           "SourceStepKey": "security-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
         }
       ],
       "BranchOutcomes": [],

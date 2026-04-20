@@ -166,6 +166,10 @@ public sealed record ProjectSummary(
     IReadOnlyList<ProjectPortfolioPartyItem>? RelatedParties = null,
     string RelatedPartySearchText = "");
 
+public sealed record ProjectAccessListItem(
+    Guid Id,
+    string Name);
+
 public sealed record ProjectHierarchyLinkSummary(
     Guid ParentProjectId,
     Guid ChildProjectId,
@@ -261,6 +265,17 @@ public sealed class ProjectsService(
             .OrderByDescending(project => project.UpdatedAtUtc)
             .Select(project => MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(project.Id)))
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<ProjectAccessListItem>> ListAccessListAsync(CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.Set<Project>()
+            .AsNoTracking()
+            .OrderBy(project => project.Name)
+            .Select(project => new ProjectAccessListItem(project.Id, project.Name))
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProjectHierarchyLinkSummary>> ListHierarchyLinksAsync(CancellationToken cancellationToken = default)

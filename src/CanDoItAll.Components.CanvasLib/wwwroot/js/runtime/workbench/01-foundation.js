@@ -497,9 +497,130 @@
         return estimateNodeSizeFromText(node, baseSize);
     }
 
+    function normalizeInlineTextParagraphs(text) {
+        const normalized = typeof text === "string"
+            ? text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+            : "";
+        const paragraphs = normalized.split("\n");
+        return paragraphs.length > 0
+            ? paragraphs
+            : [""];
+    }
+
+    function countInlineTextNodeMetaItems(node) {
+        const markerCount = Array.isArray(node?.markers) && node.markers.length > 0
+            ? Math.min(3, node.markers.length)
+            : node?.markerIcon
+                ? 1
+                : 0;
+        const annotationCount = Array.isArray(node?.annotations)
+            ? Math.min(3, node.annotations.length)
+            : 0;
+        const statusCount = node?.statusPill ? 1 : 0;
+        const priorityCount = node?.priority > 0 ? 1 : 0;
+
+        return 1 + markerCount + annotationCount + statusCount + priorityCount;
+    }
+
+    function measureInlineTextNodeParagraphs(measureService, text, maxWidth, font, maxLines) {
+        const paragraphs = normalizeInlineTextParagraphs(text);
+        const lineHeightPx = Math.max(16, font?.lineHeightPx || 20);
+        const lineLimit = Math.max(1, maxLines || 1);
+        let remainingLines = lineLimit;
+        let lineCount = 0;
+        let estimatedWidth = 0;
+        let isTruncated = false;
+
+        for (let index = 0; index < paragraphs.length; index += 1) {
+            if (remainingLines <= 0) {
+                isTruncated = true;
+                break;
+            }
+
+            const paragraph = paragraphs[index];
+            if (!paragraph.trim()) {
+                lineCount += 1;
+                remainingLines -= 1;
+                continue;
+            }
+
+            const measure = measureService.measure({
+                text: paragraph,
+                maxWidth,
+                maxLines: remainingLines,
+                font
+            });
+            const measuredLineCount = Math.max(1, measure?.lineCount || 1);
+            lineCount += measuredLineCount;
+            remainingLines -= measuredLineCount;
+            estimatedWidth = Math.max(estimatedWidth, measure?.estimatedWidth || 0);
+
+            if (measure?.isTruncated) {
+                isTruncated = true;
+                break;
+            }
+        }
+
+        return {
+            estimatedWidth,
+            estimatedHeight: Math.ceil(Math.max(1, lineCount) * lineHeightPx),
+            lineCount: Math.max(1, lineCount),
+            isTruncated
+        };
+    }
+
+    function estimateInlineTextNodeSize(node, baseSize, measureService) {
+        const noteText = node.inlineText || node.title || node.subtitle || "Write note";
+        const tokens = noteText.split(/\s+/).filter(Boolean);
+        const longestTokenLength = tokens.reduce((longest, token) => Math.max(longest, token.length), 0);
+        const noteFont = {
+            family: "\"DM Sans\", sans-serif",
+            sizePx: 14,
+            weight: 700,
+            lineHeightPx: 20
+        };
+        const minWidth = 148;
+        const maxWidth = 348;
+        const maxLines = 12;
+        const widthBias = Math.max(0, Math.min(132, (noteText.length - 18) * 1.45));
+        const longWordBias = Math.max(0, longestTokenLength - 12) * 4.5;
+        let estimatedWidth = clamp(
+            Math.ceil(baseSize.width + widthBias + longWordBias),
+            minWidth,
+            maxWidth);
+        let textMeasure = measureInlineTextNodeParagraphs(
+            measureService,
+            noteText,
+            Math.max(108, estimatedWidth - 40),
+            noteFont,
+            maxLines);
+        estimatedWidth = clamp(
+            Math.ceil(Math.max(minWidth, textMeasure.estimatedWidth + 40)),
+            minWidth,
+            maxWidth);
+        textMeasure = measureInlineTextNodeParagraphs(
+            measureService,
+            noteText,
+            Math.max(108, estimatedWidth - 40),
+            noteFont,
+            maxLines);
+
+        const metaRows = Math.max(1, Math.ceil(countInlineTextNodeMetaItems(node) / 4));
+        const metaHeight = 26 + ((metaRows - 1) * 18);
+        const estimatedHeight = clamp(
+            Math.ceil(30 + textMeasure.estimatedHeight + metaHeight),
+            76,
+            304);
+
+        return {
+            width: estimatedWidth,
+            height: estimatedHeight
+        };
+    }
+
     function resolveBaseNodeSize(node) {
         if (node.isInlineTextNode) {
-            return { width: 228, height: 108 };
+            return { width: 164, height: 76 };
         }
 
         const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
@@ -530,13 +651,13 @@
             return baseSize;
         }
 
+        if (node.isInlineTextNode) {
+            return estimateInlineTextNodeSize(node, baseSize, measureService);
+        }
+
         const family = (node.family || "item").toLowerCase();
-        const titleText = node.isInlineTextNode
-            ? (node.inlineText || node.title || node.subtitle || "Untitled")
-            : (node.title || "Untitled");
-        const subtitleText = node.isInlineTextNode
-            ? (node.subtitle || "")
-            : (node.subtitle || node.leadText || "");
+        const titleText = node.title || "Untitled";
+        const subtitleText = node.subtitle || node.leadText || "";
         const chipText = Array.isArray(node.chips) && node.chips.length > 0
             ? node.chips[0].text
             : Array.isArray(node.footerChips) && node.footerChips.length > 0
@@ -547,12 +668,12 @@
         const titleMeasure = measureService.measure({
             text: titleText,
             maxWidth: titleWidth,
-            maxLines: node.isInlineTextNode ? 4 : 2,
+            maxLines: 2,
             font: {
                 family: "\"DM Sans\", sans-serif",
-                sizePx: family === "root" ? 18 : node.isInlineTextNode ? 14 : 15,
+                sizePx: family === "root" ? 18 : 15,
                 weight: 700,
-                lineHeightPx: node.isInlineTextNode ? 20 : family === "root" ? 22 : 18
+                lineHeightPx: family === "root" ? 22 : 18
             }
         });
         const subtitleMeasure = subtitleText

@@ -1,0 +1,251 @@
+@namespace CanDoItAll.Web.Components.Layout
+@using CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Infrastructure.ControlPlane
+
+<Dialog IsOpen="@IsOpen"
+        Title="Database profiles"
+        Eyebrow="@(IsStartupMode ? "Startup" : "Runtime")"
+        Subtitle="@(IsStartupMode
+            ? "Continue with the resolved runtime database, switch to another saved profile, or create a fresh managed SQLite workspace."
+            : "Review the active runtime database and switch profiles without leaving the shell.")"
+        Size="ModalSize.Wide"
+        TestId="@(IsStartupMode ? "database-startup-modal" : "database-switcher-dialog")"
+        OnClose="CloseDatabaseDialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (DatabaseSelection is not null)
+            {
+                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4"
+                     data-testid="database-dialog-current-selection">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <p class="cda-eyebrow">Resolved profile</p>
+                            <p class="text-base font-semibold text-slate-950">@DatabaseSelection.DisplayName</p>
+                        </Stack>
+
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(DatabaseSelection.ProviderKind)" />
+                            <StatusBadge Tone="neutral" Text="@DescribeDatabaseSource(DatabaseSelection.SourceKind)" />
+                            @if (DatabaseSelection.IsRuntimeLocked)
+                            {
+                                <StatusBadge Tone="warning" Text="Config lock" />
+                            }
+                        </Cluster>
+                    </Split>
+
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="mt-3">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Stack GapScale="LayoutGap.Tiny"
+                                   Class="min-w-0 flex-1">
+                                <p class="cda-eyebrow">Resolved target</p>
+                                <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
+                                   data-testid="database-dialog-active-target">@DatabaseSelection.Descriptor</p>
+                            </Stack>
+                            <CopyButton Value="@DatabaseSelection.Descriptor"
+                                        DisplayMode="CopyButtonDisplayMode.IconButton"
+                                        Size="CopyButtonSize.Small"
+                                        AriaLabel="Copy active database target"
+                                        data-testid="database-dialog-copy-active-target" />
+                        </Split>
+
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Stack GapScale="LayoutGap.Tiny"
+                                   Class="min-w-0 flex-1">
+                                <p class="cda-eyebrow">Workspace root</p>
+                                <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
+                                   data-testid="database-dialog-workspace-root">@DatabaseSelection.WorkspaceRoot</p>
+                            </Stack>
+                            <CopyButton Value="@DatabaseSelection.WorkspaceRoot"
+                                        DisplayMode="CopyButtonDisplayMode.IconButton"
+                                        Size="CopyButtonSize.Small"
+                                        AriaLabel="Copy active database workspace root"
+                                        data-testid="database-dialog-copy-workspace-root" />
+                        </Split>
+                    </Stack>
+
+                    <p class="mt-3 text-xs text-slate-500">Selection source: @DescribeResolutionSource(DatabaseSelection.ResolutionSource)</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(DatabaseProfileMessage))
+            {
+                <div class="@DatabaseMessageClass"
+                     data-testid="database-dialog-message">
+                    @DatabaseProfileMessage
+                </div>
+            }
+
+            @if (DatabaseSelection?.IsRuntimeLocked == true)
+            {
+                <div class="rounded-[1.4rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+                     data-testid="database-dialog-locked-message">
+                    Startup configuration owns the active database for this session. Continue is still safe, but switching and creating profiles are disabled until the override is removed.
+                </div>
+            }
+
+            @if (DatabaseProfiles.Count == 0)
+            {
+                <EmptyState Eyebrow="No saved profiles"
+                            Title="Create the first managed SQLite workspace"
+                            Description="Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium" data-testid="database-dialog-profile-list">
+                    @foreach (var profile in DatabaseProfiles)
+                    {
+                        <SelectionListItem Title="@profile.DisplayName"
+                                           Eyebrow="@DescribeDatabaseProvider(profile.ProviderKind)"
+                                           Meta="@DescribeDatabaseSource(profile.SourceKind)"
+                                           Summary="@profile.Descriptor"
+                                           DataTestId="@($"database-dialog-profile-row-{profile.Id:N}")"
+                                           IsSelected="@(SelectedDatabaseProfileId == profile.Id)"
+                                           OnSelect="@(() => SelectDatabaseProfile.InvokeAsync(profile.Id))">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    @if (profile.IsActive)
+                                    {
+                                        <StatusBadge Tone="success" Text="Active" />
+                                    }
+
+                                    @if (profile.IsRuntimeLocked)
+                                    {
+                                        <StatusBadge Tone="warning" Text="Locked" />
+                                    }
+                                </Cluster>
+                            </Status>
+                            <Actions>
+                                <CopyButton Value="@profile.Descriptor"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            Size="CopyButtonSize.Small"
+                                            AriaLabel="@($"Copy database target for {profile.DisplayName}")"
+                                            data-testid="@($"database-dialog-copy-profile-{profile.Id:N}")" />
+                            </Actions>
+                        </SelectionListItem>
+                    }
+                </Stack>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                @if (IsStartupMode)
+                {
+                    <Button Text="Continue"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@DatabaseDialogBusy"
+                            Click="ContinueWithCurrentDatabase"
+                            data-testid="database-startup-continue" />
+                }
+                else
+                {
+                    <Button Text="Close"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@DatabaseDialogBusy"
+                            Click="CloseDatabaseDialog" />
+                }
+
+                <Button Text="Open Data Sources"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@DatabaseDialogBusy"
+                        Click="OpenDatabaseSettings"
+                        data-testid="database-startup-open-settings" />
+            </Cluster>
+
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Create managed SQLite"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@(DatabaseDialogBusy || !CanManageDatabases)"
+                        Click="CreateManagedSqlite"
+                        data-testid="database-startup-create-managed" />
+                <Button Text="@(SelectedDialogProfileIsActive ? "Already active" : "Switch selected")"
+                        ButtonStyle="ButtonStyle.Warning"
+                        Disabled="@(DatabaseDialogBusy || !CanSwitchSelectedProfile)"
+                        Click="SwitchDatabaseProfile"
+                        data-testid="database-startup-switch" />
+            </Cluster>
+        </Split>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public bool IsStartupMode { get; set; }
+
+    [Parameter]
+    public DatabaseSelectionStateModel? DatabaseSelection { get; set; }
+
+    [Parameter]
+    public string? DatabaseProfileMessage { get; set; }
+
+    [Parameter, EditorRequired]
+    public string DatabaseMessageClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<DatabaseProfileSummary> DatabaseProfiles { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedDatabaseProfileId { get; set; }
+
+    [Parameter]
+    public bool DatabaseDialogBusy { get; set; }
+
+    [Parameter]
+    public bool CanManageDatabases { get; set; }
+
+    [Parameter]
+    public bool SelectedDialogProfileIsActive { get; set; }
+
+    [Parameter]
+    public bool CanSwitchSelectedProfile { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<DatabaseProviderKind, string> DescribeDatabaseProvider { get; set; } = static kind => kind.ToString();
+
+    [Parameter, EditorRequired]
+    public Func<DatabaseProfileSourceKind, string> DescribeDatabaseSource { get; set; } = static kind => kind.ToString();
+
+    [Parameter, EditorRequired]
+    public Func<DatabaseProfileResolutionSource, string> DescribeResolutionSource { get; set; } = static source => source.ToString();
+
+    [Parameter]
+    public EventCallback<Guid> SelectDatabaseProfile { get; set; }
+
+    [Parameter]
+    public EventCallback ContinueWithCurrentDatabase { get; set; }
+
+    [Parameter]
+    public EventCallback CloseDatabaseDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OpenDatabaseSettings { get; set; }
+
+    [Parameter]
+    public EventCallback CreateManagedSqlite { get; set; }
+
+    [Parameter]
+    public EventCallback SwitchDatabaseProfile { get; set; }
+}

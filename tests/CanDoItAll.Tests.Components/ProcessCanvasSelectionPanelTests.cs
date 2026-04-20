@@ -136,4 +136,42 @@ public sealed class ProcessCanvasSelectionPanelTests
         Assert.True(completeButton.HasAttribute("disabled"));
         Assert.False(blockButton.HasAttribute("disabled"));
     }
+
+    [Fact]
+    public void Runtime_actions_allow_restarting_failed_steps()
+    {
+        using var context = new TestContext();
+        var runtimeStep = new ProcessStepRunViewModel(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            null,
+            4,
+            "Run QA validation and browser proof",
+            ProcessStepKind.Review,
+            ProcessStepRunStatus.Failed,
+            "Delivery QA Observer",
+            string.Empty,
+            "Previous governed execution missed a required tool.",
+            string.Empty,
+            null,
+            string.Empty,
+            0,
+            23,
+            0,
+            1,
+            ProcessCapabilityGapSeverity.None,
+            []);
+
+        var cut = context.RenderComponent<ProcessCanvasSelectionPanel>(
+            parameters => parameters
+                .Add(component => component.IsRuntime, true)
+                .Add(component => component.RuntimeStep, runtimeStep));
+
+        var buttons = cut.FindAll("button");
+        var startButton = Assert.Single(buttons, button => button.TextContent.Trim() == "Start");
+        var completeButton = Assert.Single(buttons, button => button.TextContent.Trim() == "Complete");
+
+        Assert.False(startButton.HasAttribute("disabled"));
+        Assert.True(completeButton.HasAttribute("disabled"));
+    }
 }

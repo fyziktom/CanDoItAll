@@ -26,7 +26,9 @@ public sealed class ProcessDefinitionListQueryService : IProcessDefinitionListQu
             .AsQueryable();
         if (projectId.HasValue)
         {
-            definitionsQuery = definitionsQuery.Where(definition => definition.ProjectId == projectId.Value);
+            definitionsQuery = definitionsQuery.Where(definition =>
+                definition.ProjectId == projectId.Value ||
+                definition.ProjectId == null);
         }
 
         var definitions = (await definitionsQuery

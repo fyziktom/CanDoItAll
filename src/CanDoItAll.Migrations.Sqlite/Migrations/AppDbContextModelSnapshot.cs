@@ -769,6 +769,209 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Automation_PluginIngressEnvelopes", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationInboxItemRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsUnread")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ItemKind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreviewText")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UnreadCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedAtUtc");
+
+                    b.HasIndex("ItemKind", "IsUnread");
+
+                    b.ToTable("Collaboration_InboxItems", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationMessageRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorKind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RaisesEscalation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId", "CreatedAtUtc");
+
+                    b.ToTable("Collaboration_Messages", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationParticipantRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("AddedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParticipantKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParticipantKind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RoleLabel")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId", "ParticipantKey")
+                        .IsUnique();
+
+                    b.ToTable("Collaboration_Participants", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationThreadRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ContextId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContextKind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContextLabel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContextRoute")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("LastActivityAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrimaryItemKind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastActivityAtUtc");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("ContextKind", "ContextId");
+
+                    b.ToTable("Collaboration_Threads", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiAgentProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -822,6 +1025,47 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("ProviderProfileId");
 
                     b.ToTable("CrmHr_AiAgentProfiles", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiResourceBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BindingReason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BindingStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PartyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TechnicalAgentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartyId")
+                        .IsUnique();
+
+                    b.HasIndex("TechnicalAgentId");
+
+                    b.ToTable("CrmHr_AiResourceBindings", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CapacityBlock", b =>
@@ -2411,6 +2655,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ArtifactExpectationId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ArtifactKind")
                         .IsRequired()
                         .HasMaxLength(48)
@@ -2459,6 +2706,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ArtifactExpectationId");
 
                     b.HasIndex("ProcessRunId");
 
@@ -2878,6 +3127,382 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Processes_JournalEntries", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApproverDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApproverKind")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ApproverPartyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CollaborationThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DecidedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HumanSubstituteName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("HumanSubstitutePartyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LaunchPlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResolutionSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CollaborationThreadId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("LaunchPlanId", "CreatedAtUtc");
+
+                    b.ToTable("Processes_LaunchApprovals", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AllowsDirectMessaging")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AvailabilitySummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CandidateKind")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExecutorKind")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRecommended")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("LaunchPlanRoleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MetadataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PartyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecommendationSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresProvisioning")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Score")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceRegistryKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TechnicalAgentId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartyId");
+
+                    b.HasIndex("TechnicalAgentId");
+
+                    b.HasIndex("LaunchPlanRoleId", "Score");
+
+                    b.ToTable("Processes_LaunchCandidates", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ApprovalThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ApprovedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ExecutedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FallbackStrategy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GeneratedRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("LatestApprovalRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatingMode")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProcessDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProcessDefinitionVersionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecommendationStrategy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TriggerReason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedRunId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ProcessDefinitionId", "CreatedAtUtc");
+
+                    b.HasIndex("ProcessDefinitionId", "ProcessDefinitionVersionId");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.ToTable("Processes_LaunchPlans", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("LaunchPlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreferredExecutorKind")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReadinessSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecommendationSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredSkillIdsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresExplicitApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresProvisioning")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RoleRequirementId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SelectedCandidateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SelectionSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleRequirementId");
+
+                    b.HasIndex("SelectedCandidateId");
+
+                    b.HasIndex("LaunchPlanId", "DisplayOrder");
+
+                    b.HasIndex("LaunchPlanId", "RoleRequirementId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessLaunchPlanRoles_Role");
+
+                    b.ToTable("Processes_LaunchPlanRoles", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LaunchPlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LaunchPlanRoleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestKind")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestPayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ResultPartyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResultSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ResultTechnicalAgentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SelectedCandidateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LaunchPlanRoleId");
+
+                    b.HasIndex("SelectedCandidateId");
+
+                    b.HasIndex("LaunchPlanId", "LaunchPlanRoleId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessLaunchProvisioning_Role");
+
+                    b.HasIndex("LaunchPlanId", "Status");
+
+                    b.ToTable("Processes_LaunchProvisioningRequests", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2946,6 +3571,39 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("Status", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
 
                     b.ToTable("Processes_Outbox", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ProcessDefinitionVersionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SourceRoleRequirementId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TargetRoleRequirementId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceRoleRequirementId");
+
+                    b.HasIndex("TargetRoleRequirementId");
+
+                    b.HasIndex("ProcessDefinitionVersionId", "DisplayOrder");
+
+                    b.HasIndex("ProcessDefinitionVersionId", "SourceRoleRequirementId", "TargetRoleRequirementId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessRoleMessagingPolicies_SourceTarget");
+
+                    b.ToTable("Processes_RoleMessagingPolicies", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
@@ -3152,6 +3810,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("AllowsDirectMessaging")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("BindingReason")
                         .IsRequired()
@@ -5281,6 +5944,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactExpectationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
                         .WithMany()
                         .HasForeignKey("ProcessRunId")
@@ -5370,6 +6038,102 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("StepRunId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+                        .WithMany()
+                        .HasForeignKey("LaunchPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+                        .WithMany()
+                        .HasForeignKey("LaunchPlanRoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("GeneratedRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessDefinitionId", "ProcessDefinitionVersionId")
+                        .HasPrincipalKey("ProcessDefinitionId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+                        .WithMany()
+                        .HasForeignKey("LaunchPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+                        .WithMany()
+                        .HasForeignKey("RoleRequirementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+                        .WithMany()
+                        .HasForeignKey("LaunchPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+                        .WithMany()
+                        .HasForeignKey("LaunchPlanRoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+                        .WithMany()
+                        .HasForeignKey("SelectedCandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessDefinitionVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+                        .WithMany()
+                        .HasForeignKey("SourceRoleRequirementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+                        .WithMany()
+                        .HasForeignKey("TargetRoleRequirementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>

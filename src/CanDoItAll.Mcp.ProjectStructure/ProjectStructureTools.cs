@@ -68,17 +68,24 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
     }
 
     [McpServerTool(Name = "project_structure_node_create", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Creates a new project-structure node through the central API. Provide estimatedMinutes when approval thresholds are configured.")]
+    [Description("Creates a new project-structure node through the central API. Provide estimatedMinutes when approval thresholds are configured. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeCreateAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_node_create", () => coordinator.CreateNodeAsync(projectId, request, estimatedMinutes, cancellationToken));
     }
 
     [McpServerTool(Name = "project_structure_node_update", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Updates the title, subtitle, notes, and optional metadata of an existing project-structure node.")]
+    [Description("Updates the title, subtitle, notes, timing, optional metadata, and requested reclassification of an existing project-structure node. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeUpdateAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_node_update", () => coordinator.UpdateNodeAsync(projectId, nodeId, request, estimatedMinutes, cancellationToken));
+    }
+
+    [McpServerTool(Name = "project_structure_node_move", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Moves an existing project-structure node to exact canvas coordinates so agents can resolve overlap or spacing issues that recomposition did not fix.")]
+    public Task<McpToolEnvelope<OperationAck>> ProjectStructureNodeMoveAsync(Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("project_structure_node_move", () => coordinator.MoveNodeAsync(projectId, request, estimatedMinutes, cancellationToken));
     }
 
     [McpServerTool(Name = "project_structure_node_recompose", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]

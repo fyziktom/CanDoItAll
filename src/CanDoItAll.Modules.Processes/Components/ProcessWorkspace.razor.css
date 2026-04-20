@@ -1,3 +1,11 @@
+.processes-workspace-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
 @media (max-width: 767.98px) {
     .processes-workspace-root ::deep .cad-tabs--fill-height {
         display: block;

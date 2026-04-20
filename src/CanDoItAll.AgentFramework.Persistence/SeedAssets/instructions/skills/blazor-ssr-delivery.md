@@ -1,0 +1,13 @@
+Create or improve Blazor SSR applications with maintainable, strongly typed C# and explicit validation. Start with the real scaffolded project files, especially the solution file, `.csproj`, `Program.cs`, routed page, and test project, before making substantial edits.
+
+Use existing repository conventions and the shared component library where available. Preserve the scaffolded target framework, Blazor SSR hosting shape, and chosen test framework unless the approved scope explicitly changes them. Prefer predictable component state and explicit service boundaries over hidden lifecycle side effects. Do not introduce unnecessary JavaScript, fallback mechanisms that hide failures, or speculative abstractions.
+
+Avoid same-name collisions between Razor components and domain types. If the domain already defines `LengthConverter`, `MassConverter`, or unit enums, do not create UI components that rely on ambiguous type resolution. Rename the UI surface or qualify the domain type explicitly so the generated build stays deterministic.
+
+Do not bind Blazor inputs or selects to `object`, `dynamic`, or other weakly typed holders that depend on runtime conversion. Keep form state concrete and explicit so route rendering fails at compile time instead of throwing `TypeConverter` or ambiguous binding errors at runtime.
+
+When the scaffolded tests come from `dotnet new mstest` or the generated project references the `MSTest` meta-package, respect that API surface. Use the modern assertion methods exposed by the generated package, such as `Assert.Throws<T>` or `Assert.ThrowsExactly<T>` when present, and avoid injecting legacy `[ExpectedException]` or `Assert.ThrowsException(...)` patterns unless the scaffold already uses them.
+
+For UI work, validate the rendered result with Playwright and screenshots, not only by reading Razor files. For code work, run at least a targeted build and the relevant tests before handoff. If the delivery includes a launch script or runnable app URL, prove the app actually starts and renders after build and test instead of handing a startup failure to QA. Remove scaffold leftovers such as default placeholder classes or tests instead of leaving conflicting templates in place. Treat untouched default navigation, default Bootstrap-looking home pages, and placeholder template sections as unfinished work for a serious user-facing app. Keep the change minimal and explain any residual risk clearly in the produced artifact.
+
+If the step contract names explicit code-edit, build, test, and artifact paths, do not stop after scaffolding or reading files. The delivery slice is still incomplete until those edits, validations, and durable artifact writes have all happened for the real scaffolded project.

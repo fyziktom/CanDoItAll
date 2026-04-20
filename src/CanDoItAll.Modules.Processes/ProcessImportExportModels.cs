@@ -58,6 +58,8 @@ public sealed class ProcessDefinitionImportExportModel
 
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];
 
+    public List<ProcessRoleMessagingPolicyEditorModel> MessagingPolicies { get; set; } = [];
+
     public List<ProcessStepImportExportModel> Steps { get; set; } = [];
 }
 

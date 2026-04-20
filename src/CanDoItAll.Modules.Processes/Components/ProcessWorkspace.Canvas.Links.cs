@@ -44,6 +44,7 @@ public partial class ProcessWorkspace
         }
 
         if (TryDeleteDecisionAuthorityLink(request, out var message) ||
+            TryDeleteMessagingPolicyLink(request, out message) ||
             TryDeleteRoleParticipationLink(request, out message) ||
             TryDeleteArtifactInputLink(request, out message) ||
             TryDeleteStepDependencyLink(request, out message))
@@ -60,11 +61,23 @@ public partial class ProcessWorkspace
     {
         var sourceStep = ResolveDefinitionStep(request.LinkSourceId);
         var targetStep = ResolveDefinitionStep(request.LinkTargetId);
+        var sourceRole = ResolveDefinitionRole(request.LinkSourceId);
+        var targetRole = ResolveDefinitionRole(request.LinkTargetId);
         if (sourceStep?.Id.HasValue == true &&
             targetStep?.Id.HasValue == true &&
             sourceStep.Id == targetStep.Id)
         {
             SetError("A process step cannot connect to itself.");
+            return;
+        }
+
+        if (sourceRole?.Id.HasValue == true &&
+            targetRole?.Id.HasValue == true &&
+            sourceRole.Id == targetRole.Id &&
+            ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingOutputPortId(request.LinkSourcePortId) &&
+            ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingInputPortId(request.LinkTargetPortId))
+        {
+            SetError("A process role cannot create a Messaging link to itself.");
             return;
         }
 
@@ -86,6 +99,7 @@ public partial class ProcessWorkspace
         }
 
         if (TryAssignDecisionAuthorityConnection(request, out var message) ||
+            TryCreateMessagingPolicyConnection(request, out message) ||
             TryCreateRoleParticipationConnection(request, out message) ||
             TryCreateArtifactInputConnection(request, out message) ||
             TryCreateRoutedStepDependencyConnection(request, out message) ||
@@ -230,6 +244,35 @@ public partial class ProcessWorkspace
         return true;
     }
 
+    private bool TryDeleteMessagingPolicyLink(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (!IsDefinitionRoleNodeId(request.LinkSourceId) ||
+            !IsDefinitionRoleNodeId(request.LinkTargetId) ||
+            !ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingOutputPortId(request.LinkSourcePortId) ||
+            !ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingInputPortId(request.LinkTargetPortId))
+        {
+            return false;
+        }
+
+        if (ResolveDefinitionRole(request.LinkSourceId) is not { Id: { } sourceRoleId } sourceRole ||
+            ResolveDefinitionRole(request.LinkTargetId) is not { Id: { } targetRoleId } targetRole)
+        {
+            return false;
+        }
+
+        var removed = editor.MessagingPolicies.RemoveAll(item =>
+            item.SourceRoleRequirementId == sourceRoleId &&
+            item.TargetRoleRequirementId == targetRoleId);
+        if (removed == 0)
+        {
+            return false;
+        }
+
+        message = $"{ResolveRoleLabel(sourceRole)} can no longer send direct messages to {ResolveRoleLabel(targetRole)}.";
+        return true;
+    }
+
     private bool TryDeleteArtifactInputLink(CanvasWorkbenchContextActionRequest request, out string message)
     {
         message = string.Empty;
@@ -321,6 +364,42 @@ public partial class ProcessWorkspace
         }
 
         message = $"{ResolveRoleLabel(role)} already participates as {ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(sourceResponsibilityKind).ToLowerInvariant()} on {ResolveStepLabel(step)}.";
+        return true;
+    }
+
+    private bool TryCreateMessagingPolicyConnection(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (!IsDefinitionRoleNodeId(request.LinkSourceId) ||
+            !IsDefinitionRoleNodeId(request.LinkTargetId) ||
+            !ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingOutputPortId(request.LinkSourcePortId) ||
+            !ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingInputPortId(request.LinkTargetPortId))
+        {
+            return false;
+        }
+
+        if (ResolveDefinitionRole(request.LinkSourceId) is not { Id: { } sourceRoleId } sourceRole ||
+            ResolveDefinitionRole(request.LinkTargetId) is not { Id: { } targetRoleId } targetRole)
+        {
+            return false;
+        }
+
+        var existingPolicy = editor.MessagingPolicies.FirstOrDefault(item =>
+            item.SourceRoleRequirementId == sourceRoleId &&
+            item.TargetRoleRequirementId == targetRoleId);
+        if (existingPolicy is not null)
+        {
+            message = $"{ResolveRoleLabel(sourceRole)} already can send direct messages to {ResolveRoleLabel(targetRole)}.";
+            return true;
+        }
+
+        editor.MessagingPolicies.Add(new ProcessRoleMessagingPolicyEditorModel
+        {
+            Id = Guid.NewGuid(),
+            SourceRoleRequirementId = sourceRoleId,
+            TargetRoleRequirementId = targetRoleId
+        });
+        message = $"{ResolveRoleLabel(sourceRole)} can now send direct messages to {ResolveRoleLabel(targetRole)}.";
         return true;
     }
 

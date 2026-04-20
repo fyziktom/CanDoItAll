@@ -77,7 +77,9 @@ public sealed partial class ProcessDevelopmentSeedService
         }
 
         var existingDefinition = (await processesService.ListDefinitionsAsync(projectId, cancellationToken))
-            .FirstOrDefault(item => string.Equals(item.Name, process.DisplayName, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(item =>
+                string.Equals(item.Name, process.DisplayName, StringComparison.OrdinalIgnoreCase) &&
+                item.ProjectId == projectId);
 
         Guid definitionId;
         if (existingDefinition is null)
@@ -151,6 +153,16 @@ public sealed partial class ProcessDevelopmentSeedService
         where TEnum : struct, Enum
     {
         return EnumValueParser.ParseOrDefault(value, fallback);
+    }
+
+    private static ProcessArtifactTrustStatus ParseArtifactTrustStatus(string? value)
+    {
+        if (string.Equals(value, "HumanApproved", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactTrustStatus.Approved;
+        }
+
+        return ParseEnum(value, ProcessArtifactTrustStatus.ReviewRequired);
     }
 }
 

@@ -6,7 +6,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
 {
     private static List<CanvasWorkbenchLink> BuildDefinitionLinks(
         IReadOnlyList<ProcessStepEditorModel> steps,
-        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById,
+        IReadOnlyList<ProcessRoleMessagingPolicyEditorModel> messagingPolicies)
     {
         var stepsById = steps
             .Where(step => step.Id.HasValue)
@@ -133,6 +134,25 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     IsUserAuthored = true
                 });
             }
+        }
+
+        foreach (var messagingPolicy in messagingPolicies
+                     .Where(item => item.SourceRoleRequirementId.HasValue &&
+                         item.TargetRoleRequirementId.HasValue &&
+                         rolesById.ContainsKey(item.SourceRoleRequirementId.Value) &&
+                         rolesById.ContainsKey(item.TargetRoleRequirementId.Value)))
+        {
+            var sourceRole = rolesById[messagingPolicy.SourceRoleRequirementId!.Value];
+            var targetRole = rolesById[messagingPolicy.TargetRoleRequirementId!.Value];
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildDefinitionRoleNodeId(sourceRole),
+                SourcePortId = ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput,
+                TargetId = BuildDefinitionRoleNodeId(targetRole),
+                TargetPortId = ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput,
+                Kind = "messaging",
+                IsUserAuthored = true
+            });
         }
 
         return links;

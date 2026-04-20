@@ -17,6 +17,12 @@ public sealed partial class ProcessesService {
         return await runtimeReadQueryService.ListRunsAsync(dbContext, definitionId, projectId, cancellationToken);
     }
 
+    public async Task<ProcessRunListItem?> GetRunAsync(Guid runId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await runtimeReadQueryService.GetRunAsync(dbContext, runId, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(Guid runId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -83,7 +89,8 @@ public sealed partial class ProcessesService {
                 item.SourceRegistryKey,
                 item.SnapshotSummary,
                 item.IsFallback,
-                item.IsCapabilityGap))
+                item.IsCapabilityGap,
+                item.AllowsDirectMessaging))
             .ToListAsync(cancellationToken);
     }
 
@@ -149,6 +156,24 @@ public sealed partial class ProcessesService {
         return items;
     }
 
+    public async Task<IReadOnlyList<ProcessImprovementViewModel>> ListRunImprovementsAsync(
+        Guid runId,
+        CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var items = await dbContext.Set<ProcessImprovementCandidate>()
+            .Where(item => item.ProcessRunId == runId)
+            .Select(item => new ProcessImprovementViewModel(
+                item.Id,
+                item.Title,
+                item.Category,
+                item.ProblemSummary,
+                item.Status,
+                item.IsTrainingOpportunity,
+                item.RequiresGovernanceReview))
+            .ToListAsync(cancellationToken);
+        return items;
+    }
+
     public async Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         Guid? definitionId = null,
         Guid? projectId = null,
@@ -158,8 +183,45 @@ public sealed partial class ProcessesService {
         return await runtimeReadQueryService.GetAnalyticsAsync(dbContext, definitionId, projectId, cancellationToken);
     }
 
+    public async Task<ProcessAnalyticsSummary> GetAnalyticsForDefinitionsAsync(
+        IReadOnlyCollection<Guid> definitionIds,
+        Guid? projectId = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await runtimeReadQueryService.GetAnalyticsForDefinitionsAsync(dbContext, definitionIds, projectId, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default) {
         return await projectPartyIntegrationBridge.ListPartyOptionsAsync(projectId, cancellationToken);
+    }
+
+    public async Task<ProcessLaunchPlanAccessSummary?> GetLaunchPlanAccessSummaryAsync(Guid launchPlanId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<ProcessLaunchPlan>()
+            .AsNoTracking()
+            .Where(item => item.Id == launchPlanId)
+            .Select(item => new ProcessLaunchPlanAccessSummary(item.Id, item.ProcessDefinitionId, item.ProjectId))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<ProcessStepRunAccessSummary?> GetStepRunAccessSummaryAsync(Guid stepRunId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => item.Id == stepRunId)
+            .Join(
+                dbContext.Set<ProcessRun>().AsNoTracking(),
+                stepRun => stepRun.ProcessRunId,
+                run => run.Id,
+                (stepRun, run) => new ProcessStepRunAccessSummary(
+                    stepRun.Id,
+                    run.Id,
+                    run.ProcessDefinitionId,
+                    run.ProjectId))
+            .SingleOrDefaultAsync(cancellationToken);
     }
 }
 

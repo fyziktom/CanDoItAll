@@ -1,0 +1,34 @@
+# Source Artifacts
+
+- `C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\AgentFrameworkWorkspaceService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\AgentsHomePage.razor.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentCatalogPanel.razor.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\AgentFrameworkCrmHrMetadata.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\Pages\CrmHrAgentsPage.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CrmHrServices.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\AiTechnicalAgentBridge.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Pages\ProcessesPage.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.css`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDevelopmentSeedService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDevelopmentSeedService.RuntimeSeeds.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplatePackLoader.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessTemplateProjectionService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.RunStart.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.StepTransitions.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRunAutomationDispatchService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Web\Components\Layout\MainLayoutDatabaseDialog.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Web\Components\Layout\MainLayout.DatabaseProfiles.cs`
+- `C:\repositories\CanDoItAll\Templates\Processes\processes\software-delivery\definition.json`
+- `C:\repositories\CanDoItAll\Templates\Processes\seed-catalog\baseline-scenarios.json`
+- `C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\Program.cs`
+- `C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\ScenarioSeederHost.cs`
+- `C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\AgentFrameworkIntegrationSimulationSeeder.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\AiAgentsPageTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\MainLayoutDatabaseProfileTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CrmHrCrossModuleIntegrationTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessManagementBundle.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureProcesses.cs`
+- `C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db`

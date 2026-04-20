@@ -142,6 +142,7 @@ public sealed partial class WorkspaceService(
     IClock clock,
     SecretService secretService,
     ProviderRegistry providerRegistry,
+    IProviderRuntimeGateway providerRuntimeGateway,
     IStorageCatalogService storageCatalogService,
     IStorageDriverRegistry storageDriverRegistry,
     IActivityStream activityStream)
@@ -309,14 +310,14 @@ public sealed partial class WorkspaceService(
         entity.DefaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
         entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
-        var isOpenAiPlugin = string.Equals(
-            providerPlugin.Manifest.PluginKey,
-            OpenAiProviderAdapter.PluginKey,
-            StringComparison.OrdinalIgnoreCase);
-        entity.SupportsStreaming = isOpenAiPlugin || model.SupportsStreaming;
-        entity.SupportsToolCalling = isOpenAiPlugin || model.SupportsToolCalling;
-        entity.SupportsStructuredOutput = isOpenAiPlugin || model.SupportsStructuredOutput;
-        entity.SupportsVision = isOpenAiPlugin && model.SupportsVision;
+        var isResponsesManagedPlugin =
+            string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(providerPlugin.Manifest.PluginKey, ScenarioHarnessProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase);
+        entity.SupportsStreaming = isResponsesManagedPlugin || model.SupportsStreaming;
+        entity.SupportsToolCalling = isResponsesManagedPlugin || model.SupportsToolCalling;
+        entity.SupportsStructuredOutput = isResponsesManagedPlugin || model.SupportsStructuredOutput;
+        entity.SupportsVision = string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) &&
+                                model.SupportsVision;
         entity.ExtraSettingsJson = model.Configuration.ToJson();
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -327,7 +328,7 @@ public sealed partial class WorkspaceService(
             $"{entity.Name} ({providerPlugin.Manifest.DisplayName})",
             ArtifactKind: "provider-profile",
             ArtifactId: entity.Id,
-            Route: "/settings"), cancellationToken);
+            Route: "/agents?tab=providers"), cancellationToken);
         return Result<Guid>.Success(entity.Id);
     }
 
@@ -349,53 +350,11 @@ public sealed partial class WorkspaceService(
             entity.Name,
             ArtifactKind: "provider-profile",
             ArtifactId: entity.Id,
-            Route: "/settings"), cancellationToken);
+            Route: "/agents?tab=providers"), cancellationToken);
     }
 
-    public async Task<ProviderHealthResult> TestProviderAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var provider = await dbContext.Set<ProviderProfile>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        if (provider is null)
-        {
-            return new ProviderHealthResult(false, "Provider profile not found.");
-        }
-
-        var adapter = providerRegistry.Resolve(provider);
-        if (adapter is null)
-        {
-            return new ProviderHealthResult(false, $"No adapter is registered for provider profile '{provider.Name}'.");
-        }
-
-        var secretValue = provider.ApiKeySecretId.HasValue
-            ? (await secretService.GetAsync(provider.ApiKeySecretId.Value, cancellationToken))?.SecretValue
-            : null;
-
-        try
-        {
-            var result = await adapter.CheckHealthAsync(provider, secretValue, cancellationToken);
-            provider.LastHealthCheckAtUtc = clock.GetUtcNow();
-            provider.LastHealthStatus = result.Message;
-
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await activityStream.RecordAsync(new ActivityWriteRequest(
-                "providers",
-                "health-check",
-                $"Checked provider health for {provider.Name}",
-                provider.LastHealthStatus,
-                ArtifactKind: "provider-profile",
-                ArtifactId: provider.Id,
-                Route: "/settings"), cancellationToken);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            provider.LastHealthCheckAtUtc = clock.GetUtcNow();
-            provider.LastHealthStatus = ex.Message;
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return new ProviderHealthResult(false, ex.Message);
-        }
-    }
+    public Task<ProviderHealthResult> TestProviderAsync(Guid id, CancellationToken cancellationToken = default)
+        => providerRuntimeGateway.CheckHealthAsync(id, cancellationToken);
 
     public Task<IReadOnlyList<SecretListItem>> ListSecretsAsync(CancellationToken cancellationToken = default)
         => secretService.ListForPickerAsync(cancellationToken);
@@ -426,6 +385,7 @@ public sealed partial class WorkspaceService(
 
         return pluginKey.Trim() switch
         {
+            ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
             OpenAiProviderAdapter.PluginKey => "gpt-4.1",
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
             _ => "unknown"

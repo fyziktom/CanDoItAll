@@ -161,8 +161,8 @@ public sealed class ProcessTemplatePackLoader
             ManifestFileName);
         var discoveredRoot = AncestorFileLocator.FindContainingDirectory(
             relativeManifestPath,
-            AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            AppContext.BaseDirectory,
             Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
         if (!string.IsNullOrWhiteSpace(discoveredRoot))
         {

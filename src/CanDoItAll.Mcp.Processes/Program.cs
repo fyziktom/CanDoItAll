@@ -1,9 +1,7 @@
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Mcp.Core.Identity;
-using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Processes;
-using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -41,10 +39,8 @@ internal static class Program
         builder.Services.AddSingleton<ServerInstanceIdentity>();
         builder.Services.AddSingleton<RuntimeConfiguration>();
         builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
-        builder.Services.AddProjectsModule();
-        builder.Services.AddCrmHrModule();
-        builder.Services.AddProcessesModule();
-        builder.Services.AddSingleton<IProcessMcpDatabaseBootstrapper, ProcessMcpDatabaseBootstrapper>();
+        builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
+        builder.Services.AddCanDoItAllRuntimeModules();
         builder.Services.AddSingleton<IProcessesCoordinator, ProcessesCoordinator>();
 
         builder.Services
@@ -57,7 +53,7 @@ internal static class Program
         var runtimeConfiguration = host.Services.GetRequiredService<RuntimeConfiguration>();
         if (runtimeConfiguration.EnsureCurrentProfileReadyOnStartup)
         {
-            await host.Services.GetRequiredService<IProcessMcpDatabaseBootstrapper>().EnsureCurrentProfileReadyAsync();
+            await host.Services.GetRequiredService<IAppDatabaseBootstrapper>().EnsureCurrentProfileReadyAsync();
         }
 
         await host.RunAsync();

@@ -16,6 +16,7 @@ internal static class ProcessStepRunTransitions
             ProcessStepRunStatus.WaitingApproval => targetStatus is ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Completed or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused,
             ProcessStepRunStatus.InProgress => targetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed,
             ProcessStepRunStatus.Blocked => targetStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed,
+            ProcessStepRunStatus.Failed => targetStatus == ProcessStepRunStatus.InProgress,
             _ => false
         };
     }

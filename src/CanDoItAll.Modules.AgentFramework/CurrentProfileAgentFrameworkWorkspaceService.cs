@@ -1,0 +1,258 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.CrmHr;
+
+namespace CanDoItAll.Modules.AgentFramework;
+
+internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
+    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IAiTechnicalAgentBridge technicalAgentBridge) : IAgentFrameworkWorkspaceService
+{
+    private readonly HashSet<IAgentFrameworkWorkspaceService> subscribedServices = new();
+    private EventHandler<ExecutionLogEntry>? executionUpdated;
+
+    public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
+    {
+        add
+        {
+            executionUpdated += value;
+            EnsureExecutionSubscription(ResolveService());
+        }
+        remove
+        {
+            executionUpdated -= value;
+        }
+    }
+
+    public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetDashboardAsync(cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);
+    }
+
+    public Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetAgentEditorAsync(agentId, cancellationToken);
+    }
+
+    public async Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
+    {
+        var agentId = await ResolveService().SaveAgentAsync(model, cancellationToken);
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        return agentId;
+    }
+
+    public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+    {
+        await ResolveService().DeleteAgentAsync(agentId, cancellationToken);
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+    }
+
+    public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
+    {
+        var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        return cloneId;
+    }
+
+    public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
+    }
+
+    public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ExportAgentAsync(agentId, cancellationToken);
+    }
+
+    public async Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
+    {
+        var agentId = await ResolveService().ImportAgentAsync(packagePath, cancellationToken);
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        return agentId;
+    }
+
+    public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListProvidersAsync(cancellationToken);
+    }
+
+    public Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetProviderEditorAsync(providerId, cancellationToken);
+    }
+
+    public Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().SaveProviderAsync(model, cancellationToken);
+    }
+
+    public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().DeleteProviderAsync(providerId, cancellationToken);
+    }
+
+    public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().TestProviderAsync(providerId, cancellationToken);
+    }
+
+    public Task<ProviderTestChatResult> RunProviderTestChatAsync(Guid providerId, ProviderTestChatRequest request, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().RunProviderTestChatAsync(providerId, request, cancellationToken);
+    }
+
+    public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(Guid providerId, OllamaModelfileRequest request, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().CreateOrUpdateOllamaModelAsync(providerId, request, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListCapabilitiesAsync(cancellationToken);
+    }
+
+    public Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetCapabilityEditorAsync(capabilityId, cancellationToken);
+    }
+
+    public Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().SaveCapabilityAsync(model, cancellationToken);
+    }
+
+    public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);
+    }
+
+    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListChatSessionsAsync(agentId, cancellationToken);
+    }
+
+    public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetChatPageBootstrapAsync(includeTemplates, cancellationToken);
+    }
+
+    public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetChatAgentWorkspaceAsync(agentId, preferredSessionId, cancellationToken);
+    }
+
+    public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken);
+    }
+
+    public Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ExecuteRunAsync(request, cancellationToken);
+    }
+
+    public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ContinueExecutionRunAsync(executionRunId, approved, autoApprovePendingToolCalls, cancellationToken);
+    }
+
+    public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().SendMessageAsync(agentId, chatSessionId, prompt, cancellationToken);
+    }
+
+    public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().RespondToPendingApprovalsAsync(agentId, chatSessionId, approved, autoApprovePendingToolCalls, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListExecutionLogAsync(agentId, chatSessionId, cancellationToken);
+    }
+
+    public Task<ChatRuntimeSnapshot> GetChatRuntimeSnapshotAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetChatRuntimeSnapshotAsync(agentId, chatSessionId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AgentRunMetric>> ListMetricsAsync(Guid agentId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListMetricsAsync(agentId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(Guid agentId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListMemoryAsync(agentId, cancellationToken);
+    }
+
+    public Task<Guid> SaveMemoryAsync(MemoryEditorModel model, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().SaveMemoryAsync(model, cancellationToken);
+    }
+
+    public Task DeleteMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().DeleteMemoryAsync(memoryId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListExecutionRunsAsync(query, cancellationToken);
+    }
+
+    public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListExecutionArtifactsAsync(executionRunId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListExecutionWorkflowCheckpointsAsync(executionRunId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListToolExecutionReceiptsAsync(executionRunId, cancellationToken);
+    }
+
+    private IAgentFrameworkWorkspaceService ResolveService()
+    {
+        var service = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
+        EnsureExecutionSubscription(service);
+        return service;
+    }
+
+    private void EnsureExecutionSubscription(IAgentFrameworkWorkspaceService service)
+    {
+        if (executionUpdated is null)
+        {
+            return;
+        }
+
+        if (subscribedServices.Add(service))
+        {
+            service.ExecutionUpdated += HandleExecutionUpdated;
+        }
+    }
+
+    private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry)
+    {
+        executionUpdated?.Invoke(this, entry);
+    }
+}

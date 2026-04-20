@@ -1,0 +1,141 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SectionCard Title="Artifacts, decisions, and briefs"
+             Description=""
+             HelpText="Process runtime proof stays reviewable only if work briefs, decisions, evidence, and conformance observations remain attached to the same run.">
+    <Grid Gap="LayoutGap.Large"
+          ColumnTemplateLg="minmax(0,1.05fr) minmax(0,0.95fr)">
+        <Stack GapScale="LayoutGap.Large">
+            <SurfaceCard>
+                <p class="cda-eyebrow">Record artifact</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Runtime evidence</h3>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsMd="2"
+                      Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Step run</label>
+                        <InputSelect @bind-Value="Presenter.ArtifactStepRunId"
+                                     class="cda-input">
+                            <option value="">Run level</option>
+                            @foreach (var stepRun in Presenter.StepRuns)
+                            {
+                                <option value="@stepRun.Id">@stepRun.Title</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Artifact kind</label>
+                        <InputSelect @bind-Value="Presenter.ArtifactKind"
+                                     class="cda-input">
+                            @foreach (var artifactKindValue in Enum.GetValues<ProcessArtifactKind>())
+                            {
+                                <option value="@artifactKindValue">@artifactKindValue</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </Grid>
+
+                <div class="mt-4">
+                    <label class="cda-field-label">Title</label>
+                    <InputText @bind-Value="Presenter.ArtifactTitle"
+                               class="cda-input"
+                               data-testid="processes-artifact-title-input" />
+                </div>
+
+                <Cluster Gap="LayoutGap.Small"
+                         Class="mt-4">
+                    <Button Text="Record artifact"
+                            Click="Presenter.RecordArtifactAsync"
+                            data-testid="processes-record-artifact-button" />
+                </Cluster>
+            </SurfaceCard>
+
+            <SurfaceCard>
+                <p class="cda-eyebrow">Work briefs</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Executor handoff context</h3>
+                @if (Presenter.WorkBriefs.Count == 0)
+                {
+                    <EmptyState Eyebrow="No work briefs"
+                                Title="No handoff context recorded"
+                                Description="Work briefs appear when the run creates executor-facing task packages." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="mt-4">
+                        @foreach (var brief in Presenter.WorkBriefs)
+                        {
+                            <SurfaceCard Soft="true">
+                                <p class="text-sm font-semibold text-slate-950">@brief.Title</p>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">@brief.WorkBriefText</p>
+                            </SurfaceCard>
+                        }
+                    </Stack>
+                }
+            </SurfaceCard>
+        </Stack>
+
+        <Stack GapScale="LayoutGap.Large">
+            <SurfaceCard>
+                <p class="cda-eyebrow">Decision records</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Durable runtime decisions</h3>
+                @if (Presenter.Decisions.Count == 0)
+                {
+                    <EmptyState Eyebrow="No decisions"
+                                Title="No decision records stored"
+                                Description="Assignment, approval, refusal, and escalation decisions appear here when captured during runtime." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="mt-4">
+                        @foreach (var decision in Presenter.Decisions)
+                        {
+                            <SurfaceCard Soft="true">
+                                <p class="text-sm font-semibold text-slate-950">@decision.Title</p>
+                                <p class="tracking-[0.18em] mt-1 text-xs uppercase text-slate-500">@decision.DecisionKind / @decision.Outcome</p>
+                                <p class="mt-3 text-sm leading-6 text-slate-600">@decision.Reason</p>
+                            </SurfaceCard>
+                        }
+                    </Stack>
+                }
+            </SurfaceCard>
+
+            <SurfaceCard>
+                <p class="cda-eyebrow">Conformance observations</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Deviations and safe non-actions</h3>
+                @if (Presenter.ConformanceObservations.Count == 0)
+                {
+                    <EmptyState Eyebrow="No observations"
+                                Title="No conformance records yet"
+                                Description="Observations appear when blocked, refused, or otherwise non-conforming runtime states are recorded." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="mt-4">
+                        @foreach (var observation in Presenter.ConformanceObservations)
+                        {
+                            <SurfaceCard Soft="true">
+                                <Split Gap="LayoutGap.Medium">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-950">@observation.Category</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-600">@observation.Observation</p>
+                                    </div>
+                                    <StatusBadge Tone="@Presenter.ResolveConformanceTone(observation.Severity)"
+                                                 Text="@observation.Severity.ToString()" />
+                                </Split>
+                            </SurfaceCard>
+                        }
+                    </Stack>
+                }
+            </SurfaceCard>
+        </Stack>
+    </Grid>
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+}

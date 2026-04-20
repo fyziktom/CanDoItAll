@@ -169,6 +169,12 @@ public sealed partial class ProcessCanvasSurfaceFactory
             return ProcessCanvasCatalog.GetResponsibilityVisual(responsibilityKind);
         }
 
+        if (ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingInputPortId(port.Id) ||
+            ProcessCanvasCatalog.DefinitionPorts.IsRoleMessagingOutputPortId(port.Id))
+        {
+            return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.RoleMessagingOutput);
+        }
+
         if (string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput, StringComparison.Ordinal) ||
             string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput, StringComparison.Ordinal) ||
             string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.BranchDecisionRoleInput, StringComparison.Ordinal) ||

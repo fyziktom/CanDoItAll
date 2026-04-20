@@ -23,6 +23,7 @@ Produce the change set, migration guidance, and targeted validation without losi
 - Requires decision record: True
 
 ## Dependencies
+- feature-intake
 - architecture-review
 
 ## Role assignments
@@ -34,7 +35,8 @@ Produce the change set, migration guidance, and targeted validation without losi
 - `migration-rollout-preparation-checklist` -> `rollback-plan` / Migration and rollout preparation checklist | kind=Checklist | trust=ReviewRequired | sensitivity=Internal | validation=Must name data changes, operational preconditions, and rollback steps.
 
 ## Artifact inputs
-- No explicit artifact inputs.
+- From step `feature-intake` expectation `scope-boundary-packet`
+- From step `architecture-review` expectation `architecture-decision-record`
 
 ## Branch outcomes
 - No explicit branch outcomes.

@@ -124,6 +124,7 @@ public sealed partial class ProcessDevelopmentSeedService
     private async Task<Result> EnsureArtifactAsync(
         Guid runId,
         Guid? stepRunId,
+        IReadOnlyList<ProcessStepRunArtifactPortViewModel> artifactOutputs,
         ProcessArtifactKind artifactKind,
         string title,
         ProcessArtifactTrustStatus trustStatus,
@@ -138,22 +139,25 @@ public sealed partial class ProcessDevelopmentSeedService
             return Result.Success();
         }
 
+        var normalizedTitle = title.Trim();
         var artifacts = await processesService.ListArtifactsAsync(runId, cancellationToken);
         var existingArtifact = artifacts.FirstOrDefault(item =>
-            string.Equals(item.Title, title.Trim(), StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
             item.ArtifactKind == artifactKind);
         if (existingArtifact is not null)
         {
             return Result.Success();
         }
 
+        var artifactExpectationId = ResolveArtifactExpectationId(artifactOutputs, normalizedTitle);
         var result = await processesService.RecordArtifactAsync(
             new ProcessArtifactRecordRequest
             {
                 ProcessRunId = runId,
                 StepRunId = stepRunId,
+                ArtifactExpectationId = artifactExpectationId,
                 ArtifactKind = artifactKind,
-                Title = title.Trim(),
+                Title = normalizedTitle,
                 TrustStatus = trustStatus,
                 SensitivityLevel = sensitivityLevel,
                 ProvenanceSummary = provenanceSummary?.Trim() ?? string.Empty,
@@ -164,6 +168,69 @@ public sealed partial class ProcessDevelopmentSeedService
         return result.IsFailure
             ? Result.Failure(result.Errors.ToArray())
             : Result.Success();
+    }
+
+    private static Guid? ResolveArtifactExpectationId(
+        IReadOnlyList<ProcessStepRunArtifactPortViewModel> artifactOutputs,
+        string title)
+    {
+        if (artifactOutputs.Count == 0)
+        {
+            return null;
+        }
+
+        if (artifactOutputs.Count == 1)
+        {
+            return artifactOutputs[0].ArtifactExpectationId;
+        }
+
+        var exactMatch = artifactOutputs.FirstOrDefault(item =>
+            string.Equals(item.Title, title, StringComparison.OrdinalIgnoreCase));
+        if (exactMatch is not null)
+        {
+            return exactMatch.ArtifactExpectationId;
+        }
+
+        var overlappingMatches = artifactOutputs
+            .Where(item => ArtifactTitlesOverlap(item.Title, title))
+            .ToList();
+        if (overlappingMatches.Count == 1)
+        {
+            return overlappingMatches[0].ArtifactExpectationId;
+        }
+
+        var requiredOutputs = artifactOutputs
+            .Where(item => item.IsRequired)
+            .ToList();
+        return requiredOutputs.Count == 1
+            ? requiredOutputs[0].ArtifactExpectationId
+            : null;
+    }
+
+    private static bool ArtifactTitlesOverlap(string left, string right)
+    {
+        var normalizedLeft = NormalizeArtifactTitle(left);
+        var normalizedRight = NormalizeArtifactTitle(right);
+        if (normalizedLeft.Length == 0 || normalizedRight.Length == 0)
+        {
+            return false;
+        }
+
+        return normalizedLeft.Contains(normalizedRight, StringComparison.Ordinal) ||
+               normalizedRight.Contains(normalizedLeft, StringComparison.Ordinal);
+    }
+
+    private static string NormalizeArtifactTitle(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
     }
 
     private static Result<IReadOnlyList<ProcessStepRunStatus>> BuildTransitionSequence(

@@ -1,3 +1,6 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Collaboration;
+
 namespace CanDoItAll.Modules.Processes;
 
 public sealed record ProcessRunListItem(
@@ -15,6 +18,30 @@ public sealed record ProcessRunListItem(
     decimal EstimatedCost,
     decimal ActualCost,
     DateTimeOffset UpdatedAtUtc);
+
+public sealed record ProcessLaunchPlanListItem(
+    Guid Id,
+    Guid ProcessDefinitionId,
+    Guid ProcessDefinitionVersionId,
+    Guid? ProjectId,
+    string Name,
+    ProcessOperatingMode OperatingMode,
+    ProcessLaunchPlanStatus Status,
+    int ResolvedRoleCount,
+    int TotalRoleCount,
+    int PendingProvisioningCount,
+    DateTimeOffset UpdatedAtUtc)
+{
+    public Guid? GeneratedRunId { get; init; }
+
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+
+    public string PlanningStatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusDetail { get; init; } = string.Empty;
+}
 
 public sealed record ProcessStepBranchOutcomeOptionViewModel(
     Guid Id,
@@ -100,7 +127,11 @@ public sealed record ProcessRunAssignmentViewModel(
     string SourceRegistryKey,
     string SnapshotSummary,
     bool IsFallback,
-    bool IsCapabilityGap);
+    bool IsCapabilityGap,
+    bool AllowsDirectMessaging)
+{
+    public string RoleDisplayName { get; init; } = string.Empty;
+}
 
 public sealed record ProcessWorkBriefViewModel(
     Guid Id,
@@ -124,6 +155,129 @@ public sealed record ProcessConformanceObservationViewModel(
     bool ContainsSensitiveAssessment,
     DateTimeOffset CreatedAtUtc);
 
+public sealed record ProcessDirectMessageEntryViewModel(
+    Guid MessageId,
+    CollaborationMessageKind MessageKind,
+    string AuthorName,
+    string Body,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record ProcessDirectMessageThreadViewModel(
+    Guid ThreadId,
+    string Subject,
+    string Route,
+    string ParticipantSummary,
+    int MessageCount,
+    int UnreadCount,
+    DateTimeOffset LastActivityAtUtc,
+    IReadOnlyList<ProcessDirectMessageEntryViewModel> Messages);
+
+public sealed record ProcessExecutionApprovalViewModel(
+    string ApprovalId,
+    string ToolName,
+    string ToolKind,
+    ExecutionApprovalStatus Status,
+    string Details,
+    DateTimeOffset RequestedAtUtc,
+    DateTimeOffset? DecidedAtUtc,
+    string DecisionNotes);
+
+public sealed record ProcessExecutionArtifactViewModel(
+    Guid Id,
+    string ArtifactKind,
+    string DisplayName,
+    string RelativePath,
+    string ContentType,
+    string ProducedBy,
+    string Summary,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record ProcessExecutionCheckpointViewModel(
+    Guid Id,
+    string CheckpointKind,
+    ExecutionState RunState,
+    int PendingApprovalCount,
+    DateTimeOffset CapturedAtUtc,
+    DateTimeOffset? ResumedAtUtc);
+
+public sealed record ProcessExecutionToolReceiptViewModel(
+    Guid Id,
+    string ToolFamily,
+    string ToolName,
+    string RiskClass,
+    string ApprovalMode,
+    string IsolationGuarantee,
+    string RequestSummary,
+    string WorkingDirectory,
+    string ExitSummary,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset CompletedAtUtc);
+
+public sealed record ProcessExecutionRunViewModel(
+    Guid Id,
+    Guid AgentId,
+    Guid? StepRunId,
+    string StepTitle,
+    string AgentName,
+    string AgentRoleTitle,
+    string Title,
+    string ProviderName,
+    string Model,
+    ExecutionState State,
+    RunOutcome? Outcome,
+    string InputSummary,
+    string ResultSummary,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? StartedAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    int LogEntryCount)
+{
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+
+    public string RawStatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusDetail { get; init; } = string.Empty;
+
+    public bool HasBrowserEvidenceToolInvocation { get; init; }
+
+    public IReadOnlyList<ProcessExecutionApprovalViewModel> Approvals { get; init; } = [];
+
+    public IReadOnlyList<ProcessExecutionArtifactViewModel> Artifacts { get; init; } = [];
+
+    public IReadOnlyList<ProcessExecutionCheckpointViewModel> Checkpoints { get; init; } = [];
+
+    public IReadOnlyList<ProcessExecutionToolReceiptViewModel> ToolReceipts { get; init; } = [];
+}
+
+public sealed record ProcessActiveAgentViewModel(
+    Guid ExecutionRunId,
+    Guid AgentId,
+    string AgentName,
+    string AgentRoleTitle,
+    string StepTitle,
+    ExecutionState State,
+    RunOutcome? Outcome,
+    DateTimeOffset UpdatedAtUtc)
+{
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+}
+
+public sealed record ProcessActiveRunSummaryViewModel(
+    Guid RunId,
+    string RunName,
+    ProcessRunStatus RunStatus,
+    DateTimeOffset UpdatedAtUtc,
+    int ActiveExecutionCount,
+    int PendingApprovalCount)
+{
+    public IReadOnlyList<ProcessActiveAgentViewModel> Agents { get; init; } = [];
+}
+
 public sealed record ProcessImprovementViewModel(
     Guid Id,
     string Title,
@@ -132,6 +286,99 @@ public sealed record ProcessImprovementViewModel(
     ProcessImprovementStatus Status,
     bool IsTrainingOpportunity,
     bool RequiresGovernanceReview);
+
+public sealed record ProcessLaunchCandidateViewModel(
+    Guid Id,
+    ProcessLaunchCandidateKind CandidateKind,
+    Guid? PartyId,
+    Guid? TechnicalAgentId,
+    string DisplayName,
+    string ExecutorKind,
+    decimal Score,
+    bool IsRecommended,
+    bool AllowsDirectMessaging,
+    bool RequiresProvisioning,
+    string RecommendationSummary,
+    string AvailabilitySummary,
+    string SourceRegistryKey);
+
+public sealed record ProcessLaunchRoleViewModel(
+    Guid Id,
+    Guid RoleRequirementId,
+    string RoleKey,
+    string DisplayName,
+    string PreferredExecutorKind,
+    bool IsRequired,
+    bool RequiresExplicitApproval,
+    bool RequiresProvisioning,
+    bool IsResolved,
+    Guid? SelectedCandidateId,
+    string RecommendationSummary,
+    string SelectionSummary,
+    string ReadinessSummary,
+    IReadOnlyList<Guid> RequiredSkillIds,
+    IReadOnlyList<ProcessLaunchCandidateViewModel> Candidates);
+
+public sealed record ProcessLaunchApprovalViewModel(
+    Guid Id,
+    ProcessLaunchApprovalStatus Status,
+    Guid? ApproverPartyId,
+    string ApproverDisplayName,
+    string ApproverKind,
+    Guid? HumanSubstitutePartyId,
+    string HumanSubstituteName,
+    Guid? CollaborationThreadId,
+    string RequestMessage,
+    string ResolutionSummary,
+    string DecidedBy,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? DecidedAtUtc);
+
+public sealed record ProcessLaunchProvisioningViewModel(
+    Guid Id,
+    Guid LaunchPlanRoleId,
+    Guid SelectedCandidateId,
+    ProcessLaunchProvisioningStatus Status,
+    string RequestKind,
+    string Title,
+    Guid? ResultPartyId,
+    Guid? ResultTechnicalAgentId,
+    string ResultSummary,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? CompletedAtUtc);
+
+public sealed record ProcessLaunchPlanDetails(
+    Guid Id,
+    Guid ProcessDefinitionId,
+    Guid ProcessDefinitionVersionId,
+    Guid? ProjectId,
+    string Name,
+    ProcessOperatingMode OperatingMode,
+    string TriggerReason,
+    ProcessLaunchPlanStatus Status,
+    string RecommendationStrategy,
+    string FallbackStrategy,
+    string Summary,
+    Guid? ApprovalThreadId,
+    Guid? GeneratedRunId,
+    string RequestedBy,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? SubmittedAtUtc,
+    DateTimeOffset? ApprovedAtUtc,
+    DateTimeOffset? ExecutedAtUtc,
+    IReadOnlyList<ProcessLaunchRoleViewModel> Roles,
+    IReadOnlyList<ProcessLaunchApprovalViewModel> Approvals,
+    IReadOnlyList<ProcessLaunchProvisioningViewModel> ProvisioningRequests)
+{
+    public string StatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusTone { get; init; } = "neutral";
+
+    public string PlanningStatusBadgeText { get; init; } = string.Empty;
+
+    public string StatusDetail { get; init; } = string.Empty;
+}
 
 public sealed record ProcessAnalyticsSummary(
     int TotalRuns,
@@ -159,6 +406,54 @@ public sealed class ProcessRunStartRequest
     public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
 
     public string TriggerReason { get; set; } = string.Empty;
+
+    public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
+
+    public Guid? LaunchPlanId { get; set; }
+}
+
+public sealed class ProcessLaunchCreateRequest
+{
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string LaunchName { get; set; } = string.Empty;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public string TriggerReason { get; set; } = string.Empty;
+
+    public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
+
+    public string RequestedBy { get; set; } = "process-workspace";
+}
+
+public sealed class ProcessLaunchCandidateSelectionRequest
+{
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public Guid CandidateId { get; set; }
+}
+
+public sealed class ProcessLaunchApprovalDecisionRequest
+{
+    public Guid LaunchPlanId { get; set; }
+
+    public ProcessLaunchApprovalStatus Status { get; set; } = ProcessLaunchApprovalStatus.Approved;
+
+    public string ResolutionSummary { get; set; } = string.Empty;
+
+    public string DecidedBy { get; set; } = string.Empty;
+}
+
+public sealed class ProcessLaunchExecutionRequest
+{
+    public Guid LaunchPlanId { get; set; }
+
+    public string RequestedBy { get; set; } = "process-workspace";
 }
 
 public sealed class ProcessStepTransitionRequest
@@ -174,6 +469,8 @@ public sealed class ProcessStepTransitionRequest
     public Guid? SelectedBranchOutcomeId { get; set; }
 
     public string DecidedBy { get; set; } = string.Empty;
+
+    public bool SuppressAutomationDispatch { get; set; }
 }
 
 public sealed class ProcessAssignmentResolutionRequest
@@ -193,6 +490,8 @@ public sealed class ProcessAssignmentResolutionRequest
     public string BindingReason { get; set; } = string.Empty;
 
     public bool IsFallback { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; } = true;
 }
 
 public sealed class ProcessArtifactRecordRequest
@@ -200,6 +499,8 @@ public sealed class ProcessArtifactRecordRequest
     public Guid ProcessRunId { get; set; }
 
     public Guid? StepRunId { get; set; }
+
+    public Guid? ArtifactExpectationId { get; set; }
 
     public ProcessArtifactKind ArtifactKind { get; set; } = ProcessArtifactKind.Evidence;
 
@@ -216,5 +517,18 @@ public sealed class ProcessArtifactRecordRequest
     public string ReviewSummary { get; set; } = string.Empty;
 
     public string ManagedStoragePath { get; set; } = string.Empty;
+
+    public string ExternalReferenceKey { get; set; } = string.Empty;
+}
+
+public sealed class ProcessDirectMessageRequest
+{
+    public Guid ProcessRunId { get; set; }
+
+    public Guid SourceRoleRequirementId { get; set; }
+
+    public Guid TargetRoleRequirementId { get; set; }
+
+    public string MessageBody { get; set; } = string.Empty;
 }
 

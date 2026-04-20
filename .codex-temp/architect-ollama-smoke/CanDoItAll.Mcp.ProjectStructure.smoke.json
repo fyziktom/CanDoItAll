@@ -1,0 +1,11 @@
+{
+  "server": {
+    "name": "CanDoItAll.Mcp.ProjectStructure",
+    "baseUrl": "http://127.0.0.1:49331",
+    "agentToken": "e032508a91cf31b4151ee3f2c1f7bfb10bfe3f7ba5da3270",
+    "agentName": "Architect Smoke Agent",
+    "repositoryRoot": ".",
+    "branchName": "",
+    "timeoutSeconds": 30
+  }
+}

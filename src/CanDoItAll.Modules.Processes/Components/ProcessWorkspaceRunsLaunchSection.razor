@@ -1,0 +1,290 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SectionCard Title="Launch planning"
+             Description=""
+             HelpText="Process execution now starts with staffing, approval, and provisioning. The UI must create a launch plan first, then only execute a run after the launch reaches the ready state.">
+    @if (!Presenter.HasSelectedProcess)
+    {
+        <EmptyState Eyebrow="Definition required"
+                    Title="Save a process definition first"
+                    Description="Launch planning needs a persisted process definition so roles, approvals, and runtime execution all point to the same durable contract." />
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <div>
+                <label class="cda-field-label">Launch name</label>
+                <InputText @bind-Value="Presenter.LaunchNameDraft"
+                           class="cda-input"
+                           data-testid="processes-launch-name-input" />
+            </div>
+            <div>
+                <label class="cda-field-label">Operating mode</label>
+                <InputSelect @bind-Value="Presenter.RunOperatingMode"
+                             class="cda-input"
+                             data-testid="processes-launch-mode-select">
+                    @foreach (var operatingMode in Enum.GetValues<ProcessOperatingMode>())
+                    {
+                        <option value="@operatingMode">@operatingMode</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="flex items-end">
+                <Button Text="Create launch plan"
+                        Click="Presenter.CreateLaunchPlanAsync"
+                        data-testid="processes-create-launch-plan-button" />
+            </div>
+        </Grid>
+
+        @if (Presenter.LaunchPlans.Count == 0)
+        {
+            <EmptyState Eyebrow="No launch plans"
+                        Title="Create the first launch plan"
+                        Description="Role recommendations, manager approval, human substitution, and provisioning all stay attached to launch plans instead of creating active runs immediately." />
+        }
+        else
+        {
+            <Grid Gap="LayoutGap.Large"
+                  ColumnTemplateLg="minmax(0,0.82fr) minmax(0,1.18fr)"
+                  Class="mt-5">
+                <div>
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var launchPlan in Presenter.LaunchPlans)
+                        {
+                            <SelectionListItem Title="@launchPlan.Name"
+                                               Eyebrow="@launchPlan.OperatingMode.ToString()"
+                                               Meta="@Presenter.BuildLaunchPlanSummary(launchPlan)"
+                                               Summary="@launchPlan.UpdatedAtUtc.LocalDateTime.ToString("g")"
+                                               IsSelected="@(Presenter.SelectedLaunchPlanSummary?.Id == launchPlan.Id)"
+                                               OnSelect="@(() => Presenter.SelectLaunchPlanAsync(launchPlan.Id))">
+                                <Status>
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="@launchPlan.StatusTone"
+                                                     Text="@launchPlan.StatusBadgeText" />
+                                        @if (!string.IsNullOrWhiteSpace(launchPlan.PlanningStatusBadgeText))
+                                        {
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@launchPlan.PlanningStatusBadgeText" />
+                                        }
+                                    </Cluster>
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </Stack>
+                </div>
+
+                <SurfaceCard data-testid="processes-launch-plan-detail">
+                    @if (Presenter.SelectedLaunchPlan is null)
+                    {
+                        <EmptyState Eyebrow="No launch selected"
+                                    Title="Choose a launch plan to continue"
+                                    Description="Candidate selection, approval, provisioning, and execution are all attached to the selected launch plan." />
+                    }
+                    else
+                    {
+                        var launchPlan = Presenter.SelectedLaunchPlan;
+                        <Stack GapScale="LayoutGap.Large">
+                            <Split Gap="LayoutGap.Medium">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <p class="cda-eyebrow">Selected launch</p>
+                                    <h3 class="text-lg font-semibold text-slate-950">@launchPlan.Name</h3>
+                                    <p class="text-sm leading-6 text-slate-600">@launchPlan.Summary</p>
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@launchPlan.StatusTone"
+                                                 Text="@launchPlan.StatusBadgeText" />
+                                    @if (!string.IsNullOrWhiteSpace(launchPlan.PlanningStatusBadgeText))
+                                    {
+                                        <StatusBadge Tone="neutral"
+                                                     Text="@launchPlan.PlanningStatusBadgeText" />
+                                    }
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@($"{launchPlan.Roles.Count} roles")" />
+                                </Cluster>
+                            </Split>
+
+                            @if (!string.IsNullOrWhiteSpace(launchPlan.StatusDetail))
+                            {
+                                <p class="text-sm leading-6 text-slate-600">@launchPlan.StatusDetail</p>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(launchPlan.TriggerReason))
+                            {
+                                <SurfaceCard Soft="true">
+                                    <p class="cda-eyebrow">Trigger reason</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@launchPlan.TriggerReason</p>
+                                </SurfaceCard>
+                            }
+
+                            <SectionCard Title="Role candidate matrix"
+                                         Description=""
+                                         HelpText="Every required role must pick a resolvable candidate before the launch can move to approval. Gaps stay visible instead of silently starting the run anyway.">
+                                <Stack GapScale="LayoutGap.Medium">
+                                    @foreach (var role in launchPlan.Roles)
+                                    {
+                                        <SurfaceCard data-testid="processes-launch-role-card">
+                                            <Split Gap="LayoutGap.Medium">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-slate-950">@role.DisplayName</p>
+                                                    <p class="mt-1 text-sm text-slate-600">@role.SelectionSummary</p>
+                                                    <p class="mt-2 text-sm leading-6 text-slate-500">@role.ReadinessSummary</p>
+                                                </div>
+                                                <Cluster Gap="LayoutGap.Small">
+                                                    <StatusBadge Tone="@(role.IsResolved ? "success" : "danger")"
+                                                                 Text="@(role.IsResolved ? "Resolved" : "Gap")" />
+                                                    @if (role.RequiresProvisioning)
+                                                    {
+                                                        <StatusBadge Tone="warning" Text="Provisioning" />
+                                                    }
+                                                    @if (role.RequiresExplicitApproval)
+                                                    {
+                                                        <StatusBadge Tone="info" Text="Approval" />
+                                                    }
+                                                </Cluster>
+                                            </Split>
+
+                                            <Stack GapScale="LayoutGap.Small"
+                                                   Class="mt-4">
+                                                @foreach (var candidate in role.Candidates.OrderByDescending(item => item.Score))
+                                                {
+                                                    <SelectionListItem Title="@candidate.DisplayName"
+                                                                       Eyebrow="@candidate.CandidateKind.ToString()"
+                                                                       Meta="@($"{candidate.Score:0.0} score / {candidate.ExecutorKind}")"
+                                                                       Summary="@candidate.RecommendationSummary"
+                                                                       IsSelected="@(role.SelectedCandidateId == candidate.Id)"
+                                                                       OnSelect="@(() => Presenter.SelectLaunchCandidateAsync(role.Id, candidate.Id))">
+                                                        <Status>
+                                                            <Cluster Gap="LayoutGap.Small">
+                                                                <StatusBadge Tone="@Presenter.ResolveLaunchCandidateTone(candidate)"
+                                                                             Text="@(candidate.IsRecommended ? "Recommended" : "Candidate")" />
+                                                                @if (candidate.RequiresProvisioning)
+                                                                {
+                                                                    <StatusBadge Tone="warning" Text="Provisioning" />
+                                                                }
+                                                            </Cluster>
+                                                        </Status>
+                                                    </SelectionListItem>
+                                                }
+                                            </Stack>
+                                        </SurfaceCard>
+                                    }
+                                </Stack>
+                            </SectionCard>
+
+                            <SectionCard Title="Approval and provisioning"
+                                         Description=""
+                                         HelpText="Approval stays auditable through Collaboration. Provisioning stays durable and explicit before the run is allowed to execute.">
+                                <Stack GapScale="LayoutGap.Medium">
+                                    <div>
+                                        <label class="cda-field-label">Decision summary</label>
+                                        <InputTextArea @bind-Value="Presenter.LaunchDecisionSummary"
+                                                       class="cda-input cda-input--textarea min-h-24"
+                                                       data-testid="processes-launch-decision-summary-input" />
+                                    </div>
+
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <Button Text="Submit for approval"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(launchPlan.Status is not ProcessLaunchPlanStatus.Draft and not ProcessLaunchPlanStatus.ChangesRequested)"
+                                                Click="Presenter.SubmitLaunchPlanForApprovalAsync"
+                                                data-testid="processes-launch-submit-approval-button" />
+                                        <Button Text="Approve"
+                                                Disabled="@(launchPlan.Status != ProcessLaunchPlanStatus.PendingApproval)"
+                                                Click="Presenter.ApproveLaunchPlanAsync"
+                                                data-testid="processes-launch-approve-button" />
+                                        <Button Text="Request changes"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(launchPlan.Status != ProcessLaunchPlanStatus.PendingApproval)"
+                                                Click="Presenter.RequestLaunchChangesAsync"
+                                                data-testid="processes-launch-request-changes-button" />
+                                        <Button Text="Reject"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(launchPlan.Status != ProcessLaunchPlanStatus.PendingApproval)"
+                                                Click="Presenter.RejectLaunchPlanAsync"
+                                                data-testid="processes-launch-reject-button" />
+                                    </Cluster>
+
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <Button Text="Provision selected resources"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(launchPlan.Status is not ProcessLaunchPlanStatus.Approved and not ProcessLaunchPlanStatus.Provisioning)"
+                                                Click="Presenter.ProvisionLaunchPlanAsync"
+                                                data-testid="processes-launch-provision-button" />
+                                        <Button Text="Execute ready launch"
+                                                Disabled="@(launchPlan.Status != ProcessLaunchPlanStatus.Ready)"
+                                                Click="Presenter.ExecuteLaunchPlanAsync"
+                                                data-testid="processes-launch-execute-button" />
+                                    </Cluster>
+
+                                    @if (launchPlan.Approvals.Count > 0)
+                                    {
+                                        <Stack GapScale="LayoutGap.Small">
+                                            @foreach (var approval in launchPlan.Approvals.OrderByDescending(item => item.CreatedAtUtc))
+                                            {
+                                                <SurfaceCard Soft="true"
+                                                             data-testid="processes-launch-approval-record">
+                                                    <Split Gap="LayoutGap.Medium">
+                                                        <div>
+                                                            <p class="text-sm font-semibold text-slate-950">@approval.ApproverDisplayName</p>
+                                                            <p class="mt-1 text-sm text-slate-600">@approval.RequestMessage</p>
+                                                            @if (!string.IsNullOrWhiteSpace(approval.ResolutionSummary))
+                                                            {
+                                                                <p class="mt-2 text-sm leading-6 text-slate-500">@approval.ResolutionSummary</p>
+                                                            }
+                                                        </div>
+                                                        <Cluster Gap="LayoutGap.Small">
+                                                            <StatusBadge Tone="@Presenter.ResolveLaunchApprovalTone(approval.Status)"
+                                                                         Text="@approval.Status.ToString()" />
+                                                            @if (!string.IsNullOrWhiteSpace(approval.HumanSubstituteName))
+                                                            {
+                                                                <StatusBadge Tone="info" Text="@approval.HumanSubstituteName" />
+                                                            }
+                                                        </Cluster>
+                                                    </Split>
+
+                                                    @if (approval.CollaborationThreadId.HasValue)
+                                                    {
+                                                        <Cluster Gap="LayoutGap.Small"
+                                                                 Class="mt-4">
+                                                            <Button Text="Open collaboration thread"
+                                                                    ButtonStyle="ButtonStyle.Light"
+                                                                    Href="@($"/collaboration?threadId={approval.CollaborationThreadId.Value:D}")" />
+                                                        </Cluster>
+                                                    }
+                                                </SurfaceCard>
+                                            }
+                                        </Stack>
+                                    }
+
+                                    @if (launchPlan.ProvisioningRequests.Count > 0)
+                                    {
+                                        <Stack GapScale="LayoutGap.Small">
+                                            @foreach (var provisioning in launchPlan.ProvisioningRequests.OrderByDescending(item => item.CreatedAtUtc))
+                                            {
+                                                <SelectionListItem Title="@provisioning.Title"
+                                                                   Eyebrow="@provisioning.RequestKind"
+                                                                   Meta="@provisioning.CreatedAtUtc.LocalDateTime.ToString("g")"
+                                                                   Summary="@provisioning.ResultSummary">
+                                                    <Status>
+                                                        <StatusBadge Tone="@Presenter.ResolveProvisioningTone(provisioning.Status)"
+                                                                     Text="@provisioning.Status.ToString()" />
+                                                    </Status>
+                                                </SelectionListItem>
+                                            }
+                                        </Stack>
+                                    }
+                                </Stack>
+                            </SectionCard>
+                        </Stack>
+                    }
+                </SurfaceCard>
+            </Grid>
+        }
+    }
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+}

@@ -1,0 +1,42 @@
+<SectionCard Title="Live execution timeline"
+             Description="What the selected agent is working on right now and the most recent runtime phases.">
+    @if (Entries.Count == 0)
+    {
+        <EmptyState Eyebrow="Timeline"
+                    Title="No execution entries yet"
+                    Description="A run will populate planning, runtime, and persistence phases here." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var entry in Entries.OrderByDescending(item => item.CreatedAtUtc).Take(12))
+            {
+                <SelectionListItem Title="@entry.Phase"
+                                   Eyebrow="@entry.State.ToString()"
+                                   Meta="@entry.CreatedAtUtc.LocalDateTime.ToString("g")"
+                                   Summary="@entry.Message">
+                    <Status>
+                        <StatusBadge Tone="@ResolveTone(entry.State)" Text="@entry.State.ToString()" />
+                    </Status>
+                </SelectionListItem>
+            }
+        </Stack>
+    }
+</SectionCard>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<ExecutionLogEntry> Entries { get; set; }
+
+    private static string ResolveTone(ExecutionState state)
+    {
+        return state switch
+        {
+            ExecutionState.Completed => "success",
+            ExecutionState.Failed => "danger",
+            ExecutionState.Running => "info",
+            ExecutionState.WaitingOnTool => "warning",
+            _ => "neutral"
+        };
+    }
+}

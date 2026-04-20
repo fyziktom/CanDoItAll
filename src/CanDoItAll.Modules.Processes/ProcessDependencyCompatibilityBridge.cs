@@ -32,6 +32,9 @@ internal static class ProcessDependencyCompatibilityBridge
             Roles = model.Roles
                 .Select(CloneRole)
                 .ToList(),
+            MessagingPolicies = model.MessagingPolicies
+                .Select(CloneMessagingPolicy)
+                .ToList(),
             Steps = model.Steps
                 .Select(ToImportExportStep)
                 .ToList()
@@ -68,6 +71,9 @@ internal static class ProcessDependencyCompatibilityBridge
             Roles = definition.Roles
                 .Select(CloneRole)
                 .ToList(),
+            MessagingPolicies = definition.MessagingPolicies
+                .Select(CloneMessagingPolicy)
+                .ToList(),
             Steps = definition.Steps
                 .Select(ToEditorStep)
                 .ToList()
@@ -95,6 +101,16 @@ internal static class ProcessDependencyCompatibilityBridge
             RequiredSkillIds = role.RequiredSkillIds.ToList(),
             CanvasX = role.CanvasX,
             CanvasY = role.CanvasY
+        };
+    }
+
+    private static ProcessRoleMessagingPolicyEditorModel CloneMessagingPolicy(ProcessRoleMessagingPolicyEditorModel policy)
+    {
+        return new ProcessRoleMessagingPolicyEditorModel
+        {
+            Id = policy.Id,
+            SourceRoleRequirementId = policy.SourceRoleRequirementId,
+            TargetRoleRequirementId = policy.TargetRoleRequirementId
         };
     }
 

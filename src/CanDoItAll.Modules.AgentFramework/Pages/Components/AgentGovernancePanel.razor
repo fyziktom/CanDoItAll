@@ -1,0 +1,241 @@
+<ListDetailShell ListPaneWidth="24rem"
+                 data-testid="agents-governance-panel">
+    <ListHeader>
+        <ListPanelHeader Title="Execution runs"
+                         Description="Inspect durable technical execution state, approvals, artifacts, checkpoints, and receipts without leaving the integrated shell.">
+            <Actions>
+                <Button Text="Refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@isBusy"
+                        Click="RefreshAsync" />
+            </Actions>
+        </ListPanelHeader>
+    </ListHeader>
+
+    <ListContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <SurfaceCard Soft="true">
+                <div>
+                    <label class="cda-field-label">Agent filter</label>
+                    <InputSelect TValue="Guid?"
+                                 Value="@selectedAgentId"
+                                 ValueChanged="HandleAgentFilterChangedAsync"
+                                 ValueExpression="@(() => selectedAgentId)"
+                                 class="cda-input">
+                        <option value="">All technical agents</option>
+                        @foreach (var agent in agents.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <option value="@agent.Id">@agent.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+            </SurfaceCard>
+
+            @if (runs.Count == 0)
+            {
+                <EmptyState Eyebrow="No runs"
+                            Title="No execution runs match the current filter"
+                            Description="Dispatch a process-backed agent task or use the chat and scenario tabs to create durable execution state." />
+            }
+            else
+            {
+                @foreach (var run in runs)
+                {
+                    <SelectionListItem Title="@run.Title"
+                                       Eyebrow="@ResolveRunEyebrow(run)"
+                                       Meta="@run.UpdatedAtUtc.LocalDateTime.ToString("g")"
+                                       Summary="@ResolveRunSummary(run)"
+                                       IsSelected="@(selectedRunId == run.Id)"
+                                       OnSelect="@(() => SelectRunAsync(run.Id))"
+                                       DataTestId="agents-governance-run-item">
+                        <Status>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@ResolveRunTone(run)"
+                                             Text="@run.State.ToString()" />
+                                @if (run.Outcome.HasValue)
+                                {
+                                    <StatusBadge Tone="neutral" Text="@run.Outcome.Value.ToString()" />
+                                }
+                            </Cluster>
+                        </Status>
+                    </SelectionListItem>
+                }
+            }
+        </Stack>
+    </ListContent>
+
+    <DetailHeader>
+        <Stack GapScale="LayoutGap.Small">
+            <p class="cda-eyebrow">Governance detail</p>
+            <h2 class="text-xl font-semibold text-slate-950">@(selectedDetail?.Run.Title ?? "Select an execution run")</h2>
+            <p class="text-sm leading-6 text-slate-600">Durable run details stay here even when the originating process, scenario, or chat route is elsewhere.</p>
+        </Stack>
+    </DetailHeader>
+
+    <DetailContent>
+        @if (selectedDetail is null)
+        {
+            <EmptyState Eyebrow="No run selected"
+                        Title="Choose an execution run from the left rail"
+                        Description="The right pane shows its approvals, artifacts, checkpoints, and tool receipts." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Large">
+                <SummaryTiles GapScale="LayoutGap.Small"
+                              ColumnsMd="4">
+                    <SummaryTile Label="Approvals"
+                                 Value="@selectedDetail.Approvals.Count.ToString()"
+                                 HelperText="Pending and resolved tool approvals."
+                                 Tone="warning"
+                                 Badge="true"
+                                 Compact="true" />
+                    <SummaryTile Label="Artifacts"
+                                 Value="@selectedDetail.Artifacts.Count.ToString()"
+                                 HelperText="Durable artifacts attached to this run."
+                                 Tone="success"
+                                 Badge="true"
+                                 Compact="true" />
+                    <SummaryTile Label="Checkpoints"
+                                 Value="@selectedDetail.Checkpoints.Count.ToString()"
+                                 HelperText="Resumable workflow checkpoints."
+                                 Tone="info"
+                                 Badge="true"
+                                 Compact="true" />
+                    <SummaryTile Label="Receipts"
+                                 Value="@selectedDetail.ToolReceipts.Count.ToString()"
+                                 HelperText="Controlled tool execution receipts."
+                                 Tone="neutral"
+                                 Badge="true"
+                                 Compact="true" />
+                </SummaryTiles>
+
+                <SurfaceCard Soft="true">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@ResolveRunTone(selectedDetail.Run)"
+                                     Text="@selectedDetail.Run.State.ToString()" />
+                        @if (selectedDetail.Run.Outcome.HasValue)
+                        {
+                            <StatusBadge Tone="info" Text="@selectedDetail.Run.Outcome.Value.ToString()" />
+                        }
+                        <StatusBadge Tone="neutral" Text="@selectedDetail.Run.SourceKind" />
+                        @if (!string.IsNullOrWhiteSpace(selectedDetail.Run.ProcessRunId))
+                        {
+                            <StatusBadge Tone="warning" Text="Process-linked" />
+                        }
+                    </Cluster>
+                    <p class="mt-3 text-sm leading-6 text-slate-700">@selectedDetail.Run.ResultSummary</p>
+                    <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">
+                        Source @selectedDetail.Run.SourceId
+                        @if (!string.IsNullOrWhiteSpace(selectedDetail.Run.ProcessRunId))
+                        {
+                            <span> / Process run @selectedDetail.Run.ProcessRunId</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(selectedDetail.Run.ProcessStepId))
+                        {
+                            <span> / Step @selectedDetail.Run.ProcessStepId</span>
+                        }
+                    </p>
+                </SurfaceCard>
+
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplateXl="repeat(2,minmax(0,1fr))">
+                    <SurfaceCard Soft="true">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approvals" />
+                        @if (selectedDetail.Approvals.Count == 0)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2" Value="No tool approvals were captured for this run." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                @foreach (var approval in selectedDetail.Approvals.OrderByDescending(item => item.RequestedAtUtc))
+                                {
+                                    <SelectionListItem Title="@approval.ToolName"
+                                                       Eyebrow="@approval.ToolKind"
+                                                       Meta="@approval.RequestedAtUtc.LocalDateTime.ToString("g")"
+                                                       Summary="@approval.Details">
+                                        <Status>
+                                            <StatusBadge Tone="@ResolveApprovalTone(approval.Status)"
+                                                         Text="@approval.Status.ToString()" />
+                                        </Status>
+                                    </SelectionListItem>
+                                }
+                            </Stack>
+                        }
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Artifacts" />
+                        @if (selectedDetail.Artifacts.Count == 0)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2" Value="No artifacts were persisted for this run." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                @foreach (var artifact in selectedDetail.Artifacts.OrderBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <SelectionListItem Title="@artifact.DisplayName"
+                                                       Eyebrow="@artifact.ArtifactKind"
+                                                       Meta="@artifact.CreatedAtUtc.LocalDateTime.ToString("g")"
+                                                       Summary="@artifact.RelativePath" />
+                                }
+                            </Stack>
+                        }
+                    </SurfaceCard>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplateXl="repeat(2,minmax(0,1fr))">
+                    <SurfaceCard Soft="true">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Checkpoints" />
+                        @if (selectedDetail.Checkpoints.Count == 0)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2" Value="No resumable checkpoints were emitted." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                @foreach (var checkpoint in selectedDetail.Checkpoints.OrderByDescending(item => item.CapturedAtUtc))
+                                {
+                                    <SelectionListItem Title="@checkpoint.CheckpointKind"
+                                                       Eyebrow="@checkpoint.RunState.ToString()"
+                                                       Meta="@checkpoint.CapturedAtUtc.LocalDateTime.ToString("g")"
+                                                       Summary="@($"{checkpoint.PendingApprovalIds.Count} pending approval id(s)")" />
+                                }
+                            </Stack>
+                        }
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool receipts" />
+                        @if (selectedDetail.ToolReceipts.Count == 0)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2" Value="No tool receipts were captured for this run." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                @foreach (var receipt in selectedDetail.ToolReceipts.OrderByDescending(item => item.CompletedAtUtc))
+                                {
+                                    <SelectionListItem Title="@receipt.ToolName"
+                                                       Eyebrow="@receipt.ToolFamily"
+                                                       Meta="@receipt.CompletedAtUtc.LocalDateTime.ToString("g")"
+                                                       Summary="@($"{receipt.RiskClass} / {receipt.ExitSummary}")" />
+                                }
+                            </Stack>
+                        }
+                    </SurfaceCard>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplateXl="repeat(2,minmax(0,1fr))">
+                    <ExecutionTimelinePanel Entries="@selectedDetail.ExecutionLog" />
+                    <MetricSummaryPanel Metrics="@selectedDetail.Metrics" />
+                </Grid>
+            </Stack>
+        }
+    </DetailContent>
+</ListDetailShell>

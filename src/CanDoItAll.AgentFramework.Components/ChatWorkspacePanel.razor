@@ -1,0 +1,437 @@
+<WorkspacePanel Class="flex h-full min-h-0 flex-col overflow-hidden"
+                data-testid="chat-workspace-panel">
+    <div class="border-b border-slate-200 pb-4">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="flex min-w-0 items-start gap-3">
+                <Avatar Alt="@ResolveAvatarAlt()"
+                        ImageUrl="@Agent?.AvatarImageUrl"
+                        FallbackText="@ResolveAvatarFallbackText()"
+                        DefaultImageSeed="@ResolveAvatarSeed()"
+                        Size="AvatarSize.Medium"
+                        Shape="AvatarShape.Rounded" />
+
+                <div class="min-w-0">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@ResolveSessionTone()" Text="@ResolveSessionBadge()" />
+                        @if (!string.IsNullOrWhiteSpace(RunStateText))
+                        {
+                            <StatusBadge Tone="@RunStateTone" Text="@RunStateText" />
+                        }
+                        @if (IsAutoApprovalActive())
+                        {
+                            <StatusBadge Tone="success" Text="@ResolveAutoApproveBadgeText()" />
+                        }
+                        @if (Session is not null)
+                        {
+                            <StatusBadge Tone="neutral" Text="@($"{Session.Messages.Count} messages")" />
+                        }
+                        @if (HasPendingApprovals)
+                        {
+                            <StatusBadge Tone="warning" Text="@($"{PendingApprovals.Count} approvals")" />
+                        }
+                    </Cluster>
+
+                    <Stack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                        
+                        <p class="mt-3 text-lg font-semibold text-slate-950">@(Session?.Title ?? "Select or create a thread")</p>
+                        @*<p class="mt-1 text-sm leading-6 text-slate-600">@ResolveHeaderSummary()</p>*@
+                        @if (Session is not null)
+                        {
+                            <StatusBadge Class="mt-3" Tone="primary" Text="@Session.UpdatedAtUtc.LocalDateTime.ToString("g")"/>
+                        }
+                    </Stack>
+                </div>
+            </div>
+
+            
+        </div>
+    </div>
+
+    <div class="mt-4 flex-1 overflow-y-auto pr-1" style="scrollbar-gutter:stable;">
+        @{
+            var hasMessages = Session?.Messages.Count > 0;
+            var hasPendingApprovals = HasPendingApprovals;
+            var hasPendingPrompt = !string.IsNullOrWhiteSpace(PendingUserPrompt);
+        }
+
+        @if (Session is null && !hasPendingPrompt)
+        {
+            <EmptyState Eyebrow="Conversation"
+                        Title="Nothing is open in the center panel"
+                        Description="Choose a thread from the left rail or create a new one to keep the active transcript in view." />
+        }
+        else if (!hasMessages && !hasPendingApprovals && !hasPendingPrompt)
+        {
+            <EmptyState Eyebrow="Conversation"
+                        Title="This thread is ready for the first prompt"
+                        Description="Use the composer below to ask for a plan, a status update, or an actual working answer from the selected agent." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var message in Session?.Messages.OrderBy(item => item.CreatedAtUtc) ?? Enumerable.Empty<ChatMessageRecord>())
+                {
+                    var isUserMessage = message.Role == ChatMessageRole.User;
+
+                    <div class="flex @(isUserMessage ? "justify-end" : "justify-start")">
+                        <div class="flex max-w-[44rem] flex-col gap-2 @(isUserMessage ? "items-end" : "items-start")">
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                @if (!isUserMessage)
+                                {
+                                    <Avatar Alt="@ResolveAvatarAlt()"
+                                            ImageUrl="@Agent?.AvatarImageUrl"
+                                            FallbackText="@ResolveAvatarFallbackText()"
+                                            DefaultImageSeed="@ResolveAvatarSeed()"
+                                            Size="AvatarSize.Small"
+                                            Shape="AvatarShape.Rounded" />
+                                }
+
+                                <StatusBadge Tone="@ResolveRoleTone(message.Role)" Text="@message.Role.ToString()" />
+                                <TextBlock TextStyle="TextStyle.Caption" Value="@message.CreatedAtUtc.LocalDateTime.ToString("g")" />
+                            </Cluster>
+
+                            <div class="chat-message-bubble rounded-[1.4rem] border px-4 py-3.5 shadow-sm @(ResolveBubbleClass(isUserMessage))">
+                                @if (isUserMessage)
+                                {
+                                    <p class="text-sm leading-6">@message.Content</p>
+                                }
+                                else
+                                {
+                                    <div class="chat-markdown text-sm leading-6">@RenderAssistantMessage(message.Content)</div>
+                                }
+
+                                <div class="chat-message-footer">
+                                    <span class="chat-message-footer-meta">
+                                        @if (message.TokenEstimate > 0)
+                                        {
+                                            <span class="text-xs @(isUserMessage ? "text-white/70" : "text-slate-400")">~@message.TokenEstimate tokens</span>
+                                        }
+                                    </span>
+
+                                    <CopyButton Value="@message.Content"
+                                                Disabled="@string.IsNullOrWhiteSpace(message.Content)"
+                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                Size="CopyButtonSize.ExtraSmall"
+                                                AriaLabel="@(isUserMessage ? "Copy user message" : "Copy assistant message")"
+                                                Class="@(isUserMessage ? "chat-message-copy chat-message-copy--user" : "chat-message-copy")" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (hasPendingPrompt)
+                {
+                    <div class="flex justify-end">
+                        <div class="flex max-w-[44rem] flex-col items-end gap-2">
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="info" Text="User" />
+                                <StatusBadge Tone="neutral" Text="Sending..." />
+                                <TextBlock TextStyle="TextStyle.Caption" Value="@DateTime.Now.ToString("g")" />
+                            </Cluster>
+
+                            <div class="rounded-[1.4rem] border border-slate-900 bg-slate-900 px-4 py-3.5 text-white shadow-sm opacity-90">
+                                <p class="text-sm leading-6">@PendingUserPrompt</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (HasPendingApprovals)
+                {
+                    <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50/80 p-4">
+                        <Stack GapScale="LayoutGap.Medium">
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="warning" Text="Approval required" />
+                                <TextBlock TextStyle="TextStyle.Body2"
+                                           Value="The agent is waiting on tool approval before the thread can continue." />
+                            </Cluster>
+
+                            @foreach (var approval in PendingApprovals)
+                            {
+                                <div class="rounded-[1.2rem] border border-amber-200 bg-white px-4 py-3">
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                            <StatusBadge Tone="info" Text="@approval.ToolKind" />
+                                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@approval.ToolName" />
+                                        </Cluster>
+
+                                        @if (!string.IsNullOrWhiteSpace(approval.Details))
+                                        {
+                                            <TextBlock TextStyle="TextStyle.Body2" Value="@approval.Details" />
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(approval.ArgumentsJson) && approval.ArgumentsJson != "{}")
+                                        {
+                                            <TextBlock TextStyle="TextStyle.Caption" Value="@approval.ArgumentsJson" />
+                                        }
+                                    </Stack>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+                }
+            </Stack>
+        }
+    </div>
+
+    <div class="mt-4 border-t border-slate-200 pt-4">
+        <FormField>
+            <Stack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <TextArea @key="ComposerKey"
+                          Value="@DraftPrompt"
+                          ValueChanged="HandleDraftChanged"
+                          Rows="4"
+                          Placeholder="Ask for a plan, a diagnosis, or a concrete next step."
+                          data-testid="chat-prompt-input" />
+                <Stack Orientation="Orientation.Vertical" Gap="0.5rem">
+                    <Button Icon="add"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@IsBusy"
+                            Style="min-width:2.75rem;"
+                            Click="@(async () => await AttachmentRequested.InvokeAsync())"
+                            data-testid="chat-attachment-button" />
+                    <Button Icon="send"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@(IsBusy || HasPendingApprovals)"
+                            IsBusy="@IsBusy"
+                            Click="@(async () => await SendRequested.InvokeAsync())"
+                            data-testid="chat-send-button" />
+                </Stack>
+            </Stack>
+        </FormField>
+
+        @if (DraftAttachmentPaths.Count > 0)
+        {
+            <div class="mt-4 rounded-[1.35rem] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+                <Stack GapScale="LayoutGap.Small">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="success" Text="@($"{DraftAttachmentPaths.Count} staged")" />
+                        <TextBlock TextStyle="TextStyle.Body2"
+                                   Value="These files are queued for the next prompt and their workspace paths will be included automatically." />
+                    </Cluster>
+
+                    @foreach (var attachmentPath in DraftAttachmentPaths)
+                    {
+                        <div class="flex items-start justify-between gap-3 rounded-[1rem] border border-emerald-200 bg-white/75 px-3 py-2">
+                            <p class="min-w-0 flex-1 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@attachmentPath</p>
+                            <CopyButton Value="@attachmentPath"
+                                        DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                        Size="CopyButtonSize.ExtraSmall"
+                                        AriaLabel="Copy staged attachment path" />
+                        </div>
+                    }
+                </Stack>
+            </div>
+        }
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <TextBlock TextStyle="TextStyle.Eyebrow"
+                       Value="@ResolveComposerGuidance()" />
+
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                @if (HasPendingApprovals)
+                {
+                    @if (!IsAutoApprovalActive())
+                    {
+                        <Button Text="Approve remaining in this run"
+                                Disabled="@IsBusy"
+                                IsBusy="@IsBusy"
+                                Click="@(async () => await ApprovalDecisionForConversationRequested.InvokeAsync())"
+                                data-testid="chat-approve-conversation-button" />
+                    }
+                    <Button Text="Approve once"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@IsBusy"
+                            IsBusy="@IsBusy"
+                            Click="@(async () => await ApprovalDecisionRequested.InvokeAsync(true))"
+                            data-testid="chat-approve-once-button" />
+                    <Button Text="Reject and continue"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@IsBusy"
+                            Click="@(async () => await ApprovalDecisionRequested.InvokeAsync(false))"
+                            data-testid="chat-reject-button" />
+                }
+            </Cluster>
+        </div>
+    </div>
+</WorkspacePanel>
+
+@code {
+    private static MarkupString RenderAssistantMessage(string? content)
+        => new(ChatMarkdownRenderer.RenderHtml(content));
+
+    [Parameter]
+    public AgentDefinition? Agent { get; set; }
+
+    [Parameter]
+    public ChatSessionRecord? Session { get; set; }
+
+    [Parameter]
+    public ExecutionRunRecord? ActiveRun { get; set; }
+
+    [Parameter]
+    public required string DraftPrompt { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public int ComposerKey { get; set; }
+
+    [Parameter]
+    public string RunStateText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RunStateTone { get; set; } = "neutral";
+
+    [Parameter]
+    public string PendingUserPrompt { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<string> DraftAttachmentPaths { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<string> DraftPromptChanged { get; set; }
+
+    [Parameter]
+    public EventCallback SendRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> ApprovalDecisionRequested { get; set; }
+
+    [Parameter]
+    public EventCallback ApprovalDecisionForConversationRequested { get; set; }
+
+    [Parameter]
+    public EventCallback AttachmentRequested { get; set; }
+
+    private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
+        => ActiveRun?.PendingApprovals ?? [];
+
+    private bool HasPendingApprovals => PendingApprovals.Count > 0;
+
+    private Task HandleDraftChanged(string? value)
+        => DraftPromptChanged.InvokeAsync(value ?? string.Empty);
+
+    private string ResolveHeaderSummary()
+    {
+        if (Agent is null)
+        {
+            return "Select an agent on the right to make the center panel conversational again.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(Agent.Summary))
+        {
+            return Agent.Summary;
+        }
+
+        return "Keep the active transcript visible here while the side rails handle thread switching and agent changes.";
+    }
+
+    private string ResolveComposerGuidance()
+    {
+        if (HasPendingApprovals)
+        {
+            return IsAutoApprovalActive()
+                ? "A pending tool call still needs confirmation once, then the active run policy will keep the remaining approvals moving."
+                : "Approve once, approve the rest of this run, or reject before sending the next prompt.";
+        }
+
+        if (ActiveRun?.AutoApprovePendingToolCalls == true)
+        {
+            return "The active run is allowed to auto-approve its remaining tool calls.";
+        }
+
+        if (Agent?.Permissions.AutoApproveExternalCallsByDefault == true)
+        {
+            return "This agent auto-approves external tool calls by default.";
+        }
+
+        return "Keep the next prompt focused so the transcript stays easy to scan.";
+    }
+
+    private string ResolveSessionBadge()
+    {
+        if (Session is null)
+        {
+            return "Idle";
+        }
+
+        if (HasPendingApprovals)
+        {
+            return "Waiting";
+        }
+
+        return Session.Messages.Count == 0 ? "Ready" : "Active";
+    }
+
+    private string ResolveSessionTone()
+    {
+        if (Session is null)
+        {
+            return "neutral";
+        }
+
+        return HasPendingApprovals ? "warning" : "info";
+    }
+
+    private bool IsAutoApprovalActive()
+        => ActiveRun?.AutoApprovePendingToolCalls == true || Agent?.Permissions.AutoApproveExternalCallsByDefault == true;
+
+    private string ResolveAutoApproveBadgeText()
+        => ActiveRun?.AutoApprovePendingToolCalls == true ? "Run auto approve" : "Agent auto approve";
+
+    private string ResolveAvatarAlt()
+        => Agent?.Name ?? "Selected agent";
+
+    private string ResolveAvatarFallbackText()
+        => BuildInitials(ResolveAvatarSeed());
+
+    private string ResolveAvatarSeed()
+    {
+        if (!string.IsNullOrWhiteSpace(Agent?.Name))
+        {
+            return Agent.Name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Agent?.RoleTitle))
+        {
+            return Agent.RoleTitle;
+        }
+
+        return "Sandbox Agent";
+    }
+
+    private static string ResolveRoleTone(ChatMessageRole role)
+    {
+        return role switch
+        {
+            ChatMessageRole.Assistant => "success",
+            ChatMessageRole.User => "info",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveBubbleClass(bool isUserMessage)
+        => isUserMessage
+            ? "border-slate-900 bg-slate-900 text-white"
+            : "border-slate-200 bg-slate-50 text-slate-700";
+
+    private static string BuildInitials(string value)
+    {
+        var segments = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToList();
+
+        if (segments.Count == 0)
+        {
+            return "AG";
+        }
+
+        return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
+    }
+}

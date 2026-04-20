@@ -216,6 +216,16 @@ public sealed partial class ProcessCanvasSurfaceFactory
             });
         }
 
+        var outboundMessagingCount = editor.MessagingPolicies.Count(item => item.SourceRoleRequirementId == role.Id);
+        ports.Add(new CanvasWorkbenchPort
+        {
+            Id = ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput,
+            Label = outboundMessagingCount == 0 ? "Messaging" : $"Messaging ({outboundMessagingCount})",
+            Side = "right",
+            Tone = outboundMessagingCount == 0 ? "neutral" : "accent",
+            Kind = "messaging"
+        });
+
         ports.Add(new CanvasWorkbenchPort
         {
             Id = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
@@ -226,6 +236,24 @@ public sealed partial class ProcessCanvasSurfaceFactory
         });
 
         return ports;
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionRoleInputPorts(
+        ProcessRoleEditorModel role,
+        ProcessDefinitionEditorModel editor)
+    {
+        var inboundMessagingCount = editor.MessagingPolicies.Count(item => item.TargetRoleRequirementId == role.Id);
+        return
+        [
+            new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.RoleMessagingInput,
+                Label = inboundMessagingCount == 0 ? "Incoming messages" : $"Incoming ({inboundMessagingCount})",
+                Side = "left",
+                Tone = inboundMessagingCount == 0 ? "neutral" : "accent",
+                Kind = "messaging"
+            }
+        ];
     }
 
     private static List<CanvasWorkbenchPort> BuildRunStepInputPorts(

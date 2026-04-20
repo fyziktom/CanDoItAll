@@ -170,7 +170,7 @@ public sealed class ProcessesCoordinator(IServiceScopeFactory scopeFactory) : IP
                     await service.ListAssignmentsAsync(runId, cancellationToken),
                     await service.ListWorkBriefsAsync(runId, cancellationToken),
                     await service.ListConformanceObservationsAsync(runId, cancellationToken),
-                    await service.ListImprovementsAsync(run.ProcessDefinitionId, cancellationToken));
+                    await service.ListRunImprovementsAsync(runId, cancellationToken));
             });
     }
 

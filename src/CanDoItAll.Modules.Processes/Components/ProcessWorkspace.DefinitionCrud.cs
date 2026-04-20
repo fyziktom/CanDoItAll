@@ -15,6 +15,7 @@ public partial class ProcessWorkspace
         editor = await ProcessesService.GetEditorAsync(null, ProjectId);
         detailTab = "definition";
         runs = [];
+        activeRunSummaries = [];
         improvements = [];
         analytics = await ProcessesService.GetAnalyticsAsync(null, ProjectId);
         await LoadRunDetailsAsync();
@@ -182,6 +183,9 @@ public partial class ProcessWorkspace
     private void RemoveRole(ProcessRoleEditorModel role, bool refreshSurface = true)
     {
         editor.Roles.Remove(role);
+        editor.MessagingPolicies.RemoveAll(item =>
+            item.SourceRoleRequirementId == role.Id ||
+            item.TargetRoleRequirementId == role.Id);
         foreach (var step in editor.Steps)
         {
             step.RoleAssignments.RemoveAll(item => item.RoleRequirementId == role.Id);

@@ -177,6 +177,11 @@ internal sealed class ProjectNodeScopeBridge(
                 .Where(item => item.Id == processDefinitionId)
                 .Select(item => item.ProjectId)
                 .FirstOrDefaultAsync(cancellationToken);
+            if (!definitionProjectId.HasValue)
+            {
+                return new ProjectNodeScopeResolution(true, false, false, ProjectObjectType.ProcessDefinition, string.Empty);
+            }
+
             return BuildProjectedResolution(definitionProjectId, projectId, ProjectObjectType.ProcessDefinition);
         }
 

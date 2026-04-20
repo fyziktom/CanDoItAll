@@ -1,0 +1,32 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SummaryTiles GapScale="LayoutGap.Small">
+    <SummaryTile Label="Completed steps"
+                 Value="@Presenter.SelectedRun!.CompletedStepCount.ToString()"
+                 HelperText="@($"{Presenter.SelectedRun.TotalStepCount} total steps in this run.")"
+                 Compact="true"
+                 ShowHelperTextAsTooltip="true" />
+    <SummaryTile Label="Blocked steps"
+                 Value="@Presenter.SelectedRun.BlockedStepCount.ToString()"
+                 HelperText="Steps currently blocked in runtime."
+                 Compact="true"
+                 Tone="warning"
+                 ShowHelperTextAsTooltip="true" />
+    <SummaryTile Label="Capability gaps"
+                 Value="@Presenter.SelectedRun.CapabilityGapCount.ToString()"
+                 HelperText="Assignments or execution gaps detected."
+                 Compact="true"
+                 Tone="danger"
+                 ShowHelperTextAsTooltip="true" />
+    <SummaryTile Label="Actual cost"
+                 Value="@Presenter.SelectedRun.ActualCost.ToString("C")"
+                 HelperText="@($"{Presenter.SelectedRun.EstimatedCost:C} estimated for this run.")"
+                 Compact="true"
+                 Tone="info"
+                 ShowHelperTextAsTooltip="true" />
+</SummaryTiles>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+}

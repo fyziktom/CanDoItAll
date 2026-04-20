@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Activity;
 
@@ -76,7 +77,8 @@ outputs: ActivityTimelineItem list, SearchResult list
 public sealed class ActivityService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    ISearchIndexService searchIndexService) : IActivityStream
+    ISearchIndexService searchIndexService,
+    ILogger<ActivityService> logger) : IActivityStream
 {
     public async Task RecordAsync(ActivityWriteRequest request, CancellationToken cancellationToken = default)
     {
@@ -91,6 +93,12 @@ public sealed class ActivityService(
         var normalizedIdempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey)
             ? null
             : request.IdempotencyKey.Trim();
+        logger.LogInformation(
+            "Recording activity entry Category={Category} Action={Action} Title={Title} IdempotencyKey={IdempotencyKey}.",
+            request.Category,
+            request.Action,
+            request.Title,
+            normalizedIdempotencyKey ?? "<none>");
         if (normalizedIdempotencyKey is not null)
         {
             var alreadyRecorded = await dbContext.Set<ActivityEntry>()
@@ -121,6 +129,11 @@ public sealed class ActivityService(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation(
+                "Recorded activity entry Category={Category} Action={Action} Title={Title}.",
+                request.Category,
+                request.Action,
+                request.Title);
         }
         catch (DbUpdateException exception) when (normalizedIdempotencyKey is not null && DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
         {

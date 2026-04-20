@@ -33,6 +33,8 @@ public static class ProcessCanvasCatalog
         public const string BranchStepInput = "branch:step-input";
         public const string BranchDecisionRoleInput = "branch:decision-role";
         public const string BranchOutcomeOutputPrefix = "route:";
+        public const string RoleMessagingInput = "role:messaging-input";
+        public const string RoleMessagingOutput = "role:messaging-output";
         public const string RoleDecisionAuthorityOutput = "role:decision-authority";
 
         public static string GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind responsibilityKind)
@@ -143,6 +145,16 @@ public static class ProcessCanvasCatalog
             return string.Equals(portId, StepStructuralOutput, StringComparison.Ordinal) ||
                    CanvasWorkbenchAnchorPorts.IsOutputPortId(portId);
         }
+
+        public static bool IsRoleMessagingInputPortId(string? portId)
+        {
+            return string.Equals(portId, RoleMessagingInput, StringComparison.Ordinal);
+        }
+
+        public static bool IsRoleMessagingOutputPortId(string? portId)
+        {
+            return string.Equals(portId, RoleMessagingOutput, StringComparison.Ordinal);
+        }
     }
 
     public static class RuntimePorts
@@ -179,6 +191,7 @@ public static class ProcessCanvasCatalog
     {
         public const string Structural = "process-structural";
         public const string DecisionAuthority = "process-decision-authority";
+        public const string Messaging = "process-messaging";
         public const string ResponsibilityResponsible = "process-responsible";
         public const string ResponsibilityReviewer = "process-reviewer";
         public const string ResponsibilityApprover = "process-approver";
@@ -191,6 +204,8 @@ public static class ProcessCanvasCatalog
 
     public enum PortFamily
     {
+        RoleMessagingInput,
+        RoleMessagingOutput,
         RoleResponsibilityOutput,
         RoleDecisionAuthorityOutput,
         StepStructuralInput,
@@ -339,6 +354,8 @@ public static class ProcessCanvasCatalog
     {
         return family switch
         {
+            PortFamily.RoleMessagingInput => new PortFamilyMetadata(PortDirection.Input, PortCardinality.ManyToSingle, CanonicalStatus.CanonicalToday),
+            PortFamily.RoleMessagingOutput => new PortFamilyMetadata(PortDirection.Output, PortCardinality.SingleToMany, CanonicalStatus.CanonicalToday),
             PortFamily.RoleResponsibilityOutput => new PortFamilyMetadata(PortDirection.Output, PortCardinality.ManyToMany, CanonicalStatus.CanonicalToday),
             PortFamily.RoleDecisionAuthorityOutput => new PortFamilyMetadata(PortDirection.Output, PortCardinality.SingleToMany, CanonicalStatus.CanonicalToday),
             PortFamily.StepStructuralInput => new PortFamilyMetadata(PortDirection.Input, PortCardinality.ManyToSingle, CanonicalStatus.CanonicalToday),
@@ -402,6 +419,9 @@ public static class ProcessCanvasCatalog
     {
         return family switch
         {
+            PortFamily.RoleMessagingInput or
+            PortFamily.RoleMessagingOutput
+                => new ConnectionVisual(ConnectionCategories.Messaging, "#0f766e"),
             PortFamily.RoleDecisionAuthorityOutput or
             PortFamily.StepDecisionAuthorityInput or
             PortFamily.BranchDecisionRoleInput or

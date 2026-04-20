@@ -1,499 +1,132 @@
 @namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
 
-<CanvasWorkbenchStage Eyebrow="Runtime canvas"
-                      Title="@(Presenter.SelectedRun?.Name ?? "Runtime map")"
-                      Description=""
-                      HelpText="Inspect the live runtime path, keep the selection detail window in sync, and drive explicit runtime actions from the same canvas rhythm used in structure workbench flows.">
-    <Canvas>
-        @if (Presenter.SelectedRun is null)
-        {
-            <SurfaceCard Soft="true">
-                <p class="text-sm text-slate-600">Select a run to inspect the runtime canvas before updating status, branch outcomes, or runtime evidence.</p>
-            </SurfaceCard>
-        }
-        else if (Presenter.CanvasSurface is null)
-        {
-            <SurfaceCard Soft="true">
-                <p class="text-sm text-slate-600">Runtime canvas data is loading.</p>
-            </SurfaceCard>
-        }
-        else
-        {
-            <CanvasWorkbench Surface="Presenter.CanvasSurface"
-                             @ref="workbenchRef"
-                             StateChanged="Presenter.HandleCanvasStateChangedAsync"
-                             SelectionChanged="Presenter.HandleCanvasSelectionChangedAsync"
-                             ContextActionRequested="Presenter.HandleCanvasContextActionAsync"
-                             NodeOpened="Presenter.HandleCanvasNodeOpenedAsync">
-                <ToolbarLeftContent>
-                    <ProcessCanvasToolbarActions SelectionWindowVisible="@Presenter.CanvasSelectionWindowState.IsVisible"
-                                                 ShowAuthoringTools="false"
-                                                 ShowToolbox="false"
-                                                 SelectionTestId="processes-runtime-toggle-selection"
-                                                 ToggleSelectionWindow="Presenter.ToggleCanvasSelectionWindowAsync" />
-                </ToolbarLeftContent>
-                <OverlayContent>
-                    @if (Presenter.CanvasSelectionWindowState.IsVisible)
-                    {
-                        <CanvasFloatingWindow WindowId="@Presenter.CanvasSelectionWindowId"
-                                              TestId="processes-runtime-selection-window"
-                                              AriaLabel="Process runtime selection"
-                                              Kicker="Runtime selection"
-                                              Title="@Presenter.CanvasSelectionWindowTitle"
-                                              Summary="@Presenter.CanvasSelectionWindowSummary"
-                                              DefaultPlacement="top-right"
-                                              DefaultWidth="360"
-                                              DefaultHeight="360"
-                                              MinWidth="320"
-                                              MinHeight="220"
-                                              MaxWidth="520"
-                                              State="@Presenter.CanvasSelectionWindowState"
-                                              StateChanged="Presenter.HandleCanvasSelectionWindowStateChangedAsync">
-                            <ProcessCanvasSelectionPanel IsRuntime="true"
-                                                         RuntimeStep="@Presenter.SelectedCanvasRuntimeStep"
-                                                         SelectedRuntimeBranchOutcomeId="@Presenter.SelectedCanvasRuntimeBranchOutcomeId"
-                                                         SelectedRuntimeBranchOutcomeIdChanged="Presenter.UpdateSelectedCanvasRuntimeBranchOutcomeAsync"
-                                                         ClearSelection="Presenter.ClearCanvasSelectionAsync"
-                                                         OpenActionDialog="Presenter.OpenCanvasActionDialogAsync"
-                                                         StartRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.InProgress))"
-                                                         CompleteRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Completed))"
-                                                         BlockRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Blocked))"
-                                                         RequestRuntimeApproval="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.WaitingApproval))"
-                                                         RefuseRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Refused))"
-                                                         FailRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Failed))"
-                                                         RecordRuntimeArtifact="Presenter.PrepareSelectedRuntimeArtifactCaptureAsync" />
-                        </CanvasFloatingWindow>
-                    }
-                </OverlayContent>
-            </CanvasWorkbench>
-        }
-    </Canvas>
-</CanvasWorkbenchStage>
-
-<SectionCard Title="Run lifecycle"
-             Description=""
-             HelpText="Start process runs from the selected definition, then keep runtime state, assignments, and evidence attached to the same durable process identity.">
-    @if (!Presenter.HasSelectedProcess)
+<Stack GapScale="LayoutGap.Large"
+       Class="processes-runs-tab-shell"
+       data-testid="processes-runs-tab-shell">
+    @if (Presenter.HasSelectedProcess)
     {
-        <EmptyState Eyebrow="Definition required"
-                    Title="Save a process definition first"
-                    Description="Runtime execution starts only after the process contract, roles, and steps exist on a durable definition." />
-    }
-    else
-    {
-        <Grid Gap="LayoutGap.Large"
-              ColumnsMd="3">
-            <div>
-                <label class="cda-field-label">Run name</label>
-                <InputText @bind-Value="Presenter.RunNameDraft"
-                           class="cda-input"
-                           data-testid="processes-run-name-input" />
-            </div>
-            <div>
-                <label class="cda-field-label">Operating mode</label>
-                <InputSelect @bind-Value="Presenter.RunOperatingMode"
-                             class="cda-input"
-                             data-testid="processes-operating-mode-select">
-                    @foreach (var operatingMode in Enum.GetValues<ProcessOperatingMode>())
-                    {
-                        <option value="@operatingMode">@operatingMode</option>
-                    }
-                </InputSelect>
-            </div>
-            <div class="flex items-end">
-                <Button Text="Start run"
-                        Click="Presenter.StartRunAsync"
-                        data-testid="processes-start-run-button" />
-            </div>
-        </Grid>
-
-        @if (Presenter.Runs.Count == 0)
-        {
-            <EmptyState Eyebrow="No runtime runs"
-                        Title="Start the first run"
-                        Description="Runs bring the definition to life and populate assignments, work briefs, decision records, evidence, and conformance observations." />
-        }
-        else
-        {
-            <Stack GapScale="LayoutGap.Medium"
-                   Class="mt-5">
-                @foreach (var run in Presenter.Runs)
-                {
-                    <SelectionListItem Title="@run.Name"
-                                       Eyebrow="@run.OperatingMode.ToString()"
-                                       Meta="@Presenter.BuildRunSummary(run)"
-                                       Summary="@($"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual")"
-                                       IsSelected="@(Presenter.SelectedRun?.Id == run.Id)"
-                                       OnSelect="@(() => Presenter.SelectRunAsync(run.Id))">
-                        <Status>
-                            <Cluster Gap="LayoutGap.Small">
-                                <StatusBadge Tone="@Presenter.ResolveRunTone(run.Status)"
-                                             Text="@run.Status.ToString()" />
-                                <StatusBadge Tone="neutral"
-                                             Text="@($"{run.BlockedStepCount} blocked")" />
-                            </Cluster>
-                        </Status>
-                    </SelectionListItem>
-                }
-            </Stack>
-        }
-    }
-</SectionCard>
-
-@if (Presenter.SelectedRun is not null)
-{
-    <SummaryTiles GapScale="LayoutGap.Small">
-        <SummaryTile Label="Completed steps"
-                     Value="@Presenter.SelectedRun.CompletedStepCount.ToString()"
-                     HelperText="@($"{Presenter.SelectedRun.TotalStepCount} total steps in this run.")"
-                     Compact="true"
-                     ShowHelperTextAsTooltip="true" />
-        <SummaryTile Label="Blocked steps"
-                     Value="@Presenter.SelectedRun.BlockedStepCount.ToString()"
-                     HelperText="Steps currently blocked in runtime."
-                     Compact="true"
-                     Tone="warning"
-                     ShowHelperTextAsTooltip="true" />
-        <SummaryTile Label="Capability gaps"
-                     Value="@Presenter.SelectedRun.CapabilityGapCount.ToString()"
-                     HelperText="Assignments or execution gaps detected."
-                     Compact="true"
-                     Tone="danger"
-                     ShowHelperTextAsTooltip="true" />
-        <SummaryTile Label="Actual cost"
-                     Value="@Presenter.SelectedRun.ActualCost.ToString("C")"
-                     HelperText="@($"{Presenter.SelectedRun.EstimatedCost:C} estimated for this run.")"
-                     Compact="true"
-                     Tone="info"
-                     ShowHelperTextAsTooltip="true" />
-    </SummaryTiles>
-
-    <SectionCard Title="Step execution"
-                 Description=""
-                 HelpText="Update runtime state explicitly so blocked work, safe refusals, approvals, and failures become durable evidence instead of disappearing into chat.">
-        @if (Presenter.StepRuns.Count == 0)
-        {
-            <EmptyState Eyebrow="No step runs"
-                        Title="No runtime step data yet"
-                        Description="Step runs populate after the selected run is loaded from storage." />
-        }
-        else
-        {
-            <Stack GapScale="LayoutGap.Medium">
-                @foreach (var stepRun in Presenter.StepRuns)
-                {
-                    <SurfaceCard data-testid="processes-step-run-card">
-                        <Split Gap="LayoutGap.Medium">
-                            <Stack GapScale="LayoutGap.Tiny">
-                                <p class="cda-eyebrow">Step @(stepRun.Sequence + 1)</p>
-                                <h3 class="text-lg font-semibold text-slate-950">@stepRun.Title</h3>
-                                <p class="text-sm leading-6 text-slate-600">Executor: @(string.IsNullOrWhiteSpace(stepRun.CurrentExecutorName) ? "Unassigned" : stepRun.CurrentExecutorName)</p>
-                            </Stack>
-                            <Cluster Gap="LayoutGap.Small">
-                                <StatusBadge Tone="@Presenter.ResolveStepTone(stepRun.Status)"
-                                             Text="@stepRun.Status.ToString()" />
-                                <StatusBadge Tone="neutral"
-                                             Text="@stepRun.StepKind.ToString()" />
-                            </Cluster>
-                        </Split>
-
-                        <Grid Gap="LayoutGap.Medium"
-                              ColumnsMd="4"
-                              Class="mt-5">
-                            <MetricCard Label="Wait" Value="@($"{stepRun.WaitMinutes}m")" />
-                            <MetricCard Label="Touch" Value="@($"{stepRun.TouchMinutes}m")" />
-                            <MetricCard Label="Blocked" Value="@($"{stepRun.BlockedMinutes}m")" />
-                            <MetricCard Label="Rework" Value="@stepRun.ReworkCount.ToString()" />
-                        </Grid>
-
-                        @if (stepRun.AvailableBranchOutcomes.Count > 0)
-                        {
-                            <div class="mt-5">
-                                <label class="cda-field-label">Branch outcome</label>
-                                <InputSelect TValue="Guid?"
-                                             Value="@Presenter.ResolveSelectedBranchOutcomeId(stepRun.Id)"
-                                             ValueChanged="@(value => Presenter.UpdateRuntimeBranchOutcomeSelectionAsync(stepRun.Id, value))"
-                                             class="cda-input"
-                                             data-testid="processes-branch-outcome-select">
-                                    <option value="">Select outcome</option>
-                                    @foreach (var outcome in stepRun.AvailableBranchOutcomes)
-                                    {
-                                        <option value="@outcome.Id">@outcome.Title</option>
-                                    }
-                                </InputSelect>
-                            </div>
-                        }
-
-                        <Cluster Gap="LayoutGap.Small"
-                                 Class="mt-5">
-                            <Button Text="Start"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.InProgress))"
-                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.InProgress))" />
-                            <Button Text="Complete"
-                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Completed))"
-                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Completed))" />
-                            <Button Text="Block"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Blocked))"
-                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Blocked))" />
-                            <Button Text="Approval"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.WaitingApproval))"
-                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.WaitingApproval))" />
-                            <Button Text="Refuse"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Refused))"
-                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Refused))" />
-                            <Button Text="Fail"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Disabled="@(!Presenter.CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Failed))"
-                                    Click="@(() => Presenter.ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Failed))" />
-                        </Cluster>
-                    </SurfaceCard>
-                }
-            </Stack>
-        }
-    </SectionCard>
-
-    <SectionCard Title="Assignments and executor resolution"
-                 Description=""
-                 HelpText="Role-first runtime assignments can be rebound to project parties, suppliers, or future agents without changing the process definition.">
-        <Grid Gap="LayoutGap.Large"
-              ColumnTemplateLg="minmax(0,0.8fr) minmax(0,1.2fr)">
-            <div>
-                @if (Presenter.Assignments.Count == 0)
-                {
-                    <EmptyState Eyebrow="No assignments"
-                                Title="No runtime assignments yet"
-                                Description="Assignments populate when the run snapshots the process role requirements." />
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var assignment in Presenter.Assignments)
-                        {
-                            <SelectionListItem Title="@Presenter.ResolveRoleName(assignment.RoleRequirementId)"
-                                               Eyebrow="@(assignment.StepDefinitionId.HasValue ? "Step-scoped assignment" : "Run-scoped assignment")"
-                                               Meta="@assignment.ExecutorKind"
-                                               Summary="@(string.IsNullOrWhiteSpace(assignment.DisplayName) ? assignment.BindingReason : $"{assignment.DisplayName} / {assignment.BindingReason}")"
-                                               IsSelected="@(Presenter.SelectedAssignment?.Id == assignment.Id)"
-                                               OnSelect="@(() => Presenter.SelectAssignment(assignment.Id))">
-                                <Status>
-                                    <Cluster Gap="LayoutGap.Small">
-                                        <StatusBadge Tone="@(assignment.IsCapabilityGap ? "danger" : "neutral")"
-                                                     Text="@(assignment.IsCapabilityGap ? "Gap" : "Bound")" />
-                                        <StatusBadge Tone="@(assignment.IsFallback ? "warning" : "info")"
-                                                     Text="@(assignment.IsFallback ? "Fallback" : "Primary")" />
-                                    </Cluster>
-                                </Status>
-                            </SelectionListItem>
-                        }
+        <SurfaceCard Soft="true"
+                     data-testid="processes-selected-run-summary">
+            @if (Presenter.SelectedRun is null)
+            {
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">Run focus</p>
+                    <h3 class="text-lg font-semibold text-slate-950">Select a run from Activity to inspect its details</h3>
+                    <p class="text-sm leading-6 text-slate-600">
+                        Launch planning and live monitoring stay available without a selected run.
+                        Execution controls, coordination, and evidence open once you choose a runtime run from history.
+                    </p>
+                </Stack>
+            }
+            else
+            {
+                var selectedRun = Presenter.SelectedRun!;
+                <Split Gap="LayoutGap.Medium">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Selected run</p>
+                        <h3 class="text-lg font-semibold text-slate-950">@selectedRun.Name</h3>
+                        <p class="text-sm leading-6 text-slate-600">@Presenter.BuildRunSummary(selectedRun)</p>
+                        <p class="text-sm leading-6 text-slate-500">
+                            @selectedRun.EstimatedCost.ToString("C") estimated / @selectedRun.ActualCost.ToString("C") actual
+                        </p>
                     </Stack>
-                }
-            </div>
-
-            <SurfaceCard>
-                @if (Presenter.SelectedAssignment is null)
-                {
-                    <EmptyState Eyebrow="No assignment selected"
-                                Title="Choose an assignment to resolve"
-                                Description="The selected role binding can be matched to a project party or later executor registry without rewriting the process definition." />
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Medium">
-                        <div>
-                            <label class="cda-field-label">Project party</label>
-                            <InputSelect @bind-Value="Presenter.AssignmentPartyId"
-                                         class="cda-input">
-                                <option value="">None</option>
-                                @foreach (var option in Presenter.PartyOptions)
-                                {
-                                    <option value="@option.PartyId">@option.DisplayName</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Display name</label>
-                            <InputText @bind-Value="Presenter.AssignmentDisplayName"
-                                       class="cda-input" />
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Executor kind</label>
-                            <InputText @bind-Value="Presenter.AssignmentExecutorKind"
-                                       class="cda-input" />
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Binding reason</label>
-                            <InputTextArea @bind-Value="Presenter.AssignmentBindingReason"
-                                           class="cda-input cda-input--textarea min-h-24" />
-                        </div>
-                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                            <InputCheckbox @bind-Value="Presenter.AssignmentIsFallback" />
-                            Treat this as fallback binding
-                        </label>
-                        <Button Text="Resolve assignment"
-                                Click="Presenter.ResolveSelectedAssignmentAsync"
-                                data-testid="processes-resolve-assignment-button" />
-                    </Stack>
-                }
-            </SurfaceCard>
-        </Grid>
-    </SectionCard>
-
-    <SectionCard Title="Artifacts, decisions, and briefs"
-                 Description=""
-                 HelpText="Process runtime proof stays reviewable only if work briefs, decisions, evidence, and conformance observations remain attached to the same run.">
-        <Grid Gap="LayoutGap.Large"
-              ColumnTemplateLg="minmax(0,1.05fr) minmax(0,0.95fr)">
-            <Stack GapScale="LayoutGap.Large">
-                <SurfaceCard>
-                    <p class="cda-eyebrow">Record artifact</p>
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Runtime evidence</h3>
-
-                    <Grid Gap="LayoutGap.Medium"
-                          ColumnsMd="2"
-                          Class="mt-4">
-                        <div>
-                            <label class="cda-field-label">Step run</label>
-                            <InputSelect @bind-Value="Presenter.ArtifactStepRunId"
-                                         class="cda-input">
-                                <option value="">Run level</option>
-                                @foreach (var stepRun in Presenter.StepRuns)
-                                {
-                                    <option value="@stepRun.Id">@stepRun.Title</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Artifact kind</label>
-                            <InputSelect @bind-Value="Presenter.ArtifactKind"
-                                         class="cda-input">
-                                @foreach (var artifactKindValue in Enum.GetValues<ProcessArtifactKind>())
-                                {
-                                    <option value="@artifactKindValue">@artifactKindValue</option>
-                                }
-                            </InputSelect>
-                        </div>
-                    </Grid>
-
-                    <div class="mt-4">
-                        <label class="cda-field-label">Title</label>
-                        <InputText @bind-Value="Presenter.ArtifactTitle"
-                                   class="cda-input"
-                                   data-testid="processes-artifact-title-input" />
-                    </div>
-
                     <Cluster Gap="LayoutGap.Small"
-                             Class="mt-4">
-                        <Button Text="Record artifact"
-                                Click="Presenter.RecordArtifactAsync"
-                                data-testid="processes-record-artifact-button" />
+                             Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@Presenter.ResolveRunTone(selectedRun.Status)"
+                                     Text="@selectedRun.Status.ToString()" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@selectedRun.OperatingMode.ToString()" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@($"{selectedRun.TotalStepCount} steps")" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@($"updated {selectedRun.UpdatedAtUtc.LocalDateTime:g}")" />
                     </Cluster>
-                </SurfaceCard>
+                </Split>
+            }
+        </SurfaceCard>
+    }
 
-                <SurfaceCard>
-                    <p class="cda-eyebrow">Work briefs</p>
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Executor handoff context</h3>
-                    @if (Presenter.WorkBriefs.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No work briefs"
-                                    Title="No handoff context recorded"
-                                    Description="Work briefs appear when the run creates executor-facing task packages." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="mt-4">
-                            @foreach (var brief in Presenter.WorkBriefs)
-                            {
-                                <SurfaceCard Soft="true">
-                                    <p class="text-sm font-semibold text-slate-950">@brief.Title</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">@brief.WorkBriefText</p>
-                                </SurfaceCard>
-                            }
-                        </Stack>
-                    }
-                </SurfaceCard>
-            </Stack>
+    <Tabs SelectedIndex="@selectedRunViewIndex"
+          SelectedIndexChanged="HandleSelectedRunViewChanged"
+          Variant="@(TabsVariant.WorkspaceSecondary)"
+          BorderMode="@(TabsBorderMode.Soft)"
+          Tone="@(TabsTone.Secondary)"
+          OverflowMode="@(TabsOverflowMode.Scroll)"
+          PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
+          Class="w-full min-w-0"
+          AriaLabel="Process runs workspace sections"
+          data-testid="processes-runs-tabs">
+        <TabItems>
+            <TabsItem Text="Launch">
+                <ProcessWorkspaceRunsLaunchSection Presenter="Presenter" />
+            </TabsItem>
 
-            <Stack GapScale="LayoutGap.Large">
-                <SurfaceCard>
-                    <p class="cda-eyebrow">Decision records</p>
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Durable runtime decisions</h3>
-                    @if (Presenter.Decisions.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No decisions"
-                                    Title="No decision records stored"
-                                    Description="Assignment, approval, refusal, and escalation decisions appear here when captured during runtime." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="mt-4">
-                            @foreach (var decision in Presenter.Decisions)
-                            {
-                                <SurfaceCard Soft="true">
-                                    <p class="text-sm font-semibold text-slate-950">@decision.Title</p>
-                                    <p class="tracking-[0.18em] mt-1 text-xs uppercase text-slate-500">@decision.DecisionKind / @decision.Outcome</p>
-                                    <p class="mt-3 text-sm leading-6 text-slate-600">@decision.Reason</p>
-                                </SurfaceCard>
-                            }
-                        </Stack>
-                    }
-                </SurfaceCard>
+            <TabsItem Text="Activity">
+                <Stack GapScale="LayoutGap.Large">
+                    <ProcessWorkspaceRunsActiveSection Presenter="Presenter" />
+                    <ProcessWorkspaceRunsLifecycleSection Presenter="Presenter" />
+                </Stack>
+            </TabsItem>
 
-                <SurfaceCard>
-                    <p class="cda-eyebrow">Conformance observations</p>
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Deviations and safe non-actions</h3>
-                    @if (Presenter.ConformanceObservations.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No observations"
-                                    Title="No conformance records yet"
-                                    Description="Observations appear when blocked, refused, or otherwise non-conforming runtime states are recorded." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="mt-4">
-                            @foreach (var observation in Presenter.ConformanceObservations)
-                            {
-                                <SurfaceCard Soft="true">
-                                    <Split Gap="LayoutGap.Medium">
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-950">@observation.Category</p>
-                                            <p class="mt-1 text-sm leading-6 text-slate-600">@observation.Observation</p>
-                                        </div>
-                                        <StatusBadge Tone="@Presenter.ResolveConformanceTone(observation.Severity)"
-                                                     Text="@observation.Severity.ToString()" />
-                                    </Split>
-                                </SurfaceCard>
-                            }
-                        </Stack>
-                    }
-                </SurfaceCard>
-            </Stack>
-        </Grid>
-    </SectionCard>
-}
+            <TabsItem Text="Execution">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run from Activity first"
+                                Description="Execution metrics, runtime canvas state, and technical execution telemetry are attached to the selected runtime run." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Large">
+                        <ProcessWorkspaceRunsSummarySection Presenter="Presenter" />
+                        <ProcessWorkspaceRunsCanvasSection Presenter="Presenter" />
+                        <ProcessWorkspaceRunsExecutionSection Presenter="Presenter" />
+                    </Stack>
+                }
+            </TabsItem>
+
+            <TabsItem Text="Coordination">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run before editing coordination data"
+                                Description="Assignments and direct role messaging stay attached to one durable run so staffing decisions remain reviewable." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Large">
+                        <ProcessWorkspaceRunsAssignmentsSection Presenter="Presenter" />
+                        <ProcessWorkspaceRunsMessagingSection Presenter="Presenter" />
+                    </Stack>
+                }
+            </TabsItem>
+
+            <TabsItem Text="Evidence">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run before reviewing its evidence"
+                                Description="Artifacts, decisions, work briefs, and conformance observations remain grouped under the selected runtime run." />
+                }
+                else
+                {
+                    <ProcessWorkspaceRunsArtifactsSection Presenter="Presenter" />
+                }
+            </TabsItem>
+        </TabItems>
+    </Tabs>
+</Stack>
 
 @code {
+    private int selectedRunViewIndex = 1;
+
     [Parameter, EditorRequired]
     public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
 
-    private CanvasWorkbench? workbenchRef;
-
-    private CanvasWorkbench? reportedWorkbenchRef;
-
-    protected override void OnAfterRender(bool firstRender)
+    private Task HandleSelectedRunViewChanged(int index)
     {
-        if (ReferenceEquals(workbenchRef, reportedWorkbenchRef))
-        {
-            return;
-        }
-
-        reportedWorkbenchRef = workbenchRef;
-        Presenter.CaptureWorkbench(workbenchRef);
+        selectedRunViewIndex = index;
+        return Task.CompletedTask;
     }
 }

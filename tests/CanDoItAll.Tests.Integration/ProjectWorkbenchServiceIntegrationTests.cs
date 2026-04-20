@@ -145,6 +145,233 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task GetStructureAsync_projects_process_run_output_folders_into_the_structure_surface()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench process output folders");
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Workbench process output folder run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Projection validation for managed output folders"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var managedOutputFolder = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            "managed-files",
+            "processes",
+            runResult.Value.ToString("N"));
+        Directory.CreateDirectory(managedOutputFolder);
+        await File.WriteAllTextAsync(
+            Path.Combine(managedOutputFolder, "execution-report.md"),
+            "# Output proof");
+
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "execution-report.md",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected managed output folder proof.",
+            AllowedFutureUsageSummary = "Workbench projection validation.",
+            ReviewSummary = "Managed output folder should surface in the structure graph.",
+            ManagedStoragePath = $"managed-files/processes/{runResult.Value:N}/execution-report.md"
+        })).IsSuccess);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var outputNode = Assert.Single(surface.Nodes, node =>
+            string.Equals(node.ParentId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
+            string.Equals(node.ObjectType.ToString(), ProjectObjectType.File.ToString(), StringComparison.Ordinal) &&
+            node.StorageObjectReferenceJson.Contains($"managed-files/processes/{runResult.Value:N}", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal("Stored", outputNode.Status);
+        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", outputNode.Route);
+        Assert.Contains($"managed-files/processes/{runResult.Value:N}", outputNode.StorageObjectReferenceJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, outputNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_completes_process_bound_workbench_nodes_and_rolls_up_parent_progress()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench process rollup");
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Workbench process rollup run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate process-bound workbench completion rollup"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var phaseNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Phase,
+                "Agent showcase execution",
+                "Phase / process rollup validation",
+                "Validate parent rollup when the bound feature process completes.",
+                ParentNodeKey: null,
+                ObjectSubtype: "showcase-phase"));
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Blazor SSR calculator delivery",
+                "Delivery block / process rollup validation",
+                "Contains the feature node that is bound to the process run.",
+                phaseNode.Id,
+                ObjectSubtype: "showcase-delivery-block"));
+        var featureNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Simple calculator feature",
+                "Feature / process-bound work item",
+                "Track the process run from the workbench feature lane.",
+                deliveryNode.Id,
+                ObjectSubtype: "showcase-feature"));
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var recordsByNodeKey = await dbContext.Set<ProjectObjectRecord>()
+                .Where(item => item.ProjectId == projectId &&
+                    (item.NodeKey == phaseNode.Id ||
+                     item.NodeKey == deliveryNode.Id ||
+                     item.NodeKey == featureNode.Id))
+                .ToDictionaryAsync(item => item.NodeKey);
+            Assert.Contains(featureNode.Id, recordsByNodeKey.Keys);
+            var featureRecord = recordsByNodeKey[featureNode.Id];
+            var binding = await dbContext.Set<ProjectNodeBindingRecord>()
+                .SingleAsync(item => item.ProjectObjectId == featureRecord.Id);
+
+            binding.Route = $"/projects/{projectId}/processes?processId={definitionResult.Value}&runId={runResult.Value}";
+            binding.ExternalArtifactKind = ProjectObjectType.ProcessRun.ToString();
+            binding.ExternalArtifactId = runResult.Value;
+
+            foreach (var record in recordsByNodeKey.Values)
+            {
+                record.Status = "Blocked";
+                record.ProgressMode = "progress";
+                record.ProgressPercent = 95;
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var stepRuns = await processes.ListStepRunsAsync(runResult.Value);
+        var intakeStep = Assert.Single(stepRuns, item => item.Sequence == 0);
+
+        Assert.True((await processes.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Start the feature intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processes.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Complete the feature intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var reviewStep = Assert.Single(
+            await processes.ListStepRunsAsync(runResult.Value),
+            item => item.Sequence == 1);
+        Guid requiredArtifactExpectationId;
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            requiredArtifactExpectationId = await dbContext.Set<ProcessArtifactExpectation>()
+                .Where(item => item.StepDefinitionId == reviewStep.StepDefinitionId)
+                .Select(item => item.Id)
+                .SingleAsync();
+        }
+
+        Assert.True((await processes.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = reviewStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Start the review step.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = reviewStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Projected structure review evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded to satisfy the bound workbench rollup test.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Required review evidence is present."
+        })).IsSuccess);
+        Assert.True((await processes.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = reviewStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Complete the review step.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var refreshedPhase = Assert.Single(surface.Nodes, item => string.Equals(item.Id, phaseNode.Id, StringComparison.Ordinal));
+        var refreshedDelivery = Assert.Single(surface.Nodes, item => string.Equals(item.Id, deliveryNode.Id, StringComparison.Ordinal));
+        var refreshedFeature = Assert.Single(surface.Nodes, item => string.Equals(item.Id, featureNode.Id, StringComparison.Ordinal));
+
+        Assert.Equal("Completed", refreshedFeature.Status);
+        Assert.Equal("complete", refreshedFeature.ProgressMode);
+        Assert.Equal(100, refreshedFeature.ProgressPercent);
+        Assert.Equal("Completed", refreshedDelivery.Status);
+        Assert.Equal("complete", refreshedDelivery.ProgressMode);
+        Assert.Equal(100, refreshedDelivery.ProgressPercent);
+        Assert.Equal("Completed", refreshedPhase.Status);
+        Assert.Equal("complete", refreshedPhase.ProgressMode);
+        Assert.Equal(100, refreshedPhase.ProgressPercent);
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+        var project = await verificationContext.Set<Project>()
+            .SingleAsync(item => item.Id == projectId);
+
+        Assert.Equal(ProjectStatus.Completed, project.Status);
+        Assert.Equal("Completed", project.CurrentPhase);
+    }
+
+    [Fact]
     public async Task GetStructureAsync_and_GetCalendarAsync_surface_external_artifacts_without_persisting_projection_rows()
     {
         await using var application = await TestApplication.CreateAsync();

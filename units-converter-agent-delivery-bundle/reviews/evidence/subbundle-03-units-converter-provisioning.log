@@ -1,0 +1,108 @@
+03:01:26 info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0] Resolved database profile Managed SQLite workspace (529c1206-0808-489f-ad29-feb5bc60dda1) via PersistedActiveProfile. Provider=Sqlite. Fingerprint=sqlite:managed:529c12060808489fad29feb5bc60dda1. RuntimeLocked=False.
+03:01:30 info: CanDoItAll.ScenarioSeeder[0] Seeding scenario units-converter-delivery into profile root C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1. Database C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db
+03:01:39 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=projects Action=update Title=Updated project IdempotencyKey=<none>.
+03:01:40 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=projects Action=update Title=Updated project.
+03:01:41 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:4e0c0a58f31241f995c691ab1780b3f1:activity.
+03:01:41 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+03:01:41 info: CanDoItAll.Modules.Activity.ActivityService[0] Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:b2c13def332049b8914801b10feccc61:activity.
+03:01:41 info: CanDoItAll.Modules.Activity.ActivityService[0] Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+03:01:54 info: CanDoItAll.Modules.Processes.ProcessesService[0] Submitting launch plan 9a422c03-f0d6-4edc-9e85-3e35e302f686 for approval. RequestedBy=units-converter-delivery-seeder.
+03:01:54 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9a422c03-f0d6-4edc-9e85-3e35e302f686 resolved approval authority Human Delivery Steward (Person). ExistingApprovalThread=False.
+03:01:54 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9a422c03-f0d6-4edc-9e85-3e35e302f686 is creating a new collaboration approval thread.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Creating collaboration thread for context ProcessLaunch/9a422c03-f0d6-4edc-9e85-3e35e302f686. Subject=Launch approval / Blazor SSR basic units converter / 2026-04-18 07:01:41.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Created collaboration thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b. Recording activity mirror next.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b because an ambient transaction is active.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration thread creation for 80be0df5-4161-4d3c-9f8f-c9a50396c60b.
+03:01:54 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9a422c03-f0d6-4edc-9e85-3e35e302f686 created collaboration approval thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b.
+03:01:54 info: CanDoItAll.Modules.Processes.ProcessesService[0] Launch plan 9a422c03-f0d6-4edc-9e85-3e35e302f686 moved to PendingApproval with approval record 5f1c4a7e-04f8-41cd-968c-2d93b78f095f.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appending collaboration message to thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b. Kind=Standard. Author=units-converter-delivery-seeder.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Appended collaboration message to thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b. Recording activity mirror next.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Skipped collaboration activity mirror for thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b message Standard because an ambient transaction is active.
+03:01:54 info: CanDoItAll.Modules.Collaboration.CollaborationService[0] Finished collaboration message append for thread 80be0df5-4161-4d3c-9f8f-c9a50396c60b.
+03:02:06 info: CanDoItAll.ScenarioSeeder.UnitsConverterDeliveryProvisioningSeeder[0] Provisioned units-converter delivery. ProjectId=9a817692-c632-43a4-9c0e-01e49e76360a DefinitionId=885c1099-cbfb-4c8c-bedd-57b26556c574 LaunchPlanId=9a422c03-f0d6-4edc-9e85-3e35e302f686 RunId=fb241fdb-6b0a-47e1-bc98-fee20cba0dab
+{
+  "projectId": "9a817692-c632-43a4-9c0e-01e49e76360a",
+  "projectName": "Blazor SSR basic units converter",
+  "definitionId": "885c1099-cbfb-4c8c-bedd-57b26556c574",
+  "launchPlanId": "9a422c03-f0d6-4edc-9e85-3e35e302f686",
+  "runId": "fb241fdb-6b0a-47e1-bc98-fee20cba0dab",
+  "humanPartyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+  "processRoute": "/projects/9a817692-c632-43a4-9c0e-01e49e76360a/processes?processId=885c1099-cbfb-4c8c-bedd-57b26556c574\u0026runId=fb241fdb-6b0a-47e1-bc98-fee20cba0dab",
+  "scopePhaseNodeId": "custom:045498674f724c0c963ec5ff0de4bf2f",
+  "buildPhaseNodeId": "custom:f521b21eb9cb448a9b8c19242cdabfe4",
+  "releasePhaseNodeId": "custom:12717eca802047eebec323663211c7f9",
+  "deliveryFeatureNodeId": "custom:69a30496d1cc4580a1b75f8e7ac13fb6",
+  "solutionRelativePath": "deliveries/units-converter/Units.slnx",
+  "webProjectRelativePath": "deliveries/units-converter/src/Units.Web/Units.Web.csproj",
+  "coreProjectRelativePath": "deliveries/units-converter/src/Units.Core/Units.Core.csproj",
+  "testsProjectRelativePath": "deliveries/units-converter/tests/Units.Tests/Units.Tests.csproj",
+  "briefRelativePath": "deliveries/units-converter/PROJECT-BRIEF.md",
+  "bootstrapScriptRelativePath": "deliveries/units-converter/Bootstrap-UnitsSolution.ps1",
+  "launchScriptRelativePath": "deliveries/units-converter/Launch-UnitsApp.ps1",
+  "uiEvidenceRelativePath": "artifacts/deliveries/units-converter/ui",
+  "roleBindings": [
+    {
+      "roleKey": "delivery-manager",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "lead-engineer",
+      "displayName": "Programming Workspace Analyst",
+      "partyId": "88e22e04-a72b-4633-85b6-488a222adc41",
+      "technicalAgentId": "b3636a1c-f005-fe5c-b7a7-35a04c133f76",
+      "isHuman": false
+    },
+    {
+      "roleKey": "product-owner",
+      "displayName": "Human Delivery Steward",
+      "partyId": "1167cc18-d459-4d21-bb9d-181f12f9b137",
+      "technicalAgentId": null,
+      "isHuman": true
+    },
+    {
+      "roleKey": "qa-lead",
+      "displayName": "Delivery QA Observer",
+      "partyId": "fd97549a-21ee-441e-bb53-463b4d5a5a03",
+      "technicalAgentId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+      "isHuman": false
+    },
+    {
+      "roleKey": "release-manager",
+      "displayName": "Release Readiness Manager",
+      "partyId": "1ab27389-390d-4944-857e-62fdb811d714",
+      "technicalAgentId": "6f674c92-3347-dd55-96d3-851db9739b35",
+      "isHuman": false
+    },
+    {
+      "roleKey": "review-lead",
+      "displayName": "Code Review Lead",
+      "partyId": "19228d28-881d-43fd-9525-8115f8e75d42",
+      "technicalAgentId": "33183e52-4c54-b852-8c24-bd1d13cf1f23",
+      "isHuman": false
+    },
+    {
+      "roleKey": "security-reviewer",
+      "displayName": "Security Reviewer",
+      "partyId": "fef12e80-ccd0-436c-90f1-aa4df868209c",
+      "technicalAgentId": "5ab2958c-08de-b251-8ead-caa321248b91",
+      "isHuman": false
+    },
+    {
+      "roleKey": "solution-architect",
+      "displayName": "Portfolio Architect",
+      "partyId": "6aaa001e-768e-4437-9ce0-40751b056676",
+      "technicalAgentId": "952b041a-aba0-385b-8e4e-494c4b21d831",
+      "isHuman": false
+    },
+    {
+      "roleKey": "ui-review-lead",
+      "displayName": "UI Review Lead",
+      "partyId": "3b183c45-95e8-41f9-aaac-ea8623a5bdd0",
+      "technicalAgentId": "9ebea979-0d33-8e53-a69a-ca1555c73afe",
+      "isHuman": false
+    }
+  ]
+}

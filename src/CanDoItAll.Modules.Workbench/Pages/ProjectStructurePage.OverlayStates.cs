@@ -97,6 +97,114 @@ public sealed record ProjectStructureSubprojectTransferDialogState(
     public string SubmitLabel => "Create subproject";
 }
 
+public sealed record ProjectStructureProcessLinkOption(
+    Guid DefinitionId,
+    string DisplayName,
+    string ScopeLabel,
+    string Status,
+    bool HasPublishedVersion);
+
+public sealed record ProjectStructureProcessLinkDialogState(
+    string SourceNodeId,
+    string SourceNodeTitle,
+    IReadOnlyList<ProjectStructureProcessLinkOption> Options,
+    Guid? SelectedDefinitionId,
+    string Error)
+{
+    public string Title => $"Add process for {SourceNodeTitle}";
+
+    public string Copy => "Choose an existing process definition to link to this node. The link stays explicit in the project structure and does not create a new process.";
+
+    public string SubmitLabel => "Add process";
+}
+
+public enum ProjectStructureProcessStartStage
+{
+    Confirm,
+    Staffing
+}
+
+public sealed record ProjectStructureProcessStartCandidateSelection(
+    Guid LaunchPlanRoleId,
+    Guid CandidateId);
+
+public sealed record ProjectStructureProcessStartCandidateState(
+    Guid CandidateId,
+    string DisplayName,
+    string CandidateKindLabel,
+    string ExecutorKind,
+    string ScoreLabel,
+    bool IsSelected,
+    bool IsRecommended,
+    bool RequiresProvisioning,
+    bool IsResolvable,
+    string RecommendationSummary,
+    string AvailabilitySummary,
+    string SourceRegistryKey);
+
+public sealed record ProjectStructureProcessStartRoleState(
+    Guid LaunchPlanRoleId,
+    string DisplayName,
+    string PreferredExecutorKind,
+    bool IsRequired,
+    bool IsResolved,
+    bool RequiresProvisioning,
+    string SelectionSummary,
+    string ReadinessSummary,
+    IReadOnlyList<ProjectStructureProcessStartCandidateState> Candidates)
+{
+    public bool HasBlockingGap => IsRequired && !IsResolved;
+}
+
+public sealed record ProjectStructureProcessStartDialogState(
+    Guid ProjectId,
+    Guid ProcessDefinitionId,
+    string NodeId,
+    string NodeTitle,
+    string? ParentNodeId,
+    string ParentNodeTitle,
+    Guid? LaunchPlanId,
+    ProjectStructureProcessStartStage Stage,
+    bool IsBusy,
+    bool ConfirmHrManagerMatch,
+    string StatusMessage,
+    IReadOnlyList<ProjectStructureProcessStartRoleState> Roles,
+    string HrManagerName,
+    DateTimeOffset StageActivatedAtUtc,
+    bool AssignmentsReviewed,
+    string Error)
+{
+    public string Title => Stage switch
+    {
+        ProjectStructureProcessStartStage.Staffing => $"Assign roles for {TargetNodeTitle}",
+        _ => $"Start {NodeTitle}"
+    };
+
+    public string Copy => Stage switch
+    {
+        ProjectStructureProcessStartStage.Staffing =>
+            "Required process roles must be paired before the launch can continue. Select the resources manually or ask the HR manager to match them from CRM-HR and the AI agent directory.",
+        _ =>
+            "This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing."
+    };
+
+    public string SubmitLabel => Stage switch
+    {
+        ProjectStructureProcessStartStage.Staffing => "Start",
+        _ => "Continue"
+    };
+
+    public string TargetNodeId => string.IsNullOrWhiteSpace(ParentNodeId) ? NodeId : ParentNodeId!;
+
+    public string TargetNodeTitle => string.IsNullOrWhiteSpace(ParentNodeTitle) ? NodeTitle : ParentNodeTitle;
+
+    public int ResolvedRoleCount => Roles.Count(item => item.IsResolved);
+
+    public int RequiredGapCount => Roles.Count(item => item.HasBlockingGap);
+
+    public bool CanStart => Stage != ProjectStructureProcessStartStage.Staffing || (RequiredGapCount == 0 && AssignmentsReviewed);
+}
+
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
     string Title,

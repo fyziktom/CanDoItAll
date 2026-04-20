@@ -1,0 +1,40 @@
+<SectionCard Title="Metrics"
+             Description="Recent run outcomes, token estimates, and provider usage for the selected agent.">
+    <Grid Gap="LayoutGap.Medium" ColumnTemplate="repeat(auto-fit,minmax(12rem,1fr))">
+        <MetricCard Label="Runs" Value="@Metrics.Count.ToString()" />
+        <MetricCard Label="Succeeded" Value="@Metrics.Count(item => item.Outcome == RunOutcome.Succeeded).ToString()" />
+        <MetricCard Label="Failed" Value="@Metrics.Count(item => item.Outcome == RunOutcome.Failed).ToString()" />
+        <MetricCard Label="Input tokens" Value="@Metrics.Sum(item => item.InputTokens).ToString()" />
+        <MetricCard Label="Output tokens" Value="@Metrics.Sum(item => item.OutputTokens).ToString()" />
+        <MetricCard Label="Tool calls" Value="@Metrics.Sum(item => item.ToolCalls).ToString()" />
+    </Grid>
+
+    @if (Metrics.Count == 0)
+    {
+        <EmptyState Eyebrow="Metrics"
+                    Title="No metrics recorded yet"
+                    Description="Send a prompt to the selected agent and the sandbox will capture run metrics here." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var metric in Metrics.OrderByDescending(item => item.CreatedAtUtc).Take(10))
+            {
+                <SelectionListItem Title="@metric.ProviderName"
+                                   Eyebrow="@metric.Outcome.ToString()"
+                                   Meta="@($"{metric.Model} / {metric.DurationMs} ms")"
+                                   Summary="@($"Input {metric.InputTokens}, output {metric.OutputTokens}, tools {metric.ToolCalls}")">
+                    <Status>
+                        <StatusBadge Tone="@(metric.Outcome == RunOutcome.Succeeded ? "success" : "danger")"
+                                     Text="@metric.CreatedAtUtc.LocalDateTime.ToString("g")" />
+                    </Status>
+                </SelectionListItem>
+            }
+        </Stack>
+    }
+</SectionCard>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<AgentRunMetric> Metrics { get; set; }
+}

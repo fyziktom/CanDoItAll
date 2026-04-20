@@ -23,16 +23,18 @@ Review tenant-data handling, secrets, boundary changes, and policy exceptions be
 - Requires decision record: False
 
 ## Dependencies
+- implementation
 - peer-review
 
 ## Role assignments
 - `security-reviewer` / Security reviewer => Approver; required=True; fallback-order=0; rebind=Security approval remains attached to the role even if the reviewer changes.
 
 ## Artifact expectations
-- `security-exception-assessment` -> `security-exception-assessment` / Security exception assessment | kind=Decision | trust=HumanApproved | sensitivity=Confidential | validation=Must capture controls, residual risk owner, and approval or block rationale.
+- `security-exception-assessment` -> `security-exception-assessment` / Security exception assessment | kind=Decision | trust=ReviewRequired | sensitivity=Confidential | validation=Must capture controls, residual risk owner, and approval or block rationale.
 
 ## Artifact inputs
-- No explicit artifact inputs.
+- From step `implementation` expectation `implementation-change-set`
+- From step `peer-review` expectation `peer-review-note`
 
 ## Branch outcomes
 - No explicit branch outcomes.

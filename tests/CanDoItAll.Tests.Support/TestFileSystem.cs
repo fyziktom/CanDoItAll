@@ -18,7 +18,7 @@ public static class TestFileSystem
             return;
         }
 
-        const int maxAttempts = 6;
+        const int maxAttempts = 12;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
@@ -28,11 +28,17 @@ public static class TestFileSystem
             }
             catch (IOException) when (attempt < maxAttempts)
             {
-                Thread.Sleep(150 * attempt);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                Thread.Sleep(250 * attempt);
             }
             catch (UnauthorizedAccessException) when (attempt < maxAttempts)
             {
-                Thread.Sleep(150 * attempt);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                Thread.Sleep(250 * attempt);
             }
         }
     }

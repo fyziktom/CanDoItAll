@@ -32,6 +32,31 @@ public sealed class ProjectStructureActionCatalogAdapter
             new() { ActionId = "delete", Label = "Delete", MenuLabel = "Delete", Description = "Delete this node, with confirmation when the impact is not trivial.", Icon = "delete", Tone = "danger" }
         };
 
+        if (node.ObjectType == ProjectObjectType.ProcessDefinition)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "start-process",
+                Label = "Start",
+                MenuLabel = "Start",
+                Description = "Confirm and start this process with the selected project-structure node context.",
+                Icon = "play_arrow",
+                Tone = "mint"
+            });
+        }
+        else if (CanLinkExistingProcess(node))
+        {
+            actions.Insert(5, new CanvasWorkbenchAction
+            {
+                ActionId = "add-process",
+                Label = "Add process",
+                MenuLabel = "Add process",
+                Description = "Link an existing process definition so this node can be executed through that process.",
+                Icon = "account_tree",
+                Tone = "mint"
+            });
+        }
+
         if (node.ObjectType == ProjectObjectType.PromptFlow)
         {
             actions.Insert(1, new CanvasWorkbenchAction
@@ -120,6 +145,12 @@ public sealed class ProjectStructureActionCatalogAdapter
 
         actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
         return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
+    }
+
+    private static bool CanLinkExistingProcess(ProjectStructureNode node)
+    {
+        return node.ProjectRole == ProjectStructureProjectRole.None &&
+               node.ObjectType is not (ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun);
     }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()

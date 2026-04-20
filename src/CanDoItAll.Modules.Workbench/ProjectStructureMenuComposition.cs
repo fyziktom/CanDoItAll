@@ -75,12 +75,16 @@ internal static class ProjectStructureMenuComposition
             case ProjectObjectType.PromptStep:
                 preferredActions.Add("branch");
                 break;
+            case ProjectObjectType.ProcessDefinition:
+                preferredActions.Add("start-process");
+                break;
         }
 
         preferredActions.AddRange(
         [
             "open",
             "summary",
+            "add-process",
             "validate",
             "test",
             "connect"

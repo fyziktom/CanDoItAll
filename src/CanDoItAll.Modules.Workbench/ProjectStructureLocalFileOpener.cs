@@ -49,34 +49,43 @@ public sealed class ProjectStructureLocalFileOpener(
 
         if (!OperatingSystem.IsWindows())
         {
-            return Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Local open is not available on this host."));
+            return Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Open in File Explorer is not available on this host."));
         }
 
         try
         {
-            using var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = fullPath,
-                UseShellExecute = true
-            });
+            var processStartInfo = Directory.Exists(fullPath)
+                ? new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{fullPath}\"",
+                    UseShellExecute = true
+                }
+                : new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{fullPath}\"",
+                    UseShellExecute = true
+                };
+            using var process = Process.Start(processStartInfo);
 
-            logger.LogInformation("Opened project structure attachment locally from {Path}.", fullPath);
-            return Task.FromResult(new ProjectStructureLocalFileOpenResult(true, "Opened locally."));
+            logger.LogInformation("Opened project structure attachment in File Explorer from {Path}.", fullPath);
+            return Task.FromResult(new ProjectStructureLocalFileOpenResult(true, "Opened in File Explorer."));
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to open project structure attachment locally from {Path}.", fullPath);
-            return Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Local open is unavailable for this file on the current host."));
+            logger.LogWarning(ex, "Failed to open project structure attachment in File Explorer from {Path}.", fullPath);
+            return Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Open in File Explorer is unavailable for this path on the current host."));
         }
     }
 
     private bool TryResolveTrustedPath(ProjectStructureNode? node, out string fullPath, out string failureMessage)
     {
         fullPath = string.Empty;
-        failureMessage = "Local open is only available for trusted managed files on this host.";
+        failureMessage = "Open in File Explorer is only available for trusted managed files on this host.";
         if (!IsAvailable)
         {
-            failureMessage = "Local open is not available on this host.";
+            failureMessage = "Open in File Explorer is not available on this host.";
             return false;
         }
 
@@ -91,28 +100,54 @@ public sealed class ProjectStructureLocalFileOpener(
             return false;
         }
 
-        if (BlockedExtensions.Contains(Path.GetExtension(relativePath)))
-        {
-            failureMessage = "This file type is blocked from local launch.";
-            return false;
-        }
-
-        var resolution = pathAccessGuard.ResolveManagedFilePath(relativePath);
+        var resolution = TryResolveTrustedArtifactPath(relativePath, out var artifactResolution)
+            ? artifactResolution
+            : pathAccessGuard.ResolveManagedFilePath(relativePath);
         if (!resolution.IsSuccess)
         {
-            failureMessage = "Only files stored under managed project file roots can open locally.";
+            failureMessage = "Only files or folders stored under managed files or managed artifact roots can open in File Explorer.";
             return false;
         }
 
         var candidatePath = resolution.FullPath;
+        if (Directory.Exists(candidatePath))
+        {
+            fullPath = candidatePath;
+            return true;
+        }
+
+        if (BlockedExtensions.Contains(Path.GetExtension(candidatePath)))
+        {
+            failureMessage = "This file type is blocked from File Explorer launch.";
+            return false;
+        }
+
         if (!File.Exists(candidatePath))
         {
-            failureMessage = "The managed file is no longer available on disk.";
+            failureMessage = "The managed file or folder is no longer available on disk.";
             return false;
         }
 
         fullPath = candidatePath;
         return true;
+    }
+
+    private bool TryResolveTrustedArtifactPath(string relativePath, out WorkspacePathAccessResult resolution)
+    {
+        resolution = WorkspacePathAccessResult.Failure("A trusted artifact path is required.");
+        var normalizedPath = relativePath
+            .Trim()
+            .Replace('/', Path.DirectorySeparatorChar)
+            .TrimStart(Path.DirectorySeparatorChar);
+        var firstSegment = normalizedPath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        if (!string.Equals(firstSegment, "artifacts", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        resolution = pathAccessGuard.ResolveWorkspacePath(normalizedPath);
+        return resolution.IsSuccess;
     }
 
     private static string ResolveRelativePath(ProjectStructureNode node)

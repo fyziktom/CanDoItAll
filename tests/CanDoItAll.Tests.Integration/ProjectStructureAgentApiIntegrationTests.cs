@@ -233,9 +233,104 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Contains(taskItem.Prerequisites, prerequisite => prerequisite.NodeId == note.Id && prerequisite.Reason == "depends-on");
     }
 
+    [Fact]
+    public async Task ProjectStructureAgentApi_accepts_typed_block_aliases_and_node_move_requests()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure-mcp/projects",
+            new ProjectStructureProjectSaveRequest(
+                "Alias API project",
+                "HTTP alias validation",
+                "Accept typed block aliases and move requests over the central API.",
+                "Execution",
+                ProjectStatus.Active));
+
+        var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            host.Client,
+            "/api/project-structure-mcp/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                project.Id.ToString(),
+                "Alias and move validation",
+                15));
+
+        var placeholder = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Note,
+                "Features",
+                "Scratch",
+                "Placeholder note for reclassification.",
+                $"project:{project.Id}",
+                420,
+                220,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lease.LeaseToken));
+
+        var updateResponse = await PutAndReadJsonAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/nodes/{placeholder.Id}",
+            """
+            {
+              "title": "Features",
+              "subtitle": "Feature area",
+              "notes": "Promoted into a typed feature block through an alias payload.",
+              "objectType": "FeatureBlock",
+              "leaseToken": "__LEASE__"
+            }
+            """.Replace("__LEASE__", lease.LeaseToken, StringComparison.Ordinal));
+
+        Assert.Equal(ProjectObjectType.ProjectBlock, updateResponse.ObjectType);
+        Assert.Equal("feature", updateResponse.ObjectSubtype);
+
+        var moveAck = await PostAndReadAsync<OperationAck>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/nodes/move",
+            new ProjectStructureNodeMoveInput(placeholder.Id, 1040, 560, lease.LeaseToken));
+
+        Assert.True(moveAck.Ok);
+
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/structure/read",
+            new ProjectStructureReadRequest(
+                NodeIds: [placeholder.Id],
+                IncludeLayout: true,
+                IncludeNotes: true,
+                IncludeMetadata: true));
+
+        var movedNode = Assert.Single(readback.Nodes);
+        Assert.Equal(ProjectObjectType.ProjectBlock, movedNode.ObjectType);
+        Assert.Equal("feature", movedNode.ObjectSubtype);
+        Assert.Equal(1040d, movedNode.X);
+        Assert.Equal(560d, movedNode.Y);
+    }
+
     private static async Task<T> PostAndReadAsync<T>(HttpClient client, string path, object request)
     {
         var response = await client.PostAsJsonAsync(path, request);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}). Body: {errorBody}");
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<T>();
+        return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
+    }
+
+    private static async Task<T> PutAndReadJsonAsync<T>(HttpClient client, string path, string json)
+    {
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await client.PutAsync(path, content);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync();

@@ -13,6 +13,12 @@
                     Description=""
                     Compact="true">
             <Actions>
+                <Button Text="Feed defaults"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="FeedDefaultsAsync"
+                        Disabled="@isFeedingDefaults"
+                        IsBusy="@isFeedingDefaults"
+                        data-testid="processes-feed-defaults-button" />
                 <Button Text="New definition"
                         Click="CreateNewAsync"
                         data-testid="processes-new-definition-button" />

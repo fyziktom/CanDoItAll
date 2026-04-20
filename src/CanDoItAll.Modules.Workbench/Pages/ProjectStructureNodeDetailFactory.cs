@@ -38,6 +38,7 @@ internal static class ProjectStructureNodeDetailFactory
         {
             AddIfValue(items, "Storage provider", StoragePresentation.DescribeProvider(storageReference.ProviderKind));
             AddIfValue(items, "Storage locator", StoragePresentation.DescribeLocator(storageReference.LocatorKind));
+            AddIfValue(items, "Storage path", storageReference.Locator);
             AddIfValue(items, "Storage route", storageReference.Route);
         }
         return items;

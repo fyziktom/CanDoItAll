@@ -1,18 +1,7 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
-using CanDoItAll.Modules.Activity;
-using CanDoItAll.Modules.Automation;
-using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Factory;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Processes;
-using CanDoItAll.Modules.Prompts;
-using CanDoItAll.Modules.Resources;
-using CanDoItAll.Modules.Security;
-using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
+using CanDoItAll.Composition;
 using CanDoItAll.Modules.Workbench;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.Configuration;
@@ -26,8 +15,14 @@ namespace CanDoItAll.ScenarioSeeder;
 internal sealed class ScenarioSeederOptions
 {
     private const string DefaultManagedProfileRoot = @"C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\fe8c1138e1b541cc97a32dbead3a2394";
+    public const string DefaultScenario = "agentframework-integration-simulation";
+    public const string AgentShowcaseCalculatorScenario = "agent-showcase-calculator";
+    public const string UnitsConverterDeliveryScenario = "units-converter-delivery";
+    public const string CompleteUnitsConverterHumanStepAction = "complete-units-converter-human-step";
 
     public required string RepositoryRootPath { get; init; }
+
+    public required string ScenarioName { get; init; }
 
     public required string ProfileRootPath { get; init; }
 
@@ -39,10 +34,20 @@ internal sealed class ScenarioSeederOptions
 
     public required string ConnectionString { get; init; }
 
+    public string ActionName { get; init; } = string.Empty;
+
+    public Guid? RunId { get; init; }
+
+    public int? StepSequence { get; init; }
+
     public static ScenarioSeederOptions Parse(string[] args, string currentDirectory)
     {
         var repositoryRootPath = currentDirectory;
         var profileRootPath = DefaultManagedProfileRoot;
+        var scenarioName = DefaultScenario;
+        var actionName = string.Empty;
+        Guid? runId = null;
+        int? stepSequence = null;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -54,6 +59,31 @@ internal sealed class ScenarioSeederOptions
                 case "--profile-root":
                     profileRootPath = GetRequiredValue(args, ref index);
                     break;
+                case "--scenario":
+                    scenarioName = GetRequiredValue(args, ref index);
+                    break;
+                case "--action":
+                    actionName = GetRequiredValue(args, ref index);
+                    break;
+                case "--run-id":
+                    runId = Guid.Parse(GetRequiredValue(args, ref index));
+                    break;
+                case "--step-sequence":
+                    stepSequence = int.Parse(GetRequiredValue(args, ref index));
+                    break;
+            }
+        }
+
+        if (string.Equals(actionName, CompleteUnitsConverterHumanStepAction, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!runId.HasValue)
+            {
+                throw new InvalidOperationException("Argument '--run-id' is required for the human-step completion action.");
+            }
+
+            if (!stepSequence.HasValue)
+            {
+                throw new InvalidOperationException("Argument '--step-sequence' is required for the human-step completion action.");
             }
         }
 
@@ -64,11 +94,17 @@ internal sealed class ScenarioSeederOptions
         return new ScenarioSeederOptions
         {
             RepositoryRootPath = Path.GetFullPath(repositoryRootPath),
+            ScenarioName = string.IsNullOrWhiteSpace(scenarioName)
+                ? DefaultScenario
+                : scenarioName.Trim(),
             ProfileRootPath = Path.GetFullPath(profileRootPath),
             DatabasePath = Path.GetFullPath(databasePath),
             WorkspaceRootPath = Path.GetFullPath(workspaceRootPath),
             ManagerArtifactsRootPath = Path.GetFullPath(managerArtifactsRootPath),
-            ConnectionString = $"Data Source={Path.GetFullPath(databasePath)}"
+            ConnectionString = $"Data Source={Path.GetFullPath(databasePath)}",
+            ActionName = actionName.Trim(),
+            RunId = runId,
+            StepSequence = stepSequence
         };
     }
 
@@ -116,29 +152,22 @@ internal static class ScenarioSeederHost
             builder.SetMinimumLevel(LogLevel.Information);
         });
         services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton(options);
         services.AddSingleton<SeederHostApplicationLifetime>();
         services.AddSingleton<IHostApplicationLifetime>(provider => provider.GetRequiredService<SeederHostApplicationLifetime>());
         services.AddCanDoItAllInfrastructure(configuration, environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
+        services.AddCanDoItAllRuntimeModules();
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
-        services.AddSecurityModule();
-        services.AddWorkspaceModule();
-        services.AddProjectsModule();
-        services.AddWorkbenchModule();
-        services.AddResourcesModule();
-        services.AddPromptsModule();
-        services.AddFactoryModule();
-        services.AddProcessesModule();
-        services.AddValidationModule();
-        services.AddTestLabModule();
-        services.AddActivityModule();
-        services.AddAutomationModule();
-        services.AddCrmHrModule();
         services.AddScoped<AgentFrameworkIntegrationSimulationSeeder>();
+        services.AddScoped<AgentShowcaseCalculatorSeeder>();
+        services.AddScoped<UnitsConverterDeliveryProvisioningSeeder>();
 
         var serviceProvider = services.BuildServiceProvider(ServiceProviderOptions);
         await using var scope = serviceProvider.CreateAsyncScope();
+        var profileService = scope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
         var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await ActivateRequestedProfileAsync(profileService, options, cancellationToken);
         await bootstrapper.EnsureCurrentProfileReadyAsync(cancellationToken);
         return serviceProvider;
     }
@@ -147,8 +176,6 @@ internal static class ScenarioSeederHost
     {
         return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Database:Provider"] = "Sqlite",
-            ["Database:ConnectionString"] = options.ConnectionString,
             ["Storage:WorkspaceRoot"] = options.WorkspaceRootPath,
             ["Storage:ManagedFilesFolder"] = "managed-files",
             ["Storage:ExportsFolder"] = "exports",
@@ -161,6 +188,50 @@ internal static class ScenarioSeederHost
             ["DevelopmentManager:ReviewBeforeSend"] = "true",
             ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407"
         };
+    }
+
+    private static async Task ActivateRequestedProfileAsync(
+        IDatabaseProfileService profileService,
+        ScenarioSeederOptions options,
+        CancellationToken cancellationToken)
+    {
+        var normalizedWorkspaceRoot = Path.GetFullPath(options.WorkspaceRootPath);
+        var profiles = await profileService.ListAsync(cancellationToken);
+        DatabaseProfileSummary? requestedProfile = null;
+        foreach (var profile in profiles)
+        {
+            var editor = await profileService.GetEditorAsync(profile.Id, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(editor.WorkspaceRoot) &&
+                string.Equals(
+                    Path.GetFullPath(editor.WorkspaceRoot),
+                    normalizedWorkspaceRoot,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                requestedProfile = profile;
+                break;
+            }
+        }
+
+        if (requestedProfile is null)
+        {
+            throw new InvalidOperationException(
+                $"No persisted database profile matched workspace root '{normalizedWorkspaceRoot}'. " +
+                "Create or import the managed profile before running the scenario seeder.");
+        }
+
+        var selection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        if (selection.ActiveProfileId == requestedProfile.Id && !selection.IsRuntimeLocked)
+        {
+            return;
+        }
+
+        var activationResult = await profileService.ActivateAsync(requestedProfile.Id, cancellationToken);
+        if (activationResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Activating database profile '{requestedProfile.DisplayName}' failed: " +
+                string.Join("; ", activationResult.Errors.Select(error => error.Message)));
+        }
     }
 
     private static void EnsureDirectories(ScenarioSeederOptions options)

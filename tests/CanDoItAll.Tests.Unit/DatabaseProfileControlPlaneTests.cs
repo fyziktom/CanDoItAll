@@ -128,6 +128,57 @@ public sealed class DatabaseProfileOverrideTests
         Assert.False(summaries[0].IsActive);
         Assert.Equal(DatabaseProviderKind.Sqlite, summaries[0].ProviderKind);
     }
+
+    [Fact]
+    public async Task ResolveCurrentProfile_reuses_the_persisted_sqlite_profile_identity_when_the_override_targets_the_same_database_file()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-sqlite-override-match");
+
+        Guid persistedProfileId;
+        DatabaseProfileEditorModel persistedEditor;
+        await using (var persistedProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(testEnvironment, includeDatabaseOverride: false))
+        {
+            var service = persistedProvider.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
+            {
+                DisplayName = "Managed profile for override match",
+                ProviderKind = DatabaseProviderKind.Sqlite,
+                SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+            });
+
+            Assert.True(saveResult.IsSuccess);
+            persistedProfileId = saveResult.Value;
+            persistedEditor = await service.GetEditorAsync(saveResult.Value);
+        }
+
+        var overrideWorkspaceRoot = Path.Combine(testEnvironment.RootPath, "wrong-override-workspace");
+        await using var overrideProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: true,
+            additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Database:Provider"] = "Sqlite",
+                ["Database:ConnectionString"] = $"Data Source={persistedEditor.SqliteDatabasePath}",
+                ["Storage:WorkspaceRoot"] = overrideWorkspaceRoot
+            });
+
+        var resolver = overrideProvider.GetRequiredService<IActiveDatabaseProfileResolver>();
+        var workspaceResolver = overrideProvider.GetRequiredService<IWorkspacePathResolver>();
+        var controlPlaneService = overrideProvider.GetRequiredService<IDatabaseProfileService>();
+
+        var resolvedProfile = resolver.ResolveCurrentProfile();
+        var selection = await controlPlaneService.GetCurrentSelectionAsync();
+
+        Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, resolvedProfile.ResolutionSource);
+        Assert.True(resolvedProfile.Profile.Runtime.LockedByRuntimeOverride);
+        Assert.Equal(persistedProfileId, resolvedProfile.Profile.Id);
+        Assert.Equal(DatabaseProfileSourceKind.ManagedSqlite, resolvedProfile.Profile.SourceKind);
+        Assert.Equal(persistedEditor.SqliteDatabasePath, resolvedProfile.Profile.Sqlite!.DatabasePath);
+        Assert.Equal(persistedEditor.WorkspaceRoot, resolvedProfile.Profile.Storage.WorkspaceRoot);
+        Assert.Equal(persistedEditor.WorkspaceRoot, workspaceResolver.ResolveWorkspaceRoot());
+        Assert.Equal(persistedProfileId, selection.ActiveProfileId);
+        Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, selection.ResolutionSource);
+    }
 }
 
 public sealed class SnapshotBackedProfileCatalogTests

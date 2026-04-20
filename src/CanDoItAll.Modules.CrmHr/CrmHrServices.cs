@@ -602,6 +602,9 @@ public sealed record AiAgentListItemModel(
     string DisplayName,
     string Summary,
     PartyLifecycleStatus LifecycleStatus,
+    Guid? TechnicalAgentId,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
     AiExecutionMode? ExecutionMode,
     AiValidationStatus? ValidationStatus,
     string ProviderName,
@@ -609,6 +612,7 @@ public sealed record AiAgentListItemModel(
     string OwnerName,
     int CapabilityCount,
     bool HasProfile,
+    string AgentsRoute,
     DateTimeOffset UpdatedAtUtc);
 
 public sealed record AiAgentWorkspaceModel(
@@ -618,11 +622,32 @@ public sealed record AiAgentWorkspaceModel(
     PartyLifecycleStatus LifecycleStatus,
     string PrimaryEmail,
     string PrimaryPhone,
+    Guid? TechnicalAgentId,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
+    string AgentsRoute,
     string ProviderName,
     string OwnerName,
     AiAgentProfileEditorModel Profile,
     IReadOnlyList<PartyOptionModel> OwnerOptions,
     IReadOnlyList<AiProviderOptionModel> ProviderOptions);
+
+public sealed record AiAgentStaffingFactListItemModel(
+    Guid PartyId,
+    Guid? TechnicalAgentId,
+    string DisplayName,
+    string RoleTitle,
+    string Summary,
+    string Instructions,
+    AiResourceBindingStatus BindingStatus,
+    string BindingSummary,
+    AiExecutionMode? ExecutionMode,
+    string ProviderName,
+    string DefaultModel,
+    string TemplateKey,
+    IReadOnlyList<string> Tags,
+    IReadOnlyList<AiCapabilityEditorModel> Capabilities,
+    string AgentsRoute);
 
 public sealed record AiAgentProfileSummaryModel(Guid Id, Guid PartyId, Guid? ProviderProfileId, AiExecutionMode ExecutionMode, AiValidationStatus ValidationStatus);
 
@@ -3827,11 +3852,65 @@ public sealed partial class AiAgentService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    PartyDirectoryService partyDirectoryService,
+    IAiTechnicalAgentBridge technicalAgentBridge)
 {
     public async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryAsync(CancellationToken cancellationToken = default)
     {
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectorySnapshotAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        return ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsAsync(
+        IReadOnlyList<Guid>? partyIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+
+        var resolvedPartyIds = partyIds?
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToList()
+            ?? [];
+        var facts = await technicalAgentBridge.GetStaffingFactsAsync(resolvedPartyIds, cancellationToken);
+
+        return facts.Values
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new AiAgentStaffingFactListItemModel(
+                item.PartyId,
+                item.TechnicalAgentId,
+                item.DisplayName,
+                item.RoleTitle,
+                item.Summary,
+                item.Instructions,
+                item.BindingStatus,
+                item.BindingSummary,
+                item.ExecutionMode,
+                item.ProviderName,
+                item.DefaultModel,
+                item.TemplateKey,
+                item.Tags,
+                item.Capabilities,
+                item.AgentsRoute))
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryFromProjectionAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
         var parties = await dbContext.Set<Party>()
             .Where(item => item.PartyType == PartyType.AiAgent)
             .OrderBy(item => item.DisplayName)
@@ -3853,14 +3932,10 @@ public sealed partial class AiAgentService(
         var profiles = await dbContext.Set<AiAgentProfile>()
             .Where(item => partyIds.Contains(item.PartyId))
             .ToListAsync(cancellationToken);
+        var technicalSummaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds, cancellationToken);
         var ownerIds = profiles
             .Where(item => item.OwnerPartyId.HasValue)
             .Select(item => item.OwnerPartyId!.Value)
-            .Distinct()
-            .ToList();
-        var providerIds = profiles
-            .Where(item => item.ProviderProfileId.HasValue)
-            .Select(item => item.ProviderProfileId!.Value)
             .Distinct()
             .ToList();
 
@@ -3869,32 +3944,83 @@ public sealed partial class AiAgentService(
             : await dbContext.Set<Party>()
                 .Where(item => ownerIds.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
-        var providerNames = providerIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : await dbContext.Set<ProviderProfile>()
-                .Where(item => providerIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
         var profileByPartyId = profiles.ToDictionary(item => item.PartyId);
 
         return parties
+            .Where(item => technicalSummaries.GetValueOrDefault(item.Id)?.HasTechnicalProfile == true)
             .Select(item =>
             {
                 profileByPartyId.TryGetValue(item.Id, out var profile);
+                technicalSummaries.TryGetValue(item.Id, out var technicalSummary);
+                var hasTechnicalProfile = technicalSummary?.HasTechnicalProfile == true;
+                var hasProfile = hasTechnicalProfile || profile is not null;
+                var validationStatus = profile?.ValidationStatus ?? (hasTechnicalProfile ? AiValidationStatus.Draft : null);
+                var executionMode = technicalSummary?.ExecutionMode ?? profile?.ExecutionMode ?? (hasTechnicalProfile ? AiExecutionMode.Remote : null);
                 return new AiAgentListItemModel(
                     item.Id,
                     item.DisplayName,
                     item.Summary,
                     item.LifecycleStatus,
-                    profile?.ExecutionMode,
-                    profile?.ValidationStatus,
-                    profile?.ProviderProfileId is Guid providerProfileId ? providerNames.GetValueOrDefault(providerProfileId) ?? string.Empty : string.Empty,
-                    profile?.DefaultModel ?? string.Empty,
+                    technicalSummary?.TechnicalAgentId,
+                    technicalSummary?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    technicalSummary?.BindingSummary ?? "No technical binding.",
+                    executionMode,
+                    validationStatus,
+                    technicalSummary?.ProviderName ?? string.Empty,
+                    technicalSummary?.DefaultModel ?? string.Empty,
                     profile?.OwnerPartyId is Guid ownerPartyId ? ownerNames.GetValueOrDefault(ownerPartyId) ?? string.Empty : string.Empty,
-                    profile is null ? 0 : DeserializeCapabilities(profile.CapabilityJson, profile.Id).Count,
-                    profile is not null,
+                    technicalSummary?.CapabilityCount ?? 0,
+                    hasProfile,
+                    technicalSummary?.AgentsRoute ?? "/agents?tab=agents",
                     item.UpdatedAtUtc);
             })
             .ToList();
+    }
+
+    public async Task<Result<Guid>> CreateAgentAsync(
+        string displayName,
+        string externalCode = "",
+        string summary = "",
+        string lastChangedBy = "crm-hr-ui",
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return Result<Guid>.Failure(Error.Validation("AI agent name is required.", "crmhr.ai-agent.display-name-required"));
+        }
+
+        var createResult = await partyDirectoryService.SavePartyAsync(
+            new PartyEditorModel
+            {
+                PartyType = PartyType.AiAgent,
+                LifecycleStatus = PartyLifecycleStatus.Active,
+                DisplayName = displayName.Trim(),
+                ExternalCode = externalCode.Trim(),
+                Summary = summary.Trim(),
+                LastChangedBy = string.IsNullOrWhiteSpace(lastChangedBy) ? "crm-hr-ui" : lastChangedBy.Trim()
+            },
+            cancellationToken);
+        if (createResult.IsFailure)
+        {
+            return createResult;
+        }
+
+        var partyId = createResult.Value;
+        var profileSaveResult = await SaveAgentProfileAsync(
+            new AiAgentProfileEditorModel
+            {
+                PartyId = partyId,
+                Notes = summary.Trim(),
+                LastChangedBy = string.IsNullOrWhiteSpace(lastChangedBy) ? "crm-hr-ui" : lastChangedBy.Trim()
+            },
+            cancellationToken);
+        if (profileSaveResult.IsSuccess)
+        {
+            return Result<Guid>.Success(partyId);
+        }
+
+        await RollBackFailedAgentCreationAsync(partyId, cancellationToken);
+        return Result<Guid>.Failure(profileSaveResult.Errors);
     }
 
     public async Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(Guid partyId, CancellationToken cancellationToken = default)
@@ -3922,32 +4048,14 @@ public sealed partial class AiAgentService(
             .ToListAsync(cancellationToken);
         var profile = await dbContext.Set<AiAgentProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var providerOptions = (await dbContext.Set<ProviderProfile>()
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken))
-            .Select(item => new AiProviderOptionModel(
-                item.Id,
-                item.Name,
-                item.ProviderKind?.ToString() ?? item.ConnectorPluginKey,
-                item.DefaultModel,
-                item.IsEnabled))
-            .ToList();
+        var technicalWorkspace = await technicalAgentBridge.GetWorkspaceAsync(partyId, cancellationToken);
         var ownerOptions = await dbContext.Set<Party>()
             .Where(item => item.Id != partyId && item.PartyType == PartyType.Person)
             .OrderBy(item => item.DisplayName)
             .Select(item => new PartyOptionModel(item.Id, item.DisplayName, item.PartyType))
             .ToListAsync(cancellationToken);
 
-        var providerName = string.Empty;
         var ownerName = string.Empty;
-        if (profile?.ProviderProfileId is Guid providerProfileId)
-        {
-            providerName = providerOptions
-                .FirstOrDefault(item => item.Id == providerProfileId)?
-                .Name
-                ?? string.Empty;
-        }
-
         if (profile?.OwnerPartyId is Guid ownerPartyId)
         {
             ownerName = ownerOptions
@@ -3960,10 +4068,6 @@ public sealed partial class AiAgentService(
                 ?? string.Empty;
         }
 
-        var resolvedDefaultModel = profile is null
-            ? string.Empty
-            : ResolveDefaultModel(profile.DefaultModel, providerOptions.FirstOrDefault(item => item.Id == profile.ProviderProfileId)?.DefaultModel);
-
         return new AiAgentWorkspaceModel(
             party.Id,
             party.DisplayName,
@@ -3971,25 +4075,38 @@ public sealed partial class AiAgentService(
             party.LifecycleStatus,
             ResolvePrimaryContactValue(contactPoints, PartyContactType.Email),
             ResolvePrimaryContactValue(contactPoints, PartyContactType.Phone),
-            providerName,
+            technicalWorkspace.TechnicalAgentId,
+            technicalWorkspace.BindingStatus,
+            technicalWorkspace.BindingSummary,
+            technicalWorkspace.AgentsRoute,
+            technicalWorkspace.ProviderName,
             ownerName,
             new AiAgentProfileEditorModel
             {
                 Id = profile?.Id,
                 PartyId = party.Id,
-                ProviderProfileId = profile?.ProviderProfileId,
-                DefaultModel = resolvedDefaultModel,
-                ExecutionMode = profile?.ExecutionMode ?? AiExecutionMode.Remote,
+                ProviderProfileId = technicalWorkspace.ProviderProfileId,
+                DefaultModel = technicalWorkspace.DefaultModel,
+                ExecutionMode = technicalWorkspace.ExecutionMode,
                 OwnerPartyId = profile?.OwnerPartyId,
                 ValidationStatus = profile?.ValidationStatus ?? AiValidationStatus.Draft,
                 LastReviewedOn = profile?.LastReviewedAtUtc is DateTimeOffset reviewedAtUtc ? DateOnly.FromDateTime(reviewedAtUtc.UtcDateTime) : null,
                 Notes = profile?.Notes ?? string.Empty,
                 ExtendedDataJson = profile?.ExtendedDataJson ?? "{}",
                 LastChangedBy = "crm-hr-ui",
-                Capabilities = profile is null ? [] : DeserializeCapabilities(profile.CapabilityJson, profile.Id)
+                Capabilities = technicalWorkspace.Capabilities
+                    .Select(capability => new AiCapabilityEditorModel
+                    {
+                        Name = capability.Name,
+                        Scope = capability.Scope,
+                        ToolAccess = capability.ToolAccess,
+                        Limitations = capability.Limitations,
+                        Notes = capability.Notes
+                    })
+                    .ToList()
             },
             ownerOptions,
-            providerOptions);
+            technicalWorkspace.ProviderOptions);
     }
 
     public async Task<Result<Guid>> SaveAgentProfileAsync(AiAgentProfileEditorModel model, CancellationToken cancellationToken = default)
@@ -4019,17 +4136,6 @@ public sealed partial class AiAgentService(
             return Result<Guid>.Failure(Error.Validation("An AI agent cannot own itself.", "crmhr.ai-agent.self-owner"));
         }
 
-        ProviderProfile? provider = null;
-        if (model.ProviderProfileId is Guid providerProfileId)
-        {
-            provider = await dbContext.Set<ProviderProfile>()
-                .SingleOrDefaultAsync(item => item.Id == providerProfileId, cancellationToken);
-            if (provider is null)
-            {
-                return Result<Guid>.Failure(Error.Validation("Provider profile must reference an existing workspace provider.", "crmhr.ai-agent.provider-invalid"));
-            }
-        }
-
         Party? owner = null;
         if (model.OwnerPartyId is Guid ownerPartyId)
         {
@@ -4046,27 +4152,6 @@ public sealed partial class AiAgentService(
         {
             return Result<Guid>.Failure(Error.Validation("Extended data must be valid JSON.", "crmhr.ai-agent.extended-data-invalid"));
         }
-
-        var profile = await dbContext.Set<AiAgentProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-        if (profile is null)
-        {
-            profile = new AiAgentProfile
-            {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<AiAgentProfile>().Add(profile);
-        }
-
-        profile.ProviderProfileId = model.ProviderProfileId;
-        profile.DefaultModel = ResolveDefaultModel(model.DefaultModel, provider?.DefaultModel);
-        profile.ExecutionMode = model.ExecutionMode;
-        profile.OwnerPartyId = model.OwnerPartyId;
-        profile.CapabilityJson = SerializeCapabilities(model.Capabilities);
-        profile.ValidationStatus = model.ValidationStatus;
-        profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
-        profile.Notes = model.Notes.Trim();
-        profile.ExtendedDataJson = normalizedExtendedData;
 
         if (owner is not null)
         {
@@ -4085,6 +4170,29 @@ public sealed partial class AiAgentService(
             }
         }
 
+        var technicalSaveResult = await technicalAgentBridge.SaveAsync(model, cancellationToken);
+        if (technicalSaveResult.IsFailure)
+        {
+            return Result<Guid>.Failure(technicalSaveResult.Errors);
+        }
+
+        var profile = await dbContext.Set<AiAgentProfile>()
+            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
+        if (profile is null)
+        {
+            profile = new AiAgentProfile
+            {
+                PartyId = model.PartyId
+            };
+            dbContext.Set<AiAgentProfile>().Add(profile);
+        }
+
+        profile.OwnerPartyId = model.OwnerPartyId;
+        profile.ValidationStatus = model.ValidationStatus;
+        profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
+        profile.Notes = model.Notes.Trim();
+        profile.ExtendedDataJson = normalizedExtendedData;
+
         party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
         party.UpdatedAtUtc = clock.GetUtcNow();
         CrmHrAuditWriter.AddEntry(
@@ -4095,10 +4203,12 @@ public sealed partial class AiAgentService(
             $"Saved AI agent profile for '{party.DisplayName}'.",
             new
             {
-                profile.ExecutionMode,
+                model.ExecutionMode,
                 profile.ValidationStatus,
-                profile.ProviderProfileId,
-                profile.OwnerPartyId
+                model.ProviderProfileId,
+                profile.OwnerPartyId,
+                TechnicalAgentId = technicalSaveResult.Value.TechnicalAgentId,
+                technicalSaveResult.Value.BindingStatus
             },
             party.LastChangedBy,
             party.IsSensitive,
@@ -4110,13 +4220,64 @@ public sealed partial class AiAgentService(
                 "CRM / HR",
                 "AiAgentProfileSaved",
                 $"Saved AI agent profile for {party.DisplayName}",
-                $"{profile.ExecutionMode} / {profile.ValidationStatus}",
+                $"{model.ExecutionMode} / {profile.ValidationStatus}",
                 ArtifactKind: nameof(AiAgentProfile),
                 ArtifactId: party.Id,
                 Route: $"/crm-hr/agents?partyId={party.Id}",
                 Actor: party.LastChangedBy),
             cancellationToken);
         return Result<Guid>.Success(profile.Id);
+    }
+
+    private async Task RollBackFailedAgentCreationAsync(Guid partyId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var party = await dbContext.Set<Party>()
+            .SingleOrDefaultAsync(item => item.Id == partyId, cancellationToken);
+        var profile = await dbContext.Set<AiAgentProfile>()
+            .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
+        var binding = await dbContext.Set<AiResourceBinding>()
+            .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
+        var auditEntries = await dbContext.Set<CrmHrAuditEntry>()
+            .Where(item =>
+                item.EntityId == partyId &&
+                (item.EntityType == nameof(Party) || item.EntityType == nameof(AiAgentProfile)))
+            .ToListAsync(cancellationToken);
+
+        if (profile is not null)
+        {
+            dbContext.Set<AiAgentProfile>().Remove(profile);
+        }
+
+        if (binding is not null)
+        {
+            dbContext.Set<AiResourceBinding>().Remove(binding);
+        }
+
+        if (party is not null)
+        {
+            dbContext.Set<Party>().Remove(party);
+        }
+
+        if (auditEntries.Count > 0)
+        {
+            dbContext.Set<CrmHrAuditEntry>().RemoveRange(auditEntries);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await searchIndexService.DeleteAsync(CrmHrSearchSourceTypes.Party, partyId.ToString("N"), cancellationToken);
+        await searchIndexService.DeleteAsync(CrmHrSearchSourceTypes.AiAgent, partyId.ToString("N"), cancellationToken);
+        await activityStream.RecordAsync(
+            new ActivityWriteRequest(
+                "CRM / HR",
+                "AiAgentCreationRolledBack",
+                $"Rolled back AI agent creation for {partyId:D}",
+                "Technical registration failed",
+                ArtifactKind: nameof(Party),
+                ArtifactId: partyId,
+                Route: "/crm-hr/agents",
+                Actor: "crm-hr-ui"),
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<AiAgentProfileSummaryModel>> ListAgentProfilesAsync(CancellationToken cancellationToken = default)

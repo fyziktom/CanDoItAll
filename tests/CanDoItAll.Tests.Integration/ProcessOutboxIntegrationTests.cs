@@ -148,13 +148,111 @@ public sealed class ProcessOutboxIntegrationTests
         Assert.Equal(0, await CountActivityAsync(dbContextFactory, "start-run", runResult.Value));
 
         await ForceNextAttemptDueAsync(dbContextFactory, startRunOutboxRecord.Id);
-        Assert.Equal(1, await outboxService.ProcessPendingAsync());
+        Assert.True(await outboxService.ProcessPendingAsync() >= 1);
 
         startRunOutboxRecord = await GetOutboxRecordAsync(dbContextFactory, "start-run", saveResult.Value, runResult.Value);
         Assert.Equal(ProcessOutboxRecordStatus.Completed, startRunOutboxRecord.Status);
         Assert.Equal(2, startRunOutboxRecord.AttemptCount);
         Assert.Equal(1, await CountActivityAsync(dbContextFactory, "start-run", runResult.Value));
         Assert.True(await RunExistsAsync(dbContextFactory, runResult.Value));
+    }
+
+    [Fact]
+    public async Task StartRunAsync_leaves_automation_dispatch_for_durable_worker()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox deferred automation start");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Deferred automation dispatch start",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate durable automation dispatch"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var automationDispatchRecords = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+        var automationDispatchRecord = Assert.Single(automationDispatchRecords);
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
+        Assert.Equal(0, automationDispatchRecord.AttemptCount);
+        Assert.Equal(0, harness.AutomationDispatch.CallCount);
+
+        Assert.Equal(1, await outboxService.ProcessPendingAsync());
+
+        automationDispatchRecords = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+        automationDispatchRecord = Assert.Single(automationDispatchRecords);
+        Assert.Equal(ProcessOutboxRecordStatus.Completed, automationDispatchRecord.Status);
+        Assert.Equal(1, automationDispatchRecord.AttemptCount);
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_leaves_automation_dispatch_for_durable_worker()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox deferred automation transition");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Deferred automation dispatch transition",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate deferred transition dispatch"
+        });
+
+        Assert.True(runResult.IsSuccess);
+        Assert.Equal(1, await outboxService.ProcessPendingAsync());
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Start the intake work.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(transitionResult.IsSuccess);
+
+        var automationDispatchRecords = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+        Assert.Equal(2, automationDispatchRecords.Count);
+        var latestDispatchRecord = automationDispatchRecords[^1];
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, latestDispatchRecord.Status);
+        Assert.Equal(0, latestDispatchRecord.AttemptCount);
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+
+        Assert.Equal(1, await outboxService.ProcessPendingAsync());
+
+        automationDispatchRecords = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+        latestDispatchRecord = automationDispatchRecords[^1];
+        Assert.Equal(ProcessOutboxRecordStatus.Completed, latestDispatchRecord.Status);
+        Assert.Equal(1, latestDispatchRecord.AttemptCount);
+        Assert.Equal(2, harness.AutomationDispatch.CallCount);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -268,6 +366,22 @@ public sealed class ProcessOutboxIntegrationTests
                 item.ProcessRunId == runId);
     }
 
+    private static async Task<IReadOnlyList<ProcessOutboxRecord>> ListAutomationDispatchRecordsAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid runId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var records = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item =>
+                item.CommandKey == "dispatch-run-automation" &&
+                item.ProcessRunId == runId)
+            .ToListAsync();
+        return records
+            .OrderBy(item => item.CreatedAtUtc)
+            .ThenBy(item => item.Id)
+            .ToList();
+    }
+
     private static async Task ForceNextAttemptDueAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid outboxId)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -323,11 +437,13 @@ public sealed class ProcessOutboxIntegrationTests
         private ProcessOutboxHarness(
             CanDoItAllTestEnvironment testEnvironment,
             ServiceProvider services,
-            SideEffectFailureState failures)
+            SideEffectFailureState failures,
+            TrackingAutomationDispatchService automationDispatch)
         {
             TestEnvironment = testEnvironment;
             Services = services;
             Failures = failures;
+            AutomationDispatch = automationDispatch;
         }
 
         public CanDoItAllTestEnvironment TestEnvironment { get; }
@@ -336,11 +452,14 @@ public sealed class ProcessOutboxIntegrationTests
 
         public SideEffectFailureState Failures { get; }
 
-        public static async Task<ProcessOutboxHarness> CreateAsync()
+        public TrackingAutomationDispatchService AutomationDispatch { get; }
+
+        public static async Task<ProcessOutboxHarness> CreateAsync(bool trackAutomationDispatch = false)
         {
             var testEnvironment = CanDoItAllTestEnvironment.Create("process-outbox-tests");
             var profile = testEnvironment.CreateManagedSqliteProfile("primary");
             var failures = new SideEffectFailureState();
+            var automationDispatch = new TrackingAutomationDispatchService();
             var services = await TestApplicationBootstrap.BuildServiceProviderAsync(
                 profile,
                 "CanDoItAll.Tests",
@@ -357,9 +476,16 @@ public sealed class ProcessOutboxIntegrationTests
                     collection.AddScoped<SearchIndexService>();
                     collection.AddScoped<ThrowOnceSearchIndexService>();
                     collection.AddScoped<ISearchIndexService>(serviceProvider => serviceProvider.GetRequiredService<ThrowOnceSearchIndexService>());
+
+                    if (trackAutomationDispatch)
+                    {
+                        collection.RemoveAll<IProcessRunAutomationDispatchService>();
+                        collection.AddSingleton(automationDispatch);
+                        collection.AddScoped<IProcessRunAutomationDispatchService>(serviceProvider => serviceProvider.GetRequiredService<TrackingAutomationDispatchService>());
+                    }
                 });
 
-            return new ProcessOutboxHarness(testEnvironment, services, failures);
+            return new ProcessOutboxHarness(testEnvironment, services, failures, automationDispatch);
         }
 
         public async ValueTask DisposeAsync()
@@ -472,6 +598,19 @@ public sealed class ProcessOutboxIntegrationTests
         public Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default)
         {
             return inner.SearchAsync(query, take, cancellationToken);
+        }
+    }
+
+    private sealed class TrackingAutomationDispatchService : IProcessRunAutomationDispatchService
+    {
+        private int callCount;
+
+        public int CallCount => callCount;
+
+        public Task DispatchAsync(Guid processRunId, Guid? triggerStepRunId, string trigger, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref callCount);
+            return Task.CompletedTask;
         }
     }
 }

@@ -120,6 +120,16 @@
         "ReviewSummary": "Reviewed by product and delivery."
       },
       {
+        "StepKey": "architecture-review",
+        "ArtifactKind": "Decision",
+        "Title": "Billing export architecture decision record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded after the canonical-model and source-of-truth review for the billing export capability.",
+        "AllowedFutureUsageSummary": "Reusable for implementation, peer review, and release governance.",
+        "ReviewSummary": "Selected option, rejected alternatives, and migration ownership are explicit."
+      },
+      {
         "StepKey": "implementation",
         "ArtifactKind": "Deliverable",
         "Title": "Billing export implementation change set",
@@ -128,6 +138,36 @@
         "ProvenanceSummary": "Generated from current branch and linked tests.",
         "AllowedFutureUsageSummary": "Reusable for review, QA, and release governance.",
         "ReviewSummary": "Linked to migration notes and touched-surface inventory."
+      },
+      {
+        "StepKey": "implementation",
+        "ArtifactKind": "Checklist",
+        "Title": "Billing export migration and rollout preparation checklist",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared by implementation owner alongside the change set and rollout notes.",
+        "AllowedFutureUsageSummary": "Reusable for release readiness, rollback planning, and audit.",
+        "ReviewSummary": "Migration ordering, rollback hooks, and rollout constraints are explicit."
+      },
+      {
+        "StepKey": "peer-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Billing export peer review note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded during peer review of the governed delivery package.",
+        "AllowedFutureUsageSummary": "Reusable for QA, release governance, and later forensic review.",
+        "ReviewSummary": "Residual issues, approved follow-ups, and no-blocker conclusion captured."
+      },
+      {
+        "StepKey": "qa-validation",
+        "ArtifactKind": "Evidence",
+        "Title": "Billing export regression evidence pack",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from targeted regression, browser proof, and acceptance checks for the billing export capability.",
+        "AllowedFutureUsageSummary": "Reusable for release approval, support readiness, and audit.",
+        "ReviewSummary": "QA lead approved the evidence pack after reviewing changed-surface coverage."
       },
       {
         "StepKey": "security-review",
@@ -226,12 +266,22 @@
       {
         "StepKey": "route-review-disposition",
         "ArtifactKind": "Decision",
-        "Title": "Account settings review routing decision",
+        "Title": "Account settings review routing decision record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded by review lead on the governed router step.",
         "AllowedFutureUsageSummary": "Reusable for workflow audit.",
         "ReviewSummary": "Route selected: QA validation."
+      },
+      {
+        "StepKey": "validate-qa-lane",
+        "ArtifactKind": "Evidence",
+        "Title": "Account settings QA lane validation note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from targeted QA lane validation, browser proof, and reviewer notes.",
+        "AllowedFutureUsageSummary": "Reusable for merge approval and later regression analysis.",
+        "ReviewSummary": "Validation scope, observed behavior, and residual concerns are explicit."
       },
       {
         "StepKey": "approve-merge-after-qa",
@@ -350,7 +400,7 @@
       {
         "StepKey": "activate-emergency-bridge",
         "ArtifactKind": "Transcript",
-        "Title": "Checkout latency emergency bridge log",
+        "Title": "Checkout latency emergency bridge activation log",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded from emergency bridge activation.",
@@ -358,19 +408,39 @@
         "ReviewSummary": "Participants and initial constraints captured."
       },
       {
+        "StepKey": "assess-blast-radius",
+        "ArtifactKind": "Decision",
+        "Title": "Checkout latency blast-radius assessment",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Prepared during emergency shard-risk review and rollback-trigger evaluation.",
+        "AllowedFutureUsageSummary": "Reusable for emergency approval, post-incident review, and audit.",
+        "ReviewSummary": "Impacted shards, rollback trigger, and safe boundary are explicit."
+      },
+      {
         "StepKey": "package-hotfix",
         "ArtifactKind": "Deliverable",
-        "Title": "Checkout latency emergency hotfix package",
+        "Title": "Checkout latency emergency patch and rollback bundle",
         "TrustStatus": "ReviewRequired",
-        "SensitivityLevel": "Internal",
+        "SensitivityLevel": "Confidential",
         "ProvenanceSummary": "Built from emergency fix branch with rollback notes.",
         "AllowedFutureUsageSummary": "Reusable for rollout and incident replay.",
         "ReviewSummary": "Bounded change set only."
       },
       {
+        "StepKey": "validate-hotfix",
+        "ArtifactKind": "Evidence",
+        "Title": "Checkout latency emergency validation evidence pack",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from urgent regression checks, smoke coverage, and emergency browser proof.",
+        "AllowedFutureUsageSummary": "Reusable for emergency approval, incident review, and audit.",
+        "ReviewSummary": "QA lead approved the emergency validation evidence."
+      },
+      {
         "StepKey": "approve-emergency-release",
         "ArtifactKind": "Decision",
-        "Title": "Checkout latency emergency window approval",
+        "Title": "Checkout latency emergency release approval record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Approved by release approver after review of blast radius and validation evidence.",
@@ -380,12 +450,12 @@
       {
         "StepKey": "execute-emergency-rollout",
         "ArtifactKind": "Transcript",
-        "Title": "Failed rollout telemetry capture and rollback trigger notes",
+        "Title": "Checkout latency emergency rollout and telemetry log",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Captured from the failed production rollout and immediate rollback watch.",
         "AllowedFutureUsageSummary": "Reusable for post-incident review and emergency policy tuning.",
-        "ReviewSummary": "Telemetry breach, rollback trigger, and operator notes captured."
+        "ReviewSummary": "Telemetry breach, rollback trigger, rollback decision, and operator notes captured."
       }
     ]
   },
@@ -457,6 +527,16 @@
         "ReviewSummary": "Success criteria and stakeholders named."
       },
       {
+        "StepKey": "staffing-review",
+        "ArtifactKind": "Decision",
+        "Title": "Contoso staffing recommendation",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded during staffing feasibility review for the enterprise rollout.",
+        "AllowedFutureUsageSummary": "Reusable for kickoff planning, delivery sequencing, and governance review.",
+        "ReviewSummary": "Staffing commitments, dependencies, and risks are explicit."
+      },
+      {
         "StepKey": "kickoff-approval",
         "ArtifactKind": "Brief",
         "Title": "Contoso kickoff packet",
@@ -465,6 +545,16 @@
         "ProvenanceSummary": "Prepared from onboarding brief and staffing note.",
         "AllowedFutureUsageSummary": "Reusable for the first delivery phase.",
         "ReviewSummary": "Owners and risks made explicit."
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "ArtifactKind": "Decision",
+        "Title": "Contoso kickoff approval record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded when kickoff was approved with named owners, milestones, and next actions.",
+        "AllowedFutureUsageSummary": "Reusable for execution governance, customer reporting, and audit.",
+        "ReviewSummary": "Approval scope, accountable owners, and immediate next actions are explicit."
       }
     ]
   },
@@ -548,7 +638,7 @@
       {
         "StepKey": "escalate",
         "ArtifactKind": "Decision",
-        "Title": "Tenant login mitigation approval record",
+        "Title": "Tenant login escalation approval record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Approved by escalation authority after risk review.",

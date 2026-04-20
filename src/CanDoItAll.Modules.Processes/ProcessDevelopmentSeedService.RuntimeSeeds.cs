@@ -20,12 +20,14 @@ public sealed partial class ProcessDevelopmentSeedService
 
         var stepRuns = await processesService.ListStepRunsAsync(runId, cancellationToken);
         var stepRunIdsByStepKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var stepRunsByStepKey = new Dictionary<string, ProcessStepRunViewModel>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in runtimeBindings.StepDefinitionIdsByKey)
         {
             var stepRun = stepRuns.FirstOrDefault(item => item.StepDefinitionId == pair.Value);
             if (stepRun is not null)
             {
                 stepRunIdsByStepKey[pair.Key] = stepRun.Id;
+                stepRunsByStepKey[pair.Key] = stepRun;
             }
         }
 
@@ -65,6 +67,37 @@ public sealed partial class ProcessDevelopmentSeedService
             }
         }
 
+        foreach (var artifact in scenario.Artifacts)
+        {
+            var stepRunIdResult = ResolveOptionalStepRunId(stepRunIdsByStepKey, artifact.StepKey, scenario.Key, "artifact");
+            if (stepRunIdResult.IsFailure)
+            {
+                return Result.Failure(stepRunIdResult.Errors.ToArray());
+            }
+
+            var artifactOutputs = string.IsNullOrWhiteSpace(artifact.StepKey)
+                ? []
+                : stepRunsByStepKey.TryGetValue(artifact.StepKey, out var stepRun)
+                    ? stepRun.ArtifactOutputs
+                    : [];
+            var artifactResult = await EnsureArtifactAsync(
+                runId,
+                stepRunIdResult.Value,
+                artifactOutputs,
+                ParseEnum(artifact.ArtifactKind, ProcessArtifactKind.Evidence),
+                artifact.Title,
+                ParseArtifactTrustStatus(artifact.TrustStatus),
+                ParseEnum(artifact.SensitivityLevel, ProcessSensitivityLevel.Internal),
+                artifact.ProvenanceSummary,
+                artifact.AllowedFutureUsageSummary,
+                artifact.ReviewSummary,
+                cancellationToken);
+            if (artifactResult.IsFailure)
+            {
+                return artifactResult;
+            }
+        }
+
         foreach (var transition in scenario.Transitions)
         {
             var stepRunIdResult = ResolveStepRunId(stepRunIdsByStepKey, transition.StepKey, scenario.Key, "transition");
@@ -94,31 +127,6 @@ public sealed partial class ProcessDevelopmentSeedService
             if (transitionResult.IsFailure)
             {
                 return transitionResult;
-            }
-        }
-
-        foreach (var artifact in scenario.Artifacts)
-        {
-            var stepRunIdResult = ResolveOptionalStepRunId(stepRunIdsByStepKey, artifact.StepKey, scenario.Key, "artifact");
-            if (stepRunIdResult.IsFailure)
-            {
-                return Result.Failure(stepRunIdResult.Errors.ToArray());
-            }
-
-            var artifactResult = await EnsureArtifactAsync(
-                runId,
-                stepRunIdResult.Value,
-                ParseEnum(artifact.ArtifactKind, ProcessArtifactKind.Evidence),
-                artifact.Title,
-                ParseEnum(artifact.TrustStatus, ProcessArtifactTrustStatus.ReviewRequired),
-                ParseEnum(artifact.SensitivityLevel, ProcessSensitivityLevel.Internal),
-                artifact.ProvenanceSummary,
-                artifact.AllowedFutureUsageSummary,
-                artifact.ReviewSummary,
-                cancellationToken);
-            if (artifactResult.IsFailure)
-            {
-                return artifactResult;
             }
         }
 

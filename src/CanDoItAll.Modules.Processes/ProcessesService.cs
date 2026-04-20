@@ -1,8 +1,10 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -13,7 +15,12 @@ public sealed partial class ProcessesService(
     IProcessDefinitionListQueryService definitionListQueryService,
     IProcessRuntimeReadQueryService runtimeReadQueryService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
-    IProcessExecutorRegistryBridge executorRegistryBridge)
+    IProcessExecutorRegistryBridge executorRegistryBridge,
+    IProcessProjectStructureBridge projectStructureBridge,
+    HrService hrService,
+    AiAgentService aiAgentService,
+    CollaborationService collaborationService,
+    ILogger<ProcessesService> logger)
 {
     private const string DefaultActor = "process-management";
 
@@ -64,6 +71,10 @@ public sealed partial class ProcessesService(
         }
 
         var roles = await dbContext.Set<ProcessRoleRequirement>()
+            .Where(item => item.ProcessDefinitionVersionId == workingVersion.Id)
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var messagingPolicies = await dbContext.Set<ProcessRoleMessagingPolicyDefinition>()
             .Where(item => item.ProcessDefinitionVersionId == workingVersion.Id)
             .OrderBy(item => item.DisplayOrder)
             .ToListAsync(cancellationToken);
@@ -135,6 +146,11 @@ public sealed partial class ProcessesService(
                     .Where(item => item.RoleRequirementId == role.Id)
                     .Select(item => item.SkillId)
                     .ToList()
+            }).ToList(),
+            MessagingPolicies = messagingPolicies.Select(item => new ProcessRoleMessagingPolicyEditorModel {
+                Id = item.Id,
+                SourceRoleRequirementId = item.SourceRoleRequirementId,
+                TargetRoleRequirementId = item.TargetRoleRequirementId
             }).ToList(),
             Steps = steps.Select(step => {
                 var editorStep = new ProcessStepEditorModel {

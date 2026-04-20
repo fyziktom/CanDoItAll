@@ -1,0 +1,72 @@
+@namespace CanDoItAll.Web.Components.Layout
+
+@if (ShowStandardRail)
+{
+    <SectionCard Title="Workbench" Description="Internal tabs now track artifact identity, recent closures, and contextual restore instead of flat route launches.">
+        <Grid Gap="LayoutGap.Medium">
+            <div class="cda-shell-stat-card">
+                <p class="cda-eyebrow tracking-[0.25em]">Current route</p>
+                <p class="mt-2 text-sm font-medium text-slate-900">@CurrentRouteDisplay</p>
+            </div>
+            <div class="cda-shell-stat-card">
+                <p class="cda-eyebrow tracking-[0.25em]">Active tab</p>
+                <p class="mt-2 text-sm font-medium text-slate-900">@ActiveTabTitle</p>
+            </div>
+            @if (RestoredCount.HasValue)
+            {
+                <div class="cda-shell-stat-card">
+                    <p class="cda-eyebrow tracking-[0.25em]">Restore report</p>
+                    <p class="mt-2 text-sm font-medium text-slate-900">@($"{RestoredCount.Value} tab(s) restored")</p>
+                    @if (RestoreFailureCount > 0)
+                    {
+                        <p class="mt-1 text-xs text-amber-700">@($"{RestoreFailureCount} tab(s) needed safe fallback.")</p>
+                    }
+                </div>
+            }
+        </Grid>
+    </SectionCard>
+
+    <SectionCard Title="Context Queue" Description="The shell keeps active projects and prompt sessions visible so work starts from artifacts instead of a flat route list.">
+        <Stack GapScale="LayoutGap.Medium"
+               Class="text-sm text-slate-700">
+            <div>
+                <p class="cda-eyebrow">Opened projects</p>
+                <p class="mt-1">@OpenedProjectCount</p>
+            </div>
+            <div>
+                <p class="cda-eyebrow">Prompt sessions</p>
+                <p class="mt-1">@OpenedPromptSessionCount</p>
+            </div>
+            <div>
+                <p class="cda-eyebrow">Recent closures</p>
+                <p class="mt-1">@RecentTabCount</p>
+            </div>
+        </Stack>
+    </SectionCard>
+}
+
+@code {
+    [Parameter]
+    public bool ShowStandardRail { get; set; }
+
+    [Parameter, EditorRequired]
+    public string CurrentRouteDisplay { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ActiveTabTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public int? RestoredCount { get; set; }
+
+    [Parameter]
+    public int RestoreFailureCount { get; set; }
+
+    [Parameter]
+    public int OpenedProjectCount { get; set; }
+
+    [Parameter]
+    public int OpenedPromptSessionCount { get; set; }
+
+    [Parameter]
+    public int RecentTabCount { get; set; }
+}
