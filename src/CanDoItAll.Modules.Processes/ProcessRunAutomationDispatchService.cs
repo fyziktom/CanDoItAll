@@ -1031,6 +1031,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         string? recoveryDirective)
     {
         var workBrief = candidate.WorkBrief;
+        ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
+        var summarizedTriggerReason = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
         var builder = new StringBuilder();
         builder.AppendLine("You are executing a CanDoItAll process step.");
         builder.AppendLine();
@@ -1040,12 +1042,19 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine($"Executor: {candidate.StepRun.CurrentExecutorName}");
         builder.AppendLine();
         builder.AppendLine("Run objective:");
-        builder.AppendLine(string.IsNullOrWhiteSpace(candidate.Run.TriggerReason)
+        builder.AppendLine(string.IsNullOrWhiteSpace(summarizedTriggerReason)
             ? string.IsNullOrWhiteSpace(candidate.Definition.Summary)
                 ? candidate.Definition.ValueStatement
                 : candidate.Definition.Summary
-            : candidate.Run.TriggerReason);
+            : summarizedTriggerReason);
         builder.AppendLine();
+        if (projectStructureContext is not null)
+        {
+            builder.AppendLine("Project structure context:");
+            builder.AppendLine(ProcessProjectStructureContextFormatter.BuildPromptSummary(projectStructureContext));
+            builder.AppendLine();
+        }
+
         builder.AppendLine("Work brief:");
         builder.AppendLine(workBrief?.WorkBriefText ?? "No work brief was captured for this step.");
         builder.AppendLine();

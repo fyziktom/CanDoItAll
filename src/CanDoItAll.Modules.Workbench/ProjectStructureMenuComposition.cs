@@ -76,7 +76,7 @@ internal static class ProjectStructureMenuComposition
                 preferredActions.Add("branch");
                 break;
             case ProjectObjectType.ProcessDefinition:
-                preferredActions.Add("execute-process");
+                preferredActions.Add("start-process");
                 break;
         }
 

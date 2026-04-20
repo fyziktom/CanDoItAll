@@ -38,7 +38,9 @@ public sealed partial class ProcessesService
                     ? $"{publishedContext.Definition.Name} launch / {now:yyyy-MM-dd HH:mm}"
                     : request.LaunchName.Trim(),
                 OperatingMode = request.OperatingMode,
-                TriggerReason = request.TriggerReason.Trim(),
+                TriggerReason = ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                    request.TriggerReason,
+                    request.ProjectStructureContext),
                 Status = ProcessLaunchPlanStatus.Draft,
                 RecommendationStrategy = "Project assignments first, then CRM-HR staffing and AI resource directories, then deterministic AI proposal fallback.",
                 FallbackStrategy = "Human substitute approval and explicit provisioning remain mandatory when no ready executor is already bound.",

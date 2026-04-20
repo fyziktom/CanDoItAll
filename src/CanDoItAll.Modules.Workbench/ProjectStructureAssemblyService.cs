@@ -1220,11 +1220,16 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
 
     private static string BuildProcessRunNotes(ProcessRun run, ProcessRunProjectionStats stats)
     {
+        ProcessProjectStructureContextFormatter.TryParse(run.TriggerReason, out var projectStructureContext);
+        var summarizedTriggerReason = ProcessProjectStructureContextFormatter.RemoveSerializedContext(run.TriggerReason);
         return string.Join(
             Environment.NewLine,
             new[]
             {
-                string.IsNullOrWhiteSpace(run.TriggerReason) ? null : $"Trigger: {run.TriggerReason.Trim()}",
+                string.IsNullOrWhiteSpace(summarizedTriggerReason) ? null : $"Trigger: {summarizedTriggerReason.Trim()}",
+                projectStructureContext is null
+                    ? null
+                    : $"Target: {projectStructureContext.ResolveTargetNodeTitle()} ({projectStructureContext.ResolveTargetNodeId()})",
                 string.IsNullOrWhiteSpace(run.ExecutorSnapshotSummary) ? null : $"Executors: {run.ExecutorSnapshotSummary.Trim()}",
                 $"Estimated cost: {run.EstimatedCost:C} | Actual cost: {run.ActualCost:C}",
                 stats.BlockedStepCount > 0 ? $"Blocked step(s): {stats.BlockedStepCount}" : null

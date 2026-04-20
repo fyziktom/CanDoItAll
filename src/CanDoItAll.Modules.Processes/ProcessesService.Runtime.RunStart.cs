@@ -130,7 +130,11 @@ public sealed partial class ProcessesService
                         ProcessRunId = run.Id,
                         StepRunId = stepRun.Id,
                         Title = $"{step.Title} brief",
-                        WorkBriefText = BuildWorkBrief(context.Definition, step, currentAssignment?.DisplayName),
+                        WorkBriefText = BuildWorkBrief(
+                            context.Definition,
+                            step,
+                            currentAssignment?.DisplayName,
+                            context.ProjectStructureContext),
                         HandoffSummary = step.InputContractSummary,
                         AssignmentReason = currentAssignment?.BindingReason ?? "No executor is currently bound to the required role.",
                         ExpectedOutcome = step.OutputContractSummary,
@@ -211,6 +215,7 @@ public sealed partial class ProcessesService
         Guid? projectId;
         ProcessOperatingMode operatingMode;
         string triggerReason;
+        ProcessProjectStructureContext? projectStructureContext = null;
 
         if (request.LaunchPlanId.HasValue)
         {
@@ -302,6 +307,7 @@ public sealed partial class ProcessesService
             triggerReason = string.IsNullOrWhiteSpace(launchPlan.TriggerReason)
                 ? "Executed from an approved launch plan."
                 : launchPlan.TriggerReason.Trim();
+            ProcessProjectStructureContextFormatter.TryParse(triggerReason, out projectStructureContext);
         }
         else
         {
@@ -325,7 +331,10 @@ public sealed partial class ProcessesService
 
             projectId = request.ProjectId ?? definition.ProjectId;
             operatingMode = request.OperatingMode;
-            triggerReason = request.TriggerReason.Trim();
+            projectStructureContext = request.ProjectStructureContext;
+            triggerReason = ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                request.TriggerReason,
+                request.ProjectStructureContext);
         }
 
         var roles = await dbContext.Set<ProcessRoleRequirement>()
@@ -377,6 +386,7 @@ public sealed partial class ProcessesService
                 projectId,
                 operatingMode,
                 triggerReason,
+                projectStructureContext,
                 defaultRunName,
                 selectedCandidatesByRoleRequirementId ?? [],
                 projectAssignmentLookup ?? []));
@@ -441,6 +451,7 @@ public sealed partial class ProcessesService
         Guid? ProjectId,
         ProcessOperatingMode OperatingMode,
         string TriggerReason,
+        ProcessProjectStructureContext? ProjectStructureContext,
         string DefaultRunName,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> SelectedLaunchCandidatesByRoleRequirementId,
         IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup);

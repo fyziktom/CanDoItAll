@@ -309,6 +309,66 @@
     </ProjectStructureOverlayDialog>
 }
 
+@if (ProcessStartDialog is not null)
+{
+    var startDialog = ProcessStartDialog;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@startDialog.Title"
+                                   Kicker="Process start"
+                                   Title="@startDialog.Title"
+                                   Summary="@startDialog.Copy"
+                                   DataTestId="project-structure-process-start-dialog"
+                                   Close="CloseProcessStart">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseProcessStart" />
+            <Button Text="@startDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Warning"
+                    data-testid="project-structure-process-start-submit"
+                    Click="ExecuteProcessStart" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution target" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@startDialog.TargetNodeTitle" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Target node id: {startDialog.TargetNodeId}")"
+                                   Class="cw-panel-copy" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Selected process node id: {startDialog.NodeId}")"
+                                   Class="cw-panel-copy" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Project id: {startDialog.ProjectId:D}")"
+                                   Class="cw-panel-copy" />
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context."
+                                   Class="cw-panel-copy" />
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(startDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @startDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
 @if (PreviewNode is not null)
 {
     var previewNode = PreviewNode;
@@ -418,6 +478,15 @@
 
     [Parameter]
     public EventCallback ExecuteProcessLink { get; set; }
+
+    [Parameter]
+    public ProjectStructureProcessStartDialogState? ProcessStartDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProcessStart { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteProcessStart { get; set; }
 
     [Parameter]
     public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }

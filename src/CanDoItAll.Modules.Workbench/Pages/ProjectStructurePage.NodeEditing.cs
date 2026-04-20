@@ -49,7 +49,7 @@ public partial class ProjectStructurePage
 
         if (node.ObjectType == ProjectObjectType.ProcessDefinition)
         {
-            actions.Add(new ProjectStructureInspectorAction("execute-process", "Execute process", "play_arrow", "mint"));
+            actions.Add(new ProjectStructureInspectorAction("start-process", "Start", "play_arrow", "mint"));
         }
         else if (CanLinkExistingProcess(node))
         {
@@ -181,8 +181,9 @@ public partial class ProjectStructurePage
             case "add-process":
                 await OpenAddProcessDialogAsync(node);
                 break;
+            case "start-process":
             case "execute-process":
-                await ExecuteProcessNodeAsync(node);
+                await OpenStartProcessDialogAsync(node);
                 break;
             case "project:open-structure":
                 await OpenProjectStructureInNewTabAsync(node);

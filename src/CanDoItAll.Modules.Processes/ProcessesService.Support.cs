@@ -550,7 +550,11 @@ public sealed partial class ProcessesService
             : "Unnamed step";
     }
 
-    private static string BuildWorkBrief(ProcessDefinition definition, ProcessStepDefinition step, string? executorName) {
+    private static string BuildWorkBrief(
+        ProcessDefinition definition,
+        ProcessStepDefinition step,
+        string? executorName,
+        ProcessProjectStructureContext? projectStructureContext = null) {
         var builder = new StringBuilder()
             .AppendLine($"{definition.Name}: {step.Title}")
             .AppendLine($"Customer value: {definition.ValueStatement}")
@@ -562,6 +566,12 @@ public sealed partial class ProcessesService
 
         if (!string.IsNullOrWhiteSpace(step.Notes)) {
             builder.AppendLine($"Instructions: {step.Notes}");
+        }
+
+        if (projectStructureContext is not null) {
+            builder.AppendLine($"Project structure target: {projectStructureContext.ResolveTargetNodeTitle()} ({projectStructureContext.ResolveTargetNodeId()})");
+            builder.AppendLine($"Project structure node: {projectStructureContext.NodeTitle} ({projectStructureContext.NodeId})");
+            builder.AppendLine($"Project id: {projectStructureContext.ProjectId:D}");
         }
 
         return builder

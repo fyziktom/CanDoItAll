@@ -407,6 +407,8 @@ public sealed class ProcessRunStartRequest
 
     public string TriggerReason { get; set; } = string.Empty;
 
+    public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
+
     public Guid? LaunchPlanId { get; set; }
 }
 
@@ -421,6 +423,8 @@ public sealed class ProcessLaunchCreateRequest
     public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
 
     public string TriggerReason { get; set; } = string.Empty;
+
+    public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
 
     public string RequestedBy { get; set; } = "process-workspace";
 }

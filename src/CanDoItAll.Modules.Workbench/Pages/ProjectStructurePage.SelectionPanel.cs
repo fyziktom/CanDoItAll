@@ -312,6 +312,20 @@ public partial class ProjectStructurePage
             builder.Append("|process-link:");
         }
 
+        if (processStartDialog is not null)
+        {
+            builder.Append("|process-start:")
+                .Append(processStartDialog.NodeId)
+                .Append(':')
+                .Append(processStartDialog.TargetNodeId)
+                .Append(':')
+                .Append(processStartDialog.Error);
+        }
+        else
+        {
+            builder.Append("|process-start:");
+        }
+
         if (quickActionDialog is not null)
         {
             builder.Append("|quick:")

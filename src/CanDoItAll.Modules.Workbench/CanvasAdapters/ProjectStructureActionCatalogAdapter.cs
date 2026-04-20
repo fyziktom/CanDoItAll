@@ -36,10 +36,10 @@ public sealed class ProjectStructureActionCatalogAdapter
         {
             actions.Insert(1, new CanvasWorkbenchAction
             {
-                ActionId = "execute-process",
-                Label = "Execute process",
-                MenuLabel = "Execute process",
-                Description = "Create, approve, provision, and execute a launch plan from this process definition.",
+                ActionId = "start-process",
+                Label = "Start",
+                MenuLabel = "Start",
+                Description = "Confirm and start this process with the selected project-structure node context.",
                 Icon = "play_arrow",
                 Tone = "mint"
             });

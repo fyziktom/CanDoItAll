@@ -118,6 +118,26 @@ public sealed record ProjectStructureProcessLinkDialogState(
     public string SubmitLabel => "Add process";
 }
 
+public sealed record ProjectStructureProcessStartDialogState(
+    Guid ProjectId,
+    Guid ProcessDefinitionId,
+    string NodeId,
+    string NodeTitle,
+    string? ParentNodeId,
+    string ParentNodeTitle,
+    string Error)
+{
+    public string Title => $"Start {NodeTitle}";
+
+    public string Copy => "This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing.";
+
+    public string SubmitLabel => "Start";
+
+    public string TargetNodeId => string.IsNullOrWhiteSpace(ParentNodeId) ? NodeId : ParentNodeId!;
+
+    public string TargetNodeTitle => string.IsNullOrWhiteSpace(ParentNodeTitle) ? NodeTitle : ParentNodeTitle;
+}
+
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
     string Title,

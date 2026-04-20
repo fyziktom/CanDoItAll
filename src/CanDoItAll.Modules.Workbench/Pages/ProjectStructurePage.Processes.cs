@@ -10,6 +10,7 @@ public partial class ProjectStructurePage
     private ProcessesService ProcessesService { get; set; } = default!;
 
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
+    private ProjectStructureProcessStartDialogState? processStartDialog;
 
     private async Task OpenAddProcessDialogAsync(ProjectStructureNode node)
     {
@@ -100,7 +101,7 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ExecuteProcessNodeAsync(ProjectStructureNode node)
+    private async Task OpenStartProcessDialogAsync(ProjectStructureNode node)
     {
         var processDefinitionId = ResolveProcessDefinitionId(node);
         if (!processDefinitionId.HasValue)
@@ -112,15 +113,49 @@ public partial class ProjectStructurePage
         }
 
         CloseQuickActionDialog();
+        var startContext = CreateProcessStartContext(node);
+        processStartDialog = new ProjectStructureProcessStartDialogState(
+            ProjectId,
+            processDefinitionId.Value,
+            node.Id,
+            node.Title,
+            startContext.ParentNodeId,
+            startContext.ParentNodeTitle,
+            string.Empty);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseProcessStartDialog()
+    {
+        processStartDialog = null;
+    }
+
+    private async Task ExecuteProcessStartAsync()
+    {
+        if (processStartDialog is null)
+        {
+            return;
+        }
+
+        var dialog = processStartDialog;
+        var node = ResolveNode(dialog.NodeId);
+        if (node is null)
+        {
+            processStartDialog = dialog with { Error = "The selected process node could not be found. Reload the project structure and try again." };
+            return;
+        }
+
+        var startContext = CreateProcessStartContext(node);
 
         var createResult = await ProcessesService.CreateLaunchPlanAsync(
             new ProcessLaunchCreateRequest
             {
-                ProcessDefinitionId = processDefinitionId.Value,
-                ProjectId = ProjectId,
-                LaunchName = $"{node.Title} execution",
+                ProcessDefinitionId = dialog.ProcessDefinitionId,
+                ProjectId = startContext.ProjectId,
+                LaunchName = $"{startContext.ResolveTargetNodeTitle()} / {node.Title}",
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = $"Started from project structure node '{node.Title}'.",
+                TriggerReason = "Started from project structure.",
+                ProjectStructureContext = startContext,
                 RequestedBy = "project-structure"
             });
         if (createResult.IsFailure)
@@ -143,7 +178,7 @@ public partial class ProjectStructurePage
             {
                 LaunchPlanId = launchPlanId,
                 Status = ProcessLaunchApprovalStatus.Approved,
-                ResolutionSummary = $"Approved from project structure execution for '{node.Title}'.",
+                ResolutionSummary = $"Approved from project structure start for '{startContext.ResolveTargetNodeTitle()}' using '{node.Title}'.",
                 DecidedBy = "project-structure"
             });
         if (approvalResult.IsFailure)
@@ -171,15 +206,58 @@ public partial class ProjectStructurePage
             return;
         }
 
-        workflowFeedback = $"{node.Title} execution started.";
+        processStartDialog = null;
+        await TryLinkStartedProcessRunAsync(startContext, executionResult.Value);
+        workflowFeedback = $"{node.Title} started for {startContext.ResolveTargetNodeTitle()}.";
         workflowFeedbackTone = "mint";
-        Navigation.NavigateTo($"/projects/{ProjectId:D}/processes?processId={processDefinitionId.Value:D}&runId={executionResult.Value:D}");
+        Navigation.NavigateTo($"/projects/{ProjectId:D}/processes?processId={dialog.ProcessDefinitionId:D}&runId={executionResult.Value:D}");
     }
 
     private void SetProcessActionError(IReadOnlyCollection<Error> errors)
     {
-        workflowFeedback = errors.FirstOrDefault()?.Message ?? "The process action could not be completed.";
+        var message = errors.FirstOrDefault()?.Message ?? "The process action could not be completed.";
+        if (processStartDialog is not null)
+        {
+            processStartDialog = processStartDialog with { Error = message };
+        }
+
+        workflowFeedback = message;
         workflowFeedbackTone = "warn";
+    }
+
+    private ProcessProjectStructureContext CreateProcessStartContext(ProjectStructureNode node)
+    {
+        var parentNode = ResolveNode(node.ParentId);
+        return new ProcessProjectStructureContext
+        {
+            ProjectId = ProjectId,
+            NodeId = node.Id,
+            NodeTitle = node.Title,
+            ParentNodeId = node.ParentId,
+            ParentNodeTitle = parentNode?.Title ?? string.Empty
+        };
+    }
+
+    private async Task TryLinkStartedProcessRunAsync(ProcessProjectStructureContext startContext, Guid runId)
+    {
+        var sourceNodeId = startContext.ResolveTargetNodeId();
+        if (string.IsNullOrWhiteSpace(sourceNodeId))
+        {
+            return;
+        }
+
+        try
+        {
+            await ProjectWorkbenchService.LinkObjectsAsync(
+                ProjectId,
+                sourceNodeId,
+                BuildProcessRunNodeKey(runId),
+                ProjectObjectLinkKind.Uses);
+        }
+        catch (InvalidOperationException)
+        {
+            // Keep the process run alive even if the graph relation already exists or cannot be added.
+        }
     }
 
     private static ProjectStructureProcessLinkOption MapProcessLinkOption(ProcessDefinitionListItem definition)
@@ -208,6 +286,11 @@ public partial class ProjectStructurePage
     private static string BuildProcessDefinitionNodeKey(Guid definitionId)
     {
         return $"process-definition:{definitionId:D}";
+    }
+
+    private static string BuildProcessRunNodeKey(Guid runId)
+    {
+        return $"process-run:{runId:D}";
     }
 
     private static bool TryParsePrefixedGuidNodeKey(string nodeKey, string prefix, out Guid value)
