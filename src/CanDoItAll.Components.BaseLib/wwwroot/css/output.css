@@ -2101,6 +2101,7 @@
   }
   .cad-stat-card--sm, .zy-stat-card--sm {
     padding: 0.3rem 0.54rem;
+    max-height: 3rem;
   }
   .cad-stat-card--sm .cad-stat-card__label, .cad-stat-card--sm .zy-stat-card__label, .zy-stat-card--sm .cad-stat-card__label, .zy-stat-card--sm .zy-stat-card__label {
     font-size: 0.45rem;
@@ -2110,6 +2111,7 @@
   }
   .cad-stat-card--lg, .zy-stat-card--lg {
     padding: 0.4rem 0.74rem;
+    max-height: 3rem;
   }
   .cad-stat-card--lg .cad-stat-card__label, .cad-stat-card--lg .zy-stat-card__label, .zy-stat-card--lg .cad-stat-card__label, .zy-stat-card--lg .zy-stat-card__label {
     font-size: 0.52rem;
