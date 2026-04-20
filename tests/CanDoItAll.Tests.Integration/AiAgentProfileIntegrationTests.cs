@@ -281,6 +281,7 @@ public sealed class AiAgentProfileIntegrationTests
         editor.ProjectStructureAccess = new AgentProjectStructureAccessSettings
         {
             CanWrite = true,
+            AllowAllProjects = true,
             AllowedProjectIds =
             [
                 betaProjectId,
@@ -295,6 +296,7 @@ public sealed class AiAgentProfileIntegrationTests
 
         Assert.True(savedEditor.ProjectStructureAccess.CanRead);
         Assert.True(savedEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(savedEditor.ProjectStructureAccess.AllowAllProjects);
         Assert.Equal(
             new[]
             {
@@ -344,6 +346,7 @@ public sealed class AiAgentProfileIntegrationTests
         editor.ProcessAccess = new AgentProcessAccessSettings
         {
             CanWrite = true,
+            AllowAllDefinitions = true,
             AllowedDefinitionIds =
             [
                 betaProcessId,
@@ -358,6 +361,7 @@ public sealed class AiAgentProfileIntegrationTests
 
         Assert.True(savedEditor.ProcessAccess.CanRead);
         Assert.True(savedEditor.ProcessAccess.CanWrite);
+        Assert.True(savedEditor.ProcessAccess.AllowAllDefinitions);
         Assert.Equal(
             new[]
             {

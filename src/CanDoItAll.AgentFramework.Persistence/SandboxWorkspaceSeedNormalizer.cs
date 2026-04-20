@@ -17,7 +17,8 @@ internal static class SandboxWorkspaceSeedNormalizer
         "code-review-lead",
         "ui-review-lead",
         "security-reviewer",
-        "release-readiness-manager"
+        "release-readiness-manager",
+        "research-deep-dive-analyst"
     };
 
     internal static SandboxWorkspaceDocument Normalize(SandboxWorkspaceDocument document)

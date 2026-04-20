@@ -146,9 +146,11 @@ public sealed partial class MafAgentRuntime
         {
             EnsureReadAllowed(accessState);
             var definitions = await processesService.ListDefinitionsAsync(projectId, cancellationToken);
-            return definitions
-                .Where(item => accessState.AllowedDefinitionIds.Contains(item.Id))
-                .ToList();
+            return accessState.AllowAllDefinitions
+                ? definitions
+                : definitions
+                    .Where(item => accessState.AllowedDefinitionIds.Contains(item.Id))
+                    .ToList();
         }
 
         private async Task<ProcessDefinitionEditorModel> ProcessesDefinitionEditorGetAsync(
@@ -253,9 +255,11 @@ public sealed partial class MafAgentRuntime
             }
 
             var runs = await processesService.ListRunsAsync(definitionId, projectId, cancellationToken);
-            return runs
-                .Where(item => accessState.AllowedDefinitionIds.Contains(item.ProcessDefinitionId))
-                .ToList();
+            return accessState.AllowAllDefinitions
+                ? runs
+                : runs
+                    .Where(item => accessState.AllowedDefinitionIds.Contains(item.ProcessDefinitionId))
+                    .ToList();
         }
 
         private async Task<InternalProcessRunDetailToolData> ProcessesRunDetailGetAsync(
@@ -299,8 +303,11 @@ public sealed partial class MafAgentRuntime
                 await EnsureProjectReadAllowedAsync(accessState, projectId.Value, cancellationToken);
             }
 
+            var allowedDefinitionIds = accessState.AllowAllDefinitions
+                ? (await GetAllowedDefinitionsByIdAsync(accessState, cancellationToken)).Keys.ToList()
+                : accessState.AllowedDefinitionIds.ToList();
             return await processesService.GetAnalyticsForDefinitionsAsync(
-                accessState.AllowedDefinitionIds.ToList(),
+                allowedDefinitionIds,
                 projectId,
                 cancellationToken);
         }
@@ -525,9 +532,11 @@ public sealed partial class MafAgentRuntime
             CancellationToken cancellationToken)
         {
             var definitions = await processesService.ListDefinitionsAsync(cancellationToken: cancellationToken);
-            return definitions
-                .Where(item => accessState.AllowedDefinitionIds.Contains(item.Id))
-                .ToDictionary(item => item.Id);
+            return accessState.AllowAllDefinitions
+                ? definitions.ToDictionary(item => item.Id)
+                : definitions
+                    .Where(item => accessState.AllowedDefinitionIds.Contains(item.Id))
+                    .ToDictionary(item => item.Id);
         }
 
         private async Task EnsureDefinitionExistsAsync(
@@ -625,7 +634,8 @@ public sealed partial class MafAgentRuntime
 
         private static void EnsureDefinitionAllowed(ProcessAccessState accessState, Guid definitionId)
         {
-            if (accessState.AllowedDefinitionIds.Contains(definitionId))
+            if (accessState.AllowAllDefinitions ||
+                accessState.AllowedDefinitionIds.Contains(definitionId))
             {
                 return;
             }
@@ -660,12 +670,15 @@ public sealed partial class MafAgentRuntime
             var normalized = AgentProcessAccessMetadata.Normalize(settings);
             CanRead = normalized.CanRead;
             CanWrite = normalized.CanWrite;
+            AllowAllDefinitions = normalized.AllowAllDefinitions;
             AllowedDefinitionIds = normalized.AllowedDefinitionIds.ToHashSet();
         }
 
         public bool CanRead { get; }
 
         public bool CanWrite { get; }
+
+        public bool AllowAllDefinitions { get; }
 
         public HashSet<Guid> AllowedDefinitionIds { get; }
 

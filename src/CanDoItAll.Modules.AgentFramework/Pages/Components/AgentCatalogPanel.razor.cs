@@ -327,12 +327,26 @@ public partial class AgentCatalogPanel
             .Count();
     }
 
+    private static string DescribeProjectStructureScope(AgentEditorModel editor)
+    {
+        return editor.ProjectStructureAccess.AllowAllProjects
+            ? "All current and future projects"
+            : $"{CountAllowedProjectStructureProjects(editor)} selected";
+    }
+
     private static int CountAllowedProcesses(AgentEditorModel editor)
     {
         return editor.ProcessAccess.AllowedDefinitionIds
             .Where(definitionId => definitionId != Guid.Empty)
             .Distinct()
             .Count();
+    }
+
+    private static string DescribeProcessScope(AgentEditorModel editor)
+    {
+        return editor.ProcessAccess.AllowAllDefinitions
+            ? "All current and future processes"
+            : $"{CountAllowedProcesses(editor)} selected";
     }
 
     private void ToggleProjectStructureRead(object? rawValue)
@@ -348,6 +362,7 @@ public partial class AgentCatalogPanel
         if (!isEnabled)
         {
             editorModel.ProjectStructureAccess.CanWrite = false;
+            editorModel.ProjectStructureAccess.AllowAllProjects = false;
         }
     }
 
@@ -360,6 +375,16 @@ public partial class AgentCatalogPanel
             editorModel.ProjectStructureAccess.CanRead = true;
             projectStructureProjectsRequested = true;
             _ = EnsureProjectStructureProjectsLoadedAsync();
+        }
+    }
+
+    private void ToggleProjectStructureAllowAll(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProjectStructureAccess.AllowAllProjects = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.ProjectStructureAccess.CanRead = true;
         }
     }
 
@@ -376,6 +401,7 @@ public partial class AgentCatalogPanel
         if (!isEnabled)
         {
             editorModel.ProcessAccess.CanWrite = false;
+            editorModel.ProcessAccess.AllowAllDefinitions = false;
         }
     }
 
@@ -388,6 +414,16 @@ public partial class AgentCatalogPanel
             editorModel.ProcessAccess.CanRead = true;
             processDefinitionsRequested = true;
             _ = EnsureProcessDefinitionsLoadedAsync();
+        }
+    }
+
+    private void ToggleProcessAllowAll(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProcessAccess.AllowAllDefinitions = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.ProcessAccess.CanRead = true;
         }
     }
 

@@ -167,6 +167,13 @@
                                            data-testid="agents-catalog-project-structure-write" />
                                     Can write project structure
                                 </label>
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.ProjectStructureAccess.AllowAllProjects"
+                                           @onchange="args => ToggleProjectStructureAllowAll(args.Value)"
+                                           data-testid="agents-catalog-project-structure-all" />
+                                    Allow all current and future projects
+                                </label>
                             </Stack>
                         </div>
                         <div class="cda-admin-subpanel md:col-span-2">
@@ -178,7 +185,7 @@
                                 <div>
                                     <p class="cda-field-label mb-1">Allowed projects</p>
                                     <p class="text-sm leading-6 text-slate-600">
-                                        @CountAllowedProjectStructureProjects(editorModel) selected
+                                        @DescribeProjectStructureScope(editorModel)
                                     </p>
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -186,16 +193,22 @@
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
                                             Click="SelectAllProjectStructureProjects"
-                                            Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))" />
+                                            Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
                                     <Button Text="Clear"
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
                                             Click="ClearProjectStructureProjects"
-                                            Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))" />
+                                            Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
                                 </Cluster>
                             </Split>
 
-                            @if (!projectStructureProjectsRequested)
+                            @if (editorModel.ProjectStructureAccess.AllowAllProjects)
+                            {
+                                <div class="mt-3 cda-admin-empty">
+                                    This agent can access all current and future projects. Turn off the all-projects option to manage a specific allowlist.
+                                </div>
+                            }
+                            else if (!projectStructureProjectsRequested)
                             {
                                 <div class="mt-3 cda-admin-empty">
                                     Load the project list only when you need to inspect or change the access scope.
@@ -281,6 +294,13 @@
                                            data-testid="agents-catalog-process-write" />
                                     Can write processes
                                 </label>
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.ProcessAccess.AllowAllDefinitions"
+                                           @onchange="args => ToggleProcessAllowAll(args.Value)"
+                                           data-testid="agents-catalog-process-all" />
+                                    Allow all current and future processes
+                                </label>
                             </Stack>
                         </div>
                         <div class="cda-admin-subpanel md:col-span-2">
@@ -292,7 +312,7 @@
                                 <div>
                                     <p class="cda-field-label mb-1">Allowed processes</p>
                                     <p class="text-sm leading-6 text-slate-600">
-                                        @CountAllowedProcesses(editorModel) selected
+                                        @DescribeProcessScope(editorModel)
                                     </p>
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -300,16 +320,22 @@
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
                                             Click="SelectAllProcesses"
-                                            Disabled="@(!areProcessDefinitionsLoaded || isLoadingProcessDefinitions || !string.IsNullOrWhiteSpace(processDefinitionsErrorMessage))" />
+                                            Disabled="@(!areProcessDefinitionsLoaded || isLoadingProcessDefinitions || !string.IsNullOrWhiteSpace(processDefinitionsErrorMessage) || editorModel.ProcessAccess.AllowAllDefinitions)" />
                                     <Button Text="Clear"
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
                                             Click="ClearProcesses"
-                                            Disabled="@(!areProcessDefinitionsLoaded || isLoadingProcessDefinitions || !string.IsNullOrWhiteSpace(processDefinitionsErrorMessage))" />
+                                            Disabled="@(!areProcessDefinitionsLoaded || isLoadingProcessDefinitions || !string.IsNullOrWhiteSpace(processDefinitionsErrorMessage) || editorModel.ProcessAccess.AllowAllDefinitions)" />
                                 </Cluster>
                             </Split>
 
-                            @if (!processDefinitionsRequested)
+                            @if (editorModel.ProcessAccess.AllowAllDefinitions)
+                            {
+                                <div class="mt-3 cda-admin-empty">
+                                    This agent can access all current and future processes. Turn off the all-processes option to manage a specific allowlist.
+                                </div>
+                            }
+                            else if (!processDefinitionsRequested)
                             {
                                 <div class="mt-3 cda-admin-empty">
                                     Load the process list only when you need to inspect or change the access scope.

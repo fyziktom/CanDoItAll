@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v19";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v21";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -507,22 +507,29 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             false,
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                maxLocalRagResults = 4,
-                hostedExposure = new
-                {
-                    publish = true,
-                    routeSegment = "portfolio-architect",
-                    profile = "readonly-research"
-                }
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        maxLocalRagResults = 4,
+                        hostedExposure = new
+                        {
+                            publish = true,
+                            routeSegment = "portfolio-architect",
+                            profile = "readonly-research"
+                        }
+                    }),
+                    canRead: true,
+                    canWrite: true,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             false,
             "portfolio-architect",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, AutoApproveExternalCallsByDefault = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
@@ -562,17 +569,24 @@ internal static class SandboxWorkspaceSeedBuilder
             0.1d,
             false,
             false,
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                enableCompaction = true,
-                maxLocalRagResults = 4
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             false,
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
@@ -605,17 +619,24 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Programming,
             "programming-workspace-analyst",
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                preferredSkillRoots = new[] { GetSeedSkillRoot("repository-playbook") },
-                enableCompaction = true,
-                slidingWindowTurns = 10,
-                maxLocalRagResults = 5
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        preferredSkillRoots = new[] { GetSeedSkillRoot("repository-playbook") },
+                        enableCompaction = true,
+                        slidingWindowTurns = 10,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
@@ -662,15 +683,22 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "code-review-lead",
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                enableCompaction = true,
-                maxLocalRagResults = 5
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
                 CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
@@ -697,15 +725,22 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "ui-review-lead",
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                enableCompaction = true,
-                maxLocalRagResults = 4
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
@@ -735,15 +770,22 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "security-reviewer",
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                enableCompaction = true,
-                maxLocalRagResults = 4
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
@@ -770,15 +812,22 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Management,
             "release-readiness-manager",
-            SerializeConfiguration(new
-            {
-                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                enableCompaction = true,
-                maxLocalRagResults = 4
-            }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
@@ -859,12 +908,25 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             true,
-            SerializeConfiguration(new { enableCompaction = true, maxInjectedMemoryItems = 6, maxLocalRagResults = 5 }),
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxInjectedMemoryItems = 6,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
             false,
             "research-deep-dive-analyst",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
-                CreateAssignment(projectStructureCapabilityId, "project-structure-central", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
                 CreateAssignment(appSummaryInlineSkillCapabilityId, "generated-app-summary-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
@@ -965,6 +1027,38 @@ internal static class SandboxWorkspaceSeedBuilder
         string notes = "")
     {
         return new AgentCapabilityAssignment(capabilityId, capabilityKey, kind, status, null, notes);
+    }
+
+    private static string WithProjectStructureAccess(
+        string configurationJson,
+        bool canRead,
+        bool canWrite,
+        bool allowAllProjects)
+    {
+        return AgentProjectStructureAccessMetadata.Write(
+            configurationJson,
+            new AgentProjectStructureAccessSettings
+            {
+                CanRead = canRead,
+                CanWrite = canWrite,
+                AllowAllProjects = allowAllProjects
+            });
+    }
+
+    private static string WithProcessAccess(
+        string configurationJson,
+        bool canRead,
+        bool canWrite,
+        bool allowAllDefinitions)
+    {
+        return AgentProcessAccessMetadata.Write(
+            configurationJson,
+            new AgentProcessAccessSettings
+            {
+                CanRead = canRead,
+                CanWrite = canWrite,
+                AllowAllDefinitions = allowAllDefinitions
+            });
     }
 
     private static string GetSeedSkillRoot(string key)

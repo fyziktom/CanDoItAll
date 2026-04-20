@@ -9,6 +9,8 @@ public sealed class AgentProjectStructureAccessSettings
 
     public bool CanWrite { get; set; }
 
+    public bool AllowAllProjects { get; set; }
+
     public List<Guid> AllowedProjectIds { get; set; } = [];
 }
 
@@ -17,6 +19,7 @@ public static class AgentProjectStructureAccessMetadata
     private const string RootPropertyName = "projectStructure";
     private const string CanReadPropertyName = "canRead";
     private const string CanWritePropertyName = "canWrite";
+    private const string AllowAllProjectsPropertyName = "allowAllProjects";
     private const string AllowedProjectIdsPropertyName = "allowedProjectIds";
 
     public static AgentProjectStructureAccessSettings Read(string? configurationJson)
@@ -38,7 +41,8 @@ public static class AgentProjectStructureAccessMetadata
             var settings = new AgentProjectStructureAccessSettings
             {
                 CanRead = TryReadBoolean(projectStructure, CanReadPropertyName),
-                CanWrite = TryReadBoolean(projectStructure, CanWritePropertyName)
+                CanWrite = TryReadBoolean(projectStructure, CanWritePropertyName),
+                AllowAllProjects = TryReadBoolean(projectStructure, AllowAllProjectsPropertyName)
             };
 
             if (projectStructure[AllowedProjectIdsPropertyName] is JsonArray allowedProjectIds)
@@ -68,6 +72,7 @@ public static class AgentProjectStructureAccessMetadata
 
         if (!normalized.CanRead &&
             !normalized.CanWrite &&
+            !normalized.AllowAllProjects &&
             normalized.AllowedProjectIds.Count == 0)
         {
             root.Remove(RootPropertyName);
@@ -78,6 +83,7 @@ public static class AgentProjectStructureAccessMetadata
         {
             [CanReadPropertyName] = normalized.CanRead,
             [CanWritePropertyName] = normalized.CanWrite,
+            [AllowAllProjectsPropertyName] = normalized.AllowAllProjects,
             [AllowedProjectIdsPropertyName] = new JsonArray(
                 normalized.AllowedProjectIds
                     .Select(projectId => JsonValue.Create(projectId.ToString("D")))
@@ -95,6 +101,7 @@ public static class AgentProjectStructureAccessMetadata
         {
             CanRead = settings.CanRead || settings.CanWrite,
             CanWrite = settings.CanWrite,
+            AllowAllProjects = settings.AllowAllProjects,
             AllowedProjectIds = settings.AllowedProjectIds
                 .Where(projectId => projectId != Guid.Empty)
                 .Distinct()

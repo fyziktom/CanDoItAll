@@ -9,6 +9,8 @@ public sealed class AgentProcessAccessSettings
 
     public bool CanWrite { get; set; }
 
+    public bool AllowAllDefinitions { get; set; }
+
     public List<Guid> AllowedDefinitionIds { get; set; } = [];
 }
 
@@ -17,6 +19,7 @@ public static class AgentProcessAccessMetadata
     private const string RootPropertyName = "processes";
     private const string CanReadPropertyName = "canRead";
     private const string CanWritePropertyName = "canWrite";
+    private const string AllowAllDefinitionsPropertyName = "allowAllDefinitions";
     private const string AllowedDefinitionIdsPropertyName = "allowedDefinitionIds";
 
     public static AgentProcessAccessSettings Read(string? configurationJson)
@@ -38,7 +41,8 @@ public static class AgentProcessAccessMetadata
             var settings = new AgentProcessAccessSettings
             {
                 CanRead = TryReadBoolean(processes, CanReadPropertyName),
-                CanWrite = TryReadBoolean(processes, CanWritePropertyName)
+                CanWrite = TryReadBoolean(processes, CanWritePropertyName),
+                AllowAllDefinitions = TryReadBoolean(processes, AllowAllDefinitionsPropertyName)
             };
 
             if (processes[AllowedDefinitionIdsPropertyName] is JsonArray allowedDefinitionIds)
@@ -68,6 +72,7 @@ public static class AgentProcessAccessMetadata
 
         if (!normalized.CanRead &&
             !normalized.CanWrite &&
+            !normalized.AllowAllDefinitions &&
             normalized.AllowedDefinitionIds.Count == 0)
         {
             root.Remove(RootPropertyName);
@@ -78,6 +83,7 @@ public static class AgentProcessAccessMetadata
         {
             [CanReadPropertyName] = normalized.CanRead,
             [CanWritePropertyName] = normalized.CanWrite,
+            [AllowAllDefinitionsPropertyName] = normalized.AllowAllDefinitions,
             [AllowedDefinitionIdsPropertyName] = new JsonArray(
                 normalized.AllowedDefinitionIds
                     .Select(definitionId => JsonValue.Create(definitionId.ToString("D")))
@@ -95,6 +101,7 @@ public static class AgentProcessAccessMetadata
         {
             CanRead = settings.CanRead || settings.CanWrite,
             CanWrite = settings.CanWrite,
+            AllowAllDefinitions = settings.AllowAllDefinitions,
             AllowedDefinitionIds = settings.AllowedDefinitionIds
                 .Where(definitionId => definitionId != Guid.Empty)
                 .Distinct()

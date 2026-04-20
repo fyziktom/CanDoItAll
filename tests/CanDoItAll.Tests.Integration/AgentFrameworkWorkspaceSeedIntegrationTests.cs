@@ -55,7 +55,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
-    public async Task Organization_workspace_seeds_project_structure_mcp_for_software_delivery_agents()
+    public async Task Organization_workspace_default_integrated_agents_do_not_attach_project_structure_or_processes_mcp_capabilities()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -63,40 +63,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
 
         var capabilities = await workspaceService.ListCapabilitiesAsync();
-        var capability = Assert.Single(
+        Assert.DoesNotContain(
             capabilities,
             item => item.Kind == CapabilityKind.McpServer &&
-                    string.Equals(item.Key, "project-structure-central", StringComparison.OrdinalIgnoreCase));
-
-        Assert.Equal("dotnet", capability.EndpointOrPath);
-
-        using var configuration = JsonDocument.Parse(capability.ConfigurationJson);
-        var root = configuration.RootElement;
-        Assert.Equal("stdio", root.GetProperty("transport").GetString());
-        Assert.Equal("dotnet", root.GetProperty("command").GetString());
-        Assert.Equal(".", root.GetProperty("workingDirectory").GetString());
-        Assert.Equal("NeverRequire", root.GetProperty("approvalMode").GetString());
-
-        var arguments = root.GetProperty("arguments")
-            .EnumerateArray()
-            .Select(item => item.GetString())
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Cast<string>()
-            .ToList();
-        Assert.Contains("src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj", arguments, StringComparer.Ordinal);
-        Assert.Contains("CanDoItAll.Mcp.ProjectStructure.settings.local.json", arguments, StringComparer.Ordinal);
-
-        var allowedTools = root.GetProperty("allowedTools")
-            .EnumerateArray()
-            .Select(item => item.GetString())
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Cast<string>()
-            .ToList();
-        Assert.Contains("project_structure_read", allowedTools, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("project_structure_checklist", allowedTools, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("project_structure_dependencies_query", allowedTools, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("project_structure_project_lease_acquire", allowedTools, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("project_structure_approval_request", allowedTools, StringComparer.OrdinalIgnoreCase);
+                    string.Equals(item.EndpointOrPath, "CanDoItAll.Mcp.Processes", StringComparison.OrdinalIgnoreCase));
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         foreach (var agentName in new[]
@@ -112,7 +82,56 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                  })
         {
             var agent = Assert.Single(agents, item => string.Equals(item.Name, agentName, StringComparison.Ordinal));
-            Assert.Contains(agent.Capabilities, item => item.CapabilityId == capability.Id);
+            Assert.DoesNotContain(
+                agent.Capabilities,
+                item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(
+                agent.Capabilities,
+                item => item.Kind == CapabilityKind.McpServer &&
+                        item.CapabilityKey.Contains("process", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    [Fact]
+    public async Task Serious_delivery_agents_seed_internal_project_structure_and_process_access_after_mcp_removal()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var architect = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
+        var architectEditor = await workspaceService.GetAgentEditorAsync(architect.Id);
+        Assert.True(architectEditor.ProjectStructureAccess.CanRead);
+        Assert.True(architectEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(architectEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(architectEditor.ProcessAccess.CanRead);
+        Assert.False(architectEditor.ProcessAccess.CanWrite);
+        Assert.True(architectEditor.ProcessAccess.AllowAllDefinitions);
+
+        foreach (var agentName in new[]
+                 {
+                     "Programming Workspace Analyst",
+                     "Delivery QA Observer",
+                     "Code Review Lead",
+                     "UI Review Lead",
+                     "Security Reviewer",
+                     "Release Readiness Manager",
+                     "Research Deep Dive Analyst"
+                 })
+        {
+            var agent = Assert.Single(
+                await workspaceService.ListAgentsAsync(includeTemplates: false),
+                item => string.Equals(item.Name, agentName, StringComparison.Ordinal));
+            var editor = await workspaceService.GetAgentEditorAsync(agent.Id);
+            Assert.True(editor.ProjectStructureAccess.CanRead);
+            Assert.False(editor.ProjectStructureAccess.CanWrite);
+            Assert.True(editor.ProjectStructureAccess.AllowAllProjects);
+            Assert.True(editor.ProcessAccess.CanRead);
+            Assert.False(editor.ProcessAccess.CanWrite);
+            Assert.True(editor.ProcessAccess.AllowAllDefinitions);
         }
     }
 
@@ -232,8 +251,6 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var writeFileCapabilityId = capabilityIdsByKey["workspace-write-file"];
         var appendFileCapabilityId = capabilityIdsByKey["workspace-append-file"];
         var pwshRunScriptCapabilityId = capabilityIdsByKey["workspace-pwsh-run-script"];
-        var projectStructureCapabilityId = capabilityIdsByKey["project-structure-central"];
-
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         var architectAgent = Assert.Single(agents, item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
         var programmingAgent = Assert.Single(agents, item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
@@ -251,13 +268,20 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, "gpt-4.1");
         AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, "gpt-4.1");
 
-        AssertHasCapabilities(architectAgent, projectStructureCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(programmingAgent, projectStructureCapabilityId, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(qaAgent, projectStructureCapabilityId, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(codeReviewAgent, projectStructureCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(uiReviewAgent, projectStructureCapabilityId, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(securityReviewerAgent, projectStructureCapabilityId, codeanalyticsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(releaseManagerAgent, projectStructureCapabilityId, playwrightCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(codeReviewAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(securityReviewerAgent, codeanalyticsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(releaseManagerAgent, playwrightCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        Assert.DoesNotContain(architectAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(programmingAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(codeReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(uiReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(securityReviewerAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(releaseManagerAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(codeReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(uiReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
@@ -296,6 +320,29 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("frontend-skill", editor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("project_structure_read", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project-structure-context-brief", editor.Instructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Portfolio_architect_seed_instructions_define_typed_project_structure_blocks_and_spacing_rules()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var architectAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
+        var editor = await workspaceService.GetAgentEditorAsync(architectAgent.Id);
+
+        Assert.Contains("typed nodes for their real job", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Feature block", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Architecture block", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Project block", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Work item", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("siblings should usually be separated by about 280", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("child branches by about 480", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("run subtree recomposition", editor.Instructions, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -429,6 +476,46 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Stale_research_agent_seed_is_refreshed_and_drops_project_structure_capability()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var capabilities = await workspaceService.ListCapabilitiesAsync();
+        var capabilityIdsByKey = capabilities.ToDictionary(item => item.Key, item => item.Id, StringComparer.OrdinalIgnoreCase);
+
+        var researchAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Research Deep Dive Analyst", StringComparison.Ordinal));
+        var editor = await workspaceService.GetAgentEditorAsync(researchAgent.Id);
+        editor.ConfigurationJson = "{}";
+        if (capabilityIdsByKey.TryGetValue("project-structure-central", out var projectStructureCapabilityId) &&
+            !editor.SelectedCapabilityIds.Contains(projectStructureCapabilityId))
+        {
+            editor.SelectedCapabilityIds.Add(projectStructureCapabilityId);
+        }
+
+        await workspaceService.SaveAgentAsync(editor);
+
+        var refreshedResearchAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Research Deep Dive Analyst", StringComparison.Ordinal));
+
+        Assert.DoesNotContain(
+            refreshedResearchAgent.Capabilities,
+            item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedResearchAgent.ConfigurationJson, StringComparison.Ordinal);
+
+        var refreshedEditor = await workspaceService.GetAgentEditorAsync(refreshedResearchAgent.Id);
+        Assert.True(refreshedEditor.ProjectStructureAccess.CanRead);
+        Assert.True(refreshedEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(refreshedEditor.ProcessAccess.CanRead);
+        Assert.True(refreshedEditor.ProcessAccess.AllowAllDefinitions);
+    }
+
+    [Fact]
     public async Task Loading_a_stale_managed_catalog_persists_the_refreshed_agent_seed_for_other_processes()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -443,6 +530,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             "workspace.json");
         string[] managedAgentNames =
         [
+            "Portfolio Architect",
             "Programming Workspace Analyst",
             "Delivery QA Observer",
             "Code Review Lead",

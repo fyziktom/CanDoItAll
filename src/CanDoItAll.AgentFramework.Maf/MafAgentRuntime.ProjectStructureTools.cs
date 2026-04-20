@@ -166,8 +166,10 @@ public sealed partial class MafAgentRuntime
                 {
                     EnsureReadAllowed(accessState);
                     var projects = await agentService.ListProjectsAsync(cancellationToken);
-                    return projects
-                        .Where(project => accessState.AllowedProjectIds.Contains(project.Id))
+                    var visibleProjects = accessState.AllowAllProjects
+                        ? projects
+                        : projects.Where(project => accessState.AllowedProjectIds.Contains(project.Id)).ToList();
+                    return visibleProjects
                         .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
                         .ToList();
                 },
@@ -611,7 +613,8 @@ public sealed partial class MafAgentRuntime
                         Take = Math.Clamp(query.Take, 1, 200)
                     }, cancellationToken);
 
-                    if (accessState.AllowedProjectIds.Count == 0)
+                    if (!accessState.AllowAllProjects &&
+                        accessState.AllowedProjectIds.Count == 0)
                     {
                         return response with
                         {
@@ -621,7 +624,9 @@ public sealed partial class MafAgentRuntime
                         };
                     }
 
-                    return response with
+                    return accessState.AllowAllProjects
+                        ? response
+                        : response with
                     {
                         Entries = response.Entries
                             .Where(entry => !entry.ProjectId.HasValue || accessState.AllowedProjectIds.Contains(entry.ProjectId.Value))
@@ -906,7 +911,13 @@ public sealed partial class MafAgentRuntime
                 EnsureReadAllowed(accessState);
             }
 
-            foreach (var projectId in accessState.AllowedProjectIds)
+            var candidateProjectIds = accessState.AllowAllProjects
+                ? (await agentService.ListProjectsAsync(cancellationToken))
+                    .Select(project => project.Id)
+                    .ToList()
+                : accessState.AllowedProjectIds.ToList();
+
+            foreach (var projectId in candidateProjectIds)
             {
                 try
                 {
@@ -1055,7 +1066,8 @@ public sealed partial class MafAgentRuntime
 
         private static void EnsureProjectAllowed(ProjectStructureAccessState accessState, Guid projectId)
         {
-            if (accessState.AllowedProjectIds.Contains(projectId))
+            if (accessState.AllowAllProjects ||
+                accessState.AllowedProjectIds.Contains(projectId))
             {
                 return;
             }
@@ -1120,12 +1132,15 @@ public sealed partial class MafAgentRuntime
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
             CanRead = normalized.CanRead;
             CanWrite = normalized.CanWrite;
+            AllowAllProjects = normalized.AllowAllProjects;
             AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
         }
 
         public bool CanRead { get; }
 
         public bool CanWrite { get; }
+
+        public bool AllowAllProjects { get; }
 
         public HashSet<Guid> AllowedProjectIds { get; }
     }
