@@ -22,6 +22,7 @@
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />

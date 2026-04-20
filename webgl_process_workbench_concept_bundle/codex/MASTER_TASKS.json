@@ -1,0 +1,38 @@
+{
+  "BundleKey": "cdi-webgl-process-workbench-concept",
+  "GeneratedAtUtc": "2026-04-20T00:00:00Z",
+  "StrictRule": "After every architecture review gate or failed proof expectation, the mapped corrective subbundle must be executed, the blocked evidence must be refreshed, and the gate must be rerun before downstream work continues.",
+  "ExecutionOrder": [
+    "01-baseline-and-renderer-decision-lock",
+    "02-universal-webgl-library-skeleton-and-typed-contracts",
+    "03-threejs-runtime-foundation-and-host-component",
+    "04-architecture-review-gate-a",
+    "05-process-template-projection-and-2_5d-scene-adapter",
+    "06-dedicated-webgl-sandbox-and-template-switching",
+    "07-authoring-interactions-and-in-memory-edit-model",
+    "08-architecture-review-gate-b",
+    "09-automation-bridge-and-proof-surface",
+    "10-final-proof-closure-and-migration-guidance"
+  ],
+  "ReviewGates": [
+    "04-architecture-review-gate-a",
+    "08-architecture-review-gate-b"
+  ],
+  "CorrectivePlaybooks": [
+    "subbundles/_corrective-renderer-boundary-reset",
+    "subbundles/_corrective-scene-contract-and-layout-reset",
+    "subbundles/_corrective-automation-and-proof-reset"
+  ],
+  "Workbook": "spreadsheets/01-user-stories-and-functional-matrix.xlsx",
+  "RepresentativeTemplates": [
+    "customer-onboarding",
+    "architecture-decision-governance",
+    "branching-code-review"
+  ],
+  "Notes": [
+    "The production 2D process workspace is not replaced in this concept branch.",
+    "The universal WebGL library must remain free of Processes-specific projection semantics.",
+    "Keep the default experience guided and center-lane driven, with a perspective authoring camera in the sandbox and a DOM label mirror.",
+    "Treat sandbox edits as in-memory only unless a later bundle explicitly authorizes persistence."
+  ]
+}

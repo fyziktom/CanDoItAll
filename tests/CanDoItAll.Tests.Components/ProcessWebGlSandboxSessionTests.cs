@@ -1,0 +1,140 @@
+using CanDoItAll.Components.WebGlLib;
+using CanDoItAll.Components.WebGlSandbox;
+using CanDoItAll.Modules.Processes;
+
+namespace CanDoItAll.Tests.Components;
+
+public sealed class ProcessWebGlSandboxSessionTests
+{
+    [Fact]
+    public void Session_applies_node_moves_to_in_memory_scene()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        var beforeMove = session.BuildSurface();
+        var node = beforeMove.Nodes.First(candidate =>
+            !candidate.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !candidate.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+
+        session.ApplyNodesMoved(
+        [
+            new WebGlNodePositionChange(node.Id, node.X + 96, node.Y + 44, node.Z)
+        ]);
+
+        var afterMove = session.BuildSurface();
+        var movedNode = Assert.Single(afterMove.Nodes, candidate => candidate.Id == node.Id);
+
+        Assert.Equal(node.X + 96, movedNode.X);
+        Assert.Equal(node.Y + 44, movedNode.Y);
+        Assert.Equal(node.Id, session.SelectedNodeId);
+        Assert.Equal("Moved node", session.CommandLog[0].Title);
+    }
+
+    [Fact]
+    public void Session_disconnects_and_reconnects_existing_semantic_edge()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        var beforeChange = session.BuildSurface();
+        var edge = beforeChange.Edges.First(edgeCandidate =>
+            ProcessCanvasCatalog.DefinitionPorts.IsStepStructuralOutputPortId(edgeCandidate.SourcePortId) &&
+            ProcessCanvasCatalog.DefinitionPorts.IsStepStructuralInputPortId(edgeCandidate.TargetPortId) ||
+            string.Equals(edgeCandidate.CategoryKey, ProcessCanvasCatalog.ConnectionCategories.BranchRoute, StringComparison.Ordinal));
+
+        var disconnectRequest = new WebGlConnectionChangeRequest(
+            WebGlWorkbenchConnectionActions.Disconnect,
+            edge.Id,
+            edge.SourceNodeId,
+            edge.SourceAnchorId,
+            edge.SourcePortId,
+            edge.TargetNodeId,
+            edge.TargetAnchorId,
+            edge.TargetPortId,
+            edge.Kind,
+            edge.CategoryKey);
+
+        Assert.True(session.ApplyConnectionChange(disconnectRequest));
+
+        var withoutEdge = session.BuildSurface();
+        Assert.DoesNotContain(withoutEdge.Edges, candidate => candidate.Id == edge.Id);
+        Assert.Equal("Removed connection", session.CommandLog[0].Title);
+
+        var reconnectRequest = disconnectRequest with
+        {
+            ActionId = WebGlWorkbenchConnectionActions.Connect,
+            EdgeId = null
+        };
+
+        Assert.True(session.ApplyConnectionChange(reconnectRequest));
+
+        var restored = session.BuildSurface();
+        Assert.Contains(restored.Edges, candidate => candidate.Id == edge.Id);
+        Assert.Equal("Created connection", session.CommandLog[0].Title);
+    }
+
+    [Fact]
+    public void Session_preserves_camera_state_across_surface_rebuilds()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+        session.ApplyUiState(new WebGlWorkbenchUiState
+        {
+            Camera = new WebGlWorkbenchCameraState
+            {
+                ProjectionMode = WebGlWorkbenchProjectionModes.Perspective,
+                Zoom = 1.12,
+                TargetX = 120,
+                TargetY = -220,
+                TargetZ = -160,
+                Distance = 860,
+                Azimuth = -0.44d,
+                Polar = 1.22d
+            }
+        });
+
+        var beforeMove = session.BuildSurface();
+        var node = beforeMove.Nodes.First(candidate =>
+            !candidate.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !candidate.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+
+        session.ApplyNodesMoved(
+        [
+            new WebGlNodePositionChange(node.Id, node.X + 32, node.Y + 18, node.Z)
+        ]);
+
+        var rebuiltSurface = session.BuildSurface();
+
+        Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, rebuiltSurface.UiState.Camera.ProjectionMode);
+        Assert.Equal(1.12, rebuiltSurface.UiState.Camera.Zoom);
+        Assert.Equal(120, rebuiltSurface.UiState.Camera.TargetX);
+        Assert.Equal(-220, rebuiltSurface.UiState.Camera.TargetY);
+        Assert.Equal(-160, rebuiltSurface.UiState.Camera.TargetZ);
+        Assert.Equal(860, rebuiltSurface.UiState.Camera.Distance);
+        Assert.Equal(-0.44d, rebuiltSurface.UiState.Camera.Azimuth);
+        Assert.Equal(1.22d, rebuiltSurface.UiState.Camera.Polar);
+    }
+
+    [Fact]
+    public void Session_keeps_sandbox_projection_in_perspective_mode()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+
+        session.ApplyRouteState("customer-onboarding", WebGlWorkbenchProjectionModes.Orthographic, null);
+
+        var surface = session.BuildSurface();
+
+        Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, session.ProjectionMode);
+        Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, surface.UiState.Camera.ProjectionMode);
+    }
+
+    private static ProcessWebGlSceneAdapter CreateAdapter()
+    {
+        var packLoader = new ProcessTemplatePackLoader();
+        return new ProcessWebGlSceneAdapter(
+            new ProcessTemplateCatalogService(packLoader),
+            new ProcessTemplateProjectionService(packLoader),
+            new ProcessCanvasSurfaceFactory(new ProcessCanvasChromeCatalogService(packLoader)));
+    }
+}

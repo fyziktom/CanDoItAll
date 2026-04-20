@@ -1,0 +1,33 @@
+{
+  "Key": "05-process-template-projection-and-2_5d-scene-adapter",
+  "Title": "Process template projection and center-lane 3D scene adapter",
+  "Purpose": "Build the process-specific adapter that projects real template processes into the generic WebGL scene while reusing the current process IDs, categories, and branching semantics.",
+  "DependsOn": [
+    "04-architecture-review-gate-a"
+  ],
+  "Deliverables": [
+    "Process-template-to-WebGL scene adapter outside the universal library.",
+    "Deterministic center-lane 3D layout rules that reuse current process positions, spread roles around the lane, and add semantic depth.",
+    "Visual-style mapping for process connection categories and branching semantics."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Modules.Processes/ProcessDefinitionEditorModels.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasCatalog.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasBranching.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessDependencyCompatibilityBridge.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessTemplatePackLoader.cs",
+    "Templates/Processes/manifest.json"
+  ],
+  "ValidationCommands": [
+    "dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessTemplate|FullyQualifiedName~WebGl\" -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessCanvasSurfaceFactory|FullyQualifiedName~WebGl\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Did the adapter preserve current IDs and semantics?",
+    "Are the depth rules deterministic and readable?",
+    "Did process-specific code stay out of the universal library?"
+  ],
+  "CorrectiveOnFailure": "If this task fails, stop immediately and execute `subbundles/_corrective-scene-contract-and-layout-reset` before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-scene-contract-and-layout-reset"
+}

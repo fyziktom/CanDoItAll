@@ -5,6 +5,8 @@
     <Project Path="src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj" />
     <Project Path="src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj" />
+    <Project Path="src/CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj" />
+    <Project Path="src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj" />
     <Project Path="src/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj" />

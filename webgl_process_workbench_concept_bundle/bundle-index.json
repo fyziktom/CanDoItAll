@@ -1,0 +1,68 @@
+{
+  "bundle_name": "webgl_process_workbench_concept_bundle",
+  "bundle_key": "cdi-webgl-process-workbench-concept",
+  "created_on": "2026-04-20",
+  "profile": "initiative",
+  "stage": "completed",
+  "root_documents": [
+    "README.md",
+    "01-executive-summary.md",
+    "02-bundle-intent-and-target-direction.md",
+    "03-current-implementation-audit.md",
+    "04-detailed-findings.md",
+    "05-codex-architecture-rules.md",
+    "06-risk-register-and-stop-rules.md",
+    "07-emergency-corrective-policy.md",
+    "08-codex-execution-plan.md",
+    "09-proof-contract.md",
+    "10-analysis-method.md"
+  ],
+  "directories": [
+    "analysis",
+    "architecture",
+    "codex",
+    "inputs",
+    "inventories",
+    "plan",
+    "proof",
+    "requirements",
+    "reviews",
+    "shared-prompts",
+    "subbundles",
+    "templates",
+    "traceability"
+  ],
+  "workbook": "spreadsheets/01-user-stories-and-functional-matrix.xlsx",
+  "subbundles": [
+    "01-baseline-and-renderer-decision-lock",
+    "02-universal-webgl-library-skeleton-and-typed-contracts",
+    "03-threejs-runtime-foundation-and-host-component",
+    "04-architecture-review-gate-a",
+    "05-process-template-projection-and-2_5d-scene-adapter",
+    "06-dedicated-webgl-sandbox-and-template-switching",
+    "07-authoring-interactions-and-in-memory-edit-model",
+    "08-architecture-review-gate-b",
+    "09-automation-bridge-and-proof-surface",
+    "10-final-proof-closure-and-migration-guidance"
+  ],
+  "corrective_subbundles": [
+    "_corrective-renderer-boundary-reset",
+    "_corrective-scene-contract-and-layout-reset",
+    "_corrective-automation-and-proof-reset"
+  ],
+  "representative_templates": [
+    "customer-onboarding",
+    "architecture-decision-governance",
+    "branching-code-review"
+  ],
+  "counts": {
+    "inputs": 20,
+    "requirements": 23,
+    "actors": 6,
+    "user_stories": 18,
+    "features": 30,
+    "scenarios": 10,
+    "subbundles": 10,
+    "corrective_subbundles": 3
+  }
+}

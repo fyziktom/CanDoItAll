@@ -1,0 +1,27 @@
+{
+  "Key": "_corrective-renderer-boundary-reset",
+  "Title": "Corrective renderer-boundary reset",
+  "Purpose": "Repair any failure where the new WebGL library stopped being universal, the runtime boundary drifted into Blazor/server round trips, or the JS/asset strategy became unstable.",
+  "DependsOn": [],
+  "Deliverables": [
+    "A focused corrective change set that restores the universal library boundary and JS-owned runtime control.",
+    "Updated gate memo explaining what drifted and how it was corrected.",
+    "Refreshed foundation proof after the repair."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+    "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07-runtime-entry.js",
+    "src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj",
+    "CanDoItAll.slnx"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Was the actual architectural drift removed rather than hidden?",
+    "Is the library universal again?",
+    "Can Gate A now pass honestly?"
+  ],
+  "CorrectiveOnFailure": "This task is a corrective playbook; stop once the failure is contained, the proof is refreshed, and the blocked gate is ready to be re-run.",
+  "CorrectiveTemplatePath": null
+}

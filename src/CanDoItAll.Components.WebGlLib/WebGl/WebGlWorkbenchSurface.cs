@@ -1,0 +1,153 @@
+namespace CanDoItAll.Components.WebGlLib;
+
+public static class WebGlWorkbenchProjectionModes
+{
+    public const string Orthographic = "orthographic";
+    public const string Perspective = "perspective";
+}
+
+public static class WebGlWorkbenchViewPresets
+{
+    public const string Overview = "overview";
+    public const string Roles = "roles";
+    public const string Dependencies = "dependencies";
+    public const string Branching = "branching";
+    public const string Focus = "focus";
+}
+
+public static class WebGlWorkbenchConnectionActions
+{
+    public const string Connect = "connect";
+    public const string Disconnect = "disconnect";
+}
+
+public static class WebGlWorkbenchAnchorRoles
+{
+    public const string Input = "input";
+    public const string Output = "output";
+}
+
+public sealed class WebGlWorkbenchSurface
+{
+    public string SurfaceId { get; set; } = string.Empty;
+
+    public string SceneKey { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Subtitle { get; set; } = string.Empty;
+
+    public List<WebGlWorkbenchNode> Nodes { get; set; } = [];
+
+    public List<WebGlWorkbenchEdge> Edges { get; set; } = [];
+
+    public WebGlWorkbenchUiState UiState { get; set; } = new();
+
+    public WebGlWorkbenchChrome Chrome { get; set; } = new();
+}
+
+public sealed class WebGlWorkbenchNode
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = "node";
+
+    public string Family { get; set; } = "item";
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Subtitle { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public string Status { get; set; } = string.Empty;
+
+    public string AccentColor { get; set; } = "#2563eb";
+
+    public string FillColor { get; set; } = "#ffffff";
+
+    public string BorderColor { get; set; } = "#cbd5e1";
+
+    public double X { get; set; }
+
+    public double Y { get; set; }
+
+    public double Z { get; set; }
+
+    public double Width { get; set; } = 220;
+
+    public double Height { get; set; } = 128;
+
+    public double Depth { get; set; } = 28;
+
+    public bool IsReadOnly { get; set; }
+
+    public bool IsSelected { get; set; }
+
+    public List<string> Tags { get; set; } = [];
+
+    public List<WebGlWorkbenchAnchor> Anchors { get; set; } = [];
+}
+
+public sealed class WebGlWorkbenchAnchor
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string NodeId { get; set; } = string.Empty;
+
+    public string PortId { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Role { get; set; } = WebGlWorkbenchAnchorRoles.Input;
+
+    public string Side { get; set; } = "left";
+
+    public string CategoryKey { get; set; } = string.Empty;
+
+    public string AccentColor { get; set; } = "#2563eb";
+
+    public bool IsRequired { get; set; }
+
+    public int Order { get; set; }
+
+    public int TotalOnSide { get; set; } = 1;
+}
+
+public sealed class WebGlWorkbenchEdge
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string SourceNodeId { get; set; } = string.Empty;
+
+    public string SourceAnchorId { get; set; } = string.Empty;
+
+    public string SourcePortId { get; set; } = string.Empty;
+
+    public string TargetNodeId { get; set; } = string.Empty;
+
+    public string TargetAnchorId { get; set; } = string.Empty;
+
+    public string TargetPortId { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = string.Empty;
+
+    public string CategoryKey { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string AccentColor { get; set; } = "#2563eb";
+
+    public double DepthOffset { get; set; }
+
+    public bool IsUserAuthored { get; set; }
+}
+
+public sealed class WebGlWorkbenchChrome
+{
+    public string HintText { get; set; } = string.Empty;
+
+    public string EmptyStateTitle { get; set; } = "No process geometry";
+
+    public string EmptyStateDescription { get; set; } = "Load one of the representative template packs to review the concept stage.";
+}

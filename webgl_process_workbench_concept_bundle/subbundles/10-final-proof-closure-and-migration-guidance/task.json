@@ -1,0 +1,31 @@
+{
+  "Key": "10-final-proof-closure-and-migration-guidance",
+  "Title": "Final proof, closure, and migration guidance",
+  "Purpose": "Close the concept with full proof, final review notes, workbook completion, and a migration rubric for any future pilot on the real Processes workspace.",
+  "DependsOn": [
+    "09-automation-bridge-and-proof-surface"
+  ],
+  "Deliverables": [
+    "Completed execution report with build/test/browser evidence.",
+    "Fresh screenshot analytics and final architecture/migration guidance.",
+    "Updated workbook and traceability closure notes."
+  ],
+  "RepositoryTouchpoints": [
+    "CanDoItAll.slnx",
+    "tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+    "tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+    "Templates/Processes/manifest.json"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter \"FullyQualifiedName~WebGl\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Did the concept prove enough value to justify a future pilot?",
+    "Which failures are concept tolerances and which are hard blockers?",
+    "Are the final proof assets fresh and explicit?"
+  ],
+  "CorrectiveOnFailure": "If this task fails, stop immediately and execute `subbundles/_corrective-automation-and-proof-reset` before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-automation-and-proof-reset"
+}
