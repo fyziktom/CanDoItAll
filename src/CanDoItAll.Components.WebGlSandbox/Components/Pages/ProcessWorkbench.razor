@@ -30,7 +30,7 @@
 
     <Lead>
         <SectionCard Title="Review controls"
-                     Description="Representative template selection, 3D view presets, diagnostics, export flow, and sandbox-local editing all stay local to the concept host."
+                     Description="Template selection, layout recomposition, and export stay host-owned, while the stage toolbar, settings panel, and context menu now live inside WebGL."
                      HeaderActions="BuildLeadActions">
             <Stack Orientation="Orientation.Horizontal"
                    Wrap="FlexWrap.Wrap"
@@ -88,14 +88,6 @@
                         Icon="refresh"
                         Click="HandleResetAsync"
                         data-testid="webgl-sandbox-reset" />
-                <Button Text="Fit view"
-                        Icon="fit_screen"
-                        Click="HandleFitViewAsync"
-                        data-testid="webgl-sandbox-fit-view" />
-                <Button Text="Toggle diagnostics"
-                        Icon="monitor_heart"
-                        Click="HandleToggleDiagnosticsAsync"
-                        data-testid="webgl-sandbox-toggle-diagnostics" />
                 <Button Text="Export image"
                         Icon="image"
                         Click="HandleExportAsync"
@@ -131,59 +123,11 @@
             </Stack>
         </SectionCard>
 
-        <SectionCard Title="Semantic connection authoring"
-                     Description="The concept proves connect and disconnect flows with process-aware semantics and no persistence.">
+        <SectionCard Title="In-scene authoring"
+                     Description="Connect, reconnect, delete, selection, and display settings now live in the WebGL toolbar and right-click menu instead of host-side forms.">
             <Stack GapScale="LayoutGap.Medium">
-                <FormField Text="Source node">
-                    <DropDown TValue="string"
-                              Data="@NodeOptions"
-                              TextProperty="@nameof(ChoiceItem.Label)"
-                              ValueProperty="@nameof(ChoiceItem.Value)"
-                              Value="@sourceNodeId"
-                              ValueChanged="HandleSourceNodeChangedAsync" />
-                </FormField>
-
-                <FormField Text="Source anchor">
-                    <DropDown TValue="string"
-                              Data="@SourceAnchorOptions"
-                              TextProperty="@nameof(ChoiceItem.Label)"
-                              ValueProperty="@nameof(ChoiceItem.Value)"
-                              Value="@sourceAnchorId"
-                              ValueChanged="HandleSourceAnchorChangedAsync" />
-                </FormField>
-
-                <FormField Text="Target node">
-                    <DropDown TValue="string"
-                              Data="@NodeOptions"
-                              TextProperty="@nameof(ChoiceItem.Label)"
-                              ValueProperty="@nameof(ChoiceItem.Value)"
-                              Value="@targetNodeId"
-                              ValueChanged="HandleTargetNodeChangedAsync" />
-                </FormField>
-
-                <FormField Text="Target anchor">
-                    <DropDown TValue="string"
-                              Data="@TargetAnchorOptions"
-                              TextProperty="@nameof(ChoiceItem.Label)"
-                              ValueProperty="@nameof(ChoiceItem.Value)"
-                              Value="@targetAnchorId"
-                              ValueChanged="HandleTargetAnchorChangedAsync" />
-                </FormField>
-
-                <Stack Orientation="Orientation.Horizontal"
-                       Wrap="FlexWrap.Wrap"
-                       GapScale="LayoutGap.Small">
-                    <Button Text="Connect"
-                            Icon="add_link"
-                            Disabled="@ConnectionButtonDisabled"
-                            Click="HandleConnectAsync"
-                            data-testid="webgl-sandbox-connect" />
-                    <Button Text="Disconnect"
-                            Icon="link_off"
-                            Disabled="@ConnectionButtonDisabled"
-                            Click="HandleDisconnectAsync"
-                            data-testid="webgl-sandbox-disconnect" />
-                </Stack>
+                <p class="webgl-rail-copy">Use the in-scene toolbar to switch between selection, delete, connect, and reconnect modes. Right-clicking the stage, a node, or a connection opens the WebGL context menu for scene-specific actions.</p>
+                <p class="webgl-rail-copy">The settings panel now controls node label density, grid visibility, anchor visibility, edge labels, diagnostics, and runtime-only scene filters for role and branch helper nodes.</p>
             </Stack>
         </SectionCard>
 
@@ -203,74 +147,15 @@
 
     <ChildContent>
         <SectionCard Title="Process concept stage"
-                     Description="JS owns the perspective renderer, orbit navigation, hit-testing, and semantic automation bridge while the sandbox owns route state and in-memory edits.">
+                     Description="JS owns the perspective renderer, the in-scene toolbar and context menu, hit-testing, and semantic automation bridge while the sandbox owns route state and in-memory edits.">
             <div class="webgl-stage-frame" data-testid="webgl-sandbox-stage">
                 <WebGlWorkbench @ref="workbench"
                                 Surface="@currentSurface"
                                 SelectionChanged="HandleSelectionChanged"
                                 NodesMoved="HandleNodesMoved"
                                 ConnectionChangeRequested="HandleConnectionChangeRequested"
+                                DeleteRequested="HandleDeleteRequested"
                                 StateChanged="HandleStateChanged" />
-                <div class="webgl-stage-overlay" data-testid="webgl-stage-overlay">
-                    <div class="webgl-stage-overlay__card">
-                        <p class="webgl-stage-overlay__title">3D navigation</p>
-                        <div class="webgl-stage-overlay__group">
-                            <span class="webgl-stage-overlay__label">Orbit</span>
-                            <Stack Orientation="Orientation.Horizontal"
-                                   Wrap="FlexWrap.Wrap"
-                                   GapScale="LayoutGap.Small">
-                                <Button Text="Left"
-                                        Click="HandleOrbitLeftAsync"
-                                        data-testid="webgl-stage-orbit-left" />
-                                <Button Text="Right"
-                                        Click="HandleOrbitRightAsync"
-                                        data-testid="webgl-stage-orbit-right" />
-                                <Button Text="Up"
-                                        Click="HandleOrbitUpAsync"
-                                        data-testid="webgl-stage-orbit-up" />
-                                <Button Text="Down"
-                                        Click="HandleOrbitDownAsync"
-                                        data-testid="webgl-stage-orbit-down" />
-                            </Stack>
-                        </div>
-                        <div class="webgl-stage-overlay__group">
-                            <span class="webgl-stage-overlay__label">Pan</span>
-                            <Stack Orientation="Orientation.Horizontal"
-                                   Wrap="FlexWrap.Wrap"
-                                   GapScale="LayoutGap.Small">
-                                <Button Text="Left"
-                                        Click="HandlePanLeftAsync"
-                                        data-testid="webgl-stage-pan-left" />
-                                <Button Text="Right"
-                                        Click="HandlePanRightAsync"
-                                        data-testid="webgl-stage-pan-right" />
-                                <Button Text="Up"
-                                        Click="HandlePanUpAsync"
-                                        data-testid="webgl-stage-pan-up" />
-                                <Button Text="Down"
-                                        Click="HandlePanDownAsync"
-                                        data-testid="webgl-stage-pan-down" />
-                            </Stack>
-                        </div>
-                        <div class="webgl-stage-overlay__group">
-                            <span class="webgl-stage-overlay__label">Zoom</span>
-                            <Stack Orientation="Orientation.Horizontal"
-                                   Wrap="FlexWrap.Wrap"
-                                   GapScale="LayoutGap.Small">
-                                <Button Text="In"
-                                        Click="HandleZoomInAsync"
-                                        data-testid="webgl-stage-zoom-in" />
-                                <Button Text="Out"
-                                        Click="HandleZoomOutAsync"
-                                        data-testid="webgl-stage-zoom-out" />
-                                <Button Text="Reset"
-                                        Click="HandleResetCameraAsync"
-                                        data-testid="webgl-stage-reset-view" />
-                            </Stack>
-                        </div>
-                        <p class="webgl-stage-overlay__help">Mouse: left orbit, middle drag or wheel zoom, right pan. Arrow keys pan when the scene is focused. Hold Shift and drag a node to move it, and collision protection stops boxes from crossing into each other.</p>
-                    </div>
-                </div>
             </div>
         </SectionCard>
     </ChildContent>
@@ -304,10 +189,6 @@
 
     private WebGlWorkbench workbench = default!;
     private WebGlWorkbenchSurface currentSurface = new();
-    private string? sourceNodeId;
-    private string? sourceAnchorId;
-    private string? targetNodeId;
-    private string? targetAnchorId;
 
     private RenderFragment BuildLeadActions => builder =>
     {
@@ -325,15 +206,6 @@
         RefreshSurface();
     }
 
-    private IReadOnlyList<ChoiceItem> NodeOptions
-        => currentSurface.Nodes
-            .Select(node => new ChoiceItem($"{node.Title} ({node.Kind})", node.Id))
-            .ToList();
-
-    private IReadOnlyList<ChoiceItem> SourceAnchorOptions => BuildAnchorOptions(sourceNodeId, WebGlWorkbenchAnchorRoles.Output);
-
-    private IReadOnlyList<ChoiceItem> TargetAnchorOptions => BuildAnchorOptions(targetNodeId, WebGlWorkbenchAnchorRoles.Input);
-
     private WebGlWorkbenchNode? selectedNode
         => currentSurface.Nodes.FirstOrDefault(node =>
             currentSurface.UiState.SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal));
@@ -346,12 +218,6 @@
             : string.IsNullOrWhiteSpace(selectedNode.Description)
                 ? selectedNode.Subtitle
                 : selectedNode.Description;
-
-    private bool ConnectionButtonDisabled
-        => string.IsNullOrWhiteSpace(sourceNodeId) ||
-            string.IsNullOrWhiteSpace(sourceAnchorId) ||
-            string.IsNullOrWhiteSpace(targetNodeId) ||
-            string.IsNullOrWhiteSpace(targetAnchorId);
 
     private async Task HandleTemplateChangedAsync(string? templateKey)
         => await NavigateAsync(templateKey, Session.ProjectionMode, Session.ViewPreset);
@@ -387,9 +253,17 @@
         return Task.CompletedTask;
     }
 
+    private Task HandleDeleteRequested(WebGlDeleteRequest request)
+    {
+        Session.ApplyDeleteRequest(request);
+        RefreshSurface();
+        return Task.CompletedTask;
+    }
+
     private Task HandleStateChanged(string stateJson)
     {
         Session.ApplyUiState(WebGlWorkbenchUiState.Parse(stateJson));
+        RefreshSurface();
         return Task.CompletedTask;
     }
 
@@ -415,14 +289,6 @@
         }
     }
 
-    private async Task HandleFitViewAsync()
-    {
-        if (workbench is not null)
-        {
-            await workbench.FitViewToSceneAsync();
-        }
-    }
-
     private Task HandleDecreaseSpacingAsync()
     {
         Session.AdjustNodeSpacing(-1);
@@ -437,35 +303,6 @@
         return Task.CompletedTask;
     }
 
-    private Task HandleOrbitLeftAsync() => ExecuteWorkbenchActionAsync(() => workbench.OrbitAsync(-0.18d, 0));
-
-    private Task HandleOrbitRightAsync() => ExecuteWorkbenchActionAsync(() => workbench.OrbitAsync(0.18d, 0));
-
-    private Task HandleOrbitUpAsync() => ExecuteWorkbenchActionAsync(() => workbench.OrbitAsync(0, -0.12d));
-
-    private Task HandleOrbitDownAsync() => ExecuteWorkbenchActionAsync(() => workbench.OrbitAsync(0, 0.12d));
-
-    private Task HandlePanLeftAsync() => ExecuteWorkbenchActionAsync(() => workbench.PanAsync(-84d, 0));
-
-    private Task HandlePanRightAsync() => ExecuteWorkbenchActionAsync(() => workbench.PanAsync(84d, 0));
-
-    private Task HandlePanUpAsync() => ExecuteWorkbenchActionAsync(() => workbench.PanAsync(0, 72d));
-
-    private Task HandlePanDownAsync() => ExecuteWorkbenchActionAsync(() => workbench.PanAsync(0, -72d));
-
-    private Task HandleZoomInAsync() => ExecuteWorkbenchActionAsync(() => workbench.ZoomAsync(1.15d));
-
-    private Task HandleZoomOutAsync() => ExecuteWorkbenchActionAsync(() => workbench.ZoomAsync(0.87d));
-
-    private Task HandleResetCameraAsync() => ExecuteWorkbenchActionAsync(() => workbench.ResetCameraAsync());
-
-    private Task HandleToggleDiagnosticsAsync()
-    {
-        Session.ToggleDiagnostics();
-        RefreshSurface();
-        return Task.CompletedTask;
-    }
-
     private async Task HandleExportAsync()
     {
         if (workbench is null)
@@ -476,66 +313,6 @@
         var imageLength = await workbench.CaptureImageLengthAsync();
         Session.RecordExport(imageLength);
         RefreshSurface();
-    }
-
-    private Task HandleSourceNodeChangedAsync(string? nodeId)
-    {
-        sourceNodeId = nodeId;
-        sourceAnchorId = SourceAnchorOptions.FirstOrDefault()?.Value;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleSourceAnchorChangedAsync(string? anchorId)
-    {
-        sourceAnchorId = anchorId;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleTargetNodeChangedAsync(string? nodeId)
-    {
-        targetNodeId = nodeId;
-        targetAnchorId = TargetAnchorOptions.FirstOrDefault()?.Value;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleTargetAnchorChangedAsync(string? anchorId)
-    {
-        targetAnchorId = anchorId;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleConnectAsync()
-    {
-        return ApplyConnectionRequestAsync(WebGlWorkbenchConnectionActions.Connect);
-    }
-
-    private Task HandleDisconnectAsync()
-    {
-        return ApplyConnectionRequestAsync(WebGlWorkbenchConnectionActions.Disconnect);
-    }
-
-    private Task ApplyConnectionRequestAsync(string actionId)
-    {
-        var sourceAnchor = ResolveAnchor(sourceNodeId, sourceAnchorId);
-        var targetAnchor = ResolveAnchor(targetNodeId, targetAnchorId);
-        if (sourceAnchor is null || targetAnchor is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        Session.ApplyConnectionChange(new WebGlConnectionChangeRequest(
-            actionId,
-            EdgeId: null,
-            SourceNodeId: sourceAnchor.NodeId,
-            SourceAnchorId: sourceAnchor.Id,
-            SourcePortId: sourceAnchor.PortId,
-            TargetNodeId: targetAnchor.NodeId,
-            TargetAnchorId: targetAnchor.Id,
-            TargetPortId: targetAnchor.PortId,
-            Kind: ResolveConnectionKind(sourceAnchor),
-            CategoryKey: sourceAnchor.CategoryKey));
-        RefreshSurface();
-        return Task.CompletedTask;
     }
 
     private async Task NavigateAsync(string? templateKey, string? cameraMode, string? viewPreset)
@@ -571,65 +348,6 @@
     private void RefreshSurface()
     {
         currentSurface = Session.BuildSurface();
-        EnsureConnectionDraft();
-    }
-
-    private void EnsureConnectionDraft()
-    {
-        sourceNodeId = ResolveCurrentChoice(sourceNodeId, NodeOptions);
-        targetNodeId = ResolveCurrentChoice(targetNodeId, NodeOptions);
-
-        if (string.IsNullOrWhiteSpace(sourceNodeId) && selectedNode is not null)
-        {
-            sourceNodeId = selectedNode.Id;
-        }
-
-        if (string.IsNullOrWhiteSpace(targetNodeId))
-        {
-            targetNodeId = currentSurface.Nodes.FirstOrDefault(node => !string.Equals(node.Id, sourceNodeId, StringComparison.Ordinal))?.Id
-                ?? currentSurface.Nodes.FirstOrDefault()?.Id;
-        }
-
-        sourceAnchorId = ResolveCurrentChoice(sourceAnchorId, SourceAnchorOptions);
-        targetAnchorId = ResolveCurrentChoice(targetAnchorId, TargetAnchorOptions);
-    }
-
-    private IReadOnlyList<ChoiceItem> BuildAnchorOptions(string? nodeId, string role)
-    {
-        return currentSurface.Nodes
-            .FirstOrDefault(node => string.Equals(node.Id, nodeId, StringComparison.Ordinal))?.Anchors
-            .Where(anchor => string.Equals(anchor.Role, role, StringComparison.Ordinal))
-            .Select(anchor => new ChoiceItem(anchor.Label, anchor.Id))
-            .ToList()
-            ?? [];
-    }
-
-    private WebGlWorkbenchAnchor? ResolveAnchor(string? nodeId, string? anchorId)
-    {
-        return currentSurface.Nodes
-            .FirstOrDefault(node => string.Equals(node.Id, nodeId, StringComparison.Ordinal))?.Anchors
-            .FirstOrDefault(anchor => string.Equals(anchor.Id, anchorId, StringComparison.Ordinal));
-    }
-
-    private static string ResolveCurrentChoice(string? currentValue, IReadOnlyList<ChoiceItem> options)
-    {
-        return options.Any(option => string.Equals(option.Value, currentValue, StringComparison.Ordinal))
-            ? currentValue ?? string.Empty
-            : options.FirstOrDefault()?.Value ?? string.Empty;
-    }
-
-    private static string ResolveConnectionKind(WebGlWorkbenchAnchor sourceAnchor)
-    {
-        return string.Equals(sourceAnchor.CategoryKey, ProcessCanvasCatalog.ConnectionCategories.Messaging, StringComparison.Ordinal)
-            ? "messaging"
-            : "flow";
-    }
-
-    private Task ExecuteWorkbenchActionAsync(Func<Task> action)
-    {
-        return workbench is null
-            ? Task.CompletedTask
-            : action();
     }
 
     private static string ResolveComplexityTone(string complexity)

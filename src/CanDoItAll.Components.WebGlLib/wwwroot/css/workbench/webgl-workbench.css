@@ -116,6 +116,28 @@
     padding: 0.6rem 0.72rem;
 }
 
+.wgl-node-label.is-miniature {
+    min-width: 6.8rem;
+    max-width: 10rem;
+    padding: 0.45rem 0.58rem;
+}
+
+.wgl-node-label.is-miniature .wgl-node-label__kicker {
+    margin-bottom: 0.1rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+}
+
+.wgl-node-label.is-miniature .wgl-node-label__title {
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+.wgl-node-label.is-miniature .wgl-node-label__subtitle,
+.wgl-node-label.is-miniature .wgl-node-label__tags {
+    display: none;
+}
+
 .wgl-node-label.is-condensed .wgl-node-label__tags {
     gap: 0.24rem;
     margin-top: 0.36rem;
@@ -202,6 +224,13 @@
         0 12px 30px rgba(56, 189, 248, 0.2);
 }
 
+.wgl-edge-anchor.is-selected {
+    border-color: rgba(250, 204, 21, 0.54);
+    box-shadow:
+        0 0 0 1px rgba(250, 204, 21, 0.22),
+        0 12px 30px rgba(250, 204, 21, 0.24);
+}
+
 .wgl-empty-state {
     display: none;
     align-items: end;
@@ -250,7 +279,7 @@
 
 .wgl-diagnostics-panel {
     display: flex;
-    align-items: start;
+    align-items: end;
     justify-content: end;
     padding: 1rem;
     pointer-events: none;

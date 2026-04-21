@@ -36,12 +36,49 @@ public static class WebGlWorkbenchConnectionActions
 {
     public const string Connect = "connect";
     public const string Disconnect = "disconnect";
+    public const string ReconnectTarget = "reconnect-target";
 }
 
 public static class WebGlWorkbenchAnchorRoles
 {
     public const string Input = "input";
     public const string Output = "output";
+}
+
+public static class WebGlWorkbenchToolModes
+{
+    public const string Select = "select";
+    public const string Delete = "delete";
+    public const string Connect = "connect";
+    public const string Reconnect = "reconnect";
+
+    public static string Normalize(string? value)
+    {
+        return value switch
+        {
+            Delete => Delete,
+            Connect => Connect,
+            Reconnect => Reconnect,
+            _ => Select
+        };
+    }
+}
+
+public static class WebGlWorkbenchNodeInfoModes
+{
+    public const string Detailed = "detailed";
+    public const string Miniature = "miniature";
+    public const string Hidden = "hidden";
+
+    public static string Normalize(string? value)
+    {
+        return value switch
+        {
+            Miniature => Miniature,
+            Hidden => Hidden,
+            _ => Detailed
+        };
+    }
 }
 
 public sealed class WebGlWorkbenchSurface

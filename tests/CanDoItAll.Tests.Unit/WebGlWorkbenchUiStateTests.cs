@@ -13,8 +13,13 @@ public sealed class WebGlWorkbenchUiStateTests
         Assert.Empty(state.SelectedNodeIds);
         Assert.Equal(WebGlWorkbenchViewPresets.Overview, state.ActiveViewPreset);
         Assert.Equal(WebGlWorkbenchLayoutModes.CenterLane, state.LayoutMode);
+        Assert.Equal(WebGlWorkbenchToolModes.Select, state.ToolMode);
+        Assert.Equal(WebGlWorkbenchNodeInfoModes.Detailed, state.NodeInfoMode);
         Assert.Equal(1, state.NodeSpacingFactor);
         Assert.True(state.DeterministicMode);
+        Assert.True(state.ShowGrid);
+        Assert.True(state.ShowAnchors);
+        Assert.True(state.ShowEdgeLabels);
         Assert.Equal(WebGlWorkbenchProjectionModes.Orthographic, state.Camera.ProjectionMode);
         Assert.Equal(1180, state.Camera.Distance);
         Assert.Equal(-0.72d, state.Camera.Azimuth);
@@ -29,9 +34,14 @@ public sealed class WebGlWorkbenchUiStateTests
             SelectedNodeIds = [" alpha ", "alpha", " ", "beta"],
             ActiveViewPreset = string.Empty,
             LayoutMode = WebGlWorkbenchLayoutModes.LayeredOrbit,
+            ToolMode = "unsupported",
+            NodeInfoMode = WebGlWorkbenchNodeInfoModes.Miniature,
             NodeSpacingFactor = 4,
             DeterministicMode = true,
             ShowDiagnostics = true,
+            ShowGrid = false,
+            ShowAnchors = false,
+            ShowEdgeLabels = false,
             Camera = new WebGlWorkbenchCameraState
             {
                 ProjectionMode = WebGlWorkbenchProjectionModes.Perspective,
@@ -50,8 +60,13 @@ public sealed class WebGlWorkbenchUiStateTests
         Assert.Equal(["alpha", "beta"], parsed.SelectedNodeIds);
         Assert.Equal(WebGlWorkbenchViewPresets.Overview, parsed.ActiveViewPreset);
         Assert.Equal(WebGlWorkbenchLayoutModes.LayeredOrbit, parsed.LayoutMode);
+        Assert.Equal(WebGlWorkbenchToolModes.Select, parsed.ToolMode);
+        Assert.Equal(WebGlWorkbenchNodeInfoModes.Miniature, parsed.NodeInfoMode);
         Assert.Equal(1.85d, parsed.NodeSpacingFactor);
         Assert.True(parsed.ShowDiagnostics);
+        Assert.False(parsed.ShowGrid);
+        Assert.False(parsed.ShowAnchors);
+        Assert.False(parsed.ShowEdgeLabels);
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, parsed.Camera.ProjectionMode);
         Assert.Equal(1.4, parsed.Camera.Zoom);
         Assert.Equal(0, parsed.Camera.TargetX);

@@ -24,3 +24,7 @@ public sealed record WebGlConnectionChangeRequest(
     string? TargetPortId,
     string Kind,
     string CategoryKey);
+
+public sealed record WebGlDeleteRequest(
+    string? NodeId,
+    string? EdgeId);

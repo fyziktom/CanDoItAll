@@ -185,6 +185,54 @@ public sealed class ProcessWebGlSandboxSessionTests
         Assert.Equal("Adjusted spacing", session.CommandLog[0].Title);
     }
 
+    [Fact]
+    public void Session_applies_tool_and_visibility_settings_from_ui_state()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        session.ApplyUiState(new WebGlWorkbenchUiState
+        {
+            ToolMode = WebGlWorkbenchToolModes.Connect,
+            NodeInfoMode = WebGlWorkbenchNodeInfoModes.Hidden,
+            ShowDiagnostics = false,
+            ShowGrid = false,
+            ShowAnchors = false,
+            ShowEdgeLabels = false
+        });
+
+        var surface = session.BuildSurface();
+
+        Assert.Equal(WebGlWorkbenchToolModes.Connect, surface.UiState.ToolMode);
+        Assert.Equal(WebGlWorkbenchNodeInfoModes.Hidden, surface.UiState.NodeInfoMode);
+        Assert.False(surface.UiState.ShowDiagnostics);
+        Assert.False(surface.UiState.ShowGrid);
+        Assert.False(surface.UiState.ShowAnchors);
+        Assert.False(surface.UiState.ShowEdgeLabels);
+    }
+
+    [Fact]
+    public void Session_deletes_node_from_resettable_in_memory_surface()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        var initialSurface = session.BuildSurface();
+        var node = initialSurface.Nodes.First(candidate =>
+            !candidate.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !candidate.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+
+        Assert.True(session.ApplyDeleteRequest(new WebGlDeleteRequest(node.Id, null)));
+
+        var afterDelete = session.BuildSurface();
+
+        Assert.DoesNotContain(afterDelete.Nodes, candidate => candidate.Id == node.Id);
+        Assert.DoesNotContain(afterDelete.Edges, candidate =>
+            string.Equals(candidate.SourceNodeId, node.Id, StringComparison.Ordinal) ||
+            string.Equals(candidate.TargetNodeId, node.Id, StringComparison.Ordinal));
+        Assert.Equal("Deleted node", session.CommandLog[0].Title);
+    }
+
     private static ProcessWebGlSceneAdapter CreateAdapter()
     {
         var packLoader = new ProcessTemplatePackLoader();

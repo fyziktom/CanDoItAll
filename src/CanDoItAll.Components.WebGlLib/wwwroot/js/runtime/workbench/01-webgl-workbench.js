@@ -1,99 +1,42 @@
-import * as THREE from "../../../vendor/three.module.min.js";
 import { OrbitControls } from "../../../vendor/OrbitControls.js";
+import {
+    THREE,
+    buildAutoFitKey,
+    buildRenderSurface,
+    cameraDefaults,
+    clamp,
+    clampDistance,
+    clampPolar,
+    createDefaultCameraState,
+    focusHost,
+    isBranchNode,
+    isRoleNode,
+    normalizeSelectedNodeIds,
+    normalizeState,
+    resolveFiniteNumber,
+    resolvePerspectiveZoom,
+    resolveProjectionMode,
+    round,
+    toSceneY,
+    viewPresets,
+    projectionModes
+} from "./02-webgl-workbench-core.js";
+import { syncDomOverlays } from "./03-webgl-workbench-overlays.js";
+import { WebGlWorkbenchChromeController } from "./04-webgl-workbench-chrome.js";
+import {
+    applyChromeAction,
+    finishPointerInteraction,
+    getAnchorCenter,
+    handleClick,
+    handleContextMenu,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    simulateConnection,
+    simulateDrag
+} from "./05-webgl-workbench-interaction.js";
 
 const root = window.CanDoItAll = window.CanDoItAll || {};
-const projectionModes = Object.freeze({
-    orthographic: "orthographic",
-    perspective: "perspective"
-});
-
-const viewPresets = Object.freeze({
-    overview: "overview",
-    roles: "roles",
-    dependencies: "dependencies",
-    branching: "branching",
-    focus: "focus"
-});
-
-const connectionActions = Object.freeze({
-    connect: "connect",
-    disconnect: "disconnect"
-});
-
-const cameraDefaults = Object.freeze({
-    distance: 1180,
-    azimuth: -0.72,
-    polar: 1.08
-});
-
-function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-}
-
-function round(value) {
-    return Math.round((Number(value) || 0) * 100) / 100;
-}
-
-function resolveFiniteNumber(value, fallback) {
-    const resolved = Number(value);
-    return Number.isFinite(resolved)
-        ? resolved
-        : fallback;
-}
-
-function toSceneY(value) {
-    return -(Number(value) || 0);
-}
-
-function fromSceneY(value) {
-    return -(Number(value) || 0);
-}
-
-function isRoleNode(node) {
-    return (node?.kind || "").includes("role");
-}
-
-function isBranchNode(node) {
-    return (node?.kind || "").includes("branch");
-}
-
-function resolveProjectionMode(surface) {
-    const configured = surface?.uiState?.camera?.projectionMode || projectionModes.orthographic;
-    return configured === projectionModes.perspective
-        ? projectionModes.perspective
-        : projectionModes.orthographic;
-}
-
-function clampPolar(value) {
-    return clamp(resolveFiniteNumber(value, cameraDefaults.polar), 0.38, Math.PI - 0.42);
-}
-
-function clampDistance(value) {
-    return clamp(resolveFiniteNumber(value, cameraDefaults.distance), 260, 4600);
-}
-
-function resolvePerspectiveZoom(distance) {
-    return round(clamp(cameraDefaults.distance / Math.max(260, distance || cameraDefaults.distance), 0.24, 2.5));
-}
-
-function resolvePerspectiveDistance(zoom, fallbackDistance) {
-    const normalizedZoom = clamp(resolveFiniteNumber(zoom, resolvePerspectiveZoom(fallbackDistance || cameraDefaults.distance)), 0.24, 2.5);
-    return clampDistance(cameraDefaults.distance / normalizedZoom);
-}
-
-function createDefaultCameraState(surface) {
-    const projectionMode = resolveProjectionMode(surface);
-    return {
-        projectionMode,
-        zoom: 1,
-        targetX: 0,
-        targetY: 0,
-        targetZ: 0,
-        distance: cameraDefaults.distance,
-        azimuth: cameraDefaults.azimuth,
-        polar: cameraDefaults.polar
-    };
-}
 
 function buildHostShell(host) {
     host.innerHTML = "";
@@ -172,24 +115,35 @@ function createCamera(mode, width, height) {
 }
 
 function updateCameraFrustum(state) {
-    const width = Math.max(state.host.clientWidth, 1);
-    const height = Math.max(state.host.clientHeight, 1);
-    state.viewport = {
-        width,
-        height
-    };
-
     if (state.camera.isPerspectiveCamera) {
-        state.camera.aspect = width / height;
+        state.camera.aspect = state.viewport.width / state.viewport.height;
     } else {
-        state.camera.left = -width / 2;
-        state.camera.right = width / 2;
-        state.camera.top = height / 2;
-        state.camera.bottom = -height / 2;
+        state.camera.left = -state.viewport.width / 2;
+        state.camera.right = state.viewport.width / 2;
+        state.camera.top = state.viewport.height / 2;
+        state.camera.bottom = -state.viewport.height / 2;
         state.camera.zoom = Math.max(0.2, state.cameraState.zoom || 1);
     }
 
     state.camera.updateProjectionMatrix();
+    state.chromeController?.updateViewport();
+}
+
+function syncViewport(state, force = false) {
+    const width = Math.max(Math.round(state.host.clientWidth), 1);
+    const height = Math.max(Math.round(state.host.clientHeight), 1);
+    const changed = force ||
+        width !== state.viewport.width ||
+        height !== state.viewport.height;
+    if (!changed) {
+        return false;
+    }
+
+    state.viewport.width = width;
+    state.viewport.height = height;
+    updateCameraFrustum(state);
+    state.renderer.setSize(width, height, false);
+    return true;
 }
 
 function createControls(camera, domElement, keyTarget) {
@@ -218,18 +172,6 @@ function createControls(camera, domElement, keyTarget) {
     controls.keyPanSpeed = 36;
     controls.listenToKeyEvents(keyTarget);
     return controls;
-}
-
-function focusHost(state) {
-    if (!state?.host || typeof state.host.focus !== "function") {
-        return;
-    }
-
-    try {
-        state.host.focus({ preventScroll: true });
-    } catch {
-        state.host.focus();
-    }
 }
 
 function applyCameraState(state) {
@@ -263,20 +205,10 @@ function updateCameraStateFromControls(state) {
     state.cameraState.targetZ = round(state.controls.target.z);
     state.cameraState.distance = round(clampDistance(spherical.radius));
     state.cameraState.azimuth = round(resolveFiniteNumber(spherical.theta, cameraDefaults.azimuth));
-    state.cameraState.polar = round(clampPolar(spherical.phi));
+    state.cameraState.polar = round(clampPolar(resolveFiniteNumber(spherical.phi, cameraDefaults.polar)));
     state.cameraState.zoom = state.camera.isPerspectiveCamera
         ? resolvePerspectiveZoom(state.cameraState.distance)
         : round(Math.max(0.2, state.camera.zoom || 1));
-}
-
-function commitCameraState(state, notifyDotNet) {
-    applyCameraState(state);
-    syncCameraToSurfaceState(state);
-    if (notifyDotNet) {
-        notifyStateChanged(state);
-    }
-
-    scheduleRender(state);
 }
 
 function destroyObject3D(object) {
@@ -285,17 +217,18 @@ function destroyObject3D(object) {
     }
 
     object.traverse(child => {
-        if (child.geometry) {
-            child.geometry.dispose();
-        }
+        child.geometry?.dispose?.();
 
         if (Array.isArray(child.material)) {
             for (const material of child.material) {
+                material?.map?.dispose?.();
                 material?.dispose?.();
             }
-        } else {
-            child.material?.dispose?.();
+            return;
         }
+
+        child.material?.map?.dispose?.();
+        child.material?.dispose?.();
     });
 }
 
@@ -313,6 +246,7 @@ function clearScene(state) {
     state.nodeObjects.clear();
     state.edgeObjects.clear();
     state.nodeMeshes.length = 0;
+    state.edgeHitMeshes.length = 0;
     state.projectedNodes.clear();
     state.projectedEdges.clear();
     state.projectedAnchors.clear();
@@ -326,53 +260,18 @@ function resolveNodeColors(node) {
     };
 }
 
-function resolveAnchorSide(anchor) {
-    if (anchor?.side) {
-        return anchor.side;
-    }
-
-    return anchor?.role === "output"
-        ? "right"
-        : "left";
-}
-
-function resolveAnchorPosition(node, anchor) {
-    const width = Number(node.width) || 220;
-    const height = Number(node.height) || 128;
-    const depth = Number(node.depth) || 28;
-    const side = resolveAnchorSide(anchor);
-    const totalOnSide = Math.max(1, Number(anchor.totalOnSide) || 1);
-    const order = clamp(Number(anchor.order) || 0, 0, totalOnSide - 1);
-    const offsetRatio = totalOnSide === 1
-        ? 0.5
-        : order / (totalOnSide - 1);
-    const verticalTravel = Math.max(24, height - 36);
-    const horizontalTravel = Math.max(24, width - 40);
-    const distributedY = toSceneY(node.y) + (height / 2) - 18 - (offsetRatio * verticalTravel);
-    const distributedX = (node.x - (width / 2)) + 20 + (offsetRatio * horizontalTravel);
-    switch (side) {
-        case "right":
-            return new THREE.Vector3(node.x + (width / 2), distributedY, node.z + (depth / 2));
-        case "top":
-            return new THREE.Vector3(distributedX, toSceneY(node.y) + (height / 2), node.z + (depth / 2));
-        case "bottom":
-            return new THREE.Vector3(distributedX, toSceneY(node.y) - (height / 2), node.z + (depth / 2));
-        default:
-            return new THREE.Vector3(node.x - (width / 2), distributedY, node.z + (depth / 2));
-    }
-}
-
 function createNodeObject(state, node) {
     const colors = resolveNodeColors(node);
     const group = new THREE.Group();
     const width = Number(node.width) || 220;
     const height = Number(node.height) || 128;
     const depth = Number(node.depth) || 28;
+    const isSelected = state.selectedNodeIds.has(node.id) || state.chromeState.connectSourceNodeId === node.id;
     const geometry = new THREE.BoxGeometry(width, height, depth);
     const material = new THREE.MeshPhongMaterial({
         color: colors.fill,
-        emissive: node.isSelected ? new THREE.Color(colors.accent) : new THREE.Color("#000000"),
-        emissiveIntensity: node.isSelected ? 0.12 : 0,
+        emissive: new THREE.Color(isSelected ? colors.accent : "#000000"),
+        emissiveIntensity: isSelected ? 0.12 : 0,
         shininess: 55,
         transparent: true,
         opacity: 0.96
@@ -434,11 +333,18 @@ function resolveEdgeDepth(edge) {
 }
 
 function resolveEdgeEmphasis(edge) {
-    return clamp(resolveFiniteNumber(edge?.emphasis, edge?.isPrimaryPath ? 1.7 : 0.82), 0.55, 2.4);
+    const emphasis = clamp(resolveFiniteNumber(edge?.emphasis, edge?.isPrimaryPath ? 1.7 : 0.82), 0.55, 2.4);
+    return statefulEdgeSelected(edge)
+        ? Math.max(emphasis, 1.9)
+        : emphasis;
 }
 
 function resolveEdgeOpacity(edge) {
     return clamp(resolveFiniteNumber(edge?.opacity, edge?.isPrimaryPath ? 0.96 : 0.58), 0.18, 1);
+}
+
+function statefulEdgeSelected(edge) {
+    return !!(edge && (edge.id === edge.__selectedEdgeId || edge.id === edge.__reconnectEdgeId));
 }
 
 function createEdgeObject(state, edge) {
@@ -454,8 +360,8 @@ function createEdgeObject(state, edge) {
         return;
     }
 
-    const sourcePoint = resolveAnchorPosition(sourceNode, sourceAnchor);
-    const targetPoint = resolveAnchorPosition(targetNode, targetAnchor);
+    const sourcePoint = state.resolveAnchorPosition(sourceNode, sourceAnchor);
+    const targetPoint = state.resolveAnchorPosition(targetNode, targetAnchor);
     const depth = resolveEdgeDepth(edge);
     const control = new THREE.Vector3(
         (sourcePoint.x + targetPoint.x) / 2,
@@ -463,29 +369,40 @@ function createEdgeObject(state, edge) {
         Math.max(sourcePoint.z, targetPoint.z) + depth);
     const curve = new THREE.QuadraticBezierCurve3(sourcePoint, control, targetPoint);
     const points = curve.getPoints(32);
-    const emphasis = resolveEdgeEmphasis(edge);
-    const opacity = resolveEdgeOpacity(edge);
+    const isSelected = state.chromeState.selectedEdgeId === edge.id || state.chromeState.reconnectEdgeId === edge.id;
+    const emphasis = isSelected
+        ? Math.max(clamp(resolveFiniteNumber(edge?.emphasis, 1), 0.55, 2.4), 1.9)
+        : clamp(resolveFiniteNumber(edge?.emphasis, edge?.isPrimaryPath ? 1.7 : 0.82), 0.55, 2.4);
+    const opacity = isSelected
+        ? 1
+        : resolveEdgeOpacity(edge);
     const group = new THREE.Group();
 
-    if (edge.isPrimaryPath || emphasis > 1.05) {
+    if (edge.isPrimaryPath || emphasis > 1.05 || isSelected) {
         const halo = new THREE.Mesh(
             new THREE.TubeGeometry(curve, 42, 5.8 * emphasis, 12, false),
             new THREE.MeshBasicMaterial({
                 color: edge.accentColor || "#2563eb",
                 transparent: true,
-                opacity: Math.min(0.16 + (opacity * 0.18), 0.38)
+                opacity: isSelected
+                    ? 0.32
+                    : Math.min(0.16 + (opacity * 0.18), 0.38)
             }));
         const tube = new THREE.Mesh(
             new THREE.TubeGeometry(curve, 42, 2.2 * emphasis, 12, false),
             new THREE.MeshPhongMaterial({
                 color: edge.accentColor || "#2563eb",
                 emissive: new THREE.Color(edge.accentColor || "#2563eb"),
-                emissiveIntensity: edge.isPrimaryPath ? 0.18 : 0.08,
+                emissiveIntensity: isSelected
+                    ? 0.24
+                    : edge.isPrimaryPath ? 0.18 : 0.08,
                 shininess: 85,
                 transparent: true,
-                opacity: edge.isPrimaryPath
-                    ? Math.min(0.76 + (opacity * 0.18), 0.94)
-                    : Math.min(0.34 + (opacity * 0.2), 0.66)
+                opacity: isSelected
+                    ? 0.96
+                    : edge.isPrimaryPath
+                        ? Math.min(0.76 + (opacity * 0.18), 0.94)
+                        : Math.min(0.34 + (opacity * 0.2), 0.66)
             }));
         group.add(halo, tube);
     }
@@ -498,6 +415,19 @@ function createEdgeObject(state, edge) {
     });
     const line = new THREE.Line(geometry, material);
     group.add(line);
+
+    const hitMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 28, Math.max(12, 8 * emphasis), 10, false),
+        new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0,
+            depthWrite: false
+        }));
+    hitMesh.userData = {
+        edgeId: edge.id
+    };
+    group.add(hitMesh);
+
     group.userData = {
         edgeId: edge.id,
         sourceNodeId: edge.sourceNodeId,
@@ -505,6 +435,7 @@ function createEdgeObject(state, edge) {
     };
 
     state.edgeObjects.set(edge.id, group);
+    state.edgeHitMeshes.push(hitMesh);
     state.scene.add(group);
 }
 
@@ -534,575 +465,6 @@ function rebuildScene(state) {
 
     state.diagnostics.nodeCount = state.surface.nodes?.length || 0;
     state.diagnostics.edgeCount = state.surface.edges?.length || 0;
-}
-
-function projectPoint(state, vector) {
-    const projected = vector.clone().project(state.camera);
-    return {
-        x: ((projected.x + 1) / 2) * state.viewport.width,
-        y: ((1 - projected.y) / 2) * state.viewport.height
-    };
-}
-
-function resolveNodeScreenBounds(state, node) {
-    const width = Number(node.width) || 220;
-    const height = Number(node.height) || 128;
-    const center = projectPoint(state, new THREE.Vector3(node.x, toSceneY(node.y), node.z || 0));
-    const topLeft = projectPoint(state, new THREE.Vector3(node.x - (width / 2), toSceneY(node.y) + (height / 2), node.z || 0));
-    const bottomRight = projectPoint(state, new THREE.Vector3(node.x + (width / 2), toSceneY(node.y) - (height / 2), node.z || 0));
-
-    return {
-        centerX: center.x,
-        centerY: center.y,
-        left: Math.min(topLeft.x, bottomRight.x),
-        top: Math.min(topLeft.y, bottomRight.y),
-        width: Math.abs(bottomRight.x - topLeft.x),
-        height: Math.abs(bottomRight.y - topLeft.y)
-    };
-}
-
-function ensureNodeLabel(state, node) {
-    let label = state.labelElements.get(node.id);
-    if (label) {
-        return label;
-    }
-
-    label = document.createElement("div");
-    label.className = "wgl-node-label";
-    label.setAttribute("data-webgl-node-id", node.id);
-    label.setAttribute("aria-label", `${node.title || node.id} node`);
-
-    const kicker = document.createElement("p");
-    kicker.className = "wgl-node-label__kicker";
-    const title = document.createElement("h3");
-    title.className = "wgl-node-label__title";
-    const subtitle = document.createElement("p");
-    subtitle.className = "wgl-node-label__subtitle";
-    const tags = document.createElement("div");
-    tags.className = "wgl-node-label__tags";
-
-    label.append(kicker, title, subtitle, tags);
-    state.shell.labelLayer.appendChild(label);
-    state.labelElements.set(node.id, label);
-
-    return label;
-}
-
-function ensurePortElement(state, anchor) {
-    let element = state.anchorElements.get(anchor.id);
-    if (element) {
-        return element;
-    }
-
-    element = document.createElement("div");
-    element.className = "wgl-port-anchor";
-    element.setAttribute("data-webgl-port-id", anchor.id);
-    element.setAttribute("data-webgl-anchor-role", anchor.role || "");
-    element.setAttribute("aria-label", `${anchor.label || anchor.portId || anchor.id} anchor`);
-    state.shell.mirrorLayer.appendChild(element);
-    state.anchorElements.set(anchor.id, element);
-
-    return element;
-}
-
-function ensureEdgeElement(state, edge) {
-    let element = state.edgeElements.get(edge.id);
-    if (element) {
-        return element;
-    }
-
-    element = document.createElement("div");
-    element.className = "wgl-edge-anchor";
-    element.setAttribute("data-webgl-edge-id", edge.id);
-    element.setAttribute("aria-label", `${edge.label || edge.kind || "connection"} edge`);
-    state.shell.mirrorLayer.appendChild(element);
-    state.edgeElements.set(edge.id, element);
-
-    return element;
-}
-
-function resolveNodeLabelScale(node, bounds) {
-    const targetWidth = isRoleNode(node)
-        ? 158
-        : isBranchNode(node)
-            ? 164
-            : 188;
-    const targetHeight = isRoleNode(node)
-        ? 88
-        : 96;
-    const widthScale = Math.max(0.01, bounds.width) / targetWidth;
-    const heightScale = Math.max(0.01, bounds.height) / targetHeight;
-    const fittedWidthScale = widthScale * 1.06;
-    const fittedHeightScale = heightScale * 1.95;
-    return round(clamp(Math.min(fittedWidthScale, fittedHeightScale), 0.46, 1));
-}
-
-function syncNodeLabels(state) {
-    const activeNodeIds = new Set();
-    for (const node of state.surface.nodes || []) {
-        activeNodeIds.add(node.id);
-        const label = ensureNodeLabel(state, node);
-        const bounds = resolveNodeScreenBounds(state, node);
-        const labelScale = resolveNodeLabelScale(node, bounds);
-        state.projectedNodes.set(node.id, {
-            left: round(bounds.left),
-            top: round(bounds.top),
-            width: round(bounds.width),
-            height: round(bounds.height)
-        });
-
-        label.style.left = `${round(bounds.centerX)}px`;
-        label.style.top = `${round(bounds.centerY)}px`;
-        label.style.setProperty("--wgl-label-scale", `${labelScale}`);
-        label.classList.toggle("is-selected", state.selectedNodeIds.has(node.id));
-        label.classList.toggle("is-condensed", labelScale < 0.74);
-        label.classList.toggle("is-compact", labelScale < 0.56);
-        label.querySelector(".wgl-node-label__kicker").textContent = node.kind || node.family || "Node";
-        label.querySelector(".wgl-node-label__title").textContent = node.title || node.id;
-        label.querySelector(".wgl-node-label__subtitle").textContent = node.subtitle || node.description || "";
-
-        const tags = label.querySelector(".wgl-node-label__tags");
-        tags.innerHTML = "";
-        for (const tag of node.tags || []) {
-            const tagElement = document.createElement("span");
-            tagElement.className = "wgl-node-label__tag";
-            tagElement.textContent = tag;
-            tags.appendChild(tagElement);
-        }
-    }
-
-    for (const [nodeId, element] of state.labelElements.entries()) {
-        if (!activeNodeIds.has(nodeId)) {
-            element.remove();
-            state.labelElements.delete(nodeId);
-        }
-    }
-}
-
-function syncAnchors(state) {
-    const activeAnchorIds = new Set();
-    for (const node of state.surface.nodes || []) {
-        for (const anchor of node.anchors || []) {
-            activeAnchorIds.add(anchor.id);
-            const position = resolveAnchorPosition(node, anchor);
-            const projected = projectPoint(state, position);
-            const element = ensurePortElement(state, anchor);
-            element.style.left = `${round(projected.x)}px`;
-            element.style.top = `${round(projected.y)}px`;
-            element.style.backgroundColor = anchor.accentColor || "#2563eb";
-            state.projectedAnchors.set(anchor.id, {
-                nodeId: node.id,
-                portId: anchor.portId,
-                role: anchor.role,
-                side: anchor.side,
-                x: round(projected.x),
-                y: round(projected.y)
-            });
-        }
-    }
-
-    for (const [anchorId, element] of state.anchorElements.entries()) {
-        if (!activeAnchorIds.has(anchorId)) {
-            element.remove();
-            state.anchorElements.delete(anchorId);
-        }
-    }
-}
-
-function syncEdges(state) {
-    const activeEdgeIds = new Set();
-    for (const edge of state.surface.edges || []) {
-        activeEdgeIds.add(edge.id);
-        const sourceAnchor = state.projectedAnchors.get(edge.sourceAnchorId);
-        const targetAnchor = state.projectedAnchors.get(edge.targetAnchorId);
-        if (!sourceAnchor || !targetAnchor) {
-            continue;
-        }
-
-        const element = ensureEdgeElement(state, edge);
-        const x = (sourceAnchor.x + targetAnchor.x) / 2;
-        const y = (sourceAnchor.y + targetAnchor.y) / 2;
-        element.style.left = `${round(x)}px`;
-        element.style.top = `${round(y)}px`;
-        element.style.opacity = `${resolveEdgeOpacity(edge)}`;
-        element.classList.toggle("is-primary", !!edge.isPrimaryPath);
-        element.textContent = edge.label || "";
-        state.projectedEdges.set(edge.id, {
-            x: round(x),
-            y: round(y),
-            sourceNodeId: edge.sourceNodeId,
-            sourceAnchorId: edge.sourceAnchorId,
-            sourcePortId: edge.sourcePortId,
-            targetNodeId: edge.targetNodeId,
-            targetAnchorId: edge.targetAnchorId,
-            targetPortId: edge.targetPortId,
-            kind: edge.kind,
-            categoryKey: edge.categoryKey,
-            isPrimaryPath: !!edge.isPrimaryPath,
-            emphasis: round(resolveEdgeEmphasis(edge)),
-            opacity: round(resolveEdgeOpacity(edge))
-        });
-    }
-
-    for (const [edgeId, element] of state.edgeElements.entries()) {
-        if (!activeEdgeIds.has(edgeId)) {
-            element.remove();
-            state.edgeElements.delete(edgeId);
-        }
-    }
-}
-
-function syncEmptyState(state) {
-    const hasNodes = (state.surface.nodes?.length || 0) > 0;
-    state.shell.emptyState.classList.toggle("is-visible", !hasNodes);
-    state.shell.emptyTitle.textContent = state.surface.chrome?.emptyStateTitle || "No process geometry";
-    state.shell.emptyBody.textContent = state.surface.chrome?.emptyStateDescription || "";
-}
-
-function syncDiagnostics(state) {
-    state.shell.diagnosticsPanel.style.display = state.surface.uiState?.showDiagnostics
-        ? "flex"
-        : "none";
-    state.shell.diagnosticsMeta.textContent =
-        `${state.diagnostics.nodeCount} nodes, ${state.diagnostics.edgeCount} edges, ` +
-        `${state.diagnostics.renderCount} renders, ${state.cameraState.projectionMode}`;
-}
-
-function syncCameraToSurfaceState(state) {
-    const uiState = state.surface.uiState = state.surface.uiState || {};
-    const camera = uiState.camera = uiState.camera || {};
-    camera.projectionMode = state.camera.isPerspectiveCamera
-        ? projectionModes.perspective
-        : projectionModes.orthographic;
-    camera.zoom = round(state.cameraState.zoom || 1);
-    camera.targetX = round(state.cameraState.targetX || 0);
-    camera.targetY = round(state.cameraState.targetY || 0);
-    camera.targetZ = round(state.cameraState.targetZ || 0);
-    camera.distance = round(state.cameraState.distance || cameraDefaults.distance);
-    camera.azimuth = round(state.cameraState.azimuth || cameraDefaults.azimuth);
-    camera.polar = round(state.cameraState.polar || cameraDefaults.polar);
-    state.cameraState.projectionMode = camera.projectionMode;
-    state.diagnostics.projectionMode = camera.projectionMode;
-}
-
-function notifyStateChanged(state) {
-    state.dotNetRef?.invokeMethodAsync("OnStateChanged", JSON.stringify(state.surface.uiState || {}));
-}
-
-function render(state) {
-    updateCameraStateFromControls(state);
-    syncCameraToSurfaceState(state);
-    updateCameraFrustum(state);
-    applyCameraState(state);
-    state.renderer.setSize(state.viewport.width, state.viewport.height, false);
-    state.renderer.render(state.scene, state.camera);
-    syncNodeLabels(state);
-    syncAnchors(state);
-    syncEdges(state);
-    syncEmptyState(state);
-    syncDiagnostics(state);
-    state.diagnostics.renderCount += 1;
-}
-
-function scheduleRender(state) {
-    if (state.renderHandle) {
-        return;
-    }
-
-    state.renderHandle = window.requestAnimationFrame(() => {
-        state.renderHandle = 0;
-        render(state);
-    });
-}
-
-function normalizeSelectedNodeIds(surface) {
-    return new Set(surface?.uiState?.selectedNodeIds || []);
-}
-
-function updateNodeSelection(state, nodeId) {
-    state.selectedNodeIds = nodeId
-        ? new Set([nodeId])
-        : new Set();
-    if (state.surface?.uiState) {
-        state.surface.uiState.selectedNodeIds = nodeId ? [nodeId] : [];
-    }
-
-    scheduleRender(state);
-    state.dotNetRef?.invokeMethodAsync(
-        "OnSelectionChanged",
-        nodeId || null,
-        JSON.stringify(Array.from(state.selectedNodeIds)));
-}
-
-function handleSelectionClick(state, event) {
-    if (state.suppressClick) {
-        state.suppressClick = false;
-        return;
-    }
-
-    const hit = findMeshHit(state, event);
-    if (!hit) {
-        updateNodeSelection(state, null);
-        return;
-    }
-
-    const nodeId = hit.object?.userData?.nodeId || hit.object?.parent?.userData?.nodeId || "";
-    updateNodeSelection(state, nodeId || null);
-}
-
-function resolveWorldPoint(state, event, zPlane) {
-    const rect = state.renderer.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-    state.raycaster.setFromCamera({ x, y }, state.camera);
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -zPlane);
-    const target = new THREE.Vector3();
-    return state.raycaster.ray.intersectPlane(plane, target)
-        ? target
-        : null;
-}
-
-function findMeshHit(state, event) {
-    const rect = state.renderer.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-    state.raycaster.setFromCamera({ x, y }, state.camera);
-    const intersections = state.raycaster.intersectObjects(state.nodeMeshes, false);
-    return intersections[0] || null;
-}
-
-function resolveNodeSpacingFactor(state) {
-    return clamp(resolveFiniteNumber(state?.surface?.uiState?.nodeSpacingFactor, 1), 0.75, 1.85);
-}
-
-function getNodeCollisionPadding(state, node) {
-    const spacingFactor = resolveNodeSpacingFactor(state);
-    const clearance = 8 + (((spacingFactor - 0.75) / 1.1) * 32);
-    return {
-        x: round(clearance),
-        y: round(clearance * 0.72),
-        z: round(clearance * 0.58)
-    };
-}
-
-function buildNodeBounds(node, x, y, z, padding) {
-    const width = (Number(node?.width) || 220) / 2;
-    const height = (Number(node?.height) || 128) / 2;
-    const depth = (Number(node?.depth) || 28) / 2;
-    return {
-        minX: x - width - padding.x,
-        maxX: x + width + padding.x,
-        minY: y - height - padding.y,
-        maxY: y + height + padding.y,
-        minZ: z - depth - padding.z,
-        maxZ: z + depth + padding.z
-    };
-}
-
-function boundsOverlap(left, right) {
-    return left.minX < right.maxX &&
-        left.maxX > right.minX &&
-        left.minY < right.maxY &&
-        left.maxY > right.minY &&
-        left.minZ < right.maxZ &&
-        left.maxZ > right.minZ;
-}
-
-function hasNodeCollision(state, nodeId, x, y, z) {
-    const node = state.nodeLookup.get(nodeId);
-    if (!node) {
-        return false;
-    }
-
-    const nodeBounds = buildNodeBounds(node, x, y, z, getNodeCollisionPadding(state, node));
-    for (const otherNode of state.surface.nodes || []) {
-        if (otherNode.id === nodeId) {
-            continue;
-        }
-
-        const otherBounds = buildNodeBounds(
-            otherNode,
-            otherNode.x || 0,
-            otherNode.y || 0,
-            otherNode.z || 0,
-            getNodeCollisionPadding(state, otherNode));
-        if (boundsOverlap(nodeBounds, otherBounds)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function hasMeaningfulMove(startX, startY, startZ, endX, endY, endZ) {
-    return Math.abs((endX || 0) - (startX || 0)) > 0.01 ||
-        Math.abs((endY || 0) - (startY || 0)) > 0.01 ||
-        Math.abs((endZ || 0) - (startZ || 0)) > 0.01;
-}
-
-function resolveCollisionFreePosition(state, nodeId, startX, startY, startZ, targetX, targetY, targetZ) {
-    const normalizedTarget = {
-        x: round(targetX),
-        y: round(targetY),
-        z: round(targetZ)
-    };
-    if (!hasNodeCollision(state, nodeId, normalizedTarget.x, normalizedTarget.y, normalizedTarget.z)) {
-        return {
-            ...normalizedTarget,
-            blocked: false,
-            moved: hasMeaningfulMove(startX, startY, startZ, normalizedTarget.x, normalizedTarget.y, normalizedTarget.z)
-        };
-    }
-
-    let bestX = round(startX);
-    let bestY = round(startY);
-    let bestZ = round(startZ);
-    let low = 0;
-    let high = 1;
-
-    for (let iteration = 0; iteration < 14; iteration += 1) {
-        const factor = (low + high) / 2;
-        const candidateX = round(startX + ((normalizedTarget.x - startX) * factor));
-        const candidateY = round(startY + ((normalizedTarget.y - startY) * factor));
-        const candidateZ = round(startZ + ((normalizedTarget.z - startZ) * factor));
-        if (hasNodeCollision(state, nodeId, candidateX, candidateY, candidateZ)) {
-            high = factor;
-            continue;
-        }
-
-        low = factor;
-        bestX = candidateX;
-        bestY = candidateY;
-        bestZ = candidateZ;
-    }
-
-    return {
-        x: bestX,
-        y: bestY,
-        z: bestZ,
-        blocked: true,
-        moved: hasMeaningfulMove(startX, startY, startZ, bestX, bestY, bestZ)
-    };
-}
-
-function commitMovedNodes(state, positions) {
-    if (!positions.length) {
-        return;
-    }
-
-    state.diagnostics.dragCommitCount += 1;
-    syncCameraToSurfaceState(state);
-    state.dotNetRef?.invokeMethodAsync("OnNodesMoved", JSON.stringify(positions));
-    notifyStateChanged(state);
-}
-
-function startDrag(state, node, event) {
-    const worldPoint = resolveWorldPoint(state, event, node.z || 0);
-    if (!worldPoint) {
-        return;
-    }
-
-    state.controls.enabled = false;
-    state.suppressClick = true;
-    state.interaction = {
-        kind: "drag",
-        nodeId: node.id,
-        zPlane: node.z || 0,
-        offsetX: worldPoint.x - (node.x || 0),
-        offsetY: worldPoint.y - toSceneY(node.y),
-        startX: node.x || 0,
-        startY: node.y || 0
-    };
-}
-
-function handlePointerDown(state, event) {
-    focusHost(state);
-    if (event.button !== 0 || !event.shiftKey) {
-        return;
-    }
-
-    const hit = findMeshHit(state, event);
-    if (!hit) {
-        return;
-    }
-
-    const nodeId = hit.object?.userData?.nodeId || hit.object?.parent?.userData?.nodeId || "";
-    const node = state.nodeLookup.get(nodeId);
-    if (!node) {
-        return;
-    }
-
-    updateNodeSelection(state, node.id);
-    if (!node.isReadOnly) {
-        event.preventDefault();
-        event.stopPropagation();
-        startDrag(state, node, event);
-    }
-}
-
-function handlePointerMove(state, event) {
-    if (!state.interaction) {
-        return;
-    }
-
-    if (state.interaction.kind !== "drag") {
-        return;
-    }
-
-    const node = state.nodeLookup.get(state.interaction.nodeId);
-    const object = state.nodeObjects.get(state.interaction.nodeId);
-    if (!node || !object) {
-        return;
-    }
-
-    const worldPoint = resolveWorldPoint(state, event, state.interaction.zPlane);
-    if (!worldPoint) {
-        return;
-    }
-
-    const nextPosition = resolveCollisionFreePosition(
-        state,
-        node.id,
-        node.x || 0,
-        node.y || 0,
-        node.z || 0,
-        worldPoint.x - state.interaction.offsetX,
-        fromSceneY(worldPoint.y - state.interaction.offsetY),
-        node.z || 0);
-    if (!nextPosition.moved) {
-        return;
-    }
-
-    node.x = nextPosition.x;
-    node.y = nextPosition.y;
-    object.position.x = node.x;
-    object.position.y = toSceneY(node.y);
-    rebuildScene(state);
-    scheduleRender(state);
-}
-
-function finishPointerInteraction(state) {
-    if (!state.interaction) {
-        return false;
-    }
-
-    if (state.interaction.kind === "drag") {
-        state.controls.enabled = true;
-        const node = state.nodeLookup.get(state.interaction.nodeId);
-        if (node && hasMeaningfulMove(state.interaction.startX, state.interaction.startY, node.z || 0, node.x, node.y, node.z || 0)) {
-            commitMovedNodes(state, [
-                {
-                    nodeId: node.id,
-                    x: round(node.x),
-                    y: round(node.y),
-                    z: round(node.z)
-                }
-            ]);
-        }
-    }
-
-    state.interaction = null;
-    return true;
 }
 
 function resolveViewNodes(state, preset) {
@@ -1224,56 +586,92 @@ function zoomView(state, factor) {
 
 function resetView(state) {
     focusHost(state);
-    state.cameraState = createDefaultCameraState(state.surface);
+    state.cameraState = createDefaultCameraState(state.sourceSurface || state.surface);
     fitView(state);
 }
 
-function normalizeState(surface, existingCameraState) {
-    const uiState = surface.uiState || {};
-    surface.uiState = uiState;
-    uiState.camera = uiState.camera || {};
-    const defaults = createDefaultCameraState(surface);
-    const existing = existingCameraState || defaults;
-    const projectionMode = resolveProjectionMode(surface);
-    const zoom = clamp(resolveFiniteNumber(uiState.camera.zoom, resolveFiniteNumber(existing.zoom, defaults.zoom)), 0.2, 2.5);
-    const explicitDistance = resolveFiniteNumber(uiState.camera.distance, Number.NaN);
-    const distance = projectionMode === projectionModes.perspective
-        ? Number.isFinite(explicitDistance)
-            ? clampDistance(explicitDistance)
-            : resolvePerspectiveDistance(zoom, resolveFiniteNumber(existing.distance, defaults.distance))
-        : clampDistance(resolveFiniteNumber(existing.distance, defaults.distance));
-    return {
-        projectionMode,
-        zoom: projectionMode === projectionModes.perspective
-            ? resolvePerspectiveZoom(distance)
-            : zoom,
-        targetX: resolveFiniteNumber(uiState.camera.targetX, resolveFiniteNumber(existing.targetX, defaults.targetX)),
-        targetY: resolveFiniteNumber(uiState.camera.targetY, resolveFiniteNumber(existing.targetY, defaults.targetY)),
-        targetZ: resolveFiniteNumber(uiState.camera.targetZ, resolveFiniteNumber(existing.targetZ, defaults.targetZ)),
-        distance,
-        azimuth: resolveFiniteNumber(uiState.camera.azimuth, resolveFiniteNumber(existing.azimuth, defaults.azimuth)),
-        polar: clampPolar(resolveFiniteNumber(uiState.camera.polar, resolveFiniteNumber(existing.polar, defaults.polar)))
+function syncCameraToSurfaceState(state) {
+    const updateSurfaceCamera = surface => {
+        if (!surface) {
+            return;
+        }
+
+        const uiState = surface.uiState = surface.uiState || {};
+        const camera = uiState.camera = uiState.camera || {};
+        camera.projectionMode = state.camera.isPerspectiveCamera
+            ? projectionModes.perspective
+            : projectionModes.orthographic;
+        camera.zoom = round(state.cameraState.zoom || 1);
+        camera.targetX = round(state.cameraState.targetX || 0);
+        camera.targetY = round(state.cameraState.targetY || 0);
+        camera.targetZ = round(state.cameraState.targetZ || 0);
+        camera.distance = round(state.cameraState.distance || cameraDefaults.distance);
+        camera.azimuth = round(state.cameraState.azimuth || cameraDefaults.azimuth);
+        camera.polar = round(state.cameraState.polar || cameraDefaults.polar);
     };
+
+    updateSurfaceCamera(state.surface);
+    updateSurfaceCamera(state.sourceSurface);
+    state.cameraState.projectionMode = state.camera.isPerspectiveCamera
+        ? projectionModes.perspective
+        : projectionModes.orthographic;
+    state.diagnostics.projectionMode = state.cameraState.projectionMode;
 }
 
-function buildAutoFitKey(surface) {
-    return [
-        surface?.sceneKey || surface?.surfaceId || "",
-        resolveProjectionMode(surface),
-        surface?.uiState?.activeViewPreset || viewPresets.overview,
-        surface?.uiState?.layoutMode || "center-lane",
-        round(resolveFiniteNumber(surface?.uiState?.nodeSpacingFactor, 1))
-    ].join("::");
+function notifyStateChanged(state) {
+    state.dotNetRef?.invokeMethodAsync("OnStateChanged", JSON.stringify(state.sourceSurface?.uiState || state.surface?.uiState || {}));
+}
+
+function render(state) {
+    syncViewport(state);
+    updateCameraStateFromControls(state);
+    syncCameraToSurfaceState(state);
+    applyCameraState(state);
+
+    const showGrid = state.surface.uiState?.showGrid !== false;
+    state.sceneDecorations.grid.visible = showGrid;
+    state.sceneDecorations.floor.material.opacity = showGrid ? 0.84 : 0.46;
+
+    state.renderer.clear();
+    state.renderer.render(state.scene, state.camera);
+    state.chromeController.sync();
+    state.chromeController.render(state.renderer);
+    syncDomOverlays(state);
+    state.diagnostics.renderCount += 1;
+}
+
+function scheduleRender(state) {
+    if (state.renderHandle) {
+        return;
+    }
+
+    state.renderHandle = window.requestAnimationFrame(() => {
+        state.renderHandle = 0;
+        render(state);
+    });
+}
+
+function commitCameraState(state, notifyDotNet) {
+    applyCameraState(state);
+    syncCameraToSurfaceState(state);
+    if (notifyDotNet) {
+        notifyStateChanged(state);
+    }
+
+    scheduleRender(state);
 }
 
 function syncRuntimeState(state, surface) {
-    state.surface = structuredClone(surface);
+    state.sourceSurface = structuredClone(surface);
+    state.surface = buildRenderSurface(state.sourceSurface, state.chromeState);
+    state.surface.uiState = state.sourceSurface.uiState || {};
+    state.surface.chrome = state.sourceSurface.chrome || {};
     state.selectedNodeIds = normalizeSelectedNodeIds(state.surface);
-    state.cameraState = normalizeState(state.surface, state.cameraState);
+    state.cameraState = normalizeState(state.sourceSurface, state.cameraState);
     state.diagnostics.deterministicMode = !!state.surface.uiState?.deterministicMode;
     state.diagnostics.projectionMode = state.cameraState.projectionMode;
 
-    const nextProjectionMode = resolveProjectionMode(state.surface);
+    const nextProjectionMode = resolveProjectionMode(state.sourceSurface);
     if ((state.camera.isPerspectiveCamera && nextProjectionMode !== projectionModes.perspective) ||
         (!state.camera.isPerspectiveCamera && nextProjectionMode !== projectionModes.orthographic)) {
         state.scene.remove(state.camera);
@@ -1282,6 +680,19 @@ function syncRuntimeState(state, surface) {
     }
 
     rebuildScene(state);
+
+    if (state.chromeState.connectSourceNodeId && !state.nodeLookup.has(state.chromeState.connectSourceNodeId)) {
+        state.chromeState.connectSourceNodeId = null;
+    }
+
+    if (state.chromeState.reconnectEdgeId && !(state.surface.edges || []).some(edge => edge.id === state.chromeState.reconnectEdgeId)) {
+        state.chromeState.reconnectEdgeId = null;
+    }
+
+    if (state.chromeState.selectedEdgeId && !(state.surface.edges || []).some(edge => edge.id === state.chromeState.selectedEdgeId)) {
+        state.chromeState.selectedEdgeId = null;
+    }
+
     commitCameraState(state, false);
 }
 
@@ -1292,8 +703,15 @@ function collectSceneSnapshot(state) {
         projectionMode: state.cameraState.projectionMode,
         activeViewPreset: state.surface.uiState?.activeViewPreset || viewPresets.overview,
         layoutMode: state.surface.uiState?.layoutMode || "center-lane",
+        toolMode: state.surface.uiState?.toolMode || "select",
+        nodeInfoMode: state.surface.uiState?.nodeInfoMode || "detailed",
         nodeSpacingFactor: round(resolveFiniteNumber(state.surface.uiState?.nodeSpacingFactor, 1)),
         deterministicMode: !!state.surface.uiState?.deterministicMode,
+        showGrid: state.surface.uiState?.showGrid !== false,
+        showAnchors: state.surface.uiState?.showAnchors !== false,
+        showEdgeLabels: state.surface.uiState?.showEdgeLabels !== false,
+        showRoleNodes: state.chromeState.showRoleNodes !== false,
+        showBranchNodes: state.chromeState.showBranchNodes !== false,
         viewportWidth: state.viewport.width,
         viewportHeight: state.viewport.height,
         nodes: (state.surface.nodes || []).map(node => {
@@ -1338,8 +756,8 @@ function collectSceneSnapshot(state) {
                 kind: edge.kind,
                 categoryKey: edge.categoryKey,
                 isPrimaryPath: !!edge.isPrimaryPath,
-                emphasis: round(resolveEdgeEmphasis(edge)),
-                opacity: round(resolveEdgeOpacity(edge)),
+                emphasis: round(edge.emphasis ?? 1),
+                opacity: round(edge.opacity ?? 0.82),
                 x: projected.x,
                 y: projected.y
             };
@@ -1368,7 +786,8 @@ function getDiagnostics(state) {
         edgeCount: state.diagnostics.edgeCount,
         deterministicMode: state.diagnostics.deterministicMode,
         projectionMode: state.diagnostics.projectionMode,
-        selectedNodeIds: Array.from(state.selectedNodeIds)
+        selectedNodeIds: Array.from(state.selectedNodeIds),
+        selectedEdgeId: state.chromeState.selectedEdgeId || ""
     };
 }
 
@@ -1382,118 +801,6 @@ function exportImageData(state) {
 function exportImageLength(state) {
     const imageData = exportImageData(state);
     return imageData ? imageData.length : 0;
-}
-
-function simulateDrag(state, request) {
-    const node = state.nodeLookup.get(request?.nodeId || "");
-    if (!node) {
-        return false;
-    }
-
-    const nextPosition = resolveCollisionFreePosition(
-        state,
-        node.id,
-        node.x || 0,
-        node.y || 0,
-        node.z || 0,
-        (node.x || 0) + (Number(request?.deltaX) || 0),
-        (node.y || 0) + (Number(request?.deltaY) || 0),
-        node.z || 0);
-    if (!nextPosition.moved) {
-        return false;
-    }
-
-    node.x = nextPosition.x;
-    node.y = nextPosition.y;
-    state.surface.uiState.selectedNodeIds = [node.id];
-    state.selectedNodeIds = new Set([node.id]);
-    syncRuntimeState(state, state.surface);
-
-    if (request?.release === false) {
-        state.interaction = {
-            kind: "synthetic-drag",
-            pendingPositions: [
-                {
-                    nodeId: node.id,
-                    x: node.x,
-                    y: node.y,
-                    z: node.z || 0
-                }
-            ]
-        };
-        scheduleRender(state);
-        return true;
-    }
-
-    commitMovedNodes(state, [
-        {
-            nodeId: node.id,
-            x: node.x,
-            y: node.y,
-            z: node.z || 0
-        }
-    ]);
-    scheduleRender(state);
-    return true;
-}
-
-function simulateConnection(state, request) {
-    const normalized = {
-        actionId: request?.actionId === connectionActions.disconnect
-            ? connectionActions.disconnect
-            : connectionActions.connect,
-        edgeId: request?.edgeId || null,
-        sourceNodeId: request?.sourceNodeId || "",
-        sourceAnchorId: request?.sourceAnchorId || "",
-        sourcePortId: request?.sourcePortId || null,
-        targetNodeId: request?.targetNodeId || "",
-        targetAnchorId: request?.targetAnchorId || "",
-        targetPortId: request?.targetPortId || null,
-        kind: request?.kind || "",
-        categoryKey: request?.categoryKey || ""
-    };
-    if (!normalized.sourceNodeId || !normalized.targetNodeId) {
-        return false;
-    }
-
-    state.diagnostics.connectionCommitCount += 1;
-    state.dotNetRef?.invokeMethodAsync("OnConnectionChangeRequested", JSON.stringify(normalized));
-    return true;
-}
-
-function getAnchorCenter(state, request) {
-    if (request?.edgeId) {
-        const edge = state.projectedEdges.get(request.edgeId);
-        return edge
-            ? {
-                x: edge.x,
-                y: edge.y
-            }
-            : null;
-    }
-
-    const anchorId = request?.anchorId || "";
-    if (anchorId && state.projectedAnchors.has(anchorId)) {
-        const anchor = state.projectedAnchors.get(anchorId);
-        return {
-            x: anchor.x,
-            y: anchor.y
-        };
-    }
-
-    if (request?.nodeId) {
-        const node = state.projectedNodes.get(request.nodeId);
-        if (!node) {
-            return null;
-        }
-
-        return {
-            x: node.left + (node.width / 2),
-            y: node.top + (node.height / 2)
-        };
-    }
-
-    return null;
 }
 
 function dispose(state) {
@@ -1515,6 +822,7 @@ function dispose(state) {
     state.controls.removeEventListener("change", state.handlers.controlsChange);
     state.controls.removeEventListener("end", state.handlers.controlsEnd);
     state.controls.dispose();
+    state.chromeController?.dispose();
     state.host.innerHTML = "";
     clearScene(state);
     state.renderer.dispose();
@@ -1531,7 +839,9 @@ function createState(host, dotNetRef, surface) {
         alpha: true,
         preserveDrawingBuffer: true
     });
+    renderer.autoClear = false;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.domElement.style.touchAction = "none";
     shell.stage.appendChild(renderer.domElement);
 
     const viewport = {
@@ -1557,6 +867,7 @@ function createState(host, dotNetRef, surface) {
         grid.material.transparent = true;
         grid.material.opacity = 0.42;
     }
+
     const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(4600, 4600),
         new THREE.MeshPhongMaterial({
@@ -1581,6 +892,7 @@ function createState(host, dotNetRef, surface) {
         raycaster: new THREE.Raycaster(),
         nodeObjects: new Map(),
         edgeObjects: new Map(),
+        edgeHitMeshes: [],
         nodeLookup: new Map(),
         anchorLookup: new Map(),
         labelElements: new Map(),
@@ -1606,26 +918,80 @@ function createState(host, dotNetRef, surface) {
             deterministicMode: true,
             projectionMode: resolveProjectionMode(surface)
         },
-        cameraState: normalizeState(surface),
-        surface: {
-            surfaceId: "",
-            nodes: [],
-            edges: [],
-            uiState: {
-                selectedNodeIds: [],
-                activeViewPreset: viewPresets.overview
-            },
-            chrome: {}
+        sceneDecorations: {
+            grid,
+            floor
         },
+        cameraState: normalizeState(surface),
+        sourceSurface: structuredClone(surface),
+        surface: buildRenderSurface(surface, {
+            showRoleNodes: true,
+            showBranchNodes: true
+        }),
         selectedNodeIds: new Set(),
         lastAutoFitKey: "",
-        handlers: {}
+        handlers: {},
+        chromeState: {
+            settingsOpen: false,
+            contextMenu: null,
+            showRoleNodes: true,
+            showBranchNodes: true,
+            connectSourceNodeId: null,
+            reconnectEdgeId: null,
+            selectedEdgeId: null
+        },
+        resolveAnchorPosition: null,
+        chromeController: null,
+        interactionDeps: null
     };
 
-    state.handlers.pointerDown = event => handlePointerDown(state, event);
-    state.handlers.pointerMove = event => handlePointerMove(state, event);
-    state.handlers.click = event => handleSelectionClick(state, event);
-    state.handlers.contextMenu = event => event.preventDefault();
+    syncViewport(state, true);
+
+    state.surface.uiState = state.sourceSurface.uiState || {};
+    state.surface.chrome = state.sourceSurface.chrome || {};
+    state.selectedNodeIds = normalizeSelectedNodeIds(state.surface);
+    state.resolveAnchorPosition = (node, anchor) => {
+        const width = Number(node.width) || 220;
+        const height = Number(node.height) || 128;
+        const depth = Number(node.depth) || 28;
+        const side = anchor?.side || (anchor?.role === "output" ? "right" : "left");
+        const totalOnSide = Math.max(1, Number(anchor?.totalOnSide) || 1);
+        const order = clamp(Number(anchor?.order) || 0, 0, totalOnSide - 1);
+        const offsetRatio = totalOnSide === 1
+            ? 0.5
+            : order / (totalOnSide - 1);
+        const verticalTravel = Math.max(24, height - 36);
+        const horizontalTravel = Math.max(24, width - 40);
+        const distributedY = toSceneY(node.y) + (height / 2) - 18 - (offsetRatio * verticalTravel);
+        const distributedX = (node.x - (width / 2)) + 20 + (offsetRatio * horizontalTravel);
+        switch (side) {
+            case "right":
+                return new THREE.Vector3(node.x + (width / 2), distributedY, node.z + (depth / 2));
+            case "top":
+                return new THREE.Vector3(distributedX, toSceneY(node.y) + (height / 2), node.z + (depth / 2));
+            case "bottom":
+                return new THREE.Vector3(distributedX, toSceneY(node.y) - (height / 2), node.z + (depth / 2));
+            default:
+                return new THREE.Vector3(node.x - (width / 2), distributedY, node.z + (depth / 2));
+        }
+    };
+
+    state.chromeController = new WebGlWorkbenchChromeController(state);
+    state.interactionDeps = {
+        scheduleRender,
+        notifyStateChanged,
+        syncCameraToSurfaceState,
+        syncRuntimeState,
+        fitView,
+        focusNode,
+        resetView,
+        rebuildScene
+    };
+
+    state.handlers.pointerDown = event => handlePointerDown(state, event, state.interactionDeps);
+    state.handlers.pointerMove = event => handlePointerMove(state, event, state.interactionDeps);
+    state.handlers.click = event => handleClick(state, event, state.interactionDeps);
+    state.handlers.contextMenu = event => handleContextMenu(state, event, state.interactionDeps);
     state.handlers.controlsChange = () => {
         if (state.suppressControlEvents || state.interaction?.kind === "drag") {
             return;
@@ -1643,15 +1009,7 @@ function createState(host, dotNetRef, surface) {
         syncCameraToSurfaceState(state);
         notifyStateChanged(state);
     };
-    state.handlers.pointerUp = () => {
-        if (state.interaction?.kind === "synthetic-drag") {
-            commitMovedNodes(state, state.interaction.pendingPositions || []);
-            state.interaction = null;
-            return;
-        }
-
-        finishPointerInteraction(state);
-    };
+    state.handlers.pointerUp = () => handlePointerUp(state, state.interactionDeps);
 
     renderer.domElement.addEventListener("pointerdown", state.handlers.pointerDown);
     renderer.domElement.addEventListener("click", state.handlers.click);
@@ -1731,12 +1089,18 @@ root.webglWorkbench = {
 
         updateCameraStateFromControls(state);
         syncCameraToSurfaceState(state);
-        return JSON.stringify(state.surface.uiState || {});
+        return JSON.stringify(state.sourceSurface?.uiState || state.surface?.uiState || {});
     },
     getSceneSnapshot(host) {
         const state = resolveState(host);
         return state
             ? collectSceneSnapshot(state)
+            : null;
+    },
+    getChromeState(host) {
+        const state = resolveState(host);
+        return state?.chromeController
+            ? state.chromeController.getSnapshot()
             : null;
     },
     getDiagnostics(host) {
@@ -1760,13 +1124,19 @@ root.webglWorkbench = {
     simulateDrag(host, request) {
         const state = resolveState(host);
         return state
-            ? simulateDrag(state, request || {})
+            ? simulateDrag(state, request || {}, state.interactionDeps)
             : false;
     },
     simulateConnection(host, request) {
         const state = resolveState(host);
         return state
             ? simulateConnection(state, request || {})
+            : false;
+    },
+    invokeChromeAction(host, actionId) {
+        const state = resolveState(host);
+        return state
+            ? applyChromeAction(state, actionId, state.interactionDeps)
             : false;
     },
     finishInteraction(host) {
@@ -1776,12 +1146,11 @@ root.webglWorkbench = {
         }
 
         if (state.interaction?.kind === "synthetic-drag") {
-            commitMovedNodes(state, state.interaction.pendingPositions || []);
-            state.interaction = null;
+            handlePointerUp(state, state.interactionDeps);
             return true;
         }
 
-        return finishPointerInteraction(state);
+        return finishPointerInteraction(state, state.interactionDeps);
     },
     orbitView(host, deltaAzimuth, deltaPolar) {
         const state = resolveState(host);

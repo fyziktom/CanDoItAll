@@ -19,11 +19,21 @@ public sealed class WebGlWorkbenchUiState
 
     public string LayoutMode { get; set; } = WebGlWorkbenchLayoutModes.CenterLane;
 
+    public string ToolMode { get; set; } = WebGlWorkbenchToolModes.Select;
+
+    public string NodeInfoMode { get; set; } = WebGlWorkbenchNodeInfoModes.Detailed;
+
     public double NodeSpacingFactor { get; set; } = 1;
 
     public bool DeterministicMode { get; set; } = true;
 
     public bool ShowDiagnostics { get; set; }
+
+    public bool ShowGrid { get; set; } = true;
+
+    public bool ShowAnchors { get; set; } = true;
+
+    public bool ShowEdgeLabels { get; set; } = true;
 
     public WebGlWorkbenchCameraState Camera { get; set; } = new();
 
@@ -40,6 +50,8 @@ public sealed class WebGlWorkbenchUiState
             state.SelectedNodeIds = NormalizeStringList(state.SelectedNodeIds);
             state.ActiveViewPreset = NormalizeActiveViewPreset(state.ActiveViewPreset);
             state.LayoutMode = WebGlWorkbenchLayoutModes.Normalize(state.LayoutMode);
+            state.ToolMode = WebGlWorkbenchToolModes.Normalize(state.ToolMode);
+            state.NodeInfoMode = WebGlWorkbenchNodeInfoModes.Normalize(state.NodeInfoMode);
             state.NodeSpacingFactor = NormalizeNodeSpacingFactor(state.NodeSpacingFactor);
             state.Camera ??= new WebGlWorkbenchCameraState();
             return state;
@@ -58,9 +70,14 @@ public sealed class WebGlWorkbenchUiState
             SelectedNodeIds = NormalizeStringList(SelectedNodeIds),
             ActiveViewPreset = NormalizeActiveViewPreset(ActiveViewPreset),
             LayoutMode = WebGlWorkbenchLayoutModes.Normalize(LayoutMode),
+            ToolMode = WebGlWorkbenchToolModes.Normalize(ToolMode),
+            NodeInfoMode = WebGlWorkbenchNodeInfoModes.Normalize(NodeInfoMode),
             NodeSpacingFactor = NormalizeNodeSpacingFactor(NodeSpacingFactor),
             DeterministicMode = DeterministicMode,
             ShowDiagnostics = ShowDiagnostics,
+            ShowGrid = ShowGrid,
+            ShowAnchors = ShowAnchors,
+            ShowEdgeLabels = ShowEdgeLabels,
             Camera = Camera ?? new WebGlWorkbenchCameraState()
         };
 
@@ -162,9 +179,19 @@ public sealed class WebGlAutomationSnapshot
 
     public string LayoutMode { get; set; } = WebGlWorkbenchLayoutModes.CenterLane;
 
+    public string ToolMode { get; set; } = WebGlWorkbenchToolModes.Select;
+
+    public string NodeInfoMode { get; set; } = WebGlWorkbenchNodeInfoModes.Detailed;
+
     public double NodeSpacingFactor { get; set; } = 1;
 
     public bool DeterministicMode { get; set; } = true;
+
+    public bool ShowGrid { get; set; } = true;
+
+    public bool ShowAnchors { get; set; } = true;
+
+    public bool ShowEdgeLabels { get; set; } = true;
 
     public int ViewportWidth { get; set; }
 

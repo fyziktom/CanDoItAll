@@ -39,6 +39,9 @@
     public EventCallback<WebGlConnectionChangeRequest> ConnectionChangeRequested { get; set; }
 
     [Parameter]
+    public EventCallback<WebGlDeleteRequest> DeleteRequested { get; set; }
+
+    [Parameter]
     public EventCallback<string> StateChanged { get; set; }
 
     protected override void OnParametersSet()
@@ -101,6 +104,15 @@
         return request is null
             ? Task.CompletedTask
             : ConnectionChangeRequested.InvokeAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnDeleteRequested(string requestJson)
+    {
+        var request = Deserialize<WebGlDeleteRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : DeleteRequested.InvokeAsync(request);
     }
 
     [JSInvokable]

@@ -13,6 +13,7 @@ public sealed class ProcessWebGlSandboxSession
     private readonly ProcessWebGlSceneAdapter sceneAdapter;
     private readonly List<ProcessWebGlCommandLogEntry> commandLog = [];
     private readonly Dictionary<string, WebGlNodePositionChange> nodePositionOverrides = new(StringComparer.Ordinal);
+    private readonly HashSet<string> deletedNodeIds = new(StringComparer.Ordinal);
     private WebGlWorkbenchCameraState cameraState = new();
     private IReadOnlyList<ProcessWebGlTemplateDescriptor>? templates;
     private ProcessDefinitionEditorModel? workingEditor;
@@ -33,11 +34,21 @@ public sealed class ProcessWebGlSandboxSession
 
     public string LayoutMode { get; private set; } = WebGlWorkbenchLayoutModes.CenterLane;
 
+    public string ToolMode { get; private set; } = WebGlWorkbenchToolModes.Select;
+
+    public string NodeInfoMode { get; private set; } = WebGlWorkbenchNodeInfoModes.Detailed;
+
     public double NodeSpacingFactor { get; private set; } = 1;
 
     public string? SelectedNodeId { get; private set; }
 
     public bool ShowDiagnostics { get; private set; } = true;
+
+    public bool ShowGrid { get; private set; } = true;
+
+    public bool ShowAnchors { get; private set; } = true;
+
+    public bool ShowEdgeLabels { get; private set; } = true;
 
     public int LastExportCharacterCount { get; private set; }
 
@@ -84,7 +95,9 @@ public sealed class ProcessWebGlSandboxSession
         SelectedTemplateKey = resolvedTemplateKey;
         cameraState = CreateDefaultCameraState();
         nodePositionOverrides.Clear();
+        deletedNodeIds.Clear();
         SelectedNodeId = null;
+        ToolMode = WebGlWorkbenchToolModes.Select;
         LastExportCharacterCount = 0;
         commandLog.Clear();
         RecordCommand("Loaded template", CurrentTemplate.DisplayName);
@@ -96,7 +109,9 @@ public sealed class ProcessWebGlSandboxSession
         workingEditor = sceneAdapter.LoadProjectedDefinition(SelectedTemplateKey);
         cameraState = CreateDefaultCameraState();
         nodePositionOverrides.Clear();
+        deletedNodeIds.Clear();
         SelectedNodeId = null;
+        ToolMode = WebGlWorkbenchToolModes.Select;
         LastExportCharacterCount = 0;
         commandLog.Clear();
         RecordCommand("Reset sandbox", CurrentTemplate.DisplayName);
@@ -107,8 +122,10 @@ public sealed class ProcessWebGlSandboxSession
         EnsureInitialized();
         LayoutMode = WebGlWorkbenchLayoutModes.Normalize(layoutMode ?? LayoutMode);
         nodePositionOverrides.Clear();
+        deletedNodeIds.Clear();
         cameraState = CreateDefaultCameraState();
-        RecordCommand("Recomposed scene", $"{LayoutMode} · {NodeSpacingFactor:0.##}x spacing");
+        ToolMode = WebGlWorkbenchToolModes.Select;
+        RecordCommand("Recomposed scene", $"{LayoutMode} | {NodeSpacingFactor:0.##}x spacing");
     }
 
     public void AdjustNodeSpacing(int direction)
@@ -201,6 +218,59 @@ public sealed class ProcessWebGlSandboxSession
             return false;
         }
 
+        if (string.Equals(request.ActionId, WebGlWorkbenchConnectionActions.ReconnectTarget, StringComparison.Ordinal))
+        {
+            var currentSurface = BuildSurface();
+            var existingEdge = currentSurface.Edges.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, request.EdgeId, StringComparison.Ordinal));
+            if (existingEdge is null)
+            {
+                return false;
+            }
+
+            var disconnected = sceneAdapter.ApplyConnectionChange(
+                workingEditor,
+                new WebGlConnectionChangeRequest(
+                    WebGlWorkbenchConnectionActions.Disconnect,
+                    existingEdge.Id,
+                    existingEdge.SourceNodeId,
+                    existingEdge.SourceAnchorId,
+                    existingEdge.SourcePortId,
+                    existingEdge.TargetNodeId,
+                    existingEdge.TargetAnchorId,
+                    existingEdge.TargetPortId,
+                    existingEdge.Kind,
+                    existingEdge.CategoryKey));
+            if (!disconnected)
+            {
+                return false;
+            }
+
+            var reconnected = sceneAdapter.ApplyConnectionChange(
+                workingEditor,
+                request with
+                {
+                    ActionId = WebGlWorkbenchConnectionActions.Connect,
+                    EdgeId = null,
+                    SourceNodeId = existingEdge.SourceNodeId,
+                    SourceAnchorId = existingEdge.SourceAnchorId,
+                    SourcePortId = existingEdge.SourcePortId,
+                    Kind = string.IsNullOrWhiteSpace(request.Kind)
+                        ? existingEdge.Kind
+                        : request.Kind,
+                    CategoryKey = string.IsNullOrWhiteSpace(request.CategoryKey)
+                        ? existingEdge.CategoryKey
+                        : request.CategoryKey
+                });
+            if (!reconnected)
+            {
+                return false;
+            }
+
+            RecordCommand("Reconnected connection", $"{existingEdge.SourceNodeId} -> {request.TargetNodeId}");
+            return true;
+        }
+
         var changed = sceneAdapter.ApplyConnectionChange(workingEditor, request);
         if (!changed)
         {
@@ -212,6 +282,35 @@ public sealed class ProcessWebGlSandboxSession
                 ? "Removed connection"
                 : "Created connection",
             $"{request.SourceNodeId} -> {request.TargetNodeId}");
+        return true;
+    }
+
+    public bool ApplyDeleteRequest(WebGlDeleteRequest request)
+    {
+        EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(request);
+
+        var nodeId = request.NodeId?.Trim();
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return false;
+        }
+
+        var currentSurface = BuildSurface();
+        var node = currentSurface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, nodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            return false;
+        }
+
+        deletedNodeIds.Add(nodeId);
+        nodePositionOverrides.Remove(nodeId);
+        if (string.Equals(SelectedNodeId, nodeId, StringComparison.Ordinal))
+        {
+            SelectedNodeId = null;
+        }
+
+        RecordCommand("Deleted node", node.Title);
         return true;
     }
 
@@ -243,7 +342,13 @@ public sealed class ProcessWebGlSandboxSession
             Polar = uiState.Camera?.Polar ?? cameraState.Polar
         };
         LayoutMode = WebGlWorkbenchLayoutModes.Normalize(uiState.LayoutMode);
+        ToolMode = WebGlWorkbenchToolModes.Normalize(uiState.ToolMode);
+        NodeInfoMode = WebGlWorkbenchNodeInfoModes.Normalize(uiState.NodeInfoMode);
         NodeSpacingFactor = ClampNodeSpacingFactor(uiState.NodeSpacingFactor);
+        ShowDiagnostics = uiState.ShowDiagnostics;
+        ShowGrid = uiState.ShowGrid;
+        ShowAnchors = uiState.ShowAnchors;
+        ShowEdgeLabels = uiState.ShowEdgeLabels;
     }
 
     public WebGlWorkbenchSurface BuildSurface()
@@ -262,6 +367,20 @@ public sealed class ProcessWebGlSandboxSession
                 DeterministicMode: true,
                 ShowDiagnostics: ShowDiagnostics));
         ApplyNodePositionOverrides(surface);
+        surface.Nodes = surface.Nodes
+            .Where(node => !deletedNodeIds.Contains(node.Id))
+            .ToList();
+        surface.Edges = surface.Edges
+            .Where(edge =>
+                !deletedNodeIds.Contains(edge.SourceNodeId) &&
+                !deletedNodeIds.Contains(edge.TargetNodeId))
+            .ToList();
+        surface.UiState.ToolMode = ToolMode;
+        surface.UiState.NodeInfoMode = NodeInfoMode;
+        surface.UiState.ShowDiagnostics = ShowDiagnostics;
+        surface.UiState.ShowGrid = ShowGrid;
+        surface.UiState.ShowAnchors = ShowAnchors;
+        surface.UiState.ShowEdgeLabels = ShowEdgeLabels;
         return surface;
     }
 

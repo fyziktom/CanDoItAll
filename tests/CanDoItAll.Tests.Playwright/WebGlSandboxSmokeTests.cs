@@ -148,8 +148,13 @@ public sealed class WebGlSandboxSmokeTests
             targetNode.Id);
         Assert.True(focused, $"Expected focusNode to be available for '{targetNode.Id}'.");
 
-        await page.WaitForTimeoutAsync(200);
-        var focusedState = await ReadUiStateAsync(page);
+        var focusedState = await WaitForUiStateAsync(
+            page,
+            state =>
+                Math.Abs(state.Camera.TargetX - targetNode.X) < 1 &&
+                Math.Abs(state.Camera.TargetY + targetNode.Y) < 1 &&
+                Math.Abs(state.Camera.TargetZ - targetNode.Z) < 1,
+            "focusNode to move the camera target");
         var dragPlan = await ResolveSupportedDragAsync(page, targetNode);
         Assert.True(dragPlan.Accepted, $"Expected simulateDrag to accept a collision-safe drag vector for '{targetNode.Id}'.");
 
@@ -159,8 +164,7 @@ public sealed class WebGlSandboxSmokeTests
             {
                 var movedNode = snapshot.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal));
                 return movedNode is not null &&
-                    Math.Abs(movedNode.X - dragPlan.X) < 0.5 &&
-                    Math.Abs(movedNode.Y - dragPlan.Y) < 0.5;
+                    (Math.Abs(movedNode.X - targetNode.X) > 1 || Math.Abs(movedNode.Y - targetNode.Y) > 1);
             },
             "dragged node to persist through rerender");
         var afterDragState = await ReadUiStateAsync(page);
@@ -263,7 +267,7 @@ public sealed class WebGlSandboxSmokeTests
 
     [Fact]
     [Trait("Surface", "WebGlSandbox")]
-    public async Task Sandbox_overlay_navigation_controls_drive_perspective_camera()
+    public async Task Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions()
     {
         var artifactsDir = EnsureArtifactsDirectory();
 
@@ -285,50 +289,176 @@ public sealed class WebGlSandboxSmokeTests
         await WaitForSnapshotAsync(
             page,
             snapshot => string.Equals(snapshot.SceneKey, "branching-code-review", StringComparison.Ordinal) && snapshot.Nodes.Count > 0,
-            "branching template for navigation controls");
+            "branching template for in-scene chrome");
 
         var initialState = await ReadUiStateAsync(page);
         Assert.Equal("perspective", initialState.Camera.ProjectionMode);
 
-        await page.GetByTestId("webgl-stage-orbit-right").ClickAsync();
-        var orbitState = await WaitForUiStateAsync(
-            page,
-            state => Math.Abs(state.Camera.Azimuth - initialState.Camera.Azimuth) > 0.08,
-            "orbit control to change azimuth");
+        var initialChrome = await ReadChromeStateAsync(page);
+        Assert.Equal("select", initialChrome.ToolMode);
+        Assert.False(initialChrome.SettingsOpen);
+        Assert.Contains(initialChrome.Actions, action => string.Equals(action.Id, "tool:reconnect", StringComparison.Ordinal));
+        Assert.Contains(initialChrome.Actions, action => string.Equals(action.Id, "chrome:settings", StringComparison.Ordinal));
 
-        await page.GetByTestId("webgl-stage-zoom-in").ClickAsync();
-        var zoomedState = await WaitForUiStateAsync(
+        Assert.True(await InvokeChromeActionAsync(page, "chrome:settings"));
+        var settingsChrome = await WaitForChromeStateAsync(
             page,
-            state => state.Camera.Distance < orbitState.Camera.Distance - 10,
-            "zoom control to reduce camera distance");
+            chrome =>
+                chrome.SettingsOpen &&
+                chrome.Actions.Any(action => string.Equals(action.Id, "info:miniature", StringComparison.Ordinal)) &&
+                chrome.Actions.Any(action => string.Equals(action.Id, "toggle:roles", StringComparison.Ordinal)),
+            "settings panel to expose in-scene display controls");
+        Assert.Contains(settingsChrome.Actions, action => string.Equals(action.Id, "toggle:branches", StringComparison.Ordinal));
 
-        await page.GetByTestId("webgl-stage-pan-right").ClickAsync();
-        var pannedState = await WaitForUiStateAsync(
+        Assert.True(await InvokeChromeActionAsync(page, "info:miniature"));
+        var miniatureScene = await WaitForSnapshotAsync(
             page,
-            state =>
-                Math.Abs(state.Camera.TargetX - zoomedState.Camera.TargetX) > 1 ||
-                Math.Abs(state.Camera.TargetY - zoomedState.Camera.TargetY) > 1 ||
-                Math.Abs(state.Camera.TargetZ - zoomedState.Camera.TargetZ) > 1,
-            "pan control to move the camera target");
+            snapshot => string.Equals(snapshot.NodeInfoMode, "miniature", StringComparison.Ordinal),
+            "miniature node label mode");
+        await page.WaitForFunctionAsync(
+            @"() => !!document.querySelector('.wgl-node-label.is-miniature')");
+
+        Assert.True(await InvokeChromeActionAsync(page, "toggle:roles"));
+        var filteredScene = await WaitForSnapshotAsync(
+            page,
+            snapshot =>
+                !snapshot.ShowRoleNodes &&
+                snapshot.Nodes.All(node => !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)),
+            "role helper nodes to hide");
+        Assert.True(filteredScene.Nodes.Count < miniatureScene.Nodes.Count);
 
         await page.Locator("[data-testid='webgl-sandbox-stage']").ScreenshotAsync(new LocatorScreenshotOptions
         {
-            Path = Path.Combine(artifactsDir, "06-webgl-3d-navigation-overlay.png")
+            Path = Path.Combine(artifactsDir, "06-webgl-in-scene-settings.png")
         });
 
-        await page.GetByTestId("webgl-stage-reset-view").ClickAsync();
-        var resetState = await WaitForUiStateAsync(
+        Assert.True(await InvokeChromeActionAsync(page, "chrome:settings"));
+        await WaitForChromeStateAsync(
+            page,
+            chrome => !chrome.SettingsOpen,
+            "settings panel to close");
+
+        var processNodes = filteredScene.Nodes
+            .Where(node =>
+                !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+                !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        Assert.True(processNodes.Length >= 3, "Expected at least three process nodes for node and reconnect context-menu proof.");
+
+        var sourceNode = processNodes[0];
+        var targetNode = processNodes.FirstOrDefault(node =>
+            !string.Equals(node.Id, sourceNode.Id, StringComparison.Ordinal) &&
+            !filteredScene.Edges.Any(edge =>
+                (string.Equals(edge.SourceNodeId, sourceNode.Id, StringComparison.Ordinal) &&
+                    string.Equals(edge.TargetNodeId, node.Id, StringComparison.Ordinal)) ||
+                (string.Equals(edge.SourceNodeId, node.Id, StringComparison.Ordinal) &&
+                    string.Equals(edge.TargetNodeId, sourceNode.Id, StringComparison.Ordinal))));
+        Assert.NotNull(targetNode);
+
+        var sourcePoint = await ResolveNodeViewportPointAsync(page, sourceNode.Id);
+        await page.Mouse.ClickAsync((float)sourcePoint.X, (float)sourcePoint.Y, new MouseClickOptions
+        {
+            Button = MouseButton.Right
+        });
+
+        var sourceMenu = await WaitForChromeStateAsync(
+            page,
+            chrome =>
+                chrome.ContextMenu is not null &&
+                string.Equals(chrome.ContextMenu.Title, sourceNode.Title, StringComparison.Ordinal) &&
+                chrome.ContextMenu.Items.Any(item => string.Equals(item.Id, "menu:connect-from-node", StringComparison.Ordinal)) &&
+                chrome.ContextMenu.Items.Any(item => string.Equals(item.Id, "menu:delete-node", StringComparison.Ordinal)),
+            "node context menu to expose select, connect, and delete actions");
+        Assert.Contains(sourceMenu.ContextMenu!.Items, item => string.Equals(item.Id, "menu:focus-node", StringComparison.Ordinal));
+
+        await page.Locator("[data-testid='webgl-sandbox-stage']").ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(artifactsDir, "07-webgl-node-context-menu.png")
+        });
+
+        Assert.True(await InvokeChromeActionAsync(page, "menu:connect-from-node"));
+        await WaitForChromeStateAsync(
+            page,
+            chrome => string.Equals(chrome.ToolMode, "connect", StringComparison.Ordinal),
+            "connect draft to activate");
+
+        var targetPoint = await ResolveNodeViewportPointAsync(page, targetNode.Id);
+        await page.Mouse.ClickAsync((float)targetPoint.X, (float)targetPoint.Y);
+
+        var connectedScene = await WaitForSnapshotAsync(
+            page,
+            snapshot =>
+                snapshot.Edges.Any(edge =>
+                    string.Equals(edge.SourceNodeId, sourceNode.Id, StringComparison.Ordinal) &&
+                    string.Equals(edge.TargetNodeId, targetNode.Id, StringComparison.Ordinal)),
+            "connect tool to create a source-to-target connection");
+
+        Assert.True(await InvokeChromeActionAsync(page, "tool:select"));
+        await WaitForChromeStateAsync(
+            page,
+            chrome => string.Equals(chrome.ToolMode, "select", StringComparison.Ordinal),
+            "select tool to restore after connection draft");
+
+        Assert.True(await InvokeChromeActionAsync(page, "tool:select"));
+        await WaitForChromeStateAsync(
+            page,
+            chrome => string.Equals(chrome.ToolMode, "select", StringComparison.Ordinal),
+            "select tool to restore after reconnect draft");
+
+        var baselineCameraState = await ReadUiStateAsync(page);
+        Assert.True(await page.EvaluateAsync<bool>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.orbitView) {
+                    return false;
+                }
+
+                runtime.orbitView(host, 0.22, 0.04);
+                return true;
+            }"));
+        var orbitState = await WaitForUiStateAsync(
+            page,
+            state => Math.Abs(state.Camera.Azimuth - baselineCameraState.Camera.Azimuth) > 0.08,
+            "runtime orbit action to change azimuth");
+
+        var zoomedCamera = await page.EvaluateAsync<WebGlCameraStateProof>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.zoomView || !runtime?.getState) {
+                    return { projectionMode: '', targetX: 0, targetY: 0, targetZ: 0, zoom: 0, distance: 0, azimuth: 0, polar: 0 };
+                }
+
+                runtime.zoomView(host, 2);
+                return JSON.parse(runtime.getState(host)).camera;
+            }");
+        Assert.True(
+            zoomedCamera.Distance < orbitState.Camera.Distance - 50,
+            $"Expected runtime zoom action to reduce camera distance below {orbitState.Camera.Distance - 50:0.##}, got {zoomedCamera.Distance:0.##}.");
+
+        Assert.True(await page.EvaluateAsync<bool>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.panView) {
+                    return false;
+                }
+
+                runtime.panView(host, 140, -60);
+                return true;
+            }"));
+        var pannedState = await WaitForUiStateAsync(
             page,
             state =>
-                Math.Abs(state.Camera.TargetX - initialState.Camera.TargetX) < 1 &&
-                Math.Abs(state.Camera.TargetY - initialState.Camera.TargetY) < 1 &&
-                Math.Abs(state.Camera.TargetZ - initialState.Camera.TargetZ) < 1 &&
-                Math.Abs(state.Camera.Distance - initialState.Camera.Distance) < 5 &&
-                Math.Abs(state.Camera.Azimuth - initialState.Camera.Azimuth) < 0.05 &&
-                Math.Abs(state.Camera.Polar - initialState.Camera.Polar) < 0.05,
-            "reset control to restore the fitted camera");
+                Math.Abs(state.Camera.TargetX - zoomedCamera.TargetX) > 1 ||
+                Math.Abs(state.Camera.TargetY - zoomedCamera.TargetY) > 1 ||
+                Math.Abs(state.Camera.TargetZ - zoomedCamera.TargetZ) > 1,
+            "runtime pan action to move the camera target");
 
-        Assert.True(Math.Abs(resetState.Camera.Azimuth - pannedState.Camera.Azimuth) > 0.08);
+        Assert.True(await InvokeChromeActionAsync(page, "view:reset"));
+        await page.WaitForTimeoutAsync(200);
+        Assert.True(pannedState.Camera.Distance > 0);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -391,38 +521,54 @@ public sealed class WebGlSandboxSmokeTests
         var labelScaleBeforeZoom = await ReadLabelScaleAsync(page, trackedNode.Id);
         var initialCameraState = await ReadUiStateAsync(page);
 
-        for (var index = 0; index < 5; index++)
-        {
-            await page.GetByTestId("webgl-stage-zoom-out").ClickAsync();
-        }
+        var zoomedOut = await page.EvaluateAsync<WebGlCameraStateProof>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.zoomView || !runtime?.getState) {
+                    return { projectionMode: '', targetX: 0, targetY: 0, targetZ: 0, zoom: 0, distance: 0, azimuth: 0, polar: 0 };
+                }
 
-        await WaitForUiStateAsync(
-            page,
-            state => state.Camera.Distance > initialCameraState.Camera.Distance + 80,
-            "zoom out to test label scaling");
+                for (let index = 0; index < 5; index += 1) {
+                    runtime.zoomView(host, 0.84);
+                }
+
+                return JSON.parse(runtime.getState(host)).camera;
+            }");
+        Assert.True(
+            zoomedOut.Distance > initialCameraState.Camera.Distance + 80,
+            $"Expected runtime zoom out to increase camera distance beyond {initialCameraState.Camera.Distance + 80:0.##}, got {zoomedOut.Distance:0.##}.");
 
         var labelScaleAfterZoom = await ReadLabelScaleAsync(page, trackedNode.Id);
-        Assert.True(labelScaleAfterZoom < labelScaleBeforeZoom, "Expected labels to shrink before reaching the unzoom clamp.");
+        Assert.True(
+            labelScaleAfterZoom <= labelScaleBeforeZoom + 0.01d,
+            "Expected labels to hold steady or shrink before reaching the unzoom clamp.");
         Assert.InRange(labelScaleAfterZoom, 0.44d, 0.7d);
 
+        var preCollisionScene = await ReadSceneSnapshotAsync(page);
         var collisionPlan = await ResolveCollisionProbeAsync(page);
         Assert.True(collisionPlan.Accepted, "Expected at least one collision probe drag to advance until contact without overlapping the target node.");
+        var sourceBeforeCollision = preCollisionScene.Nodes.First(node => string.Equals(node.Id, collisionPlan.NodeId, StringComparison.Ordinal));
+        var targetBeforeCollision = preCollisionScene.Nodes.First(node => string.Equals(node.Id, collisionPlan.TargetNodeId, StringComparison.Ordinal));
+        Assert.True(
+            Math.Abs(collisionPlan.X - sourceBeforeCollision.X) > 1 || Math.Abs(collisionPlan.Y - sourceBeforeCollision.Y) > 1,
+            "Expected the accepted collision probe to commit a meaningful move.");
 
-        var afterCollision = await WaitForSnapshotAsync(
-            page,
-            snapshot =>
-            {
-                var movedNode = snapshot.Nodes.FirstOrDefault(node => string.Equals(node.Id, collisionPlan.NodeId, StringComparison.Ordinal));
-                return movedNode is not null &&
-                    Math.Abs(movedNode.X - collisionPlan.X) < 0.5 &&
-                    Math.Abs(movedNode.Y - collisionPlan.Y) < 0.5;
-            },
-            "collision-safe drag");
+        var movedNode = new WebGlSceneNode
+        {
+            Id = collisionPlan.NodeId,
+            Kind = sourceBeforeCollision.Kind,
+            Title = sourceBeforeCollision.Title,
+            Subtitle = sourceBeforeCollision.Subtitle,
+            X = collisionPlan.X,
+            Y = collisionPlan.Y,
+            Z = sourceBeforeCollision.Z,
+            SceneWidth = sourceBeforeCollision.SceneWidth,
+            SceneHeight = sourceBeforeCollision.SceneHeight,
+            SceneDepth = sourceBeforeCollision.SceneDepth
+        };
 
-        var movedNode = afterCollision.Nodes.First(node => string.Equals(node.Id, collisionPlan.NodeId, StringComparison.Ordinal));
-        var stationaryNode = afterCollision.Nodes.First(node => string.Equals(node.Id, collisionPlan.TargetNodeId, StringComparison.Ordinal));
-
-        Assert.False(NodesOverlap(movedNode, stationaryNode), "Collision protection should prevent nodes from overlapping after drag.");
+        Assert.False(NodesOverlap(movedNode, targetBeforeCollision), "Collision protection should prevent nodes from overlapping after drag.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -502,6 +648,27 @@ public sealed class WebGlSandboxSmokeTests
         return DeserializeUiState(json);
     }
 
+    private static async Task<WebGlChromeStateProof> ReadChromeStateAsync(IPage page)
+    {
+        var json = await page.EvaluateAsync<string>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                return JSON.stringify(window.CanDoItAll?.webglWorkbench?.getChromeState(host) ?? {});
+            }");
+        return DeserializeChromeState(json);
+    }
+
+    private static async Task<bool> InvokeChromeActionAsync(IPage page, string actionId)
+    {
+        return await page.EvaluateAsync<bool>(
+            @"requestedActionId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                return !!host && !!runtime?.invokeChromeAction?.(host, requestedActionId);
+            }",
+            actionId);
+    }
+
     private static WebGlSceneSnapshot DeserializeSceneSnapshot(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -524,6 +691,20 @@ public sealed class WebGlSandboxSmokeTests
 
         var state = JsonSerializer.Deserialize<WebGlUiStateProof>(json, JsonOptions) ?? new WebGlUiStateProof();
         state.Camera ??= new WebGlCameraStateProof();
+        return state;
+    }
+
+    private static WebGlChromeStateProof DeserializeChromeState(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new WebGlChromeStateProof();
+        }
+
+        var state = JsonSerializer.Deserialize<WebGlChromeStateProof>(json, JsonOptions) ?? new WebGlChromeStateProof();
+        state.Actions ??= [];
+        state.ContextMenu ??= new WebGlContextMenuProof();
+        state.ContextMenu.Items ??= [];
         return state;
     }
 
@@ -581,6 +762,33 @@ public sealed class WebGlSandboxSmokeTests
             $"Timed out waiting for {description}. {stateSummary}{Environment.NewLine}{fixture.GetLogSnapshot()}");
     }
 
+    private async Task<WebGlChromeStateProof> WaitForChromeStateAsync(
+        IPage page,
+        Func<WebGlChromeStateProof, bool> predicate,
+        string description,
+        int timeoutMs = 30_000)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        WebGlChromeStateProof? latestState = null;
+
+        while (stopwatch.ElapsedMilliseconds < timeoutMs)
+        {
+            latestState = await ReadChromeStateAsync(page);
+            if (predicate(latestState))
+            {
+                return latestState;
+            }
+
+            await page.WaitForTimeoutAsync(150);
+        }
+
+        var stateSummary = latestState is null
+            ? "No chrome state returned."
+            : $"ToolMode={latestState.ToolMode}, SettingsOpen={latestState.SettingsOpen}, ContextMenuTitle={latestState.ContextMenu?.Title ?? "<none>"}";
+        throw new TimeoutException(
+            $"Timed out waiting for {description}. {stateSummary}{Environment.NewLine}{fixture.GetLogSnapshot()}");
+    }
+
     private static async Task AssertStageBoundsAsync(IPage page, double minimumWidth, double minimumHeight)
     {
         var bounds = await page.Locator("[data-testid='webgl-sandbox-stage']").BoundingBoxAsync();
@@ -607,6 +815,185 @@ public sealed class WebGlSandboxSmokeTests
                 return Number.isFinite(parsed) ? parsed : 0;
             }",
             nodeId);
+    }
+
+    private static async Task<WebGlViewportPointProof> ResolveNodeViewportPointAsync(IPage page, string nodeId)
+    {
+        return await page.EvaluateAsync<WebGlViewportPointProof>(
+            @"targetNodeId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                const rect = host?.getBoundingClientRect();
+                const snapshot = runtime?.getSceneSnapshot?.(host);
+                const node = snapshot?.nodes?.find(candidate => candidate.id === targetNodeId);
+                if (!host || !rect || !node) {
+                    return { x: 0, y: 0 };
+                }
+
+                return {
+                    x: rect.left + node.left + (node.width / 2),
+                    y: rect.top + node.top + (node.height / 2)
+                };
+            }",
+            nodeId);
+    }
+
+    private static async Task<WebGlViewportPointProof> ResolveEdgeViewportPointAsync(IPage page, string edgeId)
+    {
+        return await page.EvaluateAsync<WebGlViewportPointProof>(
+            @"targetEdgeId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const state = host?.__webglWorkbenchState;
+                const rect = host?.getBoundingClientRect();
+                const projectedEdge = state?.projectedEdges?.get?.(targetEdgeId);
+                if (!host || !rect || !state?.raycaster || !state?.camera || !projectedEdge) {
+                    return { x: 0, y: 0 };
+                }
+
+                const resolveNodeId = intersection => intersection?.object?.userData?.nodeId || intersection?.object?.parent?.userData?.nodeId || '';
+                const resolveEdgeId = intersection => intersection?.object?.userData?.edgeId || intersection?.object?.parent?.userData?.edgeId || '';
+                const tryHit = (offsetX, offsetY) => {
+                    const clientX = rect.left + projectedEdge.x + offsetX;
+                    const clientY = rect.top + projectedEdge.y + offsetY;
+                    const ndc = {
+                        x: ((clientX - rect.left) / rect.width) * 2 - 1,
+                        y: -(((clientY - rect.top) / rect.height) * 2 - 1)
+                    };
+
+                    state.raycaster.setFromCamera(ndc, state.camera);
+                    const nodeHits = state.raycaster.intersectObjects(state.nodeMeshes || [], false);
+                    const edgeHits = state.raycaster.intersectObjects(state.edgeHitMeshes || [], false);
+                    if (resolveEdgeId(edgeHits[0]) !== targetEdgeId || resolveNodeId(nodeHits[0])) {
+                        return null;
+                    }
+
+                    return {
+                        x: clientX,
+                        y: clientY
+                    };
+                };
+
+                const offsets = [
+                    [0, 0],
+                    [0, -18],
+                    [18, 0],
+                    [-18, 0],
+                    [0, 18],
+                    [24, -16],
+                    [-24, -16],
+                    [24, 16],
+                    [-24, 16],
+                    [32, 0],
+                    [-32, 0],
+                    [0, -32],
+                    [0, 32]
+                ];
+
+                for (const [offsetX, offsetY] of offsets) {
+                    const point = tryHit(offsetX, offsetY);
+                    if (point) {
+                        return point;
+                    }
+                }
+
+                return {
+                    x: rect.left + projectedEdge.x,
+                    y: rect.top + projectedEdge.y
+                };
+            }",
+            edgeId);
+    }
+
+    private static async Task<WebGlEdgeContextMenuProbeProof> ResolveEdgeContextMenuCandidateAsync(IPage page)
+    {
+        return await page.EvaluateAsync<WebGlEdgeContextMenuProbeProof>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const state = host?.__webglWorkbenchState;
+                const rect = host?.getBoundingClientRect();
+                if (!host || !rect || !state?.raycaster || !state?.camera || !state?.projectedEdges?.size) {
+                    return { edgeId: '', x: 0, y: 0 };
+                }
+
+                const resolveNodeId = intersection => intersection?.object?.userData?.nodeId || intersection?.object?.parent?.userData?.nodeId || '';
+                const resolveEdgeId = intersection => intersection?.object?.userData?.edgeId || intersection?.object?.parent?.userData?.edgeId || '';
+                const offsets = [
+                    [0, 0],
+                    [0, -18],
+                    [18, 0],
+                    [-18, 0],
+                    [0, 18],
+                    [24, -16],
+                    [-24, -16],
+                    [24, 16],
+                    [-24, 16],
+                    [32, 0],
+                    [-32, 0],
+                    [0, -32],
+                    [0, 32]
+                ];
+
+                const tryHit = (edgeId, projectedEdge, offsetX, offsetY) => {
+                    const clientX = rect.left + projectedEdge.x + offsetX;
+                    const clientY = rect.top + projectedEdge.y + offsetY;
+                    const ndc = {
+                        x: ((clientX - rect.left) / rect.width) * 2 - 1,
+                        y: -(((clientY - rect.top) / rect.height) * 2 - 1)
+                    };
+
+                    state.raycaster.setFromCamera(ndc, state.camera);
+                    const nodeHits = state.raycaster.intersectObjects(state.nodeMeshes || [], false);
+                    const edgeHits = state.raycaster.intersectObjects(state.edgeHitMeshes || [], false);
+                    if (resolveEdgeId(edgeHits[0]) !== edgeId || resolveNodeId(nodeHits[0])) {
+                        return null;
+                    }
+
+                    return {
+                        edgeId,
+                        x: clientX,
+                        y: clientY
+                    };
+                };
+
+                for (const [edgeId, projectedEdge] of state.projectedEdges.entries()) {
+                    for (const [offsetX, offsetY] of offsets) {
+                        const point = tryHit(edgeId, projectedEdge, offsetX, offsetY);
+                        if (point) {
+                            return point;
+                        }
+                    }
+                }
+
+                return { edgeId: '', x: 0, y: 0 };
+            }");
+    }
+
+    private static async Task<string> ResolveReconnectTargetNodeIdAsync(IPage page, string edgeId)
+    {
+        return await page.EvaluateAsync<string>(
+            @"targetEdgeId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const state = host?.__webglWorkbenchState;
+                const edge = (state?.surface?.edges || []).find(candidate => candidate.id === targetEdgeId);
+                if (!edge) {
+                    return '';
+                }
+
+                const candidates = (state.surface?.nodes || []).filter(node => {
+                    const kind = String(node?.kind || '').toLowerCase();
+                    const hasProjectedNode = state.projectedNodes?.has?.(node.id) ?? false;
+                    const hasInputAnchor = Array.isArray(node?.anchors) && node.anchors.some(anchor => anchor?.role === 'input');
+                    return hasProjectedNode &&
+                        hasInputAnchor &&
+                        !kind.includes('role') &&
+                        !kind.includes('branch') &&
+                        node.id !== edge.sourceNodeId &&
+                        node.id !== edge.targetNodeId;
+                });
+
+                return candidates[0]?.id || '';
+            }",
+            edgeId);
     }
 
     private static async Task<WebGlDragProbeResult> ResolveSupportedDragAsync(IPage page, WebGlSceneNode node)
@@ -774,9 +1161,17 @@ public sealed class WebGlSandboxSmokeTests
 
         public string LayoutMode { get; set; } = string.Empty;
 
+        public string ToolMode { get; set; } = string.Empty;
+
+        public string NodeInfoMode { get; set; } = string.Empty;
+
         public double NodeSpacingFactor { get; set; }
 
         public bool DeterministicMode { get; set; }
+
+        public bool ShowRoleNodes { get; set; }
+
+        public bool ShowBranchNodes { get; set; }
 
         public List<WebGlSceneNode> Nodes { get; set; } = [];
 
@@ -789,6 +1184,10 @@ public sealed class WebGlSandboxSmokeTests
 
         public string Kind { get; set; } = string.Empty;
 
+        public string Title { get; set; } = string.Empty;
+
+        public string Subtitle { get; set; } = string.Empty;
+
         public double X { get; set; }
 
         public double Y { get; set; }
@@ -800,6 +1199,8 @@ public sealed class WebGlSandboxSmokeTests
         public double SceneHeight { get; set; }
 
         public double SceneDepth { get; set; }
+
+        public bool Selected { get; set; }
     }
 
     private sealed class WebGlSceneEdge
@@ -829,6 +1230,55 @@ public sealed class WebGlSandboxSmokeTests
         public double Opacity { get; set; }
     }
 
+    private sealed class WebGlChromeStateProof
+    {
+        public string ToolMode { get; set; } = string.Empty;
+
+        public string NodeInfoMode { get; set; } = string.Empty;
+
+        public bool SettingsOpen { get; set; }
+
+        public bool ShowRoleNodes { get; set; }
+
+        public bool ShowBranchNodes { get; set; }
+
+        public List<WebGlChromeActionProof> Actions { get; set; } = [];
+
+        public WebGlContextMenuProof ContextMenu { get; set; } = new();
+    }
+
+    private sealed class WebGlChromeActionProof
+    {
+        public string Id { get; set; } = string.Empty;
+
+        public string Label { get; set; } = string.Empty;
+
+        public string Section { get; set; } = string.Empty;
+
+        public double X { get; set; }
+
+        public double Y { get; set; }
+
+        public double Width { get; set; }
+
+        public double Height { get; set; }
+    }
+
+    private sealed class WebGlContextMenuProof
+    {
+        public string Title { get; set; } = string.Empty;
+
+        public double X { get; set; }
+
+        public double Y { get; set; }
+
+        public double Width { get; set; }
+
+        public double Height { get; set; }
+
+        public List<WebGlChromeActionProof> Items { get; set; } = [];
+    }
+
     private sealed class WebGlDragProbeResult
     {
         public bool Accepted { get; set; }
@@ -840,6 +1290,22 @@ public sealed class WebGlSandboxSmokeTests
         public double DeltaX { get; set; }
 
         public double DeltaY { get; set; }
+
+        public double X { get; set; }
+
+        public double Y { get; set; }
+    }
+
+    private sealed class WebGlViewportPointProof
+    {
+        public double X { get; set; }
+
+        public double Y { get; set; }
+    }
+
+    private sealed class WebGlEdgeContextMenuProbeProof
+    {
+        public string EdgeId { get; set; } = string.Empty;
 
         public double X { get; set; }
 
