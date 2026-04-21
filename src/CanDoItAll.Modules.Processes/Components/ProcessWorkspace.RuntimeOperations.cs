@@ -41,6 +41,7 @@ public partial class ProcessWorkspace
         ResetRuntimeCanvasState();
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
+        UpdateRuntimeRefreshLoop();
     }
 
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)

@@ -10,9 +10,18 @@
     }
     else if (Presenter.ActiveRunSummaries.Count == 0)
     {
-        <EmptyState Eyebrow="No active runs"
-                    Title="No process runs are executing right now"
-                    Description="The selected process has no active AgentFramework execution at the moment." />
+        @if (Presenter.Runs.Any(run => run.Status == ProcessRunStatus.Active))
+        {
+            <EmptyState Eyebrow="Execution starting"
+                        Title="The process run is active and waiting for live execution telemetry"
+                        Description="The launch completed and runtime steps are advancing, but no active AgentFramework execution is attached right now or the run is between step handoffs." />
+        }
+        else
+        {
+            <EmptyState Eyebrow="No active runs"
+                        Title="No process runs are executing right now"
+                        Description="The selected process has no active AgentFramework execution at the moment." />
+        }
     }
     else
     {

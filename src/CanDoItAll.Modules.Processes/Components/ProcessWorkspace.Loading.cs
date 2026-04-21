@@ -23,11 +23,13 @@ public partial class ProcessWorkspace
 
     public void Dispose()
     {
+        StopRuntimeRefreshLoop();
         CancelPendingDefinitionCanvasPersistence();
     }
 
     public async ValueTask DisposeAsync()
     {
+        StopRuntimeRefreshLoop();
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
     }
 
@@ -93,8 +95,15 @@ public partial class ProcessWorkspace
         }
 
         selectedRunId = nextSelectedRunId;
+        if ((RunIdQuery.HasValue && selectedRunId.HasValue) ||
+            (LaunchPlanIdQuery.HasValue && selectedLaunchPlanId.HasValue))
+        {
+            detailTab = "runs";
+        }
+
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
+        UpdateRuntimeRefreshLoop();
         StateHasChanged();
     }
 
