@@ -9,7 +9,7 @@ public sealed partial class ProcessesService
     public async Task<Result> TransitionStepAsync(ProcessStepTransitionRequest request, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
         try
         {
             var transitionContextResult = await LoadTransitionContextAsync(dbContext, request, cancellationToken);

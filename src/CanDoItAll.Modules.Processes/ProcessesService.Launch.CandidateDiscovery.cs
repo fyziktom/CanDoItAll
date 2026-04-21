@@ -26,13 +26,31 @@ public sealed partial class ProcessesService
                     .OrderByDescending(item => item.IsPrimary)
                     .ThenBy(item => item.PartyDisplayName)
                     .ToList());
-        var aiDirectory = await aiAgentService.ListAgentDirectoryAsync(cancellationToken);
+        var aiDirectory = await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken);
         var aiDirectoryByPartyId = aiDirectory.ToDictionary(item => item.PartyId);
+        var aiStaffingFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
+                aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
+                cancellationToken))
+            .ToDictionary(item => item.PartyId);
+        var roleSkillIds = publishedContext.RoleSkillsByRoleId.Values
+            .SelectMany(item => item)
+            .Select(item => item.SkillId)
+            .Distinct()
+            .ToList();
+        var skillNamesById = roleSkillIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await dbContext.Set<SkillDefinition>()
+                .Where(item => roleSkillIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
         var roleRecommendations = new List<ProcessLaunchRoleRecommendation>(publishedContext.Roles.Count);
 
         foreach (var role in publishedContext.Roles)
         {
             var requiredSkillIds = publishedContext.RoleSkillsByRoleId.GetValueOrDefault(role.Id) ?? [];
+            var requiredSkillIdValues = requiredSkillIds
+                .Select(item => item.SkillId)
+                .Distinct()
+                .ToList();
             var candidateList = await BuildCandidatesForRoleAsync(
                 dbContext,
                 plan,
@@ -42,6 +60,12 @@ public sealed partial class ProcessesService
                 aiDirectory,
                 aiDirectoryByPartyId,
                 cancellationToken);
+            ApplyLaunchRoleRecommendation(
+                role,
+                requiredSkillIdValues,
+                skillNamesById,
+                aiStaffingFactsByPartyId,
+                candidateList);
             var selectedCandidate = candidateList
                 .OrderByDescending(item => item.IsRecommended)
                 .ThenByDescending(item => item.Score)
@@ -61,7 +85,7 @@ public sealed partial class ProcessesService
                 DisplayName = role.DisplayName,
                 PreferredExecutorKind = role.PreferredExecutorKind,
                 RequiredSkillIdsJson = JsonSerializer.Serialize(
-                    requiredSkillIds.Select(item => item.SkillId).Distinct().ToList(),
+                    requiredSkillIdValues,
                     LaunchJsonOptions),
                 RecommendationSummary = BuildLaunchRecommendationSummary(candidateList),
                 SelectionSummary = ResolveLaunchSelectionSummary(selectedCandidate),
@@ -102,6 +126,8 @@ public sealed partial class ProcessesService
             .Distinct()
             .ToList();
         var seenPartyIds = new HashSet<Guid>();
+        var requiresTechnicalAgentBinding = RequiresTechnicalAgentBinding(plan);
+        var includeAiDirectoryCandidates = IsAiRole(role) || requiresTechnicalAgentBinding;
 
         var preferredProjectRole = role.PreferredProjectAssignmentRole
             ?? (IsAiRole(role) ? ProjectPartyAssignmentRole.AiAgent : ProjectPartyAssignmentRole.TeamMember);
@@ -118,10 +144,8 @@ public sealed partial class ProcessesService
             {
                 assignmentMatchedSkillsByPartyId.TryGetValue(assignment.PartyId, out var matchedSkillSet);
                 var matchedSkillCount = matchedSkillSet?.Count ?? 0;
-                var requiresProvisioning = IsAiRole(role) &&
-                    (!aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var linkedAiResource) ||
-                        !linkedAiResource.TechnicalAgentId.HasValue ||
-                        linkedAiResource.BindingStatus != AiResourceBindingStatus.Bound);
+                aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var linkedAiResource);
+                var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(linkedAiResource);
                 var metadata = BuildLaunchProvisioningMetadata(
                     role,
                     requiredSkillIds,
@@ -131,13 +155,11 @@ public sealed partial class ProcessesService
                 {
                     CandidateKind = ProcessLaunchCandidateKind.ProjectAssignment,
                     PartyId = assignment.PartyId,
-                    TechnicalAgentId = aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var aiAssignment)
-                        ? aiAssignment.TechnicalAgentId
-                        : null,
+                    TechnicalAgentId = linkedAiResource?.TechnicalAgentId,
                     DisplayName = assignment.PartyDisplayName,
                     ExecutorKind = assignment.PartyTypeLabel,
-                    Score = (assignment.IsPrimary ? 100m : 92m) + matchedSkillCount * 2m,
-                    IsRecommended = assignment.IsPrimary,
+                    Score = (assignment.IsPrimary ? 100m : 92m) + matchedSkillCount * 2m - (requiresProvisioning ? 36m : 0m),
+                    IsRecommended = assignment.IsPrimary && !requiresProvisioning,
                     AllowsDirectMessaging = true,
                     RequiresProvisioning = requiresProvisioning,
                     RecommendationSummary = requiredSkillIds.Count == 0
@@ -146,7 +168,7 @@ public sealed partial class ProcessesService
                             ? $"Matched project assignment role {assignment.Role} and {matchedSkillCount} required skill(s)."
                             : $"Matched project assignment role {assignment.Role}, but none of the explicit required skills are currently recorded on the assigned party.",
                     AvailabilitySummary = requiresProvisioning
-                        ? "Project assignment exists, but the technical AI binding must be provisioned before execution."
+                        ? "Project assignment exists, but a runnable internal AI resource must be provisioned before execution."
                         : "Project assignment is already attached to the project.",
                     SourceRegistryKey = $"project-assignment:{assignment.Id:D}",
                     MetadataJson = metadata,
@@ -156,7 +178,7 @@ public sealed partial class ProcessesService
             }
         }
 
-        if (IsAiRole(role))
+        if (includeAiDirectoryCandidates)
         {
             var aiMatchedSkillsByPartyId = await LoadMatchedSkillsByPartyIdAsync(
                 dbContext,
@@ -213,8 +235,7 @@ public sealed partial class ProcessesService
             }
 
             var recommendNewAiProposal = !hasRecommendedCandidate &&
-                                         requiredSkillIds.Count > 0 &&
-                                         !hasReadySkillMatchedAiCandidate;
+                                         (!hasReadySkillMatchedAiCandidate || requiresTechnicalAgentBinding);
             candidates.Add(new ProcessLaunchCandidate
             {
                 CandidateKind = ProcessLaunchCandidateKind.NewAiAgentProposal,
@@ -237,11 +258,6 @@ public sealed partial class ProcessesService
                     $"{role.DisplayName} AI agent"),
                 CreatedAtUtc = clock.GetUtcNow()
             });
-
-            return candidates
-                .OrderByDescending(item => item.Score)
-                .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .ToList();
         }
 
         var staffingSearchText = string.IsNullOrWhiteSpace(role.DisplayName)
@@ -266,24 +282,33 @@ public sealed partial class ProcessesService
         {
             matchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
             var matchedSkillCount = matchedSkillSet?.Count ?? 0;
+            aiDirectoryByPartyId.TryGetValue(staffingCandidate.PartyId, out var staffingAiResource);
+            var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(staffingAiResource);
             candidates.Add(new ProcessLaunchCandidate
             {
                 CandidateKind = ProcessLaunchCandidateKind.Workforce,
                 PartyId = staffingCandidate.PartyId,
+                TechnicalAgentId = staffingAiResource?.TechnicalAgentId,
                 DisplayName = staffingCandidate.DisplayName,
                 ExecutorKind = string.IsNullOrWhiteSpace(staffingCandidate.JobTitle)
                     ? staffingCandidate.PartyType.ToString()
                     : staffingCandidate.JobTitle,
                 Score = 60m + staffingCandidate.AvailablePercent / 5m + matchedSkillCount * 7m,
-                IsRecommended = candidates.Count == 0,
+                IsRecommended = !requiresProvisioning && candidates.Count == 0,
                 AllowsDirectMessaging = true,
-                RequiresProvisioning = false,
+                RequiresProvisioning = requiresProvisioning,
                 RecommendationSummary = matchedSkillCount > 0
                     ? $"Matched {matchedSkillCount} required skill(s) for this process role."
                     : "Matched the workforce directory using role title and availability.",
-                AvailabilitySummary = $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
+                AvailabilitySummary = requiresProvisioning
+                    ? $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available. A runnable internal AI resource will be provisioned before execution."
+                    : $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
                 SourceRegistryKey = $"crmhr-workforce:{staffingCandidate.PartyId:D}",
-                MetadataJson = "{}",
+                MetadataJson = BuildLaunchProvisioningMetadata(
+                    role,
+                    requiredSkillIds,
+                    staffingCandidate.DisplayName,
+                    staffingCandidate.PartyId),
                 CreatedAtUtc = clock.GetUtcNow()
             });
             seenPartyIds.Add(staffingCandidate.PartyId);
@@ -310,24 +335,33 @@ public sealed partial class ProcessesService
             {
                 broaderMatchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
                 var matchedSkillCount = matchedSkillSet?.Count ?? 0;
+                aiDirectoryByPartyId.TryGetValue(staffingCandidate.PartyId, out var broaderAiResource);
+                var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(broaderAiResource);
                 candidates.Add(new ProcessLaunchCandidate
                 {
                     CandidateKind = ProcessLaunchCandidateKind.Workforce,
                     PartyId = staffingCandidate.PartyId,
+                    TechnicalAgentId = broaderAiResource?.TechnicalAgentId,
                     DisplayName = staffingCandidate.DisplayName,
                     ExecutorKind = string.IsNullOrWhiteSpace(staffingCandidate.JobTitle)
                         ? staffingCandidate.PartyType.ToString()
                         : staffingCandidate.JobTitle,
                     Score = 48m + staffingCandidate.AvailablePercent / 5m + matchedSkillCount * 7m,
-                    IsRecommended = candidates.Count == 0,
+                    IsRecommended = !requiresProvisioning && candidates.Count == 0,
                     AllowsDirectMessaging = true,
-                    RequiresProvisioning = false,
+                    RequiresProvisioning = requiresProvisioning,
                     RecommendationSummary = matchedSkillCount > 0
                         ? $"Broad workforce fallback matched {matchedSkillCount} required skill(s) for this role."
                         : "Broad workforce fallback matched the CRM-HR directory by role wording and current availability.",
-                    AvailabilitySummary = $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
+                    AvailabilitySummary = requiresProvisioning
+                        ? $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available. A runnable internal AI resource will be provisioned before execution."
+                        : $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
                     SourceRegistryKey = $"crmhr-workforce-broad:{staffingCandidate.PartyId:D}",
-                    MetadataJson = "{}",
+                    MetadataJson = BuildLaunchProvisioningMetadata(
+                        role,
+                        requiredSkillIds,
+                        staffingCandidate.DisplayName,
+                        staffingCandidate.PartyId),
                     CreatedAtUtc = clock.GetUtcNow()
                 });
                 seenPartyIds.Add(staffingCandidate.PartyId);
@@ -343,6 +377,39 @@ public sealed partial class ProcessesService
             .OrderByDescending(item => item.Score)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static void ApplyLaunchRoleRecommendation(
+        ProcessRoleRequirement role,
+        IReadOnlyList<Guid> requiredSkillIds,
+        IReadOnlyDictionary<Guid, string> skillNames,
+        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId,
+        List<ProcessLaunchCandidate> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var candidate in candidates)
+        {
+            candidate.Score = ScoreCandidateForHrManager(
+                role,
+                candidate,
+                requiredSkillIds,
+                skillNames,
+                aiFactsByPartyId);
+            candidate.IsRecommended = false;
+        }
+
+        var selectedCandidate = candidates
+            .OrderByDescending(item => item.CandidateKind != ProcessLaunchCandidateKind.Gap)
+            .ThenByDescending(item => item.Score)
+            .ThenBy(item => item.RequiresProvisioning)
+            .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        selectedCandidate.IsRecommended = true;
     }
 
     private static async Task<Dictionary<Guid, HashSet<Guid>>> LoadMatchedSkillsByPartyIdAsync(

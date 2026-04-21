@@ -63,6 +63,19 @@ public sealed partial class ProcessesService
                role.PreferredExecutorKind.Contains("agent", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool RequiresTechnicalAgentBinding(ProcessLaunchPlan plan)
+        => RequiresTechnicalAgentBinding(plan.OperatingMode);
+
+    private static bool RequiresTechnicalAgentBinding(ProcessOperatingMode operatingMode)
+        => operatingMode is ProcessOperatingMode.AssistedExecution or ProcessOperatingMode.GovernedLive;
+
+    private static bool HasBoundTechnicalAgent(AiAgentListItemModel? aiResource)
+    {
+        return aiResource is not null &&
+               aiResource.TechnicalAgentId.HasValue &&
+               aiResource.BindingStatus == AiResourceBindingStatus.Bound;
+    }
+
     private static string BuildLaunchRecommendationSummary(IReadOnlyList<ProcessLaunchCandidate> candidates)
     {
         if (candidates.Count == 0)

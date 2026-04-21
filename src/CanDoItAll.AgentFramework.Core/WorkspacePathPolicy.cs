@@ -10,6 +10,8 @@ internal readonly record struct WorkspacePathResolution(
 
 internal sealed class WorkspacePathPolicy
 {
+    private const string ExternalTargetAliasRoot = "external-target";
+
     private readonly string workspaceRoot;
     private readonly string workspaceRootWithSeparator;
     private readonly WorkspaceScopeDescriptor workspaceScope;
@@ -41,6 +43,20 @@ internal sealed class WorkspacePathPolicy
             return false;
         }
 
+        var externalAliasResolution = TryResolveExternalTargetAlias(path, out var externalResolution, out var externalValidationMessage);
+        if (externalAliasResolution == ExternalTargetAliasResolution.Resolved)
+        {
+            resolution = externalResolution;
+            return true;
+        }
+
+        if (externalAliasResolution == ExternalTargetAliasResolution.Invalid)
+        {
+            resolution = default;
+            validationMessage = externalValidationMessage;
+            return false;
+        }
+
         string fullPath;
         try
         {
@@ -66,6 +82,17 @@ internal sealed class WorkspacePathPolicy
 
     public WorkspacePathResolution ResolveAccessiblePath(string path, IReadOnlyList<string>? allowedExternalRoots = null)
     {
+        var externalAliasResolution = TryResolveExternalTargetAlias(path, out var externalResolution, out var externalValidationMessage);
+        if (externalAliasResolution == ExternalTargetAliasResolution.Resolved)
+        {
+            return externalResolution;
+        }
+
+        if (externalAliasResolution == ExternalTargetAliasResolution.Invalid)
+        {
+            throw new InvalidOperationException(externalValidationMessage);
+        }
+
         var fullPath = ResolveWorkspaceFullPath(path);
         if (IsWithinWorkspace(fullPath))
         {
@@ -155,11 +182,21 @@ internal sealed class WorkspacePathPolicy
             return ".";
         }
 
-        return NormalizeRelativePath(Path.GetRelativePath(workspaceRoot, fullPath));
+        if (IsWithinWorkspace(fullPath))
+        {
+            return NormalizeRelativePath(Path.GetRelativePath(workspaceRoot, fullPath));
+        }
+
+        if (TryBuildExternalTargetAliasFromFullPath(fullPath, out var externalAlias))
+        {
+            return externalAlias;
+        }
+
+        return NormalizeAbsolutePath(fullPath);
     }
 
     public string ToDisplayPath(string fullPath)
-        => IsWithinWorkspace(fullPath) ? ToRelativePath(fullPath) : NormalizeAbsolutePath(fullPath);
+        => ToRelativePath(fullPath);
 
     public IReadOnlyList<string> NormalizeAllowedExternalRoots(IReadOnlyList<string>? allowedExternalRoots)
     {
@@ -209,6 +246,17 @@ internal sealed class WorkspacePathPolicy
 
     private string ResolveWorkspaceFullPath(string path)
     {
+        var externalAliasResolution = TryResolveExternalTargetAlias(path, out var externalResolution, out var externalValidationMessage);
+        if (externalAliasResolution == ExternalTargetAliasResolution.Resolved)
+        {
+            return externalResolution.FullPath;
+        }
+
+        if (externalAliasResolution == ExternalTargetAliasResolution.Invalid)
+        {
+            throw new InvalidOperationException(externalValidationMessage);
+        }
+
         var expandedPath = ExpandPortablePath(path);
         var candidateFullPath = Path.GetFullPath(
             Path.IsPathRooted(expandedPath)
@@ -245,11 +293,118 @@ internal sealed class WorkspacePathPolicy
             IsWorkspacePath: true);
     }
 
+    public static bool IsExternalTargetAliasPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var normalizedPath = NormalizeRelativePath(ExpandPortablePath(path));
+        return MatchesRoot(normalizedPath, ExternalTargetAliasRoot);
+    }
+
     private static string EnsureTrailingSeparator(string path)
     {
         return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
             ? path
             : path + Path.DirectorySeparatorChar;
+    }
+
+    private static bool TryBuildExternalTargetAliasFromFullPath(string fullPath, out string aliasPath)
+    {
+        aliasPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(fullPath) || !Path.IsPathRooted(fullPath))
+        {
+            return false;
+        }
+
+        var normalizedFullPath = Path.GetFullPath(fullPath);
+        var rootPath = Path.GetPathRoot(normalizedFullPath);
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            return false;
+        }
+
+        var trimmedRootPath = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (trimmedRootPath.Length != 2 ||
+            trimmedRootPath[1] != ':' ||
+            !char.IsLetter(trimmedRootPath[0]))
+        {
+            return false;
+        }
+
+        var driveLetter = char.ToUpperInvariant(trimmedRootPath[0]);
+        var relativeWithinDrive = normalizedFullPath.Length <= rootPath.Length
+            ? string.Empty
+            : normalizedFullPath[rootPath.Length..]
+                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+                .TrimStart(Path.DirectorySeparatorChar);
+
+        aliasPath = string.IsNullOrWhiteSpace(relativeWithinDrive)
+            ? $"{ExternalTargetAliasRoot}/{driveLetter}"
+            : NormalizeRelativePath(Path.Combine(ExternalTargetAliasRoot, driveLetter.ToString(), relativeWithinDrive));
+        return true;
+    }
+
+    private static ExternalTargetAliasResolution TryResolveExternalTargetAlias(
+        string? path,
+        out WorkspacePathResolution resolution,
+        out string validationMessage)
+    {
+        resolution = default;
+        validationMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return ExternalTargetAliasResolution.NotMatched;
+        }
+
+        var expandedPath = ExpandPortablePath(path);
+        if (Path.IsPathRooted(expandedPath))
+        {
+            return ExternalTargetAliasResolution.NotMatched;
+        }
+
+        var normalizedPath = NormalizeRelativePath(expandedPath);
+        if (!MatchesRoot(normalizedPath, ExternalTargetAliasRoot))
+        {
+            return ExternalTargetAliasResolution.NotMatched;
+        }
+
+        var suffix = RemoveRoot(normalizedPath, ExternalTargetAliasRoot);
+        if (string.IsNullOrWhiteSpace(suffix))
+        {
+            validationMessage = $"Path '{path}' targets the mapped external-target root. Use a path like '{ExternalTargetAliasRoot}/C/path/to/project'.";
+            return ExternalTargetAliasResolution.Invalid;
+        }
+
+        var segments = suffix
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0 ||
+            segments[0].Length != 1 ||
+            !char.IsLetter(segments[0][0]))
+        {
+            validationMessage = $"Path '{path}' uses invalid external-target syntax. Use '{ExternalTargetAliasRoot}/<drive-letter>/path/to/target'.";
+            return ExternalTargetAliasResolution.Invalid;
+        }
+
+        var driveLetter = char.ToUpperInvariant(segments[0][0]);
+        var rootPath = $"{driveLetter}:{Path.DirectorySeparatorChar}";
+        var remainingSegments = segments.Skip(1).ToArray();
+        var mappedFullPath = remainingSegments.Length == 0
+            ? rootPath
+            : Path.Combine(rootPath, Path.Combine(remainingSegments));
+        var normalizedFullPath = Path.GetFullPath(mappedFullPath);
+        var aliasPath = remainingSegments.Length == 0
+            ? $"{ExternalTargetAliasRoot}/{driveLetter}"
+            : NormalizeRelativePath(Path.Combine(ExternalTargetAliasRoot, driveLetter.ToString(), Path.Combine(remainingSegments)));
+
+        resolution = new WorkspacePathResolution(
+            FullPath: normalizedFullPath,
+            RelativePath: aliasPath,
+            DisplayPath: aliasPath,
+            IsWorkspacePath: false);
+        return ExternalTargetAliasResolution.Resolved;
     }
 
     private string ApplyManagedRootScope(string relativePath)
@@ -305,5 +460,12 @@ internal sealed class WorkspacePathPolicy
         }
 
         return relativePath[(rootRelativePath.Length + 1)..];
+    }
+
+    private enum ExternalTargetAliasResolution
+    {
+        NotMatched,
+        Resolved,
+        Invalid
     }
 }

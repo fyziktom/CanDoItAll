@@ -532,15 +532,39 @@ public partial class ProjectStructurePage
 
     private ProcessProjectStructureContext CreateProcessStartContext(ProjectStructureNode node)
     {
-        var parentNode = ResolveNode(node.ParentId);
+        var parentNode = ResolveProcessStartTargetNode(node) ?? ResolveNode(node.ParentId);
         return new ProcessProjectStructureContext
         {
             ProjectId = ProjectId,
             NodeId = node.Id,
             NodeTitle = node.Title,
-            ParentNodeId = node.ParentId,
+            ParentNodeId = parentNode?.Id,
             ParentNodeTitle = parentNode?.Title ?? string.Empty
         };
+    }
+
+    private ProjectStructureNode? ResolveProcessStartTargetNode(ProjectStructureNode node)
+    {
+        if (surface is null)
+        {
+            return ResolveNode(node.ParentId);
+        }
+
+        var projectRootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(ProjectId);
+        var authoredTargetLink = surface.Links
+            .Where(link =>
+                link.IsUserAuthored &&
+                string.Equals(link.TargetId, node.Id, StringComparison.Ordinal))
+            .OrderBy(link => link.Kind == ProjectObjectLinkKind.Uses ? 0 : 1)
+            .ThenBy(link => string.Equals(link.SourceId, projectRootNodeId, StringComparison.Ordinal) ? 1 : 0)
+            .Select(link => ResolveNode(link.SourceId))
+            .FirstOrDefault(candidate => candidate is not null);
+        if (authoredTargetLink is not null)
+        {
+            return authoredTargetLink;
+        }
+
+        return ResolveNode(node.ParentId);
     }
 
     private async Task TryLinkStartedProcessRunAsync(ProcessProjectStructureContext startContext, Guid runId)

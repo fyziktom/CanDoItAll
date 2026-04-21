@@ -21,6 +21,7 @@ public sealed class ProjectStructureProjectionLayoutRecord
     public string NodeKey { get; set; } = string.Empty;
     public double PositionX { get; set; }
     public double PositionY { get; set; }
+    public bool IsHidden { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
@@ -87,6 +88,11 @@ public sealed class ProjectStructureProjectionContext(
 
         if (layoutOverrides.TryGetValue(node.NodeKey, out var layout))
         {
+            if (layout.IsHidden)
+            {
+                return;
+            }
+
             node.PositionX = layout.PositionX;
             node.PositionY = layout.PositionY;
             node.UpdatedAtUtc = layout.UpdatedAtUtc > node.UpdatedAtUtc
@@ -936,19 +942,40 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
 {
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
-        var linkedGlobalDefinitionIds = (await context.DbContext.Set<ProjectObjectLinkRecord>()
+        var userAuthoredLinks = await context.DbContext.Set<ProjectObjectLinkRecord>()
                 .Where(item => item.ProjectId == context.ProjectId && !item.IsSystemManaged)
                 .Select(item => new
                 {
                     item.SourceNodeKey,
-                    item.TargetNodeKey
+                    item.TargetNodeKey,
+                    item.LinkKind,
+                    item.CreatedAtUtc
                 })
-                .ToListAsync(cancellationToken))
+                .ToListAsync(cancellationToken);
+        var linkedGlobalDefinitionIds = userAuthoredLinks
             .SelectMany(item => new[] { item.SourceNodeKey, item.TargetNodeKey })
             .Select(TryResolveLinkedProcessDefinitionId)
             .Where(definitionId => definitionId.HasValue)
             .Select(definitionId => definitionId!.Value)
             .ToHashSet();
+        var preferredDefinitionParentByNodeKey = userAuthoredLinks
+            .Where(item =>
+                item.LinkKind == ProjectObjectLinkKind.Uses &&
+                TryResolveLinkedProcessDefinitionId(item.TargetNodeKey).HasValue &&
+                !string.IsNullOrWhiteSpace(item.SourceNodeKey))
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ThenBy(item => item.SourceNodeKey, StringComparer.Ordinal)
+            .GroupBy(item => item.TargetNodeKey, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().SourceNodeKey, StringComparer.Ordinal);
+        var preferredRunParentByNodeKey = userAuthoredLinks
+            .Where(item =>
+                item.LinkKind == ProjectObjectLinkKind.Uses &&
+                TryResolveLinkedProcessRunId(item.TargetNodeKey).HasValue &&
+                !string.IsNullOrWhiteSpace(item.SourceNodeKey))
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ThenBy(item => item.SourceNodeKey, StringComparer.Ordinal)
+            .GroupBy(item => item.TargetNodeKey, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().SourceNodeKey, StringComparer.Ordinal);
 
         var definitions = await context.DbContext.Set<ProcessDefinition>()
             .Where(item =>
@@ -1047,6 +1074,10 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                 : 0;
             var definitionNodeKey = BuildProcessDefinitionNodeKey(definition.Definition.Id);
             var definitionPosition = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ProcessDefinition, definition.Index);
+            var definitionParentNodeKey = preferredDefinitionParentByNodeKey.TryGetValue(definitionNodeKey, out var preferredParentNodeKey) &&
+                                          !string.IsNullOrWhiteSpace(preferredParentNodeKey)
+                ? preferredParentNodeKey
+                : $"project:{context.ProjectId}";
 
             context.AddNode(new ProjectObjectRecord
             {
@@ -1061,13 +1092,18 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                     $"/projects/{context.ProjectId}/processes?processId={definition.Definition.Id}",
                     "process-definition",
                     definition.Definition.Id),
-                ParentNodeKey = $"project:{context.ProjectId}",
+                ParentNodeKey = definitionParentNodeKey,
                 PositionX = definitionPosition.X,
                 PositionY = definitionPosition.Y,
                 CreatedAtUtc = definition.Definition.CreatedAtUtc,
                 UpdatedAtUtc = definition.Definition.UpdatedAtUtc
             });
-            context.AddLink($"project:{context.ProjectId}", definitionNodeKey, ProjectObjectLinkKind.Contains);
+            var definitionIsVisible = context.ContainsNode(definitionNodeKey);
+            if (definitionIsVisible &&
+                string.Equals(definitionParentNodeKey, $"project:{context.ProjectId}", StringComparison.Ordinal))
+            {
+                context.AddLink(definitionParentNodeKey, definitionNodeKey, ProjectObjectLinkKind.Contains);
+            }
 
             if (!runsByDefinitionId.TryGetValue(definition.Definition.Id, out var definitionRuns))
             {
@@ -1080,6 +1116,15 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                 var runNodeKey = BuildProcessRunNodeKey(run.Run.Id);
                 var runPosition = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ProcessRun, definition.Index + run.Index);
                 var runNodeY = definitionPosition.Y + 70 + (run.Index * 120);
+                var runParentNodeKey = preferredRunParentByNodeKey.TryGetValue(runNodeKey, out var preferredRunParentNodeKey) &&
+                                       !string.IsNullOrWhiteSpace(preferredRunParentNodeKey)
+                    ? preferredRunParentNodeKey
+                    : definitionNodeKey;
+                if (!definitionIsVisible &&
+                    string.Equals(runParentNodeKey, definitionNodeKey, StringComparison.Ordinal))
+                {
+                    continue;
+                }
 
                 context.AddNode(new ProjectObjectRecord
                 {
@@ -1094,13 +1139,18 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                         $"/projects/{context.ProjectId}/processes?runId={run.Run.Id}",
                         "process-run",
                         run.Run.Id),
-                    ParentNodeKey = definitionNodeKey,
+                    ParentNodeKey = runParentNodeKey,
                     PositionX = runPosition.X,
                     PositionY = runNodeY,
                     CreatedAtUtc = run.Run.CreatedAtUtc,
                     UpdatedAtUtc = run.Run.UpdatedAtUtc
                 });
-                context.AddLink(definitionNodeKey, runNodeKey, ProjectObjectLinkKind.Contains);
+                if (!context.ContainsNode(runNodeKey))
+                {
+                    continue;
+                }
+
+                context.AddLink(runParentNodeKey, runNodeKey, ProjectObjectLinkKind.Contains);
 
                 if (!outputFoldersByRunId.TryGetValue(run.Run.Id, out var outputFolders))
                 {
@@ -1165,6 +1215,18 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
         }
 
         return definitionId;
+    }
+
+    private static Guid? TryResolveLinkedProcessRunId(string? nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey) ||
+            !nodeKey.StartsWith("process-run:", StringComparison.Ordinal) ||
+            !Guid.TryParse(nodeKey["process-run:".Length..], out var runId))
+        {
+            return null;
+        }
+
+        return runId;
     }
 
     private static string BuildProcessRunNodeKey(Guid runId)

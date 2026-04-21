@@ -444,6 +444,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         int stdoutLimitCharacters,
         int stderrLimitCharacters)
     {
+        var externalRootsAllowed = WorkspacePathPolicy.IsExternalTargetAliasPath(workingDirectory)
+            || targetPaths.Any(WorkspacePathPolicy.IsExternalTargetAliasPath);
         var decision = new ToolExecutionDecision(
             ToolName: toolName,
             RecipeId: recipeId,
@@ -451,8 +453,10 @@ internal sealed class WorkspaceCommandPlanBuilder
             Allowed: true,
             ApprovalRequired: approvalRequired,
             NetworkAllowed: networkAllowed,
-            ExternalRootsAllowed: false,
-            Reason: $"Recipe '{recipeId}' passed workspace policy checks.");
+            ExternalRootsAllowed: externalRootsAllowed,
+            Reason: externalRootsAllowed
+                ? $"Recipe '{recipeId}' passed workspace policy checks and may access mapped external-target aliases."
+                : $"Recipe '{recipeId}' passed workspace policy checks.");
 
         return new WorkspaceCommandPlan(
             Decision: decision,
@@ -483,10 +487,18 @@ internal sealed class WorkspaceCommandPlanBuilder
             throw new InvalidOperationException($"Workspace dotnet recipes only allow solution or project targets. '{resolution.RelativePath}' uses '{extension}'.");
         }
 
+        // External-target aliases should be executed via absolute paths because the
+        // process workspace and the external target can live in unrelated roots.
+        // A relative traversal is brittle and has already produced broken dotnet
+        // invocations against mapped targets such as external-target/C/...
+        var targetArgument = resolution.IsWorkspacePath && workingDirectoryResolution.IsWorkspacePath
+            ? Path.GetRelativePath(workingDirectoryResolution.FullPath, resolution.FullPath)
+            : resolution.FullPath;
+
         return (
             workingDirectoryResolution.FullPath,
             workingDirectoryRelative,
-            [Path.GetRelativePath(workingDirectoryResolution.FullPath, resolution.FullPath)],
+            [targetArgument],
             [resolution.RelativePath]);
     }
 

@@ -39,6 +39,8 @@ public sealed class ProjectWorkbenchRelationService(
             linkKind,
             clock.GetUtcNow(),
             cancellationToken);
+        await ClearProjectionVisibilityOverrideAsync(dbContext, projectId, sourceNodeKey, cancellationToken);
+        await ClearProjectionVisibilityOverrideAsync(dbContext, projectId, targetNodeKey, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -109,6 +111,20 @@ public sealed class ProjectWorkbenchRelationService(
             : null;
     }
 
+    private static Guid? TryResolveProcessRunId(string nodeKey)
+    {
+        return nodeKey.StartsWith("process-run:", StringComparison.Ordinal) &&
+               Guid.TryParse(nodeKey["process-run:".Length..], out var runId)
+            ? runId
+            : null;
+    }
+
+    private static bool IsProjectionLayoutResetCandidate(string nodeKey)
+    {
+        return TryResolveProcessDefinitionId(nodeKey).HasValue ||
+               TryResolveProcessRunId(nodeKey).HasValue;
+    }
+
     private static string BuildProcessDefinitionNodeKey(Guid definitionId)
     {
         return $"process-definition:{definitionId:D}";
@@ -138,8 +154,152 @@ public sealed class ProjectWorkbenchRelationService(
         }
 
         dbContext.Remove(link);
+        await ResetProjectionLayoutsAsync(
+            dbContext,
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            cancellationToken);
+        await UpdateProjectionVisibilityAfterUnlinkAsync(dbContext, projectId, sourceNodeKey, cancellationToken);
+        await UpdateProjectionVisibilityAfterUnlinkAsync(dbContext, projectId, targetNodeKey, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private static async Task ResetProjectionLayoutsAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        CancellationToken cancellationToken)
+    {
+        var projectedNodeKeys = new[] { sourceNodeKey, targetNodeKey }
+            .Where(IsProjectionLayoutResetCandidate)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (projectedNodeKeys.Length == 0)
+        {
+            return;
+        }
+
+        var layouts = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .Where(item => item.ProjectId == projectId && projectedNodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        if (layouts.Count > 0)
+        {
+            dbContext.RemoveRange(layouts);
+        }
+    }
+
+    private async Task ClearProjectionVisibilityOverrideAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey) ||
+            await HasCanonicalNodeAsync(dbContext, projectId, nodeKey, cancellationToken))
+        {
+            return;
+        }
+
+        var layout = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .SingleOrDefaultAsync(
+                item => item.ProjectId == projectId && item.NodeKey == nodeKey,
+                cancellationToken);
+        if (layout is null || !layout.IsHidden)
+        {
+            return;
+        }
+
+        layout.IsHidden = false;
+        layout.UpdatedAtUtc = clock.GetUtcNow();
+    }
+
+    private async Task UpdateProjectionVisibilityAfterUnlinkAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey) ||
+            await HasCanonicalNodeAsync(dbContext, projectId, nodeKey, cancellationToken))
+        {
+            return;
+        }
+
+        var layout = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .SingleOrDefaultAsync(
+                item => item.ProjectId == projectId && item.NodeKey == nodeKey,
+                cancellationToken);
+        var deletedIncomingLinkIds = dbContext.ChangeTracker
+            .Entries<ProjectObjectLinkRecord>()
+            .Where(entry =>
+                entry.State == EntityState.Deleted &&
+                entry.Entity.ProjectId == projectId &&
+                string.Equals(entry.Entity.TargetNodeKey, nodeKey, StringComparison.Ordinal) &&
+                !entry.Entity.IsSystemManaged)
+            .Select(entry => entry.Entity.Id)
+            .ToHashSet();
+        var hasPendingIncomingLink = dbContext.ChangeTracker
+            .Entries<ProjectObjectLinkRecord>()
+            .Any(entry =>
+                entry.State == EntityState.Added &&
+                entry.Entity.ProjectId == projectId &&
+                string.Equals(entry.Entity.TargetNodeKey, nodeKey, StringComparison.Ordinal) &&
+                !entry.Entity.IsSystemManaged);
+        var hasRemainingIncomingLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+            .AnyAsync(
+                item =>
+                    item.ProjectId == projectId &&
+                    item.TargetNodeKey == nodeKey &&
+                    !item.IsSystemManaged &&
+                    !deletedIncomingLinkIds.Contains(item.Id),
+                cancellationToken);
+        if (hasPendingIncomingLink || hasRemainingIncomingLinks)
+        {
+            if (layout is not null && layout.IsHidden)
+            {
+                layout.IsHidden = false;
+                layout.UpdatedAtUtc = clock.GetUtcNow();
+            }
+
+            return;
+        }
+
+        if (layout is null)
+        {
+            await dbContext.Set<ProjectStructureProjectionLayoutRecord>().AddAsync(
+                new ProjectStructureProjectionLayoutRecord
+                {
+                    ProjectId = projectId,
+                    NodeKey = nodeKey,
+                    PositionX = 0,
+                    PositionY = 0,
+                    IsHidden = true,
+                    UpdatedAtUtc = clock.GetUtcNow()
+                },
+                cancellationToken);
+            return;
+        }
+
+        layout.IsHidden = true;
+        layout.UpdatedAtUtc = clock.GetUtcNow();
+    }
+
+    private static async Task<bool> HasCanonicalNodeAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken)
+    {
+        return await dbContext.Set<ProjectObjectRecord>()
+            .AnyAsync(
+                item =>
+                    item.ProjectId == projectId &&
+                    item.NodeKey == nodeKey &&
+                    !item.IsSystemManaged,
+                cancellationToken);
     }
 
     public async Task<ProjectStructureNode?> ReparentObjectAsync(

@@ -146,4 +146,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Select(char.ToLowerInvariant)
             .ToArray());
     }
+
+    private static bool IsRecoverableGovernedOutcomeGap(
+        DispatchCandidate candidate,
+        string? responseText)
+    {
+        if (!RequiresGovernedStepOutcome(candidate.StepRun))
+        {
+            return false;
+        }
+
+        if (!TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome));
+    }
 }

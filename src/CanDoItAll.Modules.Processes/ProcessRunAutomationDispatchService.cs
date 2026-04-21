@@ -8,6 +8,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text;
@@ -40,7 +41,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static readonly TimeSpan FreshInProgressRecoveryGracePeriod = TimeSpan.FromMinutes(2);
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> StepDispatchGuards = [];
     private static readonly Regex RequiredToolNameRegex = new(
-        @"\b(?:workspace|browser)_[a-z0-9_]+\b",
+        @"\b(?:workspace|browser|project_structure)_[a-z0-9_]+\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex DeclaredStepOutcomeRegex = new(
         @"<!--\s*PROCESS_STEP_OUTCOME\s*(?<json>\{[^\r\n]*\})\s*-->",
@@ -74,6 +75,34 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         "workspace_stat_path",
         "workspace_read_file"
     ];
+    private static readonly string[] ImplementationProofToolNames =
+    [
+        "workspace_stat_path",
+        "workspace_read_file",
+        "workspace_dotnet_build"
+    ];
+    private sealed record PrefetchedProjectStructureGrounding(string PromptSummary, IReadOnlyList<string> SatisfiedToolNames)
+    {
+        public static PrefetchedProjectStructureGrounding Empty { get; } = new(string.Empty, []);
+
+        public bool HasPromptSummary => !string.IsNullOrWhiteSpace(PromptSummary);
+    }
+    private sealed record PrefetchedArtifactInspectionGrounding(string PromptSummary, IReadOnlyList<string> SatisfiedToolNames)
+    {
+        public static PrefetchedArtifactInspectionGrounding Empty { get; } = new(string.Empty, []);
+
+        public bool HasPromptSummary => !string.IsNullOrWhiteSpace(PromptSummary);
+    }
+    private sealed record ProjectStructureGroundingNodeData(
+        string Id,
+        string ParentId,
+        string ObjectType,
+        string ObjectSubtype,
+        string Title,
+        string Subtitle,
+        string Status,
+        string Notes,
+        string MetadataJson);
 
     public async Task DispatchAsync(
         Guid processRunId,
@@ -432,7 +461,12 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         string? recoveryDirective = null;
         var recoverableExecutionRunId = candidate.RecoveryExecutionRunId;
         var automationChatSessionId = candidate.ChatSessionId;
-        var successfulToolNamesAcrossAttempts = new HashSet<string>(StringComparer.Ordinal);
+        var prefetchedProjectStructureGrounding = await TryBuildProjectStructureGroundingAsync(candidate, cancellationToken);
+        var prefetchedArtifactInspectionGrounding = await TryBuildArtifactInspectionGroundingAsync(candidate, cancellationToken);
+        var successfulToolNamesAcrossAttempts = new HashSet<string>(
+            prefetchedProjectStructureGrounding.SatisfiedToolNames,
+            StringComparer.Ordinal);
+        successfulToolNamesAcrossAttempts.UnionWith(prefetchedArtifactInspectionGrounding.SatisfiedToolNames);
 
         for (var attemptNumber = 1; attemptNumber <= MaxExecutionAttempts; attemptNumber++)
         {
@@ -479,7 +513,15 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                     var executionResult = await workspaceService.ExecuteRunAsync(
                         new ExecutionRunRequest(
                             candidate.TechnicalAgentId,
-                            BuildExecutionPromptCore(candidate, recoveryDirective),
+                            BuildExecutionPromptCore(
+                                candidate,
+                                recoveryDirective,
+                                prefetchedProjectStructureGrounding.HasPromptSummary
+                                    ? prefetchedProjectStructureGrounding.PromptSummary
+                                    : null,
+                                prefetchedArtifactInspectionGrounding.HasPromptSummary
+                                    ? prefetchedArtifactInspectionGrounding.PromptSummary
+                                    : null),
                             ChatSessionId: automationChatSessionId,
                             Context: new ExecutionInvocationContext(
                                 SourceKind: "process-step",
@@ -498,7 +540,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                     executionRunId = executionResult.ExecutionRunId;
                     automationChatSessionId ??= executionResult.ChatSessionId;
                     detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
-                    responseText = executionResult.ResponseText;
+                    responseText = ResolvePreferredExecutionResponseText(candidate, executionResult.ResponseText, detail);
                 }
             }
 
@@ -540,7 +582,38 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 attemptNumber,
                 selectedBranchOutcomeId);
 
-            if (!ShouldRetryIncompleteSuccessfulRun(detail, missingRequiredTools, attemptNumber))
+            var providerRepair = await TryRepairAssignedAgentProvidersAsync(
+                candidate,
+                detail,
+                responseText,
+                attemptNumber,
+                cancellationToken);
+            if (providerRepair is not null)
+            {
+                logger.LogWarning(
+                    "Recovered provider failure for process run {RunId}, step {StepRunId} by switching {AffectedAgentCount} assigned internal agent(s) from '{FailedProviderName}' to '{FallbackProviderName}' ({FallbackModel}). Failure summary: {FailureSummary}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    providerRepair.AffectedAgentCount,
+                    providerRepair.FailedProviderName,
+                    providerRepair.FallbackProviderName,
+                    providerRepair.FallbackModel,
+                    providerRepair.FailureSummary);
+
+                automationChatSessionId = null;
+                recoveryDirective = BuildProviderRepairRecoveryDirective(
+                    BuildRecoveryDirective(
+                        candidate,
+                        detail,
+                        responseText,
+                        missingRequiredTools,
+                        unresolvedCriticalToolFailures,
+                        attemptNumber),
+                    providerRepair);
+                continue;
+            }
+
+            if (!ShouldRetryIncompleteSuccessfulRun(candidate, detail, responseText, missingRequiredTools, attemptNumber))
             {
                 return finalOutcome;
             }
@@ -563,6 +636,10 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 attemptNumber + 1,
                 MaxExecutionAttempts);
 
+            // Start recovery attempts on a fresh chat session so stale context or provider-side errors
+            // from the previous attempt do not poison the next governed retry.
+            automationChatSessionId = null;
+
             recoveryDirective = BuildRecoveryDirective(
                 candidate,
                 detail,
@@ -574,6 +651,169 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
         return finalOutcome
                ?? throw new InvalidOperationException($"No AgentFramework execution outcome was captured for process step '{candidate.StepRun.Id:D}'.");
+    }
+
+    private async Task<ProviderRepairOutcome?> TryRepairAssignedAgentProvidersAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string responseText,
+        int attemptNumber,
+        CancellationToken cancellationToken)
+    {
+        if (attemptNumber >= MaxExecutionAttempts ||
+            !TryResolveRecoverableProviderFailure(detail, responseText, out var failureSummary))
+        {
+            return null;
+        }
+
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agentsById = agents.ToDictionary(item => item.Id);
+        if (!agentsById.TryGetValue(candidate.TechnicalAgentId, out var currentAgent) ||
+            !currentAgent.ProviderProfileId.HasValue)
+        {
+            return null;
+        }
+
+        var failedProviderId = currentAgent.ProviderProfileId.Value;
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var failedProviderName = providers.FirstOrDefault(item => item.Id == failedProviderId)?.Name;
+        var fallbackResolution = await ResolveHealthyFallbackProviderAsync(
+            providers,
+            failedProviderId,
+            cancellationToken);
+        if (fallbackResolution is null)
+        {
+            logger.LogWarning(
+                "Process run {RunId}, step {StepRunId} detected a recoverable provider failure, but no healthy fallback provider was available for technical agent {TechnicalAgentId}. Failure summary: {FailureSummary}",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                candidate.TechnicalAgentId,
+                failureSummary);
+            return null;
+        }
+
+        var assignedPartyIds = await LoadAssignedPartyIdsAsync(
+            candidate.Run.Id,
+            candidate.StepRun.CurrentExecutorPartyId,
+            cancellationToken);
+        var assignedSummaries = assignedPartyIds.Count == 0
+            ? new Dictionary<Guid, AiTechnicalAgentDirectorySummary>()
+            : await technicalAgentBridge.GetDirectorySummariesAsync(assignedPartyIds, cancellationToken);
+        var technicalAgentIdsToRepair = assignedSummaries.Values
+            .Where(summary => summary.TechnicalAgentId.HasValue)
+            .Select(summary => summary.TechnicalAgentId!.Value)
+            .Distinct()
+            .Where(agentId =>
+                agentsById.TryGetValue(agentId, out var assignedAgent) &&
+                assignedAgent.ProviderProfileId == failedProviderId)
+            .ToHashSet();
+        technicalAgentIdsToRepair.Add(candidate.TechnicalAgentId);
+
+        var affectedAgentCount = 0;
+        foreach (var technicalAgentId in technicalAgentIdsToRepair)
+        {
+            try
+            {
+                var editor = await workspaceService.GetAgentEditorAsync(technicalAgentId, cancellationToken);
+                if (editor.ProviderProfileId == fallbackResolution.Provider.Id &&
+                    string.Equals(editor.Model, fallbackResolution.Model, StringComparison.Ordinal))
+                {
+                    affectedAgentCount++;
+                    continue;
+                }
+
+                editor.ProviderProfileId = fallbackResolution.Provider.Id;
+                editor.Model = fallbackResolution.Model;
+                await workspaceService.SaveAgentAsync(editor, cancellationToken);
+                affectedAgentCount++;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Failed to switch technical agent {TechnicalAgentId} to fallback provider '{ProviderName}' while recovering process run {RunId}, step {StepRunId}.",
+                    technicalAgentId,
+                    fallbackResolution.Provider.Name,
+                    candidate.Run.Id,
+                    candidate.StepRun.Id);
+
+                if (technicalAgentId == candidate.TechnicalAgentId)
+                {
+                    return null;
+                }
+            }
+        }
+
+        if (affectedAgentCount == 0)
+        {
+            return null;
+        }
+
+        return new ProviderRepairOutcome(
+            failedProviderName ?? detail.Run.ProviderName,
+            fallbackResolution.Provider.Name,
+            fallbackResolution.Model,
+            affectedAgentCount,
+            failureSummary);
+    }
+
+    private async Task<ProviderFallbackResolution?> ResolveHealthyFallbackProviderAsync(
+        IReadOnlyList<ProviderProfile> providers,
+        Guid failedProviderId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var provider in OrderFallbackProviders(providers, failedProviderId))
+        {
+            ProviderHealthResult healthResult;
+            try
+            {
+                healthResult = await workspaceService.TestProviderAsync(provider.Id, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogInformation(
+                    exception,
+                    "Fallback provider probe for '{ProviderName}' failed while evaluating process execution recovery.",
+                    provider.Name);
+                continue;
+            }
+
+            if (!healthResult.Success)
+            {
+                logger.LogInformation(
+                    "Skipping fallback provider '{ProviderName}' because its health probe failed: {Summary}",
+                    provider.Name,
+                    healthResult.Summary);
+                continue;
+            }
+
+            return new ProviderFallbackResolution(
+                provider,
+                ResolveFallbackProviderModel(provider, healthResult),
+                healthResult.Summary);
+        }
+
+        return null;
+    }
+
+    private async Task<IReadOnlyList<Guid>> LoadAssignedPartyIdsAsync(
+        Guid processRunId,
+        Guid? currentExecutorPartyId,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var partyIds = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == processRunId && item.PartyId.HasValue && !item.IsCapabilityGap)
+            .Select(item => item.PartyId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (currentExecutorPartyId.HasValue && !partyIds.Contains(currentExecutorPartyId.Value))
+        {
+            partyIds.Add(currentExecutorPartyId.Value);
+        }
+
+        return partyIds;
     }
 
     private async Task ProjectExecutionArtifactsAsync(
@@ -685,6 +925,68 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             completionStatus,
             cancellationToken);
         await ProjectProviderNativeBrowserArtifactsAsync(candidate, detail, workspaceRoot, cancellationToken);
+        await EnsureDecisionArtifactsForCompletedStepAsync(
+            candidate,
+            detail,
+            responseText,
+            completionStatus,
+            cancellationToken);
+    }
+
+    private async Task EnsureDecisionArtifactsForCompletedStepAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string responseText,
+        ProcessStepRunStatus completionStatus,
+        CancellationToken cancellationToken)
+    {
+        if (completionStatus != ProcessStepRunStatus.Completed || candidate.ExpectedArtifacts.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var expectedArtifact in candidate.ExpectedArtifacts.Where(ShouldAutoRecordCompletedDecisionArtifact))
+        {
+            var externalReferenceKey = BuildCompletedDecisionArtifactExternalReferenceKey(
+                candidate.StepRun.Id,
+                expectedArtifact.Id);
+            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            {
+                continue;
+            }
+
+            var recordResult = await RecordArtifactAsync(
+                new ProcessArtifactRecordRequest
+                {
+                    ProcessRunId = candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    ArtifactExpectationId = expectedArtifact.Id,
+                    ArtifactKind = expectedArtifact.ArtifactKind,
+                    Title = expectedArtifact.Title,
+                    TrustStatus = ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement),
+                    SensitivityLevel = expectedArtifact.SensitivityLevel,
+                    ProvenanceSummary = BuildCompletedDecisionArtifactProvenanceSummary(candidate, detail),
+                    AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+                        ? "Reusable for audit, release replay, and governance tuning."
+                        : expectedArtifact.AllowedFutureUsageSummary,
+                    ReviewSummary = BuildCompletedDecisionArtifactReviewSummary(candidate, detail, responseText, expectedArtifact),
+                    ExternalReferenceKey = externalReferenceKey
+                },
+                cancellationToken);
+            if (recordResult.IsSuccess)
+            {
+                candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Completed-step decision artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    expectedArtifact.Title,
+                    string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+            }
+        }
     }
 
     private async Task ProjectResponseTextArtifactsAsync(
@@ -713,8 +1015,11 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
         foreach (var expectedArtifact in candidate.ExpectedArtifacts)
         {
-            if (!TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath) ||
-                !IsResponseProjectableTextArtifact(expectedRelativePath))
+            if (!TryResolveResponseTextArtifactRelativePath(
+                    candidate,
+                    workspaceScope,
+                    expectedArtifact,
+                    out var projectedRelativePath))
             {
                 continue;
             }
@@ -724,7 +1029,6 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 continue;
             }
 
-            var projectedRelativePath = ResolveScopedManagedRelativePath(workspaceScope, expectedRelativePath);
             var externalReferenceKey = BuildResponseTextArtifactExternalReferenceKey(detail.Run.Id, projectedRelativePath);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
@@ -792,7 +1096,9 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                         TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
                         SensitivityLevel = expectedArtifact.SensitivityLevel,
                         ProvenanceSummary = $"Projected from the final assistant response for AgentFramework execution run {detail.Run.Id:D}.",
-                        AllowedFutureUsageSummary = "Process evidence and audit review.",
+                        AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+                            ? "Process evidence and audit review."
+                            : expectedArtifact.AllowedFutureUsageSummary,
                         ReviewSummary = syntheticArtifact.Summary,
                         ManagedStoragePath = placement.RelativePath,
                         ExternalReferenceKey = externalReferenceKey
@@ -1023,12 +1329,14 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
     private static string BuildExecutionPrompt(DispatchCandidate candidate)
     {
-        return BuildExecutionPromptCore(candidate, null);
+        return BuildExecutionPromptCore(candidate, null, null, null);
     }
 
     private static string BuildExecutionPromptCore(
         DispatchCandidate candidate,
-        string? recoveryDirective)
+        string? recoveryDirective,
+        string? projectStructureGroundingSummary,
+        string? artifactInspectionGroundingSummary)
     {
         var workBrief = candidate.WorkBrief;
         ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
@@ -1053,6 +1361,24 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine("Project structure context:");
             builder.AppendLine(ProcessProjectStructureContextFormatter.BuildPromptSummary(projectStructureContext));
             builder.AppendLine();
+            builder.AppendLine("Project structure execution rules:");
+            builder.AppendLine(string.IsNullOrWhiteSpace(projectStructureGroundingSummary)
+                ? $"- Use `project_structure_read` early in this step for project `{projectStructureContext.ProjectId:D}` so you inspect the live project graph instead of relying only on the selected node label."
+                : "- The dispatcher already fetched a live project-structure snapshot for this selected branch and included it below. Treat that grounding as current fact, and call `project_structure_read` yourself if you need a broader or narrower slice before you conclude.");
+            builder.AppendLine("- Do not assume the selected task node contains every requirement. Carry forward concrete stack choices, output directories, examples, UI expectations, and acceptance notes that appear on related root or sibling project-structure nodes.");
+            builder.AppendLine("- If the project structure names a concrete output directory outside the managed workspace, do not silently relocate the deliverable. Use a controlled local execution path when necessary, and record the exact external target in the artifacts you write.");
+            builder.AppendLine("- Workspace file and dotnet tools cannot use a raw absolute external path like `C:\\target\\app` directly. Convert it to the mapped alias `external-target/C/target/app` when you call `workspace_create_directory`, `workspace_write_file`, `workspace_read_file`, `workspace_stat_path`, `workspace_dotnet_new`, or `workspace_dotnet_build`.");
+            builder.AppendLine("- The mapped `external-target/<drive>/...` alias resolves to the real external target. Do not create a shadow copy in a different workspace folder.");
+            builder.AppendLine("- Treat missing project-structure inspection as incomplete work for this step.");
+            builder.AppendLine("- If project_structure_read reveals an exact external output directory for the selected work node, scaffold and implement in that exact location during this step instead of returning a note that the code does not exist yet.");
+            builder.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(projectStructureGroundingSummary))
+        {
+            builder.AppendLine("Live project structure grounding:");
+            builder.AppendLine(projectStructureGroundingSummary.Trim());
+            builder.AppendLine();
         }
 
         builder.AppendLine("Work brief:");
@@ -1073,6 +1399,13 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine("Upstream artifacts:");
         builder.AppendLine(BuildArtifactInputSummary(candidate.ArtifactInputs));
         builder.AppendLine();
+        if (!string.IsNullOrWhiteSpace(artifactInspectionGroundingSummary))
+        {
+            builder.AppendLine("Prefetched governed artifact grounding:");
+            builder.AppendLine(artifactInspectionGroundingSummary.Trim());
+            builder.AppendLine();
+        }
+
         if (candidate.BranchOutcomes.Count > 0)
         {
             builder.AppendLine("Available branch outcomes:");
@@ -1087,14 +1420,20 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine();
         }
 
+        var governedInspectionPaths = ResolveGovernedInspectionPaths(candidate.ExpectedArtifacts);
+        var artifactInputInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
+
         if (RequiresGovernedInspection(candidate.StepRun) || RequiresDurableTextArtifactWrite(candidate))
         {
             builder.AppendLine("Governed evidence rules:");
             if (RequiresGovernedInspection(candidate.StepRun))
             {
-                builder.AppendLine("- Use workspace_stat_path and workspace_read_file on the concrete workspace files or durable artifacts you cite as evidence. Do not rely only on summaries, RAG snippets, or prior notes.");
+                if (!string.IsNullOrWhiteSpace(artifactInspectionGroundingSummary))
+                {
+                    builder.AppendLine("- The dispatcher already inspected upstream governed artifact files and included the verified paths and excerpts below. Treat that grounding as current evidence, and call workspace_stat_path or workspace_read_file again only when you need broader or fresher inspection before you conclude.");
+                }
 
-                var governedInspectionPaths = ResolveGovernedInspectionPaths(candidate.ExpectedArtifacts);
+                builder.AppendLine("- Use workspace_stat_path and workspace_read_file on the concrete workspace files or durable artifacts you cite as evidence. Do not rely only on summaries, RAG snippets, or prior notes.");
                 if (governedInspectionPaths.StatPaths.Count > 0)
                 {
                     builder.AppendLine($"- Before you conclude, use workspace_stat_path on these governed output paths after they exist: {FormatPromptPathList(governedInspectionPaths.StatPaths)}.");
@@ -1108,6 +1447,16 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 if (governedInspectionPaths.StatPaths.Count > 0 && governedInspectionPaths.ReadPaths.Count == 0)
                 {
                     builder.AppendLine("- If the governed artifacts are binary-only, stat the binary files and read the nearest durable markdown, log, JSON, YAML, or text artifact that explains or imports them before you conclude.");
+                }
+
+                if (artifactInputInspectionPaths.StatPaths.Count > 0)
+                {
+                    builder.AppendLine($"- Use workspace_stat_path on these upstream durable artifact paths while you review the inherited evidence: {FormatPromptPathList(artifactInputInspectionPaths.StatPaths)}.");
+                }
+
+                if (artifactInputInspectionPaths.ReadPaths.Count > 0)
+                {
+                    builder.AppendLine($"- Use workspace_read_file on these upstream durable text artifacts before you conclude: {FormatPromptPathList(artifactInputInspectionPaths.ReadPaths)}.");
                 }
             }
 
@@ -1129,6 +1478,45 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine("- Do not claim that planned scaffold targets are missing deliverables when the current step contract explicitly tells you to create, bootstrap, or scaffold them in this step.");
         builder.AppendLine("- If a required build, test, launch, browser check, or artifact import fails, inspect the real diagnostics, fix the underlying problem, and rerun the same required validation before you conclude. Do not treat the first failed validation as acceptable end-state evidence.");
         builder.AppendLine("- Do not stop after inspection, reconnaissance, bootstrap confirmation, or a next-steps summary if required tools, concrete deliverables, or required artifacts are still missing.");
+        if (RequiresConcreteImplementationProof(candidate))
+        {
+            builder.AppendLine("- Because this is an implementation step, create the real scaffold or code now. A markdown change set alone is not a completed implementation.");
+            builder.AppendLine("- Before you conclude this implementation step, use `workspace_stat_path` on the concrete solution, project, and source paths you created or changed, and use `workspace_read_file` on at least one concrete project or source file from that implementation.");
+            builder.AppendLine("- Run `workspace_dotnet_build` against the implemented solution or project before you claim the scaffold or code is build-ready.");
+            if (artifactInputInspectionPaths.StatPaths.Count > 0 || artifactInputInspectionPaths.ReadPaths.Count > 0)
+            {
+                builder.AppendLine("- Before you implement against inherited requirements or architecture notes, inspect the upstream durable artifacts directly instead of relying only on their summaries.");
+                if (artifactInputInspectionPaths.StatPaths.Count > 0)
+                {
+                    builder.AppendLine($"- Use `workspace_stat_path` on these upstream durable artifact paths before you code against them: {FormatPromptPathList(artifactInputInspectionPaths.StatPaths)}.");
+                }
+
+                if (artifactInputInspectionPaths.ReadPaths.Count > 0)
+                {
+                    builder.AppendLine($"- Use `workspace_read_file` on these upstream durable text artifacts before you code or conclude: {FormatPromptPathList(artifactInputInspectionPaths.ReadPaths)}.");
+                }
+            }
+
+            builder.AppendLine("- If the solution or project files do not exist yet, bootstrap them now with `workspace_dotnet_new` or an approved local helper path instead of hand-writing only loose source files.");
+            builder.AppendLine("- Prefer `workspace_dotnet_new` over hand-written `.csproj` or `.sln` files when you are bootstrapping a greenfield .NET solution.");
+            builder.AppendLine("- When you bootstrap with `workspace_dotnet_new`, explicitly request a supported target framework such as `net10.0` instead of accepting an older template default.");
+            builder.AppendLine("- If you must write a new `.csproj` manually, choose a target framework supported by this workspace and repo baseline. For this repository, prefer `net10.0` unless the project structure or existing solution explicitly requires another target.");
+            builder.AppendLine("- If you create browser-facing UI files such as `.razor`, `.cshtml`, or `wwwroot` assets, scaffold a runnable web host with the required startup entrypoint. Do not leave browser UI inside a plain class library or non-host project.");
+            builder.AppendLine("- If the inherited requirements or project structure describe a browser-validated Blazor or web app, leave a runnable browser surface for downstream QA instead of concluding with service-only or library-only output.");
+            builder.AppendLine("- If no concrete solution, project, or source files exist yet, do not return Completed.");
+            if (projectStructureContext is not null)
+            {
+                builder.AppendLine("- If the project structure sends you to an external target directory, map that directory to `external-target/<drive>/...`, scaffold the real solution there, inspect those mapped paths, and run `workspace_dotnet_build` against that mapped solution or project.");
+                builder.AppendLine("- Use `workspace_pwsh_run_script` only when you need a controlled helper command to bootstrap or verify the exact external target; otherwise stay on the mapped `external-target/...` path with the workspace tools.");
+            }
+        }
+
+        if (RequiresConcreteImplementationReview(candidate))
+        {
+            builder.AppendLine("- Because this review step depends on real implementation, inspect actual solution, project, or source files in addition to managed artifacts before you conclude.");
+            builder.AppendLine("- If the implementation artifacts describe a scaffold or build result that the workspace does not contain, return Blocked with the missing concrete paths instead of approving integration readiness.");
+        }
+
         builder.AppendLine("- End your final response with exactly one HTML comment in this format: <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed|Blocked|Failed|WaitingApproval|Refused\",\"reason\":\"short concrete reason\"} -->.");
         if (candidate.BranchOutcomes.Count > 0)
         {
@@ -1354,23 +1742,84 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             : serializedResponseText;
     }
 
+    private static string ResolvePreferredExecutionResponseText(
+        DispatchCandidate candidate,
+        string? responseText,
+        ExecutionRunDetail detail)
+    {
+        var primaryResponse = string.IsNullOrWhiteSpace(responseText)
+            ? string.Empty
+            : responseText.Trim();
+        var recoveredResponse = ResolveRecoveredExecutionResponseText(detail).Trim();
+        if (string.IsNullOrWhiteSpace(primaryResponse))
+        {
+            return recoveredResponse;
+        }
+
+        if (!RequiresGovernedStepOutcome(candidate.StepRun))
+        {
+            return primaryResponse;
+        }
+
+        var primaryHasDeclaredOutcome = TryResolveDeclaredStepOutcome(primaryResponse, out _);
+        var recoveredHasDeclaredOutcome = TryResolveDeclaredStepOutcome(recoveredResponse, out _);
+        return !primaryHasDeclaredOutcome && recoveredHasDeclaredOutcome
+            ? recoveredResponse
+            : primaryResponse;
+    }
+
+    private static bool TryResolveRecoverableProviderFailure(
+        ExecutionRunDetail detail,
+        string? responseText,
+        out string failureSummary)
+    {
+        failureSummary = string.Empty;
+        var candidateTexts = new[]
+        {
+            responseText,
+            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant)?.Content,
+            ResolveLatestAssistantErrorSummary(detail.Run.SerializedSessionStateJson),
+            ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson),
+            detail.Run.ResultSummary
+        };
+
+        foreach (var candidateText in candidateTexts)
+        {
+            if (TryMapRecoverableProviderFailureSummary(candidateText, out failureSummary))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static ProcessStepRunStatus ResolveCompletionStatus(DispatchCandidate candidate, ExecutionRunDetail detail)
     {
         return ResolveCompletionStatusWithCarryForward(candidate, detail, [], detail.Run.ResultSummary);
     }
 
-    internal static bool ShouldRetryIncompleteSuccessfulRun(
+    private static bool ShouldRetryIncompleteSuccessfulRun(
+        DispatchCandidate candidate,
         ExecutionRunDetail detail,
+        string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         int attemptNumber)
     {
         var run = detail.Run;
         var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        var recoverableImplementationPunt = IsRecoverableImplementationPunt(candidate, responseText);
+        var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText);
+        var recoverableProviderFailure = TryResolveRecoverableProviderFailure(detail, responseText, out _);
         return attemptNumber < MaxExecutionAttempts
                && run.State == ExecutionState.Completed
                && run.PendingApprovals.Count == 0
                && run.Outcome == RunOutcome.Succeeded
-               && (missingRequiredTools.Count > 0 || unresolvedCriticalToolFailures.Count > 0);
+               && (missingRequiredTools.Count > 0 ||
+                   unresolvedCriticalToolFailures.Count > 0 ||
+                   recoverableImplementationPunt ||
+                   recoverableGovernedOutcomeGap ||
+                   recoverableProviderFailure);
     }
 
     private static string BuildCompletionReason(DispatchCandidate candidate, ExecutionRunDetail detail, string stepTitle)
@@ -1412,6 +1861,11 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                     .Take(2)
                     .Select(item => $"{item.ToolName}: {item.ExitSummary}"));
             return $"AgentFramework run '{run.Title}' failed because critical tool executions did not recover: {summary}";
+        }
+
+        if (TryResolveRecoverableProviderFailure(detail, responseText, out var providerFailureSummary))
+        {
+            return $"AgentFramework run '{run.Title}' failed because the assigned provider could not produce a usable response: {providerFailureSummary}";
         }
 
         if (missingRequiredTools.Count > 0)
@@ -1463,6 +1917,38 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine("Do not stop after inspection, planning, bootstrap confirmation, or a next-steps summary on this retry.");
         builder.AppendLine("Finish the concrete work, rerun every failed or missing required validation successfully, and then write every required durable artifact.");
 
+        var governedInspectionPaths = ResolveGovernedInspectionPaths(candidate.ExpectedArtifacts);
+        var artifactInputInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
+
+        if (RequiresConcreteImplementationProof(candidate))
+        {
+            builder.AppendLine("This retry is still the implementation step. Do not report that implementation or code artifacts are missing before you attempt the bootstrap or scaffold yourself.");
+            builder.AppendLine("Bootstrap the runnable solution or project now, then validate the concrete files you created with workspace_stat_path, workspace_read_file, and workspace_dotnet_build before you conclude.");
+            builder.AppendLine("If the scaffold is greenfield, create the actual solution and project files now with workspace_dotnet_new or a controlled helper path instead of writing only a source file set.");
+            builder.AppendLine("If you retry a greenfield .NET bootstrap with workspace_dotnet_new, explicitly request a supported target framework such as `net10.0` instead of accepting an older template default.");
+            builder.AppendLine("If this implementation produces browser-facing UI files such as `.razor`, `.cshtml`, or `wwwroot` assets, leave a runnable web host and startup entrypoint in place for downstream QA. Do not stop at a plain class library.");
+            if (artifactInputInspectionPaths.StatPaths.Count > 0 || artifactInputInspectionPaths.ReadPaths.Count > 0)
+            {
+                builder.AppendLine("Inspect the inherited durable artifacts directly on this retry instead of relying only on prior summaries or response text.");
+                if (artifactInputInspectionPaths.StatPaths.Count > 0)
+                {
+                    builder.AppendLine($"Use workspace_stat_path on these upstream durable artifact paths now: {FormatPromptPathList(artifactInputInspectionPaths.StatPaths)}.");
+                }
+
+                if (artifactInputInspectionPaths.ReadPaths.Count > 0)
+                {
+                    builder.AppendLine($"Use workspace_read_file on these upstream durable text artifacts now: {FormatPromptPathList(artifactInputInspectionPaths.ReadPaths)}.");
+                }
+            }
+
+            if (HasProjectStructureContext(candidate))
+            {
+                builder.AppendLine("Call project_structure_read now, resolve the exact target output directory from the project structure, and honor that path instead of improvising a different location.");
+                builder.AppendLine("If the resolved target directory is outside the managed workspace, map it to the workspace alias format `external-target/<drive>/...` for workspace file and dotnet tools.");
+                builder.AppendLine("Scaffold, inspect, and build the exact mapped external-target project now. Use workspace_pwsh_run_script only when you need a controlled helper command for the real external target.");
+            }
+        }
+
         if (unresolvedCriticalToolFailures.Any(item =>
                 string.Equals(NormalizeToolToken(item.ToolName), "workspace_dotnet_build", StringComparison.Ordinal) ||
                 string.Equals(NormalizeToolToken(item.ToolName), "workspace_pwsh_run_script", StringComparison.Ordinal)))
@@ -1470,11 +1956,24 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine("If a prior runtime host, launch script, or locked output file is blocking the build or launch retry, stop the prior host before rerunning validation. Use any provided stop script or recorded PID file when the workspace includes one.");
         }
 
-        var governedInspectionPaths = ResolveGovernedInspectionPaths(candidate.ExpectedArtifacts);
+        var frameworkRecoveryGuidance = BuildDotnetFrameworkRecoveryGuidance(
+            candidate,
+            unresolvedCriticalToolFailures,
+            responseText);
+        if (!string.IsNullOrWhiteSpace(frameworkRecoveryGuidance))
+        {
+            builder.AppendLine(frameworkRecoveryGuidance);
+        }
+
         if (missingRequiredTools.Contains("workspace_stat_path", StringComparer.Ordinal) &&
             governedInspectionPaths.StatPaths.Count > 0)
         {
             builder.AppendLine($"Use workspace_stat_path on these exact governed output paths after they exist: {FormatPromptPathList(governedInspectionPaths.StatPaths)}.");
+        }
+        else if (missingRequiredTools.Contains("workspace_stat_path", StringComparer.Ordinal) &&
+                 artifactInputInspectionPaths.StatPaths.Count > 0)
+        {
+            builder.AppendLine($"Use workspace_stat_path on these exact upstream durable artifact paths now: {FormatPromptPathList(artifactInputInspectionPaths.StatPaths)}.");
         }
 
         if (missingRequiredTools.Contains("workspace_read_file", StringComparer.Ordinal))
@@ -1483,9 +1982,27 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             {
                 builder.AppendLine($"Use workspace_read_file on these exact governed text artifacts after they exist: {FormatPromptPathList(governedInspectionPaths.ReadPaths)}.");
             }
+            else if (artifactInputInspectionPaths.ReadPaths.Count > 0)
+            {
+                builder.AppendLine($"Use workspace_read_file on these exact upstream durable text artifacts now: {FormatPromptPathList(artifactInputInspectionPaths.ReadPaths)}.");
+            }
             else if (governedInspectionPaths.StatPaths.Count > 0)
             {
                 builder.AppendLine("If the governed outputs are binary-only, read the nearest durable markdown, log, JSON, YAML, or text artifact that explains the governed outputs after you create it.");
+            }
+            else if (artifactInputInspectionPaths.StatPaths.Count > 0)
+            {
+                builder.AppendLine("If the upstream artifacts are binary-only, read the nearest durable markdown, log, JSON, YAML, or text artifact that explains them before you conclude this retry.");
+            }
+        }
+
+        if (RequiresGovernedStepOutcome(candidate.StepRun))
+        {
+            builder.AppendLine("Do not conclude this governed retry without the PROCESS_STEP_OUTCOME comment.");
+            builder.AppendLine("End the retry response with exactly one HTML comment in this format: <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed|Blocked|Failed|WaitingApproval|Refused\",\"reason\":\"short concrete reason\"} -->.");
+            if (candidate.RequiresExplicitBranchOutcomeSelection)
+            {
+                builder.AppendLine("If this retry completes onto a specific downstream branch, include the exact branchOutcomeKey from the available branch outcomes, for example <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"short concrete reason\",\"branchOutcomeKey\":\"approved\"} -->.");
             }
         }
 
@@ -1499,6 +2016,559 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         }
 
         return builder.ToString().Trim();
+    }
+
+    private async Task<PrefetchedProjectStructureGrounding> TryBuildProjectStructureGroundingAsync(
+        DispatchCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        if (!ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext) ||
+            projectStructureContext is null)
+        {
+            return PrefetchedProjectStructureGrounding.Empty;
+        }
+
+        try
+        {
+            await using var scope = serviceScopeFactory.CreateAsyncScope();
+            var projectWorkbenchServiceType = Type.GetType("CanDoItAll.Modules.Workbench.ProjectWorkbenchService, CanDoItAll.Modules.Workbench");
+            if (projectWorkbenchServiceType is null)
+            {
+                return PrefetchedProjectStructureGrounding.Empty;
+            }
+
+            var projectWorkbenchService = scope.ServiceProvider.GetService(projectWorkbenchServiceType);
+            if (projectWorkbenchService is null)
+            {
+                return PrefetchedProjectStructureGrounding.Empty;
+            }
+
+            var getStructureAsync = projectWorkbenchServiceType.GetMethod(
+                "GetStructureAsync",
+                [typeof(Guid), typeof(CancellationToken)]);
+            if (getStructureAsync is null)
+            {
+                return PrefetchedProjectStructureGrounding.Empty;
+            }
+
+            var surfaceTask = getStructureAsync.Invoke(projectWorkbenchService, [projectStructureContext.ProjectId, cancellationToken]) as Task;
+            if (surfaceTask is null)
+            {
+                return PrefetchedProjectStructureGrounding.Empty;
+            }
+
+            await surfaceTask;
+            var surface = surfaceTask.GetType().GetProperty("Result")?.GetValue(surfaceTask);
+            if (surface is null)
+            {
+                return PrefetchedProjectStructureGrounding.Empty;
+            }
+
+            var promptSummary = BuildProjectStructureGroundingSummary(surface, projectStructureContext);
+            return string.IsNullOrWhiteSpace(promptSummary)
+                ? PrefetchedProjectStructureGrounding.Empty
+                : new PrefetchedProjectStructureGrounding(
+                    promptSummary,
+                    ["project_structure_read"]);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not prefetch project structure grounding for process run {RunId}, step {StepRunId}, project {ProjectId}.",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                projectStructureContext.ProjectId);
+            return PrefetchedProjectStructureGrounding.Empty;
+        }
+    }
+
+    private async Task<PrefetchedArtifactInspectionGrounding> TryBuildArtifactInspectionGroundingAsync(
+        DispatchCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        if (candidate.ArtifactInputs.Count == 0)
+        {
+            return PrefetchedArtifactInspectionGrounding.Empty;
+        }
+
+        var artifactEntries = candidate.ArtifactInputs
+            .SelectMany(
+                artifactInput => artifactInput.Artifacts.Select(artifact => new
+                {
+                    artifactInput.SourceStepTitle,
+                    artifactInput.ExpectedArtifactTitle,
+                    Artifact = artifact
+                }))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Artifact.ManagedStoragePath))
+            .GroupBy(
+                item => WorkspaceScopeDescriptor.NormalizeRelativePath(item.Artifact.ManagedStoragePath),
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Take(4)
+            .ToList();
+        if (artifactEntries.Count == 0)
+        {
+            return PrefetchedArtifactInspectionGrounding.Empty;
+        }
+
+        try
+        {
+            var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+            var builder = new StringBuilder();
+            var satisfiedToolNames = new HashSet<string>(StringComparer.Ordinal);
+            var appendedArtifactCount = 0;
+
+            builder.AppendLine("Dispatcher pre-inspected recorded upstream durable artifacts before this step started:");
+            foreach (var artifactEntry in artifactEntries)
+            {
+                var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifactEntry.Artifact.ManagedStoragePath);
+                if (string.IsNullOrWhiteSpace(normalizedPath))
+                {
+                    continue;
+                }
+
+                var fullPath = Path.GetFullPath(Path.Combine(
+                    workspaceRoot,
+                    normalizedPath.Replace('/', Path.DirectorySeparatorChar)));
+                if (!IsWithinWorkspace(workspaceRoot, fullPath) || !File.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                var fileInfo = new FileInfo(fullPath);
+                satisfiedToolNames.Add("workspace_stat_path");
+                builder.Append("- `");
+                builder.Append(normalizedPath);
+                builder.Append("` from ");
+                builder.Append(artifactEntry.SourceStepTitle);
+                builder.Append(" -> ");
+                builder.Append(artifactEntry.Artifact.Title);
+                builder.Append(" (");
+                builder.Append(fileInfo.Length);
+                builder.Append(" bytes");
+                if (fileInfo.LastWriteTimeUtc != default)
+                {
+                    builder.Append(", updated ");
+                    builder.Append(fileInfo.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'"));
+                }
+
+                builder.AppendLine(")");
+
+                if (!string.IsNullOrWhiteSpace(artifactEntry.Artifact.ReviewSummary))
+                {
+                    builder.Append("  Review summary: ");
+                    builder.AppendLine(TrimForPrompt(artifactEntry.Artifact.ReviewSummary, 280));
+                }
+
+                if (!string.IsNullOrWhiteSpace(artifactEntry.Artifact.ProvenanceSummary))
+                {
+                    builder.Append("  Provenance: ");
+                    builder.AppendLine(TrimForPrompt(artifactEntry.Artifact.ProvenanceSummary, 280));
+                }
+
+                if (IsTextReadableManagedArtifactPath(normalizedPath))
+                {
+                    var fileContents = await File.ReadAllTextAsync(fullPath, cancellationToken);
+                    satisfiedToolNames.Add("workspace_read_file");
+                    builder.Append("  Excerpt: ");
+                    builder.AppendLine(string.IsNullOrWhiteSpace(fileContents)
+                        ? "(file is empty)"
+                        : TrimForPrompt(CollapsePromptWhitespace(fileContents), 420));
+                }
+
+                appendedArtifactCount++;
+            }
+
+            if (appendedArtifactCount == 0 || satisfiedToolNames.Count == 0)
+            {
+                return PrefetchedArtifactInspectionGrounding.Empty;
+            }
+
+            return new PrefetchedArtifactInspectionGrounding(
+                builder.ToString().Trim(),
+                satisfiedToolNames.ToList());
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not prefetch governed artifact inspection grounding for process run {RunId}, step {StepRunId}.",
+                candidate.Run.Id,
+                candidate.StepRun.Id);
+            return PrefetchedArtifactInspectionGrounding.Empty;
+        }
+    }
+
+    private static string BuildProjectStructureGroundingSummary(
+        object surface,
+        ProcessProjectStructureContext context)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        ArgumentNullException.ThrowIfNull(context);
+
+        var projectName = GetProjectStructureGroundingString(surface, "ProjectName");
+        var nodes = ExtractProjectStructureGroundingNodes(surface);
+        if (nodes.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var nodesById = nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var targetNodeId = NormalizeProjectStructureNodeId(context.ResolveTargetNodeId());
+        var selectedProcessNodeId = NormalizeProjectStructureNodeId(context.NodeId);
+        var builder = new StringBuilder();
+        builder.AppendLine($"Dispatcher fetched the live project structure for `{projectName}` and focused this prompt on the selected work branch.");
+
+        var ancestorPath = ResolveProjectStructureAncestorPath(targetNodeId, nodesById);
+        if (ancestorPath.Count > 0)
+        {
+            builder.AppendLine("Ancestor path to the target work node:");
+            AppendProjectStructureGroundingNodes(builder, ancestorPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedProcessNodeId) &&
+            nodesById.TryGetValue(selectedProcessNodeId, out var selectedProcessNode) &&
+            !string.Equals(selectedProcessNodeId, targetNodeId, StringComparison.Ordinal))
+        {
+            builder.AppendLine("Selected process node:");
+            AppendProjectStructureGroundingNodes(builder, [selectedProcessNode]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetNodeId) &&
+            nodesById.TryGetValue(targetNodeId, out var targetNode))
+        {
+            var siblingNodes = nodes
+                .Where(node =>
+                    !string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal) &&
+                    !string.Equals(node.Id, selectedProcessNodeId, StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, targetNode.ParentId, StringComparison.Ordinal))
+                .Where(HasProjectStructureGroundingSignal)
+                .OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(4)
+                .ToList();
+
+            if (siblingNodes.Count > 0)
+            {
+                builder.AppendLine("Sibling planning context under the same parent:");
+                AppendProjectStructureGroundingNodes(builder, siblingNodes);
+            }
+
+            var childNodes = nodes
+                .Where(node =>
+                    string.Equals(node.ParentId, targetNode.Id, StringComparison.Ordinal) &&
+                    !string.Equals(node.Id, selectedProcessNodeId, StringComparison.Ordinal))
+                .OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToList();
+
+            if (childNodes.Count > 0)
+            {
+                builder.AppendLine("Immediate child nodes under the target work node:");
+                AppendProjectStructureGroundingNodes(builder, childNodes);
+            }
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    private static string BuildProviderRepairRecoveryDirective(
+        string recoveryDirective,
+        ProviderRepairOutcome repairOutcome)
+    {
+        var builder = new StringBuilder();
+        builder.Append("Infrastructure recovery: the previous attempt hit a provider failure. ");
+        builder.Append("Assigned internal agents using provider '")
+            .Append(repairOutcome.FailedProviderName)
+            .Append("' were moved to '")
+            .Append(repairOutcome.FallbackProviderName)
+            .Append("' with model '")
+            .Append(repairOutcome.FallbackModel)
+            .Append("'. ");
+        builder.AppendLine($"Failure summary: {repairOutcome.FailureSummary}");
+
+        if (!string.IsNullOrWhiteSpace(recoveryDirective))
+        {
+            builder.AppendLine(recoveryDirective.Trim());
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    private static IReadOnlyList<ProviderProfile> OrderFallbackProviders(
+        IEnumerable<ProviderProfile> providers,
+        Guid failedProviderId)
+    {
+        return providers
+            .Where(item => item.IsEnabled && item.SupportsTools && item.Id != failedProviderId)
+            .OrderBy(item => item.Kind == ProviderKind.Ollama ? 0 : 1)
+            .ThenBy(item => item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ? 1 : 0)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string ResolveFallbackProviderModel(
+        ProviderProfile provider,
+        ProviderHealthResult healthResult)
+    {
+        var suggestedModels = healthResult.SuggestedModels
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (!string.IsNullOrWhiteSpace(provider.DefaultModel) &&
+            (suggestedModels.Count == 0 || suggestedModels.Contains(provider.DefaultModel, StringComparer.OrdinalIgnoreCase)))
+        {
+            return provider.DefaultModel;
+        }
+
+        return suggestedModels.FirstOrDefault()
+               ?? provider.DefaultModel;
+    }
+
+    private static IReadOnlyList<ProjectStructureGroundingNodeData> ResolveProjectStructureAncestorPath(
+        string? nodeId,
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return [];
+        }
+
+        var path = new List<ProjectStructureGroundingNodeData>();
+        var cursor = NormalizeProjectStructureNodeId(nodeId);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+
+        while (!string.IsNullOrWhiteSpace(cursor) &&
+               visited.Add(cursor) &&
+               nodesById.TryGetValue(cursor, out var node))
+        {
+            path.Add(node);
+            cursor = NormalizeProjectStructureNodeId(node.ParentId);
+        }
+
+        path.Reverse();
+        return path;
+    }
+
+    private static void AppendProjectStructureGroundingNodes(
+        StringBuilder builder,
+        IReadOnlyList<ProjectStructureGroundingNodeData> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            builder.AppendLine($"- {BuildProjectStructureGroundingNodeSummary(node)}");
+        }
+    }
+
+    private static string BuildProjectStructureGroundingNodeSummary(ProjectStructureGroundingNodeData node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var segments = new List<string>
+        {
+            $"{node.Title} ({node.Id})",
+            $"type: {node.ObjectType}/{NormalizeProjectStructureNodeSubtype(node.ObjectSubtype)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(node.Status))
+        {
+            segments.Add($"status: {CollapsePromptWhitespace(node.Status)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Subtitle))
+        {
+            segments.Add($"subtitle: {TrimProjectStructureGroundingText(node.Subtitle, 140)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Notes))
+        {
+            segments.Add($"notes: {TrimProjectStructureGroundingText(node.Notes, 320)}");
+        }
+
+        var metadataSummary = NormalizeProjectStructureMetadataSummary(node.MetadataJson);
+        if (!string.IsNullOrWhiteSpace(metadataSummary))
+        {
+            segments.Add($"metadata: {metadataSummary}");
+        }
+
+        return string.Join("; ", segments);
+    }
+
+    private static bool HasProjectStructureGroundingSignal(ProjectStructureGroundingNodeData node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        return !string.IsNullOrWhiteSpace(node.Notes) ||
+               !string.IsNullOrWhiteSpace(node.Subtitle) ||
+               !string.IsNullOrWhiteSpace(NormalizeProjectStructureMetadataSummary(node.MetadataJson));
+    }
+
+    private static string NormalizeProjectStructureNodeId(string? nodeId)
+        => string.IsNullOrWhiteSpace(nodeId) ? string.Empty : nodeId.Trim();
+
+    private static string NormalizeProjectStructureNodeSubtype(string? objectSubtype)
+        => string.IsNullOrWhiteSpace(objectSubtype) ? "default" : CollapsePromptWhitespace(objectSubtype);
+
+    private static string TrimProjectStructureGroundingText(string? value, int maxLength)
+    {
+        var collapsed = CollapsePromptWhitespace(value);
+        if (collapsed.Length <= maxLength)
+        {
+            return collapsed;
+        }
+
+        return $"{collapsed[..Math.Max(0, maxLength - 3)].TrimEnd()}...";
+    }
+
+    private static string CollapsePromptWhitespace(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(
+                value,
+                @"\s+",
+                " ",
+                RegexOptions.CultureInvariant)
+            .Trim();
+    }
+
+    private static string NormalizeProjectStructureMetadataSummary(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            var root = document.RootElement;
+            if (root.ValueKind == JsonValueKind.Object && !root.EnumerateObject().MoveNext())
+            {
+                return string.Empty;
+            }
+
+            if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() == 0)
+            {
+                return string.Empty;
+            }
+
+            return TrimProjectStructureGroundingText(JsonSerializer.Serialize(root), 320);
+        }
+        catch (JsonException)
+        {
+            return TrimProjectStructureGroundingText(metadataJson, 320);
+        }
+    }
+
+    private static IReadOnlyList<ProjectStructureGroundingNodeData> ExtractProjectStructureGroundingNodes(object surface)
+    {
+        var nodesValue = surface.GetType().GetProperty("Nodes")?.GetValue(surface) as IEnumerable;
+        if (nodesValue is null)
+        {
+            return [];
+        }
+
+        var nodes = new List<ProjectStructureGroundingNodeData>();
+        foreach (var node in nodesValue.Cast<object>())
+        {
+            var id = GetProjectStructureGroundingString(node, "Id");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            nodes.Add(new ProjectStructureGroundingNodeData(
+                id,
+                GetProjectStructureGroundingString(node, "ParentId"),
+                GetProjectStructureGroundingString(node, "ObjectType"),
+                GetProjectStructureGroundingString(node, "ObjectSubtype"),
+                GetProjectStructureGroundingString(node, "Title"),
+                GetProjectStructureGroundingString(node, "Subtitle"),
+                GetProjectStructureGroundingString(node, "Status"),
+                GetProjectStructureGroundingString(node, "Notes"),
+                GetProjectStructureGroundingString(node, "MetadataJson")));
+        }
+
+        return nodes;
+    }
+
+    private static string GetProjectStructureGroundingString(object source, string propertyName)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        return value?.ToString()?.Trim() ?? string.Empty;
+    }
+
+    private static string BuildDotnetFrameworkRecoveryGuidance(
+        DispatchCandidate candidate,
+        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        string responseText)
+    {
+        var dotnetFailureSummary = string.Join(
+            Environment.NewLine,
+            unresolvedCriticalToolFailures
+                .Where(IsFrameworkRecoverableDotnetToolFailure)
+                .Select(item => item.ExitSummary));
+        if (string.IsNullOrWhiteSpace(dotnetFailureSummary))
+        {
+            return string.Empty;
+        }
+
+        var combinedFailureText = string.Join(
+            Environment.NewLine,
+            new[] { dotnetFailureSummary, responseText }.Where(item => !string.IsNullOrWhiteSpace(item)));
+        if (!MentionsMissingDotnetFramework(combinedFailureText))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("A previous dotnet validation failed because the generated project targeted a framework/runtime that is not available in this workspace.");
+        builder.AppendLine("Inspect the generated `.csproj` files now and replace unsupported target frameworks such as `net7.0` with a supported target before rerunning the failed dotnet validation.");
+        if (RequiresConcreteImplementationProof(candidate))
+        {
+            builder.AppendLine("For new greenfield .NET projects in this repository, prefer `workspace_dotnet_new`; if you must author a project file manually, prefer `net10.0` unless the project structure or existing solution explicitly requires another target.");
+        }
+        else
+        {
+            builder.AppendLine("This retry must repair the concrete solution or project configuration, not just report the mismatch.");
+            builder.AppendLine("Update the affected `.csproj` or solution files to a supported target, then rerun the originally required dotnet validation successfully before you conclude.");
+            builder.AppendLine("If the project was bootstrapped during this process and no stricter runtime is required, prefer `net10.0` for the repaired target.");
+        }
+        return builder.ToString().Trim();
+    }
+
+    private static bool IsFrameworkRecoverableDotnetToolFailure(ToolExecutionReceiptRecord receipt)
+    {
+        ArgumentNullException.ThrowIfNull(receipt);
+
+        return string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_build", StringComparison.Ordinal) ||
+               string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_test", StringComparison.Ordinal) ||
+               string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_run", StringComparison.Ordinal) ||
+               string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_publish", StringComparison.Ordinal);
+    }
+
+    private static bool MentionsMissingDotnetFramework(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("You must install or update .NET", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("Microsoft.NETCore.App", StringComparison.OrdinalIgnoreCase) &&
+               text.Contains("was not found", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("NETSDK1045", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("is not supported by this SDK", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("TargetFramework", StringComparison.OrdinalIgnoreCase) &&
+               text.Contains("net7.0", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<ToolExecutionReceiptRecord> ResolveUnresolvedCriticalToolFailures(ExecutionRunDetail detail)
@@ -1607,6 +2677,11 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         }
 
         if (ResolveUnresolvedCriticalToolFailures(detail).Count > 0)
+        {
+            return ProcessStepRunStatus.Failed;
+        }
+
+        if (TryResolveRecoverableProviderFailure(detail, responseText, out _))
         {
             return ProcessStepRunStatus.Failed;
         }
@@ -1937,6 +3012,141 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         }
     }
 
+    private static string? ResolveLatestAssistantErrorSummary(string? serializedSessionStateJson)
+    {
+        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(serializedSessionStateJson);
+            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
+                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
+                !historyProvider.TryGetProperty("messages", out var messages) ||
+                messages.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            string? latestAssistantError = null;
+            foreach (var message in messages.EnumerateArray())
+            {
+                if (!message.TryGetProperty("role", out var roleElement) ||
+                    !string.Equals(roleElement.GetString(), "assistant", StringComparison.OrdinalIgnoreCase) ||
+                    !message.TryGetProperty("contents", out var contents) ||
+                    contents.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var content in contents.EnumerateArray())
+                {
+                    if (!TryResolveAssistantErrorSummary(content, out var assistantError))
+                    {
+                        continue;
+                    }
+
+                    latestAssistantError = assistantError;
+                }
+            }
+
+            return latestAssistantError;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryResolveAssistantErrorSummary(
+        JsonElement content,
+        out string assistantError)
+    {
+        assistantError = string.Empty;
+        var hasErrorCode = content.TryGetProperty("errorCode", out var errorCodeElement) &&
+            errorCodeElement.ValueKind == JsonValueKind.String &&
+            !string.IsNullOrWhiteSpace(errorCodeElement.GetString());
+        var contentType = content.TryGetProperty("$type", out var typeElement)
+            ? typeElement.GetString()
+            : string.Empty;
+        if (!hasErrorCode &&
+            !string.Equals(contentType, "error", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var errorCode = hasErrorCode
+            ? errorCodeElement.GetString()!.Trim()
+            : string.Empty;
+        var message = TryResolveStringProperty(content, "message")
+            ?? TryResolveStringProperty(content, "errorMessage")
+            ?? TryResolveStringProperty(content, "text")
+            ?? TryResolveStringProperty(content, "content")
+            ?? string.Empty;
+        assistantError = string.IsNullOrWhiteSpace(errorCode)
+            ? message.Trim()
+            : string.IsNullOrWhiteSpace(message)
+                ? errorCode
+                : $"{errorCode}: {message.Trim()}";
+        return !string.IsNullOrWhiteSpace(assistantError);
+    }
+
+    private static string? TryResolveStringProperty(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var propertyValue) &&
+               propertyValue.ValueKind == JsonValueKind.String
+            ? propertyValue.GetString()
+            : null;
+    }
+
+    private static bool TryMapRecoverableProviderFailureSummary(
+        string? candidateText,
+        out string failureSummary)
+    {
+        failureSummary = string.Empty;
+        if (string.IsNullOrWhiteSpace(candidateText))
+        {
+            return false;
+        }
+
+        var normalizedText = Regex.Replace(
+                candidateText,
+                @"\s+",
+                " ",
+                RegexOptions.CultureInvariant)
+            .Trim();
+        if (string.IsNullOrWhiteSpace(normalizedText))
+        {
+            return false;
+        }
+
+        if (normalizedText.Contains("insufficient_quota", StringComparison.OrdinalIgnoreCase) ||
+            normalizedText.Contains("exceeded your current quota", StringComparison.OrdinalIgnoreCase))
+        {
+            failureSummary = "Provider quota was exhausted before the agent returned a usable response.";
+            return true;
+        }
+
+        if (normalizedText.Contains("rate_limit", StringComparison.OrdinalIgnoreCase) ||
+            normalizedText.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+        {
+            failureSummary = "The assigned provider hit a rate limit before the agent returned a usable response.";
+            return true;
+        }
+
+        if (normalizedText.Contains("The provider completed without returning text.", StringComparison.OrdinalIgnoreCase) ||
+            normalizedText.Contains("provider completed without returning text", StringComparison.OrdinalIgnoreCase) ||
+            normalizedText.Contains("provider returned an empty response", StringComparison.OrdinalIgnoreCase))
+        {
+            failureSummary = "The assigned provider completed without returning text.";
+            return true;
+        }
+
+        return false;
+    }
+
     private static string TruncateForPrompt(string text, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(text) || text.Length <= maxLength)
@@ -2150,9 +3360,19 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static IReadOnlyList<string> ResolveImplicitRequiredToolNames(DispatchCandidate candidate)
     {
         var requiredToolNames = new List<string>();
+        if (HasProjectStructureContext(candidate))
+        {
+            requiredToolNames.Add("project_structure_read");
+        }
+
         if (RequiresGovernedInspection(candidate.StepRun))
         {
             requiredToolNames.AddRange(GovernedInspectionToolNames);
+        }
+
+        if (RequiresConcreteImplementationProof(candidate))
+        {
+            requiredToolNames.AddRange(ImplementationProofToolNames);
         }
 
         if (RequiresDurableTextArtifactWrite(candidate))
@@ -2166,6 +3386,21 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static bool RequiresGovernedStepOutcome(ProcessStepRun stepRun)
     {
         return stepRun.StepKind != ProcessStepKind.Start;
+    }
+
+    private static bool RequiresConcreteImplementationProof(DispatchCandidate candidate)
+    {
+        return candidate.StepRun.StepKind == ProcessStepKind.Work &&
+               (candidate.StepRun.Title.Contains("implement", StringComparison.OrdinalIgnoreCase) ||
+                candidate.ExpectedArtifacts.Any(item =>
+                    item.ArtifactKind == ProcessArtifactKind.Deliverable &&
+                    item.Title.Contains("change set", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool RequiresConcreteImplementationReview(DispatchCandidate candidate)
+    {
+        return candidate.StepRun.Title.Contains("peer review", StringComparison.OrdinalIgnoreCase) ||
+               candidate.StepRun.Title.Contains("integration readiness", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool RequiresGovernedInspection(ProcessStepRun stepRun)
@@ -2189,6 +3424,45 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
             return IsResponseProjectableTextArtifact(relativePath);
         });
+    }
+
+    private static bool HasProjectStructureContext(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        return ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out _);
+    }
+
+    private static bool IsRecoverableImplementationPunt(
+        DispatchCandidate candidate,
+        string? responseText)
+    {
+        if (!RequiresConcreteImplementationProof(candidate) ||
+            !TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) ||
+            declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
+            string.IsNullOrWhiteSpace(declaredOutcome.Reason))
+        {
+            return false;
+        }
+
+        var normalizedReason = Regex.Replace(
+                declaredOutcome.Reason,
+                @"\s+",
+                " ",
+                RegexOptions.CultureInvariant)
+            .Trim()
+            .ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(normalizedReason))
+        {
+            return false;
+        }
+
+        return normalizedReason.Contains("no implementation", StringComparison.Ordinal) ||
+               normalizedReason.Contains("no code artifact", StringComparison.Ordinal) ||
+               normalizedReason.Contains("bootstrap and implement", StringComparison.Ordinal) ||
+               normalizedReason.Contains("proceed to bootstrap", StringComparison.Ordinal) ||
+               normalizedReason.Contains("scaffold", StringComparison.Ordinal) ||
+               normalizedReason.Contains("before marking as completed", StringComparison.Ordinal);
     }
 
     private static bool IsHardRequiredProcessToolName(string toolName)
@@ -2362,6 +3636,11 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static string BuildExternalReferenceKey(ExecutionArtifactRecord artifact)
     {
         return $"agentframework-artifact:{artifact.Id:D}";
+    }
+
+    private static string BuildCompletedDecisionArtifactExternalReferenceKey(Guid stepRunId, Guid artifactExpectationId)
+    {
+        return $"process-step-decision:{stepRunId:D}:{artifactExpectationId:D}";
     }
 
     private static string BuildProviderNativeBrowserArtifactExternalReferenceKey(Guid executionRunId, string relativePath)
@@ -2915,6 +4194,31 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         return new GovernedInspectionPaths(statPaths.ToList(), readPaths.ToList());
     }
 
+    private static GovernedInspectionPaths ResolveArtifactInputInspectionPaths(IReadOnlyList<DispatchArtifactInput> artifactInputs)
+    {
+        var statPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var readPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var artifactInput in artifactInputs)
+        {
+            foreach (var artifact in artifactInput.Artifacts)
+            {
+                var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.ManagedStoragePath);
+                if (string.IsNullOrWhiteSpace(normalizedPath))
+                {
+                    continue;
+                }
+
+                statPaths.Add(normalizedPath);
+                if (IsTextReadableManagedArtifactPath(normalizedPath))
+                {
+                    readPaths.Add(normalizedPath);
+                }
+            }
+        }
+
+        return new GovernedInspectionPaths(statPaths.ToList(), readPaths.ToList());
+    }
+
     private static string FormatPromptPathList(IReadOnlyList<string> relativePaths)
     {
         return string.Join(", ", relativePaths.Select(relativePath => $"`{relativePath}`"));
@@ -2945,6 +4249,62 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         var extension = Path.GetExtension(relativePath);
         return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryResolveResponseTextArtifactRelativePath(
+        DispatchCandidate candidate,
+        WorkspaceScopeDescriptor workspaceScope,
+        DispatchArtifactExpectation expectedArtifact,
+        out string relativePath)
+    {
+        if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var declaredRelativePath))
+        {
+            if (!IsResponseProjectableTextArtifact(declaredRelativePath))
+            {
+                relativePath = string.Empty;
+                return false;
+            }
+
+            relativePath = ResolveScopedManagedRelativePath(workspaceScope, declaredRelativePath);
+            return !string.IsNullOrWhiteSpace(relativePath);
+        }
+
+        if (!CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact))
+        {
+            relativePath = string.Empty;
+            return false;
+        }
+
+        relativePath = ResolveScopedManagedRelativePath(
+            workspaceScope,
+            BuildFallbackResponseTextArtifactRelativePath(candidate, expectedArtifact));
+        return !string.IsNullOrWhiteSpace(relativePath);
+    }
+
+    private static bool CanProjectResponseTextArtifactWithoutDeclaredPath(DispatchArtifactExpectation expectedArtifact)
+    {
+        return expectedArtifact.ArtifactKind is ProcessArtifactKind.Brief
+            or ProcessArtifactKind.Checklist
+            or ProcessArtifactKind.Prompt
+            or ProcessArtifactKind.Transcript;
+    }
+
+    private static string BuildFallbackResponseTextArtifactRelativePath(
+        DispatchCandidate candidate,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        var expectedSlug = FileSafeSlugBuilder.Build(expectedArtifact.Title);
+        if (string.IsNullOrWhiteSpace(expectedSlug))
+        {
+            expectedSlug = "artifact";
+        }
+
+        return WorkspaceScopeDescriptor.NormalizeRelativePath(
+            Path.Combine(
+                "artifacts",
+                "process-runs",
+                candidate.Run.Id.ToString("D"),
+                $"{candidate.StepRun.Sequence + 1:00}-{expectedSlug}.md"));
     }
 
     private static bool IsTextReadableManagedArtifactPath(string relativePath)
@@ -2979,6 +4339,106 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static string BuildResponseTextArtifactExternalReferenceKey(Guid executionRunId, string relativePath)
     {
         return $"assistant-response|{executionRunId:D}|{NormalizeManagedRelativePathForComparison(relativePath)}";
+    }
+
+    private static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
+    {
+        return expectedArtifact.IsRequired &&
+               expectedArtifact.ArtifactKind == ProcessArtifactKind.Decision &&
+               expectedArtifact.TrustRequirement is ProcessArtifactTrustRequirement.ReviewRequired or ProcessArtifactTrustRequirement.HumanApproved;
+    }
+
+    private static ProcessArtifactTrustStatus ResolveCompletedDecisionArtifactTrustStatus(
+        ProcessArtifactTrustRequirement trustRequirement)
+    {
+        return trustRequirement switch
+        {
+            ProcessArtifactTrustRequirement.HumanApproved => ProcessArtifactTrustStatus.Approved,
+            _ => ProcessArtifactTrustStatus.ReviewRequired
+        };
+    }
+
+    private static string BuildCompletedDecisionArtifactProvenanceSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        var executorName = string.IsNullOrWhiteSpace(candidate.StepRun.CurrentExecutorName)
+            ? "the assigned approver"
+            : candidate.StepRun.CurrentExecutorName.Trim();
+        return $"Recorded from the governed step outcome for AgentFramework execution run {detail.Run.Id:D} by {executorName}.";
+    }
+
+    private static string BuildCompletedDecisionArtifactReviewSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string responseText,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        var executorName = string.IsNullOrWhiteSpace(candidate.StepRun.CurrentExecutorName)
+            ? "The assigned approver"
+            : candidate.StepRun.CurrentExecutorName.Trim();
+        var summary = ResolveCompletedDecisionArtifactOutcomeSummary(candidate, detail, responseText);
+        var builder = new StringBuilder();
+        builder.Append(executorName);
+        builder.Append(" completed step '");
+        builder.Append(candidate.StepRun.Title);
+        builder.Append("' and recorded decision artifact '");
+        builder.Append(expectedArtifact.Title);
+        builder.Append("'.");
+
+        if (!string.IsNullOrWhiteSpace(summary))
+        {
+            builder.Append(' ');
+            builder.Append(EnsureTerminalPunctuation(summary));
+        }
+
+        if (!string.IsNullOrWhiteSpace(expectedArtifact.ValidationRequirementSummary))
+        {
+            builder.Append(" Validation expectation: ");
+            builder.Append(EnsureTerminalPunctuation(expectedArtifact.ValidationRequirementSummary.Trim()));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ResolveCompletedDecisionArtifactOutcomeSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string responseText)
+    {
+        if (TryResolveDeclaredStepOutcome(responseText, out var declaredOutcome) &&
+            !string.IsNullOrWhiteSpace(declaredOutcome.Reason))
+        {
+            return declaredOutcome.Reason.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.StepRun.DecisionSummary))
+        {
+            return candidate.StepRun.DecisionSummary.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(detail.Run.ResultSummary))
+        {
+            return detail.Run.ResultSummary.Trim();
+        }
+
+        return string.Empty;
+    }
+
+    private static string EnsureTerminalPunctuation(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.EndsWith('.') || trimmed.EndsWith('!') || trimmed.EndsWith('?'))
+        {
+            return trimmed;
+        }
+
+        return $"{trimmed}.";
     }
 
     private static string ResolveScopedManagedRelativePath(WorkspaceScopeDescriptor workspaceScope, string relativePath)
@@ -3128,7 +4588,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 item.IsRequired,
                 item.TrustRequirement,
                 item.SensitivityLevel,
-                item.ValidationRequirementSummary))
+                item.ValidationRequirementSummary,
+                item.AllowedFutureUsageSummary))
             .ToListAsync(cancellationToken);
     }
 
@@ -3163,7 +4624,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         bool IsRequired,
         ProcessArtifactTrustRequirement TrustRequirement,
         ProcessSensitivityLevel SensitivityLevel,
-        string ValidationRequirementSummary);
+        string ValidationRequirementSummary,
+        string AllowedFutureUsageSummary);
 
     private sealed record DispatchArtifactInput(
         string SourceStepTitle,
@@ -3189,6 +4651,18 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         IReadOnlyList<string> MissingRequiredTools,
         int AttemptNumber,
         Guid? SelectedBranchOutcomeId);
+
+    private sealed record ProviderFallbackResolution(
+        ProviderProfile Provider,
+        string Model,
+        string HealthSummary);
+
+    private sealed record ProviderRepairOutcome(
+        string FailedProviderName,
+        string FallbackProviderName,
+        string FallbackModel,
+        int AffectedAgentCount,
+        string FailureSummary);
 
     private readonly record struct DeclaredStepOutcome(
         ProcessStepRunStatus Status,

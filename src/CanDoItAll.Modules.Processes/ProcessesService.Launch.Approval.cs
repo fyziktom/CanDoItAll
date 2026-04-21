@@ -18,7 +18,7 @@ public sealed partial class ProcessesService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
         logger.LogInformation(
             "Submitting launch plan {LaunchPlanId} for approval. RequestedBy={RequestedBy}.",
             launchPlanId,
@@ -200,7 +200,7 @@ public sealed partial class ProcessesService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
 
         try
         {

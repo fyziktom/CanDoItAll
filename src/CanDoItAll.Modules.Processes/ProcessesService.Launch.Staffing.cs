@@ -8,6 +8,26 @@ namespace CanDoItAll.Modules.Processes;
 public sealed partial class ProcessesService
 {
     private const string HrStaffingManagerDisplayName = "HR Staffing Manager";
+    private static readonly HashSet<string> RoleKeywordStopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "and",
+        "the",
+        "for",
+        "with",
+        "from",
+        "this",
+        "that",
+        "who",
+        "able",
+        "into",
+        "before",
+        "after",
+        "each",
+        "current",
+        "must",
+        "keep",
+        "actual"
+    };
 
     public async Task<Result> MatchLaunchPlanWithHrManagerAsync(
         Guid launchPlanId,
@@ -19,8 +39,11 @@ public sealed partial class ProcessesService
             return Result.Failure(Error.Validation("Launch plan is required.", "processes.launch.plan-required"));
         }
 
+        // Keep projection repair outside the launch-plan transaction to avoid self-blocking SQLite writes.
+        await aiAgentService.SynchronizeDirectoryProjectionAsync(cancellationToken);
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
 
         try
         {
@@ -55,7 +78,7 @@ public sealed partial class ProcessesService
                 .ToDictionary(group => group.Key, group => group.ToList());
             var changedRoleIds = new HashSet<Guid>();
             var skillNames = await LoadSkillNamesAsync(dbContext, roles, cancellationToken);
-            var aiFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsAsync(
+            var aiFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
                     candidates
                         .Where(item => item.PartyId.HasValue)
                         .Select(item => item.PartyId!.Value)
@@ -175,10 +198,13 @@ public sealed partial class ProcessesService
             return [];
         }
 
+        var requiresTechnicalAgentBinding = RequiresTechnicalAgentBinding(plan);
         var seenPartyIds = existingCandidates
             .Where(item => item.PartyId.HasValue)
             .Select(item => item.PartyId!.Value)
             .ToHashSet();
+        var aiDirectoryByPartyId = (await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken))
+            .ToDictionary(item => item.PartyId);
         var broaderStaffingCandidates = await hrService.SearchStaffingCandidatesAsync(
             null,
             searchText,
@@ -199,25 +225,40 @@ public sealed partial class ProcessesService
         {
             matchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
             var matchedSkillCount = matchedSkillSet?.Count ?? 0;
+            aiDirectoryByPartyId.TryGetValue(staffingCandidate.PartyId, out var staffingAiResource);
+            var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(staffingAiResource);
             supplementalCandidates.Add(new ProcessLaunchCandidate
             {
                 LaunchPlanRoleId = role.Id,
                 CandidateKind = ProcessLaunchCandidateKind.Workforce,
                 PartyId = staffingCandidate.PartyId,
+                TechnicalAgentId = staffingAiResource?.TechnicalAgentId,
                 DisplayName = staffingCandidate.DisplayName,
                 ExecutorKind = string.IsNullOrWhiteSpace(staffingCandidate.JobTitle)
                     ? staffingCandidate.PartyType.ToString()
                     : staffingCandidate.JobTitle,
-                Score = 44m + staffingCandidate.AvailablePercent / 5m + matchedSkillCount * 6m,
-                IsRecommended = supplementalCandidates.Count == 0 && matchedSkillCount > 0,
+                Score = 44m + staffingCandidate.AvailablePercent / 5m + matchedSkillCount * 6m - (requiresProvisioning ? 8m : 0m),
+                IsRecommended = !requiresProvisioning && supplementalCandidates.Count == 0 && matchedSkillCount > 0,
                 AllowsDirectMessaging = true,
-                RequiresProvisioning = false,
+                RequiresProvisioning = requiresProvisioning,
                 RecommendationSummary = matchedSkillCount > 0
                     ? $"{HrStaffingManagerDisplayName} matched {matchedSkillCount} recorded skill(s) from the broader workforce directory."
                     : $"{HrStaffingManagerDisplayName} matched this resource from the broader workforce directory using the role wording and availability.",
-                AvailabilitySummary = $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
+                AvailabilitySummary = requiresProvisioning
+                    ? $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available. A runnable internal AI resource will be provisioned before execution."
+                    : $"{staffingCandidate.AvailabilityState} / {staffingCandidate.AvailablePercent:0.#}% available",
                 SourceRegistryKey = $"crmhr-workforce-hr-manager:{staffingCandidate.PartyId:D}",
-                MetadataJson = "{}",
+                MetadataJson = BuildLaunchProvisioningMetadata(
+                    new ProcessRoleRequirement
+                    {
+                        Id = role.RoleRequirementId,
+                        DisplayName = role.DisplayName,
+                        Key = role.RoleKey,
+                        PreferredExecutorKind = role.PreferredExecutorKind
+                    },
+                    requiredSkillIds,
+                    staffingCandidate.DisplayName,
+                    staffingCandidate.PartyId),
                 CreatedAtUtc = clock.GetUtcNow()
             });
         }
@@ -233,6 +274,8 @@ public sealed partial class ProcessesService
                              item.PartyTypeLabel.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                              item.Notes.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
             {
+                aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var linkedAiResource);
+                var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(linkedAiResource);
                 supplementalCandidates.Add(new ProcessLaunchCandidate
                 {
                     LaunchPlanRoleId = role.Id,
@@ -240,14 +283,27 @@ public sealed partial class ProcessesService
                     PartyId = assignment.PartyId,
                     DisplayName = assignment.PartyDisplayName,
                     ExecutorKind = assignment.PartyTypeLabel,
-                    Score = assignment.IsPrimary ? 70m : 58m,
-                    IsRecommended = assignment.IsPrimary,
+                    TechnicalAgentId = linkedAiResource?.TechnicalAgentId,
+                    Score = (assignment.IsPrimary ? 70m : 58m) - (requiresProvisioning ? 8m : 0m),
+                    IsRecommended = assignment.IsPrimary && !requiresProvisioning,
                     AllowsDirectMessaging = true,
-                    RequiresProvisioning = false,
+                    RequiresProvisioning = requiresProvisioning,
                     RecommendationSummary = $"{HrStaffingManagerDisplayName} reused the existing project assignment for role {assignment.Role}.",
-                    AvailabilitySummary = "Project assignment is already attached to the target project.",
+                    AvailabilitySummary = requiresProvisioning
+                        ? "Project assignment is attached to the target project, and a runnable internal AI resource will be provisioned before execution."
+                        : "Project assignment is already attached to the target project.",
                     SourceRegistryKey = $"project-assignment-hr-manager:{assignment.Id:D}",
-                    MetadataJson = "{}",
+                    MetadataJson = BuildLaunchProvisioningMetadata(
+                        new ProcessRoleRequirement
+                        {
+                            Id = role.RoleRequirementId,
+                            DisplayName = role.DisplayName,
+                            Key = role.RoleKey,
+                            PreferredExecutorKind = role.PreferredExecutorKind
+                        },
+                        requiredSkillIds,
+                        assignment.PartyDisplayName,
+                        assignment.PartyId),
                     CreatedAtUtc = clock.GetUtcNow()
                 });
             }
@@ -267,8 +323,54 @@ public sealed partial class ProcessesService
         IReadOnlyDictionary<Guid, string> skillNames,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId)
     {
+        return ScoreCandidateForRole(
+            role.DisplayName,
+            role.RoleKey,
+            role.PreferredExecutorKind,
+            [],
+            IsAiRoleFromLaunchRole(role),
+            candidate,
+            requiredSkillIds,
+            skillNames,
+            aiFactsByPartyId);
+    }
+
+    private static decimal ScoreCandidateForHrManager(
+        ProcessRoleRequirement role,
+        ProcessLaunchCandidate candidate,
+        IReadOnlyList<Guid> requiredSkillIds,
+        IReadOnlyDictionary<Guid, string> skillNames,
+        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId)
+    {
+        return ScoreCandidateForRole(
+            role.DisplayName,
+            role.Key,
+            role.PreferredExecutorKind,
+            [role.Purpose, role.StaffingIntent, role.SnapshotSummary],
+            IsAiRole(role),
+            candidate,
+            requiredSkillIds,
+            skillNames,
+            aiFactsByPartyId);
+    }
+
+    private static decimal ScoreCandidateForRole(
+        string displayName,
+        string roleKey,
+        string preferredExecutorKind,
+        IReadOnlyList<string?> additionalRoleContext,
+        bool prefersAiProposal,
+        ProcessLaunchCandidate candidate,
+        IReadOnlyList<Guid> requiredSkillIds,
+        IReadOnlyDictionary<Guid, string> skillNames,
+        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId)
+    {
         var score = candidate.Score;
-        var keywords = BuildRoleMatchingKeywords(role);
+        var keywords = BuildRoleMatchingKeywords(
+            displayName,
+            roleKey,
+            preferredExecutorKind,
+            additionalRoleContext);
 
         var candidateText = string.Join(
             ' ',
@@ -316,6 +418,8 @@ public sealed partial class ProcessesService
                 : -8m;
         }
 
+        score += ScorePreferredExecutorFit(preferredExecutorKind, candidate);
+
         if (candidate.RequiresProvisioning)
         {
             score -= 4m;
@@ -323,26 +427,71 @@ public sealed partial class ProcessesService
 
         if (candidate.CandidateKind == ProcessLaunchCandidateKind.NewAiAgentProposal)
         {
-            score += IsAiRoleFromLaunchRole(role) ? 8m : -30m;
+            score += prefersAiProposal ? 8m : -30m;
+        }
+
+        if (candidate.CandidateKind == ProcessLaunchCandidateKind.Gap)
+        {
+            score -= 120m;
         }
 
         return score;
     }
 
-    private static IReadOnlyList<string> BuildRoleMatchingKeywords(ProcessLaunchPlanRole role)
+    private static decimal ScorePreferredExecutorFit(string preferredExecutorKind, ProcessLaunchCandidate candidate)
     {
-        return string.Join(
-                ' ',
-                new[]
-                {
-                    role.DisplayName,
-                    role.RoleKey,
-                    role.PreferredExecutorKind
-                }.Where(item => !string.IsNullOrWhiteSpace(item)))
-            .Split([' ', '-', '/', '_', ',', '.'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(item => item.Length >= 3)
+        if (string.IsNullOrWhiteSpace(preferredExecutorKind))
+        {
+            return 0m;
+        }
+
+        var prefersPerson = preferredExecutorKind.Contains("person", StringComparison.OrdinalIgnoreCase);
+        var prefersAgent = preferredExecutorKind.Contains("agent", StringComparison.OrdinalIgnoreCase) ||
+                           preferredExecutorKind.Contains("ai", StringComparison.OrdinalIgnoreCase);
+        var candidateIsAi = candidate.CandidateKind is ProcessLaunchCandidateKind.AiResource or ProcessLaunchCandidateKind.NewAiAgentProposal ||
+                            candidate.ExecutorKind.Contains("agent", StringComparison.OrdinalIgnoreCase) ||
+                            candidate.ExecutorKind.Contains("ai", StringComparison.OrdinalIgnoreCase);
+
+        if (prefersPerson && !prefersAgent)
+        {
+            return candidateIsAi ? -10m : 10m;
+        }
+
+        if (prefersAgent && !prefersPerson)
+        {
+            return candidateIsAi ? 10m : -6m;
+        }
+
+        return candidateIsAi ? 2m : 1m;
+    }
+
+    private static IReadOnlyList<string> BuildRoleMatchingKeywords(
+        string displayName,
+        string roleKey,
+        string preferredExecutorKind,
+        IReadOnlyList<string?> additionalRoleContext)
+    {
+        return new[] { displayName, roleKey, preferredExecutorKind }
+            .Concat(additionalRoleContext)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .SelectMany(item => item!.Split([' ', '-', '/', '_', ',', '.'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(IsMeaningfulRoleKeyword)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static bool IsMeaningfulRoleKeyword(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword) || RoleKeywordStopWords.Contains(keyword))
+        {
+            return false;
+        }
+
+        return keyword.Length >= 3 ||
+               keyword.Equals("qa", StringComparison.OrdinalIgnoreCase) ||
+               keyword.Equals("ui", StringComparison.OrdinalIgnoreCase) ||
+               keyword.Equals("hr", StringComparison.OrdinalIgnoreCase) ||
+               keyword.Equals("ai", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int CountRoleKeywordMatches(string text, IReadOnlyList<string> keywords)

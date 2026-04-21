@@ -14,8 +14,11 @@ public sealed partial class ProcessesService
             return Result<Guid>.Failure(Error.Validation("Process definition is required.", "processes.launch.definition-required"));
         }
 
+        // Refresh the AI resource projection before opening the launch-plan transaction.
+        await aiAgentService.SynchronizeDirectoryProjectionAsync(cancellationToken);
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
 
         try
         {

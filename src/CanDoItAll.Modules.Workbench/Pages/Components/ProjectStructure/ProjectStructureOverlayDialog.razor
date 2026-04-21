@@ -9,7 +9,8 @@
          aria-label="@AriaLabel"
          data-testid="@DataTestId"
          @onclick:stopPropagation="true">
-        <Stack GapScale="LayoutGap.Large">
+        <Stack GapScale="LayoutGap.Large"
+               Style="min-height:0;height:100%;display:grid;grid-template-rows:auto minmax(0, 1fr);overflow:hidden;">
             <Split Breakpoint="LayoutBreakpoint.Lg"
                    Gap="LayoutGap.Medium"
                    AlignItems="AlignItems.Start"
@@ -38,7 +39,8 @@
 
             @if (Body is not null)
             {
-                <div class="@ResolveBodyCssClass() w-full">
+                <div class="@ResolveBodyCssClass() w-full"
+                     style="min-height:0;height:100%;">
                     @Body
                 </div>
             }

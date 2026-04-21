@@ -26,6 +26,11 @@ public static class ProjectWorkbenchSchemaInitializer
         ("CompletedAtUtc", """TEXT NULL""")
     ];
 
+    private static readonly (string Name, string Definition)[] RequiredProjectionLayoutColumns =
+    [
+        ("IsHidden", """INTEGER NOT NULL DEFAULT 0""")
+    ];
+
     private static readonly string[] RequiredTables =
     [
         "Workbench_ProjectObjects",
@@ -93,6 +98,7 @@ public static class ProjectWorkbenchSchemaInitializer
             "NodeKey" TEXT NOT NULL,
             "PositionX" REAL NOT NULL,
             "PositionY" REAL NOT NULL,
+            "IsHidden" INTEGER NOT NULL DEFAULT 0,
             "UpdatedAtUtc" TEXT NOT NULL
         );
         """,
@@ -267,6 +273,7 @@ public static class ProjectWorkbenchSchemaInitializer
         {
             await EnsureProjectObjectColumnsAsync(dbContext, cancellationToken);
             await EnsureCrossModuleMutationColumnsAsync(dbContext, cancellationToken);
+            await EnsureProjectionLayoutColumnsAsync(dbContext, cancellationToken);
             return;
         }
 
@@ -277,6 +284,7 @@ public static class ProjectWorkbenchSchemaInitializer
 
         await EnsureProjectObjectColumnsAsync(dbContext, cancellationToken);
         await EnsureCrossModuleMutationColumnsAsync(dbContext, cancellationToken);
+        await EnsureProjectionLayoutColumnsAsync(dbContext, cancellationToken);
     }
 
     private static async Task<HashSet<string>> ReadExistingTablesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
@@ -361,6 +369,24 @@ public static class ProjectWorkbenchSchemaInitializer
             ON "Workbench_ProjectCrossModuleMutations" ("ProjectId", "ApprovalState", "Status", "UpdatedAtUtc");
             """,
             cancellationToken);
+    }
+
+    private static async Task EnsureProjectionLayoutColumnsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var existingColumns = await ReadExistingColumnsAsync(dbContext, "Workbench_ProjectProjectionLayouts", cancellationToken);
+        foreach (var requiredColumn in RequiredProjectionLayoutColumns)
+        {
+            if (existingColumns.Contains(requiredColumn.Name))
+            {
+                continue;
+            }
+
+#pragma warning disable EF1002
+            await dbContext.Database.ExecuteSqlRawAsync(
+                $"""ALTER TABLE "Workbench_ProjectProjectionLayouts" ADD COLUMN "{requiredColumn.Name}" {requiredColumn.Definition};""",
+                cancellationToken);
+#pragma warning restore EF1002
+        }
     }
 
     private static async Task<HashSet<string>> ReadExistingColumnsAsync(AppDbContext dbContext, string tableName, CancellationToken cancellationToken)

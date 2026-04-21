@@ -5,7 +5,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed class WorkspaceFileReceiptWriter
 {
-    private const string BoundaryDescription = "Workspace-root-only file service. No external roots or host process execution.";
+    private const string BoundaryDescription = "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.";
 
     private static readonly JsonSerializerOptions ReceiptSerializerOptions = new(JsonSerializerDefaults.Web)
     {

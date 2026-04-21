@@ -18,7 +18,7 @@ public sealed partial class ProcessesService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
 
         try
         {
@@ -179,18 +179,31 @@ public sealed partial class ProcessesService
                 "processes.launch.provisioning-gap"));
         }
 
-        if (!IsAiRoleFromLaunchRole(role) &&
-            selectedCandidate.CandidateKind != ProcessLaunchCandidateKind.NewAiAgentProposal)
-        {
-            return Result<LaunchProvisioningOutcome>.Success(
-                new LaunchProvisioningOutcome(
-                    selectedCandidate.PartyId,
-                    selectedCandidate.TechnicalAgentId,
-                    "No provisioning was required for this candidate."));
-        }
-
         var metadata = ParseLaunchProvisioningMetadata(selectedCandidate.MetadataJson);
         var partyId = selectedCandidate.PartyId ?? metadata.ExistingPartyId;
+        Guid? ownerPartyId = null;
+
+        if (partyId.HasValue && partyId.Value != Guid.Empty)
+        {
+            await using var lookupContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var existingParty = await lookupContext.Set<Party>()
+                .Select(item => new
+                {
+                    item.Id,
+                    item.PartyType
+                })
+                .SingleOrDefaultAsync(item => item.Id == partyId.Value, cancellationToken);
+            if (existingParty is null)
+            {
+                partyId = null;
+            }
+            else if (existingParty.PartyType != PartyType.AiAgent)
+            {
+                ownerPartyId = existingParty.Id;
+                partyId = null;
+            }
+        }
+
         if (!partyId.HasValue || partyId.Value == Guid.Empty)
         {
             var createPartyResult = await projectPartyIntegrationBridge.CreatePartyAsync(
@@ -250,7 +263,7 @@ public sealed partial class ProcessesService
                 ProviderProfileId = technicalWorkspace.Profile.ProviderProfileId,
                 DefaultModel = technicalWorkspace.Profile.DefaultModel,
                 ExecutionMode = technicalWorkspace.Profile.ExecutionMode,
-                OwnerPartyId = null,
+                OwnerPartyId = ownerPartyId ?? technicalWorkspace.Profile.OwnerPartyId,
                 ValidationStatus = AiValidationStatus.Draft,
                 LastReviewedOn = null,
                 Notes = BuildProvisionedAgentNotes(technicalWorkspace.BindingSummary, selectedCandidate.RecommendationSummary, requestedBy),
@@ -298,6 +311,8 @@ public sealed partial class ProcessesService
             new LaunchProvisioningOutcome(
                 partyId.Value,
                 technicalWorkspace.TechnicalAgentId,
-                "Provisioned technical AI resource and attached it to the launch plan."));
+                ownerPartyId.HasValue
+                    ? $"Provisioned a runnable internal AI resource owned by {selectedCandidate.DisplayName} and attached it to the launch plan."
+                    : "Provisioned technical AI resource and attached it to the launch plan."));
     }
 }

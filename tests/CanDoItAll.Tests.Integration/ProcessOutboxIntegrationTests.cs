@@ -158,13 +158,12 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunAsync_leaves_automation_dispatch_for_durable_worker()
+    public async Task StartRunAsync_kicks_off_automation_dispatch_in_background()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
         await using var scope = harness.Services.CreateAsyncScope();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
-        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projectsService, "Process outbox deferred automation start");
@@ -184,16 +183,19 @@ public sealed class ProcessOutboxIntegrationTests
 
         Assert.True(runResult.IsSuccess);
 
+        await WaitForAsync(
+            async () =>
+            {
+                var records = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+                return records.Count == 1
+                    && records[0].Status == ProcessOutboxRecordStatus.Completed
+                    && records[0].AttemptCount == 1
+                    && harness.AutomationDispatch.CallCount == 1;
+            },
+            TimeSpan.FromSeconds(5));
+
         var automationDispatchRecords = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
         var automationDispatchRecord = Assert.Single(automationDispatchRecords);
-        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
-        Assert.Equal(0, automationDispatchRecord.AttemptCount);
-        Assert.Equal(0, harness.AutomationDispatch.CallCount);
-
-        Assert.Equal(1, await outboxService.ProcessPendingAsync());
-
-        automationDispatchRecords = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
-        automationDispatchRecord = Assert.Single(automationDispatchRecords);
         Assert.Equal(ProcessOutboxRecordStatus.Completed, automationDispatchRecord.Status);
         Assert.Equal(1, automationDispatchRecord.AttemptCount);
         Assert.Equal(1, harness.AutomationDispatch.CallCount);
@@ -225,7 +227,18 @@ public sealed class ProcessOutboxIntegrationTests
         });
 
         Assert.True(runResult.IsSuccess);
-        Assert.Equal(1, await outboxService.ProcessPendingAsync());
+
+        await WaitForAsync(
+            async () =>
+            {
+                var records = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+                return records.Count == 1
+                    && records[0].Status == ProcessOutboxRecordStatus.Completed
+                    && records[0].AttemptCount == 1
+                    && harness.AutomationDispatch.CallCount == 1;
+            },
+            TimeSpan.FromSeconds(5));
+
         Assert.Equal(1, harness.AutomationDispatch.CallCount);
 
         var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
@@ -430,6 +443,22 @@ public sealed class ProcessOutboxIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Set<ProcessRun>()
             .AnyAsync(item => item.Id == runId);
+    }
+
+    private static async Task WaitForAsync(Func<Task<bool>> predicate, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await predicate())
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
+
+        Assert.True(await predicate(), "The expected background process did not complete before the timeout.");
     }
 
     private sealed class ProcessOutboxHarness : IAsyncDisposable

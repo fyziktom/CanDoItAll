@@ -101,10 +101,15 @@ public partial class ProjectStructurePage
         var prompt = BuildDeletePrompt(targetNode);
         if (!prompt.RequiresConfirmation)
         {
-            await ProjectWorkbenchService.DeleteObjectAsync(ProjectId, targetNode.Id);
-            await ReloadSurfaceAsync();
-            workflowFeedback = $"{targetNode.Title} was deleted.";
-            workflowFeedbackTone = "mint";
+            var deleted = await DeleteSelectedNodeAsync(
+                targetNode,
+                $"{targetNode.Title} was deleted.",
+                "The selected node could not be deleted.");
+            if (!deleted)
+            {
+                return;
+            }
+
             return;
         }
 
@@ -121,14 +126,84 @@ public partial class ProjectStructurePage
         var nodeId = pendingDeletePrompt.NodeId;
         pendingDeletePrompt = null;
         reconnectNodeId = null;
-        await ProjectWorkbenchService.DeleteObjectAsync(ProjectId, nodeId);
-        await ReloadSurfaceAsync();
-        workflowFeedback = "The selected branch was deleted.";
-        workflowFeedbackTone = "mint";
+        var targetNode = ResolveNode(nodeId);
+        if (targetNode is null)
+        {
+            workflowFeedback = "The selected node could not be found anymore.";
+            workflowFeedbackTone = "warn";
+            await ReloadSurfaceAsync();
+            return;
+        }
+
+        await DeleteSelectedNodeAsync(
+            targetNode,
+            "The selected branch was deleted.",
+            "The selected branch could not be deleted.");
     }
 
     private void CancelDelete()
         => pendingDeletePrompt = null;
+
+    private async Task<bool> DeleteSelectedNodeAsync(
+        ProjectStructureNode targetNode,
+        string successMessage,
+        string failureMessage)
+    {
+        var deletedCount = await ProjectWorkbenchService.DeleteObjectAsync(ProjectId, targetNode.Id);
+        if (deletedCount > 0)
+        {
+            await ReloadSurfaceAsync();
+            workflowFeedback = successMessage;
+            workflowFeedbackTone = "mint";
+            return true;
+        }
+
+        if (await TryDetachProjectedNodeAsync(targetNode))
+        {
+            await ReloadSurfaceAsync(targetNode.ParentId);
+            workflowFeedback = successMessage;
+            workflowFeedbackTone = "mint";
+            return true;
+        }
+
+        workflowFeedback = failureMessage;
+        workflowFeedbackTone = "warn";
+        await InvokeAsync(StateHasChanged);
+        return false;
+    }
+
+    private async Task<bool> TryDetachProjectedNodeAsync(ProjectStructureNode targetNode)
+    {
+        if (surface is null)
+        {
+            return false;
+        }
+
+        var removableLink = surface.Links
+            .FirstOrDefault(link =>
+                link.IsUserAuthored &&
+                string.Equals(link.TargetId, targetNode.Id, StringComparison.Ordinal) &&
+                (string.IsNullOrWhiteSpace(targetNode.ParentId) ||
+                 string.Equals(link.SourceId, targetNode.ParentId, StringComparison.Ordinal)));
+        if (removableLink is null)
+        {
+            removableLink = surface.Links
+                .FirstOrDefault(link =>
+                    link.IsUserAuthored &&
+                    string.Equals(link.TargetId, targetNode.Id, StringComparison.Ordinal));
+        }
+
+        if (removableLink is null)
+        {
+            return false;
+        }
+
+        return await ProjectWorkbenchService.UnlinkObjectsAsync(
+            ProjectId,
+            removableLink.SourceId,
+            removableLink.TargetId,
+            removableLink.Kind);
+    }
 
     private async Task OpenSummaryAsync(string? nodeId = null)
     {

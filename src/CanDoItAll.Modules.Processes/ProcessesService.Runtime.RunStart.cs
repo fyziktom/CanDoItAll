@@ -2,6 +2,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -15,10 +17,11 @@ public sealed partial class ProcessesService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
 
         ProcessRun run;
         Guid outboxId;
+        Guid automationDispatchOutboxId = Guid.Empty;
         try
         {
             var contextResult = await LoadRunStartContextAsync(dbContext, request, cancellationToken);
@@ -175,7 +178,7 @@ public sealed partial class ProcessesService
                 cancellationToken);
 
             outboxId = await processOutboxService.EnqueueRunStartAsync(dbContext, run, cancellationToken);
-            await processOutboxService.EnqueueAutomationDispatchAsync(
+            automationDispatchOutboxId = await processOutboxService.EnqueueAutomationDispatchAsync(
                 dbContext,
                 run.ProjectId,
                 run.ProcessDefinitionId,
@@ -198,8 +201,34 @@ public sealed partial class ProcessesService
         }
 
         await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+        TriggerOutboxProcessingInBackground(automationDispatchOutboxId);
 
         return Result<Guid>.Success(run.Id);
+    }
+
+    private void TriggerOutboxProcessingInBackground(Guid outboxId)
+    {
+        if (outboxId == Guid.Empty)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await using var scope = serviceScopeFactory.CreateAsyncScope();
+                var scopedOutbox = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+                await scopedOutbox.ProcessAsync(outboxId, CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Process outbox record {OutboxId} could not be kicked off in the background after run start. The durable worker will retry it.",
+                    outboxId);
+            }
+        });
     }
 
     private async Task<Result<RunStartContext>> LoadRunStartContextAsync(

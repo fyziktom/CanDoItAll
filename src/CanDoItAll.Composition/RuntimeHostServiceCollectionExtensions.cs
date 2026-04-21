@@ -73,17 +73,49 @@ public sealed class AppDatabaseBootstrapper(
 
     public async Task EnsureProfileReadyAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation(
+            "Ensuring runtime database profile {ProfileId} ({DisplayName}) is ready. Provider={ProviderKind}, Source={SourceKind}.",
+            profile.Profile.Id,
+            profile.Profile.DisplayName,
+            profile.Profile.ProviderKind,
+            profile.Profile.SourceKind);
+
         await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(profile, cancellationToken);
         if (!dbContext.Database.IsRelational())
         {
+            logger.LogInformation(
+                "Ensuring non-relational database profile {ProfileId} is created.",
+                profile.Profile.Id);
             await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+            logger.LogInformation(
+                "Non-relational database profile {ProfileId} is ready.",
+                profile.Profile.Id);
             return;
         }
 
+        logger.LogInformation(
+            "Preparing legacy SQLite compatibility for profile {ProfileId}.",
+            profile.Profile.Id);
         await CanDoItAllDatabaseMigrationBootstrap.PrepareLegacySqliteAsync(dbContext, logger, cancellationToken);
+        logger.LogInformation(
+            "Releasing stale SQLite EF migration locks for profile {ProfileId}.",
+            profile.Profile.Id);
+        await CanDoItAllDatabaseMigrationBootstrap.ReleaseStaleSqliteMigrationLockAsync(dbContext, logger, cancellationToken);
+        logger.LogInformation(
+            "Applying EF migrations for profile {ProfileId}.",
+            profile.Profile.Id);
         await dbContext.Database.MigrateAsync(cancellationToken);
+        logger.LogInformation(
+            "Ensuring CRM/HR schema for profile {ProfileId}.",
+            profile.Profile.Id);
         await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        logger.LogInformation(
+            "Ensuring managed SQLite staffing bootstrap for profile {ProfileId}.",
+            profile.Profile.Id);
         await EnsureManagedSqliteStaffingBootstrapAsync(profile, dbContext, cancellationToken);
+        logger.LogInformation(
+            "Runtime database profile {ProfileId} is ready.",
+            profile.Profile.Id);
     }
 
     private async Task EnsureManagedSqliteStaffingBootstrapAsync(

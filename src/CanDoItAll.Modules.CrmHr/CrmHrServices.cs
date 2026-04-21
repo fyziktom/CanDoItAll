@@ -3856,9 +3856,14 @@ public sealed partial class AiAgentService(
     PartyDirectoryService partyDirectoryService,
     IAiTechnicalAgentBridge technicalAgentBridge)
 {
+    public Task SynchronizeDirectoryProjectionAsync(CancellationToken cancellationToken = default)
+    {
+        return technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryAsync(CancellationToken cancellationToken = default)
     {
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
@@ -3877,8 +3882,14 @@ public sealed partial class AiAgentService(
         IReadOnlyList<Guid>? partyIds = null,
         CancellationToken cancellationToken = default)
     {
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionAsync(cancellationToken);
+        return await ListAgentStaffingFactsSnapshotAsync(partyIds, cancellationToken);
+    }
 
+    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsSnapshotAsync(
+        IReadOnlyList<Guid>? partyIds = null,
+        CancellationToken cancellationToken = default)
+    {
         var resolvedPartyIds = partyIds?
             .Where(item => item != Guid.Empty)
             .Distinct()
