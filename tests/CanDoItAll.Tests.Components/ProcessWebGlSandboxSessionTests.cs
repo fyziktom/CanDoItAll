@@ -129,6 +129,62 @@ public sealed class ProcessWebGlSandboxSessionTests
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, surface.UiState.Camera.ProjectionMode);
     }
 
+    [Fact]
+    public void Session_recompose_clears_node_overrides_and_tracks_layout_mode()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        var beforeMove = session.BuildSurface();
+        var node = beforeMove.Nodes.First(candidate =>
+            !candidate.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !candidate.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+
+        session.ApplyNodesMoved(
+        [
+            new WebGlNodePositionChange(node.Id, node.X + 120, node.Y + 40, node.Z)
+        ]);
+
+        session.Recompose(WebGlWorkbenchLayoutModes.AlternatingArc);
+
+        var recomposedSurface = session.BuildSurface();
+        var recomposedNode = Assert.Single(recomposedSurface.Nodes, candidate => candidate.Id == node.Id);
+
+        Assert.Equal(WebGlWorkbenchLayoutModes.AlternatingArc, session.LayoutMode);
+        Assert.Equal(WebGlWorkbenchLayoutModes.AlternatingArc, recomposedSurface.UiState.LayoutMode);
+        Assert.NotEqual(node.X + 120, recomposedNode.X);
+        Assert.NotEqual(node.Y + 40, recomposedNode.Y);
+        Assert.Equal("Recomposed scene", session.CommandLog[0].Title);
+    }
+
+    [Fact]
+    public void Session_spacing_adjustments_are_clamped_and_rebuild_scene()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        for (var index = 0; index < 10; index++)
+        {
+            session.AdjustNodeSpacing(1);
+        }
+
+        var expandedSurface = session.BuildSurface();
+
+        Assert.Equal(1.85d, session.NodeSpacingFactor);
+        Assert.Equal(1.85d, expandedSurface.UiState.NodeSpacingFactor);
+
+        for (var index = 0; index < 20; index++)
+        {
+            session.AdjustNodeSpacing(-1);
+        }
+
+        var compactSurface = session.BuildSurface();
+
+        Assert.Equal(0.75d, session.NodeSpacingFactor);
+        Assert.Equal(0.75d, compactSurface.UiState.NodeSpacingFactor);
+        Assert.Equal("Adjusted spacing", session.CommandLog[0].Title);
+    }
+
     private static ProcessWebGlSceneAdapter CreateAdapter()
     {
         var packLoader = new ProcessTemplatePackLoader();

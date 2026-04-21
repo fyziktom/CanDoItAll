@@ -6,6 +6,9 @@ namespace CanDoItAll.Components.WebGlSandbox;
 public sealed class ProcessWebGlSandboxSession
 {
     private const int MaxCommandLogEntries = 12;
+    private const double MinNodeSpacingFactor = 0.75d;
+    private const double MaxNodeSpacingFactor = 1.85d;
+    private const double NodeSpacingStep = 0.15d;
 
     private readonly ProcessWebGlSceneAdapter sceneAdapter;
     private readonly List<ProcessWebGlCommandLogEntry> commandLog = [];
@@ -27,6 +30,10 @@ public sealed class ProcessWebGlSandboxSession
     public string ProjectionMode { get; private set; } = WebGlWorkbenchProjectionModes.Perspective;
 
     public string ViewPreset { get; private set; } = WebGlWorkbenchViewPresets.Overview;
+
+    public string LayoutMode { get; private set; } = WebGlWorkbenchLayoutModes.CenterLane;
+
+    public double NodeSpacingFactor { get; private set; } = 1;
 
     public string? SelectedNodeId { get; private set; }
 
@@ -93,6 +100,35 @@ public sealed class ProcessWebGlSandboxSession
         LastExportCharacterCount = 0;
         commandLog.Clear();
         RecordCommand("Reset sandbox", CurrentTemplate.DisplayName);
+    }
+
+    public void Recompose(string? layoutMode = null)
+    {
+        EnsureInitialized();
+        LayoutMode = WebGlWorkbenchLayoutModes.Normalize(layoutMode ?? LayoutMode);
+        nodePositionOverrides.Clear();
+        cameraState = CreateDefaultCameraState();
+        RecordCommand("Recomposed scene", $"{LayoutMode} · {NodeSpacingFactor:0.##}x spacing");
+    }
+
+    public void AdjustNodeSpacing(int direction)
+    {
+        EnsureInitialized();
+        if (direction == 0)
+        {
+            return;
+        }
+
+        var nextFactor = ClampNodeSpacingFactor(NodeSpacingFactor + (NodeSpacingStep * Math.Sign(direction)));
+        if (Math.Abs(nextFactor - NodeSpacingFactor) < 0.001d)
+        {
+            return;
+        }
+
+        NodeSpacingFactor = nextFactor;
+        nodePositionOverrides.Clear();
+        cameraState = CreateDefaultCameraState();
+        RecordCommand("Adjusted spacing", $"{NodeSpacingFactor:0.##}x");
     }
 
     public void SetProjectionMode(string? projectionMode)
@@ -206,6 +242,8 @@ public sealed class ProcessWebGlSandboxSession
             Azimuth = uiState.Camera?.Azimuth ?? cameraState.Azimuth,
             Polar = uiState.Camera?.Polar ?? cameraState.Polar
         };
+        LayoutMode = WebGlWorkbenchLayoutModes.Normalize(uiState.LayoutMode);
+        NodeSpacingFactor = ClampNodeSpacingFactor(uiState.NodeSpacingFactor);
     }
 
     public WebGlWorkbenchSurface BuildSurface()
@@ -218,6 +256,8 @@ public sealed class ProcessWebGlSandboxSession
                 ProjectionMode,
                 ViewPreset,
                 SelectedNodeId,
+                LayoutMode: LayoutMode,
+                NodeSpacingFactor: NodeSpacingFactor,
                 CameraState: cameraState,
                 DeterministicMode: true,
                 ShowDiagnostics: ShowDiagnostics));
@@ -269,6 +309,16 @@ public sealed class ProcessWebGlSandboxSession
             Azimuth = -0.72d,
             Polar = 1.08d
         };
+    }
+
+    private static double ClampNodeSpacingFactor(double value)
+    {
+        if (!double.IsFinite(value))
+        {
+            return 1;
+        }
+
+        return Math.Round(Math.Clamp(value, MinNodeSpacingFactor, MaxNodeSpacingFactor), 2, MidpointRounding.AwayFromZero);
     }
 }
 

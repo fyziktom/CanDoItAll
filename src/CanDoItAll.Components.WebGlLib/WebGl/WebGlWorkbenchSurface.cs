@@ -15,6 +15,23 @@ public static class WebGlWorkbenchViewPresets
     public const string Focus = "focus";
 }
 
+public static class WebGlWorkbenchLayoutModes
+{
+    public const string CenterLane = "center-lane";
+    public const string AlternatingArc = "alternating-arc";
+    public const string LayeredOrbit = "layered-orbit";
+
+    public static string Normalize(string? value)
+    {
+        return value switch
+        {
+            AlternatingArc => AlternatingArc,
+            LayeredOrbit => LayeredOrbit,
+            _ => CenterLane
+        };
+    }
+}
+
 public static class WebGlWorkbenchConnectionActions
 {
     public const string Connect = "connect";
@@ -139,6 +156,12 @@ public sealed class WebGlWorkbenchEdge
     public string AccentColor { get; set; } = "#2563eb";
 
     public double DepthOffset { get; set; }
+
+    public double Emphasis { get; set; } = 1;
+
+    public double Opacity { get; set; } = 0.82d;
+
+    public bool IsPrimaryPath { get; set; }
 
     public bool IsUserAuthored { get; set; }
 }

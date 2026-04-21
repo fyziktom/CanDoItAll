@@ -17,6 +17,10 @@ public sealed class WebGlWorkbenchUiState
 
     public string ActiveViewPreset { get; set; } = WebGlWorkbenchViewPresets.Overview;
 
+    public string LayoutMode { get; set; } = WebGlWorkbenchLayoutModes.CenterLane;
+
+    public double NodeSpacingFactor { get; set; } = 1;
+
     public bool DeterministicMode { get; set; } = true;
 
     public bool ShowDiagnostics { get; set; }
@@ -34,6 +38,9 @@ public sealed class WebGlWorkbenchUiState
         {
             var state = JsonSerializer.Deserialize<WebGlWorkbenchUiState>(json, SerializerOptions) ?? new WebGlWorkbenchUiState();
             state.SelectedNodeIds = NormalizeStringList(state.SelectedNodeIds);
+            state.ActiveViewPreset = NormalizeActiveViewPreset(state.ActiveViewPreset);
+            state.LayoutMode = WebGlWorkbenchLayoutModes.Normalize(state.LayoutMode);
+            state.NodeSpacingFactor = NormalizeNodeSpacingFactor(state.NodeSpacingFactor);
             state.Camera ??= new WebGlWorkbenchCameraState();
             return state;
         }
@@ -49,9 +56,9 @@ public sealed class WebGlWorkbenchUiState
         {
             Version = Version,
             SelectedNodeIds = NormalizeStringList(SelectedNodeIds),
-            ActiveViewPreset = string.IsNullOrWhiteSpace(ActiveViewPreset)
-                ? WebGlWorkbenchViewPresets.Overview
-                : ActiveViewPreset,
+            ActiveViewPreset = NormalizeActiveViewPreset(ActiveViewPreset),
+            LayoutMode = WebGlWorkbenchLayoutModes.Normalize(LayoutMode),
+            NodeSpacingFactor = NormalizeNodeSpacingFactor(NodeSpacingFactor),
             DeterministicMode = DeterministicMode,
             ShowDiagnostics = ShowDiagnostics,
             Camera = Camera ?? new WebGlWorkbenchCameraState()
@@ -76,6 +83,28 @@ public sealed class WebGlWorkbenchUiState
         }
 
         return normalized;
+    }
+
+    private static string NormalizeActiveViewPreset(string? value)
+    {
+        return value switch
+        {
+            WebGlWorkbenchViewPresets.Roles => WebGlWorkbenchViewPresets.Roles,
+            WebGlWorkbenchViewPresets.Dependencies => WebGlWorkbenchViewPresets.Dependencies,
+            WebGlWorkbenchViewPresets.Branching => WebGlWorkbenchViewPresets.Branching,
+            WebGlWorkbenchViewPresets.Focus => WebGlWorkbenchViewPresets.Focus,
+            _ => WebGlWorkbenchViewPresets.Overview
+        };
+    }
+
+    private static double NormalizeNodeSpacingFactor(double value)
+    {
+        if (!double.IsFinite(value))
+        {
+            return 1;
+        }
+
+        return Math.Round(Math.Clamp(value, 0.75d, 1.85d), 2, MidpointRounding.AwayFromZero);
     }
 }
 
@@ -131,6 +160,10 @@ public sealed class WebGlAutomationSnapshot
 
     public string ActiveViewPreset { get; set; } = WebGlWorkbenchViewPresets.Overview;
 
+    public string LayoutMode { get; set; } = WebGlWorkbenchLayoutModes.CenterLane;
+
+    public double NodeSpacingFactor { get; set; } = 1;
+
     public bool DeterministicMode { get; set; } = true;
 
     public int ViewportWidth { get; set; }
@@ -170,6 +203,12 @@ public sealed class WebGlAutomationNodeSnapshot
 
     public double Height { get; set; }
 
+    public double SceneWidth { get; set; }
+
+    public double SceneHeight { get; set; }
+
+    public double SceneDepth { get; set; }
+
     public bool Selected { get; set; }
 }
 
@@ -192,6 +231,12 @@ public sealed class WebGlAutomationEdgeSnapshot
     public string Kind { get; set; } = string.Empty;
 
     public string CategoryKey { get; set; } = string.Empty;
+
+    public bool IsPrimaryPath { get; set; }
+
+    public double Emphasis { get; set; }
+
+    public double Opacity { get; set; }
 
     public double X { get; set; }
 

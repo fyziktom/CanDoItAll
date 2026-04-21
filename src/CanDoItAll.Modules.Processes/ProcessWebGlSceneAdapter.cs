@@ -11,7 +11,10 @@ public sealed class ProcessWebGlSceneAdapter
     [
         new("customer-onboarding", "Simple", "Fast sanity check for sparse scenes."),
         new("architecture-decision-governance", "Medium", "Branching plus governance semantics without maximum density."),
-        new("branching-code-review", "Dense", "Stress case for overlap, routing, and authoring.")
+        new("branching-code-review", "Dense", "Stress case for overlap, routing, and authoring."),
+        new("software-delivery", "Complex", "Multi-team delivery path with shared ownership, validations, and release governance."),
+        new("ai-assisted-change-delivery", "Complex", "Guardrailed delegation flow with approvals, evaluation, and rollback-minded checkpoints."),
+        new("release-readiness-and-deployment", "Complex", "Release control path with rehearsal, cutover, and deployment verification.")
     ];
 
     private readonly ProcessTemplateCatalogService templateCatalogService;
@@ -68,7 +71,9 @@ public sealed class ProcessWebGlSceneAdapter
         var canvasSurface = canvasSurfaceFactory.BuildDefinitionSurface(editor, options.SelectedNodeId, mode: "authoring");
         var descriptor = ListRepresentativeTemplates()
             .FirstOrDefault(item => string.Equals(item.Key, options.TemplateKey, StringComparison.OrdinalIgnoreCase));
-        var layout = BuildSceneLayout(editor, canvasSurface);
+        var layoutMode = WebGlWorkbenchLayoutModes.Normalize(options.LayoutMode);
+        var nodeSpacingFactor = NormalizeNodeSpacingFactor(options.NodeSpacingFactor);
+        var layout = BuildSceneLayout(editor, canvasSurface, layoutMode, nodeSpacingFactor);
 
         return new WebGlWorkbenchSurface
         {
@@ -88,6 +93,8 @@ public sealed class ProcessWebGlSceneAdapter
                 ActiveViewPreset = string.IsNullOrWhiteSpace(options.ViewPreset)
                     ? WebGlWorkbenchViewPresets.Overview
                     : options.ViewPreset,
+                LayoutMode = layoutMode,
+                NodeSpacingFactor = nodeSpacingFactor,
                 DeterministicMode = options.DeterministicMode,
                 ShowDiagnostics = options.ShowDiagnostics,
                 Camera = new WebGlWorkbenchCameraState
@@ -107,8 +114,8 @@ public sealed class ProcessWebGlSceneAdapter
             Chrome = new WebGlWorkbenchChrome
             {
                 HintText = descriptor is null
-                    ? $"{canvasSurface.Nodes.Count} nodes / {canvasSurface.Links.Count} connections"
-                    : $"{descriptor.Complexity} template · {canvasSurface.Nodes.Count} nodes · {canvasSurface.Links.Count} connections",
+                    ? $"{layoutMode} layout · {nodeSpacingFactor:0.##}x spacing · {canvasSurface.Nodes.Count} nodes / {canvasSurface.Links.Count} connections"
+                    : $"{descriptor.Complexity} template · {layoutMode} layout · {nodeSpacingFactor:0.##}x spacing · {canvasSurface.Nodes.Count} nodes · {canvasSurface.Links.Count} connections",
                 EmptyStateTitle = "No process nodes available",
                 EmptyStateDescription = "The projected template did not produce any canvas nodes."
             }
@@ -239,6 +246,8 @@ public sealed class ProcessWebGlSceneAdapter
 
     private static WebGlWorkbenchEdge MapEdge(CanvasWorkbenchLink link)
     {
+        var categoryKey = ResolveCategoryKey(link);
+        var isPrimaryPath = IsPrimaryPath(link, categoryKey);
         return new WebGlWorkbenchEdge
         {
             Id = BuildEdgeId(link),
@@ -249,10 +258,13 @@ public sealed class ProcessWebGlSceneAdapter
             TargetAnchorId = BuildAnchorId(link.TargetId, link.TargetPortId),
             TargetPortId = link.TargetPortId,
             Kind = string.IsNullOrWhiteSpace(link.Kind) ? "flow" : link.Kind,
-            CategoryKey = ResolveCategoryKey(link),
+            CategoryKey = categoryKey,
             Label = ResolveEdgeLabel(link),
-            AccentColor = ResolveEdgeAccentColor(link),
-            DepthOffset = ResolveEdgeDepthOffset(link),
+            AccentColor = ResolveEdgeAccentColor(categoryKey),
+            DepthOffset = ResolveEdgeDepthOffset(categoryKey, isPrimaryPath),
+            Emphasis = ResolveEdgeEmphasis(categoryKey, isPrimaryPath),
+            Opacity = ResolveEdgeOpacity(categoryKey, isPrimaryPath),
+            IsPrimaryPath = isPrimaryPath,
             IsUserAuthored = link.IsUserAuthored
         };
     }
@@ -300,13 +312,15 @@ public sealed class ProcessWebGlSceneAdapter
 
     private static IReadOnlyDictionary<string, WebGlNodeLayout> BuildSceneLayout(
         ProcessDefinitionEditorModel editor,
-        CanvasWorkbenchSurface canvasSurface)
+        CanvasWorkbenchSurface canvasSurface,
+        string layoutMode,
+        double nodeSpacingFactor)
     {
         var nodesById = canvasSurface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
         var laneEntries = BuildLaneEntries(editor, nodesById);
-        var laneLayouts = BuildLaneLayouts(laneEntries);
+        var laneLayouts = BuildLaneLayouts(laneEntries, layoutMode, nodeSpacingFactor);
         var laneProgressByNodeId = laneEntries.ToDictionary(entry => entry.Node.Id, entry => entry.Progress, StringComparer.Ordinal);
-        var roleLayouts = BuildRoleLayouts(editor, canvasSurface, nodesById, laneProgressByNodeId);
+        var roleLayouts = BuildRoleLayouts(editor, canvasSurface, nodesById, laneProgressByNodeId, layoutMode, nodeSpacingFactor);
 
         return laneLayouts
             .Concat(roleLayouts)
@@ -354,7 +368,10 @@ public sealed class ProcessWebGlSceneAdapter
         return entries;
     }
 
-    private static Dictionary<string, WebGlNodeLayout> BuildLaneLayouts(IReadOnlyList<ProcessLaneEntry> laneEntries)
+    private static Dictionary<string, WebGlNodeLayout> BuildLaneLayouts(
+        IReadOnlyList<ProcessLaneEntry> laneEntries,
+        string layoutMode,
+        double nodeSpacingFactor)
     {
         var layouts = new Dictionary<string, WebGlNodeLayout>(StringComparer.Ordinal);
         if (laneEntries.Count == 0)
@@ -370,15 +387,13 @@ public sealed class ProcessWebGlSceneAdapter
                 : entry.Progress / maxProgress;
             var lateralOffset = Math.Clamp((entry.Node.X - entry.DefaultCanvasX) / 280d, -2.2d, 2.2d) * 92d;
             var verticalOffset = Math.Clamp((entry.Node.Y - entry.DefaultCanvasY) / 220d, -2d, 2d) * 88d;
-            var baseX = Lerp(-190d, 190d, normalized) + (Math.Sin(normalized * Math.PI) * 42d);
-            var baseZ = Lerp(260d, -1120d, normalized);
-            var branchDepthBias = IsBranchNode(entry.Node)
-                ? -118d
-                : 0d;
-            layouts[entry.Node.Id] = new WebGlNodeLayout(
-                Round(baseX + (lateralOffset * 0.9d) + (IsBranchNode(entry.Node) ? 22d : 0d)),
-                Round(verticalOffset + ResolveLaneVerticalBias(entry.Node)),
-                Round(baseZ + branchDepthBias - (lateralOffset * 0.45d)));
+            layouts[entry.Node.Id] = ResolveLaneLayout(
+                entry,
+                normalized,
+                lateralOffset,
+                verticalOffset,
+                layoutMode,
+                nodeSpacingFactor);
         }
 
         return layouts;
@@ -388,7 +403,9 @@ public sealed class ProcessWebGlSceneAdapter
         ProcessDefinitionEditorModel editor,
         CanvasWorkbenchSurface canvasSurface,
         IReadOnlyDictionary<string, CanvasWorkbenchNode> nodesById,
-        IReadOnlyDictionary<string, double> laneProgressByNodeId)
+        IReadOnlyDictionary<string, double> laneProgressByNodeId,
+        string layoutMode,
+        double nodeSpacingFactor)
     {
         var layouts = new Dictionary<string, WebGlNodeLayout>(StringComparer.Ordinal);
         if (editor.Roles.Count == 0)
@@ -412,27 +429,113 @@ public sealed class ProcessWebGlSceneAdapter
             var normalized = maxProgress <= 0
                 ? 0.5d
                 : linkedProgress / maxProgress;
-            var side = roleIndex % 2 == 0
-                ? -1d
-                : 1d;
-            var verticalBand = roleIndex % 4 switch
-            {
-                0 => -190d,
-                1 => 170d,
-                2 => 112d,
-                _ => -126d
-            };
             var defaultX = ResolveDefaultRoleCanvasX(editor);
             var defaultY = ResolveDefaultRoleCanvasY(roleIndex);
             var lateralOffset = Math.Clamp((roleNode.X - defaultX) / 260d, -2d, 2d) * 118d;
             var verticalOffset = Math.Clamp((roleNode.Y - defaultY) / 240d, -2d, 2d) * 96d;
-            layouts[roleNode.Id] = new WebGlNodeLayout(
-                Round((side * (468d + (Math.Abs(normalized - 0.5d) * 120d))) + (lateralOffset * 0.38d)),
-                Round(verticalBand + (verticalOffset * 0.72d)),
-                Round(Lerp(220d, -1100d, normalized) + (((roleIndex % 3) - 1) * 94d) - (lateralOffset * 0.28d)));
+            layouts[roleNode.Id] = ResolveRoleLayout(
+                roleNode,
+                roleIndex,
+                normalized,
+                lateralOffset,
+                verticalOffset,
+                layoutMode,
+                nodeSpacingFactor);
         }
 
         return layouts;
+    }
+
+    private static WebGlNodeLayout ResolveLaneLayout(
+        ProcessLaneEntry entry,
+        double normalizedProgress,
+        double lateralOffset,
+        double verticalOffset,
+        string layoutMode,
+        double nodeSpacingFactor)
+    {
+        var spacing = NormalizeNodeSpacingFactor(nodeSpacingFactor);
+        var branchLateralBias = IsBranchNode(entry.Node)
+            ? 22d * spacing
+            : 0d;
+        var branchDepthBias = IsBranchNode(entry.Node)
+            ? -118d * spacing
+            : 0d;
+
+        return WebGlWorkbenchLayoutModes.Normalize(layoutMode) switch
+        {
+            WebGlWorkbenchLayoutModes.AlternatingArc => new WebGlNodeLayout(
+                Round((Math.Sin((normalizedProgress * Math.PI * 2d) - (Math.PI / 2d)) * (168d * spacing)) + (normalizedProgress * 96d * spacing) + (lateralOffset * 0.82d) + branchLateralBias),
+                Round((Math.Cos(normalizedProgress * Math.PI * 2d) * (34d * spacing)) + verticalOffset + ResolveLaneVerticalBias(entry.Node)),
+                Round(Lerp(360d * spacing, -1420d * spacing, normalizedProgress) - (Math.Sin(normalizedProgress * Math.PI) * (152d * spacing)) + branchDepthBias - (lateralOffset * 0.36d))),
+            WebGlWorkbenchLayoutModes.LayeredOrbit => new WebGlNodeLayout(
+                Round(((normalizedProgress - 0.5d) * (148d * spacing)) + (Math.Sin(normalizedProgress * Math.PI * 3d) * (124d * spacing)) + (lateralOffset * 0.68d) + branchLateralBias),
+                Round((((entry.StepIndex % 2 == 0) ? -22d : 26d) * spacing) + verticalOffset + ResolveLaneVerticalBias(entry.Node)),
+                Round(Lerp(280d * spacing, -1180d * spacing, normalizedProgress) + (Math.Cos(normalizedProgress * Math.PI * 2d) * (118d * spacing)) + branchDepthBias - (lateralOffset * 0.28d))),
+            _ => new WebGlNodeLayout(
+                Round(Lerp(-190d * spacing, 190d * spacing, normalizedProgress) + (Math.Sin(normalizedProgress * Math.PI) * (42d * spacing)) + (lateralOffset * 0.9d) + branchLateralBias),
+                Round(verticalOffset + ResolveLaneVerticalBias(entry.Node)),
+                Round(Lerp(260d * spacing, -1120d * spacing, normalizedProgress) + branchDepthBias - (lateralOffset * 0.45d)))
+        };
+    }
+
+    private static WebGlNodeLayout ResolveRoleLayout(
+        CanvasWorkbenchNode roleNode,
+        int roleIndex,
+        double normalizedProgress,
+        double lateralOffset,
+        double verticalOffset,
+        string layoutMode,
+        double nodeSpacingFactor)
+    {
+        var spacing = NormalizeNodeSpacingFactor(nodeSpacingFactor);
+        var side = roleIndex % 2 == 0
+            ? -1d
+            : 1d;
+        var verticalBand = roleIndex % 4 switch
+        {
+            0 => -190d,
+            1 => 170d,
+            2 => 112d,
+            _ => -126d
+        };
+
+        return WebGlWorkbenchLayoutModes.Normalize(layoutMode) switch
+        {
+            WebGlWorkbenchLayoutModes.AlternatingArc => new WebGlNodeLayout(
+                Round((side * (564d + (Math.Cos(normalizedProgress * Math.PI * 2d) * 112d))) * spacing + (lateralOffset * 0.46d)),
+                Round((((roleIndex % 6) - 2.5d) * (86d * spacing)) + (verticalOffset * 0.82d) + (side * 24d)),
+                Round(Lerp(240d * spacing, -1280d * spacing, normalizedProgress) + (side * Math.Sin(normalizedProgress * Math.PI) * (92d * spacing)) + (((roleIndex % 4) - 1.5d) * (104d * spacing)) - (lateralOffset * 0.22d))),
+            WebGlWorkbenchLayoutModes.LayeredOrbit => ResolveLayeredOrbitRoleLayout(
+                roleNode,
+                roleIndex,
+                normalizedProgress,
+                lateralOffset,
+                verticalOffset,
+                spacing,
+                side),
+            _ => new WebGlNodeLayout(
+                Round((side * (468d + (Math.Abs(normalizedProgress - 0.5d) * 120d))) * spacing + (lateralOffset * 0.38d)),
+                Round((verticalBand * spacing) + (verticalOffset * 0.72d)),
+                Round(Lerp(220d * spacing, -1100d * spacing, normalizedProgress) + (((roleIndex % 3) - 1) * (94d * spacing)) - (lateralOffset * 0.28d)))
+        };
+    }
+
+    private static WebGlNodeLayout ResolveLayeredOrbitRoleLayout(
+        CanvasWorkbenchNode roleNode,
+        int roleIndex,
+        double normalizedProgress,
+        double lateralOffset,
+        double verticalOffset,
+        double spacing,
+        double side)
+    {
+        var orbitRadius = (392d + ((roleIndex % 3) * 108d)) * spacing;
+        var angle = Lerp(-1.04d, 1.04d, normalizedProgress) + (side * 0.42d);
+        return new WebGlNodeLayout(
+            Round((Math.Sin(angle) * orbitRadius) + (side * 184d * spacing) + (lateralOffset * 0.34d)),
+            Round((((roleIndex % 5) - 2d) * (92d * spacing)) + (verticalOffset * 0.76d)),
+            Round(Lerp(220d * spacing, -1080d * spacing, normalizedProgress) + (Math.Cos(angle) * (148d * spacing)) + (((roleIndex % 2 == 0) ? -1 : 1) * (82d * spacing))));
     }
 
     private static double ResolveLinkedLaneProgress(
@@ -552,6 +655,9 @@ public sealed class ProcessWebGlSceneAdapter
     private static double Round(double value)
         => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
+    private static double NormalizeNodeSpacingFactor(double value)
+        => Math.Round(Math.Clamp(double.IsFinite(value) ? value : 1d, 0.75d, 1.85d), 2, MidpointRounding.AwayFromZero);
+
     private static WebGlNodeLayout ResolveNodeLayout(
         string nodeId,
         IReadOnlyDictionary<string, WebGlNodeLayout> layout)
@@ -570,6 +676,9 @@ public sealed class ProcessWebGlSceneAdapter
             "customer-onboarding" => "Customer onboarding concept",
             "architecture-decision-governance" => "Architecture decision governance concept",
             "branching-code-review" => "Branching code review concept",
+            "software-delivery" => "Software delivery concept",
+            "ai-assisted-change-delivery" => "AI-assisted change delivery concept",
+            "release-readiness-and-deployment" => "Release readiness and deployment concept",
             _ => templateKey
         };
     }
@@ -864,9 +973,15 @@ public sealed class ProcessWebGlSceneAdapter
         };
     }
 
-    private static string ResolveEdgeAccentColor(CanvasWorkbenchLink link)
+    private static bool IsPrimaryPath(CanvasWorkbenchLink link, string categoryKey)
     {
-        return ResolveCategoryKey(link) switch
+        return string.Equals(categoryKey, ProcessCanvasCatalog.ConnectionCategories.Structural, StringComparison.Ordinal) ||
+            string.Equals(categoryKey, ProcessCanvasCatalog.ConnectionCategories.BranchRoute, StringComparison.Ordinal);
+    }
+
+    private static string ResolveEdgeAccentColor(string categoryKey)
+    {
+        return categoryKey switch
         {
             ProcessCanvasCatalog.ConnectionCategories.Messaging => "#0f766e",
             ProcessCanvasCatalog.ConnectionCategories.DecisionAuthority => "#8b5cf6",
@@ -910,15 +1025,54 @@ public sealed class ProcessWebGlSceneAdapter
         return string.Empty;
     }
 
-    private static double ResolveEdgeDepthOffset(CanvasWorkbenchLink link)
+    private static double ResolveEdgeDepthOffset(string categoryKey, bool isPrimaryPath)
     {
-        return ResolveCategoryKey(link) switch
+        if (isPrimaryPath && string.Equals(categoryKey, ProcessCanvasCatalog.ConnectionCategories.Structural, StringComparison.Ordinal))
         {
-            ProcessCanvasCatalog.ConnectionCategories.BranchRoute => 32,
+            return 46d;
+        }
+
+        return categoryKey switch
+        {
+            ProcessCanvasCatalog.ConnectionCategories.BranchRoute => 38d,
             ProcessCanvasCatalog.ConnectionCategories.DecisionAuthority => 24,
             ProcessCanvasCatalog.ConnectionCategories.Messaging => 18,
             ProcessCanvasCatalog.ConnectionCategories.Artifact => 14,
             _ => 8
+        };
+    }
+
+    private static double ResolveEdgeEmphasis(string categoryKey, bool isPrimaryPath)
+    {
+        if (isPrimaryPath)
+        {
+            return string.Equals(categoryKey, ProcessCanvasCatalog.ConnectionCategories.Structural, StringComparison.Ordinal)
+                ? 1.92d
+                : 1.58d;
+        }
+
+        return categoryKey switch
+        {
+            ProcessCanvasCatalog.ConnectionCategories.DecisionAuthority => 0.96d,
+            ProcessCanvasCatalog.ConnectionCategories.Messaging => 0.88d,
+            ProcessCanvasCatalog.ConnectionCategories.Artifact => 0.84d,
+            _ => 0.74d
+        };
+    }
+
+    private static double ResolveEdgeOpacity(string categoryKey, bool isPrimaryPath)
+    {
+        if (isPrimaryPath)
+        {
+            return 0.96d;
+        }
+
+        return categoryKey switch
+        {
+            ProcessCanvasCatalog.ConnectionCategories.DecisionAuthority => 0.78d,
+            ProcessCanvasCatalog.ConnectionCategories.Messaging => 0.66d,
+            ProcessCanvasCatalog.ConnectionCategories.Artifact => 0.62d,
+            _ => 0.54d
         };
     }
 
@@ -1265,6 +1419,8 @@ public sealed record ProcessWebGlSceneOptions(
     string ProjectionMode,
     string ViewPreset,
     string? SelectedNodeId,
+    string? LayoutMode = null,
+    double NodeSpacingFactor = 1,
     WebGlWorkbenchCameraState? CameraState = null,
     bool DeterministicMode = true,
     bool ShowDiagnostics = false);

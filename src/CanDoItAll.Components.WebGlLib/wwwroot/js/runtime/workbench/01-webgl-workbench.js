@@ -433,6 +433,14 @@ function resolveEdgeDepth(edge) {
     return 8;
 }
 
+function resolveEdgeEmphasis(edge) {
+    return clamp(resolveFiniteNumber(edge?.emphasis, edge?.isPrimaryPath ? 1.7 : 0.82), 0.55, 2.4);
+}
+
+function resolveEdgeOpacity(edge) {
+    return clamp(resolveFiniteNumber(edge?.opacity, edge?.isPrimaryPath ? 0.96 : 0.58), 0.18, 1);
+}
+
 function createEdgeObject(state, edge) {
     const sourceNode = state.nodeLookup.get(edge.sourceNodeId);
     const targetNode = state.nodeLookup.get(edge.targetNodeId);
@@ -454,22 +462,50 @@ function createEdgeObject(state, edge) {
         (sourcePoint.y + targetPoint.y) / 2,
         Math.max(sourcePoint.z, targetPoint.z) + depth);
     const curve = new THREE.QuadraticBezierCurve3(sourcePoint, control, targetPoint);
-    const points = curve.getPoints(24);
+    const points = curve.getPoints(32);
+    const emphasis = resolveEdgeEmphasis(edge);
+    const opacity = resolveEdgeOpacity(edge);
+    const group = new THREE.Group();
+
+    if (edge.isPrimaryPath || emphasis > 1.05) {
+        const halo = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, 42, 5.8 * emphasis, 12, false),
+            new THREE.MeshBasicMaterial({
+                color: edge.accentColor || "#2563eb",
+                transparent: true,
+                opacity: Math.min(0.16 + (opacity * 0.18), 0.38)
+            }));
+        const tube = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, 42, 2.2 * emphasis, 12, false),
+            new THREE.MeshPhongMaterial({
+                color: edge.accentColor || "#2563eb",
+                emissive: new THREE.Color(edge.accentColor || "#2563eb"),
+                emissiveIntensity: edge.isPrimaryPath ? 0.18 : 0.08,
+                shininess: 85,
+                transparent: true,
+                opacity: edge.isPrimaryPath
+                    ? Math.min(0.76 + (opacity * 0.18), 0.94)
+                    : Math.min(0.34 + (opacity * 0.2), 0.66)
+            }));
+        group.add(halo, tube);
+    }
+
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({
         color: edge.accentColor || "#2563eb",
         transparent: true,
-        opacity: 0.86
+        opacity
     });
     const line = new THREE.Line(geometry, material);
-    line.userData = {
+    group.add(line);
+    group.userData = {
         edgeId: edge.id,
         sourceNodeId: edge.sourceNodeId,
         targetNodeId: edge.targetNodeId
     };
 
-    state.edgeObjects.set(edge.id, line);
-    state.scene.add(line);
+    state.edgeObjects.set(edge.id, group);
+    state.scene.add(group);
 }
 
 function createNodeAndAnchorLookups(state) {
@@ -585,12 +621,29 @@ function ensureEdgeElement(state, edge) {
     return element;
 }
 
+function resolveNodeLabelScale(node, bounds) {
+    const targetWidth = isRoleNode(node)
+        ? 158
+        : isBranchNode(node)
+            ? 164
+            : 188;
+    const targetHeight = isRoleNode(node)
+        ? 88
+        : 96;
+    const widthScale = Math.max(0.01, bounds.width) / targetWidth;
+    const heightScale = Math.max(0.01, bounds.height) / targetHeight;
+    const fittedWidthScale = widthScale * 1.06;
+    const fittedHeightScale = heightScale * 1.95;
+    return round(clamp(Math.min(fittedWidthScale, fittedHeightScale), 0.46, 1));
+}
+
 function syncNodeLabels(state) {
     const activeNodeIds = new Set();
     for (const node of state.surface.nodes || []) {
         activeNodeIds.add(node.id);
         const label = ensureNodeLabel(state, node);
         const bounds = resolveNodeScreenBounds(state, node);
+        const labelScale = resolveNodeLabelScale(node, bounds);
         state.projectedNodes.set(node.id, {
             left: round(bounds.left),
             top: round(bounds.top),
@@ -600,7 +653,10 @@ function syncNodeLabels(state) {
 
         label.style.left = `${round(bounds.centerX)}px`;
         label.style.top = `${round(bounds.centerY)}px`;
+        label.style.setProperty("--wgl-label-scale", `${labelScale}`);
         label.classList.toggle("is-selected", state.selectedNodeIds.has(node.id));
+        label.classList.toggle("is-condensed", labelScale < 0.74);
+        label.classList.toggle("is-compact", labelScale < 0.56);
         label.querySelector(".wgl-node-label__kicker").textContent = node.kind || node.family || "Node";
         label.querySelector(".wgl-node-label__title").textContent = node.title || node.id;
         label.querySelector(".wgl-node-label__subtitle").textContent = node.subtitle || node.description || "";
@@ -668,6 +724,8 @@ function syncEdges(state) {
         const y = (sourceAnchor.y + targetAnchor.y) / 2;
         element.style.left = `${round(x)}px`;
         element.style.top = `${round(y)}px`;
+        element.style.opacity = `${resolveEdgeOpacity(edge)}`;
+        element.classList.toggle("is-primary", !!edge.isPrimaryPath);
         element.textContent = edge.label || "";
         state.projectedEdges.set(edge.id, {
             x: round(x),
@@ -679,7 +737,10 @@ function syncEdges(state) {
             targetAnchorId: edge.targetAnchorId,
             targetPortId: edge.targetPortId,
             kind: edge.kind,
-            categoryKey: edge.categoryKey
+            categoryKey: edge.categoryKey,
+            isPrimaryPath: !!edge.isPrimaryPath,
+            emphasis: round(resolveEdgeEmphasis(edge)),
+            opacity: round(resolveEdgeOpacity(edge))
         });
     }
 
@@ -810,6 +871,120 @@ function findMeshHit(state, event) {
     return intersections[0] || null;
 }
 
+function resolveNodeSpacingFactor(state) {
+    return clamp(resolveFiniteNumber(state?.surface?.uiState?.nodeSpacingFactor, 1), 0.75, 1.85);
+}
+
+function getNodeCollisionPadding(state, node) {
+    const spacingFactor = resolveNodeSpacingFactor(state);
+    const clearance = 8 + (((spacingFactor - 0.75) / 1.1) * 32);
+    return {
+        x: round(clearance),
+        y: round(clearance * 0.72),
+        z: round(clearance * 0.58)
+    };
+}
+
+function buildNodeBounds(node, x, y, z, padding) {
+    const width = (Number(node?.width) || 220) / 2;
+    const height = (Number(node?.height) || 128) / 2;
+    const depth = (Number(node?.depth) || 28) / 2;
+    return {
+        minX: x - width - padding.x,
+        maxX: x + width + padding.x,
+        minY: y - height - padding.y,
+        maxY: y + height + padding.y,
+        minZ: z - depth - padding.z,
+        maxZ: z + depth + padding.z
+    };
+}
+
+function boundsOverlap(left, right) {
+    return left.minX < right.maxX &&
+        left.maxX > right.minX &&
+        left.minY < right.maxY &&
+        left.maxY > right.minY &&
+        left.minZ < right.maxZ &&
+        left.maxZ > right.minZ;
+}
+
+function hasNodeCollision(state, nodeId, x, y, z) {
+    const node = state.nodeLookup.get(nodeId);
+    if (!node) {
+        return false;
+    }
+
+    const nodeBounds = buildNodeBounds(node, x, y, z, getNodeCollisionPadding(state, node));
+    for (const otherNode of state.surface.nodes || []) {
+        if (otherNode.id === nodeId) {
+            continue;
+        }
+
+        const otherBounds = buildNodeBounds(
+            otherNode,
+            otherNode.x || 0,
+            otherNode.y || 0,
+            otherNode.z || 0,
+            getNodeCollisionPadding(state, otherNode));
+        if (boundsOverlap(nodeBounds, otherBounds)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function hasMeaningfulMove(startX, startY, startZ, endX, endY, endZ) {
+    return Math.abs((endX || 0) - (startX || 0)) > 0.01 ||
+        Math.abs((endY || 0) - (startY || 0)) > 0.01 ||
+        Math.abs((endZ || 0) - (startZ || 0)) > 0.01;
+}
+
+function resolveCollisionFreePosition(state, nodeId, startX, startY, startZ, targetX, targetY, targetZ) {
+    const normalizedTarget = {
+        x: round(targetX),
+        y: round(targetY),
+        z: round(targetZ)
+    };
+    if (!hasNodeCollision(state, nodeId, normalizedTarget.x, normalizedTarget.y, normalizedTarget.z)) {
+        return {
+            ...normalizedTarget,
+            blocked: false,
+            moved: hasMeaningfulMove(startX, startY, startZ, normalizedTarget.x, normalizedTarget.y, normalizedTarget.z)
+        };
+    }
+
+    let bestX = round(startX);
+    let bestY = round(startY);
+    let bestZ = round(startZ);
+    let low = 0;
+    let high = 1;
+
+    for (let iteration = 0; iteration < 14; iteration += 1) {
+        const factor = (low + high) / 2;
+        const candidateX = round(startX + ((normalizedTarget.x - startX) * factor));
+        const candidateY = round(startY + ((normalizedTarget.y - startY) * factor));
+        const candidateZ = round(startZ + ((normalizedTarget.z - startZ) * factor));
+        if (hasNodeCollision(state, nodeId, candidateX, candidateY, candidateZ)) {
+            high = factor;
+            continue;
+        }
+
+        low = factor;
+        bestX = candidateX;
+        bestY = candidateY;
+        bestZ = candidateZ;
+    }
+
+    return {
+        x: bestX,
+        y: bestY,
+        z: bestZ,
+        blocked: true,
+        moved: hasMeaningfulMove(startX, startY, startZ, bestX, bestY, bestZ)
+    };
+}
+
 function commitMovedNodes(state, positions) {
     if (!positions.length) {
         return;
@@ -885,8 +1060,21 @@ function handlePointerMove(state, event) {
         return;
     }
 
-    node.x = round(worldPoint.x - state.interaction.offsetX);
-    node.y = round(fromSceneY(worldPoint.y - state.interaction.offsetY));
+    const nextPosition = resolveCollisionFreePosition(
+        state,
+        node.id,
+        node.x || 0,
+        node.y || 0,
+        node.z || 0,
+        worldPoint.x - state.interaction.offsetX,
+        fromSceneY(worldPoint.y - state.interaction.offsetY),
+        node.z || 0);
+    if (!nextPosition.moved) {
+        return;
+    }
+
+    node.x = nextPosition.x;
+    node.y = nextPosition.y;
     object.position.x = node.x;
     object.position.y = toSceneY(node.y);
     rebuildScene(state);
@@ -901,7 +1089,7 @@ function finishPointerInteraction(state) {
     if (state.interaction.kind === "drag") {
         state.controls.enabled = true;
         const node = state.nodeLookup.get(state.interaction.nodeId);
-        if (node) {
+        if (node && hasMeaningfulMove(state.interaction.startX, state.interaction.startY, node.z || 0, node.x, node.y, node.z || 0)) {
             commitMovedNodes(state, [
                 {
                     nodeId: node.id,
@@ -1072,7 +1260,9 @@ function buildAutoFitKey(surface) {
     return [
         surface?.sceneKey || surface?.surfaceId || "",
         resolveProjectionMode(surface),
-        surface?.uiState?.activeViewPreset || viewPresets.overview
+        surface?.uiState?.activeViewPreset || viewPresets.overview,
+        surface?.uiState?.layoutMode || "center-lane",
+        round(resolveFiniteNumber(surface?.uiState?.nodeSpacingFactor, 1))
     ].join("::");
 }
 
@@ -1101,6 +1291,8 @@ function collectSceneSnapshot(state) {
         sceneKey: state.surface.sceneKey || "",
         projectionMode: state.cameraState.projectionMode,
         activeViewPreset: state.surface.uiState?.activeViewPreset || viewPresets.overview,
+        layoutMode: state.surface.uiState?.layoutMode || "center-lane",
+        nodeSpacingFactor: round(resolveFiniteNumber(state.surface.uiState?.nodeSpacingFactor, 1)),
         deterministicMode: !!state.surface.uiState?.deterministicMode,
         viewportWidth: state.viewport.width,
         viewportHeight: state.viewport.height,
@@ -1124,6 +1316,9 @@ function collectSceneSnapshot(state) {
                 top: bounds.top,
                 width: bounds.width,
                 height: bounds.height,
+                sceneWidth: round(node.width || 0),
+                sceneHeight: round(node.height || 0),
+                sceneDepth: round(node.depth || 0),
                 selected: state.selectedNodeIds.has(node.id)
             };
         }),
@@ -1142,6 +1337,9 @@ function collectSceneSnapshot(state) {
                 targetPortId: edge.targetPortId,
                 kind: edge.kind,
                 categoryKey: edge.categoryKey,
+                isPrimaryPath: !!edge.isPrimaryPath,
+                emphasis: round(resolveEdgeEmphasis(edge)),
+                opacity: round(resolveEdgeOpacity(edge)),
                 x: projected.x,
                 y: projected.y
             };
@@ -1192,8 +1390,21 @@ function simulateDrag(state, request) {
         return false;
     }
 
-    node.x = round((node.x || 0) + (Number(request?.deltaX) || 0));
-    node.y = round((node.y || 0) + (Number(request?.deltaY) || 0));
+    const nextPosition = resolveCollisionFreePosition(
+        state,
+        node.id,
+        node.x || 0,
+        node.y || 0,
+        node.z || 0,
+        (node.x || 0) + (Number(request?.deltaX) || 0),
+        (node.y || 0) + (Number(request?.deltaY) || 0),
+        node.z || 0);
+    if (!nextPosition.moved) {
+        return false;
+    }
+
+    node.x = nextPosition.x;
+    node.y = nextPosition.y;
     state.surface.uiState.selectedNodeIds = [node.id];
     state.selectedNodeIds = new Set([node.id]);
     syncRuntimeState(state, state.surface);

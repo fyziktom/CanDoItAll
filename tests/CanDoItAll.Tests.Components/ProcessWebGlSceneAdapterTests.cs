@@ -16,7 +16,10 @@ public sealed class ProcessWebGlSceneAdapterTests
             templates,
             template => Assert.Equal("customer-onboarding", template.Key),
             template => Assert.Equal("architecture-decision-governance", template.Key),
-            template => Assert.Equal("branching-code-review", template.Key));
+            template => Assert.Equal("branching-code-review", template.Key),
+            template => Assert.Equal("software-delivery", template.Key),
+            template => Assert.Equal("ai-assisted-change-delivery", template.Key),
+            template => Assert.Equal("release-readiness-and-deployment", template.Key));
 
         var first = adapter.LoadProjectedDefinition("architecture-decision-governance");
         var second = adapter.LoadProjectedDefinition("architecture-decision-governance");
@@ -54,8 +57,12 @@ public sealed class ProcessWebGlSceneAdapterTests
         Assert.Contains(surface.Nodes, node => node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, surface.UiState.Camera.ProjectionMode);
         Assert.Equal(WebGlWorkbenchViewPresets.Dependencies, surface.UiState.ActiveViewPreset);
+        Assert.Equal(WebGlWorkbenchLayoutModes.CenterLane, surface.UiState.LayoutMode);
+        Assert.Equal(1, surface.UiState.NodeSpacingFactor);
         Assert.True(surface.UiState.DeterministicMode);
         Assert.True(surface.UiState.ShowDiagnostics);
+        Assert.Contains(surface.Edges, edge => edge.IsPrimaryPath && edge.Emphasis > 1.4d && edge.Opacity > 0.9d);
+        Assert.Contains(surface.Edges, edge => !edge.IsPrimaryPath && edge.Emphasis < 1d && edge.Opacity < 0.8d);
 
         Assert.All(surface.Nodes, node =>
         {
@@ -113,6 +120,56 @@ public sealed class ProcessWebGlSceneAdapterTests
             processLaneNodes.Average(node => Math.Abs(node.X)) + 180);
         Assert.True(stepNodes.Max(node => node.Z) - stepNodes.Min(node => node.Z) > 900);
         Assert.True(roleNodes.Max(node => node.Y) - roleNodes.Min(node => node.Y) > 60);
+    }
+
+    [Fact]
+    public void Scene_mapping_supports_multiple_recompose_algorithms_and_spacing_variants()
+    {
+        var adapter = CreateAdapter();
+        var baselineSurface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("branching-code-review"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "branching-code-review",
+                ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null,
+                LayoutMode: WebGlWorkbenchLayoutModes.CenterLane,
+                NodeSpacingFactor: 1));
+        var arcSurface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("branching-code-review"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "branching-code-review",
+                ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null,
+                LayoutMode: WebGlWorkbenchLayoutModes.AlternatingArc,
+                NodeSpacingFactor: 1));
+        var orbitSurface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("branching-code-review"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "branching-code-review",
+                ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null,
+                LayoutMode: WebGlWorkbenchLayoutModes.LayeredOrbit,
+                NodeSpacingFactor: 1.35d));
+
+        var trackedNodeId = baselineSurface.Nodes.First(node =>
+            !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase)).Id;
+        var baselineNode = baselineSurface.Nodes.First(node => node.Id == trackedNodeId);
+        var arcNode = arcSurface.Nodes.First(node => node.Id == trackedNodeId);
+        var orbitNode = orbitSurface.Nodes.First(node => node.Id == trackedNodeId);
+
+        Assert.Equal(WebGlWorkbenchLayoutModes.CenterLane, baselineSurface.UiState.LayoutMode);
+        Assert.Equal(WebGlWorkbenchLayoutModes.AlternatingArc, arcSurface.UiState.LayoutMode);
+        Assert.Equal(WebGlWorkbenchLayoutModes.LayeredOrbit, orbitSurface.UiState.LayoutMode);
+        Assert.NotEqual((baselineNode.X, baselineNode.Y, baselineNode.Z), (arcNode.X, arcNode.Y, arcNode.Z));
+        Assert.NotEqual((arcNode.X, arcNode.Y, arcNode.Z), (orbitNode.X, orbitNode.Y, orbitNode.Z));
+        Assert.True(
+            orbitSurface.Nodes.Where(node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)).Average(node => Math.Abs(node.X)) >
+            baselineSurface.Nodes.Where(node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)).Average(node => Math.Abs(node.X)));
+        Assert.Equal(1.35d, orbitSurface.UiState.NodeSpacingFactor);
     }
 
     private static ProcessWebGlSceneAdapter CreateAdapter()

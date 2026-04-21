@@ -2,7 +2,8 @@
 
 ## Status
 
-- Blocked
+- Completed
+- Triggered by post-proof scene feedback after the original Gate B closure memo
 
 ## Objective
 
@@ -35,6 +36,15 @@
 - Updated readability notes and screenshots proving the reset helped rather than shuffled the problem.
 - Fresh Gate B memo after the repair.
 
+## Resolution Summary
+
+- Main-path edges were promoted above role links with stronger emphasis and opacity separation.
+- Label overlays were rescaled so they now shrink during unzoom from scene-sized overlays down to a stable floor near box scale instead of pinning at the minimum immediately.
+- The representative template pack expanded beyond the original simple/medium/dense trio to include additional dense and complex process scenes.
+- Recompose controls now support `center-lane`, `alternating-arc`, and `layered-orbit`, and spacing controls widen or tighten node margins without losing deterministic layout.
+- Dragging now respects node collisions so a node cannot pass through another node.
+- Gate B was rerun on fresh browser proof and passed.
+
 ## Dependency Impact
 
 - Automation hardening remains blocked until the scene is worth proving.
@@ -62,6 +72,11 @@
 - Process semantics and IDs are consistent again.
 - Gate B can be rerun on fresh evidence.
 
+## Completion Notes
+
+- Acceptance checklist closed on 2026-04-20 with fresh Playwright smoke proof and live Playwright MCP inspection on `/webgl/process-workbench?template=branching-code-review`.
+- Screenshot evidence refreshed in `C:/repositories/CanDoItAll/output/playwright/webgl-sandbox/02-webgl-dense-template.png`, `C:/repositories/CanDoItAll/output/playwright/webgl-sandbox/06-webgl-3d-navigation-overlay.png`, and `C:/repositories/CanDoItAll/output/playwright/webgl-sandbox/07-webgl-alternating-arc-clamp.png`.
+
 ## Proof Required
 
 - Run the focused adapter/sandbox tests.
@@ -73,6 +88,7 @@
 ## Browser Validation Logging
 
 - Re-capture the medium and dense template views and answer the readability questions explicitly.
+- Completed on 2026-04-20: dense branching scene and alternating-arc recomposed scene were rechecked at `1900x1200`; main-path emphasis, label clamp (`0.68 -> 0.46`), spacing control (`1.0x -> 1.3x`), and collision-safe drag proof all passed.
 
 ## Progression Gate
 
@@ -116,3 +132,4 @@ Execute only the corrective scene-contract and layout reset. Repair the guided 3
 
 - Treat this subbundle as an isolated execution slice. Do not continue into later numbered work during the same pass.
 - Update `reviews/01-execution-report.md` and `reviews/02-architecture-gate-memo-log.md` as soon as this subbundle either passes, blocks, or triggers a corrective path.
+- This corrective subbundle was reopened and closed during the same bundle lifecycle; the execution report and gate memo now record that rerun explicitly.

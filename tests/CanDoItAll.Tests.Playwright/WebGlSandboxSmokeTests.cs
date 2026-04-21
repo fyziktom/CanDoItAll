@@ -56,18 +56,44 @@ public sealed class WebGlSandboxSmokeTests
             Path = Path.Combine(artifactsDir, "01-webgl-default-template.png")
         });
 
-        await page.GetByLabel("Template").SelectOptionAsync("2");
+        await page.GetByLabel("Template").SelectOptionAsync(
+        [
+            new SelectOptionValue
+            {
+                Label = "Multi-team software delivery and release governance"
+            }
+        ]);
+
+        var softwareDeliveryScene = await WaitForSnapshotAsync(
+            page,
+            snapshot =>
+                string.Equals(snapshot.SceneKey, "software-delivery", StringComparison.Ordinal) &&
+                snapshot.Nodes.Count > initialScene.Nodes.Count &&
+                snapshot.Edges.Count > initialScene.Edges.Count,
+            "software delivery representative template");
+
+        Assert.True(softwareDeliveryScene.Nodes.Count >= 12);
+
+        await page.GetByLabel("Template").SelectOptionAsync(
+        [
+            new SelectOptionValue
+            {
+                Label = "Branching code review and merge governance"
+            }
+        ]);
 
         var denseScene = await WaitForSnapshotAsync(
             page,
             snapshot =>
                 string.Equals(snapshot.SceneKey, "branching-code-review", StringComparison.Ordinal) &&
-                snapshot.Nodes.Count > initialScene.Nodes.Count &&
-                snapshot.Edges.Count >= initialScene.Edges.Count,
+                snapshot.Nodes.Count >= softwareDeliveryScene.Nodes.Count &&
+                snapshot.Edges.Count >= softwareDeliveryScene.Edges.Count,
             "dense representative template");
 
         Assert.Contains(denseScene.Nodes, node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(denseScene.Nodes, node => node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(denseScene.Edges, edge => edge.IsPrimaryPath && edge.Emphasis > 1.4d);
+        Assert.Contains(denseScene.Edges, edge => !edge.IsPrimaryPath && edge.Emphasis < 1d);
         await AssertStageBoundsAsync(page, 900, 600);
 
         await page.Locator("[data-testid='webgl-sandbox-stage']").ScreenshotAsync(new LocatorScreenshotOptions
@@ -104,10 +130,10 @@ public sealed class WebGlSandboxSmokeTests
             snapshot => string.Equals(snapshot.SceneKey, "branching-code-review", StringComparison.Ordinal) && snapshot.Nodes.Count > 0,
             "branching template");
         await AssertStageBoundsAsync(page, 900, 600);
-        var targetNode = initialScene.Nodes.First(node =>
-            !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
-            !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
-
+        var targetNode = initialScene.Nodes
+            .Where(node => !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(node => ResolveSceneClearance(initialScene, node))
+            .First();
         var focused = await page.EvaluateAsync<bool>(
             @"nodeId => {
                 const host = document.querySelector('.wgl-workbench-host');
@@ -124,20 +150,8 @@ public sealed class WebGlSandboxSmokeTests
 
         await page.WaitForTimeoutAsync(200);
         var focusedState = await ReadUiStateAsync(page);
-
-        var dragAccepted = await page.EvaluateAsync<bool>(
-            @"request => {
-                const host = document.querySelector('.wgl-workbench-host');
-                const runtime = window.CanDoItAll?.webglWorkbench;
-                return !!runtime?.simulateDrag(host, request);
-            }",
-            new
-            {
-                nodeId = targetNode.Id,
-                deltaX = 132,
-                deltaY = 58
-            });
-        Assert.True(dragAccepted, $"Expected simulateDrag to accept node '{targetNode.Id}'.");
+        var dragPlan = await ResolveSupportedDragAsync(page, targetNode);
+        Assert.True(dragPlan.Accepted, $"Expected simulateDrag to accept a collision-safe drag vector for '{targetNode.Id}'.");
 
         var afterDrag = await WaitForSnapshotAsync(
             page,
@@ -145,11 +159,12 @@ public sealed class WebGlSandboxSmokeTests
             {
                 var movedNode = snapshot.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal));
                 return movedNode is not null &&
-                    Math.Abs(movedNode.X - (targetNode.X + 132)) < 0.5 &&
-                    Math.Abs(movedNode.Y - (targetNode.Y + 58)) < 0.5;
+                    Math.Abs(movedNode.X - dragPlan.X) < 0.5 &&
+                    Math.Abs(movedNode.Y - dragPlan.Y) < 0.5;
             },
             "dragged node to persist through rerender");
         var afterDragState = await ReadUiStateAsync(page);
+        var movedNode = afterDrag.Nodes.First(node => string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal));
 
         Assert.True(Math.Abs(afterDragState.Camera.TargetX - focusedState.Camera.TargetX) < 0.1);
         Assert.True(Math.Abs(afterDragState.Camera.TargetY - focusedState.Camera.TargetY) < 0.1);
@@ -158,6 +173,9 @@ public sealed class WebGlSandboxSmokeTests
         Assert.True(Math.Abs(afterDragState.Camera.Distance - focusedState.Camera.Distance) < 0.5);
         Assert.True(Math.Abs(afterDragState.Camera.Azimuth - focusedState.Camera.Azimuth) < 0.01);
         Assert.True(Math.Abs(afterDragState.Camera.Polar - focusedState.Camera.Polar) < 0.01);
+        Assert.True(
+            Math.Abs(movedNode.X - targetNode.X) > 1 || Math.Abs(movedNode.Y - targetNode.Y) > 1,
+            $"Expected node '{targetNode.Id}' to move after the accepted collision-safe drag.");
 
         var edge = afterDrag.Edges.First(edgeCandidate =>
             (ProcessCanvasCatalog.DefinitionPorts.IsStepStructuralOutputPortId(edgeCandidate.SourcePortId) &&
@@ -311,6 +329,100 @@ public sealed class WebGlSandboxSmokeTests
             "reset control to restore the fitted camera");
 
         Assert.True(Math.Abs(resetState.Camera.Azimuth - pannedState.Camera.Azimuth) > 0.08);
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    [Trait("Surface", "WebGlSandbox")]
+    public async Task Sandbox_recomposes_scene_adjusts_spacing_scales_labels_and_blocks_collisions()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+        var page = await context.NewPageAsync();
+
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/webgl/process-workbench?template=branching-code-review");
+        Assert.NotNull(response);
+        Assert.True(response!.Ok, $"Expected sandbox route to return 2xx, got {(int)response.Status}.");
+
+        var baselineScene = await WaitForSnapshotAsync(
+            page,
+            snapshot => string.Equals(snapshot.SceneKey, "branching-code-review", StringComparison.Ordinal) && snapshot.Nodes.Count > 0,
+            "branching template for recomposition");
+        var trackedNode = baselineScene.Nodes.First(node =>
+            !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+
+        await page.GetByLabel("Layout algorithm").SelectOptionAsync(
+        [
+            new SelectOptionValue
+            {
+                Label = "Alternating arc"
+            }
+        ]);
+
+        var recomposedScene = await WaitForSnapshotAsync(
+            page,
+            snapshot =>
+                string.Equals(snapshot.LayoutMode, "alternating-arc", StringComparison.Ordinal) &&
+                snapshot.Nodes.Any(node =>
+                    string.Equals(node.Id, trackedNode.Id, StringComparison.Ordinal) &&
+                    Math.Abs(node.X - trackedNode.X) > 20),
+            "alternating arc recomposition");
+
+        await page.GetByTestId("webgl-sandbox-spacing-increase").ClickAsync();
+        await page.GetByTestId("webgl-sandbox-spacing-increase").ClickAsync();
+
+        var spacedScene = await WaitForSnapshotAsync(
+            page,
+            snapshot =>
+                string.Equals(snapshot.LayoutMode, "alternating-arc", StringComparison.Ordinal) &&
+                snapshot.NodeSpacingFactor > recomposedScene.NodeSpacingFactor &&
+                snapshot.Nodes.Where(node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)).Average(node => Math.Abs(node.X)) >
+                recomposedScene.Nodes.Where(node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)).Average(node => Math.Abs(node.X)),
+            "spacing increase to spread nodes");
+
+        var labelScaleBeforeZoom = await ReadLabelScaleAsync(page, trackedNode.Id);
+        var initialCameraState = await ReadUiStateAsync(page);
+
+        for (var index = 0; index < 5; index++)
+        {
+            await page.GetByTestId("webgl-stage-zoom-out").ClickAsync();
+        }
+
+        await WaitForUiStateAsync(
+            page,
+            state => state.Camera.Distance > initialCameraState.Camera.Distance + 80,
+            "zoom out to test label scaling");
+
+        var labelScaleAfterZoom = await ReadLabelScaleAsync(page, trackedNode.Id);
+        Assert.True(labelScaleAfterZoom < labelScaleBeforeZoom, "Expected labels to shrink before reaching the unzoom clamp.");
+        Assert.InRange(labelScaleAfterZoom, 0.44d, 0.7d);
+
+        var collisionPlan = await ResolveCollisionProbeAsync(page);
+        Assert.True(collisionPlan.Accepted, "Expected at least one collision probe drag to advance until contact without overlapping the target node.");
+
+        var afterCollision = await WaitForSnapshotAsync(
+            page,
+            snapshot =>
+            {
+                var movedNode = snapshot.Nodes.FirstOrDefault(node => string.Equals(node.Id, collisionPlan.NodeId, StringComparison.Ordinal));
+                return movedNode is not null &&
+                    Math.Abs(movedNode.X - collisionPlan.X) < 0.5 &&
+                    Math.Abs(movedNode.Y - collisionPlan.Y) < 0.5;
+            },
+            "collision-safe drag");
+
+        var movedNode = afterCollision.Nodes.First(node => string.Equals(node.Id, collisionPlan.NodeId, StringComparison.Ordinal));
+        var stationaryNode = afterCollision.Nodes.First(node => string.Equals(node.Id, collisionPlan.TargetNodeId, StringComparison.Ordinal));
+
+        Assert.False(NodesOverlap(movedNode, stationaryNode), "Collision protection should prevent nodes from overlapping after drag.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -481,11 +593,188 @@ public sealed class WebGlSandboxSmokeTests
             $"Expected stage height >= {minimumHeight}, got {bounds.Height}.");
     }
 
+    private static async Task<double> ReadLabelScaleAsync(IPage page, string nodeId)
+    {
+        return await page.EvaluateAsync<double>(
+            @"targetNodeId => {
+                const element = document.querySelector(`[data-webgl-node-id='${targetNodeId}']`);
+                if (!(element instanceof HTMLElement)) {
+                    return 0;
+                }
+
+                const rawValue = getComputedStyle(element).getPropertyValue('--wgl-label-scale').trim();
+                const parsed = Number.parseFloat(rawValue);
+                return Number.isFinite(parsed) ? parsed : 0;
+            }",
+            nodeId);
+    }
+
+    private static async Task<WebGlDragProbeResult> ResolveSupportedDragAsync(IPage page, WebGlSceneNode node)
+    {
+        return await page.EvaluateAsync<WebGlDragProbeResult>(
+            @"request => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.simulateDrag || !runtime?.getSceneSnapshot) {
+                    return { accepted: false, nodeId: request.nodeId, targetNodeId: '', deltaX: 0, deltaY: 0, x: request.nodeX, y: request.nodeY };
+                }
+
+                const horizontalDirection = (request.nodeX || 0) <= 0 ? -1 : 1;
+                const verticalDirection = (request.nodeY || 0) <= 0 ? -1 : 1;
+                const candidates = [
+                    { deltaX: horizontalDirection * 48, deltaY: 0 },
+                    { deltaX: horizontalDirection * 72, deltaY: verticalDirection * 24 },
+                    { deltaX: horizontalDirection * 36, deltaY: verticalDirection * 18 },
+                    { deltaX: 0, deltaY: verticalDirection * 36 },
+                    { deltaX: horizontalDirection * 24, deltaY: 0 },
+                    { deltaX: horizontalDirection * 24, deltaY: verticalDirection * 12 }
+                ];
+
+                for (const candidate of candidates) {
+                    const accepted = !!runtime.simulateDrag(host, {
+                        nodeId: request.nodeId,
+                        deltaX: candidate.deltaX,
+                        deltaY: candidate.deltaY
+                    });
+                    if (!accepted) {
+                        continue;
+                    }
+
+                    const movedNode = runtime.getSceneSnapshot(host)?.nodes?.find(node => node.id === request.nodeId);
+                    return {
+                        accepted: true,
+                        nodeId: request.nodeId,
+                        targetNodeId: '',
+                        deltaX: candidate.deltaX,
+                        deltaY: candidate.deltaY,
+                        x: movedNode?.x ?? request.nodeX,
+                        y: movedNode?.y ?? request.nodeY
+                    };
+                }
+
+                return { accepted: false, nodeId: request.nodeId, targetNodeId: '', deltaX: 0, deltaY: 0, x: request.nodeX, y: request.nodeY };
+            }",
+            new
+            {
+                nodeId = node.Id,
+                nodeX = node.X,
+                nodeY = node.Y
+            });
+    }
+
+    private static async Task<WebGlDragProbeResult> ResolveCollisionProbeAsync(IPage page)
+    {
+        return await page.EvaluateAsync<WebGlDragProbeResult>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.simulateDrag || !runtime?.getSceneSnapshot) {
+                    return { accepted: false, nodeId: '', targetNodeId: '', deltaX: 0, deltaY: 0, x: 0, y: 0 };
+                }
+
+                const overlaps = (left, right) => {
+                    const overlapsX = Math.abs((left?.x || 0) - (right?.x || 0)) < (((left?.sceneWidth || 0) + (right?.sceneWidth || 0)) / 2);
+                    const overlapsY = Math.abs((left?.y || 0) - (right?.y || 0)) < (((left?.sceneHeight || 0) + (right?.sceneHeight || 0)) / 2);
+                    const overlapsZ = Math.abs((left?.z || 0) - (right?.z || 0)) < (((left?.sceneDepth || 0) + (right?.sceneDepth || 0)) / 2);
+                    return overlapsX && overlapsY && overlapsZ;
+                };
+
+                const snapshot = runtime.getSceneSnapshot(host);
+                const processNodes = (snapshot?.nodes || []).filter(node => !node.kind.includes('role') && !node.kind.includes('branch'));
+                const pairCandidates = [];
+
+                for (const source of processNodes) {
+                    for (const target of processNodes) {
+                        if (source.id === target.id) {
+                            continue;
+                        }
+
+                        const deltaX = target.x - source.x;
+                        const deltaY = target.y - source.y;
+                        if (Math.abs(deltaX) < 40 && Math.abs(deltaY) < 40) {
+                            continue;
+                        }
+
+                        pairCandidates.push({
+                            sourceId: source.id,
+                            targetId: target.id,
+                            deltaX,
+                            deltaY,
+                            distance: Math.abs(deltaX) + Math.abs(deltaY) + Math.abs(target.z - source.z)
+                        });
+                    }
+                }
+
+                pairCandidates.sort((left, right) => left.distance - right.distance);
+
+                for (const candidate of pairCandidates) {
+                    const beforeSnapshot = runtime.getSceneSnapshot(host);
+                    const sourceNode = beforeSnapshot?.nodes?.find(node => node.id === candidate.sourceId);
+                    const targetNode = beforeSnapshot?.nodes?.find(node => node.id === candidate.targetId);
+                    if (!sourceNode || !targetNode) {
+                        continue;
+                    }
+
+                    const accepted = !!runtime.simulateDrag(host, {
+                        nodeId: candidate.sourceId,
+                        deltaX: candidate.deltaX,
+                        deltaY: candidate.deltaY
+                    });
+                    const movedNode = runtime.getSceneSnapshot(host)?.nodes?.find(node => node.id === candidate.sourceId);
+                    const moved = movedNode &&
+                        (Math.abs((movedNode.x || 0) - (sourceNode.x || 0)) > 1 || Math.abs((movedNode.y || 0) - (sourceNode.y || 0)) > 1);
+
+                    if (accepted && moved && movedNode && !overlaps(movedNode, targetNode)) {
+                        return {
+                            accepted: true,
+                            nodeId: candidate.sourceId,
+                            targetNodeId: candidate.targetId,
+                            deltaX: candidate.deltaX,
+                            deltaY: candidate.deltaY,
+                            x: movedNode.x || 0,
+                            y: movedNode.y || 0
+                        };
+                    }
+
+                    if (accepted && movedNode) {
+                        runtime.simulateDrag(host, {
+                            nodeId: candidate.sourceId,
+                            deltaX: (sourceNode.x || 0) - (movedNode.x || 0),
+                            deltaY: (sourceNode.y || 0) - (movedNode.y || 0)
+                        });
+                    }
+                }
+
+                return { accepted: false, nodeId: '', targetNodeId: '', deltaX: 0, deltaY: 0, x: 0, y: 0 };
+            }");
+    }
+
+    private static bool NodesOverlap(WebGlSceneNode left, WebGlSceneNode right)
+    {
+        var overlapsX = Math.Abs(left.X - right.X) < ((left.SceneWidth + right.SceneWidth) / 2d);
+        var overlapsY = Math.Abs(left.Y - right.Y) < ((left.SceneHeight + right.SceneHeight) / 2d);
+        var overlapsZ = Math.Abs(left.Z - right.Z) < ((left.SceneDepth + right.SceneDepth) / 2d);
+        return overlapsX && overlapsY && overlapsZ;
+    }
+
+    private static double ResolveSceneClearance(WebGlSceneSnapshot snapshot, WebGlSceneNode node)
+    {
+        return snapshot.Nodes
+            .Where(other => !string.Equals(other.Id, node.Id, StringComparison.Ordinal))
+            .Select(other => Math.Abs(other.X - node.X) + Math.Abs(other.Y - node.Y) + Math.Abs(other.Z - node.Z))
+            .DefaultIfEmpty(0)
+            .Min();
+    }
+
     private sealed class WebGlSceneSnapshot
     {
         public string SceneKey { get; set; } = string.Empty;
 
         public string ProjectionMode { get; set; } = string.Empty;
+
+        public string LayoutMode { get; set; } = string.Empty;
+
+        public double NodeSpacingFactor { get; set; }
 
         public bool DeterministicMode { get; set; }
 
@@ -505,6 +794,12 @@ public sealed class WebGlSandboxSmokeTests
         public double Y { get; set; }
 
         public double Z { get; set; }
+
+        public double SceneWidth { get; set; }
+
+        public double SceneHeight { get; set; }
+
+        public double SceneDepth { get; set; }
     }
 
     private sealed class WebGlSceneEdge
@@ -526,6 +821,29 @@ public sealed class WebGlSandboxSmokeTests
         public string Kind { get; set; } = string.Empty;
 
         public string CategoryKey { get; set; } = string.Empty;
+
+        public bool IsPrimaryPath { get; set; }
+
+        public double Emphasis { get; set; }
+
+        public double Opacity { get; set; }
+    }
+
+    private sealed class WebGlDragProbeResult
+    {
+        public bool Accepted { get; set; }
+
+        public string NodeId { get; set; } = string.Empty;
+
+        public string TargetNodeId { get; set; } = string.Empty;
+
+        public double DeltaX { get; set; }
+
+        public double DeltaY { get; set; }
+
+        public double X { get; set; }
+
+        public double Y { get; set; }
     }
 
     private sealed class WebGlUiStateProof

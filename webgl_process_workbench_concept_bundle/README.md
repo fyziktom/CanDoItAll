@@ -2,16 +2,16 @@
 
 ## Status
 
-This initiative bundle was prepared and executed on **2026-04-20** for a concept branch. It now records the completed implementation and proof trail for the **WebGL process-workbench concept**, shipped as a perspective-first, center-lane 3D sandbox while keeping the production `ProcessWorkspace` out of scope.
+This initiative bundle was prepared and executed on **2026-04-20** for a concept branch. It now records the completed implementation and proof trail for the **WebGL process-workbench concept**, including a reopened scene-contract corrective pass that closed the final 3D readability and interaction gaps while keeping the production `ProcessWorkspace` out of scope.
 
 ## Validation Summary
 
-- Bundle preparation status: `Prepared on 2026-04-20; execution closed on 2026-04-20`
+- Bundle preparation status: `Prepared on 2026-04-20; execution closed, reopened for scene corrective, and reclosed on 2026-04-20`
 - Bundle readiness gate: `Passed on 2026-04-20`
-- Execution status: `Completed on 2026-04-20`
-- Subbundle gate review: `Main subbundles 01-10 completed; corrective playbooks not triggered`
-- Final closure gate: `Passed on 2026-04-20`
-- Browser validation analytics: `Passed on 2026-04-20 with fresh screenshots and semantic proof`
+- Execution status: `Completed on 2026-04-20 after corrective scene reset`
+- Subbundle gate review: `Main subbundles 01-10 completed; _corrective-scene-contract-and-layout-reset triggered, executed, and closed on fresh proof`
+- Final closure gate: `Passed on 2026-04-20 after corrective rerun`
+- Browser validation analytics: `Passed on 2026-04-20 with fresh screenshots, live Playwright MCP proof, and rerun semantic automation`
 
 ## Why this bundle exists
 
@@ -41,9 +41,13 @@ This bundle intentionally **does not** replace the production 2D process workspa
 The shipped implementation uses a **guided perspective 3D scene** instead of either a flat 2D replica or an uncontrolled free-fly graph editor:
 
 - The main process path stays deterministic and centered.
+- The main process path is visually stronger than role and artifact connections.
 - Roles and supporting nodes spread to the left and right flanks to reduce overlap.
 - Depth is used semantically to stage the route and strengthen legibility.
 - The sandbox authoring camera is **perspective-first** with orbit, pan, zoom, and reset controls.
+- The scene can be recomposed with `center-lane`, `alternating-arc`, and `layered-orbit` layout rules plus adjustable node spacing.
+- Collision-safe dragging prevents one node from being pushed through another node.
+- Label overlays shrink while unzooming until they hit a stable clamp near box scale.
 - Labels stay in a **DOM/HTML overlay mirror** for readability and automation.
 - Rendering, hit-testing, drag preview, and connection preview stay in **JavaScript**, not in per-frame Blazor logic.
 
@@ -54,6 +58,9 @@ The shipped implementation uses a **guided perspective 3D scene** instead of eit
 | customer-onboarding | Simple | Fast sanity check for sparse scenes. |
 | architecture-decision-governance | Medium | Branching plus governance semantics without maximum density. |
 | branching-code-review | Dense | Stress case for overlap, routing, and authoring. |
+| software-delivery | Dense | Multi-lane delivery path with more approvals and support-role spread. |
+| ai-assisted-change-delivery | Complex | Mixed human and AI executor path with review and governance anchors. |
+| release-readiness-and-deployment | Complex | Late-stage approval flow with deployment gates and high edge density. |
 
 ## Read first
 

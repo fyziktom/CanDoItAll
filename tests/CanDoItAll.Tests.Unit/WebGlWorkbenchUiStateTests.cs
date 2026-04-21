@@ -12,6 +12,8 @@ public sealed class WebGlWorkbenchUiStateTests
         Assert.Equal(WebGlWorkbenchUiState.CurrentVersion, state.Version);
         Assert.Empty(state.SelectedNodeIds);
         Assert.Equal(WebGlWorkbenchViewPresets.Overview, state.ActiveViewPreset);
+        Assert.Equal(WebGlWorkbenchLayoutModes.CenterLane, state.LayoutMode);
+        Assert.Equal(1, state.NodeSpacingFactor);
         Assert.True(state.DeterministicMode);
         Assert.Equal(WebGlWorkbenchProjectionModes.Orthographic, state.Camera.ProjectionMode);
         Assert.Equal(1180, state.Camera.Distance);
@@ -26,6 +28,8 @@ public sealed class WebGlWorkbenchUiStateTests
         {
             SelectedNodeIds = [" alpha ", "alpha", " ", "beta"],
             ActiveViewPreset = string.Empty,
+            LayoutMode = WebGlWorkbenchLayoutModes.LayeredOrbit,
+            NodeSpacingFactor = 4,
             DeterministicMode = true,
             ShowDiagnostics = true,
             Camera = new WebGlWorkbenchCameraState
@@ -45,6 +49,8 @@ public sealed class WebGlWorkbenchUiStateTests
 
         Assert.Equal(["alpha", "beta"], parsed.SelectedNodeIds);
         Assert.Equal(WebGlWorkbenchViewPresets.Overview, parsed.ActiveViewPreset);
+        Assert.Equal(WebGlWorkbenchLayoutModes.LayeredOrbit, parsed.LayoutMode);
+        Assert.Equal(1.85d, parsed.NodeSpacingFactor);
         Assert.True(parsed.ShowDiagnostics);
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, parsed.Camera.ProjectionMode);
         Assert.Equal(1.4, parsed.Camera.Zoom);

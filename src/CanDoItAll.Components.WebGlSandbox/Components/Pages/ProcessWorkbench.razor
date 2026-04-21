@@ -20,6 +20,8 @@
 
             <div class="webgl-page-hero__meta">
                 <StatusBadge Text="@Session.CurrentTemplate.Complexity" Tone="@ResolveComplexityTone(Session.CurrentTemplate.Complexity)" />
+                <StatusBadge Text="@ResolveLayoutLabel(Session.LayoutMode)" Tone="neutral" />
+                <StatusBadge Text="@($"{Session.NodeSpacingFactor:0.##}x spacing")" Tone="neutral" />
                 <StatusBadge Text="@($"{currentSurface.Nodes.Count} nodes")" Tone="info" />
                 <StatusBadge Text="@($"{currentSurface.Edges.Count} edges")" Tone="accent" />
             </div>
@@ -52,6 +54,36 @@
                               ValueChanged="HandleViewPresetChangedAsync" />
                 </FormField>
 
+                <FormField Text="Layout algorithm" ContainerClass="webgl-control-field">
+                    <DropDown TValue="string"
+                              Data="@LayoutModeOptions"
+                              TextProperty="@nameof(ChoiceItem.Label)"
+                              ValueProperty="@nameof(ChoiceItem.Value)"
+                              Value="@Session.LayoutMode"
+                              ValueChanged="HandleLayoutModeChangedAsync" />
+                </FormField>
+
+                <FormField Text="Node spacing" ContainerClass="webgl-control-field">
+                    <Stack Orientation="Orientation.Horizontal"
+                           Wrap="FlexWrap.Wrap"
+                           GapScale="LayoutGap.Small"
+                           AlignItems="AlignItems.Center">
+                        <Button Text="Tighter"
+                                Icon="remove"
+                                Click="HandleDecreaseSpacingAsync"
+                                data-testid="webgl-sandbox-spacing-decrease" />
+                        <Button Text="Wider"
+                                Icon="add"
+                                Click="HandleIncreaseSpacingAsync"
+                                data-testid="webgl-sandbox-spacing-increase" />
+                        <StatusBadge Text="@($"{Session.NodeSpacingFactor:0.##}x")" Tone="info" />
+                    </Stack>
+                </FormField>
+
+                <Button Text="Recompose"
+                        Icon="route"
+                        Click="HandleRecomposeAsync"
+                        data-testid="webgl-sandbox-recompose" />
                 <Button Text="Reset edits"
                         Icon="refresh"
                         Click="HandleResetAsync"
@@ -78,7 +110,7 @@
             <Stack GapScale="LayoutGap.Small">
                 <StatusBadge Text="@Session.CurrentTemplate.DisplayName" Tone="info" />
                 <StatusBadge Text="@($"{Session.CurrentTemplate.StepCount} steps")" Tone="accent" />
-                <p class="webgl-rail-copy">Locked bundle set: simple, medium, and dense coverage without inventing fake process data.</p>
+                <p class="webgl-rail-copy">Expanded representative pack: baseline, dense, delivery, AI, and release-control flows are all projected from repository templates instead of demo-only data.</p>
             </Stack>
         </SectionCard>
 
@@ -236,7 +268,7 @@
                                         data-testid="webgl-stage-reset-view" />
                             </Stack>
                         </div>
-                        <p class="webgl-stage-overlay__help">Mouse: left orbit, middle drag or wheel zoom, right pan. Arrow keys pan when the scene is focused. Hold Shift and drag a node to move it.</p>
+                        <p class="webgl-stage-overlay__help">Mouse: left orbit, middle drag or wheel zoom, right pan. Arrow keys pan when the scene is focused. Hold Shift and drag a node to move it, and collision protection stops boxes from crossing into each other.</p>
                     </div>
                 </div>
             </div>
@@ -252,6 +284,13 @@
         new("Dependencies", WebGlWorkbenchViewPresets.Dependencies),
         new("Branching", WebGlWorkbenchViewPresets.Branching),
         new("Focus", WebGlWorkbenchViewPresets.Focus)
+    ];
+
+    private static readonly IReadOnlyList<ChoiceItem> LayoutModeOptions =
+    [
+        new("Center lane", WebGlWorkbenchLayoutModes.CenterLane),
+        new("Alternating arc", WebGlWorkbenchLayoutModes.AlternatingArc),
+        new("Layered orbit", WebGlWorkbenchLayoutModes.LayeredOrbit)
     ];
 
     [SupplyParameterFromQuery(Name = "template")]
@@ -320,6 +359,13 @@
     private async Task HandleViewPresetChangedAsync(string? viewPreset)
         => await NavigateAsync(Session.SelectedTemplateKey, Session.ProjectionMode, viewPreset);
 
+    private Task HandleLayoutModeChangedAsync(string? layoutMode)
+    {
+        Session.Recompose(layoutMode);
+        RefreshSurface();
+        return Task.CompletedTask;
+    }
+
     private Task HandleSelectionChanged(WebGlSelectionChangedEventArgs args)
     {
         Session.SetSelectedNode(args.PrimaryNodeId);
@@ -358,12 +404,37 @@
         }
     }
 
+    private async Task HandleRecomposeAsync()
+    {
+        Session.Recompose();
+        RefreshSurface();
+        await Task.Yield();
+        if (workbench is not null)
+        {
+            await workbench.FitViewToSceneAsync();
+        }
+    }
+
     private async Task HandleFitViewAsync()
     {
         if (workbench is not null)
         {
             await workbench.FitViewToSceneAsync();
         }
+    }
+
+    private Task HandleDecreaseSpacingAsync()
+    {
+        Session.AdjustNodeSpacing(-1);
+        RefreshSurface();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleIncreaseSpacingAsync()
+    {
+        Session.AdjustNodeSpacing(1);
+        RefreshSurface();
+        return Task.CompletedTask;
     }
 
     private Task HandleOrbitLeftAsync() => ExecuteWorkbenchActionAsync(() => workbench.OrbitAsync(-0.18d, 0));
@@ -567,8 +638,19 @@
         {
             "Simple" => "success",
             "Medium" => "info",
+            "Complex" => "accent",
             "Dense" => "warning",
             _ => "neutral"
+        };
+    }
+
+    private static string ResolveLayoutLabel(string layoutMode)
+    {
+        return WebGlWorkbenchLayoutModes.Normalize(layoutMode) switch
+        {
+            WebGlWorkbenchLayoutModes.AlternatingArc => "Alternating arc",
+            WebGlWorkbenchLayoutModes.LayeredOrbit => "Layered orbit",
+            _ => "Center lane"
         };
     }
 

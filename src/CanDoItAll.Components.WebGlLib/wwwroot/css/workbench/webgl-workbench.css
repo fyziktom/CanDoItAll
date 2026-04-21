@@ -82,6 +82,7 @@
 .wgl-node-label {
     position: absolute;
     z-index: 2;
+    --wgl-label-scale: 1;
     min-width: 8.4rem;
     max-width: 15.5rem;
     padding: 0.72rem 0.86rem;
@@ -95,7 +96,8 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
         0 18px 52px rgba(2, 6, 23, 0.3);
     backdrop-filter: blur(18px);
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(var(--wgl-label-scale));
+    transform-origin: center center;
     transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease, background 120ms ease;
 }
 
@@ -107,7 +109,21 @@
     box-shadow:
         0 0 0 2px rgba(56, 189, 248, 0.18),
         0 22px 56px rgba(56, 189, 248, 0.16);
-    transform: translate(-50%, -50%) translateY(-2px);
+    transform: translate(-50%, -50%) translateY(-2px) scale(var(--wgl-label-scale));
+}
+
+.wgl-node-label.is-condensed {
+    padding: 0.6rem 0.72rem;
+}
+
+.wgl-node-label.is-condensed .wgl-node-label__tags {
+    gap: 0.24rem;
+    margin-top: 0.36rem;
+}
+
+.wgl-node-label.is-compact .wgl-node-label__subtitle,
+.wgl-node-label.is-compact .wgl-node-label__tags {
+    display: none;
 }
 
 .wgl-node-label__kicker {
@@ -177,6 +193,13 @@
     box-shadow: 0 10px 26px rgba(2, 6, 23, 0.22);
     transform: translate(-50%, -50%);
     pointer-events: none;
+}
+
+.wgl-edge-anchor.is-primary {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow:
+        0 0 0 1px rgba(56, 189, 248, 0.16),
+        0 12px 30px rgba(56, 189, 248, 0.2);
 }
 
 .wgl-empty-state {
