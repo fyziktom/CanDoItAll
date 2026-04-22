@@ -83,6 +83,7 @@ public sealed class ProcessWebGlSandboxSessionTests
         {
             Camera = new WebGlWorkbenchCameraState
             {
+                ViewMode = WebGlWorkbenchCameraViewModes.Perspective,
                 ProjectionMode = WebGlWorkbenchProjectionModes.Perspective,
                 Zoom = 1.12,
                 TargetX = 120,
@@ -107,6 +108,7 @@ public sealed class ProcessWebGlSandboxSessionTests
         var rebuiltSurface = session.BuildSurface();
 
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, rebuiltSurface.UiState.Camera.ProjectionMode);
+        Assert.Equal(WebGlWorkbenchCameraViewModes.Perspective, rebuiltSurface.UiState.Camera.ViewMode);
         Assert.Equal(1.12, rebuiltSurface.UiState.Camera.Zoom);
         Assert.Equal(120, rebuiltSurface.UiState.Camera.TargetX);
         Assert.Equal(-220, rebuiltSurface.UiState.Camera.TargetY);
@@ -117,15 +119,38 @@ public sealed class ProcessWebGlSandboxSessionTests
     }
 
     [Fact]
-    public void Session_keeps_sandbox_projection_in_perspective_mode()
+    [Theory]
+    [InlineData(WebGlWorkbenchCameraViewModes.Perspective, WebGlWorkbenchProjectionModes.Perspective)]
+    [InlineData(WebGlWorkbenchCameraViewModes.XY, WebGlWorkbenchProjectionModes.Orthographic)]
+    [InlineData(WebGlWorkbenchCameraViewModes.XZ, WebGlWorkbenchProjectionModes.Orthographic)]
+    [InlineData(WebGlWorkbenchCameraViewModes.YZ, WebGlWorkbenchProjectionModes.Orthographic)]
+    public void Session_applies_camera_view_mode_from_route_state(string cameraViewMode, string expectedProjectionMode)
     {
         var session = new ProcessWebGlSandboxSession(CreateAdapter());
 
-        session.ApplyRouteState("customer-onboarding", WebGlWorkbenchProjectionModes.Orthographic, null);
+        session.ApplyRouteState("customer-onboarding", cameraViewMode, null);
 
         var surface = session.BuildSurface();
 
+        Assert.Equal(cameraViewMode, session.CameraViewMode);
+        Assert.Equal(expectedProjectionMode, session.ProjectionMode);
+        Assert.Equal(expectedProjectionMode, surface.UiState.Camera.ProjectionMode);
+        Assert.Equal(cameraViewMode, surface.UiState.Camera.ViewMode);
+    }
+
+    [Fact]
+    public void Session_defaults_missing_route_camera_to_perspective()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+
+        session.ApplyRouteState("customer-onboarding", WebGlWorkbenchCameraViewModes.XY, null);
+        session.ApplyRouteState("customer-onboarding", null, null);
+
+        var surface = session.BuildSurface();
+
+        Assert.Equal(WebGlWorkbenchCameraViewModes.Perspective, session.CameraViewMode);
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, session.ProjectionMode);
+        Assert.Equal(WebGlWorkbenchCameraViewModes.Perspective, surface.UiState.Camera.ViewMode);
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, surface.UiState.Camera.ProjectionMode);
     }
 
@@ -198,7 +223,12 @@ public sealed class ProcessWebGlSandboxSessionTests
             ShowDiagnostics = false,
             ShowGrid = false,
             ShowAnchors = false,
-            ShowEdgeLabels = false
+            ShowEdgeLabels = false,
+            Camera = new WebGlWorkbenchCameraState
+            {
+                ViewMode = WebGlWorkbenchCameraViewModes.XZ,
+                ProjectionMode = WebGlWorkbenchProjectionModes.Orthographic
+            }
         });
 
         var surface = session.BuildSurface();
@@ -209,6 +239,8 @@ public sealed class ProcessWebGlSandboxSessionTests
         Assert.False(surface.UiState.ShowGrid);
         Assert.False(surface.UiState.ShowAnchors);
         Assert.False(surface.UiState.ShowEdgeLabels);
+        Assert.Equal(WebGlWorkbenchCameraViewModes.XZ, surface.UiState.Camera.ViewMode);
+        Assert.Equal(WebGlWorkbenchProjectionModes.Orthographic, surface.UiState.Camera.ProjectionMode);
     }
 
     [Fact]

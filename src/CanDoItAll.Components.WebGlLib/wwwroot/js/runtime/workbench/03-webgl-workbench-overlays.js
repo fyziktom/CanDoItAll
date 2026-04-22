@@ -255,7 +255,7 @@ function syncDiagnostics(state) {
         : "none";
     state.shell.diagnosticsMeta.textContent =
         `${state.diagnostics.nodeCount} nodes, ${state.diagnostics.edgeCount} edges, ` +
-        `${state.diagnostics.renderCount} renders, ${state.cameraState.projectionMode}`;
+        `${state.diagnostics.renderCount} renders, ${state.cameraState.viewMode}/${state.cameraState.projectionMode}`;
 }
 
 export function syncDomOverlays(state) {

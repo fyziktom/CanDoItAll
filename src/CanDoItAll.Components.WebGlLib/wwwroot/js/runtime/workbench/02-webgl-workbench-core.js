@@ -7,6 +7,13 @@ export const projectionModes = Object.freeze({
     perspective: "perspective"
 });
 
+export const cameraViewModes = Object.freeze({
+    perspective: "perspective",
+    xy: "xy",
+    xz: "xz",
+    yz: "yz"
+});
+
 export const viewPresets = Object.freeze({
     overview: "overview",
     roles: "roles",
@@ -71,11 +78,35 @@ export function isBranchNode(node) {
     return (node?.kind || "").includes("branch");
 }
 
-export function resolveProjectionMode(surface) {
-    const configured = surface?.uiState?.camera?.projectionMode || projectionModes.orthographic;
-    return configured === projectionModes.perspective
+export function normalizeCameraViewMode(value, projectionMode) {
+    const configured = (value || "").trim().toLowerCase();
+    switch (configured) {
+        case cameraViewModes.perspective:
+        case cameraViewModes.xy:
+        case cameraViewModes.xz:
+        case cameraViewModes.yz:
+            return configured;
+        default:
+            return projectionMode === projectionModes.perspective
+                ? cameraViewModes.perspective
+                : cameraViewModes.xy;
+    }
+}
+
+export function resolveProjectionModeForViewMode(viewMode) {
+    return normalizeCameraViewMode(viewMode) === cameraViewModes.perspective
         ? projectionModes.perspective
         : projectionModes.orthographic;
+}
+
+export function resolveCameraViewMode(surface, fallbackProjectionMode) {
+    const configuredProjectionMode = (surface?.uiState?.camera?.projectionMode || fallbackProjectionMode || "").trim().toLowerCase();
+    return normalizeCameraViewMode(surface?.uiState?.camera?.viewMode, configuredProjectionMode);
+}
+
+export function resolveProjectionMode(surface) {
+    return resolveProjectionModeForViewMode(
+        resolveCameraViewMode(surface, surface?.uiState?.camera?.projectionMode || projectionModes.orthographic));
 }
 
 export function resolveToolMode(surface) {
@@ -119,8 +150,10 @@ export function resolvePerspectiveDistance(zoom, fallbackDistance) {
 }
 
 export function createDefaultCameraState(surface) {
-    const projectionMode = resolveProjectionMode(surface);
+    const viewMode = resolveCameraViewMode(surface, surface?.uiState?.camera?.projectionMode || projectionModes.orthographic);
+    const projectionMode = resolveProjectionModeForViewMode(viewMode);
     return {
+        viewMode,
         projectionMode,
         zoom: 1,
         targetX: 0,
@@ -138,7 +171,8 @@ export function normalizeState(surface, existingCameraState) {
     uiState.camera = uiState.camera || {};
     const defaults = createDefaultCameraState(surface);
     const existing = existingCameraState || defaults;
-    const projectionMode = resolveProjectionMode(surface);
+    const viewMode = resolveCameraViewMode(surface, existing?.projectionMode || defaults.projectionMode);
+    const projectionMode = resolveProjectionModeForViewMode(viewMode);
     const zoom = clamp(resolveFiniteNumber(uiState.camera.zoom, resolveFiniteNumber(existing.zoom, defaults.zoom)), 0.2, 2.5);
     const explicitDistance = resolveFiniteNumber(uiState.camera.distance, Number.NaN);
     const distance = projectionMode === projectionModes.perspective
@@ -147,6 +181,7 @@ export function normalizeState(surface, existingCameraState) {
             : resolvePerspectiveDistance(zoom, resolveFiniteNumber(existing.distance, defaults.distance))
         : clampDistance(resolveFiniteNumber(existing.distance, defaults.distance));
     return {
+        viewMode,
         projectionMode,
         zoom: projectionMode === projectionModes.perspective
             ? resolvePerspectiveZoom(distance)
@@ -163,7 +198,7 @@ export function normalizeState(surface, existingCameraState) {
 export function buildAutoFitKey(surface) {
     return [
         surface?.sceneKey || surface?.surfaceId || "",
-        resolveProjectionMode(surface),
+        resolveCameraViewMode(surface, surface?.uiState?.camera?.projectionMode || projectionModes.orthographic),
         surface?.uiState?.activeViewPreset || viewPresets.overview,
         surface?.uiState?.layoutMode || "center-lane",
         round(resolveFiniteNumber(surface?.uiState?.nodeSpacingFactor, 1))

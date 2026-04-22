@@ -28,7 +28,10 @@ public sealed class ProcessWebGlSandboxSession
 
     public string SelectedTemplateKey { get; private set; } = string.Empty;
 
-    public string ProjectionMode { get; private set; } = WebGlWorkbenchProjectionModes.Perspective;
+    public string CameraViewMode { get; private set; } = WebGlWorkbenchCameraViewModes.Perspective;
+
+    public string ProjectionMode
+        => WebGlWorkbenchCameraViewModes.ResolveProjectionMode(CameraViewMode);
 
     public string ViewPreset { get; private set; } = WebGlWorkbenchViewPresets.Overview;
 
@@ -74,7 +77,7 @@ public sealed class ProcessWebGlSandboxSession
         LoadTemplate(Templates.First().Key);
     }
 
-    public void ApplyRouteState(string? templateKey, string? projectionMode, string? viewPreset)
+    public void ApplyRouteState(string? templateKey, string? cameraViewMode, string? viewPreset)
     {
         EnsureInitialized();
 
@@ -84,7 +87,9 @@ public sealed class ProcessWebGlSandboxSession
             LoadTemplate(resolvedTemplateKey);
         }
 
-        SetProjectionMode(projectionMode);
+        SetCameraView(string.IsNullOrWhiteSpace(cameraViewMode)
+            ? WebGlWorkbenchCameraViewModes.Perspective
+            : cameraViewMode);
         SetViewPreset(viewPreset);
     }
 
@@ -148,17 +153,18 @@ public sealed class ProcessWebGlSandboxSession
         RecordCommand("Adjusted spacing", $"{NodeSpacingFactor:0.##}x");
     }
 
-    public void SetProjectionMode(string? projectionMode)
+    public void SetCameraView(string? cameraViewMode)
     {
-        var normalized = WebGlWorkbenchProjectionModes.Perspective;
-        if (string.Equals(ProjectionMode, normalized, StringComparison.Ordinal))
+        var normalized = WebGlWorkbenchCameraViewModes.Normalize(cameraViewMode, ProjectionMode);
+        if (string.Equals(CameraViewMode, normalized, StringComparison.Ordinal))
         {
             return;
         }
 
-        ProjectionMode = normalized;
-        cameraState.ProjectionMode = normalized;
-        RecordCommand("Changed camera", ProjectionMode);
+        CameraViewMode = normalized;
+        cameraState.ViewMode = normalized;
+        cameraState.ProjectionMode = ProjectionMode;
+        RecordCommand("Changed camera", CameraViewMode);
     }
 
     public void SetViewPreset(string? viewPreset)
@@ -330,9 +336,8 @@ public sealed class ProcessWebGlSandboxSession
 
         cameraState = new WebGlWorkbenchCameraState
         {
-            ProjectionMode = string.Equals(uiState.Camera?.ProjectionMode, WebGlWorkbenchProjectionModes.Perspective, StringComparison.Ordinal)
-                ? WebGlWorkbenchProjectionModes.Perspective
-                : ProjectionMode,
+            ViewMode = WebGlWorkbenchCameraViewModes.Normalize(uiState.Camera?.ViewMode, uiState.Camera?.ProjectionMode),
+            ProjectionMode = WebGlWorkbenchCameraViewModes.ResolveProjectionMode(uiState.Camera?.ViewMode),
             Zoom = uiState.Camera?.Zoom ?? cameraState.Zoom,
             TargetX = uiState.Camera?.TargetX ?? cameraState.TargetX,
             TargetY = uiState.Camera?.TargetY ?? cameraState.TargetY,
@@ -341,6 +346,7 @@ public sealed class ProcessWebGlSandboxSession
             Azimuth = uiState.Camera?.Azimuth ?? cameraState.Azimuth,
             Polar = uiState.Camera?.Polar ?? cameraState.Polar
         };
+        CameraViewMode = cameraState.ViewMode;
         LayoutMode = WebGlWorkbenchLayoutModes.Normalize(uiState.LayoutMode);
         ToolMode = WebGlWorkbenchToolModes.Normalize(uiState.ToolMode);
         NodeInfoMode = WebGlWorkbenchNodeInfoModes.Normalize(uiState.NodeInfoMode);
@@ -359,6 +365,7 @@ public sealed class ProcessWebGlSandboxSession
             new ProcessWebGlSceneOptions(
                 SelectedTemplateKey,
                 ProjectionMode,
+                CameraViewMode,
                 ViewPreset,
                 SelectedNodeId,
                 LayoutMode: LayoutMode,
@@ -420,6 +427,7 @@ public sealed class ProcessWebGlSandboxSession
         return new WebGlWorkbenchCameraState
         {
             ProjectionMode = ProjectionMode,
+            ViewMode = CameraViewMode,
             Zoom = 1,
             TargetX = 0,
             TargetY = 0,

@@ -1,9 +1,11 @@
 import {
     THREE,
+    cameraViewModes,
     clamp,
     createCanvasTexture,
     drawRoundedRect,
     nodeInfoModes,
+    resolveCameraViewMode,
     resolveHostPoint,
     resolveNodeInfoMode,
     resolveToolMode,
@@ -185,6 +187,7 @@ function createPanelTexture(width, height, options) {
 
 function buildToolbarButtons(state) {
     const toolMode = resolveToolMode(state.surface);
+    const cameraViewMode = resolveCameraViewMode(state.surface, state.cameraState?.projectionMode);
     return [
         { id: "tool:select", label: "Select", caption: "Tool", tone: "accent", active: toolMode === toolModes.select },
         { id: "tool:delete", label: "Delete", caption: "Tool", tone: "danger", active: toolMode === toolModes.delete },
@@ -192,6 +195,10 @@ function buildToolbarButtons(state) {
         { id: "tool:reconnect", label: "Reconnect", caption: "Tool", tone: "warning", active: toolMode === toolModes.reconnect },
         { id: "view:fit", label: "Fit", caption: "View", tone: "neutral" },
         { id: "view:reset", label: "Reset", caption: "View", tone: "neutral" },
+        { id: "camera:perspective", label: "Perspective", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.perspective },
+        { id: "camera:xy", label: "XY", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.xy },
+        { id: "camera:xz", label: "XZ", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.xz },
+        { id: "camera:yz", label: "YZ", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.yz },
         { id: "chrome:settings", label: state.chromeState?.settingsOpen ? "Close" : "Settings", caption: "Panel", tone: "neutral", active: !!state.chromeState?.settingsOpen }
     ];
 }
@@ -243,6 +250,7 @@ function buildChromeRenderKey(state) {
         viewportWidth: state.viewport.width,
         viewportHeight: state.viewport.height,
         toolMode: resolveToolMode(state.surface),
+        viewMode: resolveCameraViewMode(state.surface, state.cameraState?.projectionMode),
         nodeInfoMode: resolveNodeInfoMode(state.surface),
         settingsOpen: !!state.chromeState?.settingsOpen,
         showRoleNodes: state.chromeState?.showRoleNodes !== false,
@@ -347,12 +355,12 @@ export class WebGlWorkbenchChromeController {
 
     syncToolbar() {
         const compact = this.state.viewport.width < 1040;
-        const buttonWidth = compact ? 92 : 110;
+        const buttonWidth = compact ? 92 : 108;
         const buttonHeight = compact ? 34 : 38;
         const gap = 10;
         const padding = compact ? 12 : 14;
         const buttons = buildToolbarButtons(this.state);
-        const itemsPerRow = compact ? 4 : buttons.length;
+        const itemsPerRow = Math.min(compact ? 4 : 6, Math.max(buttons.length, 1));
         const rowCount = Math.ceil(buttons.length / itemsPerRow);
         const rowWidth = Math.min(itemsPerRow, buttons.length) * buttonWidth + (Math.min(itemsPerRow, buttons.length) - 1) * gap;
         const width = rowWidth + (padding * 2);
@@ -523,6 +531,7 @@ export class WebGlWorkbenchChromeController {
             viewportWidth: this.state.viewport.width,
             viewportHeight: this.state.viewport.height,
             toolMode: resolveToolMode(this.state.surface),
+            viewMode: resolveCameraViewMode(this.state.surface, this.state.cameraState?.projectionMode),
             nodeInfoMode: resolveNodeInfoMode(this.state.surface),
             settingsOpen: !!this.state.chromeState?.settingsOpen,
             actions: [],

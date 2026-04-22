@@ -1,9 +1,40 @@
+using System;
+
 namespace CanDoItAll.Components.WebGlLib;
 
 public static class WebGlWorkbenchProjectionModes
 {
     public const string Orthographic = "orthographic";
     public const string Perspective = "perspective";
+}
+
+public static class WebGlWorkbenchCameraViewModes
+{
+    public const string Perspective = "perspective";
+    public const string XY = "xy";
+    public const string XZ = "xz";
+    public const string YZ = "yz";
+
+    public static string Normalize(string? value, string? projectionMode = null)
+    {
+        return value switch
+        {
+            XY => XY,
+            XZ => XZ,
+            YZ => YZ,
+            Perspective => Perspective,
+            _ => string.Equals(projectionMode, WebGlWorkbenchProjectionModes.Perspective, StringComparison.Ordinal)
+                ? Perspective
+                : XY
+        };
+    }
+
+    public static string ResolveProjectionMode(string? viewMode)
+    {
+        return string.Equals(Normalize(viewMode), Perspective, StringComparison.Ordinal)
+            ? WebGlWorkbenchProjectionModes.Perspective
+            : WebGlWorkbenchProjectionModes.Orthographic;
+    }
 }
 
 public static class WebGlWorkbenchViewPresets
@@ -20,6 +51,9 @@ public static class WebGlWorkbenchLayoutModes
     public const string CenterLane = "center-lane";
     public const string AlternatingArc = "alternating-arc";
     public const string LayeredOrbit = "layered-orbit";
+    public const string CriticalPathSpine = "critical-path-spine";
+    public const string FanoutCorridor = "fanout-corridor";
+    public const string RadialBurst = "radial-burst";
 
     public static string Normalize(string? value)
     {
@@ -27,6 +61,9 @@ public static class WebGlWorkbenchLayoutModes
         {
             AlternatingArc => AlternatingArc,
             LayeredOrbit => LayeredOrbit,
+            CriticalPathSpine => CriticalPathSpine,
+            FanoutCorridor => FanoutCorridor,
+            RadialBurst => RadialBurst,
             _ => CenterLane
         };
     }

@@ -45,6 +45,7 @@ public sealed class ProcessWebGlSceneAdapterTests
             new ProcessWebGlSceneOptions(
                 TemplateKey: "branching-code-review",
                 ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
                 ViewPreset: WebGlWorkbenchViewPresets.Dependencies,
                 SelectedNodeId: null,
                 DeterministicMode: true,
@@ -56,6 +57,7 @@ public sealed class ProcessWebGlSceneAdapterTests
         Assert.Contains(surface.Nodes, node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(surface.Nodes, node => node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, surface.UiState.Camera.ProjectionMode);
+        Assert.Equal(WebGlWorkbenchCameraViewModes.Perspective, surface.UiState.Camera.ViewMode);
         Assert.Equal(WebGlWorkbenchViewPresets.Dependencies, surface.UiState.ActiveViewPreset);
         Assert.Equal(WebGlWorkbenchLayoutModes.CenterLane, surface.UiState.LayoutMode);
         Assert.Equal(1, surface.UiState.NodeSpacingFactor);
@@ -95,6 +97,7 @@ public sealed class ProcessWebGlSceneAdapterTests
             new ProcessWebGlSceneOptions(
                 TemplateKey: "branching-code-review",
                 ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
                 ViewPreset: WebGlWorkbenchViewPresets.Overview,
                 SelectedNodeId: null,
                 DeterministicMode: true,
@@ -131,6 +134,7 @@ public sealed class ProcessWebGlSceneAdapterTests
             new ProcessWebGlSceneOptions(
                 TemplateKey: "branching-code-review",
                 ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
                 ViewPreset: WebGlWorkbenchViewPresets.Overview,
                 SelectedNodeId: null,
                 LayoutMode: WebGlWorkbenchLayoutModes.CenterLane,
@@ -140,6 +144,7 @@ public sealed class ProcessWebGlSceneAdapterTests
             new ProcessWebGlSceneOptions(
                 TemplateKey: "branching-code-review",
                 ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
                 ViewPreset: WebGlWorkbenchViewPresets.Overview,
                 SelectedNodeId: null,
                 LayoutMode: WebGlWorkbenchLayoutModes.AlternatingArc,
@@ -149,10 +154,41 @@ public sealed class ProcessWebGlSceneAdapterTests
             new ProcessWebGlSceneOptions(
                 TemplateKey: "branching-code-review",
                 ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
                 ViewPreset: WebGlWorkbenchViewPresets.Overview,
                 SelectedNodeId: null,
                 LayoutMode: WebGlWorkbenchLayoutModes.LayeredOrbit,
                 NodeSpacingFactor: 1.35d));
+        var spineSurface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("branching-code-review"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "branching-code-review",
+                ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null,
+                LayoutMode: WebGlWorkbenchLayoutModes.CriticalPathSpine,
+                NodeSpacingFactor: 1));
+        var corridorSurface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("branching-code-review"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "branching-code-review",
+                ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null,
+                LayoutMode: WebGlWorkbenchLayoutModes.FanoutCorridor,
+                NodeSpacingFactor: 1.1d));
+        var radialSurface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("branching-code-review"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "branching-code-review",
+                ProjectionMode: WebGlWorkbenchProjectionModes.Perspective,
+                CameraViewMode: WebGlWorkbenchCameraViewModes.Perspective,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null,
+                LayoutMode: WebGlWorkbenchLayoutModes.RadialBurst,
+                NodeSpacingFactor: 1.2d));
 
         var trackedNodeId = baselineSurface.Nodes.First(node =>
             !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
@@ -160,16 +196,68 @@ public sealed class ProcessWebGlSceneAdapterTests
         var baselineNode = baselineSurface.Nodes.First(node => node.Id == trackedNodeId);
         var arcNode = arcSurface.Nodes.First(node => node.Id == trackedNodeId);
         var orbitNode = orbitSurface.Nodes.First(node => node.Id == trackedNodeId);
+        var spineNode = spineSurface.Nodes.First(node => node.Id == trackedNodeId);
+        var corridorNode = corridorSurface.Nodes.First(node => node.Id == trackedNodeId);
+        var radialNode = radialSurface.Nodes.First(node => node.Id == trackedNodeId);
+        var busiestNodeId = baselineSurface.Nodes
+            .OrderByDescending(node => baselineSurface.Edges.Count(edge =>
+                string.Equals(edge.SourceNodeId, node.Id, StringComparison.Ordinal) ||
+                string.Equals(edge.TargetNodeId, node.Id, StringComparison.Ordinal)))
+            .First()
+            .Id;
 
         Assert.Equal(WebGlWorkbenchLayoutModes.CenterLane, baselineSurface.UiState.LayoutMode);
         Assert.Equal(WebGlWorkbenchLayoutModes.AlternatingArc, arcSurface.UiState.LayoutMode);
         Assert.Equal(WebGlWorkbenchLayoutModes.LayeredOrbit, orbitSurface.UiState.LayoutMode);
+        Assert.Equal(WebGlWorkbenchLayoutModes.CriticalPathSpine, spineSurface.UiState.LayoutMode);
+        Assert.Equal(WebGlWorkbenchLayoutModes.FanoutCorridor, corridorSurface.UiState.LayoutMode);
+        Assert.Equal(WebGlWorkbenchLayoutModes.RadialBurst, radialSurface.UiState.LayoutMode);
         Assert.NotEqual((baselineNode.X, baselineNode.Y, baselineNode.Z), (arcNode.X, arcNode.Y, arcNode.Z));
         Assert.NotEqual((arcNode.X, arcNode.Y, arcNode.Z), (orbitNode.X, orbitNode.Y, orbitNode.Z));
+        Assert.NotEqual((baselineNode.X, baselineNode.Y, baselineNode.Z), (spineNode.X, spineNode.Y, spineNode.Z));
+        Assert.NotEqual((spineNode.X, spineNode.Y, spineNode.Z), (corridorNode.X, corridorNode.Y, corridorNode.Z));
+        Assert.NotEqual((corridorNode.X, corridorNode.Y, corridorNode.Z), (radialNode.X, radialNode.Y, radialNode.Z));
         Assert.True(
             orbitSurface.Nodes.Where(node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)).Average(node => Math.Abs(node.X)) >
             baselineSurface.Nodes.Where(node => node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase)).Average(node => Math.Abs(node.X)));
+        Assert.True(ResolveNearestNodeDistance(spineSurface, busiestNodeId) > ResolveNearestNodeDistance(baselineSurface, busiestNodeId));
+        Assert.True(ResolveNearestNodeDistance(corridorSurface, busiestNodeId) > ResolveNearestNodeDistance(baselineSurface, busiestNodeId));
+        Assert.True(radialSurface.Nodes.Max(node => Math.Abs(node.X)) > baselineSurface.Nodes.Max(node => Math.Abs(node.X)) + 120);
         Assert.Equal(1.35d, orbitSurface.UiState.NodeSpacingFactor);
+    }
+
+    [Theory]
+    [InlineData(WebGlWorkbenchCameraViewModes.Perspective, WebGlWorkbenchProjectionModes.Perspective)]
+    [InlineData(WebGlWorkbenchCameraViewModes.XY, WebGlWorkbenchProjectionModes.Orthographic)]
+    [InlineData(WebGlWorkbenchCameraViewModes.XZ, WebGlWorkbenchProjectionModes.Orthographic)]
+    [InlineData(WebGlWorkbenchCameraViewModes.YZ, WebGlWorkbenchProjectionModes.Orthographic)]
+    public void Scene_mapping_normalizes_camera_view_modes(string cameraViewMode, string expectedProjectionMode)
+    {
+        var adapter = CreateAdapter();
+
+        var surface = adapter.BuildDefinitionScene(
+            adapter.LoadProjectedDefinition("customer-onboarding"),
+            new ProcessWebGlSceneOptions(
+                TemplateKey: "customer-onboarding",
+                ProjectionMode: expectedProjectionMode,
+                CameraViewMode: cameraViewMode,
+                ViewPreset: WebGlWorkbenchViewPresets.Overview,
+                SelectedNodeId: null));
+
+        Assert.Equal(expectedProjectionMode, surface.UiState.Camera.ProjectionMode);
+        Assert.Equal(cameraViewMode, surface.UiState.Camera.ViewMode);
+    }
+
+    private static double ResolveNearestNodeDistance(WebGlWorkbenchSurface surface, string nodeId)
+    {
+        var source = surface.Nodes.First(node => string.Equals(node.Id, nodeId, StringComparison.Ordinal));
+        return surface.Nodes
+            .Where(node => !string.Equals(node.Id, nodeId, StringComparison.Ordinal))
+            .Select(node => Math.Sqrt(
+                Math.Pow(node.X - source.X, 2) +
+                Math.Pow(node.Z - source.Z, 2)))
+            .DefaultIfEmpty(0d)
+            .Min();
     }
 
     private static ProcessWebGlSceneAdapter CreateAdapter()

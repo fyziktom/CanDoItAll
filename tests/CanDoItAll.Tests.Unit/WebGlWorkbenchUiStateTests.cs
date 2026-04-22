@@ -21,6 +21,7 @@ public sealed class WebGlWorkbenchUiStateTests
         Assert.True(state.ShowAnchors);
         Assert.True(state.ShowEdgeLabels);
         Assert.Equal(WebGlWorkbenchProjectionModes.Orthographic, state.Camera.ProjectionMode);
+        Assert.Equal(WebGlWorkbenchCameraViewModes.XY, state.Camera.ViewMode);
         Assert.Equal(1180, state.Camera.Distance);
         Assert.Equal(-0.72d, state.Camera.Azimuth);
         Assert.Equal(1.08d, state.Camera.Polar);
@@ -44,6 +45,7 @@ public sealed class WebGlWorkbenchUiStateTests
             ShowEdgeLabels = false,
             Camera = new WebGlWorkbenchCameraState
             {
+                ViewMode = WebGlWorkbenchCameraViewModes.Perspective,
                 ProjectionMode = WebGlWorkbenchProjectionModes.Perspective,
                 Zoom = 1.4,
                 TargetX = 0,
@@ -68,6 +70,7 @@ public sealed class WebGlWorkbenchUiStateTests
         Assert.False(parsed.ShowAnchors);
         Assert.False(parsed.ShowEdgeLabels);
         Assert.Equal(WebGlWorkbenchProjectionModes.Perspective, parsed.Camera.ProjectionMode);
+        Assert.Equal(WebGlWorkbenchCameraViewModes.Perspective, parsed.Camera.ViewMode);
         Assert.Equal(1.4, parsed.Camera.Zoom);
         Assert.Equal(0, parsed.Camera.TargetX);
         Assert.Equal(0, parsed.Camera.TargetY);

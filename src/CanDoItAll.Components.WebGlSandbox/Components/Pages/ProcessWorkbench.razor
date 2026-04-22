@@ -20,6 +20,7 @@
 
             <div class="webgl-page-hero__meta">
                 <StatusBadge Text="@Session.CurrentTemplate.Complexity" Tone="@ResolveComplexityTone(Session.CurrentTemplate.Complexity)" />
+                <StatusBadge Text="@ResolveCameraViewLabel(Session.CameraViewMode)" Tone="neutral" />
                 <StatusBadge Text="@ResolveLayoutLabel(Session.LayoutMode)" Tone="neutral" />
                 <StatusBadge Text="@($"{Session.NodeSpacingFactor:0.##}x spacing")" Tone="neutral" />
                 <StatusBadge Text="@($"{currentSurface.Nodes.Count} nodes")" Tone="info" />
@@ -61,6 +62,21 @@
                               ValueProperty="@nameof(ChoiceItem.Value)"
                               Value="@Session.LayoutMode"
                               ValueChanged="HandleLayoutModeChangedAsync" />
+                </FormField>
+
+                <FormField Text="Camera view" ContainerClass="webgl-control-field">
+                    <Stack Orientation="Orientation.Horizontal"
+                           Wrap="FlexWrap.Wrap"
+                           GapScale="LayoutGap.Small"
+                           AlignItems="AlignItems.Center">
+                        @foreach (var option in CameraViewOptions)
+                        {
+                            <Button Text="@option.Label"
+                                    ButtonStyle="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                    Variant="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? Variant.Filled : Variant.Outlined)"
+                                    Click="@(() => HandleCameraViewChangedAsync(option.Value))" />
+                        }
+                    </Stack>
                 </FormField>
 
                 <FormField Text="Node spacing" ContainerClass="webgl-control-field">
@@ -175,7 +191,18 @@
     [
         new("Center lane", WebGlWorkbenchLayoutModes.CenterLane),
         new("Alternating arc", WebGlWorkbenchLayoutModes.AlternatingArc),
-        new("Layered orbit", WebGlWorkbenchLayoutModes.LayeredOrbit)
+        new("Layered orbit", WebGlWorkbenchLayoutModes.LayeredOrbit),
+        new("Critical path spine", WebGlWorkbenchLayoutModes.CriticalPathSpine),
+        new("Fan-out corridor", WebGlWorkbenchLayoutModes.FanoutCorridor),
+        new("Radial burst", WebGlWorkbenchLayoutModes.RadialBurst)
+    ];
+
+    private static readonly IReadOnlyList<ChoiceItem> CameraViewOptions =
+    [
+        new("Perspective", WebGlWorkbenchCameraViewModes.Perspective),
+        new("XY", WebGlWorkbenchCameraViewModes.XY),
+        new("XZ", WebGlWorkbenchCameraViewModes.XZ),
+        new("YZ", WebGlWorkbenchCameraViewModes.YZ)
     ];
 
     [SupplyParameterFromQuery(Name = "template")]
@@ -220,10 +247,13 @@
                 : selectedNode.Description;
 
     private async Task HandleTemplateChangedAsync(string? templateKey)
-        => await NavigateAsync(templateKey, Session.ProjectionMode, Session.ViewPreset);
+        => await NavigateAsync(templateKey, Session.CameraViewMode, Session.ViewPreset);
 
     private async Task HandleViewPresetChangedAsync(string? viewPreset)
-        => await NavigateAsync(Session.SelectedTemplateKey, Session.ProjectionMode, viewPreset);
+        => await NavigateAsync(Session.SelectedTemplateKey, Session.CameraViewMode, viewPreset);
+
+    private async Task HandleCameraViewChangedAsync(string? cameraViewMode)
+        => await NavigateAsync(Session.SelectedTemplateKey, cameraViewMode, Session.ViewPreset);
 
     private Task HandleLayoutModeChangedAsync(string? layoutMode)
     {
@@ -321,20 +351,16 @@
             ? Session.SelectedTemplateKey
             : templateKey;
         var camera = string.IsNullOrWhiteSpace(cameraMode)
-            ? Session.ProjectionMode
+            ? Session.CameraViewMode
             : cameraMode;
         var view = string.IsNullOrWhiteSpace(viewPreset)
             ? Session.ViewPreset
             : viewPreset;
         var query = new List<string>
         {
-            $"template={Uri.EscapeDataString(template)}"
+            $"template={Uri.EscapeDataString(template)}",
+            $"camera={Uri.EscapeDataString(camera)}"
         };
-
-        if (!string.Equals(camera, WebGlWorkbenchProjectionModes.Perspective, StringComparison.Ordinal))
-        {
-            query.Add($"camera={Uri.EscapeDataString(camera)}");
-        }
 
         if (!string.Equals(view, WebGlWorkbenchViewPresets.Overview, StringComparison.Ordinal))
         {
@@ -368,7 +394,21 @@
         {
             WebGlWorkbenchLayoutModes.AlternatingArc => "Alternating arc",
             WebGlWorkbenchLayoutModes.LayeredOrbit => "Layered orbit",
+            WebGlWorkbenchLayoutModes.CriticalPathSpine => "Critical spine",
+            WebGlWorkbenchLayoutModes.FanoutCorridor => "Fan-out corridor",
+            WebGlWorkbenchLayoutModes.RadialBurst => "Radial burst",
             _ => "Center lane"
+        };
+    }
+
+    private static string ResolveCameraViewLabel(string cameraViewMode)
+    {
+        return WebGlWorkbenchCameraViewModes.Normalize(cameraViewMode) switch
+        {
+            WebGlWorkbenchCameraViewModes.XY => "XY view",
+            WebGlWorkbenchCameraViewModes.XZ => "XZ view",
+            WebGlWorkbenchCameraViewModes.YZ => "YZ view",
+            _ => "Perspective"
         };
     }
 

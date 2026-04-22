@@ -53,7 +53,7 @@ public sealed class WebGlWorkbenchUiState
             state.ToolMode = WebGlWorkbenchToolModes.Normalize(state.ToolMode);
             state.NodeInfoMode = WebGlWorkbenchNodeInfoModes.Normalize(state.NodeInfoMode);
             state.NodeSpacingFactor = NormalizeNodeSpacingFactor(state.NodeSpacingFactor);
-            state.Camera ??= new WebGlWorkbenchCameraState();
+            state.Camera = NormalizeCameraState(state.Camera);
             return state;
         }
         catch
@@ -78,7 +78,7 @@ public sealed class WebGlWorkbenchUiState
             ShowGrid = ShowGrid,
             ShowAnchors = ShowAnchors,
             ShowEdgeLabels = ShowEdgeLabels,
-            Camera = Camera ?? new WebGlWorkbenchCameraState()
+            Camera = NormalizeCameraState(Camera)
         };
 
         return JsonSerializer.Serialize(normalized, SerializerOptions);
@@ -123,11 +123,21 @@ public sealed class WebGlWorkbenchUiState
 
         return Math.Round(Math.Clamp(value, 0.75d, 1.85d), 2, MidpointRounding.AwayFromZero);
     }
+
+    private static WebGlWorkbenchCameraState NormalizeCameraState(WebGlWorkbenchCameraState? state)
+    {
+        var normalized = state ?? new WebGlWorkbenchCameraState();
+        normalized.ViewMode = WebGlWorkbenchCameraViewModes.Normalize(normalized.ViewMode, normalized.ProjectionMode);
+        normalized.ProjectionMode = WebGlWorkbenchCameraViewModes.ResolveProjectionMode(normalized.ViewMode);
+        return normalized;
+    }
 }
 
 public sealed class WebGlWorkbenchCameraState
 {
     public string ProjectionMode { get; set; } = WebGlWorkbenchProjectionModes.Orthographic;
+
+    public string ViewMode { get; set; } = WebGlWorkbenchCameraViewModes.XY;
 
     public double Zoom { get; set; } = 1;
 
@@ -165,6 +175,8 @@ public sealed class WebGlWorkbenchDiagnostics
     public bool DeterministicMode { get; set; }
 
     public string ProjectionMode { get; set; } = WebGlWorkbenchProjectionModes.Orthographic;
+
+    public string ViewMode { get; set; } = WebGlWorkbenchCameraViewModes.XY;
 }
 
 public sealed class WebGlAutomationSnapshot
@@ -174,6 +186,8 @@ public sealed class WebGlAutomationSnapshot
     public string SceneKey { get; set; } = string.Empty;
 
     public string ProjectionMode { get; set; } = WebGlWorkbenchProjectionModes.Orthographic;
+
+    public string ViewMode { get; set; } = WebGlWorkbenchCameraViewModes.XY;
 
     public string ActiveViewPreset { get; set; } = WebGlWorkbenchViewPresets.Overview;
 

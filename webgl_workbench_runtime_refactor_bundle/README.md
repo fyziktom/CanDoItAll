@@ -36,7 +36,7 @@ This bundle is a coordination and execution package for `webgl_workbench_runtime
 ## Validation Summary
 
 - Bundle preparation status: `Prepared and validated on 2026-04-21 from repo-backed analysis`
-- Execution status: `Implemented and regression-repaired`
+- Execution status: `Implemented, regression-repaired, and extended with follow-up runtime split, camera-view controls, and new 3D layout algorithms`
 - Subbundle gate review: `Completed with residual Playwright fixture-host instability noted in reviews/01-execution-report.md`
 - Final closure gate: `Implemented with documented residuals`
-- Browser validation analytics: `Manual Playwright MCP proof complete, including the 2026-04-21 repair pass that restored node/edge visibility and reduced chrome-render overhead; focused automated proof partial`
+- Browser validation analytics: `Manual Playwright MCP proof complete, including the 2026-04-21 repair pass that restored node/edge visibility and reduced chrome-render overhead plus the 2026-04-22 follow-up proof for host/in-scene camera switching and the new critical-path-spine, fan-out-corridor, and radial-burst layouts; focused automated proof partial`

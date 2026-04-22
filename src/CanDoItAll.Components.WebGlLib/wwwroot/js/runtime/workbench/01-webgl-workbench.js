@@ -1,25 +1,13 @@
-import { OrbitControls } from "../../../vendor/OrbitControls.js";
 import {
     THREE,
     buildAutoFitKey,
     buildRenderSurface,
-    cameraDefaults,
-    clamp,
-    clampDistance,
-    clampPolar,
-    createDefaultCameraState,
-    focusHost,
-    isBranchNode,
-    isRoleNode,
     normalizeSelectedNodeIds,
     normalizeState,
     resolveFiniteNumber,
-    resolvePerspectiveZoom,
     resolveProjectionMode,
     round,
-    toSceneY,
-    viewPresets,
-    projectionModes
+    viewPresets
 } from "./02-webgl-workbench-core.js";
 import { syncDomOverlays } from "./03-webgl-workbench-overlays.js";
 import { WebGlWorkbenchChromeController } from "./04-webgl-workbench-chrome.js";
@@ -35,6 +23,24 @@ import {
     simulateConnection,
     simulateDrag
 } from "./05-webgl-workbench-interaction.js";
+import {
+    applyCameraState,
+    commitCameraState,
+    createCamera,
+    createControls,
+    fitView,
+    focusNode,
+    orbitView,
+    panView,
+    resetView,
+    setCameraViewMode,
+    syncCameraModeFromSurface,
+    syncCameraToSurfaceState,
+    syncViewport,
+    updateCameraStateFromControls,
+    zoomView
+} from "./06-webgl-workbench-camera.js";
+import { clearScene, rebuildScene } from "./07-webgl-workbench-scene-graph.js";
 
 const root = window.CanDoItAll = window.CanDoItAll || {};
 
@@ -93,531 +99,6 @@ function buildHostShell(host) {
     };
 }
 
-function createCamera(mode, width, height) {
-    const safeWidth = Math.max(width, 1);
-    const safeHeight = Math.max(height, 1);
-    const aspect = safeWidth / safeHeight;
-    if (mode === projectionModes.perspective) {
-        const camera = new THREE.PerspectiveCamera(48, aspect, 0.1, 12000);
-        camera.position.set(0, 240, 960);
-        return camera;
-    }
-
-    const camera = new THREE.OrthographicCamera(
-        -safeWidth / 2,
-        safeWidth / 2,
-        safeHeight / 2,
-        -safeHeight / 2,
-        -6000,
-        8000);
-    camera.position.set(0, 240, 960);
-    return camera;
-}
-
-function updateCameraFrustum(state) {
-    if (state.camera.isPerspectiveCamera) {
-        state.camera.aspect = state.viewport.width / state.viewport.height;
-    } else {
-        state.camera.left = -state.viewport.width / 2;
-        state.camera.right = state.viewport.width / 2;
-        state.camera.top = state.viewport.height / 2;
-        state.camera.bottom = -state.viewport.height / 2;
-        state.camera.zoom = Math.max(0.2, state.cameraState.zoom || 1);
-    }
-
-    state.camera.updateProjectionMatrix();
-    state.chromeController?.updateViewport();
-}
-
-function syncViewport(state, force = false) {
-    const width = Math.max(Math.round(state.host.clientWidth), 1);
-    const height = Math.max(Math.round(state.host.clientHeight), 1);
-    const changed = force ||
-        width !== state.viewport.width ||
-        height !== state.viewport.height;
-    if (!changed) {
-        return false;
-    }
-
-    state.viewport.width = width;
-    state.viewport.height = height;
-    updateCameraFrustum(state);
-    state.renderer.setSize(width, height, false);
-    return true;
-}
-
-function createControls(camera, domElement, keyTarget) {
-    const controls = new OrbitControls(camera, domElement);
-    controls.enableDamping = false;
-    controls.enableZoom = true;
-    controls.enablePan = true;
-    controls.enableRotate = true;
-    controls.rotateSpeed = 0.92;
-    controls.zoomSpeed = 1.08;
-    controls.panSpeed = 0.82;
-    controls.screenSpacePanning = true;
-    controls.minDistance = 260;
-    controls.maxDistance = 4600;
-    controls.minPolarAngle = 0.38;
-    controls.maxPolarAngle = Math.PI - 0.42;
-    controls.mouseButtons = {
-        LEFT: THREE.MOUSE.ROTATE,
-        MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: THREE.MOUSE.PAN
-    };
-    controls.touches = {
-        ONE: THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.DOLLY_PAN
-    };
-    controls.keyPanSpeed = 36;
-    controls.listenToKeyEvents(keyTarget);
-    return controls;
-}
-
-function applyCameraState(state) {
-    const target = new THREE.Vector3(
-        state.cameraState.targetX || 0,
-        state.cameraState.targetY || 0,
-        state.cameraState.targetZ || 0);
-    const distance = clampDistance(state.cameraState.distance || cameraDefaults.distance);
-    const polar = clampPolar(state.cameraState.polar);
-    const azimuth = resolveFiniteNumber(state.cameraState.azimuth, cameraDefaults.azimuth);
-    const offset = new THREE.Vector3().setFromSpherical(new THREE.Spherical(distance, polar, azimuth));
-
-    state.suppressControlEvents = true;
-    state.controls.target.copy(target);
-    state.camera.position.copy(target.clone().add(offset));
-    if (state.camera.isOrthographicCamera) {
-        state.camera.zoom = Math.max(0.2, state.cameraState.zoom || 1);
-    }
-
-    state.camera.lookAt(target);
-    state.camera.updateProjectionMatrix();
-    state.controls.update();
-    state.suppressControlEvents = false;
-}
-
-function updateCameraStateFromControls(state) {
-    const offset = state.camera.position.clone().sub(state.controls.target);
-    const spherical = new THREE.Spherical().setFromVector3(offset);
-    state.cameraState.targetX = round(state.controls.target.x);
-    state.cameraState.targetY = round(state.controls.target.y);
-    state.cameraState.targetZ = round(state.controls.target.z);
-    state.cameraState.distance = round(clampDistance(spherical.radius));
-    state.cameraState.azimuth = round(resolveFiniteNumber(spherical.theta, cameraDefaults.azimuth));
-    state.cameraState.polar = round(clampPolar(resolveFiniteNumber(spherical.phi, cameraDefaults.polar)));
-    state.cameraState.zoom = state.camera.isPerspectiveCamera
-        ? resolvePerspectiveZoom(state.cameraState.distance)
-        : round(Math.max(0.2, state.camera.zoom || 1));
-}
-
-function destroyObject3D(object) {
-    if (!object) {
-        return;
-    }
-
-    object.traverse(child => {
-        child.geometry?.dispose?.();
-
-        if (Array.isArray(child.material)) {
-            for (const material of child.material) {
-                material?.map?.dispose?.();
-                material?.dispose?.();
-            }
-            return;
-        }
-
-        child.material?.map?.dispose?.();
-        child.material?.dispose?.();
-    });
-}
-
-function clearScene(state) {
-    for (const nodeGroup of state.nodeObjects.values()) {
-        state.scene.remove(nodeGroup);
-        destroyObject3D(nodeGroup);
-    }
-
-    for (const edgeObject of state.edgeObjects.values()) {
-        state.scene.remove(edgeObject);
-        destroyObject3D(edgeObject);
-    }
-
-    state.nodeObjects.clear();
-    state.edgeObjects.clear();
-    state.nodeMeshes.length = 0;
-    state.edgeHitMeshes.length = 0;
-    state.projectedNodes.clear();
-    state.projectedEdges.clear();
-    state.projectedAnchors.clear();
-}
-
-function resolveNodeColors(node) {
-    return {
-        fill: node.fillColor || "#ffffff",
-        border: node.borderColor || "#cbd5e1",
-        accent: node.accentColor || "#2563eb"
-    };
-}
-
-function createNodeObject(state, node) {
-    const colors = resolveNodeColors(node);
-    const group = new THREE.Group();
-    const width = Number(node.width) || 220;
-    const height = Number(node.height) || 128;
-    const depth = Number(node.depth) || 28;
-    const isSelected = state.selectedNodeIds.has(node.id) || state.chromeState.connectSourceNodeId === node.id;
-    const geometry = new THREE.BoxGeometry(width, height, depth);
-    const material = new THREE.MeshPhongMaterial({
-        color: colors.fill,
-        emissive: new THREE.Color(isSelected ? colors.accent : "#000000"),
-        emissiveIntensity: isSelected ? 0.12 : 0,
-        shininess: 55,
-        transparent: true,
-        opacity: 0.96
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.userData = {
-        nodeId: node.id
-    };
-    const edges = new THREE.LineSegments(
-        new THREE.EdgesGeometry(geometry),
-        new THREE.LineBasicMaterial({
-            color: colors.border,
-            transparent: true,
-            opacity: 0.92
-        }));
-
-    const accentBand = new THREE.Mesh(
-        new THREE.BoxGeometry(width * 0.98, 8, 4),
-        new THREE.MeshBasicMaterial({
-            color: colors.accent
-        }));
-    accentBand.position.set(0, (height / 2) - 6, (depth / 2) + 2);
-
-    group.add(mesh, edges, accentBand);
-    group.position.set(node.x || 0, toSceneY(node.y), node.z || 0);
-    group.userData = {
-        nodeId: node.id
-    };
-
-    state.nodeObjects.set(node.id, group);
-    state.nodeMeshes.push(mesh);
-    state.scene.add(group);
-}
-
-function resolveEdgeDepth(edge) {
-    const explicitDepth = Number(edge.depthOffset);
-    if (Number.isFinite(explicitDepth) && explicitDepth !== 0) {
-        return explicitDepth;
-    }
-
-    const category = edge.categoryKey || "";
-    if (category.includes("branch")) {
-        return 34;
-    }
-
-    if (category.includes("decision")) {
-        return 26;
-    }
-
-    if (category.includes("messaging")) {
-        return 18;
-    }
-
-    if (category.includes("artifact")) {
-        return 12;
-    }
-
-    return 8;
-}
-
-function resolveEdgeEmphasis(edge) {
-    const emphasis = clamp(resolveFiniteNumber(edge?.emphasis, edge?.isPrimaryPath ? 1.7 : 0.82), 0.55, 2.4);
-    return statefulEdgeSelected(edge)
-        ? Math.max(emphasis, 1.9)
-        : emphasis;
-}
-
-function resolveEdgeOpacity(edge) {
-    return clamp(resolveFiniteNumber(edge?.opacity, edge?.isPrimaryPath ? 0.96 : 0.58), 0.18, 1);
-}
-
-function statefulEdgeSelected(edge) {
-    return !!(edge && (edge.id === edge.__selectedEdgeId || edge.id === edge.__reconnectEdgeId));
-}
-
-function createEdgeObject(state, edge) {
-    const sourceNode = state.nodeLookup.get(edge.sourceNodeId);
-    const targetNode = state.nodeLookup.get(edge.targetNodeId);
-    if (!sourceNode || !targetNode) {
-        return;
-    }
-
-    const sourceAnchor = state.anchorLookup.get(edge.sourceAnchorId);
-    const targetAnchor = state.anchorLookup.get(edge.targetAnchorId);
-    if (!sourceAnchor || !targetAnchor) {
-        return;
-    }
-
-    const sourcePoint = state.resolveAnchorPosition(sourceNode, sourceAnchor);
-    const targetPoint = state.resolveAnchorPosition(targetNode, targetAnchor);
-    const depth = resolveEdgeDepth(edge);
-    const control = new THREE.Vector3(
-        (sourcePoint.x + targetPoint.x) / 2,
-        (sourcePoint.y + targetPoint.y) / 2,
-        Math.max(sourcePoint.z, targetPoint.z) + depth);
-    const curve = new THREE.QuadraticBezierCurve3(sourcePoint, control, targetPoint);
-    const points = curve.getPoints(32);
-    const isSelected = state.chromeState.selectedEdgeId === edge.id || state.chromeState.reconnectEdgeId === edge.id;
-    const emphasis = isSelected
-        ? Math.max(clamp(resolveFiniteNumber(edge?.emphasis, 1), 0.55, 2.4), 1.9)
-        : clamp(resolveFiniteNumber(edge?.emphasis, edge?.isPrimaryPath ? 1.7 : 0.82), 0.55, 2.4);
-    const opacity = isSelected
-        ? 1
-        : resolveEdgeOpacity(edge);
-    const group = new THREE.Group();
-
-    if (edge.isPrimaryPath || emphasis > 1.05 || isSelected) {
-        const halo = new THREE.Mesh(
-            new THREE.TubeGeometry(curve, 42, 5.8 * emphasis, 12, false),
-            new THREE.MeshBasicMaterial({
-                color: edge.accentColor || "#2563eb",
-                transparent: true,
-                opacity: isSelected
-                    ? 0.32
-                    : Math.min(0.16 + (opacity * 0.18), 0.38)
-            }));
-        const tube = new THREE.Mesh(
-            new THREE.TubeGeometry(curve, 42, 2.2 * emphasis, 12, false),
-            new THREE.MeshPhongMaterial({
-                color: edge.accentColor || "#2563eb",
-                emissive: new THREE.Color(edge.accentColor || "#2563eb"),
-                emissiveIntensity: isSelected
-                    ? 0.24
-                    : edge.isPrimaryPath ? 0.18 : 0.08,
-                shininess: 85,
-                transparent: true,
-                opacity: isSelected
-                    ? 0.96
-                    : edge.isPrimaryPath
-                        ? Math.min(0.76 + (opacity * 0.18), 0.94)
-                        : Math.min(0.34 + (opacity * 0.2), 0.66)
-            }));
-        group.add(halo, tube);
-    }
-
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
-        color: edge.accentColor || "#2563eb",
-        transparent: true,
-        opacity
-    });
-    const line = new THREE.Line(geometry, material);
-    group.add(line);
-
-    const hitMesh = new THREE.Mesh(
-        new THREE.TubeGeometry(curve, 28, Math.max(12, 8 * emphasis), 10, false),
-        new THREE.MeshBasicMaterial({
-            transparent: true,
-            opacity: 0,
-            depthWrite: false
-        }));
-    hitMesh.userData = {
-        edgeId: edge.id
-    };
-    group.add(hitMesh);
-
-    group.userData = {
-        edgeId: edge.id,
-        sourceNodeId: edge.sourceNodeId,
-        targetNodeId: edge.targetNodeId
-    };
-
-    state.edgeObjects.set(edge.id, group);
-    state.edgeHitMeshes.push(hitMesh);
-    state.scene.add(group);
-}
-
-function createNodeAndAnchorLookups(state) {
-    state.nodeLookup = new Map();
-    state.anchorLookup = new Map();
-
-    for (const node of state.surface.nodes || []) {
-        state.nodeLookup.set(node.id, node);
-        for (const anchor of node.anchors || []) {
-            state.anchorLookup.set(anchor.id, anchor);
-        }
-    }
-}
-
-function rebuildScene(state) {
-    clearScene(state);
-    createNodeAndAnchorLookups(state);
-
-    for (const node of state.surface.nodes || []) {
-        createNodeObject(state, node);
-    }
-
-    for (const edge of state.surface.edges || []) {
-        createEdgeObject(state, edge);
-    }
-
-    state.diagnostics.nodeCount = state.surface.nodes?.length || 0;
-    state.diagnostics.edgeCount = state.surface.edges?.length || 0;
-}
-
-function resolveViewNodes(state, preset) {
-    const nodes = state.surface.nodes || [];
-    switch (preset) {
-        case viewPresets.roles:
-            return nodes.filter(isRoleNode);
-        case viewPresets.branching:
-            return nodes.filter(isBranchNode);
-        case viewPresets.dependencies:
-            return nodes.filter(node => !isRoleNode(node));
-        case viewPresets.focus:
-            return nodes.filter(node => state.selectedNodeIds.has(node.id));
-        default:
-            return nodes;
-    }
-}
-
-function fitNodes(state, nodes) {
-    if (!nodes.length) {
-        return;
-    }
-
-    const bounds = new THREE.Box3();
-    for (const node of nodes) {
-        const halfWidth = (Number(node.width) || 220) / 2;
-        const halfHeight = (Number(node.height) || 128) / 2;
-        const halfDepth = (Number(node.depth) || 28) / 2;
-        const sceneCenterY = toSceneY(node.y);
-        bounds.expandByPoint(new THREE.Vector3((node.x || 0) - halfWidth, sceneCenterY - halfHeight, (node.z || 0) - halfDepth));
-        bounds.expandByPoint(new THREE.Vector3((node.x || 0) + halfWidth, sceneCenterY + halfHeight, (node.z || 0) + halfDepth));
-    }
-
-    const center = bounds.getCenter(new THREE.Vector3());
-    const size = bounds.getSize(new THREE.Vector3());
-    state.cameraState.targetX = round(center.x);
-    state.cameraState.targetY = round(center.y);
-    state.cameraState.targetZ = round(center.z);
-
-    if (state.camera.isPerspectiveCamera) {
-        const verticalFov = THREE.MathUtils.degToRad(state.camera.fov);
-        const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * Math.max(state.camera.aspect, 1));
-        const distanceFromHeight = (Math.max(size.y, 220) * 0.62) / Math.tan(verticalFov / 2);
-        const distanceFromWidth = (Math.max(size.x, 260) * 0.58) / Math.tan(horizontalFov / 2);
-        const depthPadding = Math.max(size.z * 0.42, 180);
-        state.cameraState.distance = clampDistance(Math.max(distanceFromHeight, distanceFromWidth) + depthPadding + 160);
-        state.cameraState.zoom = resolvePerspectiveZoom(state.cameraState.distance);
-    } else {
-        const contentWidth = Math.max(260, size.x + 260);
-        const contentHeight = Math.max(240, size.y + 240);
-        const zoomX = state.viewport.width / contentWidth;
-        const zoomY = state.viewport.height / contentHeight;
-        state.cameraState.zoom = clamp(Math.min(zoomX, zoomY), 0.28, 1.65);
-    }
-
-    commitCameraState(state, true);
-}
-
-function fitView(state) {
-    fitNodes(state, resolveViewNodes(state, state.surface.uiState?.activeViewPreset || viewPresets.overview));
-}
-
-function focusNode(state, nodeId) {
-    const node = state.nodeLookup.get(nodeId);
-    if (!node) {
-        return;
-    }
-
-    state.cameraState.targetX = round(node.x || 0);
-    state.cameraState.targetY = round(toSceneY(node.y));
-    state.cameraState.targetZ = round(node.z || 0);
-    if (state.camera.isPerspectiveCamera) {
-        const focusDistance = Math.max(420, ((Math.max(Number(node.width) || 220, Number(node.height) || 128) + (Number(node.depth) || 28)) * 2.2));
-        state.cameraState.distance = clampDistance(Math.min(state.cameraState.distance || cameraDefaults.distance, focusDistance));
-        state.cameraState.zoom = resolvePerspectiveZoom(state.cameraState.distance);
-    } else {
-        state.cameraState.zoom = clamp(Math.max(state.cameraState.zoom || 1, 1.12), 0.28, 1.85);
-    }
-
-    commitCameraState(state, true);
-}
-
-function orbitView(state, deltaAzimuth, deltaPolar) {
-    focusHost(state);
-    state.cameraState.azimuth = resolveFiniteNumber(state.cameraState.azimuth, cameraDefaults.azimuth) + (Number(deltaAzimuth) || 0);
-    state.cameraState.polar = clampPolar(resolveFiniteNumber(state.cameraState.polar, cameraDefaults.polar) + (Number(deltaPolar) || 0));
-    commitCameraState(state, true);
-}
-
-function panView(state, deltaX, deltaY) {
-    focusHost(state);
-    const forward = new THREE.Vector3();
-    state.camera.getWorldDirection(forward);
-    const right = new THREE.Vector3().crossVectors(forward, state.camera.up).normalize();
-    const up = new THREE.Vector3().copy(state.camera.up).normalize();
-    const scale = state.camera.isPerspectiveCamera
-        ? Math.max(48, (state.cameraState.distance || cameraDefaults.distance) * 0.055)
-        : Math.max(42, 120 / Math.max(state.cameraState.zoom || 1, 0.2));
-    const translation = right.multiplyScalar((Number(deltaX) || 0) / 84 * scale)
-        .add(up.multiplyScalar((Number(deltaY) || 0) / 72 * scale));
-    state.cameraState.targetX = round((state.cameraState.targetX || 0) + translation.x);
-    state.cameraState.targetY = round((state.cameraState.targetY || 0) + translation.y);
-    state.cameraState.targetZ = round((state.cameraState.targetZ || 0) + translation.z);
-    commitCameraState(state, true);
-}
-
-function zoomView(state, factor) {
-    focusHost(state);
-    const normalizedFactor = Math.max(0.1, Number(factor) || 1);
-    if (state.camera.isPerspectiveCamera) {
-        state.cameraState.distance = clampDistance((state.cameraState.distance || cameraDefaults.distance) / normalizedFactor);
-        state.cameraState.zoom = resolvePerspectiveZoom(state.cameraState.distance);
-    } else {
-        state.cameraState.zoom = clamp((state.cameraState.zoom || 1) * normalizedFactor, 0.24, 2.5);
-    }
-
-    commitCameraState(state, true);
-}
-
-function resetView(state) {
-    focusHost(state);
-    state.cameraState = createDefaultCameraState(state.sourceSurface || state.surface);
-    fitView(state);
-}
-
-function syncCameraToSurfaceState(state) {
-    const updateSurfaceCamera = surface => {
-        if (!surface) {
-            return;
-        }
-
-        const uiState = surface.uiState = surface.uiState || {};
-        const camera = uiState.camera = uiState.camera || {};
-        camera.projectionMode = state.camera.isPerspectiveCamera
-            ? projectionModes.perspective
-            : projectionModes.orthographic;
-        camera.zoom = round(state.cameraState.zoom || 1);
-        camera.targetX = round(state.cameraState.targetX || 0);
-        camera.targetY = round(state.cameraState.targetY || 0);
-        camera.targetZ = round(state.cameraState.targetZ || 0);
-        camera.distance = round(state.cameraState.distance || cameraDefaults.distance);
-        camera.azimuth = round(state.cameraState.azimuth || cameraDefaults.azimuth);
-        camera.polar = round(state.cameraState.polar || cameraDefaults.polar);
-    };
-
-    updateSurfaceCamera(state.surface);
-    updateSurfaceCamera(state.sourceSurface);
-    state.cameraState.projectionMode = state.camera.isPerspectiveCamera
-        ? projectionModes.perspective
-        : projectionModes.orthographic;
-    state.diagnostics.projectionMode = state.cameraState.projectionMode;
-}
-
 function notifyStateChanged(state) {
     state.dotNetRef?.invokeMethodAsync("OnStateChanged", JSON.stringify(state.sourceSurface?.uiState || state.surface?.uiState || {}));
 }
@@ -651,16 +132,6 @@ function scheduleRender(state) {
     });
 }
 
-function commitCameraState(state, notifyDotNet) {
-    applyCameraState(state);
-    syncCameraToSurfaceState(state);
-    if (notifyDotNet) {
-        notifyStateChanged(state);
-    }
-
-    scheduleRender(state);
-}
-
 function syncRuntimeState(state, surface) {
     state.sourceSurface = structuredClone(surface);
     state.surface = buildRenderSurface(state.sourceSurface, state.chromeState);
@@ -670,15 +141,9 @@ function syncRuntimeState(state, surface) {
     state.cameraState = normalizeState(state.sourceSurface, state.cameraState);
     state.diagnostics.deterministicMode = !!state.surface.uiState?.deterministicMode;
     state.diagnostics.projectionMode = state.cameraState.projectionMode;
+    state.diagnostics.viewMode = state.cameraState.viewMode;
 
-    const nextProjectionMode = resolveProjectionMode(state.sourceSurface);
-    if ((state.camera.isPerspectiveCamera && nextProjectionMode !== projectionModes.perspective) ||
-        (!state.camera.isPerspectiveCamera && nextProjectionMode !== projectionModes.orthographic)) {
-        state.scene.remove(state.camera);
-        state.camera = createCamera(nextProjectionMode, state.viewport.width, state.viewport.height);
-        state.controls.object = state.camera;
-    }
-
+    syncCameraModeFromSurface(state);
     rebuildScene(state);
 
     if (state.chromeState.connectSourceNodeId && !state.nodeLookup.has(state.chromeState.connectSourceNodeId)) {
@@ -701,6 +166,7 @@ function collectSceneSnapshot(state) {
         surfaceId: state.surface.surfaceId || "",
         sceneKey: state.surface.sceneKey || "",
         projectionMode: state.cameraState.projectionMode,
+        viewMode: state.cameraState.viewMode,
         activeViewPreset: state.surface.uiState?.activeViewPreset || viewPresets.overview,
         layoutMode: state.surface.uiState?.layoutMode || "center-lane",
         toolMode: state.surface.uiState?.toolMode || "select",
@@ -786,6 +252,7 @@ function getDiagnostics(state) {
         edgeCount: state.diagnostics.edgeCount,
         deterministicMode: state.diagnostics.deterministicMode,
         projectionMode: state.diagnostics.projectionMode,
+        viewMode: state.diagnostics.viewMode,
         selectedNodeIds: Array.from(state.selectedNodeIds),
         selectedEdgeId: state.chromeState.selectedEdgeId || ""
     };
@@ -848,7 +315,8 @@ function createState(host, dotNetRef, surface) {
         width: Math.max(host.clientWidth, 1),
         height: Math.max(host.clientHeight, 1)
     };
-    const camera = createCamera(resolveProjectionMode(surface), viewport.width, viewport.height);
+    const initialCameraState = normalizeState(surface);
+    const camera = createCamera(initialCameraState.projectionMode, viewport.width, viewport.height);
     const controls = createControls(camera, renderer.domElement, host);
     const ambient = new THREE.AmbientLight("#f8fafc", 0.28);
     const hemisphere = new THREE.HemisphereLight("#e2e8f0", "#020617", 1.2);
@@ -879,6 +347,16 @@ function createState(host, dotNetRef, surface) {
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -261;
     scene.add(camera, ambient, hemisphere, directional, rimLight, grid, floor);
+
+    const chromeState = {
+        settingsOpen: false,
+        contextMenu: null,
+        showRoleNodes: true,
+        showBranchNodes: true,
+        connectSourceNodeId: null,
+        reconnectEdgeId: null,
+        selectedEdgeId: null
+    };
 
     const state = {
         host,
@@ -916,33 +394,23 @@ function createState(host, dotNetRef, surface) {
             nodeCount: 0,
             edgeCount: 0,
             deterministicMode: true,
-            projectionMode: resolveProjectionMode(surface)
+            projectionMode: initialCameraState.projectionMode,
+            viewMode: initialCameraState.viewMode
         },
         sceneDecorations: {
             grid,
             floor
         },
-        cameraState: normalizeState(surface),
+        cameraState: initialCameraState,
         sourceSurface: structuredClone(surface),
-        surface: buildRenderSurface(surface, {
-            showRoleNodes: true,
-            showBranchNodes: true
-        }),
+        surface: buildRenderSurface(surface, chromeState),
         selectedNodeIds: new Set(),
         lastAutoFitKey: "",
         handlers: {},
-        chromeState: {
-            settingsOpen: false,
-            contextMenu: null,
-            showRoleNodes: true,
-            showBranchNodes: true,
-            connectSourceNodeId: null,
-            reconnectEdgeId: null,
-            selectedEdgeId: null
-        },
-        resolveAnchorPosition: null,
+        chromeState,
         chromeController: null,
-        interactionDeps: null
+        interactionDeps: null,
+        scheduleRender
     };
 
     syncViewport(state, true);
@@ -950,31 +418,6 @@ function createState(host, dotNetRef, surface) {
     state.surface.uiState = state.sourceSurface.uiState || {};
     state.surface.chrome = state.sourceSurface.chrome || {};
     state.selectedNodeIds = normalizeSelectedNodeIds(state.surface);
-    state.resolveAnchorPosition = (node, anchor) => {
-        const width = Number(node.width) || 220;
-        const height = Number(node.height) || 128;
-        const depth = Number(node.depth) || 28;
-        const side = anchor?.side || (anchor?.role === "output" ? "right" : "left");
-        const totalOnSide = Math.max(1, Number(anchor?.totalOnSide) || 1);
-        const order = clamp(Number(anchor?.order) || 0, 0, totalOnSide - 1);
-        const offsetRatio = totalOnSide === 1
-            ? 0.5
-            : order / (totalOnSide - 1);
-        const verticalTravel = Math.max(24, height - 36);
-        const horizontalTravel = Math.max(24, width - 40);
-        const distributedY = toSceneY(node.y) + (height / 2) - 18 - (offsetRatio * verticalTravel);
-        const distributedX = (node.x - (width / 2)) + 20 + (offsetRatio * horizontalTravel);
-        switch (side) {
-            case "right":
-                return new THREE.Vector3(node.x + (width / 2), distributedY, node.z + (depth / 2));
-            case "top":
-                return new THREE.Vector3(distributedX, toSceneY(node.y) + (height / 2), node.z + (depth / 2));
-            case "bottom":
-                return new THREE.Vector3(distributedX, toSceneY(node.y) - (height / 2), node.z + (depth / 2));
-            default:
-                return new THREE.Vector3(node.x - (width / 2), distributedY, node.z + (depth / 2));
-        }
-    };
 
     state.chromeController = new WebGlWorkbenchChromeController(state);
     state.interactionDeps = {
@@ -985,7 +428,8 @@ function createState(host, dotNetRef, surface) {
         fitView,
         focusNode,
         resetView,
-        rebuildScene
+        rebuildScene,
+        setCameraViewMode
     };
 
     state.handlers.pointerDown = event => handlePointerDown(state, event, state.interactionDeps);
@@ -1080,6 +524,15 @@ root.webglWorkbench = {
         }
 
         focusNode(state, nodeId);
+    },
+    setCameraView(host, viewMode) {
+        const state = resolveState(host);
+        if (!state) {
+            return false;
+        }
+
+        setCameraViewMode(state, viewMode, true);
+        return true;
     },
     getState(host) {
         const state = resolveState(host);
