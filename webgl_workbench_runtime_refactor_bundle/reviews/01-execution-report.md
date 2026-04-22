@@ -63,6 +63,7 @@
 - Refined the in-scene toolbar into a single-row, icon-first control strip so the authoring chrome stays compact at desktop width without wrapping into stacked rows.
 - Added an in-scene maximize/dock action that can lift the WebGL stage into an overlay shell and return it to the page layout without leaving the runtime surface.
 - Persisted stage maximize state through the runtime snapshot, Blazor interop session state, and sandbox page shell so the docked/undocked mode survives rerenders and host refreshes.
+- Repaired a maximize-shell interaction bug by making the visual backdrop non-interactive, so mouse input now reaches the WebGL stage and toolbar while maximized.
 - Added sandbox-local delete behavior and reconnect support across the runtime, Blazor interop surface, and sandbox session state.
 - Removed the old host-owned WebGL authoring overlay from the sandbox page so the stage-local runtime chrome is now the primary authoring surface.
 - Repaired a post-refactor rendering regression where the in-scene chrome pass could clear the main WebGL scene, which left DOM labels/anchors visible while hiding node meshes and connection curves.
@@ -99,7 +100,9 @@
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter WebGlWorkbenchUiStateTests --nologo` | `Passed` | `2/2` focused unit tests passed with stage-maximize UI-state round-trip coverage. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter ProcessWebGlSandboxSessionTests --nologo` | `Passed` | `13/13` focused component tests passed with sandbox-session maximize-state propagation coverage. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions --nologo` | `Passed` | Focused toolbar/chrome smoke passed with one-row toolbar proof plus maximize/dock stage assertions and screenshot capture. |
+| `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions --nologo` | `Passed` | Re-ran after the pointer-overlay repair; maximized-mode proof now includes real mouse clicks on the in-scene toolbar. |
 | `Playwright MCP toolbar maximize/dock proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified the icon-first toolbar stays on one row, confirmed runtime maximize/dock state, and captured clean docked/maximized screenshots on `http://127.0.0.1:5611`. |
+| `Playwright MCP post-fix visual proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Revisited the live sandbox after the pointer fix and captured a fresh route screenshot on `http://127.0.0.1:5621`. |
 | `npm run webgllib:verify-assets` | `Not run` | No asset-regeneration issue was observed during build or live route proof. |
 
 ## Browser Artifacts
@@ -126,6 +129,7 @@
 | `C:\repositories\CanDoItAll\output\playwright-mcp\10-webgl-explicit-anchor-connected-proof.png` | Exact anchor-to-anchor connection proof after clicking one specific target input | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-toolbar-docked-clean.png` | Clean docked-stage proof for the single-row icon toolbar | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-toolbar-maximized-clean.png` | Clean maximized-stage proof for the icon toolbar plus overlay dock shell | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T12-32-07-881Z.png` | Fresh live-route screenshot after the maximized-stage pointer-event repair | `Captured` |
 
 ## Subbundle Gate Results
 
@@ -151,6 +155,7 @@
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review` | `1600x1100` | `Inspect the live managed route, confirm imported GLB groups for role/branch/step nodes, confirm closer role-anchor projections, confirm `2` flow markers in runtime state, and capture the refreshed stage` | `page-2026-04-22T02-34-21-947Z.png`, `element-2026-04-22T02-36-16-915Z.png` | `Passed` |
 | `03-3d-connection-reconnection-and-delete-tools` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Focus an inspected node to reveal anchor labels, enter connect mode, choose one exact role output anchor, focus a multi-input step, confirm the intended compatible target input is highlighted, click that exact input, and verify the created edge keeps the expected source/target anchor ids` | `08-webgl-anchor-labels-detail-proof.png`, `09-webgl-explicit-target-anchor-proof.png`, `10-webgl-explicit-anchor-connected-proof.png` | `Passed` |
 | `02-in-scene-toolbar-and-settings-chrome` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Inspect toolbar geometry, confirm a single distinct toolbar row, invoke maximize and dock from the in-scene chrome, verify runtime state plus stage-shell expansion, and capture clean docked/maximized screenshots` | `webgl-toolbar-docked-clean.png`, `webgl-toolbar-maximized-clean.png` | `Passed` |
+| `02-in-scene-toolbar-and-settings-chrome` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Revisit the live route after the backdrop pointer-event repair and capture a fresh screenshot showing the stage rendered normally with the maximize-shell fix in place` | `page-2026-04-22T12-32-07-881Z.png` | `Passed` |
 
 ## Raw Note Closure
 
@@ -173,6 +178,7 @@
 - The GLB-node follow-up now proves imported model groups for sampled role, branch, and step nodes plus `2` start/end flow markers on the managed route at `http://127.0.0.1:5501`.
 - The anchor-authoring follow-up now proves zoom-conditional anchor labels plus an exact role-output to step-input connection on the dedicated sandbox host at `http://127.0.0.1:5599`; the managed-runtime health probe still times out for this host even though the page and route are live in-browser.
 - The toolbar maximize/dock follow-up repaired an intermediate blur/stretch issue by syncing the stage shell before viewport resize; manual MCP proof and the targeted toolbar/chrome smoke both now pass against that path.
+- The maximize overlay follow-up repaired the remaining mouse-interaction issue by marking the backdrop as non-interactive; the targeted toolbar/chrome smoke now proves real mouse clicks still work while the stage is maximized.
 - The broader Playwright smoke suite was not re-run end-to-end after the toolbar maximize follow-up; from the last full-suite run, the remaining observed timing-sensitive fixture-host case is `Sandbox_supports_drag_connection_and_export_without_camera_reset`.
 - A stale MCP-managed `dotnet-watch` sandbox on `https://localhost:7123` could still lock `CanDoItAll.Components.WebGlSandbox` build outputs until that older watch pair is stopped; isolated test output paths avoid this for component coverage, and the live validation work used a separate fixed-port runtime.
 - The live MCP browser route and the focused component/unit suites support the implementation, so the remaining gap is in automation stability rather than in the core runtime split or in-scene chrome delivery.

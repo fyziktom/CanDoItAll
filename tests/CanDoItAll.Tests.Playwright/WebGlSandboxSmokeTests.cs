@@ -374,12 +374,28 @@ public sealed class WebGlSandboxSmokeTests
             maximizedStageBounds.Height > dockedStageBounds.Height + 200,
             $"Expected maximized stage height to exceed docked height by 200px, got docked={dockedStageBounds.Height:0.##}, maximized={maximizedStageBounds.Height:0.##}.");
 
+        await ClickChromeActionAsync(page, "chrome:settings");
+        var maximizedSettingsChrome = await WaitForChromeStateAsync(
+            page,
+            chrome =>
+                chrome.IsStageMaximized &&
+                chrome.SettingsOpen &&
+                chrome.Actions.Any(action => string.Equals(action.Id, "info:miniature", StringComparison.Ordinal)),
+            "settings panel to open from a real mouse click while maximized");
+        Assert.True(maximizedSettingsChrome.SettingsOpen);
+
+        await ClickChromeActionAsync(page, "chrome:settings");
+        await WaitForChromeStateAsync(
+            page,
+            chrome => chrome.IsStageMaximized && !chrome.SettingsOpen,
+            "settings panel to close from a real mouse click while maximized");
+
         await page.Locator("[data-testid='webgl-sandbox-stage']").ScreenshotAsync(new LocatorScreenshotOptions
         {
             Path = Path.Combine(artifactsDir, "08-webgl-toolbar-maximized.png")
         });
 
-        Assert.True(await InvokeChromeActionAsync(page, "chrome:toggle-stage-size"));
+        await ClickChromeActionAsync(page, "chrome:toggle-stage-size");
         var redockedUiState = await WaitForUiStateAsync(
             page,
             state => !state.IsStageMaximized,
@@ -754,6 +770,16 @@ public sealed class WebGlSandboxSmokeTests
             actionId);
     }
 
+    private static async Task ClickChromeActionAsync(IPage page, string actionId)
+    {
+        var point = await ResolveChromeActionViewportPointAsync(page, actionId);
+        Assert.True(
+            point.X > 0 && point.Y > 0,
+            $"Expected chrome action '{actionId}' to resolve to a positive viewport point, got x={point.X:0.##}, y={point.Y:0.##}.");
+
+        await page.Mouse.ClickAsync((float)point.X, (float)point.Y);
+    }
+
     private static WebGlSceneSnapshot DeserializeSceneSnapshot(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -941,6 +967,27 @@ public sealed class WebGlSandboxSmokeTests
                 };
             }",
             anchorId);
+    }
+
+    private static async Task<WebGlViewportPointProof> ResolveChromeActionViewportPointAsync(IPage page, string actionId)
+    {
+        return await page.EvaluateAsync<WebGlViewportPointProof>(
+            @"targetActionId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                const rect = host?.getBoundingClientRect();
+                const chromeState = runtime?.getChromeState?.(host);
+                const action = chromeState?.actions?.find(candidate => candidate.id === targetActionId);
+                if (!host || !rect || !action) {
+                    return { x: 0, y: 0 };
+                }
+
+                return {
+                    x: rect.left + action.x + (action.width / 2),
+                    y: rect.top + action.y + (action.height / 2)
+                };
+            }",
+            actionId);
     }
 
     private static async Task<WebGlExplicitConnectionCandidateProof> ResolveExplicitConnectionCandidateAsync(IPage page)
