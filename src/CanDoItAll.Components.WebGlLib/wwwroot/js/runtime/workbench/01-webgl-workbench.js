@@ -110,8 +110,19 @@ function render(state) {
     applyCameraState(state);
 
     const showGrid = state.surface.uiState?.showGrid !== false;
+    const transparentGround = state.surface.uiState?.transparentGround !== false;
     state.sceneDecorations.grid.visible = showGrid;
-    state.sceneDecorations.floor.material.opacity = showGrid ? 0.84 : 0.46;
+    state.sceneDecorations.floor.visible = true;
+    state.sceneDecorations.floor.renderOrder = transparentGround ? -6 : -2;
+    if (state.sceneDecorations.floor.userData.transparentGround !== transparentGround) {
+        state.sceneDecorations.floor.userData.transparentGround = transparentGround;
+        state.sceneDecorations.floor.material.depthWrite = !transparentGround;
+        state.sceneDecorations.floor.material.needsUpdate = true;
+    }
+
+    state.sceneDecorations.floor.material.opacity = transparentGround
+        ? showGrid ? 0.12 : 0.06
+        : showGrid ? 0.84 : 0.46;
 
     state.renderer.clear();
     state.renderer.render(state.scene, state.camera);
@@ -176,6 +187,7 @@ function collectSceneSnapshot(state) {
         showGrid: state.surface.uiState?.showGrid !== false,
         showAnchors: state.surface.uiState?.showAnchors !== false,
         showEdgeLabels: state.surface.uiState?.showEdgeLabels !== false,
+        transparentGround: state.surface.uiState?.transparentGround !== false,
         showRoleNodes: state.chromeState.showRoleNodes !== false,
         showBranchNodes: state.chromeState.showBranchNodes !== false,
         viewportWidth: state.viewport.width,
@@ -341,11 +353,14 @@ function createState(host, dotNetRef, surface) {
         new THREE.MeshPhongMaterial({
             color: "#020617",
             transparent: true,
-            opacity: 0.84,
+            opacity: 0.12,
+            depthWrite: false,
             side: THREE.DoubleSide
         }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -261;
+    floor.renderOrder = -6;
+    floor.userData.transparentGround = true;
     scene.add(camera, ambient, hemisphere, directional, rimLight, grid, floor);
 
     const chromeState = {

@@ -1,10 +1,17 @@
 import {
     THREE,
     clamp,
+    isRoleNode,
     resolveAnchorPosition,
     resolveFiniteNumber,
     toSceneY
 } from "./02-webgl-workbench-core.js";
+import { GLTFLoader } from "../../../vendor/GLTFLoader.js";
+import { clone as cloneSkeleton } from "../../../vendor/utils/SkeletonUtils.js";
+
+const roleModelLoader = new GLTFLoader();
+const roleModelAssetUrl = new URL("../../../assets/model/lowpoly_person_boxing.glb", import.meta.url).href;
+let roleModelAssetPromise = null;
 
 function destroyObject3D(object) {
     if (!object) {
@@ -12,6 +19,10 @@ function destroyObject3D(object) {
     }
 
     object.traverse(child => {
+        if (child.userData?.skipDispose) {
+            return;
+        }
+
         child.geometry?.dispose?.();
         if (Array.isArray(child.material)) {
             for (const material of child.material) {
@@ -64,18 +75,72 @@ function resolveEdgeOpacity(edge) {
     return clamp(resolveFiniteNumber(edge?.opacity, edge?.isPrimaryPath ? 0.96 : 0.58), 0.18, 1);
 }
 
-function createNodeObject(state, node) {
-    const colors = resolveNodeColors(node);
-    const group = new THREE.Group();
+function loadRoleModelAsset() {
+    if (roleModelAssetPromise) {
+        return roleModelAssetPromise;
+    }
+
+    roleModelAssetPromise = roleModelLoader.loadAsync(roleModelAssetUrl)
+        .then(gltf => {
+            const template = gltf.scene || gltf.scenes?.[0];
+            if (!template) {
+                throw new Error("Role node GLB did not contain a scene.");
+            }
+
+            const bounds = new THREE.Box3().setFromObject(template);
+            const size = bounds.getSize(new THREE.Vector3());
+            const center = bounds.getCenter(new THREE.Vector3());
+            return {
+                template,
+                min: bounds.min.clone(),
+                center,
+                size
+            };
+        })
+        .catch(error => {
+            roleModelAssetPromise = null;
+            console.error("CanDoItAll WebGL role model failed to load.", error);
+            throw error;
+        });
+
+    return roleModelAssetPromise;
+}
+
+function resolveNodeFrame(node, state) {
     const width = Number(node.width) || 220;
     const height = Number(node.height) || 128;
     const depth = Number(node.depth) || 28;
     const isSelected = state.selectedNodeIds.has(node.id) || state.chromeState.connectSourceNodeId === node.id;
+
+    return {
+        width,
+        height,
+        depth,
+        isSelected
+    };
+}
+
+function createHitMesh(width, height, depth, nodeId) {
+    const hitMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, Math.max(34, depth)),
+        new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0,
+            depthWrite: false
+        }));
+    hitMesh.userData = {
+        nodeId
+    };
+    return hitMesh;
+}
+
+function createStandardNodeVisual(node, colors, frame) {
+    const { width, height, depth } = frame;
     const geometry = new THREE.BoxGeometry(width, height, depth);
     const material = new THREE.MeshPhongMaterial({
         color: colors.fill,
-        emissive: new THREE.Color(isSelected ? colors.accent : "#000000"),
-        emissiveIntensity: isSelected ? 0.12 : 0,
+        emissive: new THREE.Color(frame.isSelected ? colors.accent : "#000000"),
+        emissiveIntensity: frame.isSelected ? 0.12 : 0,
         shininess: 55,
         transparent: true,
         opacity: 0.96
@@ -99,15 +164,152 @@ function createNodeObject(state, node) {
         }));
     accentBand.position.set(0, (height / 2) - 6, (depth / 2) + 2);
 
-    group.add(mesh, edges, accentBand);
+    return {
+        mesh,
+        objects: [mesh, edges, accentBand]
+    };
+}
+
+function createRoleNodePedestal(colors, frame) {
+    const radius = Math.max(24, Math.min(frame.width, frame.depth) * 0.24);
+    const haloRadius = radius * 1.18;
+    const baseY = (-frame.height / 2) + 10;
+
+    const pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius * 1.04, radius * 0.92, 10, 28),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(frame.isSelected ? colors.accent : "#111827"),
+            emissiveIntensity: frame.isSelected ? 0.22 : 0.04,
+            shininess: 75,
+            transparent: true,
+            opacity: 0.96
+        }));
+    pedestal.position.y = baseY;
+
+    const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(haloRadius, 3.6, 18, 42),
+        new THREE.MeshBasicMaterial({
+            color: colors.accent,
+            transparent: true,
+            opacity: frame.isSelected ? 0.72 : 0.3
+        }));
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = baseY + 6.5;
+
+    return {
+        pedestal,
+        rim,
+        modelBottomY: baseY + 7
+    };
+}
+
+function createRoleNodeFallback(colors, frame) {
+    const fallback = new THREE.Mesh(
+        new THREE.BoxGeometry(frame.width * 0.32, frame.height * 0.58, frame.depth * 0.22),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.18 : 0.05,
+            shininess: 55,
+            transparent: true,
+            opacity: 0.88
+        }));
+    fallback.position.y = (-frame.height / 2) + ((frame.height * 0.58) / 2) + 18;
+    return fallback;
+}
+
+function markRoleModelInstance(instance) {
+    instance.traverse(child => {
+        child.userData = {
+            ...child.userData,
+            skipDispose: true
+        };
+        child.frustumCulled = false;
+    });
+}
+
+function buildRoleModelInstance(asset, frame, modelBottomY) {
+    const instance = cloneSkeleton(asset.template);
+    markRoleModelInstance(instance);
+
+    const availableWidth = Math.max(46, frame.width * 0.56);
+    const availableHeight = Math.max(64, frame.height * 0.92);
+    const availableDepth = Math.max(42, frame.depth * 0.56);
+    const scale = Math.min(
+        availableWidth / Math.max(asset.size.x, 1),
+        availableHeight / Math.max(asset.size.y, 1),
+        availableDepth / Math.max(asset.size.z, 1));
+
+    instance.scale.setScalar(scale);
+    instance.position.set(
+        -asset.center.x * scale,
+        modelBottomY - (asset.min.y * scale),
+        -asset.center.z * scale);
+
+    return instance;
+}
+
+function attachRoleModel(state, group, fallback, frame, node) {
+    loadRoleModelAsset()
+        .then(asset => {
+            if (state.nodeObjects.get(node.id) !== group) {
+                return;
+            }
+
+            const instance = buildRoleModelInstance(asset, frame, fallback.userData.modelBottomY || 0);
+            group.add(instance);
+            if (fallback.parent === group) {
+                group.remove(fallback);
+                destroyObject3D(fallback);
+            }
+
+            state.scheduleRender(state);
+        })
+        .catch(() => {
+            if (state.nodeObjects.get(node.id) === group) {
+                state.scheduleRender(state);
+            }
+        });
+}
+
+function createRoleNodeVisual(state, node, colors, frame) {
+    const hitMesh = createHitMesh(frame.width * 0.82, frame.height, frame.depth * 0.82, node.id);
+    const pedestal = createRoleNodePedestal(colors, frame);
+    const fallback = createRoleNodeFallback(colors, frame);
+    fallback.userData = {
+        ...fallback.userData,
+        modelBottomY: pedestal.modelBottomY
+    };
+
+    const objects = [hitMesh, pedestal.pedestal, pedestal.rim, fallback];
+    return {
+        mesh: hitMesh,
+        objects,
+        onAdded(group) {
+            attachRoleModel(state, group, fallback, frame, node);
+        }
+    };
+}
+
+function createNodeObject(state, node) {
+    const colors = resolveNodeColors(node);
+    const group = new THREE.Group();
+    const frame = resolveNodeFrame(node, state);
+    const visual = isRoleNode(node)
+        ? createRoleNodeVisual(state, node, colors, frame)
+        : createStandardNodeVisual(node, colors, frame);
+
+    group.add(...visual.objects);
     group.position.set(node.x || 0, toSceneY(node.y), node.z || 0);
     group.userData = {
         nodeId: node.id
     };
 
     state.nodeObjects.set(node.id, group);
-    state.nodeMeshes.push(mesh);
+    state.nodeMeshes.push(visual.mesh);
     state.scene.add(group);
+    visual.onAdded?.(group);
 }
 
 function createEdgeObject(state, edge) {

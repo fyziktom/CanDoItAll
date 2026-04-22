@@ -429,6 +429,9 @@ export function applyChromeAction(state, actionId, deps) {
         case "toggle:grid":
             toggleUiFlag(state, "showGrid", deps);
             return true;
+        case "toggle:transparent-ground":
+            toggleUiFlag(state, "transparentGround", deps);
+            return true;
         case "toggle:anchors":
             toggleUiFlag(state, "showAnchors", deps);
             return true;

@@ -210,8 +210,9 @@ function buildSettingsItems(state) {
         { id: "info:miniature", label: "Mini labels", tone: "accent", active: nodeInfoMode === nodeInfoModes.miniature },
         { id: "info:hidden", label: "Hide labels", tone: "accent", active: nodeInfoMode === nodeInfoModes.hidden },
         { id: "toggle:grid", label: "Scene grid", tone: "neutral", toggled: state.surface.uiState?.showGrid !== false },
+        { id: "toggle:transparent-ground", label: "Transparent ground", tone: "neutral", toggled: state.surface.uiState?.transparentGround !== false },
         { id: "toggle:anchors", label: "Anchors", tone: "neutral", toggled: state.surface.uiState?.showAnchors !== false },
-        { id: "toggle:edge-labels", label: "Edge labels", tone: "neutral", toggled: state.surface.uiState?.showEdgeLabels !== false },
+        { id: "toggle:edge-labels", label: "Connection labels", tone: "neutral", toggled: state.surface.uiState?.showEdgeLabels !== false },
         { id: "toggle:diagnostics", label: "Diagnostics", tone: "neutral", toggled: !!state.surface.uiState?.showDiagnostics },
         { id: "toggle:roles", label: "Role nodes", tone: "neutral", toggled: state.chromeState?.showRoleNodes !== false },
         { id: "toggle:branches", label: "Branch routers", tone: "neutral", toggled: state.chromeState?.showBranchNodes !== false }
@@ -259,6 +260,7 @@ function buildChromeRenderKey(state) {
         reconnectEdgeId: state.chromeState?.reconnectEdgeId || "",
         selectedEdgeId: state.chromeState?.selectedEdgeId || "",
         showGrid: state.surface.uiState?.showGrid !== false,
+        transparentGround: state.surface.uiState?.transparentGround !== false,
         showAnchors: state.surface.uiState?.showAnchors !== false,
         showEdgeLabels: state.surface.uiState?.showEdgeLabels !== false,
         showDiagnostics: !!state.surface.uiState?.showDiagnostics,

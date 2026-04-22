@@ -222,6 +222,7 @@ public sealed class ProcessWebGlSandboxSessionTests
             NodeInfoMode = WebGlWorkbenchNodeInfoModes.Hidden,
             ShowDiagnostics = false,
             ShowGrid = false,
+            TransparentGround = false,
             ShowAnchors = false,
             ShowEdgeLabels = false,
             Camera = new WebGlWorkbenchCameraState
@@ -237,6 +238,7 @@ public sealed class ProcessWebGlSandboxSessionTests
         Assert.Equal(WebGlWorkbenchNodeInfoModes.Hidden, surface.UiState.NodeInfoMode);
         Assert.False(surface.UiState.ShowDiagnostics);
         Assert.False(surface.UiState.ShowGrid);
+        Assert.False(surface.UiState.TransparentGround);
         Assert.False(surface.UiState.ShowAnchors);
         Assert.False(surface.UiState.ShowEdgeLabels);
         Assert.Equal(WebGlWorkbenchCameraViewModes.XZ, surface.UiState.Camera.ViewMode);

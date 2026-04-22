@@ -53,6 +53,8 @@ public sealed class ProcessWebGlSandboxSession
 
     public bool ShowEdgeLabels { get; private set; } = true;
 
+    public bool TransparentGround { get; private set; } = true;
+
     public int LastExportCharacterCount { get; private set; }
 
     public IReadOnlyList<ProcessWebGlCommandLogEntry> CommandLog => commandLog;
@@ -355,6 +357,7 @@ public sealed class ProcessWebGlSandboxSession
         ShowGrid = uiState.ShowGrid;
         ShowAnchors = uiState.ShowAnchors;
         ShowEdgeLabels = uiState.ShowEdgeLabels;
+        TransparentGround = uiState.TransparentGround;
     }
 
     public WebGlWorkbenchSurface BuildSurface()
@@ -388,6 +391,7 @@ public sealed class ProcessWebGlSandboxSession
         surface.UiState.ShowGrid = ShowGrid;
         surface.UiState.ShowAnchors = ShowAnchors;
         surface.UiState.ShowEdgeLabels = ShowEdgeLabels;
+        surface.UiState.TransparentGround = TransparentGround;
         return surface;
     }
 
