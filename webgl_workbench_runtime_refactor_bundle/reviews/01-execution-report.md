@@ -4,7 +4,7 @@
 
 - Execution state: `Implemented`
 - Bundle validation state: `Prepared bundle validated on 2026-04-21`
-- Closure state: `Implemented, regression-repaired, follow-up refactor/layout/camera/model extension delivered, with residual Playwright fixture-host instability`
+- Closure state: `Implemented, regression-repaired, follow-up refactor/layout/camera/model/anchor extension delivered, with residual Playwright fixture-host instability`
 
 ## Delivered Scope
 
@@ -20,6 +20,7 @@
   - `08-webgl-workbench-hit-testing.js`
   - `09-webgl-workbench-actions.js`
   - `10-webgl-workbench-drag.js`
+- Added `11-webgl-workbench-anchor-flow.js` so anchor compatibility checks, exact source/target draft state, and connection-request shaping are isolated out of the larger action surface.
 - Reduced the former interaction monolith into a facade-style entry module:
   - `05-webgl-workbench-interaction.js` now re-exports focused drag, hit-test, and action helpers instead of owning the whole implementation
 - Added in-scene WebGL chrome instead of host-side authoring controls:
@@ -54,6 +55,11 @@
   - green start sphere ahead of the first process step
   - red end sphere beyond the last process step
 - Tightened role anchor placement so connection pins sit materially closer to the person model instead of floating far outside the visual body.
+- Added zoom-conditional anchor labels for node connection points so colored port markers can reveal their exact meaning during close inspection without keeping the full scene permanently noisy.
+- Upgraded connect and reconnect authoring from node-only targeting to exact anchor targeting:
+  - source selection can lock to one specific output anchor
+  - destination selection can lock to one specific compatible input anchor
+  - multi-input steps now expose the precise role/input target instead of forcing a whole-node guess
 - Added sandbox-local delete behavior and reconnect support across the runtime, Blazor interop surface, and sandbox session state.
 - Removed the old host-owned WebGL authoring overlay from the sandbox page so the stage-local runtime chrome is now the primary authoring surface.
 - Repaired a post-refactor rendering regression where the in-scene chrome pass could clear the main WebGL scene, which left DOM labels/anchors visible while hiding node meshes and connection curves.
@@ -76,11 +82,15 @@
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter WebGlWorkbenchUiStateTests -v minimal` | `Passed` | `2/2` focused unit tests passed. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter ProcessWebGlSandboxSessionTests -v minimal` | `Passed` | `12/12` focused component tests passed after cleaning the conflicting `Fact/Theory` attribute on the camera-view route-state test. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter WebGlWorkbenchUiStateTests -v minimal` | `Passed` | `2/2` focused unit tests re-ran cleanly during the GLB-node follow-up validation. |
+| `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "ProcessWebGlSandboxSessionTests|ProcessWebGlSceneAdapterTests"` | `Passed` | `21/21` focused component tests passed after the exact-anchor authoring follow-up. |
+| `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter WebGlSandboxSmokeTests` | `Passed` | `6/6` smoke tests passed after the anchor-label and explicit target-input proof updates. |
+| `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj` | `Passed` | Build succeeded with existing `NU1903` warnings only. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter FullyQualifiedName~WebGlSandboxSmokeTests -v minimal` | `Partial` | Latest clean run ended at `4/6` passing. Two fixture-host smokes remained timing-sensitive around synthetic connect and synthetic drag persistence. |
 | `Playwright MCP manual route proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Live route manually inspected with screenshots for toolbar, settings, context menu, and narrow-width layout. |
 | `Playwright MCP regression repair proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified restored node/edge rendering, stable rerenders, and non-rebuilding chrome objects on the live route after the repair patch. |
 | `Playwright MCP follow-up proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified host and in-scene camera-view switching, perspective round-trip repair, and the three new layout algorithms with live screenshots on `http://127.0.0.1:5123`. |
 | `Playwright MCP GLB node-visual proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified imported model groups for role, branch, and step nodes, confirmed closer projected role anchors, confirmed `2` start/end flow markers, and captured fresh live-route screenshots on `http://127.0.0.1:5501`. |
+| `Playwright MCP anchor-label and explicit-target proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified zoom-conditional anchor labels, focused compatible target-input highlighting, and a real exact-anchor role-binding on `http://127.0.0.1:5599`. |
 | `npm run webgllib:verify-assets` | `Not run` | No asset-regeneration issue was observed during build or live route proof. |
 
 ## Browser Artifacts
@@ -102,6 +112,9 @@
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-layout-radial-burst.png` | `Radial burst` 3D recomposition proof | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T02-34-21-947Z.png` | Fresh managed-route viewport proof after the GLB node-visual follow-up landed | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\element-2026-04-22T02-36-16-915Z.png` | Focused stage proof for closer role anchors, imported GLB node visuals, and live flow-marker presence | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\08-webgl-anchor-labels-detail-proof.png` | Zoomed detail proof showing anchor labels revealed for the inspected node | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\09-webgl-explicit-target-anchor-proof.png` | Connect-mode proof showing the exact compatible target input highlighted on a multi-input step | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\10-webgl-explicit-anchor-connected-proof.png` | Exact anchor-to-anchor connection proof after clicking one specific target input | `Captured` |
 
 ## Subbundle Gate Results
 
@@ -109,7 +122,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `01-runtime-foundation-refactor-and-api-shaping` | `Passed` | `Passed` | `Passed` | `Completed` | Runtime split completed without dropping the public automation bridge. |
 | `02-in-scene-toolbar-and-settings-chrome` | `Passed` | `Passed` | `Passed` | `Completed` | Toolbar, settings panel, and context-menu chrome all moved into the runtime surface. |
-| `03-3d-connection-reconnection-and-delete-tools` | `Passed` | `Passed` | `Passed` | `Completed` | Connect, reconnect, delete, and scene/edge hit-target support implemented across runtime and sandbox session flow. |
+| `03-3d-connection-reconnection-and-delete-tools` | `Passed` | `Passed` | `Passed` | `Completed` | Connect, reconnect, delete, and scene/edge hit-target support implemented across runtime and sandbox session flow, then extended with exact anchor-to-anchor targeting and anchor-label proof. |
 | `04-sandbox-integration-regression-proof-and-closure` | `Passed` | `Passed with residuals` | `Passed` | `Completed` | Host cleanup, manual MCP proof, and focused automated regressions completed; two Playwright smokes remain flaky in the fixture host. |
 
 ## Browser Validation Analytics
@@ -125,6 +138,7 @@
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review&camera=perspective` | `1600x1100` | `Verify host and in-scene camera switching including repaired perspective round-trip and WebGL YZ-view proof` | `webgl-camera-yz-view.png` | `Passed` |
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review&camera=perspective` | `1600x1100` | `Verify new recomposition layouts on the live route` | `webgl-layout-critical-path-spine.png`, `webgl-layout-fanout-corridor.png`, `webgl-layout-radial-burst.png` | `Passed` |
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review` | `1600x1100` | `Inspect the live managed route, confirm imported GLB groups for role/branch/step nodes, confirm closer role-anchor projections, confirm `2` flow markers in runtime state, and capture the refreshed stage` | `page-2026-04-22T02-34-21-947Z.png`, `element-2026-04-22T02-36-16-915Z.png` | `Passed` |
+| `03-3d-connection-reconnection-and-delete-tools` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Focus an inspected node to reveal anchor labels, enter connect mode, choose one exact role output anchor, focus a multi-input step, confirm the intended compatible target input is highlighted, click that exact input, and verify the created edge keeps the expected source/target anchor ids` | `08-webgl-anchor-labels-detail-proof.png`, `09-webgl-explicit-target-anchor-proof.png`, `10-webgl-explicit-anchor-connected-proof.png` | `Passed` |
 
 ## Raw Note Closure
 
@@ -145,6 +159,7 @@
 - The rendering/performance regression reported after the refactor was repaired and revalidated on the live sandbox route with new Playwright MCP screenshots and runtime diagnostics.
 - The perspective route regression was repaired by making the default camera view explicit in both route application and route generation; live host-button and in-scene-toolbar proof now passes on `http://127.0.0.1:5123`.
 - The GLB-node follow-up now proves imported model groups for sampled role, branch, and step nodes plus `2` start/end flow markers on the managed route at `http://127.0.0.1:5501`.
+- The anchor-authoring follow-up now proves zoom-conditional anchor labels plus an exact role-output to step-input connection on the dedicated sandbox host at `http://127.0.0.1:5599`; the managed-runtime health probe still times out for this host even though the page and route are live in-browser.
 - The focused Playwright smoke suite remains unstable inside the test fixture host for two synthetic interaction proofs:
   - `Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions`
   - `Sandbox_supports_drag_connection_and_export_without_camera_reset`

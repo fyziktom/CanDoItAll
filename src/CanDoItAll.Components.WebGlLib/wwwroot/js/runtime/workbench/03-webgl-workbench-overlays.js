@@ -6,8 +6,15 @@ import {
     resolveAnchorPosition,
     resolveNodeInfoMode,
     resolveNodeScreenBounds,
+    resolveToolMode,
     round
 } from "./02-webgl-workbench-core.js";
+import {
+    resolveCompatibleTargetAnchorIds,
+    resolveConnectSourceAnchor,
+    resolvePendingSourceOutputAnchorIds,
+    resolveReconnectEdge
+} from "./11-webgl-workbench-anchor-flow.js";
 
 function ensureNodeLabel(state, node) {
     let label = state.labelElements.get(node.id);
@@ -71,12 +78,41 @@ function ensurePortElement(state, anchor) {
     element = document.createElement("div");
     element.className = "wgl-port-anchor";
     element.setAttribute("data-webgl-port-id", anchor.id);
+    element.setAttribute("data-webgl-node-id", anchor.nodeId || "");
     element.setAttribute("data-webgl-anchor-role", anchor.role || "");
+    element.setAttribute("data-webgl-anchor-side", anchor.side || "");
     element.setAttribute("aria-label", `${anchor.label || anchor.portId || anchor.id} anchor`);
     state.shell.mirrorLayer.appendChild(element);
     state.anchorElements.set(anchor.id, element);
 
     return element;
+}
+
+function ensurePortLabelElement(state, anchor) {
+    let element = state.anchorLabelElements.get(anchor.id);
+    if (element) {
+        return element;
+    }
+
+    element = document.createElement("div");
+    element.className = "wgl-port-anchor-label";
+    element.setAttribute("data-webgl-port-label-for", anchor.id);
+    element.setAttribute("data-webgl-node-id", anchor.nodeId || "");
+    element.setAttribute("data-webgl-anchor-side", anchor.side || "");
+    state.shell.mirrorLayer.appendChild(element);
+    state.anchorLabelElements.set(anchor.id, element);
+
+    return element;
+}
+
+function syncPortLabelContent(element, anchor) {
+    const labelText = anchor.label || anchor.portId || anchor.id;
+    if (element.dataset.labelText === labelText) {
+        return;
+    }
+
+    element.dataset.labelText = labelText;
+    element.textContent = labelText;
 }
 
 function ensureEdgeElement(state, edge) {
@@ -155,26 +191,76 @@ function syncAnchors(state) {
     state.projectedAnchors.clear();
     const activeAnchorIds = new Set();
     const showAnchors = state.surface.uiState?.showAnchors !== false;
+    const toolMode = resolveToolMode(state.surface);
+    const nodeInfoMode = resolveNodeInfoMode(state.surface);
+    const connectSourceAnchor = resolveConnectSourceAnchor(state);
+    const reconnectEdge = resolveReconnectEdge(state);
+    const authoringSourceAnchorId = connectSourceAnchor?.id || reconnectEdge?.sourceAnchorId || "";
+    const compatibleTargetAnchorIds = authoringSourceAnchorId
+        ? resolveCompatibleTargetAnchorIds(state, authoringSourceAnchorId)
+        : new Set();
+    const pendingSourceAnchorIds = resolvePendingSourceOutputAnchorIds(state);
+    const authoringAnchorsVisible = showAnchors || toolMode === "connect" || toolMode === "reconnect";
 
     for (const node of state.surface.nodes || []) {
+        const nodeBounds = resolveNodeScreenBounds(state, node);
+        const isSelectedNode = state.selectedNodeIds.has(node.id) || state.chromeState?.connectSourceNodeId === node.id;
+        const zoom = Number(state.cameraState?.zoom) || 1;
         for (const anchor of node.anchors || []) {
             activeAnchorIds.add(anchor.id);
             const position = resolveAnchorPosition(node, anchor);
             const projected = projectPoint(state, position);
             const element = ensurePortElement(state, anchor);
+            const labelElement = ensurePortLabelElement(state, anchor);
+            const isSourceActive = connectSourceAnchor?.id === anchor.id;
+            const isReconnectTarget = reconnectEdge?.targetAnchorId === anchor.id;
+            const isPendingSource = pendingSourceAnchorIds.has(anchor.id);
+            const isCompatible = compatibleTargetAnchorIds.has(anchor.id);
+            const largeNode = nodeBounds.width >= 170 || nodeBounds.height >= 84 || (zoom >= 1.18 && nodeBounds.width >= 138);
+            const labelVisible = authoringAnchorsVisible && (
+                isSourceActive ||
+                isReconnectTarget ||
+                isPendingSource ||
+                isCompatible ||
+                (nodeInfoMode !== "hidden" && largeNode && (nodeInfoMode === "detailed" || isSelectedNode || zoom >= 1.32))
+            );
             element.style.left = `${round(projected.x)}px`;
             element.style.top = `${round(projected.y)}px`;
-            element.style.display = showAnchors ? "block" : "none";
+            element.style.display = authoringAnchorsVisible ? "block" : "none";
             const accentColor = anchor.accentColor || "#2563eb";
             if (element.dataset.accentColor !== accentColor) {
                 element.dataset.accentColor = accentColor;
                 element.style.backgroundColor = accentColor;
             }
+            element.classList.toggle("is-source", isSourceActive);
+            element.classList.toggle("is-compatible", isCompatible);
+            element.classList.toggle("is-current-target", isReconnectTarget);
+            element.classList.toggle("is-pending-source", isPendingSource);
+            element.classList.toggle("is-required", !!anchor.isRequired);
+
+            syncPortLabelContent(labelElement, anchor);
+            labelElement.style.left = `${round(projected.x)}px`;
+            labelElement.style.top = `${round(projected.y)}px`;
+            labelElement.style.display = labelVisible ? "block" : "none";
+            labelElement.classList.toggle("is-source", isSourceActive);
+            labelElement.classList.toggle("is-compatible", isCompatible);
+            labelElement.classList.toggle("is-current-target", isReconnectTarget);
+            labelElement.classList.toggle("is-pending-source", isPendingSource);
+            labelElement.classList.toggle("is-required", !!anchor.isRequired);
+            labelElement.classList.toggle("is-compact", nodeBounds.width < 152 || nodeBounds.height < 76);
+            labelElement.setAttribute("data-webgl-anchor-side", anchor.side || "");
             state.projectedAnchors.set(anchor.id, {
                 nodeId: node.id,
                 portId: anchor.portId,
+                label: anchor.label,
                 role: anchor.role,
                 side: anchor.side,
+                categoryKey: anchor.categoryKey,
+                isRequired: !!anchor.isRequired,
+                isVisible: authoringAnchorsVisible,
+                labelVisible,
+                isActive: isSourceActive || isReconnectTarget,
+                isCompatible,
                 x: round(projected.x),
                 y: round(projected.y)
             });
@@ -185,6 +271,13 @@ function syncAnchors(state) {
         if (!activeAnchorIds.has(anchorId)) {
             element.remove();
             state.anchorElements.delete(anchorId);
+        }
+    }
+
+    for (const [anchorId, element] of state.anchorLabelElements.entries()) {
+        if (!activeAnchorIds.has(anchorId)) {
+            element.remove();
+            state.anchorLabelElements.delete(anchorId);
         }
     }
 }

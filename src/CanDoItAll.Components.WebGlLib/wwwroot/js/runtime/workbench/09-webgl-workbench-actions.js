@@ -5,6 +5,15 @@ import {
     toolModes
 } from "./02-webgl-workbench-core.js";
 import {
+    applyConnectionSourceAnchor,
+    buildConnectionRequest,
+    clearConnectionDrafts,
+    focusConnectionSourceNode,
+    resolveConnectSourceAnchor,
+    resolveSingleCompatibleTargetAnchor,
+    resolveSingleOutputAnchor
+} from "./11-webgl-workbench-anchor-flow.js";
+import {
     resolveHitTarget
 } from "./08-webgl-workbench-hit-testing.js";
 
@@ -67,98 +76,6 @@ export function closeContextMenu(state, deps, shouldRender = true) {
     }
 }
 
-function clearToolDrafts(state) {
-    state.chromeState.connectSourceNodeId = null;
-    state.chromeState.reconnectEdgeId = null;
-}
-
-function resolveCategoryKey(anchor) {
-    const category = (anchor?.categoryKey || "").toLowerCase();
-    if (!category) {
-        return "default";
-    }
-
-    if (category.includes("branch")) {
-        return "branch";
-    }
-
-    if (category.includes("struct")) {
-        return "structural";
-    }
-
-    if (category.includes("artifact")) {
-        return "artifact";
-    }
-
-    if (category.includes("message")) {
-        return "messaging";
-    }
-
-    if (category.includes("decision")) {
-        return "decision";
-    }
-
-    if (category.includes("responsibility")) {
-        return "responsibility";
-    }
-
-    return category;
-}
-
-function areCategoriesCompatible(sourceCategory, targetCategory) {
-    if (sourceCategory === targetCategory) {
-        return true;
-    }
-
-    if (sourceCategory === "default" || targetCategory === "default") {
-        return true;
-    }
-
-    return sourceCategory === "branch" && targetCategory === "structural";
-}
-
-function resolveCompatibleAnchorPair(sourceNode, targetNode, preferredSourceAnchorId) {
-    const sourceAnchors = (sourceNode?.anchors || []).filter(anchor => anchor.role === "output");
-    const targetAnchors = (targetNode?.anchors || []).filter(anchor => anchor.role === "input");
-    if (!sourceAnchors.length || !targetAnchors.length) {
-        return null;
-    }
-
-    const orderedSourceAnchors = preferredSourceAnchorId
-        ? [
-            ...sourceAnchors.filter(anchor => anchor.id === preferredSourceAnchorId),
-            ...sourceAnchors.filter(anchor => anchor.id !== preferredSourceAnchorId)
-        ]
-        : sourceAnchors;
-
-    for (const sourceAnchor of orderedSourceAnchors) {
-        const sourceCategory = resolveCategoryKey(sourceAnchor);
-        const exactTarget = targetAnchors.find(anchor => areCategoriesCompatible(sourceCategory, resolveCategoryKey(anchor)));
-        if (exactTarget) {
-            return {
-                sourceAnchor,
-                targetAnchor: exactTarget
-            };
-        }
-    }
-
-    return {
-        sourceAnchor: orderedSourceAnchors[0],
-        targetAnchor: targetAnchors[0]
-    };
-}
-
-function resolveConnectionKind(sourceAnchor, edge) {
-    if ((edge?.kind || "").trim()) {
-        return edge.kind;
-    }
-
-    const category = resolveCategoryKey(sourceAnchor);
-    return category === "messaging"
-        ? "messaging"
-        : "flow";
-}
-
 function setToolMode(state, mode, deps) {
     const normalizedMode = Object.values(toolModes).includes(mode)
         ? mode
@@ -172,7 +89,7 @@ function setToolMode(state, mode, deps) {
     }
 
     state.chromeState.selectedEdgeId = null;
-    clearToolDrafts(state);
+    clearConnectionDrafts(state);
     closeContextMenu(state, deps, false);
     deps.notifyStateChanged(state);
     deps.scheduleRender(state);
@@ -213,70 +130,60 @@ function toggleLocalFilter(state, key, deps) {
     deps.scheduleRender(state);
 }
 
-function executeConnectionBetweenNodes(state, sourceNodeId, targetNodeId, deps) {
-    const sourceNode = state.nodeLookup.get(sourceNodeId);
-    const targetNode = state.nodeLookup.get(targetNodeId);
-    if (!sourceNode || !targetNode || sourceNodeId === targetNodeId) {
+function executeConnectionBetweenAnchors(state, sourceAnchorId, targetAnchorId, deps) {
+    const request = buildConnectionRequest(state, sourceAnchorId, targetAnchorId, connectionActions.connect);
+    if (!request) {
         return false;
     }
 
-    const pair = resolveCompatibleAnchorPair(sourceNode, targetNode);
-    if (!pair) {
-        return false;
-    }
-
-    const request = {
-        actionId: connectionActions.connect,
-        edgeId: null,
-        sourceNodeId: sourceNode.id,
-        sourceAnchorId: pair.sourceAnchor.id,
-        sourcePortId: pair.sourceAnchor.portId || null,
-        targetNodeId: targetNode.id,
-        targetAnchorId: pair.targetAnchor.id,
-        targetPortId: pair.targetAnchor.portId || null,
-        kind: resolveConnectionKind(pair.sourceAnchor),
-        categoryKey: pair.sourceAnchor.categoryKey || ""
-    };
     const connected = dispatchConnectionChangeRequested(state, request);
     if (connected) {
-        updateNodeSelection(state, sourceNode.id, deps);
+        updateNodeSelection(state, request.sourceNodeId, deps);
     }
 
     return connected;
 }
 
-function executeReconnectToNode(state, edgeId, targetNodeId, deps) {
-    const edge = (state.surface.edges || []).find(candidate => candidate.id === edgeId);
-    const sourceNode = edge ? state.nodeLookup.get(edge.sourceNodeId) : null;
-    const targetNode = state.nodeLookup.get(targetNodeId);
-    if (!edge || !sourceNode || !targetNode) {
+function executeConnectionToNode(state, targetNodeId, deps) {
+    const sourceAnchor = resolveConnectSourceAnchor(state);
+    if (!sourceAnchor) {
         return false;
     }
 
-    const pair = resolveCompatibleAnchorPair(sourceNode, targetNode, edge.sourceAnchorId);
-    if (!pair) {
+    const targetAnchor = resolveSingleCompatibleTargetAnchor(state, sourceAnchor.id, targetNodeId);
+    if (!targetAnchor) {
         return false;
     }
 
-    const reconnected = dispatchConnectionChangeRequested(state, {
-        actionId: connectionActions.reconnectTarget,
-        edgeId: edge.id,
-        sourceNodeId: edge.sourceNodeId,
-        sourceAnchorId: edge.sourceAnchorId,
-        sourcePortId: edge.sourcePortId || null,
-        targetNodeId: targetNode.id,
-        targetAnchorId: pair.targetAnchor.id,
-        targetPortId: pair.targetAnchor.portId || null,
-        kind: edge.kind || resolveConnectionKind(pair.sourceAnchor, edge),
-        categoryKey: edge.categoryKey || pair.sourceAnchor.categoryKey || ""
-    });
+    return executeConnectionBetweenAnchors(state, sourceAnchor.id, targetAnchor.id, deps);
+}
+
+function executeReconnectToAnchor(state, edgeId, targetAnchorId, deps) {
+    const request = buildConnectionRequest(state, null, targetAnchorId, connectionActions.reconnectTarget, edgeId);
+    if (!request) {
+        return false;
+    }
+
+    const reconnected = dispatchConnectionChangeRequested(state, request);
     if (reconnected) {
         state.chromeState.reconnectEdgeId = null;
-        state.chromeState.selectedEdgeId = edge.id;
+        state.chromeState.selectedEdgeId = request.edgeId;
         deps.scheduleRender(state);
     }
 
     return reconnected;
+}
+
+function executeReconnectToNode(state, edgeId, targetNodeId, deps) {
+    const edge = (state.surface.edges || []).find(candidate => candidate.id === edgeId);
+    if (!edge) {
+        return false;
+    }
+
+    const targetAnchor = resolveSingleCompatibleTargetAnchor(state, edge.sourceAnchorId, targetNodeId);
+    return targetAnchor
+        ? executeReconnectToAnchor(state, edgeId, targetAnchor.id, deps)
+        : false;
 }
 
 function disconnectEdgeById(state, edgeId) {
@@ -311,6 +218,30 @@ function deleteNodeById(state, nodeId) {
     });
 }
 
+function resolveSelectedNodeId(hitTarget) {
+    if (hitTarget?.type === "anchor") {
+        return hitTarget.nodeId || null;
+    }
+
+    if (hitTarget?.type === "node") {
+        return hitTarget.nodeId || null;
+    }
+
+    return null;
+}
+
+function resolveAnchorMenuTitle(anchor) {
+    return anchor?.label || anchor?.portId || anchor?.id || "Connection point";
+}
+
+function resolveAnchorMenuSubtitle(anchor, node) {
+    const role = anchor?.role === "output"
+        ? "Output"
+        : "Input";
+    const nodeTitle = node?.title || anchor?.nodeId || "Node";
+    return `${role} · ${nodeTitle}`;
+}
+
 function openContextMenu(state, event, deps) {
     const hitTarget = resolveHitTarget(state, event);
     const hostPoint = resolveHostPoint(state.host, event.clientX, event.clientY);
@@ -323,14 +254,36 @@ function openContextMenu(state, event, deps) {
     let subtitle = "WebGL context menu";
     let nodeId = null;
     let edgeId = null;
+    let anchorId = null;
 
-    if (hitTarget?.type === "node") {
+    if (hitTarget?.type === "anchor") {
+        nodeId = hitTarget.nodeId || null;
+        anchorId = hitTarget.anchorId || null;
+        const node = nodeId ? state.nodeLookup.get(nodeId) : null;
+        const anchor = anchorId ? state.anchorLookup.get(anchorId) : null;
+        title = resolveAnchorMenuTitle(anchor);
+        subtitle = resolveAnchorMenuSubtitle(anchor, node);
+        items.push({ id: "menu:select-node", label: "Select node", tone: "accent" });
+        if (anchor?.role === "output") {
+            items.push({ id: "menu:connect-from-anchor", label: "Connect from point", tone: "positive" });
+        }
+
+        if (anchor?.role === "input" && state.chromeState.connectSourceAnchorId) {
+            items.push({ id: "menu:connect-to-anchor", label: "Connect here", tone: "positive" });
+        }
+
+        if (anchor?.role === "input" && state.chromeState.reconnectEdgeId) {
+            items.push({ id: "menu:reconnect-to-anchor", label: "Reconnect here", tone: "warning" });
+        }
+
+        items.push({ id: "menu:focus-node", label: "Focus node", tone: "neutral" });
+    } else if (hitTarget?.type === "node") {
         nodeId = hitTarget.nodeId || null;
         const node = nodeId ? state.nodeLookup.get(nodeId) : null;
         title = node?.title || "Node actions";
         subtitle = node?.kind || "Process node";
         items.push({ id: "menu:select-node", label: "Select node", tone: "accent" });
-        if (state.chromeState.connectSourceNodeId && state.chromeState.connectSourceNodeId !== nodeId) {
+        if (state.chromeState.connectSourceAnchorId && state.chromeState.connectSourceNodeId !== nodeId) {
             items.push({ id: "menu:connect-to-node", label: "Connect here", tone: "positive" });
         } else {
             items.push({ id: "menu:connect-from-node", label: "Connect from node", tone: "positive" });
@@ -366,6 +319,7 @@ function openContextMenu(state, event, deps) {
         y: hostPoint.y,
         nodeId,
         edgeId,
+        anchorId,
         items
     };
     deps.scheduleRender(state);
@@ -464,20 +418,51 @@ export function applyChromeAction(state, actionId, deps) {
         case "menu:connect-from-node": {
             const nodeId = state.chromeState?.contextMenu?.nodeId || null;
             setToolMode(state, toolModes.connect, deps);
-            state.chromeState.connectSourceNodeId = nodeId;
             closeContextMenu(state, deps, false);
             if (nodeId) {
+                const singleOutputAnchor = resolveSingleOutputAnchor(state, nodeId);
+                if (singleOutputAnchor) {
+                    applyConnectionSourceAnchor(state, singleOutputAnchor.id);
+                } else {
+                    focusConnectionSourceNode(state, nodeId);
+                }
                 updateNodeSelection(state, nodeId, deps);
+            }
+            deps.scheduleRender(state);
+            return true;
+        }
+        case "menu:connect-from-anchor": {
+            const anchorId = state.chromeState?.contextMenu?.anchorId || null;
+            const anchor = anchorId ? state.anchorLookup.get(anchorId) : null;
+            setToolMode(state, toolModes.connect, deps);
+            closeContextMenu(state, deps, false);
+            if (anchor && applyConnectionSourceAnchor(state, anchor.id)) {
+                updateNodeSelection(state, anchor.nodeId, deps);
             }
             deps.scheduleRender(state);
             return true;
         }
         case "menu:connect-to-node": {
             const targetNodeId = state.chromeState?.contextMenu?.nodeId || null;
-            const sourceNodeId = state.chromeState?.connectSourceNodeId || null;
+            const sourceAnchor = resolveConnectSourceAnchor(state);
             closeContextMenu(state, deps, false);
-            if (sourceNodeId && targetNodeId) {
-                executeConnectionBetweenNodes(state, sourceNodeId, targetNodeId, deps);
+            if (sourceAnchor && targetNodeId) {
+                if (executeConnectionToNode(state, targetNodeId, deps)) {
+                    return true;
+                }
+
+                updateNodeSelection(state, targetNodeId, deps);
+                deps.scheduleRender(state);
+                return true;
+            }
+            return true;
+        }
+        case "menu:connect-to-anchor": {
+            const targetAnchorId = state.chromeState?.contextMenu?.anchorId || null;
+            const sourceAnchor = resolveConnectSourceAnchor(state);
+            closeContextMenu(state, deps, false);
+            if (sourceAnchor && targetAnchorId) {
+                executeConnectionBetweenAnchors(state, sourceAnchor.id, targetAnchorId, deps);
             }
             return true;
         }
@@ -498,7 +483,22 @@ export function applyChromeAction(state, actionId, deps) {
             const edgeId = state.chromeState?.reconnectEdgeId || null;
             closeContextMenu(state, deps, false);
             if (edgeId && targetNodeId) {
-                executeReconnectToNode(state, edgeId, targetNodeId, deps);
+                if (executeReconnectToNode(state, edgeId, targetNodeId, deps)) {
+                    return true;
+                }
+
+                updateNodeSelection(state, targetNodeId, deps);
+                deps.scheduleRender(state);
+                return true;
+            }
+            return true;
+        }
+        case "menu:reconnect-to-anchor": {
+            const targetAnchorId = state.chromeState?.contextMenu?.anchorId || null;
+            const edgeId = state.chromeState?.reconnectEdgeId || null;
+            closeContextMenu(state, deps, false);
+            if (edgeId && targetAnchorId) {
+                executeReconnectToAnchor(state, edgeId, targetAnchorId, deps);
             }
             return true;
         }
@@ -526,6 +526,7 @@ export function applyChromeAction(state, actionId, deps) {
 function handleToolClick(state, event, deps) {
     const toolMode = resolveToolMode(state.surface);
     const hitTarget = resolveHitTarget(state, event);
+    const selectedNodeId = resolveSelectedNodeId(hitTarget);
 
     switch (toolMode) {
         case toolModes.delete:
@@ -534,26 +535,69 @@ function handleToolClick(state, event, deps) {
                 return true;
             }
 
-            if (hitTarget?.type === "node") {
-                deleteNodeById(state, hitTarget.nodeId);
+            if (selectedNodeId) {
+                deleteNodeById(state, selectedNodeId);
                 return true;
             }
             return false;
-        case toolModes.connect:
+        case toolModes.connect: {
+            if (hitTarget?.type === "anchor") {
+                const anchor = state.anchorLookup.get(hitTarget.anchorId || "");
+                if (!anchor) {
+                    return false;
+                }
+
+                if (anchor.role === "output") {
+                    applyConnectionSourceAnchor(state, anchor.id);
+                    updateNodeSelection(state, anchor.nodeId, deps);
+                    deps.scheduleRender(state);
+                    return true;
+                }
+
+                const sourceAnchor = resolveConnectSourceAnchor(state);
+                if (sourceAnchor && executeConnectionBetweenAnchors(state, sourceAnchor.id, anchor.id, deps)) {
+                    return true;
+                }
+
+                updateNodeSelection(state, anchor.nodeId, deps);
+                deps.scheduleRender(state);
+                return true;
+            }
+
             if (hitTarget?.type !== "node") {
                 state.chromeState.connectSourceNodeId = null;
+                state.chromeState.connectSourceAnchorId = null;
                 deps.scheduleRender(state);
                 return false;
             }
 
-            if (!state.chromeState.connectSourceNodeId || state.chromeState.connectSourceNodeId === hitTarget.nodeId) {
-                state.chromeState.connectSourceNodeId = hitTarget.nodeId;
+            const sourceAnchor = resolveConnectSourceAnchor(state);
+            if (!sourceAnchor) {
+                const singleOutputAnchor = resolveSingleOutputAnchor(state, hitTarget.nodeId);
+                if (singleOutputAnchor) {
+                    applyConnectionSourceAnchor(state, singleOutputAnchor.id);
+                } else {
+                    focusConnectionSourceNode(state, hitTarget.nodeId);
+                }
                 updateNodeSelection(state, hitTarget.nodeId, deps);
                 deps.scheduleRender(state);
                 return true;
             }
 
-            return executeConnectionBetweenNodes(state, state.chromeState.connectSourceNodeId, hitTarget.nodeId, deps);
+            if (sourceAnchor.nodeId === hitTarget.nodeId) {
+                updateNodeSelection(state, hitTarget.nodeId, deps);
+                deps.scheduleRender(state);
+                return true;
+            }
+
+            if (executeConnectionToNode(state, hitTarget.nodeId, deps)) {
+                return true;
+            }
+
+            updateNodeSelection(state, hitTarget.nodeId, deps);
+            deps.scheduleRender(state);
+            return true;
+        }
         case toolModes.reconnect:
             if (hitTarget?.type === "edge") {
                 state.chromeState.reconnectEdgeId = hitTarget.edgeId;
@@ -562,8 +606,23 @@ function handleToolClick(state, event, deps) {
                 return true;
             }
 
+            if (hitTarget?.type === "anchor" && state.chromeState.reconnectEdgeId) {
+                const anchor = state.anchorLookup.get(hitTarget.anchorId || "");
+                if (anchor?.role === "input" && executeReconnectToAnchor(state, state.chromeState.reconnectEdgeId, anchor.id, deps)) {
+                    return true;
+                }
+
+                return false;
+            }
+
             if (hitTarget?.type === "node" && state.chromeState.reconnectEdgeId) {
-                return executeReconnectToNode(state, state.chromeState.reconnectEdgeId, hitTarget.nodeId, deps);
+                if (executeReconnectToNode(state, state.chromeState.reconnectEdgeId, hitTarget.nodeId, deps)) {
+                    return true;
+                }
+
+                updateNodeSelection(state, hitTarget.nodeId, deps);
+                deps.scheduleRender(state);
+                return true;
             }
 
             return false;
@@ -573,8 +632,8 @@ function handleToolClick(state, event, deps) {
                 return true;
             }
 
-            if (hitTarget?.type === "node") {
-                updateNodeSelection(state, hitTarget.nodeId, deps);
+            if (selectedNodeId) {
+                updateNodeSelection(state, selectedNodeId, deps);
                 return true;
             }
 

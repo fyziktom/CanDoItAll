@@ -75,6 +75,40 @@ public sealed class ProcessWebGlSandboxSessionTests
     }
 
     [Fact]
+    public void Session_connects_using_the_explicit_source_and_target_anchors_for_multi_input_nodes()
+    {
+        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        session.LoadTemplate("branching-code-review");
+
+        var surface = session.BuildSurface();
+        var candidate = ResolveExplicitAnchorConnectionCandidate(surface);
+
+        var request = new WebGlConnectionChangeRequest(
+            WebGlWorkbenchConnectionActions.Connect,
+            EdgeId: null,
+            candidate.SourceNodeId,
+            candidate.SourceAnchorId,
+            candidate.SourcePortId,
+            candidate.TargetNodeId,
+            candidate.TargetAnchorId,
+            candidate.TargetPortId,
+            candidate.Kind,
+            candidate.CategoryKey);
+
+        Assert.True(session.ApplyConnectionChange(request));
+
+        var updatedSurface = session.BuildSurface();
+
+        Assert.Contains(updatedSurface.Edges, edge =>
+            string.Equals(edge.SourceAnchorId, candidate.SourceAnchorId, StringComparison.Ordinal) &&
+            string.Equals(edge.TargetAnchorId, candidate.TargetAnchorId, StringComparison.Ordinal));
+        Assert.DoesNotContain(updatedSurface.Edges, edge =>
+            string.Equals(edge.SourceAnchorId, candidate.SourceAnchorId, StringComparison.Ordinal) &&
+            string.Equals(edge.TargetAnchorId, candidate.AlternateTargetAnchorId, StringComparison.Ordinal));
+        Assert.Equal("Created connection", session.CommandLog[0].Title);
+    }
+
+    [Fact]
     public void Session_preserves_camera_state_across_surface_rebuilds()
     {
         var session = new ProcessWebGlSandboxSession(CreateAdapter());
@@ -274,4 +308,147 @@ public sealed class ProcessWebGlSandboxSessionTests
             new ProcessTemplateProjectionService(packLoader),
             new ProcessCanvasSurfaceFactory(new ProcessCanvasChromeCatalogService(packLoader)));
     }
+
+    private static ExplicitAnchorConnectionCandidate ResolveExplicitAnchorConnectionCandidate(WebGlWorkbenchSurface surface)
+    {
+        foreach (var sourceNode in surface.Nodes)
+        {
+            var sourceOutputs = sourceNode.Anchors
+                .Where(anchor => string.Equals(anchor.Role, WebGlWorkbenchAnchorRoles.Output, StringComparison.Ordinal))
+                .ToList();
+            if (sourceOutputs.Count < 2)
+            {
+                continue;
+            }
+
+            foreach (var sourceAnchor in sourceOutputs.Skip(1))
+            {
+                foreach (var targetNode in surface.Nodes)
+                {
+                    if (string.Equals(targetNode.Id, sourceNode.Id, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var targetInputs = targetNode.Anchors
+                        .Where(anchor => string.Equals(anchor.Role, WebGlWorkbenchAnchorRoles.Input, StringComparison.Ordinal))
+                        .ToList();
+                    if (targetInputs.Count < 2)
+                    {
+                        continue;
+                    }
+
+                    var alternateTarget = targetInputs[0];
+                    foreach (var targetAnchor in targetInputs)
+                    {
+                        if (!AreAnchorCategoriesCompatible(sourceAnchor, targetAnchor) ||
+                            surface.Edges.Any(edge =>
+                                string.Equals(edge.SourceAnchorId, sourceAnchor.Id, StringComparison.Ordinal) &&
+                                string.Equals(edge.TargetAnchorId, targetAnchor.Id, StringComparison.Ordinal)))
+                        {
+                            continue;
+                        }
+
+                        alternateTarget = targetInputs.FirstOrDefault(candidate =>
+                            !string.Equals(candidate.Id, targetAnchor.Id, StringComparison.Ordinal));
+                        if (alternateTarget is null)
+                        {
+                            continue;
+                        }
+
+                        return new ExplicitAnchorConnectionCandidate(
+                            sourceNode.Id,
+                            sourceAnchor.Id,
+                            sourceAnchor.PortId,
+                            targetNode.Id,
+                            targetAnchor.Id,
+                            targetAnchor.PortId,
+                            alternateTarget.Id,
+                            ResolveAnchorConnectionKind(sourceAnchor),
+                            sourceAnchor.CategoryKey ?? string.Empty);
+                    }
+                }
+            }
+        }
+
+        throw new InvalidOperationException("Expected the dense WebGL template to expose a multi-anchor connection candidate.");
+    }
+
+    private static bool AreAnchorCategoriesCompatible(WebGlWorkbenchAnchor sourceAnchor, WebGlWorkbenchAnchor targetAnchor)
+    {
+        var sourceCategory = NormalizeAnchorCategory(sourceAnchor.CategoryKey);
+        var targetCategory = NormalizeAnchorCategory(targetAnchor.CategoryKey);
+        if (string.Equals(sourceCategory, targetCategory, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (string.Equals(sourceCategory, "default", StringComparison.Ordinal) ||
+            string.Equals(targetCategory, "default", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return string.Equals(sourceCategory, "branch", StringComparison.Ordinal) &&
+            string.Equals(targetCategory, "structural", StringComparison.Ordinal);
+    }
+
+    private static string NormalizeAnchorCategory(string? value)
+    {
+        var category = (value ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return "default";
+        }
+
+        if (category.Contains("branch", StringComparison.Ordinal))
+        {
+            return "branch";
+        }
+
+        if (category.Contains("struct", StringComparison.Ordinal))
+        {
+            return "structural";
+        }
+
+        if (category.Contains("artifact", StringComparison.Ordinal))
+        {
+            return "artifact";
+        }
+
+        if (category.Contains("message", StringComparison.Ordinal))
+        {
+            return "messaging";
+        }
+
+        if (category.Contains("decision", StringComparison.Ordinal))
+        {
+            return "decision";
+        }
+
+        if (category.Contains("responsibility", StringComparison.Ordinal))
+        {
+            return "responsibility";
+        }
+
+        return category;
+    }
+
+    private static string ResolveAnchorConnectionKind(WebGlWorkbenchAnchor sourceAnchor)
+    {
+        return string.Equals(NormalizeAnchorCategory(sourceAnchor.CategoryKey), "messaging", StringComparison.Ordinal)
+            ? "messaging"
+            : "flow";
+    }
+
+    private sealed record ExplicitAnchorConnectionCandidate(
+        string SourceNodeId,
+        string SourceAnchorId,
+        string SourcePortId,
+        string TargetNodeId,
+        string TargetAnchorId,
+        string TargetPortId,
+        string AlternateTargetAnchorId,
+        string Kind,
+        string CategoryKey);
 }

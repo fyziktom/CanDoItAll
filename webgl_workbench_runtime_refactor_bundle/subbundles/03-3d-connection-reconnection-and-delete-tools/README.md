@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Implemented`
 
 ## Objective
 
@@ -31,10 +31,12 @@
 ## Deliverables
 
 - Tool-mode behavior for select, delete, connect, and reconnect.
+- Exact anchor-to-anchor source and destination targeting for connect and reconnect flows.
 - Stage-local selection of the entities needed by those tools.
 - A delete path that is honest to the sandbox scope and survives rerender until reset.
 - Updated sandbox-session or event-bridge logic for the new authoring requests.
 - Updated automated proof for the stage-local authoring flows.
+- Zoom-conditional anchor labels that reveal specific connection-point meaning during close inspection or active authoring.
 
 ## Dependency Impact
 
@@ -67,6 +69,7 @@
 
 - A user can choose a stage-local selection tool and visibly select authoring targets.
 - A user can perform a connect flow in 3D and see the resulting edge mutation.
+- A user can choose a specific source/output anchor and a specific compatible target/input anchor instead of only picking whole nodes.
 - A user can perform a reconnect flow in 3D and see the target/source change that was requested.
 - A user can delete from the stage-local tool surface and see the stage update honestly.
 - The command log or equivalent sandbox feedback reflects the new actions.

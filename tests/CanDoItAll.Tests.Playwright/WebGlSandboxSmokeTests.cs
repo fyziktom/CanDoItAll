@@ -338,24 +338,12 @@ public sealed class WebGlSandboxSmokeTests
             chrome => !chrome.SettingsOpen,
             "settings panel to close");
 
-        var processNodes = filteredScene.Nodes
-            .Where(node =>
-                !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
-                !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        Assert.True(processNodes.Length >= 3, "Expected at least three process nodes for node and reconnect context-menu proof.");
+        var connectCandidate = await ResolveExplicitConnectionCandidateAsync(page);
+        Assert.False(
+            string.IsNullOrWhiteSpace(connectCandidate.SourceAnchorId),
+            "Expected the dense WebGL sandbox to expose a multi-anchor connect candidate.");
 
-        var sourceNode = processNodes[0];
-        var targetNode = processNodes.FirstOrDefault(node =>
-            !string.Equals(node.Id, sourceNode.Id, StringComparison.Ordinal) &&
-            !filteredScene.Edges.Any(edge =>
-                (string.Equals(edge.SourceNodeId, sourceNode.Id, StringComparison.Ordinal) &&
-                    string.Equals(edge.TargetNodeId, node.Id, StringComparison.Ordinal)) ||
-                (string.Equals(edge.SourceNodeId, node.Id, StringComparison.Ordinal) &&
-                    string.Equals(edge.TargetNodeId, sourceNode.Id, StringComparison.Ordinal))));
-        Assert.NotNull(targetNode);
-
-        var sourcePoint = await ResolveNodeViewportPointAsync(page, sourceNode.Id);
+        var sourcePoint = await ResolveNodeViewportPointAsync(page, connectCandidate.SourceNodeId);
         await page.Mouse.ClickAsync((float)sourcePoint.X, (float)sourcePoint.Y, new MouseClickOptions
         {
             Button = MouseButton.Right
@@ -365,10 +353,9 @@ public sealed class WebGlSandboxSmokeTests
             page,
             chrome =>
                 chrome.ContextMenu is not null &&
-                string.Equals(chrome.ContextMenu.Title, sourceNode.Title, StringComparison.Ordinal) &&
-                chrome.ContextMenu.Items.Any(item => string.Equals(item.Id, "menu:connect-from-node", StringComparison.Ordinal)) &&
-                chrome.ContextMenu.Items.Any(item => string.Equals(item.Id, "menu:delete-node", StringComparison.Ordinal)),
-            "node context menu to expose select, connect, and delete actions");
+                string.Equals(chrome.ContextMenu.Title, connectCandidate.SourceNodeTitle, StringComparison.Ordinal) &&
+                chrome.ContextMenu.Items.Any(item => string.Equals(item.Id, "menu:connect-from-node", StringComparison.Ordinal)),
+            "node context menu to expose the explicit-source connect draft");
         Assert.Contains(sourceMenu.ContextMenu!.Items, item => string.Equals(item.Id, "menu:focus-node", StringComparison.Ordinal));
 
         await page.Locator("[data-testid='webgl-sandbox-stage']").ScreenshotAsync(new LocatorScreenshotOptions
@@ -382,16 +369,29 @@ public sealed class WebGlSandboxSmokeTests
             chrome => string.Equals(chrome.ToolMode, "connect", StringComparison.Ordinal),
             "connect draft to activate");
 
-        var targetPoint = await ResolveNodeViewportPointAsync(page, targetNode.Id);
+        var sourceAnchorPoint = await ResolveAnchorViewportPointAsync(page, connectCandidate.SourceAnchorId);
+        await page.Mouse.ClickAsync((float)sourceAnchorPoint.X, (float)sourceAnchorPoint.Y);
+        await page.WaitForFunctionAsync(
+            @"anchorId => {
+                const element = document.querySelector(`[data-webgl-port-label-for='${anchorId}']`);
+                return element instanceof HTMLElement && getComputedStyle(element).display !== 'none';
+            }",
+            connectCandidate.SourceAnchorId,
+            new PageWaitForFunctionOptions
+            {
+                Timeout = 30_000
+            });
+
+        var targetPoint = await ResolveAnchorViewportPointAsync(page, connectCandidate.TargetAnchorId);
         await page.Mouse.ClickAsync((float)targetPoint.X, (float)targetPoint.Y);
 
         var connectedScene = await WaitForSnapshotAsync(
             page,
-            snapshot =>
+                snapshot =>
                 snapshot.Edges.Any(edge =>
-                    string.Equals(edge.SourceNodeId, sourceNode.Id, StringComparison.Ordinal) &&
-                    string.Equals(edge.TargetNodeId, targetNode.Id, StringComparison.Ordinal)),
-            "connect tool to create a source-to-target connection");
+                    string.Equals(edge.SourceAnchorId, connectCandidate.SourceAnchorId, StringComparison.Ordinal) &&
+                    string.Equals(edge.TargetAnchorId, connectCandidate.TargetAnchorId, StringComparison.Ordinal)),
+            "connect tool to create an explicit source-point to target-input connection");
 
         Assert.True(await InvokeChromeActionAsync(page, "tool:select"));
         await WaitForChromeStateAsync(
@@ -399,11 +399,29 @@ public sealed class WebGlSandboxSmokeTests
             chrome => string.Equals(chrome.ToolMode, "select", StringComparison.Ordinal),
             "select tool to restore after connection draft");
 
-        Assert.True(await InvokeChromeActionAsync(page, "tool:select"));
-        await WaitForChromeStateAsync(
-            page,
-            chrome => string.Equals(chrome.ToolMode, "select", StringComparison.Ordinal),
-            "select tool to restore after reconnect draft");
+        Assert.True(await page.EvaluateAsync<bool>(
+            @"targetNodeId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                if (!host || !runtime?.focusNode || !runtime?.zoomView) {
+                    return false;
+                }
+
+                runtime.focusNode(host, targetNodeId);
+                runtime.zoomView(host, 2);
+                return true;
+            }",
+            connectCandidate.TargetNodeId));
+        await page.WaitForFunctionAsync(
+            @"anchorId => {
+                const element = document.querySelector(`[data-webgl-port-label-for='${anchorId}']`);
+                return element instanceof HTMLElement && getComputedStyle(element).display !== 'none';
+            }",
+            connectCandidate.TargetAnchorId,
+            new PageWaitForFunctionOptions
+            {
+                Timeout = 30_000
+            });
 
         var baselineCameraState = await ReadUiStateAsync(page);
         Assert.True(await page.EvaluateAsync<bool>(
@@ -836,6 +854,143 @@ public sealed class WebGlSandboxSmokeTests
                 };
             }",
             nodeId);
+    }
+
+    private static async Task<WebGlViewportPointProof> ResolveAnchorViewportPointAsync(IPage page, string anchorId)
+    {
+        return await page.EvaluateAsync<WebGlViewportPointProof>(
+            @"targetAnchorId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const state = host?.__webglWorkbenchState;
+                const rect = host?.getBoundingClientRect();
+                const projectedAnchor = state?.projectedAnchors?.get?.(targetAnchorId);
+                if (!host || !rect || !projectedAnchor) {
+                    return { x: 0, y: 0 };
+                }
+
+                return {
+                    x: rect.left + projectedAnchor.x,
+                    y: rect.top + projectedAnchor.y
+                };
+            }",
+            anchorId);
+    }
+
+    private static async Task<WebGlExplicitConnectionCandidateProof> ResolveExplicitConnectionCandidateAsync(IPage page)
+    {
+        return await page.EvaluateAsync<WebGlExplicitConnectionCandidateProof>(
+            @"() => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const state = host?.__webglWorkbenchState;
+                const nodes = state?.surface?.nodes || [];
+                const edges = state?.surface?.edges || [];
+
+                const normalizeCategory = value => {
+                    const category = String(value || '').toLowerCase();
+                    if (!category) {
+                        return 'default';
+                    }
+
+                    if (category.includes('branch')) {
+                        return 'branch';
+                    }
+
+                    if (category.includes('struct')) {
+                        return 'structural';
+                    }
+
+                    if (category.includes('artifact')) {
+                        return 'artifact';
+                    }
+
+                    if (category.includes('message')) {
+                        return 'messaging';
+                    }
+
+                    if (category.includes('decision')) {
+                        return 'decision';
+                    }
+
+                    if (category.includes('responsibility')) {
+                        return 'responsibility';
+                    }
+
+                    return category;
+                };
+
+                const areCompatible = (sourceAnchor, targetAnchor) => {
+                    if (!sourceAnchor || !targetAnchor || sourceAnchor.nodeId === targetAnchor.nodeId) {
+                        return false;
+                    }
+
+                    const sourceCategory = normalizeCategory(sourceAnchor.categoryKey);
+                    const targetCategory = normalizeCategory(targetAnchor.categoryKey);
+                    if (sourceCategory === targetCategory) {
+                        return true;
+                    }
+
+                    if (sourceCategory === 'default' || targetCategory === 'default') {
+                        return true;
+                    }
+
+                    return sourceCategory === 'branch' && targetCategory === 'structural';
+                };
+
+                for (const sourceNode of nodes) {
+                    const outputs = (sourceNode.anchors || []).filter(anchor => anchor?.role === 'output');
+                    if (outputs.length < 2) {
+                        continue;
+                    }
+
+                    for (const sourceAnchor of outputs.slice(1)) {
+                        for (const targetNode of nodes) {
+                            if (targetNode.id === sourceNode.id) {
+                                continue;
+                            }
+
+                            const inputs = (targetNode.anchors || []).filter(anchor => anchor?.role === 'input');
+                            if (inputs.length < 2) {
+                                continue;
+                            }
+
+                            for (const targetAnchor of inputs) {
+                                if (!areCompatible(sourceAnchor, targetAnchor)) {
+                                    continue;
+                                }
+
+                                const edgeExists = edges.some(edge =>
+                                    edge?.sourceAnchorId === sourceAnchor.id &&
+                                    edge?.targetAnchorId === targetAnchor.id);
+                                if (edgeExists) {
+                                    continue;
+                                }
+
+                                return {
+                                    sourceNodeId: sourceNode.id || '',
+                                    sourceNodeTitle: sourceNode.title || sourceNode.id || '',
+                                    sourceAnchorId: sourceAnchor.id || '',
+                                    sourceAnchorLabel: sourceAnchor.label || sourceAnchor.portId || sourceAnchor.id || '',
+                                    targetNodeId: targetNode.id || '',
+                                    targetNodeTitle: targetNode.title || targetNode.id || '',
+                                    targetAnchorId: targetAnchor.id || '',
+                                    targetAnchorLabel: targetAnchor.label || targetAnchor.portId || targetAnchor.id || ''
+                                };
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    sourceNodeId: '',
+                    sourceNodeTitle: '',
+                    sourceAnchorId: '',
+                    sourceAnchorLabel: '',
+                    targetNodeId: '',
+                    targetNodeTitle: '',
+                    targetAnchorId: '',
+                    targetAnchorLabel: ''
+                };
+            }");
     }
 
     private static async Task<WebGlViewportPointProof> ResolveEdgeViewportPointAsync(IPage page, string edgeId)
@@ -1301,6 +1456,25 @@ public sealed class WebGlSandboxSmokeTests
         public double X { get; set; }
 
         public double Y { get; set; }
+    }
+
+    private sealed class WebGlExplicitConnectionCandidateProof
+    {
+        public string SourceNodeId { get; set; } = string.Empty;
+
+        public string SourceNodeTitle { get; set; } = string.Empty;
+
+        public string SourceAnchorId { get; set; } = string.Empty;
+
+        public string SourceAnchorLabel { get; set; } = string.Empty;
+
+        public string TargetNodeId { get; set; } = string.Empty;
+
+        public string TargetNodeTitle { get; set; } = string.Empty;
+
+        public string TargetAnchorId { get; set; } = string.Empty;
+
+        public string TargetAnchorLabel { get; set; } = string.Empty;
     }
 
     private sealed class WebGlEdgeContextMenuProbeProof

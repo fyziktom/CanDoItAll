@@ -199,6 +199,82 @@
         0 0 18px rgba(56, 189, 248, 0.24);
     transform: translate(-50%, -50%);
     pointer-events: none;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+
+.wgl-port-anchor.is-source,
+.wgl-port-anchor.is-current-target {
+    border-color: rgba(250, 204, 21, 0.96);
+    box-shadow:
+        0 0 0 2px rgba(250, 204, 21, 0.18),
+        0 0 24px rgba(250, 204, 21, 0.34);
+    transform: translate(-50%, -50%) scale(1.26);
+}
+
+.wgl-port-anchor.is-compatible,
+.wgl-port-anchor.is-pending-source {
+    border-color: rgba(191, 219, 254, 0.98);
+    box-shadow:
+        0 0 0 2px rgba(56, 189, 248, 0.14),
+        0 0 22px rgba(56, 189, 248, 0.32);
+}
+
+.wgl-port-anchor-label {
+    position: absolute;
+    z-index: 3;
+    max-width: 12rem;
+    padding: 0.18rem 0.52rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.92);
+    color: rgba(226, 232, 240, 0.88);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.22);
+    pointer-events: none;
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="left"] {
+    transform: translate(calc(-100% - 0.9rem), -50%);
+    text-align: right;
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="right"] {
+    transform: translate(0.9rem, -50%);
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="top"] {
+    transform: translate(-50%, calc(-100% - 0.8rem));
+    text-align: center;
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="bottom"] {
+    transform: translate(-50%, 0.8rem);
+    text-align: center;
+}
+
+.wgl-port-anchor-label.is-compact {
+    padding: 0.12rem 0.42rem;
+    font-size: 0.66rem;
+}
+
+.wgl-port-anchor-label.is-source,
+.wgl-port-anchor-label.is-current-target {
+    border-color: rgba(250, 204, 21, 0.48);
+    color: #fef3c7;
+    box-shadow:
+        0 0 0 1px rgba(250, 204, 21, 0.16),
+        0 14px 32px rgba(250, 204, 21, 0.18);
+}
+
+.wgl-port-anchor-label.is-compatible,
+.wgl-port-anchor-label.is-pending-source {
+    border-color: rgba(56, 189, 248, 0.34);
+    color: #e0f2fe;
+    box-shadow:
+        0 0 0 1px rgba(56, 189, 248, 0.14),
+        0 14px 32px rgba(56, 189, 248, 0.16);
 }
 
 .wgl-edge-anchor {

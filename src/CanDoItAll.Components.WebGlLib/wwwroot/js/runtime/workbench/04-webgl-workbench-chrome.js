@@ -11,6 +11,9 @@ import {
     resolveToolMode,
     toolModes
 } from "./02-webgl-workbench-core.js";
+import {
+    resolveConnectionHintText
+} from "./11-webgl-workbench-anchor-flow.js";
 
 function resolveTonePalette(tone, active, toggled) {
     const base = tone || "neutral";
@@ -220,24 +223,12 @@ function buildSettingsItems(state) {
 }
 
 function resolveHintText(state) {
+    const authoringHint = resolveConnectionHintText(state);
+    if (authoringHint) {
+        return authoringHint;
+    }
+
     const toolMode = resolveToolMode(state.surface);
-    if (toolMode === toolModes.connect) {
-        if (state.chromeState?.connectSourceNodeId) {
-            const sourceNode = state.nodeLookup.get(state.chromeState.connectSourceNodeId);
-            return `Connect mode | choose a target for ${sourceNode?.title || state.chromeState.connectSourceNodeId}`;
-        }
-
-        return "Connect mode | choose a source node";
-    }
-
-    if (toolMode === toolModes.reconnect) {
-        if (state.chromeState?.reconnectEdgeId) {
-            return "Reconnect mode | choose a new target node";
-        }
-
-        return "Reconnect mode | choose a connection first";
-    }
-
     if (toolMode === toolModes.delete) {
         return "Delete mode | click a node or connection to remove it";
     }
@@ -257,6 +248,7 @@ function buildChromeRenderKey(state) {
         showRoleNodes: state.chromeState?.showRoleNodes !== false,
         showBranchNodes: state.chromeState?.showBranchNodes !== false,
         connectSourceNodeId: state.chromeState?.connectSourceNodeId || "",
+        connectSourceAnchorId: state.chromeState?.connectSourceAnchorId || "",
         reconnectEdgeId: state.chromeState?.reconnectEdgeId || "",
         selectedEdgeId: state.chromeState?.selectedEdgeId || "",
         showGrid: state.surface.uiState?.showGrid !== false,
@@ -273,6 +265,7 @@ function buildChromeRenderKey(state) {
                 y: Math.round(contextMenu.y || 0),
                 nodeId: contextMenu.nodeId || "",
                 edgeId: contextMenu.edgeId || "",
+                anchorId: contextMenu.anchorId || "",
                 items: (contextMenu.items || []).map(item => ({
                     id: item.id || "",
                     label: item.label || "",

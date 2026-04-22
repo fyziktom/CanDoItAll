@@ -161,6 +161,15 @@ function syncRuntimeState(state, surface) {
         state.chromeState.connectSourceNodeId = null;
     }
 
+    if (state.chromeState.connectSourceAnchorId && !state.anchorLookup.has(state.chromeState.connectSourceAnchorId)) {
+        state.chromeState.connectSourceAnchorId = null;
+    }
+
+    if (state.chromeState.connectSourceAnchorId) {
+        const sourceAnchor = state.anchorLookup.get(state.chromeState.connectSourceAnchorId);
+        state.chromeState.connectSourceNodeId = sourceAnchor?.nodeId || null;
+    }
+
     if (state.chromeState.reconnectEdgeId && !(state.surface.edges || []).some(edge => edge.id === state.chromeState.reconnectEdgeId)) {
         state.chromeState.reconnectEdgeId = null;
     }
@@ -244,8 +253,15 @@ function collectSceneSnapshot(state) {
             id,
             nodeId: value.nodeId,
             portId: value.portId,
+            label: value.label,
             role: value.role,
             side: value.side,
+            categoryKey: value.categoryKey,
+            isRequired: !!value.isRequired,
+            isVisible: value.isVisible !== false,
+            labelVisible: !!value.labelVisible,
+            isActive: !!value.isActive,
+            isCompatible: !!value.isCompatible,
             x: value.x,
             y: value.y
         }))
@@ -369,6 +385,7 @@ function createState(host, dotNetRef, surface) {
         showRoleNodes: true,
         showBranchNodes: true,
         connectSourceNodeId: null,
+        connectSourceAnchorId: null,
         reconnectEdgeId: null,
         selectedEdgeId: null
     };
@@ -390,6 +407,7 @@ function createState(host, dotNetRef, surface) {
         anchorLookup: new Map(),
         labelElements: new Map(),
         anchorElements: new Map(),
+        anchorLabelElements: new Map(),
         edgeElements: new Map(),
         projectedNodes: new Map(),
         projectedEdges: new Map(),
