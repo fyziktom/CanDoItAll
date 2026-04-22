@@ -81,6 +81,10 @@
     gap: 1rem;
 }
 
+.webgl-page-hero--compact .webgl-page-hero__summary {
+    max-width: 42rem;
+}
+
 .webgl-page-hero__eyebrow {
     margin: 0 0 0.35rem;
     font-size: 0.7rem;
@@ -125,6 +129,43 @@
     min-width: 0;
     overflow: hidden;
     border-radius: 1.75rem;
+}
+
+.webgl-stage-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background:
+        radial-gradient(circle at top, rgba(14, 165, 233, 0.14), transparent 30%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.56));
+}
+
+.webgl-stage-frame--maximized {
+    position: fixed;
+    inset: 1rem;
+    z-index: 70;
+    display: flex;
+    min-height: 0;
+    height: auto;
+    padding: 0.7rem;
+    border: 1px solid rgba(71, 85, 105, 0.28);
+    border-radius: 2rem;
+    background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.54)),
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.1), transparent 34%);
+    box-shadow: 0 36px 100px rgba(2, 6, 23, 0.46);
+}
+
+.webgl-stage-frame--maximized > * {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.webgl-stage-frame--maximized .wgl-workbench-shell,
+.webgl-stage-frame--maximized .wgl-workbench-stage,
+.webgl-stage-frame--maximized .wgl-workbench-host {
+    min-height: 0;
+    height: 100%;
 }
 
 .webgl-rail-copy {
@@ -229,6 +270,12 @@
     .webgl-stage-frame {
         min-height: 34rem;
         height: auto;
+    }
+
+    .webgl-stage-frame--maximized {
+        inset: 0.55rem;
+        padding: 0.45rem;
+        border-radius: 1.4rem;
     }
 
     .webgl-stage-overlay {

@@ -258,6 +258,7 @@ public sealed class ProcessWebGlSandboxSessionTests
             TransparentGround = false,
             ShowAnchors = false,
             ShowEdgeLabels = false,
+            IsStageMaximized = true,
             Camera = new WebGlWorkbenchCameraState
             {
                 ViewMode = WebGlWorkbenchCameraViewModes.XZ,
@@ -274,6 +275,7 @@ public sealed class ProcessWebGlSandboxSessionTests
         Assert.False(surface.UiState.TransparentGround);
         Assert.False(surface.UiState.ShowAnchors);
         Assert.False(surface.UiState.ShowEdgeLabels);
+        Assert.True(surface.UiState.IsStageMaximized);
         Assert.Equal(WebGlWorkbenchCameraViewModes.XZ, surface.UiState.Camera.ViewMode);
         Assert.Equal(WebGlWorkbenchProjectionModes.Orthographic, surface.UiState.Camera.ProjectionMode);
     }

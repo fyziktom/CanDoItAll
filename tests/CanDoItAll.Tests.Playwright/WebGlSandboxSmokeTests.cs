@@ -297,8 +297,15 @@ public sealed class WebGlSandboxSmokeTests
         var initialChrome = await ReadChromeStateAsync(page);
         Assert.Equal("select", initialChrome.ToolMode);
         Assert.False(initialChrome.SettingsOpen);
+        Assert.False(initialChrome.IsStageMaximized);
         Assert.Contains(initialChrome.Actions, action => string.Equals(action.Id, "tool:reconnect", StringComparison.Ordinal));
         Assert.Contains(initialChrome.Actions, action => string.Equals(action.Id, "chrome:settings", StringComparison.Ordinal));
+        Assert.Contains(initialChrome.Actions, action => string.Equals(action.Id, "chrome:toggle-stage-size", StringComparison.Ordinal));
+        Assert.Single(
+            initialChrome.Actions
+                .Where(action => string.Equals(action.Section, "toolbar", StringComparison.Ordinal))
+                .Select(action => Math.Round(action.Y, 2))
+                .Distinct());
 
         Assert.True(await InvokeChromeActionAsync(page, "chrome:settings"));
         var settingsChrome = await WaitForChromeStateAsync(
@@ -338,6 +345,60 @@ public sealed class WebGlSandboxSmokeTests
             chrome => !chrome.SettingsOpen,
             "settings panel to close");
 
+        var dockedStageBounds = await page.Locator("[data-testid='webgl-sandbox-stage']").BoundingBoxAsync();
+        Assert.NotNull(dockedStageBounds);
+
+        Assert.True(await InvokeChromeActionAsync(page, "chrome:toggle-stage-size"));
+        var maximizedUiState = await WaitForUiStateAsync(
+            page,
+            state => state.IsStageMaximized,
+            "stage maximize mode to persist through runtime state");
+        var maximizedChrome = await WaitForChromeStateAsync(
+            page,
+            chrome =>
+                chrome.IsStageMaximized &&
+                chrome.Actions.Any(action => string.Equals(action.Id, "chrome:toggle-stage-size", StringComparison.Ordinal)),
+            "toolbar maximize action to switch into dock mode");
+
+        await page.WaitForFunctionAsync(
+            @"() => document.querySelector('[data-testid=""webgl-sandbox-stage""]')?.classList.contains('webgl-stage-frame--maximized') === true");
+
+        var maximizedStageBounds = await page.Locator("[data-testid='webgl-sandbox-stage']").BoundingBoxAsync();
+        Assert.NotNull(maximizedStageBounds);
+        Assert.True(maximizedUiState.IsStageMaximized);
+        Assert.True(maximizedChrome.IsStageMaximized);
+        Assert.True(
+            maximizedStageBounds!.Width > dockedStageBounds!.Width + 200,
+            $"Expected maximized stage width to exceed docked width by 200px, got docked={dockedStageBounds.Width:0.##}, maximized={maximizedStageBounds.Width:0.##}.");
+        Assert.True(
+            maximizedStageBounds.Height > dockedStageBounds.Height + 200,
+            $"Expected maximized stage height to exceed docked height by 200px, got docked={dockedStageBounds.Height:0.##}, maximized={maximizedStageBounds.Height:0.##}.");
+
+        await page.Locator("[data-testid='webgl-sandbox-stage']").ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(artifactsDir, "08-webgl-toolbar-maximized.png")
+        });
+
+        Assert.True(await InvokeChromeActionAsync(page, "chrome:toggle-stage-size"));
+        var redockedUiState = await WaitForUiStateAsync(
+            page,
+            state => !state.IsStageMaximized,
+            "stage to dock back into the page shell");
+        var redockedChrome = await WaitForChromeStateAsync(
+            page,
+            chrome => !chrome.IsStageMaximized,
+            "toolbar dock action to restore embedded layout");
+
+        await page.WaitForFunctionAsync(
+            @"() => document.querySelector('[data-testid=""webgl-sandbox-stage""]')?.classList.contains('webgl-stage-frame--maximized') !== true");
+
+        var restoredStageBounds = await page.Locator("[data-testid='webgl-sandbox-stage']").BoundingBoxAsync();
+        Assert.NotNull(restoredStageBounds);
+        Assert.False(redockedUiState.IsStageMaximized);
+        Assert.False(redockedChrome.IsStageMaximized);
+        Assert.InRange(restoredStageBounds!.Width, dockedStageBounds.Width - 60, dockedStageBounds.Width + 60);
+        Assert.InRange(restoredStageBounds.Height, dockedStageBounds.Height - 60, dockedStageBounds.Height + 60);
+
         var connectCandidate = await ResolveExplicitConnectionCandidateAsync(page);
         Assert.False(
             string.IsNullOrWhiteSpace(connectCandidate.SourceAnchorId),
@@ -373,8 +434,11 @@ public sealed class WebGlSandboxSmokeTests
         await page.Mouse.ClickAsync((float)sourceAnchorPoint.X, (float)sourceAnchorPoint.Y);
         await page.WaitForFunctionAsync(
             @"anchorId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                const snapshotAnchor = runtime?.getSceneSnapshot?.(host)?.anchors?.find(candidate => candidate.id === anchorId);
                 const element = document.querySelector(`[data-webgl-port-label-for='${anchorId}']`);
-                return element instanceof HTMLElement && getComputedStyle(element).display !== 'none';
+                return !!snapshotAnchor?.labelVisible || (element instanceof HTMLElement && getComputedStyle(element).display !== 'none');
             }",
             connectCandidate.SourceAnchorId,
             new PageWaitForFunctionOptions
@@ -414,8 +478,11 @@ public sealed class WebGlSandboxSmokeTests
             connectCandidate.TargetNodeId));
         await page.WaitForFunctionAsync(
             @"anchorId => {
+                const host = document.querySelector('.wgl-workbench-host');
+                const runtime = window.CanDoItAll?.webglWorkbench;
+                const snapshotAnchor = runtime?.getSceneSnapshot?.(host)?.anchors?.find(candidate => candidate.id === anchorId);
                 const element = document.querySelector(`[data-webgl-port-label-for='${anchorId}']`);
-                return element instanceof HTMLElement && getComputedStyle(element).display !== 'none';
+                return !!snapshotAnchor?.labelVisible || (element instanceof HTMLElement && getComputedStyle(element).display !== 'none');
             }",
             connectCandidate.TargetAnchorId,
             new PageWaitForFunctionOptions
@@ -1393,6 +1460,8 @@ public sealed class WebGlSandboxSmokeTests
 
         public bool SettingsOpen { get; set; }
 
+        public bool IsStageMaximized { get; set; }
+
         public bool ShowRoleNodes { get; set; }
 
         public bool ShowBranchNodes { get; set; }
@@ -1488,6 +1557,8 @@ public sealed class WebGlSandboxSmokeTests
 
     private sealed class WebGlUiStateProof
     {
+        public bool IsStageMaximized { get; set; }
+
         public WebGlCameraStateProof Camera { get; set; } = new();
     }
 

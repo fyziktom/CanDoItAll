@@ -365,6 +365,10 @@ export function applyChromeAction(state, actionId, deps) {
             closeContextMenu(state, deps, false);
             deps.setCameraViewMode?.(state, "yz", true);
             return true;
+        case "chrome:toggle-stage-size":
+            closeContextMenu(state, deps, false);
+            toggleUiFlag(state, "isStageMaximized", deps);
+            return true;
         case "chrome:settings":
         case "menu:settings":
             state.chromeState.settingsOpen = !state.chromeState.settingsOpen;

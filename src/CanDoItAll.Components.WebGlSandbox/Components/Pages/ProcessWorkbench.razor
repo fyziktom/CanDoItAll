@@ -11,7 +11,7 @@
               MaxWidthClass="max-w-[1900px]"
               data-testid="webgl-process-workbench-page">
     <Header>
-        <div class="webgl-page-hero">
+        <div class="webgl-page-hero @(IsStageMaximized ? "webgl-page-hero--compact" : null)">
             <div>
                 <p class="webgl-page-hero__eyebrow">Concept review surface</p>
                 <h1 class="webgl-page-hero__title">Process templates in navigable 3D</h1>
@@ -25,146 +25,161 @@
                 <StatusBadge Text="@($"{Session.NodeSpacingFactor:0.##}x spacing")" Tone="neutral" />
                 <StatusBadge Text="@($"{currentSurface.Nodes.Count} nodes")" Tone="info" />
                 <StatusBadge Text="@($"{currentSurface.Edges.Count} edges")" Tone="accent" />
+                @if (IsStageMaximized)
+                {
+                    <StatusBadge Text="Stage maximized" Tone="warning" />
+                }
             </div>
         </div>
     </Header>
 
     <Lead>
-        <SectionCard Title="Review controls"
-                     Description="Template selection, layout recomposition, and export stay host-owned, while the stage toolbar, settings panel, and context menu now live inside WebGL."
-                     HeaderActions="BuildLeadActions">
-            <Stack Orientation="Orientation.Horizontal"
-                   Wrap="FlexWrap.Wrap"
-                   GapScale="LayoutGap.Medium"
-                   AlignItems="AlignItems.End">
-                <FormField Text="Template" ContainerClass="webgl-control-field">
-                    <DropDown TValue="string"
-                              Data="@Session.Templates"
-                              TextProperty="@nameof(ProcessWebGlTemplateDescriptor.DisplayName)"
-                              ValueProperty="@nameof(ProcessWebGlTemplateDescriptor.Key)"
-                              Value="@Session.SelectedTemplateKey"
-                              ValueChanged="HandleTemplateChangedAsync" />
-                </FormField>
+        @if (!IsStageMaximized)
+        {
+            <SectionCard Title="Review controls"
+                         Description="Template selection, layout recomposition, and export stay host-owned, while the stage toolbar, settings panel, and context menu now live inside WebGL."
+                         HeaderActions="BuildLeadActions">
+                <Stack Orientation="Orientation.Horizontal"
+                       Wrap="FlexWrap.Wrap"
+                       GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.End">
+                    <FormField Text="Template" ContainerClass="webgl-control-field">
+                        <DropDown TValue="string"
+                                  Data="@Session.Templates"
+                                  TextProperty="@nameof(ProcessWebGlTemplateDescriptor.DisplayName)"
+                                  ValueProperty="@nameof(ProcessWebGlTemplateDescriptor.Key)"
+                                  Value="@Session.SelectedTemplateKey"
+                                  ValueChanged="HandleTemplateChangedAsync" />
+                    </FormField>
 
-                <FormField Text="View preset" ContainerClass="webgl-control-field">
-                    <DropDown TValue="string"
-                              Data="@ViewPresetOptions"
-                              TextProperty="@nameof(ChoiceItem.Label)"
-                              ValueProperty="@nameof(ChoiceItem.Value)"
-                              Value="@Session.ViewPreset"
-                              ValueChanged="HandleViewPresetChangedAsync" />
-                </FormField>
+                    <FormField Text="View preset" ContainerClass="webgl-control-field">
+                        <DropDown TValue="string"
+                                  Data="@ViewPresetOptions"
+                                  TextProperty="@nameof(ChoiceItem.Label)"
+                                  ValueProperty="@nameof(ChoiceItem.Value)"
+                                  Value="@Session.ViewPreset"
+                                  ValueChanged="HandleViewPresetChangedAsync" />
+                    </FormField>
 
-                <FormField Text="Layout algorithm" ContainerClass="webgl-control-field">
-                    <DropDown TValue="string"
-                              Data="@LayoutModeOptions"
-                              TextProperty="@nameof(ChoiceItem.Label)"
-                              ValueProperty="@nameof(ChoiceItem.Value)"
-                              Value="@Session.LayoutMode"
-                              ValueChanged="HandleLayoutModeChangedAsync" />
-                </FormField>
+                    <FormField Text="Layout algorithm" ContainerClass="webgl-control-field">
+                        <DropDown TValue="string"
+                                  Data="@LayoutModeOptions"
+                                  TextProperty="@nameof(ChoiceItem.Label)"
+                                  ValueProperty="@nameof(ChoiceItem.Value)"
+                                  Value="@Session.LayoutMode"
+                                  ValueChanged="HandleLayoutModeChangedAsync" />
+                    </FormField>
 
-                <FormField Text="Camera view" ContainerClass="webgl-control-field">
-                    <Stack Orientation="Orientation.Horizontal"
-                           Wrap="FlexWrap.Wrap"
-                           GapScale="LayoutGap.Small"
-                           AlignItems="AlignItems.Center">
-                        @foreach (var option in CameraViewOptions)
-                        {
-                            <Button Text="@option.Label"
-                                    ButtonStyle="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                    Variant="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? Variant.Filled : Variant.Outlined)"
-                                    Click="@(() => HandleCameraViewChangedAsync(option.Value))" />
-                        }
-                    </Stack>
-                </FormField>
+                    <FormField Text="Camera view" ContainerClass="webgl-control-field">
+                        <Stack Orientation="Orientation.Horizontal"
+                               Wrap="FlexWrap.Wrap"
+                               GapScale="LayoutGap.Small"
+                               AlignItems="AlignItems.Center">
+                            @foreach (var option in CameraViewOptions)
+                            {
+                                <Button Text="@option.Label"
+                                        ButtonStyle="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                        Variant="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? Variant.Filled : Variant.Outlined)"
+                                        Click="@(() => HandleCameraViewChangedAsync(option.Value))" />
+                            }
+                        </Stack>
+                    </FormField>
 
-                <FormField Text="Node spacing" ContainerClass="webgl-control-field">
-                    <Stack Orientation="Orientation.Horizontal"
-                           Wrap="FlexWrap.Wrap"
-                           GapScale="LayoutGap.Small"
-                           AlignItems="AlignItems.Center">
-                        <Button Text="Tighter"
-                                Icon="remove"
-                                Click="HandleDecreaseSpacingAsync"
-                                data-testid="webgl-sandbox-spacing-decrease" />
-                        <Button Text="Wider"
-                                Icon="add"
-                                Click="HandleIncreaseSpacingAsync"
-                                data-testid="webgl-sandbox-spacing-increase" />
-                        <StatusBadge Text="@($"{Session.NodeSpacingFactor:0.##}x")" Tone="info" />
-                    </Stack>
-                </FormField>
+                    <FormField Text="Node spacing" ContainerClass="webgl-control-field">
+                        <Stack Orientation="Orientation.Horizontal"
+                               Wrap="FlexWrap.Wrap"
+                               GapScale="LayoutGap.Small"
+                               AlignItems="AlignItems.Center">
+                            <Button Text="Tighter"
+                                    Icon="remove"
+                                    Click="HandleDecreaseSpacingAsync"
+                                    data-testid="webgl-sandbox-spacing-decrease" />
+                            <Button Text="Wider"
+                                    Icon="add"
+                                    Click="HandleIncreaseSpacingAsync"
+                                    data-testid="webgl-sandbox-spacing-increase" />
+                            <StatusBadge Text="@($"{Session.NodeSpacingFactor:0.##}x")" Tone="info" />
+                        </Stack>
+                    </FormField>
 
-                <Button Text="Recompose"
-                        Icon="route"
-                        Click="HandleRecomposeAsync"
-                        data-testid="webgl-sandbox-recompose" />
-                <Button Text="Reset edits"
-                        Icon="refresh"
-                        Click="HandleResetAsync"
-                        data-testid="webgl-sandbox-reset" />
-                <Button Text="Export image"
-                        Icon="image"
-                        Click="HandleExportAsync"
-                        data-testid="webgl-sandbox-export" />
-            </Stack>
-        </SectionCard>
+                    <Button Text="Recompose"
+                            Icon="route"
+                            Click="HandleRecomposeAsync"
+                            data-testid="webgl-sandbox-recompose" />
+                    <Button Text="Reset edits"
+                            Icon="refresh"
+                            Click="HandleResetAsync"
+                            data-testid="webgl-sandbox-reset" />
+                    <Button Text="Export image"
+                            Icon="image"
+                            Click="HandleExportAsync"
+                            data-testid="webgl-sandbox-export" />
+                </Stack>
+            </SectionCard>
+        }
     </Lead>
 
     <SecondaryRail>
-        <SectionCard Title="Template brief"
-                     Description="@Session.CurrentTemplate.Summary">
-            <Stack GapScale="LayoutGap.Small">
-                <StatusBadge Text="@Session.CurrentTemplate.DisplayName" Tone="info" />
-                <StatusBadge Text="@($"{Session.CurrentTemplate.StepCount} steps")" Tone="accent" />
-                <p class="webgl-rail-copy">Expanded representative pack: baseline, dense, delivery, AI, and release-control flows are all projected from repository templates instead of demo-only data.</p>
-            </Stack>
-        </SectionCard>
+        @if (!IsStageMaximized)
+        {
+            <SectionCard Title="Template brief"
+                         Description="@Session.CurrentTemplate.Summary">
+                <Stack GapScale="LayoutGap.Small">
+                    <StatusBadge Text="@Session.CurrentTemplate.DisplayName" Tone="info" />
+                    <StatusBadge Text="@($"{Session.CurrentTemplate.StepCount} steps")" Tone="accent" />
+                    <p class="webgl-rail-copy">Expanded representative pack: baseline, dense, delivery, AI, and release-control flows are all projected from repository templates instead of demo-only data.</p>
+                </Stack>
+            </SectionCard>
 
-        <SectionCard Title="Selection"
-                     Description="The sandbox inspector stays outside the universal runtime so the component remains reusable.">
-            <Stack GapScale="LayoutGap.Small">
-                <StatusBadge Text="@SelectedNodeTitle" Tone="info" />
-                <p class="webgl-rail-copy">@SelectedNodeSummary</p>
-                @if (selectedNode is not null && selectedNode.Anchors.Count > 0)
-                {
-                    <div class="webgl-chip-cluster">
-                        @foreach (var anchor in selectedNode.Anchors.Take(6))
-                        {
-                            <span class="webgl-chip">@anchor.Label</span>
-                        }
-                    </div>
-                }
-            </Stack>
-        </SectionCard>
+            <SectionCard Title="Selection"
+                         Description="The sandbox inspector stays outside the universal runtime so the component remains reusable.">
+                <Stack GapScale="LayoutGap.Small">
+                    <StatusBadge Text="@SelectedNodeTitle" Tone="info" />
+                    <p class="webgl-rail-copy">@SelectedNodeSummary</p>
+                    @if (selectedNode is not null && selectedNode.Anchors.Count > 0)
+                    {
+                        <div class="webgl-chip-cluster">
+                            @foreach (var anchor in selectedNode.Anchors.Take(6))
+                            {
+                                <span class="webgl-chip">@anchor.Label</span>
+                            }
+                        </div>
+                    }
+                </Stack>
+            </SectionCard>
 
-        <SectionCard Title="In-scene authoring"
-                     Description="Connect, reconnect, delete, selection, and display settings now live in the WebGL toolbar and right-click menu instead of host-side forms.">
-            <Stack GapScale="LayoutGap.Medium">
-                <p class="webgl-rail-copy">Use the in-scene toolbar to switch between selection, delete, connect, and reconnect modes. Right-clicking the stage, a node, or a connection opens the WebGL context menu for scene-specific actions.</p>
-                <p class="webgl-rail-copy">The settings panel now controls node label density, grid visibility, anchor visibility, edge labels, diagnostics, and runtime-only scene filters for role and branch helper nodes.</p>
-            </Stack>
-        </SectionCard>
+            <SectionCard Title="In-scene authoring"
+                         Description="Connect, reconnect, delete, selection, and display settings now live in the WebGL toolbar and right-click menu instead of host-side forms.">
+                <Stack GapScale="LayoutGap.Medium">
+                    <p class="webgl-rail-copy">Use the in-scene toolbar to switch between selection, delete, connect, and reconnect modes. Right-clicking the stage, a node, or a connection opens the WebGL context menu for scene-specific actions.</p>
+                    <p class="webgl-rail-copy">The settings panel now controls node label density, grid visibility, anchor visibility, edge labels, diagnostics, and runtime-only scene filters for role and branch helper nodes.</p>
+                </Stack>
+            </SectionCard>
 
-        <SectionCard Title="Command log"
-                     Description="Recent sandbox-only actions prove edits stay isolated and reversible.">
-            <Stack GapScale="LayoutGap.Small">
-                @foreach (var entry in Session.CommandLog)
-                {
-                    <div class="webgl-command-entry">
-                        <strong>@entry.Title</strong>
-                        <span>@entry.Detail</span>
-                    </div>
-                }
-            </Stack>
-        </SectionCard>
+            <SectionCard Title="Command log"
+                         Description="Recent sandbox-only actions prove edits stay isolated and reversible.">
+                <Stack GapScale="LayoutGap.Small">
+                    @foreach (var entry in Session.CommandLog)
+                    {
+                        <div class="webgl-command-entry">
+                            <strong>@entry.Title</strong>
+                            <span>@entry.Detail</span>
+                        </div>
+                    }
+                </Stack>
+            </SectionCard>
+        }
     </SecondaryRail>
 
     <ChildContent>
+        @if (IsStageMaximized)
+        {
+            <div class="webgl-stage-backdrop" aria-hidden="true"></div>
+        }
+
         <SectionCard Title="Process concept stage"
                      Description="JS owns the perspective renderer, the in-scene toolbar and context menu, hit-testing, and semantic automation bridge while the sandbox owns route state and in-memory edits.">
-            <div class="webgl-stage-frame" data-testid="webgl-sandbox-stage">
+            <div class="webgl-stage-frame @(IsStageMaximized ? "webgl-stage-frame--maximized" : null)" data-testid="webgl-sandbox-stage">
                 <WebGlWorkbench @ref="workbench"
                                 Surface="@currentSurface"
                                 SelectionChanged="HandleSelectionChanged"
@@ -239,6 +254,8 @@
 
     private string SelectedNodeTitle => selectedNode?.Title ?? "Nothing selected";
 
+    private bool IsStageMaximized => currentSurface.UiState.IsStageMaximized;
+
     private string SelectedNodeSummary
         => selectedNode is null
             ? "Pick a node in the stage or use the semantic controls to inspect the current selection."
@@ -265,42 +282,37 @@
     private Task HandleSelectionChanged(WebGlSelectionChangedEventArgs args)
     {
         Session.SetSelectedNode(args.PrimaryNodeId);
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private Task HandleNodesMoved(WebGlNodeMovedEventArgs args)
     {
         Session.ApplyNodesMoved(args.Positions);
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private Task HandleConnectionChangeRequested(WebGlConnectionChangeRequest request)
     {
         Session.ApplyConnectionChange(request);
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private Task HandleDeleteRequested(WebGlDeleteRequest request)
     {
         Session.ApplyDeleteRequest(request);
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private Task HandleStateChanged(string stateJson)
     {
         Session.ApplyUiState(WebGlWorkbenchUiState.Parse(stateJson));
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private async Task HandleResetAsync()
     {
         Session.Reset();
-        RefreshSurface();
+        await RefreshSurfaceAsync();
         await Task.Yield();
         if (workbench is not null)
         {
@@ -311,7 +323,7 @@
     private async Task HandleRecomposeAsync()
     {
         Session.Recompose();
-        RefreshSurface();
+        await RefreshSurfaceAsync();
         await Task.Yield();
         if (workbench is not null)
         {
@@ -322,15 +334,13 @@
     private Task HandleDecreaseSpacingAsync()
     {
         Session.AdjustNodeSpacing(-1);
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private Task HandleIncreaseSpacingAsync()
     {
         Session.AdjustNodeSpacing(1);
-        RefreshSurface();
-        return Task.CompletedTask;
+        return RefreshSurfaceAsync();
     }
 
     private async Task HandleExportAsync()
@@ -342,7 +352,7 @@
 
         var imageLength = await workbench.CaptureImageLengthAsync();
         Session.RecordExport(imageLength);
-        RefreshSurface();
+        await RefreshSurfaceAsync();
     }
 
     private async Task NavigateAsync(string? templateKey, string? cameraMode, string? viewPreset)
@@ -374,6 +384,12 @@
     private void RefreshSurface()
     {
         currentSurface = Session.BuildSurface();
+    }
+
+    private Task RefreshSurfaceAsync()
+    {
+        RefreshSurface();
+        return InvokeAsync(StateHasChanged);
     }
 
     private static string ResolveComplexityTone(string complexity)

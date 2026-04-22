@@ -99,11 +99,48 @@ function buildHostShell(host) {
     };
 }
 
+function resolveStageFrame(host) {
+    return host?.closest?.("[data-testid='webgl-sandbox-stage']")
+        || host?.parentElement
+        || null;
+}
+
+function syncStageBackdrop(isStageMaximized) {
+    const runtimeBackdropSelector = "[data-webgl-stage-backdrop='runtime']";
+    const existingRuntimeBackdrop = document.querySelector(runtimeBackdropSelector);
+    if (!isStageMaximized) {
+        existingRuntimeBackdrop?.remove();
+        return;
+    }
+
+    if (existingRuntimeBackdrop || document.querySelector(".webgl-stage-backdrop")) {
+        return;
+    }
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "webgl-stage-backdrop";
+    backdrop.setAttribute("data-webgl-stage-backdrop", "runtime");
+    backdrop.setAttribute("aria-hidden", "true");
+    document.body?.appendChild(backdrop);
+}
+
+function syncStageShell(state) {
+    const isStageMaximized = !!state.surface.uiState?.isStageMaximized;
+    resolveStageFrame(state.host)?.classList.toggle("webgl-stage-frame--maximized", isStageMaximized);
+    syncStageBackdrop(isStageMaximized);
+}
+
+function clearStageShell(state) {
+    resolveStageFrame(state?.host)?.classList.remove("webgl-stage-frame--maximized");
+    document.querySelector("[data-webgl-stage-backdrop='runtime']")?.remove();
+}
+
 function notifyStateChanged(state) {
     state.dotNetRef?.invokeMethodAsync("OnStateChanged", JSON.stringify(state.sourceSurface?.uiState || state.surface?.uiState || {}));
 }
 
 function render(state) {
+    syncStageShell(state);
     syncViewport(state);
     updateCameraStateFromControls(state);
     syncCameraToSurfaceState(state);
@@ -197,6 +234,7 @@ function collectSceneSnapshot(state) {
         showAnchors: state.surface.uiState?.showAnchors !== false,
         showEdgeLabels: state.surface.uiState?.showEdgeLabels !== false,
         transparentGround: state.surface.uiState?.transparentGround !== false,
+        isStageMaximized: !!state.surface.uiState?.isStageMaximized,
         showRoleNodes: state.chromeState.showRoleNodes !== false,
         showBranchNodes: state.chromeState.showBranchNodes !== false,
         viewportWidth: state.viewport.width,
@@ -303,6 +341,7 @@ function dispose(state) {
         return;
     }
 
+    clearStageShell(state);
     if (state.renderHandle) {
         window.cancelAnimationFrame(state.renderHandle);
         state.renderHandle = 0;

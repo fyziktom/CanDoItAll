@@ -55,6 +55,8 @@ public sealed class ProcessWebGlSandboxSession
 
     public bool TransparentGround { get; private set; } = true;
 
+    public bool IsStageMaximized { get; private set; }
+
     public int LastExportCharacterCount { get; private set; }
 
     public IReadOnlyList<ProcessWebGlCommandLogEntry> CommandLog => commandLog;
@@ -358,6 +360,7 @@ public sealed class ProcessWebGlSandboxSession
         ShowAnchors = uiState.ShowAnchors;
         ShowEdgeLabels = uiState.ShowEdgeLabels;
         TransparentGround = uiState.TransparentGround;
+        IsStageMaximized = uiState.IsStageMaximized;
     }
 
     public WebGlWorkbenchSurface BuildSurface()
@@ -392,6 +395,7 @@ public sealed class ProcessWebGlSandboxSession
         surface.UiState.ShowAnchors = ShowAnchors;
         surface.UiState.ShowEdgeLabels = ShowEdgeLabels;
         surface.UiState.TransparentGround = TransparentGround;
+        surface.UiState.IsStageMaximized = IsStageMaximized;
         return surface;
     }
 

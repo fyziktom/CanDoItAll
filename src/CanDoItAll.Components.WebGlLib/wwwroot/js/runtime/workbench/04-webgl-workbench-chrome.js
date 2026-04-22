@@ -132,6 +132,179 @@ function disposeObject(object) {
     });
 }
 
+function strokeGlyph(context, centerX, centerY, size, color, lineWidth, draw) {
+    context.save();
+    context.translate(centerX, centerY);
+    context.strokeStyle = color;
+    context.lineWidth = lineWidth;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.beginPath();
+    draw(context, size);
+    context.stroke();
+    context.restore();
+}
+
+function fillGlyph(context, centerX, centerY, size, color, draw, strokeColor = null, lineWidth = 1) {
+    context.save();
+    context.translate(centerX, centerY);
+    context.fillStyle = color;
+    context.beginPath();
+    draw(context, size);
+    context.fill();
+    if (strokeColor) {
+        context.strokeStyle = strokeColor;
+        context.lineWidth = lineWidth;
+        context.lineJoin = "round";
+        context.stroke();
+    }
+    context.restore();
+}
+
+function drawToolbarGlyph(context, glyph, centerX, centerY, size, palette) {
+    if (!glyph) {
+        return;
+    }
+
+    const strokeColor = palette.text;
+    const accentColor = palette.secondaryText;
+    const lineWidth = Math.max(1.7, size * 0.12);
+
+    switch (glyph) {
+        case "cursor":
+            fillGlyph(context, centerX, centerY, size, strokeColor, (path, scale) => {
+                path.moveTo(-scale * 0.34, -scale * 0.46);
+                path.lineTo(scale * 0.24, -scale * 0.04);
+                path.lineTo(scale * 0.02, scale * 0.04);
+                path.lineTo(scale * 0.2, scale * 0.42);
+                path.lineTo(scale * 0.04, scale * 0.48);
+                path.lineTo(-scale * 0.12, scale * 0.14);
+                path.lineTo(-scale * 0.32, scale * 0.34);
+                path.closePath();
+            }, accentColor, Math.max(1, lineWidth * 0.45));
+            return;
+        case "delete":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.moveTo(-scale * 0.28, -scale * 0.22);
+                path.lineTo(scale * 0.28, -scale * 0.22);
+                path.moveTo(-scale * 0.2, -scale * 0.34);
+                path.lineTo(scale * 0.2, -scale * 0.34);
+                path.moveTo(-scale * 0.12, -scale * 0.42);
+                path.lineTo(scale * 0.12, -scale * 0.42);
+                path.rect(-scale * 0.22, -scale * 0.2, scale * 0.44, scale * 0.56);
+                path.moveTo(-scale * 0.08, -scale * 0.08);
+                path.lineTo(-scale * 0.08, scale * 0.24);
+                path.moveTo(0, -scale * 0.08);
+                path.lineTo(0, scale * 0.24);
+                path.moveTo(scale * 0.08, -scale * 0.08);
+                path.lineTo(scale * 0.08, scale * 0.24);
+            });
+            return;
+        case "connect":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.arc(-scale * 0.14, 0, scale * 0.2, Math.PI * 0.45, Math.PI * 1.55);
+                path.moveTo(scale * 0.02, -scale * 0.14);
+                path.arc(scale * 0.14, 0, scale * 0.2, Math.PI * 1.45, Math.PI * 0.55, true);
+                path.moveTo(-scale * 0.02, 0);
+                path.lineTo(scale * 0.02, 0);
+            });
+            return;
+        case "reconnect":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.arc(0, 0, scale * 0.3, Math.PI * 0.2, Math.PI * 1.55);
+                path.moveTo(-scale * 0.2, -scale * 0.08);
+                path.lineTo(-scale * 0.34, -scale * 0.2);
+                path.moveTo(-scale * 0.2, -scale * 0.08);
+                path.lineTo(-scale * 0.38, -scale * 0.02);
+                path.moveTo(scale * 0.12, scale * 0.08);
+                path.lineTo(scale * 0.34, scale * 0.08);
+            });
+            return;
+        case "fit":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.moveTo(-scale * 0.34, -scale * 0.12);
+                path.lineTo(-scale * 0.34, -scale * 0.34);
+                path.lineTo(-scale * 0.12, -scale * 0.34);
+                path.moveTo(scale * 0.12, -scale * 0.34);
+                path.lineTo(scale * 0.34, -scale * 0.34);
+                path.lineTo(scale * 0.34, -scale * 0.12);
+                path.moveTo(scale * 0.34, scale * 0.12);
+                path.lineTo(scale * 0.34, scale * 0.34);
+                path.lineTo(scale * 0.12, scale * 0.34);
+                path.moveTo(-scale * 0.12, scale * 0.34);
+                path.lineTo(-scale * 0.34, scale * 0.34);
+                path.lineTo(-scale * 0.34, scale * 0.12);
+            });
+            return;
+        case "reset":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.arc(0, 0, scale * 0.28, Math.PI * 0.08, Math.PI * 1.72);
+                path.moveTo(-scale * 0.12, -scale * 0.26);
+                path.lineTo(-scale * 0.34, -scale * 0.22);
+                path.moveTo(-scale * 0.12, -scale * 0.26);
+                path.lineTo(-scale * 0.24, -scale * 0.42);
+            });
+            return;
+        case "perspective":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.rect(-scale * 0.18, -scale * 0.22, scale * 0.34, scale * 0.34);
+                path.moveTo(-scale * 0.18, -scale * 0.22);
+                path.lineTo(-scale * 0.02, -scale * 0.38);
+                path.lineTo(scale * 0.32, -scale * 0.38);
+                path.lineTo(scale * 0.16, -scale * 0.22);
+                path.moveTo(scale * 0.16, -scale * 0.22);
+                path.lineTo(scale * 0.32, -scale * 0.38);
+                path.lineTo(scale * 0.32, -scale * 0.04);
+                path.lineTo(scale * 0.16, scale * 0.12);
+            });
+            return;
+        case "wrench":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.arc(-scale * 0.1, -scale * 0.16, scale * 0.16, Math.PI * 0.15, Math.PI * 1.35);
+                path.moveTo(scale * 0.02, -scale * 0.04);
+                path.lineTo(scale * 0.28, scale * 0.22);
+                path.moveTo(scale * 0.18, scale * 0.14);
+                path.lineTo(scale * 0.3, scale * 0.02);
+            });
+            strokeGlyph(context, centerX, centerY, size, accentColor, Math.max(1, lineWidth * 0.5), (path, scale) => {
+                path.moveTo(scale * 0.22, scale * 0.16);
+                path.lineTo(scale * 0.32, scale * 0.26);
+            });
+            return;
+        case "maximize":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.moveTo(-scale * 0.04, -scale * 0.12);
+                path.lineTo(-scale * 0.32, -scale * 0.12);
+                path.lineTo(-scale * 0.32, -scale * 0.4);
+                path.moveTo(scale * 0.04, -scale * 0.12);
+                path.lineTo(scale * 0.32, -scale * 0.12);
+                path.lineTo(scale * 0.32, -scale * 0.4);
+                path.moveTo(scale * 0.04, scale * 0.12);
+                path.lineTo(scale * 0.32, scale * 0.12);
+                path.lineTo(scale * 0.32, scale * 0.4);
+                path.moveTo(-scale * 0.04, scale * 0.12);
+                path.lineTo(-scale * 0.32, scale * 0.12);
+                path.lineTo(-scale * 0.32, scale * 0.4);
+            });
+            return;
+        case "dock":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.rect(-scale * 0.32, -scale * 0.34, scale * 0.64, scale * 0.56);
+                path.moveTo(-scale * 0.32, -scale * 0.16);
+                path.lineTo(scale * 0.32, -scale * 0.16);
+                path.moveTo(0, -scale * 0.46);
+                path.lineTo(0, 0);
+                path.moveTo(0, 0);
+                path.lineTo(-scale * 0.14, -scale * 0.12);
+                path.moveTo(0, 0);
+                path.lineTo(scale * 0.14, -scale * 0.12);
+            });
+            return;
+        default:
+            return;
+    }
+}
+
 function createButtonTexture(width, height, options) {
     const palette = resolveTonePalette(options.tone, options.active, options.toggled);
     return createCanvasTexture(width, height, (context, safeWidth, safeHeight) => {
@@ -144,7 +317,13 @@ function createButtonTexture(width, height, options) {
         context.fillStyle = "rgba(255, 255, 255, 0.04)";
         drawRoundedRect(context, 5, 5, safeWidth - 10, Math.max(10, (safeHeight * 0.38)), Math.min(14, safeHeight / 2), null, null);
 
-        if (options.caption) {
+        const visualLabel = options.visualLabel || options.label || "Action";
+        const showGlyph = !!options.glyph;
+        const iconOnly = !!options.iconOnly;
+        const showLabel = !iconOnly || !showGlyph;
+        const glyphSize = Math.max(12, Math.min(safeWidth, safeHeight) * (iconOnly ? 0.48 : 0.36) * (options.sizeScale || 1));
+
+        if (options.caption && showLabel) {
             context.font = "600 10px 'Segoe UI Variable Display', 'Segoe UI', sans-serif";
             context.fillStyle = palette.secondaryText;
             context.textAlign = "left";
@@ -152,16 +331,49 @@ function createButtonTexture(width, height, options) {
             context.fillText(options.caption, 12, 8);
         }
 
+        if (showGlyph) {
+            const glyphCenterX = iconOnly
+                ? safeWidth / 2
+                : 18 + (glyphSize / 2);
+            const glyphCenterY = safeHeight / 2;
+            drawToolbarGlyph(context, options.glyph, glyphCenterX, glyphCenterY, glyphSize, palette);
+        }
+
+        if (!showLabel) {
+            return;
+        }
+
         context.font = `${options.emphasis ? "700" : "600"} ${options.compact ? 12 : 13}px 'Segoe UI Variable Display', 'Segoe UI', sans-serif`;
         context.fillStyle = palette.text;
-        context.textAlign = "center";
         context.textBaseline = "middle";
-        context.fillText(options.label || "Action", safeWidth / 2, options.caption ? (safeHeight / 2) + 6 : safeHeight / 2);
+
+        if (showGlyph && !iconOnly) {
+            context.textAlign = "left";
+            context.fillText(
+                visualLabel,
+                Math.max(14, 18 + glyphSize + 8),
+                options.caption ? (safeHeight / 2) + 6 : safeHeight / 2);
+            return;
+        }
+
+        context.textAlign = "center";
+        context.fillText(visualLabel, safeWidth / 2, options.caption ? (safeHeight / 2) + 6 : safeHeight / 2);
     });
 }
 
 function createPanelTexture(width, height, options) {
     return createCanvasTexture(width, height, (context, safeWidth, safeHeight) => {
+        if (options.variant === "toolbar") {
+            const gradient = context.createLinearGradient(0, 0, 0, safeHeight);
+            gradient.addColorStop(0, "rgba(51, 65, 85, 0.7)");
+            gradient.addColorStop(1, "rgba(30, 41, 59, 0.78)");
+            drawRoundedRect(context, 0.5, 0.5, safeWidth - 1, safeHeight - 1, Math.min(24, safeHeight / 2), gradient, "rgba(148, 163, 184, 0.28)", 1.2);
+
+            context.fillStyle = "rgba(255, 255, 255, 0.06)";
+            drawRoundedRect(context, 8, 6, safeWidth - 16, Math.max(10, safeHeight * 0.36), Math.min(18, safeHeight / 2), null, null);
+            return;
+        }
+
         const gradient = context.createLinearGradient(0, 0, 0, safeHeight);
         gradient.addColorStop(0, "rgba(15, 23, 42, 0.94)");
         gradient.addColorStop(1, "rgba(15, 23, 42, 0.84)");
@@ -191,18 +403,20 @@ function createPanelTexture(width, height, options) {
 function buildToolbarButtons(state) {
     const toolMode = resolveToolMode(state.surface);
     const cameraViewMode = resolveCameraViewMode(state.surface, state.cameraState?.projectionMode);
+    const isStageMaximized = !!state.surface.uiState?.isStageMaximized;
     return [
-        { id: "tool:select", label: "Select", caption: "Tool", tone: "accent", active: toolMode === toolModes.select },
-        { id: "tool:delete", label: "Delete", caption: "Tool", tone: "danger", active: toolMode === toolModes.delete },
-        { id: "tool:connect", label: "Connect", caption: "Tool", tone: "positive", active: toolMode === toolModes.connect },
-        { id: "tool:reconnect", label: "Reconnect", caption: "Tool", tone: "warning", active: toolMode === toolModes.reconnect },
-        { id: "view:fit", label: "Fit", caption: "View", tone: "neutral" },
-        { id: "view:reset", label: "Reset", caption: "View", tone: "neutral" },
-        { id: "camera:perspective", label: "Perspective", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.perspective },
-        { id: "camera:xy", label: "XY", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.xy },
-        { id: "camera:xz", label: "XZ", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.xz },
-        { id: "camera:yz", label: "YZ", caption: "Camera", tone: "neutral", active: cameraViewMode === cameraViewModes.yz },
-        { id: "chrome:settings", label: state.chromeState?.settingsOpen ? "Close" : "Settings", caption: "Panel", tone: "neutral", active: !!state.chromeState?.settingsOpen }
+        { id: "tool:select", label: "Select", glyph: "cursor", iconOnly: true, width: 44, tone: "accent", active: toolMode === toolModes.select },
+        { id: "tool:delete", label: "Delete", glyph: "delete", iconOnly: true, width: 44, tone: "danger", active: toolMode === toolModes.delete },
+        { id: "tool:connect", label: "Connect", glyph: "connect", iconOnly: true, width: 44, tone: "positive", active: toolMode === toolModes.connect },
+        { id: "tool:reconnect", label: "Reconnect", glyph: "reconnect", iconOnly: true, width: 44, tone: "warning", active: toolMode === toolModes.reconnect },
+        { id: "view:fit", label: "Fit view", glyph: "fit", iconOnly: true, width: 44, tone: "neutral" },
+        { id: "view:reset", label: "Reset camera", glyph: "reset", iconOnly: true, width: 44, tone: "neutral" },
+        { id: "camera:perspective", label: "Perspective", glyph: "perspective", iconOnly: true, width: 44, tone: "neutral", active: cameraViewMode === cameraViewModes.perspective },
+        { id: "camera:xy", label: "XY view", visualLabel: "XY", width: 48, tone: "neutral", active: cameraViewMode === cameraViewModes.xy },
+        { id: "camera:xz", label: "XZ view", visualLabel: "XZ", width: 48, tone: "neutral", active: cameraViewMode === cameraViewModes.xz },
+        { id: "camera:yz", label: "YZ view", visualLabel: "YZ", width: 48, tone: "neutral", active: cameraViewMode === cameraViewModes.yz },
+        { id: "chrome:settings", label: state.chromeState?.settingsOpen ? "Close settings" : "Settings", glyph: "wrench", iconOnly: true, width: 44, tone: "neutral", active: !!state.chromeState?.settingsOpen },
+        { id: "chrome:toggle-stage-size", label: isStageMaximized ? "Dock stage" : "Maximize stage", glyph: isStageMaximized ? "dock" : "maximize", iconOnly: true, width: 44, tone: isStageMaximized ? "warning" : "neutral", active: isStageMaximized }
     ];
 }
 
@@ -255,6 +469,7 @@ function buildChromeRenderKey(state) {
         transparentGround: state.surface.uiState?.transparentGround !== false,
         showAnchors: state.surface.uiState?.showAnchors !== false,
         showEdgeLabels: state.surface.uiState?.showEdgeLabels !== false,
+        isStageMaximized: !!state.surface.uiState?.isStageMaximized,
         showDiagnostics: !!state.surface.uiState?.showDiagnostics,
         hintText: resolveHintText(state),
         contextMenu: contextMenu
@@ -290,11 +505,13 @@ export class WebGlWorkbenchChromeController {
             toolMode: toolModes.select,
             nodeInfoMode: nodeInfoModes.detailed,
             settingsOpen: false,
+            isStageMaximized: false,
             actions: [],
             contextMenu: null
         };
         this.objects = [];
         this.renderKey = "";
+        this.toolbarBounds = null;
         this.updateViewport();
     }
 
@@ -331,7 +548,7 @@ export class WebGlWorkbenchChromeController {
         if (metadata?.interactive !== false) {
             this.snapshot.actions.push({
                 id: metadata.id,
-                label: options.label || metadata.id || "action",
+                label: metadata.actionLabel || options.label || metadata.id || "action",
                 section: metadata.section || "toolbar",
                 x,
                 y,
@@ -349,46 +566,58 @@ export class WebGlWorkbenchChromeController {
     }
 
     syncToolbar() {
-        const compact = this.state.viewport.width < 1040;
-        const buttonWidth = compact ? 92 : 108;
-        const buttonHeight = compact ? 34 : 38;
-        const gap = 10;
-        const padding = compact ? 12 : 14;
         const buttons = buildToolbarButtons(this.state);
-        const itemsPerRow = Math.min(compact ? 4 : 6, Math.max(buttons.length, 1));
-        const rowCount = Math.ceil(buttons.length / itemsPerRow);
-        const rowWidth = Math.min(itemsPerRow, buttons.length) * buttonWidth + (Math.min(itemsPerRow, buttons.length) - 1) * gap;
-        const width = rowWidth + (padding * 2);
-        const height = rowCount * buttonHeight + ((rowCount - 1) * gap) + (padding * 2);
+        const baseGap = 8;
+        const basePadding = 10;
+        const desiredWidth = buttons.reduce((sum, button) => sum + (button.width || 44), 0)
+            + (Math.max(0, buttons.length - 1) * baseGap)
+            + (basePadding * 2);
+        const scale = clamp((this.state.viewport.width - 24) / desiredWidth, 0.56, 1);
+        const compact = scale < 0.92 || this.state.viewport.width < 940;
+        const gap = Math.max(4, Math.round(baseGap * scale));
+        const padding = Math.max(6, Math.round(basePadding * scale));
+        const buttonHeight = Math.max(28, Math.round(42 * scale));
+        const scaledButtons = buttons.map(button => ({
+            ...button,
+            computedWidth: Math.max(button.visualLabel ? 28 : 24, Math.round((button.width || 44) * scale))
+        }));
+        const width = scaledButtons.reduce((sum, button) => sum + button.computedWidth, 0)
+            + (Math.max(0, scaledButtons.length - 1) * gap)
+            + (padding * 2);
+        const height = buttonHeight + (padding * 2);
         const x = Math.max(12, (this.state.viewport.width - width) / 2);
         const y = 12;
+        this.toolbarBounds = { x, y, width, height };
 
         this.addPanel(x, y, width, height, {
-            title: "Workbench tools",
-            subtitle: compact ? "Scene tools" : "In-scene toolbar"
+            variant: "toolbar"
         });
 
-        buttons.forEach((button, index) => {
-            const row = Math.floor(index / itemsPerRow);
-            const column = index % itemsPerRow;
+        let cursorX = x + padding;
+        scaledButtons.forEach(button => {
             this.addCard(
-                x + padding + (column * (buttonWidth + gap)),
-                y + padding + (row * (buttonHeight + gap)),
-                buttonWidth,
+                cursorX,
+                y + padding,
+                button.computedWidth,
                 buttonHeight,
                 {
                     label: button.label,
-                    caption: button.caption,
+                    visualLabel: button.visualLabel,
+                    glyph: button.glyph,
+                    iconOnly: button.iconOnly,
                     tone: button.tone,
                     active: button.active,
                     toggled: button.toggled,
-                    compact
+                    compact,
+                    sizeScale: scale
                 },
                 {
                     id: button.id,
+                    actionLabel: button.label,
                     section: "toolbar",
                     z: 0.05
                 });
+            cursorX += button.computedWidth + gap;
         });
     }
 
@@ -426,7 +655,7 @@ export class WebGlWorkbenchChromeController {
         const x = compact
             ? 12
             : this.state.viewport.width - width - 12;
-        const y = 78;
+        const y = (this.toolbarBounds?.y || 12) + (this.toolbarBounds?.height || 52) + 12;
 
         this.addPanel(x, y, width, height, {
             title: "Display settings",
@@ -529,6 +758,7 @@ export class WebGlWorkbenchChromeController {
             viewMode: resolveCameraViewMode(this.state.surface, this.state.cameraState?.projectionMode),
             nodeInfoMode: resolveNodeInfoMode(this.state.surface),
             settingsOpen: !!this.state.chromeState?.settingsOpen,
+            isStageMaximized: !!this.state.surface.uiState?.isStageMaximized,
             actions: [],
             contextMenu: null
         };
@@ -548,6 +778,7 @@ export class WebGlWorkbenchChromeController {
     getSnapshot() {
         return {
             ...this.snapshot,
+            isStageMaximized: !!this.state.surface.uiState?.isStageMaximized,
             showRoleNodes: this.state.chromeState?.showRoleNodes !== false,
             showBranchNodes: this.state.chromeState?.showBranchNodes !== false
         };

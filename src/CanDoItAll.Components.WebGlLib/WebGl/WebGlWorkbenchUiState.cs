@@ -37,6 +37,8 @@ public sealed class WebGlWorkbenchUiState
 
     public bool TransparentGround { get; set; } = true;
 
+    public bool IsStageMaximized { get; set; }
+
     public WebGlWorkbenchCameraState Camera { get; set; } = new();
 
     public static WebGlWorkbenchUiState Parse(string? json)
@@ -81,6 +83,7 @@ public sealed class WebGlWorkbenchUiState
             ShowAnchors = ShowAnchors,
             ShowEdgeLabels = ShowEdgeLabels,
             TransparentGround = TransparentGround,
+            IsStageMaximized = IsStageMaximized,
             Camera = NormalizeCameraState(Camera)
         };
 
@@ -211,6 +214,8 @@ public sealed class WebGlAutomationSnapshot
     public bool ShowEdgeLabels { get; set; } = true;
 
     public bool TransparentGround { get; set; } = true;
+
+    public bool IsStageMaximized { get; set; }
 
     public int ViewportWidth { get; set; }
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Implemented`
 
 ## Objective
 
@@ -34,6 +34,7 @@
 ## Deliverables
 
 - A WebGL-drawn toolbar inside the stage with the primary tool controls.
+- A single-row, icon-first toolbar layout with an in-scene maximize/dock action.
 - A settings surface inside the stage that includes node-info density and at least one additional useful scene setting.
 - A stage-local right-click context menu with open-state proof.
 - UI-state plumbing for the stable settings that must survive updates and rerenders.
@@ -67,6 +68,8 @@
 ## Acceptance Checklist
 
 - The toolbar is rendered inside the stage and not only as external page HTML.
+- The toolbar stays on one row and uses icon-first controls where text is not needed.
+- The toolbar can maximize the stage into a docked overlay and restore it back into the page shell.
 - The right-click menu opens inside the stage and is readable in its open state.
 - Node-info density supports `detailed`, `miniature`, and `hidden`.
 - At least one extra useful setting is implemented and visually observable.
@@ -78,6 +81,8 @@
 - Desktop browser pass on `/webgl/process-workbench?template=branching-code-review`
 - Screenshot at `output/playwright/webgl-sandbox/bundle-02-toolbar-settings-desktop.png`
 - Screenshot at `output/playwright/webgl-sandbox/bundle-02-toolbar-settings-open-menu.png`
+- Screenshot at `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-toolbar-docked-clean.png`
+- Screenshot at `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-toolbar-maximized-clean.png`
 - Manual Playwright MCP proof for open toolbar/settings/menu states
 
 ## Browser Validation Logging
