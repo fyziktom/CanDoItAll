@@ -1,99 +1,35 @@
 @namespace CanDoItAll.Components.CanvasLib
-@implements IAsyncDisposable
-@using CanDoItAll.Components.BaseLib
-@using CanDoItAll.Components.CanvasLib
-@inject IJSRuntime JsRuntime
+@using CanDoItAll.Components.OverlayLib
 
-<section class="cw-floating-window @(State.IsMinimized ? "is-minimized" : string.Empty) @(!ShowHeader ? "is-headerless" : string.Empty)"
-         data-testid="@TestId"
-         aria-label="@AriaLabel"
-         @ref="host"
-         @onclick:stopPropagation="true">
-    @if (State.IsMinimized)
-    {
-        <div class="cw-floating-window__chip">
-            <div class="cw-floating-window__drag" data-cw-window-drag="true">
-                @if (!string.IsNullOrWhiteSpace(Kicker))
-                {
-                    <p class="cw-panel-kicker">@Kicker</p>
-                }
-                <strong class="cw-floating-window__chip-title">@Title</strong>
-            </div>
-            <div class="cw-floating-window__chip-actions">
-                <button type="button"
-                        class="cw-floating-window__action"
-                        aria-label="@RestoreLabel"
-                        title="@RestoreLabel"
-                        @onclick="RestoreWindowAsync">
-                    <Icon Name="expand" />
-                </button>
-                <button type="button"
-                        class="cw-floating-window__action"
-                        aria-label="@HideLabel"
-                        title="@HideLabel"
-                        @onclick="HideWindowAsync">
-                    <Icon Name="visibility_off" />
-                </button>
-            </div>
-        </div>
-    }
-    else
-    {
-        @if (ShowHeader)
-        {
-            <header class="cw-floating-window__header">
-                <div class="cw-floating-window__drag" data-cw-window-drag="true">
-                    @if (!string.IsNullOrWhiteSpace(Kicker))
-                    {
-                        <p class="cw-panel-kicker">@Kicker</p>
-                    }
-                    <h3 class="cw-floating-window__title">@Title</h3>
-
-                    @if (!string.IsNullOrWhiteSpace(Summary))
-                    {
-                        <p class="cw-floating-window__summary">@Summary</p>
-                    }
-                </div>
-
-                <div class="cw-floating-window__actions">
-                    <button type="button"
-                            class="cw-floating-window__action"
-                            aria-label="@MinimizeLabel"
-                            title="@MinimizeLabel"
-                            @onclick="MinimizeWindowAsync">
-                        <Icon Name="minimize" />
-                    </button>
-                    <button type="button"
-                            class="cw-floating-window__action"
-                            aria-label="@NormalizeLabel"
-                            title="@NormalizeLabel"
-                            disabled="@IsNormalized"
-                            @onclick="NormalizeWindowAsync">
-                        <Icon Name="restart_alt" />
-                    </button>
-                    <button type="button"
-                            class="cw-floating-window__action"
-                            aria-label="@HideLabel"
-                            title="@HideLabel"
-                            @onclick="HideWindowAsync">
-                        <Icon Name="visibility_off" />
-                    </button>
-                </div>
-            </header>
-        }
-
-        <div class="cw-floating-window__body @BodyClass">
-            @ChildContent
-        </div>
-    }
-</section>
+<OverlayWindow WindowId="@WindowId"
+               Title="@Title"
+               Kicker="@Kicker"
+               Summary="@Summary"
+               AriaLabel="@AriaLabel"
+               BodyClass="@BodyClass"
+               TestId="@TestId"
+               DefaultPlacement="@DefaultPlacement"
+               ContainerSelector="@ContainerSelector"
+               SafeTopSelector="@SafeTopSelector"
+               InteropApiRoot="CanDoItAll.canvasFloatingWindow"
+               DefaultWidth="@DefaultWidth"
+               DefaultHeight="@DefaultHeight"
+               MinWidth="@MinWidth"
+               MinHeight="@MinHeight"
+               MaxWidth="@MaxWidth"
+               MaxHeight="@MaxHeight"
+               AllowResize="@AllowResize"
+               RestoreLabel="@RestoreLabel"
+               MinimizeLabel="@MinimizeLabel"
+               NormalizeLabel="@NormalizeLabel"
+               HideLabel="@HideLabel"
+               ShowHeader="@ShowHeader"
+               State="@State.ToOverlayWindowState()"
+               StateChanged="HandleOverlayStateChangedAsync">
+    @ChildContent
+</OverlayWindow>
 
 @code {
-    private readonly CanvasSceneHost sceneHost = new();
-    private ElementReference host;
-    private DotNetObjectReference<CanvasFloatingWindow>? objectReference;
-    private string? pendingStateKey;
-
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 
@@ -117,6 +53,12 @@
 
     [Parameter]
     public string DefaultPlacement { get; set; } = "top-right";
+
+    [Parameter]
+    public string ContainerSelector { get; set; } = ".cw-stage-surface";
+
+    [Parameter]
+    public string SafeTopSelector { get; set; } = ".cw-toolbar";
 
     [Parameter]
     public double DefaultWidth { get; set; } = 360;
@@ -163,35 +105,6 @@
     [Parameter, EditorRequired]
     public RenderFragment ChildContent { get; set; } = default!;
 
-    protected override void OnParametersSet()
-    {
-        pendingStateKey = SerializationPersistencePack.Serialize(BuildInteropPayload());
-        sceneHost.QueueSync(
-            pendingStateKey,
-            !string.Equals(sceneHost.AppliedStateKey, pendingStateKey, StringComparison.Ordinal));
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        objectReference ??= DotNetObjectReference.Create(this);
-        var bridge = new JsInteropBridge(JsRuntime);
-        if (sceneHost.ShouldCreate())
-        {
-            await bridge.InvokeVoidAsync("CanDoItAll.canvasFloatingWindow.create", host, objectReference, BuildInteropPayload());
-            sceneHost.MarkApplied();
-            return;
-        }
-
-        if (!sceneHost.ShouldUpdate())
-        {
-            return;
-        }
-
-        await bridge.InvokeVoidAsync("CanDoItAll.canvasFloatingWindow.update", host, BuildInteropPayload());
-        sceneHost.MarkApplied();
-    }
-
-    [JSInvokable]
     public Task OnGeometryChanged(double? left, double? top, double? width, double? height)
     {
         var next = CanvasWorkbenchWindowState.Normalize(
@@ -208,49 +121,8 @@
         return PublishStateAsync(next);
     }
 
-    private Task MinimizeWindowAsync()
-    {
-        var next = State.Clone();
-        next.IsVisible = true;
-        next.IsMinimized = true;
-        return PublishStateAsync(next);
-    }
-
-    private Task RestoreWindowAsync()
-    {
-        var next = State.Clone();
-        next.IsVisible = true;
-        next.IsMinimized = false;
-        return PublishStateAsync(next);
-    }
-
-    private Task NormalizeWindowAsync()
-        => PublishStateAsync(new CanvasWorkbenchWindowState { IsVisible = true });
-
-    private Task HideWindowAsync()
-    {
-        var next = State.Clone();
-        next.IsVisible = false;
-        next.IsMinimized = false;
-        return PublishStateAsync(next);
-    }
-
-    private bool IsNormalized => !State.IsMinimized && !State.HasCustomGeometry;
-
-    private object BuildInteropPayload()
-        => new
-        {
-            windowId = WindowId,
-            placement = DefaultPlacement,
-            defaultWidth = DefaultWidth,
-            defaultHeight = DefaultHeight,
-            minWidth = MinWidth,
-            minHeight = MinHeight,
-            maxWidth = MaxWidth,
-            maxHeight = MaxHeight,
-            allowResize = AllowResize,
-            state = State
-        };
+    private Task HandleOverlayStateChangedAsync(OverlayWindowState state)
+        => PublishStateAsync(CanvasWorkbenchWindowState.FromOverlayWindowState(state));
 
     private Task PublishStateAsync(CanvasWorkbenchWindowState state)
     {
@@ -270,28 +142,5 @@
            Nullable.Equals(left.Top, right.Top) &&
            Nullable.Equals(left.Width, right.Width) &&
            Nullable.Equals(left.Height, right.Height);
-
-    public async ValueTask DisposeAsync()
-    {
-        if (!sceneHost.IsInitialized)
-        {
-            objectReference?.Dispose();
-            return;
-        }
-
-        try
-        {
-            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.canvasFloatingWindow.dispose", host);
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
-        }
-
-        objectReference?.Dispose();
-    }
 }
-
 

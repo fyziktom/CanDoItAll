@@ -3,6 +3,7 @@
 @page "/webgl/process-workbench"
 @inject NavigationManager NavigationManager
 @inject ProcessWebGlSandboxSession Session
+@using CanDoItAll.Components.OverlayLib
 
 <PageTitle>WebGL Process Workbench</PageTitle>
 
@@ -114,6 +115,14 @@
                             Icon="image"
                             Click="HandleExportAsync"
                             data-testid="webgl-sandbox-export" />
+                    <Button Text="Selection window"
+                            Icon="dock_to_right"
+                            Click="ShowSelectionWindowAsync"
+                            data-testid="webgl-sandbox-show-selection-window" />
+                    <Button Text="Command log"
+                            Icon="description"
+                            Click="ShowCommandWindowAsync"
+                            data-testid="webgl-sandbox-show-command-window" />
                 </Stack>
             </SectionCard>
         }
@@ -180,13 +189,113 @@
         <SectionCard Title="Process concept stage"
                      Description="JS owns the perspective renderer, the in-scene toolbar and context menu, hit-testing, and semantic automation bridge while the sandbox owns route state and in-memory edits.">
             <div class="webgl-stage-frame @(IsStageMaximized ? "webgl-stage-frame--maximized" : null)" data-testid="webgl-sandbox-stage">
-                <WebGlWorkbench @ref="workbench"
-                                Surface="@currentSurface"
-                                SelectionChanged="HandleSelectionChanged"
-                                NodesMoved="HandleNodesMoved"
-                                ConnectionChangeRequested="HandleConnectionChangeRequested"
-                                DeleteRequested="HandleDeleteRequested"
-                                StateChanged="HandleStateChanged" />
+                <div class="webgl-stage-overlay-host" data-cda-overlay-frame="true" data-cda-overlay-container="true">
+                    <WebGlWorkbench @ref="workbench"
+                                    Surface="@currentSurface"
+                                    SelectionChanged="HandleSelectionChanged"
+                                    NodesMoved="HandleNodesMoved"
+                                    ConnectionChangeRequested="HandleConnectionChangeRequested"
+                                    DeleteRequested="HandleDeleteRequested"
+                                    StateChanged="HandleStateChanged" />
+
+                    @if (selectionWindowState.IsVisible)
+                    {
+                        <OverlayWindow WindowId="webgl-selection-overlay"
+                                       Title="Selection"
+                                       Kicker="Shared overlay"
+                                       Summary="This inspector now uses the extracted floating-window library over the WebGL stage."
+                                       AriaLabel="WebGL selection window"
+                                       TestId="webgl-selection-window"
+                                       DefaultPlacement="top-right"
+                                       DefaultWidth="360"
+                                       DefaultHeight="285"
+                                       MinWidth="300"
+                                       MinHeight="220"
+                                       MaxWidth="420"
+                                       MaxHeight="360"
+                                       BodyClass="webgl-overlay-window__body"
+                                       ContainerSelector="[data-cda-overlay-container]"
+                                       State="@selectionWindowState"
+                                       StateChanged="HandleSelectionWindowStateChangedAsync">
+                            <div class="webgl-overlay-window__panel">
+                                <div class="webgl-overlay-window__metric-row">
+                                    <StatusBadge Text="@SelectedNodeTitle" Tone="info" />
+                                    @if (selectedNode is not null)
+                                    {
+                                        <StatusBadge Text="@selectedNode.Kind" Tone="neutral" />
+                                    }
+                                </div>
+                                <p class="webgl-rail-copy">@SelectedNodeSummary</p>
+
+                                @if (selectedNode is not null)
+                                {
+                                    <div class="webgl-overlay-window__stats">
+                                        <div>
+                                            <span class="webgl-overlay-window__label">Family</span>
+                                            <strong>@selectedNode.Family</strong>
+                                        </div>
+                                        <div>
+                                            <span class="webgl-overlay-window__label">Anchors</span>
+                                            <strong>@selectedNode.Anchors.Count</strong>
+                                        </div>
+                                        <div>
+                                            <span class="webgl-overlay-window__label">Connections</span>
+                                            <strong>@SelectedNodeConnectionCount</strong>
+                                        </div>
+                                    </div>
+
+                                    @if (selectedNode.Anchors.Count > 0)
+                                    {
+                                        <div class="webgl-chip-cluster">
+                                            @foreach (var anchor in selectedNode.Anchors.Take(6))
+                                            {
+                                                <span class="webgl-chip">@anchor.Label</span>
+                                            }
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="webgl-overlay-window__hint">Select a node in the scene to inspect its anchor layout, family, and connection load.</p>
+                                }
+                            </div>
+                        </OverlayWindow>
+                    }
+
+                    @if (commandWindowState.IsVisible)
+                    {
+                        <OverlayWindow WindowId="webgl-command-overlay"
+                                       Title="Command log"
+                                       Kicker="Shared overlay"
+                                       Summary="Recent host-side actions stay visible while the camera moves and the stage maximizes."
+                                       AriaLabel="WebGL command log window"
+                                       TestId="webgl-command-window"
+                                       DefaultPlacement="top-left"
+                                       DefaultWidth="330"
+                                       DefaultHeight="320"
+                                       MinWidth="280"
+                                       MinHeight="220"
+                                       MaxWidth="380"
+                                       MaxHeight="420"
+                                       BodyClass="webgl-overlay-window__body"
+                                       ContainerSelector="[data-cda-overlay-container]"
+                                       State="@commandWindowState"
+                                       StateChanged="HandleCommandWindowStateChangedAsync">
+                            <div class="webgl-overlay-window__panel">
+                                <p class="webgl-overlay-window__hint">The log proves the overlay window remains interactive while the WebGL stage handles selection, camera changes, and recomposition.</p>
+                                <div class="webgl-overlay-window__log">
+                                    @foreach (var entry in Session.CommandLog.Take(6))
+                                    {
+                                        <div class="webgl-command-entry">
+                                            <strong>@entry.Title</strong>
+                                            <span>@entry.Detail</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </OverlayWindow>
+                    }
+                </div>
             </div>
         </SectionCard>
     </ChildContent>
@@ -231,6 +340,18 @@
 
     private WebGlWorkbench workbench = default!;
     private WebGlWorkbenchSurface currentSurface = new();
+    private OverlayWindowState selectionWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+    {
+        IsVisible = true,
+        Width = 360,
+        Height = 285
+    });
+    private OverlayWindowState commandWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+    {
+        IsVisible = true,
+        Width = 330,
+        Height = 320
+    });
 
     private RenderFragment BuildLeadActions => builder =>
     {
@@ -255,6 +376,13 @@
     private string SelectedNodeTitle => selectedNode?.Title ?? "Nothing selected";
 
     private bool IsStageMaximized => currentSurface.UiState.IsStageMaximized;
+
+    private int SelectedNodeConnectionCount
+        => selectedNode is null
+            ? 0
+            : currentSurface.Edges.Count(edge =>
+                string.Equals(edge.SourceNodeId, selectedNode.Id, StringComparison.Ordinal) ||
+                string.Equals(edge.TargetNodeId, selectedNode.Id, StringComparison.Ordinal));
 
     private string SelectedNodeSummary
         => selectedNode is null
@@ -282,6 +410,19 @@
     private Task HandleSelectionChanged(WebGlSelectionChangedEventArgs args)
     {
         Session.SetSelectedNode(args.PrimaryNodeId);
+        if (!string.IsNullOrWhiteSpace(args.PrimaryNodeId))
+        {
+            selectionWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+            {
+                IsVisible = true,
+                IsMinimized = false,
+                Left = selectionWindowState.Left,
+                Top = selectionWindowState.Top,
+                Width = selectionWindowState.Width,
+                Height = selectionWindowState.Height
+            });
+        }
+
         return RefreshSurfaceAsync();
     }
 
@@ -353,6 +494,46 @@
         var imageLength = await workbench.CaptureImageLengthAsync();
         Session.RecordExport(imageLength);
         await RefreshSurfaceAsync();
+    }
+
+    private Task HandleSelectionWindowStateChangedAsync(OverlayWindowState state)
+    {
+        selectionWindowState = OverlayWindowState.Normalize(state);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleCommandWindowStateChangedAsync(OverlayWindowState state)
+    {
+        commandWindowState = OverlayWindowState.Normalize(state);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowSelectionWindowAsync()
+    {
+        selectionWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+        {
+            IsVisible = true,
+            IsMinimized = false,
+            Left = selectionWindowState.Left,
+            Top = selectionWindowState.Top,
+            Width = selectionWindowState.Width,
+            Height = selectionWindowState.Height
+        });
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowCommandWindowAsync()
+    {
+        commandWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+        {
+            IsVisible = true,
+            IsMinimized = false,
+            Left = commandWindowState.Left,
+            Top = commandWindowState.Top,
+            Width = commandWindowState.Width,
+            Height = commandWindowState.Height
+        });
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task NavigateAsync(string? templateKey, string? cameraMode, string? viewPreset)

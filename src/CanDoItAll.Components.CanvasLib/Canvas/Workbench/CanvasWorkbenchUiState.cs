@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.Components.OverlayLib;
 
 namespace CanDoItAll.Components.CanvasLib;
 
@@ -158,6 +159,32 @@ public sealed class CanvasWorkbenchWindowState
         normalized.Width = NormalizeDimension(normalized.Width);
         normalized.Height = NormalizeDimension(normalized.Height);
         return normalized;
+    }
+
+    public OverlayWindowState ToOverlayWindowState()
+        => OverlayWindowState.Normalize(
+            new OverlayWindowState
+            {
+                IsVisible = IsVisible,
+                IsMinimized = IsMinimized,
+                Left = Left,
+                Top = Top,
+                Width = Width,
+                Height = Height
+            });
+
+    public static CanvasWorkbenchWindowState FromOverlayWindowState(OverlayWindowState? value)
+    {
+        var normalized = OverlayWindowState.Normalize(value);
+        return new CanvasWorkbenchWindowState
+        {
+            IsVisible = normalized.IsVisible,
+            IsMinimized = normalized.IsMinimized,
+            Left = normalized.Left,
+            Top = normalized.Top,
+            Width = normalized.Width,
+            Height = normalized.Height
+        };
     }
 
     private static double? NormalizeDimension(double? value)

@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj" />
+  </ItemGroup>
+
 </Project>

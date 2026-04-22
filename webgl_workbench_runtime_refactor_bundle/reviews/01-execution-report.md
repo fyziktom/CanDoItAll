@@ -74,6 +74,21 @@
   - caching WebGL chrome rebuilds until chrome state actually changes
   - stopping per-render renderer resize work unless the host viewport changes
   - trimming repeated DOM overlay content rebuilds for node labels and edge text
+- Extracted shared floating-window behavior into a new reusable component library:
+  - `src/CanDoItAll.Components.OverlayLib/Components/Core/OverlayWindow.razor`
+  - `src/CanDoItAll.Components.OverlayLib/Models/OverlayWindowState.cs`
+  - `src/CanDoItAll.Components.OverlayLib/wwwroot/css/overlay-window.css`
+  - `src/CanDoItAll.Components.OverlayLib/wwwroot/js/runtime/overlay-window.js`
+- Kept CanvasLib backward-compatible while swapping to the shared implementation:
+  - `CanvasFloatingWindow.razor` is now a compatibility wrapper over `OverlayWindow`
+  - legacy JS interop root `CanDoItAll.canvasFloatingWindow.*` still resolves through the shared runtime bridge
+  - legacy CSS classes such as `cw-floating-window__*` still render from the shared component so existing browser and bUnit expectations remain stable
+- Adopted the shared overlay library in the WebGL sandbox and proved it on the dedicated route with live selection and command-log overlay windows positioned over the stage.
+- Removed the duplicated generic floating-window skin from the old CanvasLib stylesheet so the extracted overlay library now owns the shared visual chrome instead of CanvasLib carrying a second copy.
+- Added direct shared-overlay component coverage in `OverlayWindowTests.cs` and re-ran the existing `CanvasFloatingWindowTests.cs` wrapper coverage to prove the shared component plus the CanvasLib shim both stay stable.
+- Revalidated the swapped CanvasLib windows in the real CanDoItAll app:
+  - project-structure canvas kept the shared selection-window chrome plus draggable toolbox window behavior
+  - process canvas kept the shared selection/toolbox/editor window flow on the `Steps` tab with live Playwright MCP screenshots
 
 ## Commands
 
@@ -103,6 +118,14 @@
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions --nologo` | `Passed` | Re-ran after the pointer-overlay repair; maximized-mode proof now includes real mouse clicks on the in-scene toolbar. |
 | `Playwright MCP toolbar maximize/dock proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified the icon-first toolbar stays on one row, confirmed runtime maximize/dock state, and captured clean docked/maximized screenshots on `http://127.0.0.1:5611`. |
 | `Playwright MCP post-fix visual proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Revisited the live sandbox after the pointer fix and captured a fresh route screenshot on `http://127.0.0.1:5621`. |
+| `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj --no-restore -m:1 /p:UseSharedCompilation=false` | `Passed` | Shared overlay library compiled cleanly after the extraction. |
+| `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj --no-restore -m:1 /p:UseSharedCompilation=false` | `Passed` | WebGL sandbox still builds cleanly against the shared overlay library; restore surfaced existing `NU1903` warnings only. |
+| `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 /p:UseSharedCompilation=false` | `Passed` | Main web app still builds cleanly after the CanvasLib overlay swap; restore surfaced existing `NU1903` warnings only. |
+| `dotnet build C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore -m:1 /p:UseSharedCompilation=false /p:BuildProjectReferences=false` | `Passed` | Built the focused component test assembly without rebuilding already-running UI hosts. |
+| `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~CanvasFloatingWindowTests|FullyQualifiedName~OverlayWindowTests"` | `Passed` | `7/7` targeted component tests passed, covering the shared overlay component plus the CanvasLib compatibility wrapper. |
+| `Playwright MCP shared-overlay proof on /webgl/process-workbench?probe=overlay-refresh` | `Passed` | Verified the WebGL sandbox selection and command-log overlays render through the shared library with stable stage positioning and fresh screenshots on `http://127.0.0.1:5501`. |
+| `Playwright MCP shared-overlay proof on /projects/{projectId}/structure` | `Passed` | Verified project-structure selection-window action chrome, opened the toolbox window, and confirmed drag motion still moves the shared floating window on `http://127.0.0.1:5515`. |
+| `Playwright MCP shared-overlay proof on /projects/{projectId}/processes` | `Passed` | Switched to the `Steps` tab, opened the process toolbox and canvas editor windows, and captured fresh process-canvas overlay screenshots on `http://127.0.0.1:5515`. |
 | `npm run webgllib:verify-assets` | `Not run` | No asset-regeneration issue was observed during build or live route proof. |
 
 ## Browser Artifacts
@@ -130,6 +153,11 @@
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-toolbar-docked-clean.png` | Clean docked-stage proof for the single-row icon toolbar | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-toolbar-maximized-clean.png` | Clean maximized-stage proof for the icon toolbar plus overlay dock shell | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T12-32-07-881Z.png` | Fresh live-route screenshot after the maximized-stage pointer-event repair | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T15-01-43-229Z.png` | Shared overlay-window proof on the WebGL sandbox after extracting `OverlayLib` | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T15-06-03-970Z.png` | Project-structure canvas proof with the shared selection-window chrome still rendered in the main app | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\project-structure-toolbox-window.png` | Focused project-structure toolbox-window proof after the shared overlay swap | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T15-10-10-896Z.png` | Process-canvas proof showing the shared canvas editor window after opening a toolbox action on the `Steps` tab | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\processes-canvas-selection-window.png` | Focused process-canvas selection-window proof after the CanvasLib swap | `Captured` |
 
 ## Subbundle Gate Results
 
@@ -156,6 +184,9 @@
 | `03-3d-connection-reconnection-and-delete-tools` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Focus an inspected node to reveal anchor labels, enter connect mode, choose one exact role output anchor, focus a multi-input step, confirm the intended compatible target input is highlighted, click that exact input, and verify the created edge keeps the expected source/target anchor ids` | `08-webgl-anchor-labels-detail-proof.png`, `09-webgl-explicit-target-anchor-proof.png`, `10-webgl-explicit-anchor-connected-proof.png` | `Passed` |
 | `02-in-scene-toolbar-and-settings-chrome` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Inspect toolbar geometry, confirm a single distinct toolbar row, invoke maximize and dock from the in-scene chrome, verify runtime state plus stage-shell expansion, and capture clean docked/maximized screenshots` | `webgl-toolbar-docked-clean.png`, `webgl-toolbar-maximized-clean.png` | `Passed` |
 | `02-in-scene-toolbar-and-settings-chrome` | `/webgl/process-workbench?template=branching-code-review` | `1900x1200` | `Revisit the live route after the backdrop pointer-event repair and capture a fresh screenshot showing the stage rendered normally with the maximize-shell fix in place` | `page-2026-04-22T12-32-07-881Z.png` | `Passed` |
+| `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?probe=overlay-refresh` | `1900x1200` | `Verify the extracted shared overlay library drives the WebGL sandbox selection and command-log windows with fresh geometry/state proof` | `page-2026-04-22T15-01-43-229Z.png` | `Passed` |
+| `04-sandbox-integration-regression-proof-and-closure` | `/projects/{projectId}/structure` | `1900x1200` | `Create a project, verify shared selection-window action chrome, open the toolbox window, and confirm drag motion still repositions the shared window in the main app` | `page-2026-04-22T15-06-03-970Z.png`, `project-structure-toolbox-window.png` | `Passed` |
+| `04-sandbox-integration-regression-proof-and-closure` | `/projects/{projectId}/processes` | `1900x1200` | `Open the process workspace Steps tab, confirm the shared selection window, open the process toolbox, trigger the canvas editor, and capture the swapped window chrome in the real app` | `page-2026-04-22T15-10-10-896Z.png`, `processes-canvas-selection-window.png` | `Passed` |
 
 ## Raw Note Closure
 
@@ -179,6 +210,7 @@
 - The anchor-authoring follow-up now proves zoom-conditional anchor labels plus an exact role-output to step-input connection on the dedicated sandbox host at `http://127.0.0.1:5599`; the managed-runtime health probe still times out for this host even though the page and route are live in-browser.
 - The toolbar maximize/dock follow-up repaired an intermediate blur/stretch issue by syncing the stage shell before viewport resize; manual MCP proof and the targeted toolbar/chrome smoke both now pass against that path.
 - The maximize overlay follow-up repaired the remaining mouse-interaction issue by marking the backdrop as non-interactive; the targeted toolbar/chrome smoke now proves real mouse clicks still work while the stage is maximized.
+- The shared overlay extraction was browser-validated on the WebGL sandbox plus the CanDoItAll project-structure and process canvases, but there is not yet a dedicated automated Playwright regression that covers the new `OverlayLib` path end-to-end in the main app.
 - The broader Playwright smoke suite was not re-run end-to-end after the toolbar maximize follow-up; from the last full-suite run, the remaining observed timing-sensitive fixture-host case is `Sandbox_supports_drag_connection_and_export_without_camera_reset`.
 - A stale MCP-managed `dotnet-watch` sandbox on `https://localhost:7123` could still lock `CanDoItAll.Components.WebGlSandbox` build outputs until that older watch pair is stopped; isolated test output paths avoid this for component coverage, and the live validation work used a separate fixed-port runtime.
 - The live MCP browser route and the focused component/unit suites support the implementation, so the remaining gap is in automation stability rather than in the core runtime split or in-scene chrome delivery.

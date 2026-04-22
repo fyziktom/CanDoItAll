@@ -131,6 +131,20 @@
     border-radius: 1.75rem;
 }
 
+.webgl-stage-overlay-host {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+}
+
+.webgl-stage-overlay-host .wgl-workbench-shell,
+.webgl-stage-overlay-host .wgl-workbench-stage,
+.webgl-stage-overlay-host .wgl-workbench-host {
+    height: 100%;
+    min-height: inherit;
+}
+
 .webgl-stage-backdrop {
     position: fixed;
     inset: 0;
@@ -174,6 +188,62 @@
 .webgl-stage-frame--maximized .wgl-workbench-host::before,
 .webgl-stage-frame--maximized .wgl-workbench-host::after {
     opacity: 0;
+}
+
+.webgl-overlay-window__body {
+    min-height: 0;
+}
+
+.webgl-overlay-window__panel {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.webgl-overlay-window__metric-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+}
+
+.webgl-overlay-window__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+
+.webgl-overlay-window__stats > div {
+    display: grid;
+    gap: 0.16rem;
+    padding: 0.7rem 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.96);
+    border-radius: 0.95rem;
+    background: rgba(248, 250, 252, 0.86);
+}
+
+.webgl-overlay-window__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(71, 85, 105, 0.76);
+}
+
+.webgl-overlay-window__stats strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+}
+
+.webgl-overlay-window__hint {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(51, 65, 85, 0.82);
+}
+
+.webgl-overlay-window__log {
+    display: grid;
+    gap: 0.55rem;
 }
 
 .webgl-rail-copy {
@@ -280,10 +350,21 @@
         height: auto;
     }
 
+    .webgl-stage-overlay-host,
+    .webgl-stage-overlay-host .wgl-workbench-shell,
+    .webgl-stage-overlay-host .wgl-workbench-stage,
+    .webgl-stage-overlay-host .wgl-workbench-host {
+        min-height: 34rem;
+    }
+
     .webgl-stage-frame--maximized {
         inset: 0.55rem;
         padding: 0.45rem;
         border-radius: 1.4rem;
+    }
+
+    .webgl-overlay-window__stats {
+        grid-template-columns: 1fr;
     }
 
     .webgl-stage-overlay {
