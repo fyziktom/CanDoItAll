@@ -78,6 +78,41 @@ export function isBranchNode(node) {
     return (node?.kind || "").includes("branch");
 }
 
+export function isProcessStepNode(node) {
+    return !isRoleNode(node) && !isBranchNode(node);
+}
+
+function resolveAnchorFrame(node) {
+    const width = Number(node?.width) || 220;
+    const height = Number(node?.height) || 128;
+    const depth = Number(node?.depth) || 28;
+
+    if (isRoleNode(node)) {
+        return {
+            sideOffsetX: Math.max(28, Math.min(width * 0.18, 42)),
+            frontOffsetZ: Math.max(8, Math.min(depth * 0.18, 18)),
+            verticalPadding: 22,
+            horizontalPadding: 34
+        };
+    }
+
+    if (isBranchNode(node)) {
+        return {
+            sideOffsetX: Math.max(42, Math.min(width * 0.24, 58)),
+            frontOffsetZ: Math.max(12, Math.min(depth * 0.22, 24)),
+            verticalPadding: 24,
+            horizontalPadding: 42
+        };
+    }
+
+    return {
+        sideOffsetX: Math.max(54, Math.min(width * 0.28, 74)),
+        frontOffsetZ: Math.max(14, Math.min(depth * 0.24, 28)),
+        verticalPadding: 20,
+        horizontalPadding: 44
+    };
+}
+
 export function normalizeCameraViewMode(value, projectionMode) {
     const configured = (value || "").trim().toLowerCase();
     switch (configured) {
@@ -234,26 +269,26 @@ export function resolveAnchorSide(anchor) {
 export function resolveAnchorPosition(node, anchor) {
     const width = Number(node.width) || 220;
     const height = Number(node.height) || 128;
-    const depth = Number(node.depth) || 28;
+    const frame = resolveAnchorFrame(node);
     const side = resolveAnchorSide(anchor);
     const totalOnSide = Math.max(1, Number(anchor.totalOnSide) || 1);
     const order = clamp(Number(anchor.order) || 0, 0, totalOnSide - 1);
     const offsetRatio = totalOnSide === 1
         ? 0.5
         : order / (totalOnSide - 1);
-    const verticalTravel = Math.max(24, height - 36);
-    const horizontalTravel = Math.max(24, width - 40);
-    const distributedY = toSceneY(node.y) + (height / 2) - 18 - (offsetRatio * verticalTravel);
-    const distributedX = (node.x - (width / 2)) + 20 + (offsetRatio * horizontalTravel);
+    const verticalTravel = Math.max(24, height - (frame.verticalPadding * 2));
+    const horizontalTravel = Math.max(24, width - (frame.horizontalPadding * 2));
+    const distributedY = toSceneY(node.y) + (height / 2) - frame.verticalPadding - (offsetRatio * verticalTravel);
+    const distributedX = (node.x - (horizontalTravel / 2)) + (offsetRatio * horizontalTravel);
     switch (side) {
         case "right":
-            return new THREE.Vector3(node.x + (width / 2), distributedY, node.z + (depth / 2));
+            return new THREE.Vector3(node.x + frame.sideOffsetX, distributedY, node.z + frame.frontOffsetZ);
         case "top":
-            return new THREE.Vector3(distributedX, toSceneY(node.y) + (height / 2), node.z + (depth / 2));
+            return new THREE.Vector3(distributedX, toSceneY(node.y) + (height / 2), node.z + frame.frontOffsetZ);
         case "bottom":
-            return new THREE.Vector3(distributedX, toSceneY(node.y) - (height / 2), node.z + (depth / 2));
+            return new THREE.Vector3(distributedX, toSceneY(node.y) - (height / 2), node.z + frame.frontOffsetZ);
         default:
-            return new THREE.Vector3(node.x - (width / 2), distributedY, node.z + (depth / 2));
+            return new THREE.Vector3(node.x - frame.sideOffsetX, distributedY, node.z + frame.frontOffsetZ);
     }
 }
 

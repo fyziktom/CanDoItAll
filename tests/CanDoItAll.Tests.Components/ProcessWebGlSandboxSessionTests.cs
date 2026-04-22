@@ -118,7 +118,6 @@ public sealed class ProcessWebGlSandboxSessionTests
         Assert.Equal(1.22d, rebuiltSurface.UiState.Camera.Polar);
     }
 
-    [Fact]
     [Theory]
     [InlineData(WebGlWorkbenchCameraViewModes.Perspective, WebGlWorkbenchProjectionModes.Perspective)]
     [InlineData(WebGlWorkbenchCameraViewModes.XY, WebGlWorkbenchProjectionModes.Orthographic)]

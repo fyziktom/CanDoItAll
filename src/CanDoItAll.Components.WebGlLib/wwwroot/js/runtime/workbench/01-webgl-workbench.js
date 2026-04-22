@@ -395,6 +395,7 @@ function createState(host, dotNetRef, surface) {
         projectedEdges: new Map(),
         projectedAnchors: new Map(),
         nodeMeshes: [],
+        markerObjects: [],
         renderHandle: 0,
         interaction: null,
         suppressClick: false,

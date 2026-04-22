@@ -1,6 +1,8 @@
 import {
     THREE,
     clamp,
+    isBranchNode,
+    isProcessStepNode,
     isRoleNode,
     resolveAnchorPosition,
     resolveFiniteNumber,
@@ -9,9 +11,28 @@ import {
 import { GLTFLoader } from "../../../vendor/GLTFLoader.js";
 import { clone as cloneSkeleton } from "../../../vendor/utils/SkeletonUtils.js";
 
-const roleModelLoader = new GLTFLoader();
-const roleModelAssetUrl = new URL("../../../assets/model/lowpoly_person_boxing.glb", import.meta.url).href;
-let roleModelAssetPromise = null;
+const modelLoader = new GLTFLoader();
+const nodeModelConfigs = Object.freeze({
+    role: {
+        assetUrl: new URL("../../../assets/model/lowpoly_person_boxing.glb", import.meta.url).href,
+        fitWidthFactor: 0.44,
+        fitHeightFactor: 0.9,
+        fitDepthFactor: 0.4
+    },
+    branch: {
+        assetUrl: new URL("../../../assets/model/question_box.glb", import.meta.url).href,
+        fitWidthFactor: 0.4,
+        fitHeightFactor: 0.72,
+        fitDepthFactor: 0.42
+    },
+    step: {
+        assetUrl: new URL("../../../assets/model/gears.glb", import.meta.url).href,
+        fitWidthFactor: 0.42,
+        fitHeightFactor: 0.74,
+        fitDepthFactor: 0.42
+    }
+});
+const modelAssetPromises = new Map();
 
 function destroyObject3D(object) {
     if (!object) {
@@ -75,35 +96,63 @@ function resolveEdgeOpacity(edge) {
     return clamp(resolveFiniteNumber(edge?.opacity, edge?.isPrimaryPath ? 0.96 : 0.58), 0.18, 1);
 }
 
-function loadRoleModelAsset() {
-    if (roleModelAssetPromise) {
-        return roleModelAssetPromise;
+function resolveNodeVisualKind(node) {
+    if (isRoleNode(node)) {
+        return "role";
     }
 
-    roleModelAssetPromise = roleModelLoader.loadAsync(roleModelAssetUrl)
+    if (isBranchNode(node)) {
+        return "branch";
+    }
+
+    return "step";
+}
+
+function loadModelAsset(kind) {
+    if (modelAssetPromises.has(kind)) {
+        return modelAssetPromises.get(kind);
+    }
+
+    const config = nodeModelConfigs[kind];
+    if (!config?.assetUrl) {
+        return Promise.resolve(null);
+    }
+
+    const promise = modelLoader.loadAsync(config.assetUrl)
         .then(gltf => {
             const template = gltf.scene || gltf.scenes?.[0];
             if (!template) {
-                throw new Error("Role node GLB did not contain a scene.");
+                throw new Error(`${kind} node GLB did not contain a scene.`);
             }
 
             const bounds = new THREE.Box3().setFromObject(template);
             const size = bounds.getSize(new THREE.Vector3());
             const center = bounds.getCenter(new THREE.Vector3());
+            const hasSkinnedMesh = (() => {
+                let skinned = false;
+                template.traverse(child => {
+                    if (child.isSkinnedMesh) {
+                        skinned = true;
+                    }
+                });
+                return skinned;
+            })();
             return {
                 template,
                 min: bounds.min.clone(),
                 center,
-                size
+                size,
+                hasSkinnedMesh
             };
         })
         .catch(error => {
-            roleModelAssetPromise = null;
-            console.error("CanDoItAll WebGL role model failed to load.", error);
+            modelAssetPromises.delete(kind);
+            console.error(`CanDoItAll WebGL ${kind} model failed to load.`, error);
             throw error;
         });
 
-    return roleModelAssetPromise;
+    modelAssetPromises.set(kind, promise);
+    return promise;
 }
 
 function resolveNodeFrame(node, state) {
@@ -170,7 +219,7 @@ function createStandardNodeVisual(node, colors, frame) {
     };
 }
 
-function createRoleNodePedestal(colors, frame) {
+function createRoleNodeBase(colors, frame) {
     const radius = Math.max(24, Math.min(frame.width, frame.depth) * 0.24);
     const haloRadius = radius * 1.18;
     const baseY = (-frame.height / 2) + 10;
@@ -219,7 +268,99 @@ function createRoleNodeFallback(colors, frame) {
     return fallback;
 }
 
-function markRoleModelInstance(instance) {
+function createStepNodeBase(colors, frame) {
+    const baseY = (-frame.height / 2) + 9;
+    const platform = new THREE.Mesh(
+        new THREE.BoxGeometry(frame.width * 0.44, 12, frame.depth * 0.46),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(frame.isSelected ? colors.accent : "#0f172a"),
+            emissiveIntensity: frame.isSelected ? 0.24 : 0.06,
+            shininess: 88,
+            transparent: true,
+            opacity: 0.94
+        }));
+    platform.position.y = baseY;
+
+    const rail = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(frame.width * 0.48, 14, frame.depth * 0.5)),
+        new THREE.LineBasicMaterial({
+            color: colors.border,
+            transparent: true,
+            opacity: frame.isSelected ? 0.88 : 0.34
+        }));
+    rail.position.y = baseY + 1;
+
+    return {
+        platform,
+        rim: rail,
+        modelBottomY: baseY + 8
+    };
+}
+
+function createStepNodeFallback(colors, frame) {
+    const fallback = new THREE.Mesh(
+        new THREE.BoxGeometry(frame.width * 0.24, frame.height * 0.34, frame.depth * 0.2),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.16 : 0.04,
+            shininess: 62,
+            transparent: true,
+            opacity: 0.86
+        }));
+    fallback.position.y = (-frame.height / 2) + ((frame.height * 0.34) / 2) + 24;
+    return fallback;
+}
+
+function createBranchNodeBase(colors, frame) {
+    const radius = Math.max(28, Math.min(frame.width, frame.depth) * 0.2);
+    const baseY = (-frame.height / 2) + 10;
+    const pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius * 0.92, 11, 8),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(frame.isSelected ? colors.accent : "#111827"),
+            emissiveIntensity: frame.isSelected ? 0.26 : 0.06,
+            shininess: 78,
+            transparent: true,
+            opacity: 0.94
+        }));
+    pedestal.position.y = baseY;
+
+    const halo = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.CylinderGeometry(radius * 1.14, radius * 1.06, 13, 8)),
+        new THREE.LineBasicMaterial({
+            color: colors.border,
+            transparent: true,
+            opacity: frame.isSelected ? 0.86 : 0.38
+        }));
+    halo.position.y = baseY + 0.5;
+
+    return {
+        pedestal,
+        rim: halo,
+        modelBottomY: baseY + 8
+    };
+}
+
+function createBranchNodeFallback(colors, frame) {
+    const fallback = new THREE.Mesh(
+        new THREE.BoxGeometry(frame.width * 0.28, frame.height * 0.28, frame.depth * 0.28),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.16 : 0.04,
+            shininess: 70,
+            transparent: true,
+            opacity: 0.88
+        }));
+    fallback.rotation.y = Math.PI / 4;
+    fallback.position.y = (-frame.height / 2) + ((frame.height * 0.28) / 2) + 24;
+    return fallback;
+}
+
+function markModelInstance(instance) {
     instance.traverse(child => {
         child.userData = {
             ...child.userData,
@@ -229,13 +370,16 @@ function markRoleModelInstance(instance) {
     });
 }
 
-function buildRoleModelInstance(asset, frame, modelBottomY) {
-    const instance = cloneSkeleton(asset.template);
-    markRoleModelInstance(instance);
+function buildNodeModelInstance(kind, asset, frame, modelBottomY) {
+    const config = nodeModelConfigs[kind] || nodeModelConfigs.step;
+    const instance = asset.hasSkinnedMesh
+        ? cloneSkeleton(asset.template)
+        : asset.template.clone(true);
+    markModelInstance(instance);
 
-    const availableWidth = Math.max(46, frame.width * 0.56);
-    const availableHeight = Math.max(64, frame.height * 0.92);
-    const availableDepth = Math.max(42, frame.depth * 0.56);
+    const availableWidth = Math.max(40, frame.width * config.fitWidthFactor);
+    const availableHeight = Math.max(54, frame.height * config.fitHeightFactor);
+    const availableDepth = Math.max(34, frame.depth * config.fitDepthFactor);
     const scale = Math.min(
         availableWidth / Math.max(asset.size.x, 1),
         availableHeight / Math.max(asset.size.y, 1),
@@ -250,14 +394,14 @@ function buildRoleModelInstance(asset, frame, modelBottomY) {
     return instance;
 }
 
-function attachRoleModel(state, group, fallback, frame, node) {
-    loadRoleModelAsset()
+function attachNodeModel(state, group, fallback, frame, node, kind) {
+    loadModelAsset(kind)
         .then(asset => {
             if (state.nodeObjects.get(node.id) !== group) {
                 return;
             }
 
-            const instance = buildRoleModelInstance(asset, frame, fallback.userData.modelBottomY || 0);
+            const instance = buildNodeModelInstance(kind, asset, frame, fallback.userData.modelBottomY || 0);
             group.add(instance);
             if (fallback.parent === group) {
                 group.remove(fallback);
@@ -275,7 +419,7 @@ function attachRoleModel(state, group, fallback, frame, node) {
 
 function createRoleNodeVisual(state, node, colors, frame) {
     const hitMesh = createHitMesh(frame.width * 0.82, frame.height, frame.depth * 0.82, node.id);
-    const pedestal = createRoleNodePedestal(colors, frame);
+    const pedestal = createRoleNodeBase(colors, frame);
     const fallback = createRoleNodeFallback(colors, frame);
     fallback.userData = {
         ...fallback.userData,
@@ -287,18 +431,198 @@ function createRoleNodeVisual(state, node, colors, frame) {
         mesh: hitMesh,
         objects,
         onAdded(group) {
-            attachRoleModel(state, group, fallback, frame, node);
+            attachNodeModel(state, group, fallback, frame, node, "role");
         }
     };
+}
+
+function createStepNodeVisual(state, node, colors, frame) {
+    const hitMesh = createHitMesh(frame.width * 0.72, frame.height * 0.82, frame.depth * 0.72, node.id);
+    const base = createStepNodeBase(colors, frame);
+    const fallback = createStepNodeFallback(colors, frame);
+    fallback.userData = {
+        ...fallback.userData,
+        modelBottomY: base.modelBottomY
+    };
+
+    return {
+        mesh: hitMesh,
+        objects: [hitMesh, base.platform, base.rim, fallback],
+        onAdded(group) {
+            attachNodeModel(state, group, fallback, frame, node, "step");
+        }
+    };
+}
+
+function createBranchNodeVisual(state, node, colors, frame) {
+    const hitMesh = createHitMesh(frame.width * 0.74, frame.height * 0.8, frame.depth * 0.74, node.id);
+    const base = createBranchNodeBase(colors, frame);
+    const fallback = createBranchNodeFallback(colors, frame);
+    fallback.userData = {
+        ...fallback.userData,
+        modelBottomY: base.modelBottomY
+    };
+
+    return {
+        mesh: hitMesh,
+        objects: [hitMesh, base.pedestal, base.rim, fallback],
+        onAdded(group) {
+            attachNodeModel(state, group, fallback, frame, node, "branch");
+        }
+    };
+}
+
+function createFlowMarker(color, accentColor, position, radius) {
+    const group = new THREE.Group();
+    const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 1.7, 24, 24),
+        new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 0.16,
+            depthWrite: false
+        }));
+    const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 26, 26),
+        new THREE.MeshPhongMaterial({
+            color,
+            emissive: new THREE.Color(accentColor || color),
+            emissiveIntensity: 0.3,
+            shininess: 88,
+            transparent: true,
+            opacity: 0.96
+        }));
+    group.add(halo, sphere);
+    group.position.copy(position);
+    group.userData = {
+        skipHitTest: true
+    };
+    return group;
+}
+
+function isStructuralFlowEdge(edge) {
+    const categoryKey = (edge?.categoryKey || "").toLowerCase();
+    return !!edge?.isPrimaryPath ||
+        categoryKey.includes("structural") ||
+        categoryKey.includes("branch");
+}
+
+function resolveStepEndpoints(state) {
+    const processNodes = (state.surface.nodes || []).filter(isProcessStepNode);
+    if (!processNodes.length) {
+        return {
+            firstNode: null,
+            lastNode: null
+        };
+    }
+
+    const inboundCounts = new Map(processNodes.map(node => [node.id, 0]));
+    const outboundCounts = new Map(processNodes.map(node => [node.id, 0]));
+
+    for (const edge of state.surface.edges || []) {
+        if (!isStructuralFlowEdge(edge)) {
+            continue;
+        }
+
+        const sourceNode = state.nodeLookup.get(edge.sourceNodeId);
+        const targetNode = state.nodeLookup.get(edge.targetNodeId);
+        if (!sourceNode || !targetNode || isRoleNode(sourceNode) || isRoleNode(targetNode)) {
+            continue;
+        }
+
+        if (outboundCounts.has(edge.sourceNodeId)) {
+            outboundCounts.set(edge.sourceNodeId, outboundCounts.get(edge.sourceNodeId) + 1);
+        }
+
+        if (inboundCounts.has(edge.targetNodeId)) {
+            inboundCounts.set(edge.targetNodeId, inboundCounts.get(edge.targetNodeId) + 1);
+        }
+    }
+
+    const firstNode = processNodes.find(node => (inboundCounts.get(node.id) || 0) === 0) || processNodes[0];
+    const lastNode = [...processNodes].reverse().find(node => (outboundCounts.get(node.id) || 0) === 0) || processNodes[processNodes.length - 1];
+    return {
+        firstNode,
+        lastNode
+    };
+}
+
+function resolveMarkerDirection(state, nodeId, outbound) {
+    const edges = (state.surface.edges || []).filter(edge => {
+        if (!isStructuralFlowEdge(edge)) {
+            return false;
+        }
+
+        return outbound
+            ? edge.sourceNodeId === nodeId
+            : edge.targetNodeId === nodeId;
+    });
+    const edge = edges[0];
+    if (!edge) {
+        return new THREE.Vector3(0, 0, -1);
+    }
+
+    const sourceNode = state.nodeLookup.get(edge.sourceNodeId);
+    const targetNode = state.nodeLookup.get(edge.targetNodeId);
+    if (!sourceNode || !targetNode) {
+        return new THREE.Vector3(0, 0, -1);
+    }
+
+    const direction = outbound
+        ? new THREE.Vector3(targetNode.x - sourceNode.x, 0, targetNode.z - sourceNode.z)
+        : new THREE.Vector3(targetNode.x - sourceNode.x, 0, targetNode.z - sourceNode.z);
+    if (direction.lengthSq() < 0.0001) {
+        return new THREE.Vector3(0, 0, -1);
+    }
+
+    return direction.normalize();
+}
+
+function createFlowMarkers(state) {
+    const markerObjects = [];
+    const { firstNode, lastNode } = resolveStepEndpoints(state);
+    if (!firstNode && !lastNode) {
+        return markerObjects;
+    }
+
+    const firstDirection = firstNode
+        ? resolveMarkerDirection(state, firstNode.id, true)
+        : null;
+    const lastDirection = lastNode
+        ? resolveMarkerDirection(state, lastNode.id, false)
+        : null;
+
+    if (firstNode && firstDirection) {
+        const offset = Math.max(118, (Number(firstNode.width) || 220) * 0.54);
+        const position = new THREE.Vector3(
+            firstNode.x - (firstDirection.x * offset),
+            toSceneY(firstNode.y) - ((Number(firstNode.height) || 128) * 0.18),
+            firstNode.z - (firstDirection.z * offset));
+        markerObjects.push(createFlowMarker("#22c55e", "#86efac", position, 18));
+    }
+
+    if (lastNode && lastDirection) {
+        const offset = Math.max(118, (Number(lastNode.width) || 220) * 0.54);
+        const position = new THREE.Vector3(
+            lastNode.x + (lastDirection.x * offset),
+            toSceneY(lastNode.y) - ((Number(lastNode.height) || 128) * 0.18),
+            lastNode.z + (lastDirection.z * offset));
+        markerObjects.push(createFlowMarker("#ef4444", "#fca5a5", position, 18));
+    }
+
+    return markerObjects;
 }
 
 function createNodeObject(state, node) {
     const colors = resolveNodeColors(node);
     const group = new THREE.Group();
     const frame = resolveNodeFrame(node, state);
-    const visual = isRoleNode(node)
+    const visualKind = resolveNodeVisualKind(node);
+    const visual = visualKind === "role"
         ? createRoleNodeVisual(state, node, colors, frame)
-        : createStandardNodeVisual(node, colors, frame);
+        : visualKind === "branch"
+            ? createBranchNodeVisual(state, node, colors, frame)
+            : createStepNodeVisual(state, node, colors, frame);
 
     group.add(...visual.objects);
     group.position.set(node.x || 0, toSceneY(node.y), node.z || 0);
@@ -427,10 +751,18 @@ export function clearScene(state) {
         destroyObject3D(edgeObject);
     }
 
+    for (const markerObject of state.markerObjects || []) {
+        state.scene.remove(markerObject);
+        destroyObject3D(markerObject);
+    }
+
     state.nodeObjects.clear();
     state.edgeObjects.clear();
     state.nodeMeshes.length = 0;
     state.edgeHitMeshes.length = 0;
+    if (state.markerObjects) {
+        state.markerObjects.length = 0;
+    }
     state.projectedNodes.clear();
     state.projectedEdges.clear();
     state.projectedAnchors.clear();
@@ -446,6 +778,11 @@ export function rebuildScene(state) {
 
     for (const edge of state.surface.edges || []) {
         createEdgeObject(state, edge);
+    }
+
+    for (const marker of createFlowMarkers(state)) {
+        state.markerObjects.push(marker);
+        state.scene.add(marker);
     }
 
     state.diagnostics.nodeCount = state.surface.nodes?.length || 0;

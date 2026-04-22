@@ -4,7 +4,7 @@
 
 - Execution state: `Implemented`
 - Bundle validation state: `Prepared bundle validated on 2026-04-21`
-- Closure state: `Implemented, regression-repaired, follow-up refactor/layout/camera extension delivered, with residual Playwright fixture-host instability`
+- Closure state: `Implemented, regression-repaired, follow-up refactor/layout/camera/model extension delivered, with residual Playwright fixture-host instability`
 
 ## Delivered Scope
 
@@ -47,10 +47,18 @@
   - diagnostics visibility
   - role-node visibility
   - branch-helper visibility
+- Added model-based node visuals and path markers:
+  - `lowpoly_person_boxing.glb` for role nodes
+  - `question_box.glb` for switch and router helper nodes
+  - `gears.glb` for standard process-step nodes
+  - green start sphere ahead of the first process step
+  - red end sphere beyond the last process step
+- Tightened role anchor placement so connection pins sit materially closer to the person model instead of floating far outside the visual body.
 - Added sandbox-local delete behavior and reconnect support across the runtime, Blazor interop surface, and sandbox session state.
 - Removed the old host-owned WebGL authoring overlay from the sandbox page so the stage-local runtime chrome is now the primary authoring surface.
 - Repaired a post-refactor rendering regression where the in-scene chrome pass could clear the main WebGL scene, which left DOM labels/anchors visible while hiding node meshes and connection curves.
 - Repaired a follow-up navigation regression where returning from orthographic views to `Perspective` could round-trip through the route and stay stuck in `XY`.
+- Repaired a focused component-test analyzer break in `ProcessWebGlSandboxSessionTests.cs` so the validation suite now runs cleanly again.
 - Reduced the main runtime hot path by:
   - caching WebGL chrome rebuilds until chrome state actually changes
   - stopping per-render renderer resize work unless the host viewport changes
@@ -66,10 +74,13 @@
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter ProcessWebGlSandboxSessionTests -v minimal` | `Passed` | `8/8` focused component tests passed. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "ProcessWebGlSceneAdapterTests|ProcessWebGlSandboxSessionTests|WebGlWorkbenchInteropTests" -v minimal -p:BaseOutputPath=C:\repositories\CanDoItAll\output\test-bin\ -p:BaseIntermediateOutputPath=C:\repositories\CanDoItAll\output\test-obj\` | `Passed` | Focused component and interop coverage passed using isolated outputs to avoid the live sandbox binary lock. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter WebGlWorkbenchUiStateTests -v minimal` | `Passed` | `2/2` focused unit tests passed. |
+| `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter ProcessWebGlSandboxSessionTests -v minimal` | `Passed` | `12/12` focused component tests passed after cleaning the conflicting `Fact/Theory` attribute on the camera-view route-state test. |
+| `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter WebGlWorkbenchUiStateTests -v minimal` | `Passed` | `2/2` focused unit tests re-ran cleanly during the GLB-node follow-up validation. |
 | `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter FullyQualifiedName~WebGlSandboxSmokeTests -v minimal` | `Partial` | Latest clean run ended at `4/6` passing. Two fixture-host smokes remained timing-sensitive around synthetic connect and synthetic drag persistence. |
 | `Playwright MCP manual route proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Live route manually inspected with screenshots for toolbar, settings, context menu, and narrow-width layout. |
 | `Playwright MCP regression repair proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified restored node/edge rendering, stable rerenders, and non-rebuilding chrome objects on the live route after the repair patch. |
 | `Playwright MCP follow-up proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified host and in-scene camera-view switching, perspective round-trip repair, and the three new layout algorithms with live screenshots on `http://127.0.0.1:5123`. |
+| `Playwright MCP GLB node-visual proof on /webgl/process-workbench?template=branching-code-review` | `Passed` | Verified imported model groups for role, branch, and step nodes, confirmed closer projected role anchors, confirmed `2` start/end flow markers, and captured fresh live-route screenshots on `http://127.0.0.1:5501`. |
 | `npm run webgllib:verify-assets` | `Not run` | No asset-regeneration issue was observed during build or live route proof. |
 
 ## Browser Artifacts
@@ -89,6 +100,8 @@
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-layout-critical-path-spine.png` | `Critical path spine` 3D recomposition proof | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-layout-fanout-corridor.png` | `Fan-out corridor` 3D recomposition proof | `Captured` |
 | `C:\repositories\CanDoItAll\output\playwright-mcp\webgl-layout-radial-burst.png` | `Radial burst` 3D recomposition proof | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\page-2026-04-22T02-34-21-947Z.png` | Fresh managed-route viewport proof after the GLB node-visual follow-up landed | `Captured` |
+| `C:\repositories\CanDoItAll\output\playwright-mcp\element-2026-04-22T02-36-16-915Z.png` | Focused stage proof for closer role anchors, imported GLB node visuals, and live flow-marker presence | `Captured` |
 
 ## Subbundle Gate Results
 
@@ -111,6 +124,7 @@
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review` | `1600x1100` | `Follow-up runtime split proof with default stage, host camera buttons, and WebGL toolbar visible together` | `webgl-refactor-validation-stage-default.png` | `Passed` |
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review&camera=perspective` | `1600x1100` | `Verify host and in-scene camera switching including repaired perspective round-trip and WebGL YZ-view proof` | `webgl-camera-yz-view.png` | `Passed` |
 | `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review&camera=perspective` | `1600x1100` | `Verify new recomposition layouts on the live route` | `webgl-layout-critical-path-spine.png`, `webgl-layout-fanout-corridor.png`, `webgl-layout-radial-burst.png` | `Passed` |
+| `04-sandbox-integration-regression-proof-and-closure` | `/webgl/process-workbench?template=branching-code-review` | `1600x1100` | `Inspect the live managed route, confirm imported GLB groups for role/branch/step nodes, confirm closer role-anchor projections, confirm `2` flow markers in runtime state, and capture the refreshed stage` | `page-2026-04-22T02-34-21-947Z.png`, `element-2026-04-22T02-36-16-915Z.png` | `Passed` |
 
 ## Raw Note Closure
 
@@ -130,6 +144,7 @@
 
 - The rendering/performance regression reported after the refactor was repaired and revalidated on the live sandbox route with new Playwright MCP screenshots and runtime diagnostics.
 - The perspective route regression was repaired by making the default camera view explicit in both route application and route generation; live host-button and in-scene-toolbar proof now passes on `http://127.0.0.1:5123`.
+- The GLB-node follow-up now proves imported model groups for sampled role, branch, and step nodes plus `2` start/end flow markers on the managed route at `http://127.0.0.1:5501`.
 - The focused Playwright smoke suite remains unstable inside the test fixture host for two synthetic interaction proofs:
   - `Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions`
   - `Sandbox_supports_drag_connection_and_export_without_camera_reset`
