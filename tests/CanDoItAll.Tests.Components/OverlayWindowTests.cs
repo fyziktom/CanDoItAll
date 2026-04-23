@@ -68,4 +68,34 @@ public sealed class OverlayWindowTests
         Assert.Equal(401.99, state.Width);
         Assert.Equal(280.34, state.Height);
     }
+
+    [Fact]
+    public void Shared_overlay_window_action_buttons_publish_minimize_and_hide_states()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var stateChanges = new List<OverlayWindowState>();
+        var cut = context.RenderComponent<OverlayWindow>(
+            parameters => parameters
+                .Add(component => component.WindowId, "overlay-toolbox")
+                .Add(component => component.Title, "Overlay toolbox")
+                .Add(component => component.State, new OverlayWindowState { IsVisible = true })
+                .Add(component => component.StateChanged, EventCallback.Factory.Create<OverlayWindowState>(this, state => stateChanges.Add(state)))
+                .Add(component => component.ChildContent, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.Find("button[aria-label='Minimize window']").Click();
+        var minimized = Assert.Single(stateChanges);
+        Assert.True(minimized.IsVisible);
+        Assert.True(minimized.IsMinimized);
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.State, minimized));
+
+        cut.Find("button[aria-label='Hide window']").Click();
+        Assert.Equal(2, stateChanges.Count);
+        var hidden = stateChanges[^1];
+        Assert.False(hidden.IsVisible);
+        Assert.False(hidden.IsMinimized);
+    }
 }
