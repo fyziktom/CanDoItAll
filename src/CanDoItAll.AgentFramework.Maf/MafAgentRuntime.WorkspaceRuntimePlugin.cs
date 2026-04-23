@@ -65,8 +65,8 @@ public sealed partial class MafAgentRuntime
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 1200)
             => commandExecutionService.DotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds);
 
-        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, int timeoutSeconds = 300)
-            => commandExecutionService.DotnetNew(template, name, parentDirectory, timeoutSeconds);
+        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
+            => commandExecutionService.DotnetNew(template, name, parentDirectory, force, timeoutSeconds);
 
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
             => commandExecutionService.PythonRunFile(path, arguments, workingDirectory, timeoutSeconds);

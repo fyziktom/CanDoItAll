@@ -1,24 +1,26 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Configuration;
 using Quartz;
 
 namespace CanDoItAll.Modules.Automation;
 
 public static class AutomationModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddAutomationModule(this IServiceCollection services)
+    public static IServiceCollection AddAutomationModule(this IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+        var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
+            configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
+            configuration["LaneKind"]);
+
         services.AddOptions<AutomationRuntimeOptions>()
             .BindConfiguration(AutomationRuntimeOptions.SectionName);
         services.AddQuartz(options =>
         {
             options.SchedulerId = "CanDoItAll.Automation";
             options.SchedulerName = "CanDoItAll Automation";
-        });
-        services.AddQuartzHostedService(options =>
-        {
-            options.WaitForJobsToComplete = true;
         });
         services.AddScoped<AutomationWorkspaceService>();
         services.TryAddScoped<IAutomationSignalProvider, CompositeAutomationSignalProvider>();
@@ -33,10 +35,19 @@ public static class AutomationModuleServiceCollectionExtensions
         services.AddScoped<IAutomationBackgroundJobScheduler, AutomationBackgroundJobScheduler>();
         services.AddScoped<IAutomationMessageHandler, AutomationBackgroundJobMessageHandler>();
         services.AddScoped<IAutomationRuntimeInspectionService, AutomationRuntimeInspectionService>();
-        services.AddHostedService<AutomationSchedulerProjectionHostedService>();
-        services.AddHostedService<AutomationMessagePumpWorker>();
-        services.AddHostedService<ConnectorOutboxDrainWorker>();
-        services.AddHostedService<LegacyBackgroundJobQueueBridgeWorker>();
+
+        if (backgroundWorkersEnabled)
+        {
+            services.AddQuartzHostedService(options =>
+            {
+                options.WaitForJobsToComplete = true;
+            });
+            services.AddHostedService<AutomationSchedulerProjectionHostedService>();
+            services.AddHostedService<AutomationMessagePumpWorker>();
+            services.AddHostedService<ConnectorOutboxDrainWorker>();
+            services.AddHostedService<LegacyBackgroundJobQueueBridgeWorker>();
+        }
+
         return services;
     }
 }

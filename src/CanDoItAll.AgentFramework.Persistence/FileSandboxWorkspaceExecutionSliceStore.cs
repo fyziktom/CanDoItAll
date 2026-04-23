@@ -530,7 +530,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             return false;
         }
 
-        var rawJson = await File.ReadAllTextAsync(layout.ExecutionIndexPath, cancellationToken);
+        var rawJson = await jsonStore.ReadTextAsync(layout.ExecutionIndexPath, cancellationToken);
         return !rawJson.Contains("\"activeRunCount\"", StringComparison.Ordinal) ||
                !rawJson.Contains("\"failedRunCount\"", StringComparison.Ordinal);
     }

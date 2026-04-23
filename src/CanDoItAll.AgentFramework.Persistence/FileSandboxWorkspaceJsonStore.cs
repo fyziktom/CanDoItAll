@@ -6,6 +6,15 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal sealed class FileSandboxWorkspaceJsonStore
 {
     private static readonly char[] InvalidFileNameCharacters = Path.GetInvalidFileNameChars();
+    private static readonly FileShare SharedReadFileShare = FileShare.ReadWrite | FileShare.Delete;
+    private static readonly TimeSpan[] AtomicWriteRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(25),
+        TimeSpan.FromMilliseconds(50),
+        TimeSpan.FromMilliseconds(100),
+        TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(400)
+    ];
 
     public JsonSerializerOptions SerializerOptions { get; } = new(JsonSerializerDefaults.Web)
     {
@@ -29,8 +38,20 @@ internal sealed class FileSandboxWorkspaceJsonStore
             return default;
         }
 
-        await using var stream = File.OpenRead(fullPath);
+        await using var stream = OpenSharedReadStream(fullPath);
         return await JsonSerializer.DeserializeAsync<T>(stream, SerializerOptions, cancellationToken);
+    }
+
+    public async Task<string> ReadTextAsync(string fullPath, CancellationToken cancellationToken)
+    {
+        if (!File.Exists(fullPath))
+        {
+            return string.Empty;
+        }
+
+        await using var stream = OpenSharedReadStream(fullPath);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<T>> LoadRecordsFromDirectoryAsync<T>(
@@ -157,18 +178,26 @@ internal sealed class FileSandboxWorkspaceJsonStore
         var serialized = JsonSerializer.Serialize(payload, SerializerOptions);
         if (File.Exists(fullPath))
         {
-            var existing = await File.ReadAllTextAsync(fullPath, cancellationToken);
+            var existing = await ReadTextAsync(fullPath, cancellationToken);
             if (string.Equals(existing, serialized, StringComparison.Ordinal))
             {
                 return false;
             }
         }
 
-        await WriteJsonAtomicallyAsync(fullPath, payload, cancellationToken);
+        await WriteJsonAtomicallyAsync(fullPath, serialized, cancellationToken);
         return true;
     }
 
     public async Task WriteJsonAtomicallyAsync<T>(string fullPath, T payload, CancellationToken cancellationToken)
+    {
+        await WriteJsonAtomicallyAsync(
+            fullPath,
+            JsonSerializer.Serialize(payload, SerializerOptions),
+            cancellationToken);
+    }
+
+    private async Task WriteJsonAtomicallyAsync(string fullPath, string serialized, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(fullPath)!;
         Directory.CreateDirectory(directory);
@@ -176,21 +205,54 @@ internal sealed class FileSandboxWorkspaceJsonStore
         var tempPath = Path.Combine(directory, $"{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
         try
         {
-            await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(payload, SerializerOptions), Encoding.UTF8, cancellationToken);
-            if (File.Exists(fullPath))
-            {
-                File.Replace(tempPath, fullPath, destinationBackupFileName: null, ignoreMetadataErrors: true);
-            }
-            else
-            {
-                File.Move(tempPath, fullPath);
-            }
+            await File.WriteAllTextAsync(tempPath, serialized, Encoding.UTF8, cancellationToken);
+            await ReplaceAtomicallyWithRetryAsync(tempPath, fullPath, cancellationToken);
         }
         finally
         {
             if (File.Exists(tempPath))
             {
                 File.Delete(tempPath);
+            }
+        }
+    }
+
+    private static FileStream OpenSharedReadStream(string fullPath)
+    {
+        return new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            SharedReadFileShare,
+            bufferSize: 4096,
+            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
+    }
+
+    private static async Task ReplaceAtomicallyWithRetryAsync(
+        string tempPath,
+        string fullPath,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                if (File.Exists(fullPath))
+                {
+                    File.Replace(tempPath, fullPath, destinationBackupFileName: null, ignoreMetadataErrors: true);
+                }
+                else
+                {
+                    File.Move(tempPath, fullPath);
+                }
+
+                return;
+            }
+            catch (IOException) when (attempt < AtomicWriteRetryDelays.Length)
+            {
+                await Task.Delay(AtomicWriteRetryDelays[attempt], cancellationToken);
             }
         }
     }

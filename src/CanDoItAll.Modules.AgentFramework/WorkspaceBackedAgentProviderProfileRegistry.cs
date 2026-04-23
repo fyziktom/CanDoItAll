@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
 internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     IDbContextFactory<AppDbContext> dbContextFactory,
+    IDatabaseProfileRuntimeAccessor profileAccessor,
     ISandboxWorkspaceStore store,
     ProviderRegistry providerRegistry,
     IProviderProfileService providerProfileService) : IProviderProfileRegistry
@@ -27,6 +29,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
         var mappedProviders = providers
             .Select(MapToAgentFrameworkProvider)
+            .Select(ApplyManagedSqliteFallbackIfNeeded)
             .ToList();
         await UpsertCatalogProvidersAsync(mappedProviders, cancellationToken);
 
@@ -49,7 +52,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedProvider = MapToAgentFrameworkProvider(provider);
         await UpsertCatalogProvidersAsync([mappedProvider], cancellationToken);
 
-        return mappedProvider;
+        return ApplyManagedSqliteFallbackIfNeeded(mappedProvider);
     }
 
     public async Task<AgentFrameworkProviderProfileEditorModel> GetProviderEditorAsync(
@@ -215,6 +218,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var catalog = await store.LoadCatalogAsync(cancellationToken);
         return catalog.Providers
             .Concat(providers)
+            .Select(ApplyManagedSqliteFallbackIfNeeded)
             .GroupBy(item => item.Id)
             .Select(group => group.Last())
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
@@ -226,7 +230,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         CancellationToken cancellationToken)
     {
         var catalog = await store.LoadCatalogAsync(cancellationToken);
-        return catalog.Providers.FirstOrDefault(item => item.Id == providerId);
+        var provider = catalog.Providers.FirstOrDefault(item => item.Id == providerId);
+        return provider is null
+            ? null
+            : ApplyManagedSqliteFallbackIfNeeded(provider);
     }
 
     private AgentFrameworkProviderProfile MapToAgentFrameworkProvider(
@@ -266,6 +273,13 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel]);
 
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
+    }
+
+    private AgentFrameworkProviderProfile ApplyManagedSqliteFallbackIfNeeded(
+        AgentFrameworkProviderProfile provider)
+    {
+        var isManagedSqliteProfile = profileAccessor.ResolveCurrentProfile().Profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite;
+        return ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile);
     }
 
     private static string ResolveDefaultModel(

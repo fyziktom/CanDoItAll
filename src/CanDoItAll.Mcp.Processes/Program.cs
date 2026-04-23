@@ -40,7 +40,7 @@ internal static class Program
         builder.Services.AddSingleton<RuntimeConfiguration>();
         builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
         builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-        builder.Services.AddCanDoItAllRuntimeModules();
+        builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
         builder.Services.AddSingleton<IProcessesCoordinator, ProcessesCoordinator>();
 
         builder.Services

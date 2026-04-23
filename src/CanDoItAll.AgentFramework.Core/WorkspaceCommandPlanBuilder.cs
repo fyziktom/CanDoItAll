@@ -189,7 +189,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 96 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildDotnetNew(string template, string name, string? parentDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildDotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
     {
         if (string.IsNullOrWhiteSpace(template))
         {
@@ -212,6 +212,18 @@ internal sealed class WorkspaceCommandPlanBuilder
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(parentDirectory, createIfMissing: true, out var workingDirectoryResolution);
         var targetRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, name.Trim()));
 
+        var arguments = new List<string>
+        {
+            "new",
+            template.Trim(),
+            "-n",
+            name.Trim()
+        };
+        if (force)
+        {
+            arguments.Add("--force");
+        }
+
         return CreatePlan(
             toolName: "workspace_dotnet_new",
             recipeId: "dotnet_new",
@@ -223,7 +235,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
             executableCandidates: ["dotnet"],
-            arguments: ["new", template.Trim(), "-n", name.Trim()],
+            arguments: arguments,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 64 * 1024);

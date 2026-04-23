@@ -42,6 +42,16 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
     {
+        if (CanReadCatalogWithoutWorkspaceLock())
+        {
+            var catalog = await LoadCatalogCoreAsync(cancellationToken);
+            var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+            if (EqualityComparer<SandboxWorkspaceCatalog>.Default.Equals(catalog, normalizedCatalog))
+            {
+                return normalizedCatalog;
+            }
+        }
+
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -98,6 +108,11 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default)
     {
+        if (CanReadExecutionWithoutWorkspaceLock())
+        {
+            return await LoadExecutionCoreAsync(cancellationToken);
+        }
+
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -113,6 +128,11 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default)
     {
+        if (CanReadExecutionWithoutWorkspaceLock())
+        {
+            return await LoadExecutionSummaryCoreAsync(cancellationToken);
+        }
+
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -171,6 +191,11 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
+        if (CanReadExecutionDetailsWithoutWorkspaceLock())
+        {
+            return await executionSliceStore.LoadRunDetailAsync(executionRunId, cancellationToken);
+        }
+
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -590,6 +615,23 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
         await EnsureSplitFilesCoreAsync(cancellationToken);
         return (await LoadWorkspaceIndexCoreAsync(cancellationToken)).Revision;
+    }
+
+    private bool CanReadCatalogWithoutWorkspaceLock()
+    {
+        return File.Exists(layout.CatalogPath) &&
+               File.Exists(layout.WorkspaceIndexPath);
+    }
+
+    private bool CanReadExecutionWithoutWorkspaceLock()
+    {
+        return CanReadCatalogWithoutWorkspaceLock() &&
+               executionSliceStore.ExecutionStorageExists();
+    }
+
+    private bool CanReadExecutionDetailsWithoutWorkspaceLock()
+    {
+        return executionSliceStore.ExecutionStorageExists();
     }
 
     private static SandboxWorkspaceDocument NormalizeAndValidateDocument(SandboxWorkspaceDocument document)

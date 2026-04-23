@@ -8,7 +8,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IAgentExecutionGovernanceBridge executionGovernanceBridge,
     IAgentExecutionEventSink executionEventSink,
     IAgentExecutionCheckpointBridge executionCheckpointBridge,
-    IProviderProfileRegistry providerRegistry)
+    IProviderProfileRegistry providerRegistry,
+    IAgentProviderCredentialResolver providerCredentialResolver)
 {
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 }

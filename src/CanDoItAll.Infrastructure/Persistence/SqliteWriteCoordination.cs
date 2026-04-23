@@ -95,8 +95,8 @@ public static class SqliteWriteCoordination
                 return;
             }
 
-            TryEnableWalMode(sqliteConnection);
             ExecutePragma(sqliteConnection, $"PRAGMA busy_timeout={BusyTimeoutMilliseconds};");
+            TryEnableWalMode(sqliteConnection);
         }
 
         private static async Task ApplyPragmasAsync(DbConnection connection, CancellationToken cancellationToken)
@@ -106,8 +106,8 @@ public static class SqliteWriteCoordination
                 return;
             }
 
-            await TryEnableWalModeAsync(sqliteConnection, cancellationToken);
             await ExecutePragmaAsync(sqliteConnection, $"PRAGMA busy_timeout={BusyTimeoutMilliseconds};", cancellationToken);
+            await TryEnableWalModeAsync(sqliteConnection, cancellationToken);
         }
 
         private static void TryEnableWalMode(SqliteConnection connection)
@@ -116,7 +116,7 @@ public static class SqliteWriteCoordination
             {
                 ExecutePragma(connection, "PRAGMA journal_mode=WAL;");
             }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == 8)
+            catch (Exception ex) when (IsPragmaFailureSafeToIgnore(ex))
             {
             }
         }
@@ -127,9 +127,15 @@ public static class SqliteWriteCoordination
             {
                 await ExecutePragmaAsync(connection, "PRAGMA journal_mode=WAL;", cancellationToken);
             }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == 8)
+            catch (Exception ex) when (IsPragmaFailureSafeToIgnore(ex))
             {
             }
+        }
+
+        private static bool IsPragmaFailureSafeToIgnore(Exception exception)
+        {
+            return exception is SqliteException { SqliteErrorCode: 8 } ||
+                IsBusy(exception);
         }
 
         private static void ExecutePragma(SqliteConnection connection, string commandText)

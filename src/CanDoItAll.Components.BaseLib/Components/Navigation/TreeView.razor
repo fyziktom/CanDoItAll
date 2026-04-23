@@ -12,7 +12,8 @@
                                  Level="0"
                                  Style="@Style"
                                  OnSelect="OnSelect"
-                                 OnToggle="OnToggle" />
+                                 OnToggle="OnToggle"
+                                 OnContextMenu="OnContextMenu" />
             }
         </ul>
     </div>
@@ -33,6 +34,9 @@
 
     [Parameter]
     public EventCallback<string> OnToggle { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeViewNodeContextMenuRequest> OnContextMenu { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }

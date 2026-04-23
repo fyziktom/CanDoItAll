@@ -82,6 +82,17 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         Assert.Contains(aliasPath, plan.TargetPaths, StringComparer.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void BuildDotnetNew_includes_force_argument_when_requested()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var builder = new WorkspaceCommandPlanBuilder(new WorkspacePathPolicy(workspaceRoot));
+
+        var plan = builder.BuildDotnetNew("blazor", "CalculatorApp", force: true);
+
+        Assert.Contains("--force", plan.Arguments, StringComparer.Ordinal);
+    }
+
     public void Dispose()
     {
         try

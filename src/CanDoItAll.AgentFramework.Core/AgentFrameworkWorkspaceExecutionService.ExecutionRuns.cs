@@ -835,11 +835,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         throw new InvalidOperationException("This session does not have any pending approvals.");
     }
 
-    private static string ResolveModel(AgentDefinition agent, ProviderProfile provider)
+    private string ResolveModel(AgentDefinition agent, ProviderProfile provider)
     {
-        return string.IsNullOrWhiteSpace(agent.Model)
-            ? provider.DefaultModel
-            : agent.Model;
+        return ResolveEffectiveManagedSeedModel(agent, provider);
     }
 
     private static string CreateExecutionSummary(string value)

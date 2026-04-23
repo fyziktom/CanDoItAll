@@ -47,21 +47,26 @@ public sealed partial class MafAgentRuntime
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false)
     {
-        var model = string.IsNullOrWhiteSpace(agent.Model) ? provider.DefaultModel : agent.Model;
+        var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
+        var managedSeedProvider = ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent)
+            ? ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile: true)
+            : provider;
+        var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, managedSeedProvider, openAiCredentialOverride);
+        var model = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
         if (string.IsNullOrWhiteSpace(model))
         {
-            throw new InvalidOperationException($"Provider '{provider.Name}' does not have a default model and the agent '{agent.Name}' does not override one.");
+            throw new InvalidOperationException($"Provider '{effectiveProvider.Name}' does not have a default model and the agent '{agent.Name}' does not override one.");
         }
 
         var capabilityState = await CreateCapabilityStateAsync(
             agent,
-            provider,
+            effectiveProvider,
             capabilities,
             memory,
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements);
-        var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, provider);
+        var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider);
         var chatOptions = new ChatOptions
         {
             Temperature = (float)agent.Temperature,
@@ -84,7 +89,9 @@ public sealed partial class MafAgentRuntime
             RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence
         };
 
-        var runtimeAgent = CreateInstrumentedAgent(CreateFrameworkAgent(provider, model, options, frameworkManagedHistory), provider);
+        var runtimeAgent = CreateInstrumentedAgent(
+            CreateFrameworkAgent(effectiveProvider, model, options, frameworkManagedHistory),
+            effectiveProvider);
         return new RuntimeBuildResult(runtimeAgent, capabilityState.AsyncDisposables, capabilityState.Disposables, capabilityState.HasApprovalTools);
     }
 
@@ -115,7 +122,7 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(credential.FailureMessage);
         }
 
-        var clientOptions = CreateOpenAiClientOptions(provider.BaseUrl);
+        var clientOptions = CreateOpenAiClientOptions(provider);
         var client = new OpenAIClient(
             credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
             options: clientOptions);
@@ -155,7 +162,7 @@ public sealed partial class MafAgentRuntime
             new System.ClientModel.ApiKeyCredential(credential.ApiKey),
             new AzureOpenAIClientOptions
             {
-                NetworkTimeout = ModelNetworkTimeout
+                NetworkTimeout = ResolveProviderNetworkTimeout(provider)
             });
 
         return provider.Transport switch
@@ -181,22 +188,55 @@ public sealed partial class MafAgentRuntime
         string model,
         ChatClientAgentOptions options)
     {
-        IChatClient chatClient = new OllamaApiClient(new Uri(provider.BaseUrl, UriKind.Absolute), model);
+        var httpClient = new HttpClient
+        {
+            BaseAddress = new Uri(provider.BaseUrl, UriKind.Absolute),
+            Timeout = ResolveProviderNetworkTimeout(provider)
+        };
+        IChatClient chatClient = new OllamaApiClient(httpClient, model, jsonSerializerContext: null);
         return chatClient.AsAIAgent(options: options);
     }
 
-    private static OpenAIClientOptions CreateOpenAiClientOptions(string baseUrl)
+    private static OpenAIClientOptions CreateOpenAiClientOptions(ProviderProfile provider)
     {
+        ArgumentNullException.ThrowIfNull(provider);
+
         var options = new OpenAIClientOptions
         {
-            NetworkTimeout = ModelNetworkTimeout
+            NetworkTimeout = ResolveProviderNetworkTimeout(provider)
         };
-        if (!ShouldUseDefaultOpenAiEndpoint(baseUrl))
+        if (!ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))
         {
-            options.Endpoint = new Uri(baseUrl, UriKind.Absolute);
+            options.Endpoint = new Uri(provider.BaseUrl, UriKind.Absolute);
         }
 
         return options;
+    }
+
+    private static TimeSpan ResolveProviderNetworkTimeout(ProviderProfile provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (string.IsNullOrWhiteSpace(provider.ConfigurationJson))
+        {
+            return ModelNetworkTimeout;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(provider.ConfigurationJson);
+            if (!document.RootElement.TryGetProperty("timeoutSeconds", out var timeoutElement) ||
+                !timeoutElement.TryGetInt32(out var timeoutSeconds))
+            {
+                return ModelNetworkTimeout;
+            }
+
+            return TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, 5, 3600));
+        }
+        catch (JsonException)
+        {
+            return ModelNetworkTimeout;
+        }
     }
 
     private static bool ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(
@@ -274,6 +314,18 @@ public sealed partial class MafAgentRuntime
     {
         return services.GetService<IAgentProviderCredentialResolver>()?.Resolve(provider)
             ?? FallbackProviderCredentialResolver.Resolve(provider);
+    }
+
+    private string ResolveOpenAiCredentialOverride(ProviderProfile provider)
+    {
+        if (provider.Kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
+        {
+            return "resolved";
+        }
+
+        return ResolveProviderCredential(provider).IsResolved
+            ? "resolved"
+            : string.Empty;
     }
 
     private static string ResolveHealthCheckModel(

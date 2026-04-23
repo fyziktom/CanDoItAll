@@ -8,6 +8,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 
 internal static class SandboxWorkspaceSeedNormalizer
 {
+    private const string RetiredSandboxAssemblyName = "CanDoItAll.AgentFramework.Sandbox";
     private static readonly ProviderProfileService ProviderProfileService = new();
     private static readonly HashSet<string> ManagedSeriousDeliveryTemplateKeys = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -36,13 +37,15 @@ internal static class SandboxWorkspaceSeedNormalizer
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
         var agents = MergeAgents(catalog.Agents, seeded.Agents, providers.IdMap, capabilities.IdMap);
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
+        var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items);
+        var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
 
         return catalog with
         {
             Version = seeded.Version,
             Providers = providers.Items,
-            Capabilities = capabilities.Items,
-            Agents = agents.Items,
+            Capabilities = activeCapabilities,
+            Agents = activeAgents,
             Memory = memory
         };
     }
@@ -317,6 +320,14 @@ internal static class SandboxWorkspaceSeedNormalizer
                    || !existingCapability.ConfigurationJson.Contains("Return 2 to 4 bullets only", StringComparison.OrdinalIgnoreCase);
         }
 
+        if (string.Equals(seededCapability.Key, "blazor-ssr-delivery-inline-skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If the project structure or attached step materials name a concrete output directory")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "external-target/<drive>/...")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "scaffold directly into it instead of adding an extra nested");
+        }
+
         if (string.Equals(seededCapability.Key, "architecture-source-rag", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.ConfigurationJson.Contains("\"tools\"", StringComparison.OrdinalIgnoreCase)
@@ -344,6 +355,132 @@ internal static class SandboxWorkspaceSeedNormalizer
             ProofNotes = seededCapability.ProofNotes,
             IsBuiltIn = seededCapability.IsBuiltIn
         };
+    }
+
+    private static bool InlineSkillInstructionsContain(string configurationJson, string expectedPhrase)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson) || string.IsNullOrWhiteSpace(expectedPhrase))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            if (document.RootElement.TryGetProperty("inlineSkill", out var inlineSkillElement) &&
+                inlineSkillElement.TryGetProperty("instructions", out var instructionsElement))
+            {
+                var instructions = instructionsElement.GetString();
+                return !string.IsNullOrWhiteSpace(instructions) &&
+                       instructions.Contains(expectedPhrase, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return configurationJson.Contains(expectedPhrase, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<CapabilityCatalogItem> RemoveRetiredCapabilities(IReadOnlyList<CapabilityCatalogItem> capabilities)
+    {
+        return capabilities
+            .Where(capability => !IsRetiredSandboxRegisteredSkillCapability(capability))
+            .OrderBy(item => item.Kind)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<AgentDefinition> RemoveUnavailableAgentCapabilities(
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyList<CapabilityCatalogItem> capabilities)
+    {
+        var availableCapabilityIds = capabilities
+            .Select(item => item.Id)
+            .ToHashSet();
+
+        return agents
+            .Select(agent =>
+            {
+                var filteredCapabilities = agent.Capabilities
+                    .Where(item => availableCapabilityIds.Contains(item.CapabilityId))
+                    .OrderBy(item => item.Kind)
+                    .ThenBy(item => item.CapabilityKey, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                return filteredCapabilities.Count == agent.Capabilities.Count
+                    ? agent
+                    : agent with
+                    {
+                        Capabilities = filteredCapabilities
+                    };
+            })
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool IsRetiredSandboxRegisteredSkillCapability(CapabilityCatalogItem capability)
+    {
+        if (capability.Kind != CapabilityKind.Skill)
+        {
+            return false;
+        }
+
+        if (string.Equals(capability.Key, "workspace-delivery-skill", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(capability.Name, "Workspace Delivery Skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
+            capability.EndpointOrPath.Contains(RetiredSandboxAssemblyName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(capability.ConfigurationJson) &&
+            capability.ConfigurationJson.Contains("WorkspaceDeliverySkill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return TryReadConfigurationString(capability.ConfigurationJson, "registeredSkillServiceType", out var serviceTypeName) &&
+               IsRetiredSandboxRegisteredSkillServiceType(serviceTypeName);
+    }
+
+    private static bool IsRetiredSandboxRegisteredSkillServiceType(string? serviceTypeName)
+    {
+        return !string.IsNullOrWhiteSpace(serviceTypeName) &&
+               serviceTypeName.Contains(RetiredSandboxAssemblyName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryReadConfigurationString(
+        string? configurationJson,
+        string propertyName,
+        out string value)
+    {
+        value = string.Empty;
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            if (!document.RootElement.TryGetProperty(propertyName, out var valueElement) ||
+                valueElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            value = valueElement.GetString() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static IReadOnlyList<AgentMemoryRecord> MergeMemory(

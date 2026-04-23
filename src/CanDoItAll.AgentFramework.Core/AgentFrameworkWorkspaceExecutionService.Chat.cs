@@ -1,9 +1,12 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService
 {
+    private const string RetiredSandboxAssemblyName = "CanDoItAll.AgentFramework.Sandbox";
+
     public async Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(
         Guid agentId,
         CancellationToken cancellationToken = default)
@@ -236,8 +239,68 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var attachedCapabilityIds = agent.Capabilities.Select(item => item.CapabilityId).ToHashSet();
         return catalog.Capabilities
             .Where(item => attachedCapabilityIds.Contains(item.Id))
+            .Where(item => !IsRetiredSandboxRegisteredSkillCapability(item))
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static bool IsRetiredSandboxRegisteredSkillCapability(CapabilityCatalogItem capability)
+    {
+        if (capability.Kind != CapabilityKind.Skill)
+        {
+            return false;
+        }
+
+        if (string.Equals(capability.Key, "workspace-delivery-skill", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(capability.Name, "Workspace Delivery Skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
+            capability.EndpointOrPath.Contains(RetiredSandboxAssemblyName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(capability.ConfigurationJson) &&
+            capability.ConfigurationJson.Contains("WorkspaceDeliverySkill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return TryReadConfigurationString(capability.ConfigurationJson, "registeredSkillServiceType", out var serviceTypeName) &&
+               !string.IsNullOrWhiteSpace(serviceTypeName) &&
+               serviceTypeName.Contains(RetiredSandboxAssemblyName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryReadConfigurationString(
+        string? configurationJson,
+        string propertyName,
+        out string value)
+    {
+        value = string.Empty;
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            if (!document.RootElement.TryGetProperty(propertyName, out var valueElement) ||
+                valueElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            value = valueElement.GetString() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static IReadOnlyList<AgentMemoryRecord> ResolveAgentMemory(

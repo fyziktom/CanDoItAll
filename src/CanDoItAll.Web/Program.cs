@@ -43,7 +43,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-builder.Services.AddCanDoItAllRuntimeModules();
+builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
 builder.Services.AddMermaidJS();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();

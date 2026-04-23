@@ -16,6 +16,7 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         ICapabilityProofService capabilityProofService,
         IProviderProfileService? providerProfileService = null,
         IProviderProfileRegistry? providerProfileRegistry = null,
+        IAgentProviderCredentialResolver? providerCredentialResolver = null,
         IProviderDiagnosticsService? providerDiagnosticsService = null,
         IAgentExecutionGovernanceBridge? executionGovernanceBridge = null,
         IAgentExecutionEventSink? executionEventSink = null,
@@ -31,6 +32,7 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
         var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService);
+        var resolvedProviderCredentialResolver = providerCredentialResolver ?? new EnvironmentVariableAgentProviderCredentialResolver();
         var resolvedProviderDiagnosticsService = providerDiagnosticsService ?? new ProviderDiagnosticsService(runtime);
         var resolvedExecutionGovernanceBridge = executionGovernanceBridge ?? new NullAgentExecutionGovernanceBridge();
         var resolvedExecutionEventSink = executionEventSink ?? new NullAgentExecutionEventSink();
@@ -51,7 +53,8 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
             resolvedExecutionGovernanceBridge,
             resolvedExecutionEventSink,
             resolvedExecutionCheckpointBridge,
-            resolvedProviderProfileRegistry);
+            resolvedProviderProfileRegistry,
+            resolvedProviderCredentialResolver);
 
         executionService.ExecutionUpdated += (_, entry) => ExecutionUpdated?.Invoke(this, entry);
     }

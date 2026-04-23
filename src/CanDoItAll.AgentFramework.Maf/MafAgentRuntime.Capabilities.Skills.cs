@@ -141,16 +141,44 @@ public sealed partial class MafAgentRuntime
                     continue;
                 }
 
-                var serviceType = Type.GetType(configuration.RegisteredSkillServiceType, throwOnError: false);
+                var registeredSkillServiceType = configuration.RegisteredSkillServiceType.Trim();
+                if (owner.IsRetiredRegisteredSkillCapability(capability, registeredSkillServiceType))
+                {
+                    owner.LogSkippedRetiredRegisteredSkill(
+                        capability.Name,
+                        registeredSkillServiceType,
+                        "is retired and no longer participates in runtime skill composition.");
+                    continue;
+                }
+
+                var serviceType = Type.GetType(registeredSkillServiceType, throwOnError: false);
                 if (serviceType is null)
                 {
-                    throw new InvalidOperationException($"Registered skill type '{configuration.RegisteredSkillServiceType}' for capability '{capability.Name}' could not be resolved.");
+                    if (owner.IsRetiredRegisteredSkillServiceType(registeredSkillServiceType))
+                    {
+                        owner.LogSkippedRetiredRegisteredSkill(
+                            capability.Name,
+                            registeredSkillServiceType,
+                            "points to the retired sandbox assembly and could not be resolved in the current runtime.");
+                        continue;
+                    }
+
+                    throw new InvalidOperationException($"Registered skill type '{registeredSkillServiceType}' for capability '{capability.Name}' could not be resolved.");
                 }
 
                 var service = owner.services.GetService(serviceType);
                 if (service is null)
                 {
-                    throw new InvalidOperationException($"Registered skill type '{configuration.RegisteredSkillServiceType}' for capability '{capability.Name}' is not available in DI.");
+                    if (owner.IsRetiredRegisteredSkillServiceType(registeredSkillServiceType))
+                    {
+                        owner.LogSkippedRetiredRegisteredSkill(
+                            capability.Name,
+                            registeredSkillServiceType,
+                            "points to the retired sandbox assembly and is no longer registered in DI.");
+                        continue;
+                    }
+
+                    throw new InvalidOperationException($"Registered skill type '{registeredSkillServiceType}' for capability '{capability.Name}' is not available in DI.");
                 }
 
                 if (service is AgentSkill singleSkill)
@@ -165,7 +193,7 @@ public sealed partial class MafAgentRuntime
                     continue;
                 }
 
-                throw new InvalidOperationException($"Registered skill service '{configuration.RegisteredSkillServiceType}' for capability '{capability.Name}' is not an AgentSkill.");
+                throw new InvalidOperationException($"Registered skill service '{registeredSkillServiceType}' for capability '{capability.Name}' is not an AgentSkill.");
             }
 
             return resolved;
@@ -176,5 +204,53 @@ public sealed partial class MafAgentRuntime
             var configuration = DeserializeConfiguration<SkillCapabilityConfiguration>(capability.ConfigurationJson);
             return configuration?.ScriptExecution?.ApprovalRequired ?? configuration?.ScriptApproval == true;
         }
+    }
+
+    private bool IsRetiredRegisteredSkillCapability(CapabilityCatalogItem capability, string? serviceTypeName)
+    {
+        if (string.Equals(capability.Key, "workspace-delivery-skill", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(capability.Name, "Workspace Delivery Skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
+            capability.EndpointOrPath.Contains("CanDoItAll.AgentFramework.Sandbox", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(capability.ConfigurationJson) &&
+            capability.ConfigurationJson.Contains("WorkspaceDeliverySkill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IsRetiredRegisteredSkillServiceType(serviceTypeName);
+    }
+
+    private bool IsRetiredRegisteredSkillServiceType(string? serviceTypeName)
+    {
+        return !string.IsNullOrWhiteSpace(serviceTypeName) &&
+               serviceTypeName.Trim().Contains("CanDoItAll.AgentFramework.Sandbox", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void LogSkippedRetiredRegisteredSkill(
+        string capabilityName,
+        string serviceTypeName,
+        string reason)
+    {
+        if (services.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory)) is not Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
+        {
+            return;
+        }
+
+        var logger = loggerFactory.CreateLogger(nameof(MafAgentRuntime));
+        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(
+            logger,
+            "Skipping retired registered skill capability {CapabilityName} because service type {ServiceType} {Reason}",
+            capabilityName,
+            serviceTypeName,
+            reason);
     }
 }

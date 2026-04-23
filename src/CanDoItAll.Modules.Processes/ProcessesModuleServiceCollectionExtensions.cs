@@ -1,4 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -6,8 +8,13 @@ namespace CanDoItAll.Modules.Processes;
 
 public static class ProcessesModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddProcessesModule(this IServiceCollection services)
+    public static IServiceCollection AddProcessesModule(this IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+        var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
+            configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
+            configuration["LaneKind"]);
+
         services.AddOptions<ProcessTemplatePackOptions>()
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddScoped<ProcessesService>();
@@ -34,9 +41,14 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessCatalogWarmupService>();
         services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();
         services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
-        services.AddHostedService<ProcessCatalogWarmupWorker>();
-        services.AddHostedService<ProcessOutboxDrainWorker>();
-        services.AddHostedService<ProcessRunRecoveryWorker>();
+
+        if (backgroundWorkersEnabled)
+        {
+            services.AddHostedService<ProcessCatalogWarmupWorker>();
+            services.AddHostedService<ProcessOutboxDrainWorker>();
+            services.AddHostedService<ProcessRunRecoveryWorker>();
+        }
+
         return services;
     }
 }

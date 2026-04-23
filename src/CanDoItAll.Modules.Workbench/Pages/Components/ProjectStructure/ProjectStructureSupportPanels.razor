@@ -5,7 +5,8 @@
 
 <Stack GapScale="LayoutGap.Large"
        Class="w-full">
-    <PanelCard Class="w-full project-structure-support-card project-structure-support-card--outline">
+    <PanelCard Class="w-full project-structure-support-card project-structure-support-card--outline"
+               data-testid="project-structure-outline-panel">
         <Stack GapScale="LayoutGap.Small"
                Class="w-full">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Outline" />
@@ -14,7 +15,8 @@
                       AriaLabel="Project object index"
                       Class="w-full"
                       OnSelect="OnSelectNode"
-                      OnToggle="HandleIgnoredToggleAsync" />
+                      OnToggle="HandleIgnoredToggleAsync"
+                      OnContextMenu="HandleNodeContextMenuAsync" />
         </Stack>
     </PanelCard>
 
@@ -36,7 +38,43 @@
     </PanelCard>
 </Stack>
 
+@if (outlineContextMenu is not null)
+{
+    <button type="button"
+            class="project-structure-outline-context-menu__scrim"
+            aria-label="Close outline context menu"
+            @onclick="CloseOutlineContextMenu" />
+    <div class="project-structure-outline-context-menu"
+         data-testid="project-structure-outline-context-menu"
+         style="@BuildOutlineContextMenuStyle(outlineContextMenu)">
+        <div class="project-structure-outline-context-menu__header">
+            <span class="project-structure-outline-context-menu__eyebrow">Node actions</span>
+            <strong class="project-structure-outline-context-menu__title">@outlineContextMenu.NodeTitle</strong>
+        </div>
+        <div class="project-structure-outline-context-menu__actions">
+            @foreach (var action in outlineContextMenu.Actions)
+            {
+                <button type="button"
+                        class="project-structure-outline-context-menu__action"
+                        data-tone="@action.Tone"
+                        data-testid="@($"project-structure-outline-context-action-{BuildActionTestId(action.ActionId)}")"
+                        @onclick="@(() => ExecuteOutlineContextActionAsync(action.ActionId))">
+                    <Icon Name="@action.Icon" />
+                    <span>@action.Label</span>
+                </button>
+            }
+        </div>
+    </div>
+}
+
 @code {
+    private sealed record OutlineContextMenuState(
+        string NodeId,
+        string NodeTitle,
+        double ClientX,
+        double ClientY,
+        IReadOnlyList<ProjectStructureSupportPanelContextAction> Actions);
+
     [Parameter, EditorRequired]
     public IReadOnlyList<ProjectStructureNode> Nodes { get; set; } = [];
 
@@ -46,11 +84,20 @@
     [Parameter]
     public EventCallback<string> OnSelectNode { get; set; }
 
+    [Parameter]
+    public Func<ProjectStructureNode, IReadOnlyList<ProjectStructureSupportPanelContextAction>> ResolveContextActions { get; set; }
+        = _ => [];
+
+    [Parameter]
+    public EventCallback<ProjectStructureSupportPanelContextActionRequest> OnExecuteNodeContextAction { get; set; }
+
     private int TotalNodes => Nodes.Count;
 
     private int TotalLinks { get; set; }
 
     private int SelectedCount => SelectedNodeIds.Count;
+
+    private OutlineContextMenuState? outlineContextMenu;
 
     [Parameter]
     public int LinkCount
@@ -75,6 +122,68 @@
 
     private Task HandleIgnoredToggleAsync(string _)
         => Task.CompletedTask;
+
+    private async Task HandleNodeContextMenuAsync(TreeViewNodeContextMenuRequest request)
+    {
+        var node = Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, request.NodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            outlineContextMenu = null;
+            return;
+        }
+
+        var actions = ResolveContextActions(node)
+            .Where(action => !string.IsNullOrWhiteSpace(action.ActionId) && !string.IsNullOrWhiteSpace(action.Label))
+            .ToList();
+        if (actions.Count == 0)
+        {
+            outlineContextMenu = null;
+            return;
+        }
+
+        outlineContextMenu = new OutlineContextMenuState(
+            node.Id,
+            node.Title,
+            request.ClientX,
+            request.ClientY,
+            actions);
+        await OnSelectNode.InvokeAsync(node.Id);
+    }
+
+    private void CloseOutlineContextMenu()
+        => outlineContextMenu = null;
+
+    private async Task ExecuteOutlineContextActionAsync(string actionId)
+    {
+        if (outlineContextMenu is null || string.IsNullOrWhiteSpace(actionId))
+        {
+            return;
+        }
+
+        var request = new ProjectStructureSupportPanelContextActionRequest(outlineContextMenu.NodeId, actionId);
+        outlineContextMenu = null;
+        await OnExecuteNodeContextAction.InvokeAsync(request);
+    }
+
+    private static string BuildOutlineContextMenuStyle(OutlineContextMenuState state)
+        => $"left:min(max(0.75rem, {Math.Round(state.ClientX)}px), calc(100vw - 21rem));top:min(max(0.75rem, {Math.Round(state.ClientY)}px), calc(100vh - 24rem));max-height:min(24rem, calc(100vh - 1.5rem));";
+
+    private static string BuildActionTestId(string actionId)
+    {
+        var sanitized = string.Concat(
+            actionId
+                .Trim()
+                .ToLowerInvariant()
+                .Select(character => char.IsLetterOrDigit(character) ? character : '-'));
+
+        while (sanitized.Contains("--", StringComparison.Ordinal))
+        {
+            sanitized = sanitized.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        sanitized = sanitized.Trim('-');
+        return string.IsNullOrWhiteSpace(sanitized) ? "action" : sanitized;
+    }
 
     private static string ResolveOutlineIcon(ProjectStructureNode node)
     {

@@ -6,6 +6,8 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -13,8 +15,13 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public static class AgentFrameworkModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services)
+    public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+        var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
+            configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
+            configuration["LaneKind"]);
+
         services.AddSingleton<IProviderProfileService, ProviderProfileService>();
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
@@ -38,8 +45,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<ScenarioHarnessService>();
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
-        services.AddHostedService<AgentFrameworkCatalogWarmupWorker>();
-        services.AddHostedService<AgentFrameworkExecutionRecoveryWorker>();
+
+        if (backgroundWorkersEnabled)
+        {
+            services.AddHostedService<AgentFrameworkCatalogWarmupWorker>();
+            services.AddHostedService<AgentFrameworkExecutionRecoveryWorker>();
+        }
+
         return services;
     }
 }

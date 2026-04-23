@@ -1,0 +1,94 @@
+.project-structure-outline-context-menu__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 1590;
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.project-structure-outline-context-menu {
+    position: fixed;
+    z-index: 1600;
+    min-width: 14rem;
+    max-width: min(20rem, calc(100vw - 2rem));
+    transform: translate(0.35rem, 0.35rem);
+    border: 1px solid rgba(148, 163, 184, 0.38);
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 28px 64px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+}
+
+.project-structure-outline-context-menu__header {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.8rem 0.9rem 0.7rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.92));
+}
+
+.project-structure-outline-context-menu__eyebrow {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(71, 85, 105, 0.88);
+}
+
+.project-structure-outline-context-menu__title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.94);
+}
+
+.project-structure-outline-context-menu__actions {
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.35rem;
+    overflow: auto;
+}
+
+.project-structure-outline-context-menu__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    border: 0;
+    border-radius: 0.7rem;
+    background: transparent;
+    color: rgba(15, 23, 42, 0.88);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.7rem 0.8rem;
+    text-align: left;
+    transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.project-structure-outline-context-menu__action:hover {
+    background: rgba(241, 245, 249, 0.92);
+    transform: translateX(1px);
+}
+
+.project-structure-outline-context-menu__action:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
+}
+
+.project-structure-outline-context-menu__action[data-tone="mint"] {
+    color: rgba(5, 122, 85, 0.96);
+}
+
+.project-structure-outline-context-menu__action[data-tone="accent"] {
+    color: rgba(29, 78, 216, 0.94);
+}
+
+.project-structure-outline-context-menu__action[data-tone="warn"] {
+    color: rgba(180, 83, 9, 0.96);
+}
+
+.project-structure-outline-context-menu__action[data-tone="danger"] {
+    color: rgba(190, 24, 93, 0.96);
+}

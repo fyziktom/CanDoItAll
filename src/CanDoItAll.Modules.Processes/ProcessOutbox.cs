@@ -111,8 +111,10 @@ public sealed class ProcessOutboxService(
 {
     private const int MaxAttempts = 3;
     private const int DefaultBatchSize = 20;
+    private const string AutomationDispatchCommandKey = "dispatch-run-automation";
     private static readonly JsonSerializerOptions PayloadSerializerOptions = new(JsonSerializerDefaults.Web);
-    private static readonly TimeSpan DefaultLeaseDuration = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan DefaultLeaseDuration = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan AutomationDispatchLeaseDuration = TimeSpan.FromMinutes(30);
 
     public Task<Guid> EnqueueDefinitionSaveAsync(
         AppDbContext dbContext,
@@ -259,7 +261,7 @@ public sealed class ProcessOutboxService(
             projectId,
             definitionId,
             runId,
-            "dispatch-run-automation",
+            AutomationDispatchCommandKey,
             new ProcessOutboxPayload(
                 null,
                 null,
@@ -527,7 +529,25 @@ public sealed class ProcessOutboxService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var leaseToken = Guid.NewGuid().ToString("N");
-        var leaseExpiresAtUtc = now.Add(leaseDuration);
+        var commandKey = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Select(item => item.CommandKey)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(commandKey))
+        {
+            return null;
+        }
+
+        var claimLeaseDuration = ResolveClaimLeaseDuration(commandKey, leaseDuration);
+        var leaseExpiresAtUtc = now.Add(claimLeaseDuration);
+        if (string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal))
+        {
+            logger.LogInformation(
+                "Claiming process automation dispatch outbox record {OutboxId} with lease duration {LeaseDuration}.",
+                outboxId,
+                claimLeaseDuration);
+        }
+
         var updatedRows = dbContext.Database.IsSqlite()
             ? await TryClaimRecordForSqliteAsync(
                 dbContext,
@@ -551,6 +571,17 @@ public sealed class ProcessOutboxService(
         return updatedRows == 0
             ? null
             : leaseToken;
+    }
+
+    internal static TimeSpan ResolveClaimLeaseDuration(string commandKey, TimeSpan requestedLeaseDuration)
+    {
+        if (string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal) &&
+            requestedLeaseDuration < AutomationDispatchLeaseDuration)
+        {
+            return AutomationDispatchLeaseDuration;
+        }
+
+        return requestedLeaseDuration;
     }
 
     private static Task<List<Guid>> ListPendingRecordIdsForSqliteAsync(
@@ -654,6 +685,14 @@ public sealed class ProcessOutboxDrainWorker(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 return;
+            }
+            catch (Exception exception) when (SqliteWriteCoordination.IsBusy(exception))
+            {
+                logger.LogWarning(
+                    exception,
+                    "ProcessOutboxDrainWorker hit transient SQLite contention. The worker will retry after {FailureBackoff}.",
+                    FailureBackoff);
+                await Task.Delay(FailureBackoff, stoppingToken);
             }
             catch (Exception exception)
             {

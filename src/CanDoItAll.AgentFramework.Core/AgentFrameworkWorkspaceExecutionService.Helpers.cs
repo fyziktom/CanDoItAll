@@ -285,7 +285,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : $"{cleaned[..45]}...";
     }
 
-    private static ExecutionRunRecord CreatePreparingRun(
+    private ExecutionRunRecord CreatePreparingRun(
         AgentDefinition agent,
         ProviderProfile provider,
         Guid? chatSessionId,
@@ -317,7 +317,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             InputSummary: CreateExecutionSummary(prompt),
             ResultSummary: string.Empty,
             ProviderName: provider.Name,
-            Model: ResolveModel(agent, provider),
+            Model: ResolveEffectiveManagedSeedModel(agent, provider),
             State: ExecutionState.Preparing,
             Outcome: null,
             CreatedAtUtc: now,
@@ -353,18 +353,57 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("The selected agent does not have a provider profile.");
         }
 
-        if (catalog is not null &&
-            providerRegistry is ICatalogShadowProviderProfileRegistry catalogShadowProviderRegistry)
+        var registryProvider = await providerRegistry.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken);
+        var catalogShadowProvider = catalog is not null &&
+                                    providerRegistry is ICatalogShadowProviderProfileRegistry catalogShadowProviderRegistry
+            ? catalogShadowProviderRegistry.TryGetProviderFromCatalog(catalog, agent.ProviderProfileId.Value)
+            : null;
+
+        var preferredProvider = ManagedSeedProviderFallbacks.ResolvePreferredProvider(
+            agent,
+            registryProvider,
+            catalogShadowProvider);
+        if (ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent))
         {
-            var shadowProvider = catalogShadowProviderRegistry.TryGetProviderFromCatalog(catalog, agent.ProviderProfileId.Value);
-            if (shadowProvider is not null)
-            {
-                return shadowProvider;
-            }
+            preferredProvider = ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(
+                preferredProvider,
+                isManagedSqliteProfile: true);
         }
 
-        return await providerRegistry.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken)
-            ?? throw new InvalidOperationException("The selected agent does not have a provider profile.");
+        return ApplyCredentialAwareManagedSeedFallback(agent, preferredProvider);
+    }
+
+    private ProviderProfile ApplyCredentialAwareManagedSeedFallback(
+        AgentDefinition agent,
+        ProviderProfile provider)
+    {
+        return ManagedSeedProviderFallbacks.Apply(
+            agent,
+            provider,
+            ResolveOpenAiCredentialOverride(provider));
+    }
+
+    private string ResolveEffectiveManagedSeedModel(
+        AgentDefinition agent,
+        ProviderProfile provider)
+    {
+        return ManagedSeedProviderFallbacks.ResolveModel(
+            agent,
+            provider,
+            ResolveOpenAiCredentialOverride(provider));
+    }
+
+    private string ResolveOpenAiCredentialOverride(
+        ProviderProfile provider)
+    {
+        if (provider.Kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
+        {
+            return "resolved";
+        }
+
+        return providerCredentialResolver.Resolve(provider).IsResolved
+            ? "resolved"
+            : string.Empty;
     }
 
     private static ChatSessionRecord EnsureAgentOwnsSession(

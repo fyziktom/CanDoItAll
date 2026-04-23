@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Components.BaseLib
+@using Microsoft.AspNetCore.Components.Web
 
 <li class="cda-treeview__item"
     role="treeitem"
@@ -26,7 +27,9 @@
                 title="@ResolveTooltip()"
                 data-testid="@ResolveDataTestId()"
                 disabled="@Node.IsDisabled"
-                @onclick="HandleRowClickAsync">
+                @onclick="HandleRowClickAsync"
+                @oncontextmenu="HandleContextMenuAsync"
+                @oncontextmenu:preventDefault="true">
             @if (!string.IsNullOrWhiteSpace(Node.Icon))
             {
                 <span class="cda-treeview__icon" aria-hidden="true">
@@ -54,7 +57,8 @@
                                  Level="@(Level + 1)"
                                  Style="@Style"
                                  OnSelect="OnSelect"
-                                 OnToggle="OnToggle" />
+                                 OnToggle="OnToggle"
+                                 OnContextMenu="OnContextMenu" />
             }
         </ul>
     }
@@ -75,6 +79,9 @@
 
     [Parameter]
     public EventCallback<string> OnToggle { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeViewNodeContextMenuRequest> OnContextMenu { get; set; }
 
     private Task HandleToggleAsync()
     {
@@ -99,6 +106,19 @@
         }
 
         return OnSelect.InvokeAsync(Node.Id);
+    }
+
+    private Task HandleContextMenuAsync(MouseEventArgs args)
+    {
+        if (Node.IsDisabled || !OnContextMenu.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnContextMenu.InvokeAsync(new TreeViewNodeContextMenuRequest(
+            Node.Id,
+            args.ClientX,
+            args.ClientY));
     }
 
     private string ResolveRowCssClass()

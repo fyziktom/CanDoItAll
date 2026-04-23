@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
@@ -15,8 +16,15 @@ public interface IAgentFrameworkOrganizationCatalogRepairService
 internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    IProviderProfileService providerProfileService) : IAgentFrameworkOrganizationCatalogRepairService
+    IProviderProfileService providerProfileService,
+    IAgentProviderCredentialResolver providerCredentialResolver) : IAgentFrameworkOrganizationCatalogRepairService
 {
+    private static readonly IReadOnlySet<string> ManagedSeedOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "OpenAI default",
+        "OpenAI chat completions"
+    };
+
     public async Task EnsureCurrentOrganizationCatalogAsync(CancellationToken cancellationToken = default)
     {
         await EnsureCurrentOrganizationCatalogCoreAsync(cancellationToken);
@@ -34,6 +42,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .ToListAsync(cancellationToken);
         if (aiPartyIds.Count == 0)
         {
+            await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
@@ -43,12 +52,14 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .ToListAsync(cancellationToken);
         if (CurrentWorkspaceAlreadyOwnsProjectedAgents(currentAgents, aiPartyIds, boundBindings))
         {
+            await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
         var legacyScopeKeys = GetLegacyOrganizationScopeKeys();
         if (legacyScopeKeys.Count == 0)
         {
+            await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
@@ -115,6 +126,116 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 });
             }
         }
+
+        await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+    }
+
+    private async Task RepairManagedSqliteSeedAgentAssignmentsAsync(
+        IAgentFrameworkWorkspaceService currentWorkspace,
+        CancellationToken cancellationToken)
+    {
+        var providers = (await currentWorkspace.ListProvidersAsync(cancellationToken)).ToList();
+        var fallbackProvider = providers.FirstOrDefault(IsManagedSeedFallbackProvider);
+        if (fallbackProvider is null)
+        {
+            return;
+        }
+
+        if (HasAvailableOpenAiCredentials(providers))
+        {
+            return;
+        }
+
+        var agents = await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agentsNeedingRepair = agents
+            .Where(RequiresManagedSeedFallbackRepair)
+            .Where(agent =>
+                agent.ProviderProfileId != fallbackProvider.Id ||
+                !string.Equals(agent.Model, ManagedSeedProviderFallbacks.FallbackModel, StringComparison.Ordinal))
+            .ToList();
+        if (agentsNeedingRepair.Count == 0)
+        {
+            return;
+        }
+
+        var store = new FileSandboxWorkspaceStore(
+            workspaceFactory.GetWorkspaceRoot(),
+            workspaceFactory.GetOrganizationScope());
+        var agentIdsNeedingRepair = agentsNeedingRepair
+            .Select(agent => agent.Id)
+            .ToHashSet();
+        var updatedAtUtc = DateTimeOffset.UtcNow;
+        await store.UpdateCatalogAsync(catalog => catalog with
+        {
+            Agents = catalog.Agents
+                .Select(agent => agentIdsNeedingRepair.Contains(agent.Id)
+                    ? agent with
+                    {
+                        ProviderProfileId = fallbackProvider.Id,
+                        Model = ManagedSeedProviderFallbacks.FallbackModel,
+                        UpdatedAtUtc = updatedAtUtc
+                    }
+                    : agent)
+                .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+        }, cancellationToken);
+    }
+
+    private bool HasAvailableOpenAiCredentials(
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        var openAiProviders = providers
+            .Where(IsManagedSeedOpenAiProvider)
+            .ToList();
+        if (openAiProviders.Count == 0)
+        {
+            return providerCredentialResolver.Resolve(CreateBootstrapOpenAiProvider()).IsResolved;
+        }
+
+        return openAiProviders.Any(provider => providerCredentialResolver.Resolve(provider).IsResolved);
+    }
+
+    private static bool RequiresManagedSeedFallbackRepair(
+        AgentDefinition agent)
+    {
+        return ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent);
+    }
+
+    private static bool IsManagedSeedOpenAiProvider(
+        ProviderProfile provider)
+    {
+        return provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+               ManagedSeedOpenAiProviderNames.Contains(provider.Name);
+    }
+
+    private static bool IsManagedSeedFallbackProvider(
+        ProviderProfile provider)
+    {
+        return provider.Kind == ProviderKind.Ollama &&
+               string.Equals(provider.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(provider.BaseUrl, ManagedSeedProviderFallbacks.FallbackBaseUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ProviderProfile CreateBootstrapOpenAiProvider()
+    {
+        return new ProviderProfile(
+            Id: Guid.Empty,
+            Name: "OpenAI default",
+            Kind: ProviderKind.OpenAi,
+            BaseUrl: "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable: "OPENAI_API_KEY",
+            DefaultModel: "gpt-4.1",
+            Transport: ProviderTransportKind.Responses,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: true,
+            ConfigurationJson: "{\"history\":\"service-managed\"}",
+            Notes: "Managed-seed OpenAI bootstrap probe.",
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: ["gpt-4.1"]);
     }
 
     private IReadOnlyList<string> GetLegacyOrganizationScopeKeys()

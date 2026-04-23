@@ -26,6 +26,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
     IProviderProfileService providerProfileService,
     IProviderProfileRegistry providerProfileRegistry,
+    IAgentProviderCredentialResolver providerCredentialResolver,
     ICapabilityProofService capabilityProofService) : ICanDoItAllAgentWorkspaceFactory
 {
     private readonly Dictionary<string, IAgentFrameworkWorkspaceService> workspaceServices = new(StringComparer.Ordinal);
@@ -67,6 +68,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             capabilityProofService,
             providerProfileService,
             providerProfileRegistry,
+            providerCredentialResolver,
             providerDiagnosticsService,
             governanceBridge,
             new NullAgentExecutionEventSink(),

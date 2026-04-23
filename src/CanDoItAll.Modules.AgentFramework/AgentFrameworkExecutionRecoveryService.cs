@@ -15,10 +15,15 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
     private const string RestartRecoveryMessage = "Execution interrupted because the CanDoItAll host restarted before the run completed.";
 
     public async Task<int> RecoverInterruptedRunsAsync(CancellationToken cancellationToken = default)
+        => await RecoverInterruptedRunsAsync(DateTimeOffset.UtcNow, cancellationToken);
+
+    internal async Task<int> RecoverInterruptedRunsAsync(
+        DateTimeOffset startupCutoffUtc,
+        CancellationToken cancellationToken = default)
     {
         var executionState = await workspaceStore.LoadExecutionAsync(cancellationToken);
         var strandedRunIds = executionState.ExecutionRuns
-            .Where(IsInterruptedRun)
+            .Where(run => IsInterruptedRun(run, startupCutoffUtc))
             .Select(item => item.Id)
             .ToList();
         if (strandedRunIds.Count == 0)
@@ -32,7 +37,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
             cancellationToken.ThrowIfCancellationRequested();
 
             var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
-            if (detail is null || !IsInterruptedRun(detail.Run) || HasResumableApprovals(detail))
+            if (detail is null || !IsInterruptedRun(detail.Run, startupCutoffUtc) || HasResumableApprovals(detail))
             {
                 continue;
             }
@@ -82,10 +87,11 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         return repairedCount;
     }
 
-    private static bool IsInterruptedRun(ExecutionRunRecord run)
+    private static bool IsInterruptedRun(ExecutionRunRecord run, DateTimeOffset startupCutoffUtc)
     {
         return run.State is not ExecutionState.Completed
-               and not ExecutionState.Failed;
+               and not ExecutionState.Failed
+               && run.CreatedAtUtc <= startupCutoffUtc;
     }
 
     private static bool HasResumableApprovals(ExecutionRunDetail detail)

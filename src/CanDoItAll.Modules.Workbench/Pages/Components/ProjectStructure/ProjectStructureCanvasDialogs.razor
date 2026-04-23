@@ -309,7 +309,7 @@
     </ProjectStructureOverlayDialog>
 }
 
-@if (ProcessStartDialog is not null)
+@if (RenderProcessStartDialog && ProcessStartDialog is not null)
 {
     var startDialog = ProcessStartDialog;
     var isStaffingStage = startDialog.Stage == ProjectStructureProcessStartStage.Staffing;
@@ -320,8 +320,7 @@
     const string processStartRequestHrKey = "project-structure-process-start-request-hr";
     const string processStartContinueKey = "project-structure-process-start-continue";
 
-    <ProjectStructureOverlayDialog CanvasScoped="true"
-                                   AriaLabel="@startDialog.Title"
+    <ProjectStructureOverlayDialog AriaLabel="@startDialog.Title"
                                    Kicker="Process start"
                                    Title="@startDialog.Title"
                                    Summary="@startDialog.Copy"
@@ -712,6 +711,9 @@
 
     [Parameter]
     public EventCallback ExecuteProcessLink { get; set; }
+
+    [Parameter]
+    public bool RenderProcessStartDialog { get; set; } = true;
 
     [Parameter]
     public ProjectStructureProcessStartDialogState? ProcessStartDialog { get; set; }

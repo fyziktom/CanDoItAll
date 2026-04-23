@@ -298,7 +298,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        var providerNames = providers.ToDictionary(item => item.Id, item => item.Name);
+        var providersById = providers.ToDictionary(item => item.Id);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var bindings = await dbContext.Set<AiResourceBinding>()
@@ -326,18 +326,15 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             }
 
             var metadata = AgentFrameworkCrmHrMetadata.Read(resolved.Agent.ConfigurationJson);
-            var resolvedModel = string.IsNullOrWhiteSpace(resolved.Agent.Model)
-                ? resolved.Agent.ProviderProfileId is Guid providerId
-                    ? providers.FirstOrDefault(item => item.Id == providerId)?.DefaultModel ?? string.Empty
-                    : string.Empty
-                : resolved.Agent.Model;
+            var effectiveProvider = ResolveEffectiveProvider(resolved.Agent, providersById);
+            var resolvedModel = ResolveEffectiveModel(resolved.Agent, effectiveProvider);
             var capabilityCount = ResolveCapabilityCount(metadata, resolved.Agent);
             result[partyId] = new AiTechnicalAgentDirectorySummary(
                 resolved.Agent.Id,
                 resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Bound,
                 ResolveBindingSummary(resolved.Binding, missingAgent: false),
                 ResolveExecutionMode(metadata, resolved.Agent),
-                resolved.Agent.ProviderProfileId is Guid resolvedProviderId ? providerNames.GetValueOrDefault(resolvedProviderId) ?? string.Empty : string.Empty,
+                effectiveProvider?.Name ?? string.Empty,
                 resolvedModel,
                 capabilityCount,
                 true,
@@ -369,14 +366,15 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         var metadata = resolved.Agent is null
             ? null
             : AgentFrameworkCrmHrMetadata.Read(resolved.Agent.ConfigurationJson);
-        var providerName = resolved.Agent?.ProviderProfileId is Guid providerId
-            ? providerOptions.FirstOrDefault(item => item.Id == providerId)?.Name ?? string.Empty
-            : string.Empty;
-        var defaultModel = string.IsNullOrWhiteSpace(resolved.Agent?.Model)
-            ? resolved.Agent?.ProviderProfileId is Guid resolvedProviderId
-                ? providerOptions.FirstOrDefault(item => item.Id == resolvedProviderId)?.DefaultModel ?? string.Empty
-                : string.Empty
-            : resolved.Agent.Model;
+        var effectiveProvider = resolved.Agent is null
+            ? null
+            : ResolveEffectiveProvider(
+                resolved.Agent,
+                providers.ToDictionary(item => item.Id));
+        var providerName = effectiveProvider?.Name ?? string.Empty;
+        var defaultModel = resolved.Agent is null
+            ? string.Empty
+            : ResolveEffectiveModel(resolved.Agent, effectiveProvider);
         var capabilityNamesById = capabilities.ToDictionary(item => item.Id, item => item.Name);
         var resolvedCapabilities = ResolveCapabilities(metadata, resolved.Agent, capabilityNamesById);
 
@@ -425,7 +423,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         }
 
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        var providerNames = providers.ToDictionary(item => item.Id, item => item.Name);
+        var providersById = providers.ToDictionary(item => item.Id);
         var capabilities = await workspaceService.ListCapabilitiesAsync(cancellationToken);
         var capabilityNamesById = capabilities.ToDictionary(item => item.Id, item => item.Name);
 
@@ -467,11 +465,8 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
 
             var metadata = AgentFrameworkCrmHrMetadata.Read(resolved.Agent.ConfigurationJson);
             var resolvedCapabilities = ResolveCapabilities(metadata, resolved.Agent, capabilityNamesById);
-            var resolvedModel = string.IsNullOrWhiteSpace(resolved.Agent.Model)
-                ? resolved.Agent.ProviderProfileId is Guid providerId
-                    ? providers.FirstOrDefault(item => item.Id == providerId)?.DefaultModel ?? string.Empty
-                    : string.Empty
-                : resolved.Agent.Model;
+            var effectiveProvider = ResolveEffectiveProvider(resolved.Agent, providersById);
+            var resolvedModel = ResolveEffectiveModel(resolved.Agent, effectiveProvider);
 
             result[partyId] = new AiAgentStaffingFactModel(
                 partyId,
@@ -483,7 +478,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Bound,
                 ResolveBindingSummary(resolved.Binding, missingAgent: false),
                 ResolveExecutionMode(metadata, resolved.Agent),
-                resolved.Agent.ProviderProfileId is Guid resolvedProviderId ? providerNames.GetValueOrDefault(resolvedProviderId) ?? string.Empty : string.Empty,
+                effectiveProvider?.Name ?? string.Empty,
                 resolvedModel,
                 resolved.Agent.TemplateKey,
                 resolved.Agent.Tags,
@@ -749,5 +744,32 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 Notes = item.ProofNotes
             })
             .ToList();
+    }
+
+    private static ProviderProfile? ResolveEffectiveProvider(
+        AgentDefinition agent,
+        IReadOnlyDictionary<Guid, ProviderProfile> providersById)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+        ArgumentNullException.ThrowIfNull(providersById);
+
+        if (!agent.ProviderProfileId.HasValue ||
+            !providersById.TryGetValue(agent.ProviderProfileId.Value, out var provider))
+        {
+            return null;
+        }
+
+        return ManagedSeedProviderFallbacks.Apply(agent, provider);
+    }
+
+    private static string ResolveEffectiveModel(
+        AgentDefinition agent,
+        ProviderProfile? provider)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+
+        return provider is null
+            ? string.Empty
+            : ManagedSeedProviderFallbacks.ResolveModel(agent, provider);
     }
 }
