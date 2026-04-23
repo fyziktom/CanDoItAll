@@ -1,0 +1,23 @@
+@namespace CanDoItAll.Space3D.Mouse.Sandbox.Components
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/material-icons.css"]" />
+    <WebGlLibHeadAssets />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/output.css"]" />
+    <link rel="stylesheet" href="@Assets["space3d-mouse-sandbox.css"]" />
+    <link rel="stylesheet" href="@Assets["CanDoItAll.Space3D.Mouse.Sandbox.styles.css"]" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <WebGlLibBodyAssets />
+    <script src="_framework/blazor.web.js"></script>
+</body>
+
+</html>
