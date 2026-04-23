@@ -78,8 +78,17 @@ export function isBranchNode(node) {
     return (node?.kind || "").includes("branch");
 }
 
+export function isVisualGuideNode(node) {
+    const kind = (node?.kind || "").toLowerCase();
+    return kind.includes("arrow") ||
+        kind.includes("axis") ||
+        kind.includes("neutral") ||
+        kind.includes("plane") ||
+        kind.includes("pointer");
+}
+
 export function isProcessStepNode(node) {
-    return !isRoleNode(node) && !isBranchNode(node);
+    return !isVisualGuideNode(node) && !isRoleNode(node) && !isBranchNode(node);
 }
 
 function resolveAnchorFrame(node) {
@@ -200,16 +209,21 @@ export function createDefaultCameraState(surface) {
     };
 }
 
-export function normalizeState(surface, existingCameraState) {
+export function normalizeState(surface, existingCameraState, preserveCameraState = false) {
     const uiState = surface.uiState || {};
     surface.uiState = uiState;
     uiState.camera = uiState.camera || {};
     const defaults = createDefaultCameraState(surface);
     const existing = existingCameraState || defaults;
-    const viewMode = resolveCameraViewMode(surface, existing?.projectionMode || defaults.projectionMode);
+    const camera = preserveCameraState && existingCameraState
+        ? existing
+        : uiState.camera;
+    const viewMode = preserveCameraState && existingCameraState
+        ? normalizeCameraViewMode(existing.viewMode, existing.projectionMode || defaults.projectionMode)
+        : resolveCameraViewMode(surface, existing?.projectionMode || defaults.projectionMode);
     const projectionMode = resolveProjectionModeForViewMode(viewMode);
-    const zoom = clamp(resolveFiniteNumber(uiState.camera.zoom, resolveFiniteNumber(existing.zoom, defaults.zoom)), 0.2, 2.5);
-    const explicitDistance = resolveFiniteNumber(uiState.camera.distance, Number.NaN);
+    const zoom = clamp(resolveFiniteNumber(camera.zoom, resolveFiniteNumber(existing.zoom, defaults.zoom)), 0.2, 2.5);
+    const explicitDistance = resolveFiniteNumber(camera.distance, Number.NaN);
     const distance = projectionMode === projectionModes.perspective
         ? Number.isFinite(explicitDistance)
             ? clampDistance(explicitDistance)
@@ -221,12 +235,12 @@ export function normalizeState(surface, existingCameraState) {
         zoom: projectionMode === projectionModes.perspective
             ? resolvePerspectiveZoom(distance)
             : zoom,
-        targetX: resolveFiniteNumber(uiState.camera.targetX, resolveFiniteNumber(existing.targetX, defaults.targetX)),
-        targetY: resolveFiniteNumber(uiState.camera.targetY, resolveFiniteNumber(existing.targetY, defaults.targetY)),
-        targetZ: resolveFiniteNumber(uiState.camera.targetZ, resolveFiniteNumber(existing.targetZ, defaults.targetZ)),
+        targetX: resolveFiniteNumber(camera.targetX, resolveFiniteNumber(existing.targetX, defaults.targetX)),
+        targetY: resolveFiniteNumber(camera.targetY, resolveFiniteNumber(existing.targetY, defaults.targetY)),
+        targetZ: resolveFiniteNumber(camera.targetZ, resolveFiniteNumber(existing.targetZ, defaults.targetZ)),
         distance,
-        azimuth: resolveFiniteNumber(uiState.camera.azimuth, resolveFiniteNumber(existing.azimuth, defaults.azimuth)),
-        polar: clampPolar(resolveFiniteNumber(uiState.camera.polar, resolveFiniteNumber(existing.polar, defaults.polar)))
+        azimuth: resolveFiniteNumber(camera.azimuth, resolveFiniteNumber(existing.azimuth, defaults.azimuth)),
+        polar: clampPolar(resolveFiniteNumber(camera.polar, resolveFiniteNumber(existing.polar, defaults.polar)))
     };
 }
 

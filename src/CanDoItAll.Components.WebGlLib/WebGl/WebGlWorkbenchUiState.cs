@@ -39,6 +39,8 @@ public sealed class WebGlWorkbenchUiState
 
     public bool IsStageMaximized { get; set; }
 
+    public long CameraRevision { get; set; }
+
     public WebGlWorkbenchCameraState Camera { get; set; } = new();
 
     public static WebGlWorkbenchUiState Parse(string? json)
@@ -84,6 +86,7 @@ public sealed class WebGlWorkbenchUiState
             ShowEdgeLabels = ShowEdgeLabels,
             TransparentGround = TransparentGround,
             IsStageMaximized = IsStageMaximized,
+            CameraRevision = CameraRevision,
             Camera = NormalizeCameraState(Camera)
         };
 

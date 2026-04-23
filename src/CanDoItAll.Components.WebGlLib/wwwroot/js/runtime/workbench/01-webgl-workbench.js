@@ -190,13 +190,13 @@ function scheduleRender(state) {
     });
 }
 
-function syncRuntimeState(state, surface) {
+function syncRuntimeState(state, surface, preserveCameraState = false) {
     state.sourceSurface = structuredClone(surface);
     state.surface = buildRenderSurface(state.sourceSurface, state.chromeState);
     state.surface.uiState = state.sourceSurface.uiState || {};
     state.surface.chrome = state.sourceSurface.chrome || {};
     state.selectedNodeIds = normalizeSelectedNodeIds(state.surface);
-    state.cameraState = normalizeState(state.sourceSurface, state.cameraState);
+    state.cameraState = normalizeState(state.sourceSurface, state.cameraState, preserveCameraState);
     state.diagnostics.deterministicMode = !!state.surface.uiState?.deterministicMode;
     state.diagnostics.projectionMode = state.cameraState.projectionMode;
     state.diagnostics.viewMode = state.cameraState.viewMode;
@@ -584,7 +584,10 @@ root.webglWorkbench = {
         state.diagnostics.updateCount += 1;
         const nextAutoFitKey = buildAutoFitKey(surface);
         const shouldAutoFit = state.lastAutoFitKey !== nextAutoFitKey;
-        syncRuntimeState(state, surface);
+        const currentCameraRevision = Number(state.sourceSurface?.uiState?.cameraRevision) || 0;
+        const nextCameraRevision = Number(surface?.uiState?.cameraRevision) || 0;
+        const preserveCameraState = !shouldAutoFit && currentCameraRevision === nextCameraRevision;
+        syncRuntimeState(state, surface, preserveCameraState);
         if (shouldAutoFit) {
             fitView(state);
             state.lastAutoFitKey = nextAutoFitKey;

@@ -4,6 +4,7 @@ import {
     isBranchNode,
     isProcessStepNode,
     isRoleNode,
+    isVisualGuideNode,
     resolveAnchorPosition,
     resolveFiniteNumber,
     toSceneY
@@ -500,6 +501,226 @@ function createFlowMarker(color, accentColor, position, radius) {
     return group;
 }
 
+function resolveNodePosition(node) {
+    return new THREE.Vector3(
+        Number(node?.x) || 0,
+        toSceneY(node?.y),
+        Number(node?.z) || 0);
+}
+
+function resolveTagValue(node, prefix) {
+    const expectedPrefix = prefix.toLowerCase();
+    for (const tag of node?.tags || []) {
+        const text = String(tag || "");
+        if (text.toLowerCase().startsWith(expectedPrefix)) {
+            return text.slice(prefix.length);
+        }
+    }
+
+    return "";
+}
+
+function registerGuideNodeObject(state, node, group, hitMesh) {
+    group.userData = {
+        nodeId: node.id
+    };
+    state.nodeObjects.set(node.id, group);
+    if (hitMesh) {
+        state.nodeMeshes.push(hitMesh);
+    }
+
+    state.scene.add(group);
+}
+
+function createGuideHitSphere(radius, nodeId) {
+    const hitMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.max(18, radius), 18, 18),
+        new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0,
+            depthWrite: false
+        }));
+    hitMesh.userData = {
+        nodeId
+    };
+    return hitMesh;
+}
+
+function createOriginGuideObject(state, node, colors, frame) {
+    const radius = Math.max(14, Math.min(frame.width, frame.height, frame.depth) * 0.32);
+    const position = resolveNodePosition(node);
+    const group = new THREE.Group();
+    const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 2.05, 26, 26),
+        new THREE.MeshBasicMaterial({
+            color: colors.accent,
+            transparent: true,
+            opacity: 0.14,
+            depthWrite: false
+        }));
+    const core = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 28, 28),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.35 : 0.16,
+            shininess: 90,
+            transparent: true,
+            opacity: 0.96
+        }));
+    const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * 1.45, 2.6, 14, 48),
+        new THREE.MeshBasicMaterial({
+            color: colors.accent,
+            transparent: true,
+            opacity: 0.72
+        }));
+    ring.rotation.x = Math.PI / 2;
+    const hitMesh = createGuideHitSphere(radius * 2.2, node.id);
+    group.add(halo, core, ring, hitMesh);
+    group.position.copy(position);
+    registerGuideNodeObject(state, node, group, hitMesh);
+}
+
+function createPlaneGuideObject(state, node, colors, frame) {
+    const position = resolveNodePosition(node);
+    const group = new THREE.Group();
+    const geometry = new THREE.BoxGeometry(frame.width, frame.height, frame.depth);
+    const cube = new THREE.Mesh(
+        geometry,
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.22 : 0.06,
+            shininess: 70,
+            transparent: true,
+            opacity: 0.84
+        }));
+    const outline = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geometry),
+        new THREE.LineBasicMaterial({
+            color: colors.accent,
+            transparent: true,
+            opacity: 0.78
+        }));
+    const hitMesh = createHitMesh(frame.width * 1.35, frame.height * 1.35, frame.depth * 1.35, node.id);
+    group.add(cube, outline, hitMesh);
+    group.position.copy(position);
+    registerGuideNodeObject(state, node, group, hitMesh);
+}
+
+function createPointerGuideObject(state, node, colors, frame) {
+    const radius = Math.max(14, Math.min(frame.width, frame.height, frame.depth) * 0.36);
+    const position = resolveNodePosition(node);
+    const group = new THREE.Group();
+    const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 1.9, 28, 28),
+        new THREE.MeshBasicMaterial({
+            color: colors.accent,
+            transparent: true,
+            opacity: frame.isSelected ? 0.22 : 0.12,
+            depthWrite: false
+        }));
+    const core = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 32, 32),
+        new THREE.MeshPhongMaterial({
+            color: colors.fill,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.42 : 0.22,
+            shininess: 95,
+            transparent: true,
+            opacity: 0.96
+        }));
+    const hitMesh = createGuideHitSphere(radius * 2.1, node.id);
+    group.add(halo, core, hitMesh);
+    group.position.copy(position);
+    registerGuideNodeObject(state, node, group, hitMesh);
+}
+
+function createArrowGuideObject(state, node, colors, frame) {
+    const startNodeId = resolveTagValue(node, "arrow-start:");
+    const startNode = startNodeId
+        ? state.nodeLookup.get(startNodeId)
+        : null;
+    const start = startNode
+        ? resolveNodePosition(startNode)
+        : new THREE.Vector3(0, 0, 0);
+    const end = resolveNodePosition(node);
+    const delta = end.clone().sub(start);
+    const length = delta.length();
+    if (length < 0.01) {
+        createPointerGuideObject(state, node, colors, frame);
+        return;
+    }
+
+    const direction = delta.clone().normalize();
+    const group = new THREE.Group();
+    const headLength = Math.min(Math.max(22, frame.height * 1.25), length * 0.36);
+    const headRadius = Math.max(9, frame.width * 0.42);
+    const shaftLength = Math.max(1, length - headLength);
+    const shaftRadius = Math.max(3.6, Math.min(8.5, headRadius * 0.36));
+    const rotation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+    const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLength, 18),
+        new THREE.MeshPhongMaterial({
+            color: colors.accent,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.26 : 0.12,
+            shininess: 80,
+            transparent: true,
+            opacity: 0.9
+        }));
+    shaft.position.copy(start.clone().add(direction.clone().multiplyScalar(shaftLength / 2)));
+    shaft.quaternion.copy(rotation);
+
+    const head = new THREE.Mesh(
+        new THREE.ConeGeometry(headRadius, headLength, 26),
+        new THREE.MeshPhongMaterial({
+            color: colors.accent,
+            emissive: new THREE.Color(colors.accent),
+            emissiveIntensity: frame.isSelected ? 0.36 : 0.18,
+            shininess: 92,
+            transparent: true,
+            opacity: 0.96
+        }));
+    head.position.copy(start.clone().add(direction.clone().multiplyScalar(shaftLength + (headLength / 2))));
+    head.quaternion.copy(rotation);
+
+    const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(headRadius * 1.35, 20, 20),
+        new THREE.MeshBasicMaterial({
+            color: colors.accent,
+            transparent: true,
+            opacity: frame.isSelected ? 0.2 : 0.1,
+            depthWrite: false
+        }));
+    halo.position.copy(end);
+
+    const hitMesh = createGuideHitSphere(Math.max(headRadius * 1.6, 18), node.id);
+    hitMesh.position.copy(end);
+    group.add(shaft, head, halo, hitMesh);
+    registerGuideNodeObject(state, node, group, hitMesh);
+}
+
+function tryCreateGuideNodeObject(state, node, colors, frame) {
+    if (!isVisualGuideNode(node)) {
+        return false;
+    }
+
+    const kind = (node?.kind || "").toLowerCase();
+    if (kind.includes("arrow")) {
+        createArrowGuideObject(state, node, colors, frame);
+    } else if (kind.includes("plane")) {
+        createPlaneGuideObject(state, node, colors, frame);
+    } else if (kind.includes("pointer")) {
+        createPointerGuideObject(state, node, colors, frame);
+    } else {
+        createOriginGuideObject(state, node, colors, frame);
+    }
+
+    return true;
+}
+
 function isStructuralFlowEdge(edge) {
     const categoryKey = (edge?.categoryKey || "").toLowerCase();
     return !!edge?.isPrimaryPath ||
@@ -615,8 +836,12 @@ function createFlowMarkers(state) {
 
 function createNodeObject(state, node) {
     const colors = resolveNodeColors(node);
-    const group = new THREE.Group();
     const frame = resolveNodeFrame(node, state);
+    if (tryCreateGuideNodeObject(state, node, colors, frame)) {
+        return;
+    }
+
+    const group = new THREE.Group();
     const visualKind = resolveNodeVisualKind(node);
     const visual = visualKind === "role"
         ? createRoleNodeVisual(state, node, colors, frame)
