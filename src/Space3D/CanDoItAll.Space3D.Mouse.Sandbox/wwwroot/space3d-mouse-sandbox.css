@@ -352,6 +352,88 @@
     color: rgba(203, 213, 225, 0.82);
 }
 
+.space3d-main-tabs {
+    display: block;
+    min-height: calc(100vh - 8rem);
+}
+
+.space3d-main-tabs .cad-tabs__panel {
+    min-height: 0;
+}
+
+.space3d-process-workbench {
+    display: grid;
+    gap: 1rem;
+    color: #e2e8f0;
+}
+
+.space3d-process-workbench__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.25rem 0.1rem 0;
+}
+
+.space3d-process-workbench__header h2 {
+    margin: 0.15rem 0 0;
+    color: #f8fafc;
+    font-size: clamp(1.3rem, 2vw, 1.85rem);
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.space3d-process-workbench__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+    gap: 1rem;
+    align-items: start;
+}
+
+.space3d-process-workbench__stage {
+    min-width: 0;
+}
+
+.space3d-process-workbench__stage .webgl-stage-frame {
+    min-height: min(72vh, 820px);
+}
+
+.space3d-process-workbench__rail {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.space3d-process-workbench .cda-section-card {
+    --cad-color-text: #334155;
+    --cad-color-text-strong: #0f172a;
+    --cad-color-text-muted: #64748b;
+    color: #334155;
+}
+
+.space3d-process-workbench .cda-section-card__title {
+    color: #0f172a;
+}
+
+.space3d-process-workbench .cda-section-card__description,
+.space3d-process-workbench .visualizer-note,
+.space3d-process-workbench .webgl-rail-copy {
+    color: #475569;
+}
+
+.space3d-process-workbench .visualizer-metrics dt {
+    color: #64748b;
+}
+
+.space3d-process-workbench .visualizer-metrics dd {
+    color: #0f172a;
+}
+
+.space3d-button-history {
+    display: grid;
+    gap: 0.55rem;
+}
+
 @media (max-width: 1024px) {
     .webgl-shell {
         padding: 0.8rem;
@@ -390,5 +472,17 @@
     .webgl-stage-overlay__card {
         gap: 0.7rem;
         padding: 0.85rem 0.9rem;
+    }
+
+    .space3d-process-workbench__header {
+        display: grid;
+    }
+
+    .space3d-process-workbench__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .space3d-process-workbench__stage .webgl-stage-frame {
+        min-height: 62vh;
     }
 }

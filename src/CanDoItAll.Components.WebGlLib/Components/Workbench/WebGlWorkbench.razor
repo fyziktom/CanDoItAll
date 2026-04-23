@@ -149,6 +149,15 @@
     public Task ZoomAsync(double factor)
         => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.zoomView", host, factor).AsTask();
 
+    public Task TriggerPrimaryClickAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.triggerPrimaryClick", host).AsTask();
+
+    public Task TriggerDoubleClickAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.triggerDoubleClick", host).AsTask();
+
+    public Task TriggerContextMenuAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.triggerContextMenu", host).AsTask();
+
     public Task ResetCameraAsync()
         => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.resetView", host).AsTask();
 

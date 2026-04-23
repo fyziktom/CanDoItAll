@@ -346,6 +346,74 @@ function exportImageLength(state) {
     return imageData ? imageData.length : 0;
 }
 
+function isPointInsideCanvas(state, clientX, clientY) {
+    const rect = state.renderer?.domElement?.getBoundingClientRect?.();
+    return !!rect &&
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+}
+
+function rememberPointer(state, event) {
+    if (!state || !event || !isPointInsideCanvas(state, event.clientX, event.clientY)) {
+        return;
+    }
+
+    state.lastPointer = {
+        clientX: event.clientX,
+        clientY: event.clientY
+    };
+}
+
+function createSyntheticPointerEvent(state, button = 0) {
+    const rect = state.renderer?.domElement?.getBoundingClientRect?.();
+    const saved = state.lastPointer;
+    const useSaved = saved && isPointInsideCanvas(state, saved.clientX, saved.clientY);
+    return {
+        button,
+        clientX: useSaved ? saved.clientX : (rect.left + (rect.width / 2)),
+        clientY: useSaved ? saved.clientY : (rect.top + (rect.height / 2)),
+        preventDefault() {
+        },
+        stopPropagation() {
+        }
+    };
+}
+
+function triggerPrimaryClick(state) {
+    if (!state) {
+        return false;
+    }
+
+    handleClick(state, createSyntheticPointerEvent(state, 0), state.interactionDeps);
+    return true;
+}
+
+function triggerDoubleClick(state) {
+    if (!triggerPrimaryClick(state)) {
+        return false;
+    }
+
+    const selectedNodeId = Array.from(state.selectedNodeIds || [])[0] || null;
+    if (selectedNodeId) {
+        focusNode(state, selectedNodeId);
+    } else {
+        fitView(state);
+    }
+
+    return true;
+}
+
+function triggerContextMenu(state) {
+    if (!state) {
+        return false;
+    }
+
+    handleContextMenu(state, createSyntheticPointerEvent(state, 2), state.interactionDeps);
+    return true;
+}
+
 function dispose(state) {
     if (!state) {
         return;
@@ -488,6 +556,7 @@ function createState(host, dotNetRef, surface) {
         sourceSurface: structuredClone(surface),
         surface: buildRenderSurface(surface, chromeState),
         selectedNodeIds: new Set(),
+        lastPointer: null,
         lastAutoFitKey: "",
         handlers: {},
         chromeState,
@@ -516,10 +585,22 @@ function createState(host, dotNetRef, surface) {
         requestChromeAction: actionId => notifyChromeActionRequested(state, actionId)
     };
 
-    state.handlers.pointerDown = event => handlePointerDown(state, event, state.interactionDeps);
-    state.handlers.pointerMove = event => handlePointerMove(state, event, state.interactionDeps);
-    state.handlers.click = event => handleClick(state, event, state.interactionDeps);
-    state.handlers.contextMenu = event => handleContextMenu(state, event, state.interactionDeps);
+    state.handlers.pointerDown = event => {
+        rememberPointer(state, event);
+        handlePointerDown(state, event, state.interactionDeps);
+    };
+    state.handlers.pointerMove = event => {
+        rememberPointer(state, event);
+        handlePointerMove(state, event, state.interactionDeps);
+    };
+    state.handlers.click = event => {
+        rememberPointer(state, event);
+        handleClick(state, event, state.interactionDeps);
+    };
+    state.handlers.contextMenu = event => {
+        rememberPointer(state, event);
+        handleContextMenu(state, event, state.interactionDeps);
+    };
     state.handlers.controlsChange = () => {
         if (state.suppressControlEvents || state.interaction?.kind === "drag") {
             return;
@@ -715,6 +796,15 @@ root.webglWorkbench = {
         }
 
         zoomView(state, factor);
+    },
+    triggerPrimaryClick(host) {
+        return triggerPrimaryClick(resolveState(host));
+    },
+    triggerDoubleClick(host) {
+        return triggerDoubleClick(resolveState(host));
+    },
+    triggerContextMenu(host) {
+        return triggerContextMenu(resolveState(host));
     },
     resetView(host) {
         const state = resolveState(host);

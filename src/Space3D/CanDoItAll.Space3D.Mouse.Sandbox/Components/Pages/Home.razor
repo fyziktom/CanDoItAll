@@ -1,5 +1,47 @@
 @page "/"
+@using CanDoItAll.Space3D.Mouse.Driver.Protocol
 
 <PageTitle>CanDoItAll Space3D Mouse Lab</PageTitle>
 
-<MouseLab />
+<Tabs SelectedIndex="@selectedTabIndex"
+      SelectedIndexChanged="HandleSelectedTabChangedAsync"
+      RenderMode="TabRenderMode.Client"
+      Variant="TabsVariant.Workstation"
+      BorderMode="TabsBorderMode.Soft"
+      Tone="TabsTone.Secondary"
+      OverflowMode="TabsOverflowMode.Wrap"
+      PanelOverflowMode="TabsPanelOverflowMode.Visible"
+      Class="space3d-main-tabs"
+      AriaLabel="Space3D mouse sandbox tabs">
+    <TabItems>
+        <TabsItem Text="Mouse lab">
+            <MouseLab TelemetryReceived="HandleTelemetryReceivedAsync"
+                      LogicalButtonState="@buttonState" />
+        </TabsItem>
+
+        <TabsItem Text="Process scene">
+            <Space3DProcessWorkbench LatestTelemetry="@latestTelemetry"
+                                      ButtonState="@buttonState" />
+        </TabsItem>
+    </TabItems>
+</Tabs>
+
+@code {
+    private readonly Space3DMouseButtonInterpreter buttonInterpreter = Space3DMouseButtonInterpreter.CreateMeasuredLadder();
+    private MouseTelemetrySnapshot? latestTelemetry;
+    private Space3DMouseButtonSnapshot buttonState = Space3DMouseButtonSnapshot.Empty;
+    private int selectedTabIndex;
+
+    private Task HandleTelemetryReceivedAsync(MouseTelemetrySnapshot telemetry)
+    {
+        latestTelemetry = telemetry;
+        buttonState = buttonInterpreter.Update(telemetry);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleSelectedTabChangedAsync(int index)
+    {
+        selectedTabIndex = index;
+        return Task.CompletedTask;
+    }
+}

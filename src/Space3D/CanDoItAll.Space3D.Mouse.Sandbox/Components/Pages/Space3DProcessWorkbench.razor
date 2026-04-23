@@ -1,0 +1,565 @@
+@namespace CanDoItAll.Space3D.Mouse.Sandbox.Components.Pages
+@using CanDoItAll.Modules.Processes
+@using CanDoItAll.Space3D.Mouse.Driver.Protocol
+@using CanDoItAll.Space3D.Mouse.Driver.Scene
+@inject Space3DProcessWorkbenchSession Session
+
+<section class="space3d-process-workbench">
+    <div class="space3d-process-workbench__header">
+        <div>
+            <p class="visualizer-card-kicker">Process scene</p>
+            <h2>Standard WebGL process workbench</h2>
+        </div>
+        <div class="visualizer-stage-card__meta">
+            <StatusBadge Text="@MouseConnectionLabel" Tone="@MouseConnectionTone" />
+            <StatusBadge Text="@Session.CurrentTemplate.DisplayName" Tone="info" />
+            <StatusBadge Text="@ResolveCameraViewLabel(Session.CameraViewMode)" Tone="neutral" />
+            <StatusBadge Text="@($"{currentSurface.Nodes.Count} nodes")" Tone="accent" />
+        </div>
+    </div>
+
+    <SectionCard Title="Process controls"
+                 Description="Template, layout, and camera controls use the same process scene pipeline as the WebGL sandbox.">
+        <Stack Orientation="Orientation.Horizontal"
+               Wrap="FlexWrap.Wrap"
+               GapScale="LayoutGap.Medium"
+               AlignItems="AlignItems.End">
+            <FormField Text="Template" ContainerClass="webgl-control-field">
+                <DropDown TValue="string"
+                          Data="@Session.Templates"
+                          TextProperty="@nameof(ProcessWebGlTemplateDescriptor.DisplayName)"
+                          ValueProperty="@nameof(ProcessWebGlTemplateDescriptor.Key)"
+                          Value="@Session.SelectedTemplateKey"
+                          ValueChanged="HandleTemplateChangedAsync" />
+            </FormField>
+
+            <FormField Text="View preset" ContainerClass="webgl-control-field">
+                <DropDown TValue="string"
+                          Data="@ViewPresetOptions"
+                          TextProperty="@nameof(ChoiceItem.Label)"
+                          ValueProperty="@nameof(ChoiceItem.Value)"
+                          Value="@Session.ViewPreset"
+                          ValueChanged="HandleViewPresetChangedAsync" />
+            </FormField>
+
+            <FormField Text="Layout" ContainerClass="webgl-control-field">
+                <DropDown TValue="string"
+                          Data="@LayoutModeOptions"
+                          TextProperty="@nameof(ChoiceItem.Label)"
+                          ValueProperty="@nameof(ChoiceItem.Value)"
+                          Value="@Session.LayoutMode"
+                          ValueChanged="HandleLayoutModeChangedAsync" />
+            </FormField>
+
+            <FormField Text="Camera" ContainerClass="webgl-control-field">
+                <Stack Orientation="Orientation.Horizontal"
+                       Wrap="FlexWrap.Wrap"
+                       GapScale="LayoutGap.Small"
+                       AlignItems="AlignItems.Center">
+                    @foreach (var option in CameraViewOptions)
+                    {
+                        <Button Text="@option.Label"
+                                ButtonStyle="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                Variant="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? Variant.Filled : Variant.Outlined)"
+                                Click="@(() => HandleCameraViewChangedAsync(option.Value))" />
+                    }
+                </Stack>
+            </FormField>
+
+            <Button Text="Fit"
+                    Icon="center_focus_strong"
+                    Click="FitViewAsync" />
+            <Button Text="Reset"
+                    Icon="refresh"
+                    Click="ResetSceneAsync" />
+            <Button Text="Capture neutral"
+                    Icon="home"
+                    Click="CaptureSceneCalibrationAsync"
+                    Disabled="@(LatestTelemetry is null || !LatestTelemetry.PoseValid)" />
+        </Stack>
+    </SectionCard>
+
+    <div class="space3d-process-workbench__grid">
+        <section class="space3d-process-workbench__stage">
+            <div class="webgl-stage-frame" data-testid="space3d-process-stage">
+                <div class="webgl-stage-overlay-host" data-cda-overlay-frame="true" data-cda-overlay-container="true">
+                    <WebGlWorkbench @ref="workbench"
+                                    Surface="@currentSurface"
+                                    SelectionChanged="HandleSelectionChanged"
+                                    NodesMoved="HandleNodesMoved"
+                                    ConnectionChangeRequested="HandleConnectionChangeRequested"
+                                    DeleteRequested="HandleDeleteRequested"
+                                    StateChanged="HandleStateChanged" />
+                </div>
+            </div>
+        </section>
+
+        <aside class="space3d-process-workbench__rail">
+            <SectionCard Title="3D mouse"
+                         Description="@buttonModeDescription">
+                <dl class="visualizer-metrics">
+                    <div>
+                        <dt>Active button</dt>
+                        <dd>@ButtonState.ActiveButtonName</dd>
+                    </div>
+                    <div>
+                        <dt>Action</dt>
+                        <dd>@ButtonState.ActiveAction</dd>
+                    </div>
+                    <div>
+                        <dt>ADC</dt>
+                        <dd>@AdcLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Accel</dt>
+                        <dd>@FormatVector(sceneTelemetry?.LinearAccel)</dd>
+                    </div>
+                    <div>
+                        <dt>Angles</dt>
+                        <dd>@PointerAnglesLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Neutral</dt>
+                        <dd>@(sceneTransform.HasReference ? "captured" : "raw")</dd>
+                    </div>
+                </dl>
+                <p class="visualizer-note visualizer-note--dense">@mouseActionMessage</p>
+            </SectionCard>
+
+            <SectionCard Title="Button history"
+                         Description="Recent logical ADC events from the host-side ladder interpreter.">
+                <div class="space3d-button-history">
+                    @if (ButtonState.Events.Count == 0)
+                    {
+                        <p class="webgl-rail-copy">No interpreted button events yet.</p>
+                    }
+                    else
+                    {
+                        @foreach (var buttonEvent in ButtonState.Events.Take(5))
+                        {
+                            <div class="webgl-command-entry">
+                                <strong>@buttonEvent.DisplayText</strong>
+                                <span>@buttonEvent.Action | seq @buttonEvent.Sequence</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </SectionCard>
+
+            <SectionCard Title="Selection"
+                         Description="@SelectedNodeSummary">
+                <Stack GapScale="LayoutGap.Small">
+                    <StatusBadge Text="@SelectedNodeTitle" Tone="info" />
+                    <StatusBadge Text="@($"{SelectedNodeConnectionCount} connections")" Tone="neutral" />
+                    @if (selectedNode is not null && selectedNode.Anchors.Count > 0)
+                    {
+                        <div class="webgl-chip-cluster">
+                            @foreach (var anchor in selectedNode.Anchors.Take(6))
+                            {
+                                <span class="webgl-chip">@anchor.Label</span>
+                            }
+                        </div>
+                    }
+                </Stack>
+            </SectionCard>
+
+            <SectionCard Title="Command log"
+                         Description="Recent scene and 3D-mouse actions.">
+                <Stack GapScale="LayoutGap.Small">
+                    @foreach (var entry in Session.CommandLog.Take(6))
+                    {
+                        <div class="webgl-command-entry">
+                            <strong>@entry.Title</strong>
+                            <span>@entry.Detail</span>
+                        </div>
+                    }
+                </Stack>
+            </SectionCard>
+        </aside>
+    </div>
+</section>
+
+@code {
+    private static readonly IReadOnlyList<ChoiceItem> ViewPresetOptions =
+    [
+        new("Overview", WebGlWorkbenchViewPresets.Overview),
+        new("Roles", WebGlWorkbenchViewPresets.Roles),
+        new("Dependencies", WebGlWorkbenchViewPresets.Dependencies),
+        new("Branching", WebGlWorkbenchViewPresets.Branching),
+        new("Focus", WebGlWorkbenchViewPresets.Focus)
+    ];
+
+    private static readonly IReadOnlyList<ChoiceItem> LayoutModeOptions =
+    [
+        new("Center lane", WebGlWorkbenchLayoutModes.CenterLane),
+        new("Alternating arc", WebGlWorkbenchLayoutModes.AlternatingArc),
+        new("Layered orbit", WebGlWorkbenchLayoutModes.LayeredOrbit),
+        new("Critical path spine", WebGlWorkbenchLayoutModes.CriticalPathSpine),
+        new("Fan-out corridor", WebGlWorkbenchLayoutModes.FanoutCorridor),
+        new("Radial burst", WebGlWorkbenchLayoutModes.RadialBurst)
+    ];
+
+    private static readonly IReadOnlyList<ChoiceItem> CameraViewOptions =
+    [
+        new("Perspective", WebGlWorkbenchCameraViewModes.Perspective),
+        new("XY", WebGlWorkbenchCameraViewModes.XY),
+        new("XZ", WebGlWorkbenchCameraViewModes.XZ),
+        new("YZ", WebGlWorkbenchCameraViewModes.YZ)
+    ];
+
+    private const double NeutralCaptureGyroThresholdDps = 8d;
+    private const double NeutralCaptureAccelThresholdG = 0.05d;
+    private const double AccelDeadzoneG = 0.025d;
+    private const double GyroDeadzoneDps = 1.5d;
+
+    private readonly MouseLabPoseTransform sceneTransform = new();
+    private WebGlWorkbench? workbench;
+    private WebGlWorkbenchSurface currentSurface = new();
+    private MouseSceneSnapshot? sceneTelemetry;
+    private DateTimeOffset? lastTelemetryAt;
+    private DateTimeOffset? lastNavigationAt;
+    private DateTimeOffset lastHandledButtonEventAt = DateTimeOffset.MinValue;
+    private string mouseActionMessage = "Connect the BLE mouse in the lab tab, then use held buttons 1/2/3 for pan, rotate, and zoom.";
+    private string buttonModeDescription = "Button 1 pans, button 2 rotates, button 3 zooms, button 4 primary-clicks, button 5 opens the context menu, and button 6 captures neutral.";
+
+    [Parameter]
+    public MouseTelemetrySnapshot? LatestTelemetry { get; set; }
+
+    [Parameter]
+    public Space3DMouseButtonSnapshot ButtonState { get; set; } = Space3DMouseButtonSnapshot.Empty;
+
+    protected override void OnInitialized()
+    {
+        Session.EnsureInitialized();
+        RefreshSurface();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (LatestTelemetry is null || LatestTelemetry.ReceivedAt == lastTelemetryAt)
+        {
+            return;
+        }
+
+        lastTelemetryAt = LatestTelemetry.ReceivedAt;
+        sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+        await HandleButtonEventsAsync();
+        await ApplyHeldNavigationAsync();
+    }
+
+    private WebGlWorkbenchNode? selectedNode
+        => currentSurface.Nodes.FirstOrDefault(node =>
+            currentSurface.UiState.SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal));
+
+    private string SelectedNodeTitle => selectedNode?.Title ?? "Nothing selected";
+
+    private int SelectedNodeConnectionCount
+        => selectedNode is null
+            ? 0
+            : currentSurface.Edges.Count(edge =>
+                string.Equals(edge.SourceNodeId, selectedNode.Id, StringComparison.Ordinal) ||
+                string.Equals(edge.TargetNodeId, selectedNode.Id, StringComparison.Ordinal));
+
+    private string SelectedNodeSummary
+        => selectedNode is null
+            ? "Select a process node in the stage or trigger a left click over a node."
+            : string.IsNullOrWhiteSpace(selectedNode.Description)
+                ? selectedNode.Subtitle
+                : selectedNode.Description;
+
+    private string MouseConnectionLabel
+        => LatestTelemetry is null
+            ? "No mouse frame"
+            : ButtonState.AdcEnabled
+                ? "3D mouse active"
+                : "Motion active";
+
+    private string MouseConnectionTone
+        => LatestTelemetry is null
+            ? "neutral"
+            : ButtonState.AdcEnabled
+                ? "success"
+                : "info";
+
+    private string AdcLabel
+        => ButtonState.AdcEnabled
+            ? $"{(ButtonState.CurrentMillivolts / 1000d):0.00} V | {ButtonState.SignalState} {(ButtonState.AdcStable ? "stable" : "unstable")}"
+            : "disabled";
+
+    private string PointerAnglesLabel
+        => sceneTelemetry is null
+            ? "--"
+            : $"yaw {sceneTelemetry.ForwardAzimuthDeg:+0.0;-0.0;+0.0} deg | pitch {sceneTelemetry.ForwardElevationDeg:+0.0;-0.0;+0.0} deg | roll {sceneTelemetry.RollDeg:+0.0;-0.0;+0.0} deg";
+
+    private async Task HandleButtonEventsAsync()
+    {
+        if (ButtonState.Events.Count == 0)
+        {
+            return;
+        }
+
+        var events = ButtonState.Events
+            .Where(buttonEvent => buttonEvent.ObservedAt > lastHandledButtonEventAt)
+            .OrderBy(buttonEvent => buttonEvent.ObservedAt)
+            .ToArray();
+        foreach (var buttonEvent in events)
+        {
+            await HandleButtonEventAsync(buttonEvent);
+            if (buttonEvent.ObservedAt > lastHandledButtonEventAt)
+            {
+                lastHandledButtonEventAt = buttonEvent.ObservedAt;
+            }
+        }
+    }
+
+    private async Task HandleButtonEventAsync(Space3DMouseButtonEvent buttonEvent)
+    {
+        if (workbench is null)
+        {
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 4 && buttonEvent.Kind == MouseAdcEventKind.Click)
+        {
+            await workbench.TriggerPrimaryClickAsync();
+            RecordMouseAction("Primary click", buttonEvent.DisplayText);
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 4 && buttonEvent.Kind == MouseAdcEventKind.DoubleClick)
+        {
+            await workbench.TriggerDoubleClickAsync();
+            RecordMouseAction("Double click", buttonEvent.DisplayText);
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 5 && buttonEvent.Kind == MouseAdcEventKind.Click)
+        {
+            await workbench.TriggerContextMenuAsync();
+            RecordMouseAction("Context click", buttonEvent.DisplayText);
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 6 &&
+            (buttonEvent.Kind == MouseAdcEventKind.Click || buttonEvent.Kind == MouseAdcEventKind.DoubleClick))
+        {
+            await CaptureSceneCalibrationAsync();
+        }
+    }
+
+    private async Task ApplyHeldNavigationAsync()
+    {
+        if (workbench is null || sceneTelemetry is null || !sceneTelemetry.Valid)
+        {
+            return;
+        }
+
+        var hasNavigationButton = ButtonState.IsPressed(1) || ButtonState.IsPressed(2) || ButtonState.IsPressed(3);
+        if (!hasNavigationButton)
+        {
+            lastNavigationAt = null;
+            return;
+        }
+
+        var deltaSeconds = ResolveNavigationDeltaSeconds(sceneTelemetry.Source.ReceivedAt);
+        if (ButtonState.IsPressed(1))
+        {
+            var accel = sceneTelemetry.LinearAccel;
+            var panX = ApplyDeadzone(accel.X, AccelDeadzoneG) * 155d;
+            var panY = ApplyDeadzone(accel.Z + (accel.Y * 0.35d), AccelDeadzoneG) * 155d;
+            if (Math.Abs(panX) > 0.2d || Math.Abs(panY) > 0.2d)
+            {
+                await workbench.PanAsync(panX, panY);
+                mouseActionMessage = $"Pan from accel {FormatVector(accel)}";
+            }
+        }
+        else if (ButtonState.IsPressed(2))
+        {
+            var gyro = sceneTelemetry.Gyro;
+            var azimuth = DegreesToRadians(ApplyDeadzone(gyro.Z, GyroDeadzoneDps) * deltaSeconds * 0.85d);
+            var polar = DegreesToRadians(-ApplyDeadzone(gyro.X, GyroDeadzoneDps) * deltaSeconds * 0.85d);
+            if (Math.Abs(azimuth) > 0.0001d || Math.Abs(polar) > 0.0001d)
+            {
+                await workbench.OrbitAsync(azimuth, polar);
+                mouseActionMessage = $"Rotate from gyro {FormatVector(gyro)}";
+            }
+        }
+        else if (ButtonState.IsPressed(3))
+        {
+            var accel = sceneTelemetry.LinearAccel;
+            var zoomSignal = ApplyDeadzone(accel.Y, AccelDeadzoneG);
+            var factor = 1d + Math.Clamp(zoomSignal * 0.18d, -0.12d, 0.12d);
+            if (Math.Abs(factor - 1d) > 0.004d)
+            {
+                await workbench.ZoomAsync(factor);
+                mouseActionMessage = $"Zoom from forward accel {accel.Y:+0.000;-0.000;+0.000} g";
+            }
+        }
+    }
+
+    private Task HandleTemplateChangedAsync(string? templateKey)
+    {
+        Session.LoadTemplate(templateKey);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleViewPresetChangedAsync(string? viewPreset)
+    {
+        Session.SetViewPreset(viewPreset);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleLayoutModeChangedAsync(string? layoutMode)
+    {
+        Session.Recompose(layoutMode);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleCameraViewChangedAsync(string? cameraViewMode)
+    {
+        Session.SetCameraView(cameraViewMode);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleSelectionChanged(WebGlSelectionChangedEventArgs args)
+    {
+        Session.SetSelectedNode(args.PrimaryNodeId);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleNodesMoved(WebGlNodeMovedEventArgs args)
+    {
+        Session.ApplyNodesMoved(args.Positions);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleConnectionChangeRequested(WebGlConnectionChangeRequest request)
+    {
+        Session.ApplyConnectionChange(request);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleDeleteRequested(WebGlDeleteRequest request)
+    {
+        Session.ApplyDeleteRequest(request);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleStateChanged(string stateJson)
+    {
+        Session.ApplyUiState(WebGlWorkbenchUiState.Parse(stateJson));
+        return RefreshSurfaceAsync();
+    }
+
+    private async Task FitViewAsync()
+    {
+        if (workbench is not null)
+        {
+            await workbench.FitViewToSceneAsync();
+        }
+    }
+
+    private async Task ResetSceneAsync()
+    {
+        Session.Reset();
+        RefreshSurface();
+        if (workbench is not null)
+        {
+            await workbench.FitViewToSceneAsync();
+        }
+    }
+
+    private Task CaptureSceneCalibrationAsync()
+    {
+        if (LatestTelemetry is null || !LatestTelemetry.PoseValid)
+        {
+            mouseActionMessage = "Capture a valid live pose before neutral calibration.";
+            return RefreshSurfaceAsync();
+        }
+
+        if (!IsNeutralCaptureStable(LatestTelemetry))
+        {
+            mouseActionMessage = "Hold the module still before neutral calibration.";
+            return RefreshSurfaceAsync();
+        }
+
+        if (sceneTransform.CaptureReference(LatestTelemetry))
+        {
+            sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+            RecordMouseAction("Captured neutral", "Button 6 calibration");
+        }
+        else
+        {
+            mouseActionMessage = "Neutral capture rejected this frame.";
+        }
+
+        return RefreshSurfaceAsync();
+    }
+
+    private void RefreshSurface()
+    {
+        currentSurface = Session.BuildSurface();
+    }
+
+    private Task RefreshSurfaceAsync()
+    {
+        RefreshSurface();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void RecordMouseAction(string title, string detail)
+    {
+        mouseActionMessage = $"{title}: {detail}";
+        Session.RecordMouseAction(title, detail);
+        RefreshSurface();
+    }
+
+    private double ResolveNavigationDeltaSeconds(DateTimeOffset timestamp)
+    {
+        var deltaSeconds = lastNavigationAt is null
+            ? 0.02d
+            : Math.Max(0.001d, (timestamp - lastNavigationAt.Value).TotalSeconds);
+        lastNavigationAt = timestamp;
+        return Math.Clamp(deltaSeconds, 0.001d, 0.08d);
+    }
+
+    private static double ApplyDeadzone(double value, double deadzone)
+    {
+        var magnitude = Math.Abs(value);
+        if (magnitude <= deadzone)
+        {
+            return 0d;
+        }
+
+        return Math.Sign(value) * (magnitude - deadzone);
+    }
+
+    private static bool IsNeutralCaptureStable(MouseTelemetrySnapshot pose)
+        => pose.GyroMagnitudeDps <= NeutralCaptureGyroThresholdDps &&
+           pose.LinearAccelMagnitudeG <= NeutralCaptureAccelThresholdG;
+
+    private static double DegreesToRadians(double degrees)
+        => degrees * Math.PI / 180d;
+
+    private static string FormatVector(SceneVector? vector)
+        => vector is null
+            ? "--"
+            : $"{vector.Value.X:+0.000;-0.000;+0.000}, {vector.Value.Y:+0.000;-0.000;+0.000}, {vector.Value.Z:+0.000;-0.000;+0.000}";
+
+    private static string ResolveCameraViewLabel(string cameraViewMode)
+    {
+        return WebGlWorkbenchCameraViewModes.Normalize(cameraViewMode) switch
+        {
+            WebGlWorkbenchCameraViewModes.XY => "XY view",
+            WebGlWorkbenchCameraViewModes.XZ => "XZ view",
+            WebGlWorkbenchCameraViewModes.YZ => "YZ view",
+            _ => "Perspective"
+        };
+    }
+
+    private sealed record ChoiceItem(string Label, string Value);
+}

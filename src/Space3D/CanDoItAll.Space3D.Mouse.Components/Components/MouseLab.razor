@@ -463,6 +463,14 @@
                                                 <dd>@ButtonsLabel</dd>
                                             </div>
                                             <div>
+                                                <dt>Logical button</dt>
+                                                <dd>@LogicalButtonLabel</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Button action</dt>
+                                                <dd>@LogicalButtonActionLabel</dd>
+                                            </div>
+                                            <div>
                                                 <dt>ADC state</dt>
                                                 <dd>@AdcStateLabel</dd>
                                             </div>
@@ -538,6 +546,12 @@
     [Parameter]
     public string BleDebugCaptureFilePath { get; set; } = string.Empty;
 
+    [Parameter]
+    public EventCallback<MouseTelemetrySnapshot> TelemetryReceived { get; set; }
+
+    [Parameter]
+    public Space3DMouseButtonSnapshot? LogicalButtonState { get; set; }
+
     protected override void OnInitialized()
     {
         surface = MouseLabSceneFactory.CreateSurface(sceneTelemetry, uiState, ConnectionLabel);
@@ -587,7 +601,7 @@
     }
 
     [JSInvokable]
-    public Task OnBleSysExFrame(int[] data)
+    public async Task OnBleSysExFrame(int[] data)
     {
         bleDiagnostics.FrameCount = Math.Max(bleDiagnostics.FrameCount + 1, receivedFrameCount + parseFailureCount + 1);
         if (Space3DMouseProtocol.TryParseTelemetry(data, out var pose, out var rejectReason))
@@ -602,7 +616,13 @@
             }
 
             RebuildSurface();
-            return RequestUiRefreshAsync();
+            if (TelemetryReceived.HasDelegate)
+            {
+                await TelemetryReceived.InvokeAsync(pose);
+            }
+
+            await RequestUiRefreshAsync();
+            return;
         }
 
         parseFailureCount++;
@@ -610,7 +630,7 @@
         lastRejectedFrameHex = FormatFrameHex(data);
         lastRejectedFrameReason = string.IsNullOrWhiteSpace(rejectReason) ? "Parser rejected the frame." : rejectReason;
         statusMessage = $"BLE frame rejected by 3D mouse parser. {lastRejectedFrameReason}";
-        return RequestUiRefreshAsync();
+        await RequestUiRefreshAsync();
     }
 
     [JSInvokable]
@@ -1063,6 +1083,16 @@
             : latestTelemetry.AdcEnabled
                 ? $"{latestTelemetry.AdcSignalState} {(latestTelemetry.AdcStable ? "stable" : "unstable")}"
                 : "disabled";
+
+    private string LogicalButtonLabel
+        => LogicalButtonState?.ActiveButtonNumber is int buttonNumber
+            ? $"{LogicalButtonState.ActiveButtonName} ({buttonNumber})"
+            : "none";
+
+    private string LogicalButtonActionLabel
+        => LogicalButtonState is null
+            ? "--"
+            : $"{LogicalButtonState.ActiveAction} | events {LogicalButtonState.Events.Count}";
 
     private string AdcVoltageLabel
         => latestTelemetry is null
