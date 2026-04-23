@@ -463,12 +463,20 @@
                                                 <dd>@ButtonsLabel</dd>
                                             </div>
                                             <div>
-                                                <dt>ADC bucket</dt>
-                                                <dd>@AdcBucketLabel</dd>
+                                                <dt>ADC state</dt>
+                                                <dd>@AdcStateLabel</dd>
+                                            </div>
+                                            <div>
+                                                <dt>ADC voltage</dt>
+                                                <dd>@AdcVoltageLabel</dd>
                                             </div>
                                             <div>
                                                 <dt>ADC raw</dt>
                                                 <dd>@AdcRawLabel</dd>
+                                            </div>
+                                            <div>
+                                                <dt>ADC event</dt>
+                                                <dd>@AdcEventLabel</dd>
                                             </div>
                                             <div>
                                                 <dt>Pose flags</dt>
@@ -1049,20 +1057,32 @@
         }
     }
 
-    private string AdcBucketLabel
+    private string AdcStateLabel
         => latestTelemetry is null
             ? "--"
             : latestTelemetry.AdcEnabled
-                ? latestTelemetry.AdcBucket == 0x7F
-                    ? "idle"
-                    : $"bucket {latestTelemetry.AdcBucket}"
+                ? $"{latestTelemetry.AdcSignalState} {(latestTelemetry.AdcStable ? "stable" : "unstable")}"
                 : "disabled";
+
+    private string AdcVoltageLabel
+        => latestTelemetry is null
+            ? "--"
+            : latestTelemetry.AdcEnabled
+                ? $"{FormatMillivolts(latestTelemetry.AdcMillivolts)}"
+                : "n/a";
 
     private string AdcRawLabel
         => latestTelemetry is null
             ? "--"
             : latestTelemetry.AdcEnabled
-                ? $"{latestTelemetry.AdcRaw} {(latestTelemetry.AdcStable ? "stable" : "unstable")}"
+                ? $"{latestTelemetry.AdcRaw} raw"
+                : "n/a";
+
+    private string AdcEventLabel
+        => latestTelemetry is null
+            ? "--"
+            : latestTelemetry.AdcEnabled
+                ? $"{latestTelemetry.AdcEventKind} #{latestTelemetry.AdcEventSequence} @ {FormatMillivolts(latestTelemetry.AdcEventMillivolts)} ({latestTelemetry.AdcEventRaw} raw)"
                 : "n/a";
 
     private string PoseFlagsLabel
@@ -1163,6 +1183,9 @@
         => pose.GyroMagnitudeDps <= NeutralCaptureGyroThresholdDps &&
            pose.LinearAccelMagnitudeG <= NeutralCaptureAccelThresholdG;
 
+    private static string FormatMillivolts(int millivolts)
+        => $"{(millivolts / 1000d):0.00} V";
+
     private static int[] BuildDemoFrame()
     {
         var orientation = System.Numerics.Quaternion.CreateFromYawPitchRoll(
@@ -1170,7 +1193,7 @@
             pitch: DegreesToRadians(-18f),
             roll: DegreesToRadians(11f));
 
-        var bytes = new byte[40];
+        var bytes = new byte[48];
         var index = 0;
         bytes[index++] = 0xF0;
         bytes[index++] = 0x7D;
@@ -1179,17 +1202,21 @@
         bytes[index++] = (byte)'R';
         bytes[index++] = (byte)'M';
         bytes[index++] = 0x01;
-        bytes[index++] = 0x02;
+        bytes[index++] = 0x03;
         bytes[index++] = 0x09;
         bytes[index++] = 0x31;
         bytes[index++] = 0x00;
         bytes[index++] = 0x01;
-        bytes[index++] = 0x53;
+        bytes[index++] = 0x5F;
         bytes[index++] = 0x3F;
+        bytes[index++] = 0x04;
         bytes[index++] = 0x03;
-        bytes[index++] = 0x7F;
-
-        AppendUnsigned14(bytes, ref index, 4095);
+        AppendUnsigned14(bytes, ref index, 612);
+        AppendUnsigned14(bytes, ref index, 493);
+        bytes[index++] = 0x04;
+        bytes[index++] = 0x07;
+        AppendUnsigned14(bytes, ref index, 598);
+        AppendUnsigned14(bytes, ref index, 482);
         AppendSigned14(bytes, ref index, QuantizeSigned(orientation.W, 4096f));
         AppendSigned14(bytes, ref index, QuantizeSigned(orientation.X, 4096f));
         AppendSigned14(bytes, ref index, QuantizeSigned(orientation.Y, 4096f));

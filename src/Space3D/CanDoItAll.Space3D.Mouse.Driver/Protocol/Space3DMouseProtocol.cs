@@ -10,6 +10,24 @@ public enum MouseOrientationSource
     ArvrStabilized = 3
 }
 
+public enum MouseAdcSignalState
+{
+    Disabled = 0,
+    Idle = 1,
+    Pressed = 2,
+    Holding = 3
+}
+
+public enum MouseAdcEventKind
+{
+    None = 0,
+    Press = 1,
+    Release = 2,
+    Click = 3,
+    DoubleClick = 4,
+    Hold = 5
+}
+
 public readonly record struct SceneVector(double X, double Y, double Z)
 {
     public double Length => Math.Sqrt((X * X) + (Y * Y) + (Z * Z));
@@ -68,8 +86,13 @@ public sealed record MouseTelemetrySnapshot(
     int LinearAccelAccuracy,
     int GyroAccuracy,
     int PressedButtons,
-    int AdcBucket,
+    MouseAdcSignalState AdcSignalState,
     int AdcRaw,
+    int AdcMillivolts,
+    MouseAdcEventKind AdcEventKind,
+    int AdcEventSequence,
+    int AdcEventRaw,
+    int AdcEventMillivolts,
     Quaternion RelativeOrientation,
     SceneVector GyroDps,
     SceneVector LinearAccelG,
@@ -123,9 +146,16 @@ public static class Space3DMouseProtocol
         var protocolMinor = ReadByte(rawData, 7) & 0x7F;
         var hasSourceByte = protocolMinor == 1;
         var hasPackedSourceBits = protocolMinor >= 2;
+        var hasExtendedAdcPayload = protocolMinor >= 3;
         if (hasSourceByte && rawData.Count < 41)
         {
             rejectReason = $"Protocol minor 1 frame too short: {rawData.Count}.";
+            return false;
+        }
+
+        if (hasExtendedAdcPayload && rawData.Count < 48)
+        {
+            rejectReason = $"Protocol minor {protocolMinor} frame too short: {rawData.Count}.";
             return false;
         }
 
@@ -144,23 +174,60 @@ public static class Space3DMouseProtocol
             : hasPackedSourceBits
                 ? DecodeOrientationSource(((flags >> 5) & 0x02) | ((status >> 6) & 0x01))
                 : DecodeLegacyOrientationSource(status);
+
         var payloadOffset = hasSourceByte ? 1 : 0;
-        var pressedButtons = ReadByte(rawData, 14 + payloadOffset) & 0x7F;
-        var adcBucket = ReadByte(rawData, 15 + payloadOffset) & 0x7F;
-        var adcRaw = ReadUnsigned14(rawData, 16 + payloadOffset);
+        var payloadStart = 14 + payloadOffset;
+        var pressedButtons = ReadByte(rawData, payloadStart) & 0x7F;
 
-        var qW = ReadSigned14(rawData, 18 + payloadOffset) / 4096f;
-        var qX = ReadSigned14(rawData, 20 + payloadOffset) / 4096f;
-        var qY = ReadSigned14(rawData, 22 + payloadOffset) / 4096f;
-        var qZ = ReadSigned14(rawData, 24 + payloadOffset) / 4096f;
+        MouseAdcSignalState adcSignalState;
+        int adcRaw;
+        int adcMillivolts;
+        MouseAdcEventKind adcEventKind;
+        int adcEventSequence;
+        int adcEventRaw;
+        int adcEventMillivolts;
+        int poseStart;
 
-        var gX = ReadSigned14(rawData, 26 + payloadOffset) / 2f;
-        var gY = ReadSigned14(rawData, 28 + payloadOffset) / 2f;
-        var gZ = ReadSigned14(rawData, 30 + payloadOffset) / 2f;
+        if (hasExtendedAdcPayload)
+        {
+            adcSignalState = DecodeAdcSignalState(ReadByte(rawData, payloadStart + 1) & 0x7F);
+            adcRaw = ReadUnsigned14(rawData, payloadStart + 2);
+            adcMillivolts = ReadUnsigned14(rawData, payloadStart + 4);
+            adcEventKind = DecodeAdcEventKind(ReadByte(rawData, payloadStart + 6) & 0x7F);
+            adcEventSequence = ReadByte(rawData, payloadStart + 7) & 0x7F;
+            adcEventRaw = ReadUnsigned14(rawData, payloadStart + 8);
+            adcEventMillivolts = ReadUnsigned14(rawData, payloadStart + 10);
+            poseStart = payloadStart + 12;
+        }
+        else
+        {
+            var legacyBucket = ReadByte(rawData, payloadStart + 1) & 0x7F;
+            adcRaw = ReadUnsigned14(rawData, payloadStart + 2);
+            adcMillivolts = ConvertRawToMillivolts(adcRaw);
+            adcSignalState = !((flags & 0x04) != 0)
+                ? MouseAdcSignalState.Disabled
+                : legacyBucket == 0x7F
+                    ? MouseAdcSignalState.Idle
+                    : MouseAdcSignalState.Pressed;
+            adcEventKind = MouseAdcEventKind.None;
+            adcEventSequence = 0;
+            adcEventRaw = adcRaw;
+            adcEventMillivolts = adcMillivolts;
+            poseStart = payloadStart + 4;
+        }
 
-        var aX = ReadSigned14(rawData, 32 + payloadOffset) / 1024f;
-        var aY = ReadSigned14(rawData, 34 + payloadOffset) / 1024f;
-        var aZ = ReadSigned14(rawData, 36 + payloadOffset) / 1024f;
+        var qW = ReadSigned14(rawData, poseStart) / 4096f;
+        var qX = ReadSigned14(rawData, poseStart + 2) / 4096f;
+        var qY = ReadSigned14(rawData, poseStart + 4) / 4096f;
+        var qZ = ReadSigned14(rawData, poseStart + 6) / 4096f;
+
+        var gX = ReadSigned14(rawData, poseStart + 8) / 2f;
+        var gY = ReadSigned14(rawData, poseStart + 10) / 2f;
+        var gZ = ReadSigned14(rawData, poseStart + 12) / 2f;
+
+        var aX = ReadSigned14(rawData, poseStart + 14) / 1024f;
+        var aY = ReadSigned14(rawData, poseStart + 16) / 1024f;
+        var aZ = ReadSigned14(rawData, poseStart + 18) / 1024f;
 
         var rawOrientation = new Quaternion(qX, qY, qZ, qW);
         var orientationLength = rawOrientation.Length();
@@ -182,8 +249,13 @@ public static class Space3DMouseProtocol
             LinearAccelAccuracy: (status >> 2) & 0x03,
             GyroAccuracy: (status >> 4) & 0x03,
             PressedButtons: pressedButtons,
-            AdcBucket: adcBucket,
+            AdcSignalState: adcSignalState,
             AdcRaw: adcRaw,
+            AdcMillivolts: adcMillivolts,
+            AdcEventKind: adcEventKind,
+            AdcEventSequence: adcEventSequence,
+            AdcEventRaw: adcEventRaw,
+            AdcEventMillivolts: adcEventMillivolts,
             RelativeOrientation: orientation,
             GyroDps: new SceneVector(gX, gY, gZ),
             LinearAccelG: new SceneVector(aX, aY, aZ),
@@ -216,6 +288,29 @@ public static class Space3DMouseProtocol
             1 => MouseOrientationSource.Geomagnetic,
             _ => MouseOrientationSource.Unknown
         };
+
+    private static MouseAdcSignalState DecodeAdcSignalState(int value)
+        => value switch
+        {
+            1 => MouseAdcSignalState.Idle,
+            2 => MouseAdcSignalState.Pressed,
+            3 => MouseAdcSignalState.Holding,
+            _ => MouseAdcSignalState.Disabled
+        };
+
+    private static MouseAdcEventKind DecodeAdcEventKind(int value)
+        => value switch
+        {
+            1 => MouseAdcEventKind.Press,
+            2 => MouseAdcEventKind.Release,
+            3 => MouseAdcEventKind.Click,
+            4 => MouseAdcEventKind.DoubleClick,
+            5 => MouseAdcEventKind.Hold,
+            _ => MouseAdcEventKind.None
+        };
+
+    private static int ConvertRawToMillivolts(int raw)
+        => Math.Clamp((int)Math.Round((Math.Clamp(raw, 0, 4095) * 3300d) / 4095d, MidpointRounding.AwayFromZero), 0, 4095);
 
     private static byte ComputeCrc7(IReadOnlyList<int> data, int startIndex, int endExclusive)
     {
