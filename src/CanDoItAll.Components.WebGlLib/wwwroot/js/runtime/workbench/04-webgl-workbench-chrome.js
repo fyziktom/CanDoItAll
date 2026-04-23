@@ -300,9 +300,72 @@ function drawToolbarGlyph(context, glyph, centerX, centerY, size, palette) {
                 path.lineTo(scale * 0.14, -scale * 0.12);
             });
             return;
+        case "inspector":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.rect(-scale * 0.34, -scale * 0.28, scale * 0.68, scale * 0.56);
+                path.moveTo(-scale * 0.12, -scale * 0.28);
+                path.lineTo(-scale * 0.12, scale * 0.28);
+                path.moveTo(-scale * 0.24, -scale * 0.12);
+                path.lineTo(-scale * 0.2, -scale * 0.12);
+                path.moveTo(scale * 0.02, -scale * 0.12);
+                path.lineTo(scale * 0.22, -scale * 0.12);
+                path.moveTo(scale * 0.02, scale * 0.04);
+                path.lineTo(scale * 0.22, scale * 0.04);
+            });
+            return;
+        case "toolbox":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.rect(-scale * 0.3, -scale * 0.06, scale * 0.6, scale * 0.3);
+                path.moveTo(-scale * 0.12, -scale * 0.06);
+                path.lineTo(-scale * 0.06, -scale * 0.22);
+                path.lineTo(scale * 0.06, -scale * 0.22);
+                path.lineTo(scale * 0.12, -scale * 0.06);
+                path.moveTo(-scale * 0.3, scale * 0.08);
+                path.lineTo(scale * 0.3, scale * 0.08);
+                path.moveTo(-scale * 0.12, scale * 0.08);
+                path.lineTo(-scale * 0.04, scale * 0.08);
+                path.moveTo(scale * 0.04, scale * 0.08);
+                path.lineTo(scale * 0.12, scale * 0.08);
+            });
+            return;
+        case "log":
+            strokeGlyph(context, centerX, centerY, size, strokeColor, lineWidth, (path, scale) => {
+                path.rect(-scale * 0.26, -scale * 0.32, scale * 0.52, scale * 0.64);
+                path.moveTo(-scale * 0.14, -scale * 0.14);
+                path.lineTo(scale * 0.14, -scale * 0.14);
+                path.moveTo(-scale * 0.14, 0);
+                path.lineTo(scale * 0.14, 0);
+                path.moveTo(-scale * 0.14, scale * 0.14);
+                path.lineTo(scale * 0.08, scale * 0.14);
+                path.moveTo(scale * 0.08, -scale * 0.32);
+                path.lineTo(scale * 0.08, -scale * 0.18);
+                path.lineTo(scale * 0.26, -scale * 0.18);
+            });
+            return;
         default:
             return;
     }
+}
+
+function normalizeHostToolbarActions(state) {
+    const actions = state.surface?.chrome?.toolbarActions;
+    if (!Array.isArray(actions)) {
+        return [];
+    }
+
+    return actions
+        .filter(action => action && action.isVisible !== false && action.id)
+        .map(action => ({
+            id: action.id,
+            label: action.label || "Host action",
+            glyph: action.glyph || "",
+            visualLabel: action.visualLabel || "",
+            iconOnly: action.iconOnly !== false,
+            width: clamp(Number.isFinite(action.width) ? action.width : 44, 28, 96),
+            tone: action.tone || "neutral",
+            active: !!action.isActive,
+            toggled: !!action.isToggled
+        }));
 }
 
 function createButtonTexture(width, height, options) {
@@ -404,6 +467,7 @@ function buildToolbarButtons(state) {
     const toolMode = resolveToolMode(state.surface);
     const cameraViewMode = resolveCameraViewMode(state.surface, state.cameraState?.projectionMode);
     const isStageMaximized = !!state.surface.uiState?.isStageMaximized;
+    const hostToolbarActions = normalizeHostToolbarActions(state);
     return [
         { id: "tool:select", label: "Select", glyph: "cursor", iconOnly: true, width: 44, tone: "accent", active: toolMode === toolModes.select },
         { id: "tool:delete", label: "Delete", glyph: "delete", iconOnly: true, width: 44, tone: "danger", active: toolMode === toolModes.delete },
@@ -415,6 +479,7 @@ function buildToolbarButtons(state) {
         { id: "camera:xy", label: "XY view", visualLabel: "XY", width: 48, tone: "neutral", active: cameraViewMode === cameraViewModes.xy },
         { id: "camera:xz", label: "XZ view", visualLabel: "XZ", width: 48, tone: "neutral", active: cameraViewMode === cameraViewModes.xz },
         { id: "camera:yz", label: "YZ view", visualLabel: "YZ", width: 48, tone: "neutral", active: cameraViewMode === cameraViewModes.yz },
+        ...hostToolbarActions,
         { id: "chrome:settings", label: state.chromeState?.settingsOpen ? "Close settings" : "Settings", glyph: "wrench", iconOnly: true, width: 44, tone: "neutral", active: !!state.chromeState?.settingsOpen },
         { id: "chrome:toggle-stage-size", label: isStageMaximized ? "Dock stage" : "Maximize stage", glyph: isStageMaximized ? "dock" : "maximize", iconOnly: true, width: 44, tone: isStageMaximized ? "warning" : "neutral", active: isStageMaximized }
     ];
@@ -469,6 +534,17 @@ function buildChromeRenderKey(state) {
         transparentGround: state.surface.uiState?.transparentGround !== false,
         showAnchors: state.surface.uiState?.showAnchors !== false,
         showEdgeLabels: state.surface.uiState?.showEdgeLabels !== false,
+        toolbarActions: normalizeHostToolbarActions(state).map(action => ({
+            id: action.id,
+            label: action.label,
+            glyph: action.glyph,
+            visualLabel: action.visualLabel,
+            iconOnly: action.iconOnly,
+            width: action.width,
+            tone: action.tone,
+            active: action.active,
+            toggled: action.toggled
+        })),
         isStageMaximized: !!state.surface.uiState?.isStageMaximized,
         showDiagnostics: !!state.surface.uiState?.showDiagnostics,
         hintText: resolveHintText(state),

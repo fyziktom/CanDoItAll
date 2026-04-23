@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject ProcessWebGlSandboxSession Session
 @using CanDoItAll.Components.OverlayLib
+@using CanDoItAll.Modules.Processes
 
 <PageTitle>WebGL Process Workbench</PageTitle>
 
@@ -115,6 +116,10 @@
                             Icon="image"
                             Click="HandleExportAsync"
                             data-testid="webgl-sandbox-export" />
+                    <Button Text="Components toolbox"
+                            Icon="inventory_2"
+                            Click="ShowToolboxWindowAsync"
+                            data-testid="webgl-sandbox-show-toolbox-window" />
                     <Button Text="Selection window"
                             Icon="dock_to_right"
                             Click="ShowSelectionWindowAsync"
@@ -196,7 +201,43 @@
                                     NodesMoved="HandleNodesMoved"
                                     ConnectionChangeRequested="HandleConnectionChangeRequested"
                                     DeleteRequested="HandleDeleteRequested"
-                                    StateChanged="HandleStateChanged" />
+                                    StateChanged="HandleStateChanged"
+                                    ChromeActionRequested="HandleChromeActionRequestedAsync" />
+
+                    @if (toolboxWindowState.IsVisible)
+                    {
+                        <OverlayWindow WindowId="webgl-components-toolbox-overlay"
+                                       Title="Components library"
+                                       Kicker="Generic toolbox"
+                                       Summary="The shared overlay toolbox now hosts role and step templates for WebGL authoring too."
+                                       AriaLabel="WebGL components toolbox"
+                                       TestId="webgl-components-toolbox-window"
+                                       DefaultPlacement="top-left"
+                                       DefaultWidth="368"
+                                       DefaultHeight="420"
+                                       MinWidth="320"
+                                       MinHeight="260"
+                                       MaxWidth="420"
+                                       MaxHeight="560"
+                                       BodyClass="webgl-overlay-window__body"
+                                       ContainerSelector="[data-cda-overlay-container]"
+                                       State="@toolboxWindowState"
+                                       StateChanged="HandleToolboxWindowStateChangedAsync">
+                            <OverlayComponentToolbox TestId="webgl-components-toolbox"
+                                                     AriaLabel="WebGL components library"
+                                                     Class="webgl-components-toolbox"
+                                                     Eyebrow="3D authoring"
+                                                     Title="Process components"
+                                                     Summary="Seed new roles and steps directly into the in-memory 3D definition."
+                                                     SearchText="@toolboxSearchText"
+                                                     SearchTextChanged="HandleToolboxSearchChangedAsync"
+                                                     SearchPlaceholder="Search process components"
+                                                     SearchTestId="webgl-components-toolbox-search"
+                                                     Sections="@ToolboxSections"
+                                                     Badges="@ToolboxBadges"
+                                                     ItemSelected="HandleToolboxItemSelectedAsync" />
+                        </OverlayWindow>
+                    }
 
                     @if (selectionWindowState.IsVisible)
                     {
@@ -329,6 +370,10 @@
         new("YZ", WebGlWorkbenchCameraViewModes.YZ)
     ];
 
+    private const string ShowToolboxWindowChromeActionId = "host:show-toolbox-window";
+    private const string ShowSelectionWindowChromeActionId = "host:show-selection-window";
+    private const string ShowCommandWindowChromeActionId = "host:show-command-window";
+
     [SupplyParameterFromQuery(Name = "template")]
     public string? TemplateQuery { get; set; }
 
@@ -340,6 +385,15 @@
 
     private WebGlWorkbench workbench = default!;
     private WebGlWorkbenchSurface currentSurface = new();
+    private string toolboxSearchText = string.Empty;
+    private OverlayWindowState toolboxWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+    {
+        IsVisible = true,
+        Left = 24,
+        Top = 112,
+        Width = 368,
+        Height = 420
+    });
     private OverlayWindowState selectionWindowState = OverlayWindowState.Normalize(new OverlayWindowState
     {
         IsVisible = true,
@@ -349,6 +403,9 @@
     private OverlayWindowState commandWindowState = OverlayWindowState.Normalize(new OverlayWindowState
     {
         IsVisible = true,
+        IsMinimized = true,
+        Left = 792,
+        Top = 336,
         Width = 330,
         Height = 320
     });
@@ -391,6 +448,18 @@
                 ? selectedNode.Subtitle
                 : selectedNode.Description;
 
+    private IReadOnlyList<OverlayToolboxBadge> ToolboxBadges
+        =>
+        [
+            new OverlayToolboxBadge(Session.CurrentTemplate.DisplayName, "info", "webgl-components-toolbox-template-badge"),
+            new OverlayToolboxBadge($"{FilteredToolboxItemCount} items", "neutral", "webgl-components-toolbox-count-badge")
+        ];
+
+    private IReadOnlyList<OverlayToolboxSection> ToolboxSections => BuildToolboxSections();
+
+    private int FilteredToolboxItemCount
+        => ToolboxSections.Sum(section => section.Groups.Sum(group => group.Items.Count));
+
     private async Task HandleTemplateChangedAsync(string? templateKey)
         => await NavigateAsync(templateKey, Session.CameraViewMode, Session.ViewPreset);
 
@@ -410,19 +479,6 @@
     private Task HandleSelectionChanged(WebGlSelectionChangedEventArgs args)
     {
         Session.SetSelectedNode(args.PrimaryNodeId);
-        if (!string.IsNullOrWhiteSpace(args.PrimaryNodeId))
-        {
-            selectionWindowState = OverlayWindowState.Normalize(new OverlayWindowState
-            {
-                IsVisible = true,
-                IsMinimized = false,
-                Left = selectionWindowState.Left,
-                Top = selectionWindowState.Top,
-                Width = selectionWindowState.Width,
-                Height = selectionWindowState.Height
-            });
-        }
-
         return RefreshSurfaceAsync();
     }
 
@@ -496,15 +552,61 @@
         await RefreshSurfaceAsync();
     }
 
+    private Task HandleToolboxSearchChangedAsync(string? value)
+    {
+        toolboxSearchText = value?.Trim() ?? string.Empty;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleToolboxItemSelectedAsync(string actionId)
+    {
+        var authoredNodeId = Session.AddToolboxComponent(actionId, selectedNode?.Id);
+        if (string.IsNullOrWhiteSpace(authoredNodeId))
+        {
+            return;
+        }
+
+        await RefreshSurfaceAsync();
+        await Task.Yield();
+        if (workbench is not null)
+        {
+            await workbench.FocusNodeAsync(authoredNodeId);
+        }
+    }
+
+    private Task HandleToolboxWindowStateChangedAsync(OverlayWindowState state)
+    {
+        toolboxWindowState = OverlayWindowState.Normalize(state);
+        ApplyOverlayToolbarActions();
+        return InvokeAsync(StateHasChanged);
+    }
+
     private Task HandleSelectionWindowStateChangedAsync(OverlayWindowState state)
     {
         selectionWindowState = OverlayWindowState.Normalize(state);
+        ApplyOverlayToolbarActions();
         return InvokeAsync(StateHasChanged);
     }
 
     private Task HandleCommandWindowStateChangedAsync(OverlayWindowState state)
     {
         commandWindowState = OverlayWindowState.Normalize(state);
+        ApplyOverlayToolbarActions();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowToolboxWindowAsync()
+    {
+        toolboxWindowState = OverlayWindowState.Normalize(new OverlayWindowState
+        {
+            IsVisible = true,
+            IsMinimized = false,
+            Left = toolboxWindowState.Left,
+            Top = toolboxWindowState.Top,
+            Width = toolboxWindowState.Width,
+            Height = toolboxWindowState.Height
+        });
+        ApplyOverlayToolbarActions();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -519,6 +621,7 @@
             Width = selectionWindowState.Width,
             Height = selectionWindowState.Height
         });
+        ApplyOverlayToolbarActions();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -533,6 +636,7 @@
             Width = commandWindowState.Width,
             Height = commandWindowState.Height
         });
+        ApplyOverlayToolbarActions();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -565,12 +669,189 @@
     private void RefreshSurface()
     {
         currentSurface = Session.BuildSurface();
+        ApplyOverlayToolbarActions();
+    }
+
+    private void ApplyOverlayToolbarActions()
+    {
+        currentSurface.Chrome.ToolbarActions.Clear();
+
+        if (!toolboxWindowState.IsVisible)
+        {
+            currentSurface.Chrome.ToolbarActions.Add(new WebGlWorkbenchChromeToolbarAction
+            {
+                Id = ShowToolboxWindowChromeActionId,
+                Label = "Show components toolbox",
+                Glyph = "toolbox",
+                Tone = "neutral",
+                IconOnly = true,
+                Width = 44,
+                IsVisible = true
+            });
+        }
+
+        if (!selectionWindowState.IsVisible)
+        {
+            currentSurface.Chrome.ToolbarActions.Add(new WebGlWorkbenchChromeToolbarAction
+            {
+                Id = ShowSelectionWindowChromeActionId,
+                Label = "Show selection window",
+                Glyph = "inspector",
+                Tone = "accent",
+                IconOnly = true,
+                Width = 44,
+                IsVisible = true
+            });
+        }
+
+        if (!commandWindowState.IsVisible)
+        {
+            currentSurface.Chrome.ToolbarActions.Add(new WebGlWorkbenchChromeToolbarAction
+            {
+                Id = ShowCommandWindowChromeActionId,
+                Label = "Show command log",
+                Glyph = "log",
+                Tone = "neutral",
+                IconOnly = true,
+                Width = 44,
+                IsVisible = true
+            });
+        }
+    }
+
+    private Task HandleChromeActionRequestedAsync(string actionId)
+    {
+        if (string.Equals(actionId, ShowToolboxWindowChromeActionId, StringComparison.Ordinal))
+        {
+            return ShowToolboxWindowAsync();
+        }
+
+        if (string.Equals(actionId, ShowSelectionWindowChromeActionId, StringComparison.Ordinal))
+        {
+            return ShowSelectionWindowAsync();
+        }
+
+        if (string.Equals(actionId, ShowCommandWindowChromeActionId, StringComparison.Ordinal))
+        {
+            return ShowCommandWindowAsync();
+        }
+
+        return Task.CompletedTask;
     }
 
     private Task RefreshSurfaceAsync()
     {
         RefreshSurface();
         return InvokeAsync(StateHasChanged);
+    }
+
+    private IReadOnlyList<OverlayToolboxSection> BuildToolboxSections()
+    {
+        var groups = Session.ToolboxGroups
+            .Select(group =>
+            {
+                var items = group.Actions
+                    .Where(MatchesToolboxSearch)
+                    .Select(action => new OverlayToolboxItem(
+                        action.ActionId,
+                        action.Label,
+                        action.Summary,
+                        Tone: action.Tone,
+                        Icon: ResolveToolboxIcon(action.ActionId),
+                        DataTestId: $"webgl-components-toolbox-{action.ActionId}"))
+                    .ToList();
+
+                return new OverlayToolboxGroup(
+                    group.Key,
+                    group.Title,
+                    group.Summary,
+                    items,
+                    IsExpanded: true,
+                    DataTestId: $"webgl-components-toolbox-group-{group.Key}",
+                    BodyDataTestId: $"webgl-components-toolbox-group-body-{group.Key}");
+            })
+            .Where(group => group.Items.Count > 0)
+            .ToList();
+
+        if (groups.Count == 0)
+        {
+            return [];
+        }
+
+        return
+        [
+            new OverlayToolboxSection(
+                "webgl-process-components",
+                "Process components",
+                "Reuse the same toolbox contract while authoring directly inside the 3D workbench.",
+                groups,
+                Tone: "accent",
+                IsExpanded: true,
+                DataTestId: "webgl-components-toolbox-section",
+                BodyDataTestId: "webgl-components-toolbox-section-body")
+        ];
+    }
+
+    private bool MatchesToolboxSearch(ProcessCanvasToolboxAction action)
+    {
+        if (string.IsNullOrWhiteSpace(toolboxSearchText))
+        {
+            return true;
+        }
+
+        return action.Label.Contains(toolboxSearchText, StringComparison.OrdinalIgnoreCase) ||
+            action.Summary.Contains(toolboxSearchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveToolboxIcon(string actionId)
+    {
+        var normalized = (actionId ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Contains("role", StringComparison.Ordinal))
+        {
+            return "person_add";
+        }
+
+        if (normalized.Contains("intake", StringComparison.Ordinal))
+        {
+            return "playlist_add_check";
+        }
+
+        if (normalized.Contains("decision", StringComparison.Ordinal))
+        {
+            return "call_split";
+        }
+
+        if (normalized.Contains("architecture", StringComparison.Ordinal))
+        {
+            return "architecture";
+        }
+
+        if (normalized.Contains("qa", StringComparison.Ordinal))
+        {
+            return "fact_check";
+        }
+
+        if (normalized.Contains("security", StringComparison.Ordinal))
+        {
+            return "security";
+        }
+
+        if (normalized.Contains("release", StringComparison.Ordinal))
+        {
+            return "check";
+        }
+
+        if (normalized.Contains("deploy", StringComparison.Ordinal))
+        {
+            return "rocket_launch";
+        }
+
+        if (normalized.Contains("retro", StringComparison.Ordinal))
+        {
+            return "history";
+        }
+
+        return "hub";
     }
 
     private static string ResolveComplexityTone(string complexity)

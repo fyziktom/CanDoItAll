@@ -44,6 +44,9 @@
     [Parameter]
     public EventCallback<string> StateChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<string> ChromeActionRequested { get; set; }
+
     protected override void OnParametersSet()
     {
         pendingSurfaceKey = SerializeSurface(Surface);
@@ -118,6 +121,12 @@
     [JSInvokable]
     public Task OnStateChanged(string stateJson)
         => StateChanged.InvokeAsync(WebGlWorkbenchUiState.Parse(stateJson).ToJson());
+
+    [JSInvokable]
+    public Task OnChromeActionRequested(string actionId)
+        => string.IsNullOrWhiteSpace(actionId)
+            ? Task.CompletedTask
+            : ChromeActionRequested.InvokeAsync(actionId);
 
     public Task FitViewToSceneAsync()
         => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.fitView", host).AsTask();

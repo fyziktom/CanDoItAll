@@ -326,6 +326,12 @@ function openContextMenu(state, event, deps) {
 }
 
 export function applyChromeAction(state, actionId, deps) {
+    if (actionId?.startsWith?.("host:")) {
+        closeContextMenu(state, deps, false);
+        deps.requestChromeAction?.(actionId);
+        return true;
+    }
+
     switch (actionId) {
         case "tool:select":
             setToolMode(state, toolModes.select, deps);

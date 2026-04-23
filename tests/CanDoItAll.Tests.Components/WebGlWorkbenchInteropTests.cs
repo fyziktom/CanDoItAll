@@ -1,5 +1,6 @@
 using Bunit;
 using CanDoItAll.Components.WebGlLib;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -35,6 +36,23 @@ public sealed class WebGlWorkbenchInteropTests
             Assert.Single(createInterop.Invocations);
             Assert.Single(updateInterop.Invocations);
         });
+    }
+
+    [Fact]
+    public async Task Workbench_forwards_host_chrome_actions_to_blazor()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var actions = new List<string>();
+        var cut = context.RenderComponent<WebGlWorkbench>(parameters =>
+            parameters
+                .Add(component => component.Surface, CreateSurface("customer-onboarding", 140, 180))
+                .Add(component => component.ChromeActionRequested, EventCallback.Factory.Create<string>(this, action => actions.Add(action))));
+
+        await cut.InvokeAsync(() => cut.Instance.OnChromeActionRequested("host:show-selection-window"));
+
+        Assert.Equal("host:show-selection-window", Assert.Single(actions));
     }
 
     private static WebGlWorkbenchSurface CreateSurface(string sceneKey, double x, double y)

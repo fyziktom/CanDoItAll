@@ -139,6 +139,16 @@ function notifyStateChanged(state) {
     state.dotNetRef?.invokeMethodAsync("OnStateChanged", JSON.stringify(state.sourceSurface?.uiState || state.surface?.uiState || {}));
 }
 
+function notifyChromeActionRequested(state, actionId) {
+    if (!state.dotNetRef || !actionId) {
+        return;
+    }
+
+    state.dotNetRef
+        .invokeMethodAsync("OnChromeActionRequested", actionId)
+        .catch(error => console.warn("WebGL chrome action callback failed.", error));
+}
+
 function render(state) {
     syncStageShell(state);
     syncViewport(state);
@@ -502,7 +512,8 @@ function createState(host, dotNetRef, surface) {
         focusNode,
         resetView,
         rebuildScene,
-        setCameraViewMode
+        setCameraViewMode,
+        requestChromeAction: actionId => notifyChromeActionRequested(state, actionId)
     };
 
     state.handlers.pointerDown = event => handlePointerDown(state, event, state.interactionDeps);

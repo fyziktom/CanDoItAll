@@ -247,4 +247,29 @@ public sealed class WebGlWorkbenchChrome
     public string EmptyStateTitle { get; set; } = "No process geometry";
 
     public string EmptyStateDescription { get; set; } = "Load one of the representative template packs to review the concept stage.";
+
+    public List<WebGlWorkbenchChromeToolbarAction> ToolbarActions { get; set; } = [];
+}
+
+public sealed class WebGlWorkbenchChromeToolbarAction
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Glyph { get; set; } = string.Empty;
+
+    public string VisualLabel { get; set; } = string.Empty;
+
+    public string Tone { get; set; } = "neutral";
+
+    public bool IconOnly { get; set; } = true;
+
+    public double Width { get; set; } = 44;
+
+    public bool IsVisible { get; set; } = true;
+
+    public bool IsActive { get; set; }
+
+    public bool IsToggled { get; set; }
 }

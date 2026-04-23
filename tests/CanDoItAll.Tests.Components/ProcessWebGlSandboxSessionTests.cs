@@ -9,7 +9,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_applies_node_moves_to_in_memory_scene()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         var beforeMove = session.BuildSurface();
@@ -34,7 +34,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_disconnects_and_reconnects_existing_semantic_edge()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         var beforeChange = session.BuildSurface();
@@ -77,7 +77,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_connects_using_the_explicit_source_and_target_anchors_for_multi_input_nodes()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         var surface = session.BuildSurface();
@@ -111,7 +111,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_preserves_camera_state_across_surface_rebuilds()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
         session.ApplyUiState(new WebGlWorkbenchUiState
         {
@@ -159,7 +159,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [InlineData(WebGlWorkbenchCameraViewModes.YZ, WebGlWorkbenchProjectionModes.Orthographic)]
     public void Session_applies_camera_view_mode_from_route_state(string cameraViewMode, string expectedProjectionMode)
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
 
         session.ApplyRouteState("customer-onboarding", cameraViewMode, null);
 
@@ -174,7 +174,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_defaults_missing_route_camera_to_perspective()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
 
         session.ApplyRouteState("customer-onboarding", WebGlWorkbenchCameraViewModes.XY, null);
         session.ApplyRouteState("customer-onboarding", null, null);
@@ -190,7 +190,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_recompose_clears_node_overrides_and_tracks_layout_mode()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         var beforeMove = session.BuildSurface();
@@ -218,7 +218,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_spacing_adjustments_are_clamped_and_rebuild_scene()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         for (var index = 0; index < 10; index++)
@@ -246,7 +246,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_applies_tool_and_visibility_settings_from_ui_state()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         session.ApplyUiState(new WebGlWorkbenchUiState
@@ -283,7 +283,7 @@ public sealed class ProcessWebGlSandboxSessionTests
     [Fact]
     public void Session_deletes_node_from_resettable_in_memory_surface()
     {
-        var session = new ProcessWebGlSandboxSession(CreateAdapter());
+        var session = CreateSession();
         session.LoadTemplate("branching-code-review");
 
         var initialSurface = session.BuildSurface();
@@ -300,6 +300,60 @@ public sealed class ProcessWebGlSandboxSessionTests
             string.Equals(candidate.SourceNodeId, node.Id, StringComparison.Ordinal) ||
             string.Equals(candidate.TargetNodeId, node.Id, StringComparison.Ordinal));
         Assert.Equal("Deleted node", session.CommandLog[0].Title);
+    }
+
+    [Fact]
+    public void Session_adds_role_from_toolbox_and_selects_new_role_node()
+    {
+        var session = CreateSession();
+        session.LoadTemplate("customer-onboarding");
+
+        var before = session.BuildSurface();
+        var authoredNodeId = session.AddToolboxComponent("process-role.solution-architect");
+
+        var after = session.BuildSurface();
+
+        Assert.False(string.IsNullOrWhiteSpace(authoredNodeId));
+        Assert.Equal(authoredNodeId, session.SelectedNodeId);
+        Assert.True(after.Nodes.Count > before.Nodes.Count);
+        Assert.Contains(after.Nodes, node => string.Equals(node.Id, authoredNodeId, StringComparison.Ordinal));
+        Assert.Equal("Added role", session.CommandLog[0].Title);
+    }
+
+    [Fact]
+    public void Session_adds_step_from_toolbox_after_selected_step_context()
+    {
+        var session = CreateSession();
+        session.LoadTemplate("customer-onboarding");
+
+        var before = session.BuildSurface();
+        var sourceStep = before.Nodes.First(node =>
+            !node.Kind.Contains("role", StringComparison.OrdinalIgnoreCase) &&
+            !node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase));
+
+        var authoredNodeId = session.AddToolboxComponent("process-step.qa", sourceStep.Id);
+        var after = session.BuildSurface();
+
+        Assert.False(string.IsNullOrWhiteSpace(authoredNodeId));
+        Assert.Equal(authoredNodeId, session.SelectedNodeId);
+        Assert.True(after.Nodes.Count > before.Nodes.Count);
+        Assert.Contains(after.Nodes, node => string.Equals(node.Id, authoredNodeId, StringComparison.Ordinal));
+        Assert.Contains(after.Edges, edge =>
+            string.Equals(edge.TargetNodeId, authoredNodeId, StringComparison.Ordinal) &&
+            string.Equals(edge.SourceNodeId, sourceStep.Id, StringComparison.Ordinal));
+        Assert.Equal("Added step", session.CommandLog[0].Title);
+    }
+
+    private static ProcessWebGlSandboxSession CreateSession()
+    {
+        var packLoader = new ProcessTemplatePackLoader();
+        var catalogService = new ProcessTemplateCatalogService(packLoader);
+        return new ProcessWebGlSandboxSession(
+            new ProcessWebGlSceneAdapter(
+                catalogService,
+                new ProcessTemplateProjectionService(packLoader),
+                new ProcessCanvasSurfaceFactory(new ProcessCanvasChromeCatalogService(packLoader))),
+            catalogService);
     }
 
     private static ProcessWebGlSceneAdapter CreateAdapter()

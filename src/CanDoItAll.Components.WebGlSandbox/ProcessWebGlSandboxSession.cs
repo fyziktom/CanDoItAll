@@ -11,6 +11,7 @@ public sealed class ProcessWebGlSandboxSession
     private const double NodeSpacingStep = 0.15d;
 
     private readonly ProcessWebGlSceneAdapter sceneAdapter;
+    private readonly ProcessTemplateCatalogService templateCatalogService;
     private readonly List<ProcessWebGlCommandLogEntry> commandLog = [];
     private readonly Dictionary<string, WebGlNodePositionChange> nodePositionOverrides = new(StringComparer.Ordinal);
     private readonly HashSet<string> deletedNodeIds = new(StringComparer.Ordinal);
@@ -18,13 +19,19 @@ public sealed class ProcessWebGlSandboxSession
     private IReadOnlyList<ProcessWebGlTemplateDescriptor>? templates;
     private ProcessDefinitionEditorModel? workingEditor;
 
-    public ProcessWebGlSandboxSession(ProcessWebGlSceneAdapter sceneAdapter)
+    public ProcessWebGlSandboxSession(
+        ProcessWebGlSceneAdapter sceneAdapter,
+        ProcessTemplateCatalogService templateCatalogService)
     {
         this.sceneAdapter = sceneAdapter;
+        this.templateCatalogService = templateCatalogService;
     }
 
     public IReadOnlyList<ProcessWebGlTemplateDescriptor> Templates
         => templates ??= sceneAdapter.ListRepresentativeTemplates();
+
+    public IReadOnlyList<ProcessCanvasToolboxGroup> ToolboxGroups
+        => templateCatalogService.GetDefinitionToolboxGroups();
 
     public string SelectedTemplateKey { get; private set; } = string.Empty;
 
@@ -363,6 +370,54 @@ public sealed class ProcessWebGlSandboxSession
         IsStageMaximized = uiState.IsStageMaximized;
     }
 
+    public string? AddToolboxComponent(string actionId, string? preferredSourceNodeId = null)
+    {
+        EnsureInitialized();
+        if (workingEditor is null || string.IsNullOrWhiteSpace(actionId))
+        {
+            return null;
+        }
+
+        if (templateCatalogService.TryCreateRoleDraft(actionId, workingEditor.Roles.Count + 1, out var roleDraft))
+        {
+            roleDraft.CanvasX = ResolveDefaultRoleCanvasX(workingEditor);
+            roleDraft.CanvasY = ResolveDefaultRoleCanvasY(workingEditor.Roles.Count);
+            workingEditor.Roles.Add(roleDraft);
+            ProcessCanvasBranching.NormalizeDefinitionEditor(workingEditor);
+
+            var authoredRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(roleDraft);
+            SelectedNodeId = authoredRoleNodeId;
+            deletedNodeIds.Remove(authoredRoleNodeId);
+            RecordCommand("Added role", roleDraft.DisplayName);
+            return authoredRoleNodeId;
+        }
+
+        var sourceStep = ResolvePreferredInsertionStep(workingEditor, preferredSourceNodeId);
+        if (!templateCatalogService.TryCreateStepDraft(
+                actionId,
+                workingEditor.Steps.Count + 1,
+                sourceStep?.Id,
+                ResolveSuggestedStepCanvasX(workingEditor, sourceStep),
+                ResolveSuggestedStepCanvasY(workingEditor, sourceStep),
+                out var stepDraft))
+        {
+            return null;
+        }
+
+        workingEditor.Steps.Add(stepDraft);
+        ProcessCanvasBranching.NormalizeDefinitionEditor(workingEditor);
+
+        var authoredStepNodeId = ProcessCanvasBranching.BuildDefinitionStepNodeId(stepDraft);
+        SelectedNodeId = authoredStepNodeId;
+        deletedNodeIds.Remove(authoredStepNodeId);
+        RecordCommand(
+            "Added step",
+            sourceStep is null
+                ? stepDraft.Title
+                : $"{stepDraft.Title} after {sourceStep.Title}");
+        return authoredStepNodeId;
+    }
+
     public WebGlWorkbenchSurface BuildSurface()
     {
         EnsureInitialized();
@@ -455,6 +510,78 @@ public sealed class ProcessWebGlSandboxSession
 
         return Math.Round(Math.Clamp(value, MinNodeSpacingFactor, MaxNodeSpacingFactor), 2, MidpointRounding.AwayFromZero);
     }
+
+    private static ProcessStepEditorModel? ResolvePreferredInsertionStep(
+        ProcessDefinitionEditorModel editor,
+        string? preferredSourceNodeId)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredSourceNodeId))
+        {
+            var selectedStep = editor.Steps.FirstOrDefault(step =>
+                string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), preferredSourceNodeId, StringComparison.Ordinal) ||
+                string.Equals(ProcessCanvasBranching.BuildDefinitionBranchNodeId(step), preferredSourceNodeId, StringComparison.Ordinal));
+            if (selectedStep is not null)
+            {
+                return selectedStep;
+            }
+        }
+
+        return editor.Steps.LastOrDefault();
+    }
+
+    private static double ResolveSuggestedStepCanvasX(
+        ProcessDefinitionEditorModel editor,
+        ProcessStepEditorModel? sourceStep)
+    {
+        if (sourceStep is null)
+        {
+            return ResolveDefaultStepCanvasX(editor.Steps.Count);
+        }
+
+        var sourceIndex = editor.Steps.IndexOf(sourceStep);
+        var currentX = sourceStep.CanvasX != 0
+            ? sourceStep.CanvasX
+            : ResolveDefaultStepCanvasX(sourceIndex < 0 ? editor.Steps.Count : sourceIndex);
+        return currentX + 320d;
+    }
+
+    private static double ResolveSuggestedStepCanvasY(
+        ProcessDefinitionEditorModel editor,
+        ProcessStepEditorModel? sourceStep)
+    {
+        if (sourceStep is null)
+        {
+            return ResolveDefaultStepCanvasY();
+        }
+
+        var sourceIndex = editor.Steps.IndexOf(sourceStep);
+        return sourceStep.CanvasY != 0
+            ? sourceStep.CanvasY
+            : ResolveDefaultStepCanvasY(sourceIndex);
+    }
+
+    private static double ResolveDefaultStepCanvasX(int stepIndex)
+        => 140d + (Math.Max(0, stepIndex) * 280d);
+
+    private static double ResolveDefaultStepCanvasY(int? _ = null)
+        => 180d;
+
+    private static double ResolveDefaultRoleCanvasX(ProcessDefinitionEditorModel editor)
+    {
+        if (editor.Steps.Count == 0)
+        {
+            return -180d;
+        }
+
+        return editor.Steps
+            .Select((step, index) => step.CanvasX != 0
+                ? step.CanvasX
+                : ResolveDefaultStepCanvasX(index))
+            .Min() - 360d;
+    }
+
+    private static double ResolveDefaultRoleCanvasY(int roleIndex)
+        => 120d + (Math.Max(0, roleIndex) * 210d);
 }
 
 public sealed record ProcessWebGlCommandLogEntry(
