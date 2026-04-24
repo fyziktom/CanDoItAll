@@ -11,12 +11,12 @@
                       BodyClass="project-structure-toolbox-window__body"
                       DefaultPlacement="top-left"
                       DefaultWidth="@DefaultWidth"
-                      DefaultHeight="420"
+                      DefaultHeight="@DefaultToolboxWindowHeight"
                       MinWidth="320"
-                      MinHeight="240"
+                      MinHeight="320"
                       MaxWidth="520"
-                      MaxHeight="520"
-                      State="@State"
+                      MaxHeight="760"
+                      State="@ResolvedState"
                       StateChanged="StateChanged">
     <OverlayComponentToolbox TestId="project-structure-standard-blocks-toolbox"
                              AriaLabel="Project structure standard blocks toolbox"
@@ -26,6 +26,7 @@
                              SearchTextChanged="SearchTextChanged"
                              SearchPlaceholder="Search blocks, files, runtime, or infrastructure"
                              SearchClass="project-structure-toolbox__search w-full"
+                             BodyClass="project-structure-toolbox__body"
                              SectionsClass="project-structure-toolbox__sections"
                              ItemButtonClass="cda-treeview__row"
                              ItemIconClass="cda-treeview__icon"
@@ -39,6 +40,9 @@
 </CanvasFloatingWindow>
 
 @code {
+    private const double LegacyDefaultToolboxWindowHeight = 420;
+    private const double DefaultToolboxWindowHeight = 560;
+
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 
@@ -77,6 +81,9 @@
 
     [Parameter]
     public double DefaultWidth { get; set; }
+
+    private CanvasWorkbenchWindowState ResolvedState
+        => UpgradeLegacyDefaultHeight(State, LegacyDefaultToolboxWindowHeight, DefaultToolboxWindowHeight);
 
     [Parameter]
     public EventCallback<string> OnToggleGroup { get; set; }
@@ -126,4 +133,22 @@
 
     private Task HandleNodeSelectedAsync(string actionId)
         => OnOpenAction.InvokeAsync(actionId);
+
+    private static CanvasWorkbenchWindowState UpgradeLegacyDefaultHeight(
+        CanvasWorkbenchWindowState state,
+        double legacyDefaultHeight,
+        double defaultHeight)
+    {
+        var normalized = CanvasWorkbenchWindowState.Normalize(state);
+        if (normalized.IsMinimized ||
+            !normalized.Height.HasValue ||
+            normalized.Height.Value > legacyDefaultHeight + 0.5)
+        {
+            return normalized;
+        }
+
+        var upgraded = normalized.Clone();
+        upgraded.Height = defaultHeight;
+        return CanvasWorkbenchWindowState.Normalize(upgraded);
+    }
 }
