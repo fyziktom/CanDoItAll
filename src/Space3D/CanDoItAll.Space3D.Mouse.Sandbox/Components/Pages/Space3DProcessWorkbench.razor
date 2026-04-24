@@ -3,6 +3,7 @@
 @using CanDoItAll.Space3D.Mouse.Driver.Protocol
 @using CanDoItAll.Space3D.Mouse.Driver.Scene
 @inject Space3DProcessWorkbenchSession Session
+@inject IJSRuntime JS
 
 <section class="space3d-process-workbench">
     <div class="space3d-process-workbench__header">
@@ -111,8 +112,36 @@
                         <dd>@AdcLabel</dd>
                     </div>
                     <div>
-                        <dt>Accel</dt>
+                        <dt>Raw accel</dt>
                         <dd>@FormatVector(sceneTelemetry?.LinearAccel)</dd>
+                    </div>
+                    <div>
+                        <dt>Filtered accel</dt>
+                        <dd>@FormatVector(filteredState?.FilteredAccel)</dd>
+                    </div>
+                    <div>
+                        <dt>Accel bias</dt>
+                        <dd>@FormatVector(filteredState?.AccelBias)</dd>
+                    </div>
+                    <div>
+                        <dt>Raw gyro</dt>
+                        <dd>@FormatVector(sceneTelemetry?.Gyro)</dd>
+                    </div>
+                    <div>
+                        <dt>Filtered gyro</dt>
+                        <dd>@FormatVector(filteredState?.FilteredGyro)</dd>
+                    </div>
+                    <div>
+                        <dt>Still</dt>
+                        <dd>@(filteredState?.Still == true ? "yes" : "no")</dd>
+                    </div>
+                    <div>
+                        <dt>Source</dt>
+                        <dd>@OrientationSourceLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Last command</dt>
+                        <dd>@lastNavigationCommand.DebugLabel</dd>
                     </div>
                     <div>
                         <dt>Angles</dt>
@@ -124,6 +153,101 @@
                     </div>
                 </dl>
                 <p class="visualizer-note visualizer-note--dense">@mouseActionMessage</p>
+            </SectionCard>
+
+            <SectionCard Title="Control profile"
+                         Description="Host-side smoothing and navigation mapping.">
+                <Stack GapScale="LayoutGap.Small">
+                    <FormField Text="Profile" ContainerClass="webgl-control-field">
+                        <select class="visualizer-select"
+                                value="@controlSettings.ProfileName"
+                                @onchange="HandleControlProfileChangedAsync">
+                            @foreach (var profileName in ControlProfiles)
+                            {
+                                <option value="@profileName">@profileName</option>
+                            }
+                        </select>
+                    </FormField>
+
+                    <div class="visualizer-axis-grid">
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Pan</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="25"
+                                   value="@FormatNumber(controlSettings.PanPixelsPerSecondAtFullInput)"
+                                   @onchange="HandlePanSensitivityChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Zoom</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.1"
+                                   value="@FormatNumber(controlSettings.ZoomLogRatePerSecondAtFullInput)"
+                                   @onchange="HandleZoomSensitivityChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Orbit</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="5"
+                                   value="@FormatNumber(controlSettings.OrbitDegreesPerSecondAtFullInput)"
+                                   @onchange="HandleOrbitSensitivityChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Accel dz</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.005"
+                                   value="@FormatNumber(controlSettings.AccelDeadzoneG)"
+                                   @onchange="HandleAccelDeadzoneChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Gyro dz</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.1"
+                                   value="@FormatNumber(controlSettings.GyroDeadzoneDps)"
+                                   @onchange="HandleGyroDeadzoneChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Accel tau</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="5"
+                                   value="@FormatNumber(controlSettings.AccelSmoothingTauMs)"
+                                   @onchange="HandleAccelTauChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Gyro tau</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="5"
+                                   value="@FormatNumber(controlSettings.GyroSmoothingTauMs)"
+                                   @onchange="HandleGyroTauChangedAsync" />
+                        </label>
+                    </div>
+
+                    <div class="visualizer-inline-actions">
+                        <button class="visualizer-button visualizer-button--compact"
+                                @onclick="ResetControlProfileAsync">
+                            Reset profile
+                        </button>
+                        <button class="visualizer-button visualizer-button--compact"
+                                @onclick="ExportControlSettingsAsync">
+                            Export JSON
+                        </button>
+                    </div>
+
+                    <textarea class="visualizer-debug-log"
+                              rows="5"
+                              value="@controlSettingsJson"
+                              @onchange="HandleControlSettingsJsonChangedAsync"></textarea>
+                    <button class="visualizer-button visualizer-button--compact"
+                            @onclick="ImportControlSettingsAsync">
+                        Import JSON
+                    </button>
+                </Stack>
             </SectionCard>
 
             <SectionCard Title="Button history"
@@ -209,18 +333,23 @@
 
     private const double NeutralCaptureGyroThresholdDps = 8d;
     private const double NeutralCaptureAccelThresholdG = 0.05d;
-    private const double AccelDeadzoneG = 0.025d;
-    private const double GyroDeadzoneDps = 1.5d;
+    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v1";
+    private static readonly IReadOnlyList<string> ControlProfiles = Space3DMouseControlSettings.ProfileNames;
 
     private readonly MouseLabPoseTransform sceneTransform = new();
+    private readonly Space3DMouseControlFilter controlFilter = new();
     private WebGlWorkbench? workbench;
     private WebGlWorkbenchSurface currentSurface = new();
     private MouseSceneSnapshot? sceneTelemetry;
+    private Space3DMouseFilteredState? filteredState;
+    private Space3DNavigationCommand lastNavigationCommand = Space3DNavigationCommand.None;
+    private Space3DMouseControlSettings controlSettings = Space3DMouseControlSettings.CreateDefault();
     private DateTimeOffset? lastTelemetryAt;
-    private DateTimeOffset? lastNavigationAt;
     private DateTimeOffset lastHandledButtonEventAt = DateTimeOffset.MinValue;
     private string mouseActionMessage = "Connect the BLE mouse in the lab tab, then use held buttons 1/2/3 for pan, rotate, and zoom.";
     private string buttonModeDescription = "Button 1 pans, button 2 rotates, button 3 zooms, button 4 primary-clicks, button 5 opens the context menu, and button 6 captures neutral.";
+    private string controlSettingsJson = string.Empty;
+    private bool controlSettingsLoaded;
 
     [Parameter]
     public MouseTelemetrySnapshot? LatestTelemetry { get; set; }
@@ -231,7 +360,30 @@
     protected override void OnInitialized()
     {
         Session.EnsureInitialized();
+        ApplyControlSettings(controlSettings, persist: false);
         RefreshSurface();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || controlSettingsLoaded)
+        {
+            return;
+        }
+
+        controlSettingsLoaded = true;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", ControlSettingsStorageKey);
+            if (Space3DMouseControlSettings.TryFromJson(json, out var storedSettings))
+            {
+                ApplyControlSettings(storedSettings, persist: false);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JSException)
+        {
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -243,8 +395,14 @@
 
         lastTelemetryAt = LatestTelemetry.ReceivedAt;
         sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+        if (sceneTelemetry is not null)
+        {
+            lastNavigationCommand = controlFilter.BuildNavigationCommand(sceneTelemetry, ButtonState, IsPrecisionProfile);
+            filteredState = controlFilter.LastState;
+        }
+
         await HandleButtonEventsAsync();
-        await ApplyHeldNavigationAsync();
+        await ApplyNavigationCommandAsync(lastNavigationCommand);
     }
 
     private WebGlWorkbenchNode? selectedNode
@@ -347,53 +505,133 @@
         }
     }
 
-    private async Task ApplyHeldNavigationAsync()
+    private async Task ApplyNavigationCommandAsync(Space3DNavigationCommand command)
     {
         if (workbench is null || sceneTelemetry is null || !sceneTelemetry.Valid)
         {
             return;
         }
 
-        var hasNavigationButton = ButtonState.IsPressed(1) || ButtonState.IsPressed(2) || ButtonState.IsPressed(3);
-        if (!hasNavigationButton)
+        if (command.HasPan)
         {
-            lastNavigationAt = null;
+            await workbench.PanAsync(command.PanX, command.PanY);
+            mouseActionMessage = command.DebugLabel;
+        }
+
+        if (command.HasOrbit)
+        {
+            await workbench.OrbitAsync(command.OrbitAzimuthRadians, command.OrbitPolarRadians);
+            mouseActionMessage = command.DebugLabel;
+        }
+
+        if (command.HasZoom)
+        {
+            await workbench.ZoomAsync(command.ZoomFactor);
+            mouseActionMessage = command.DebugLabel;
+        }
+    }
+
+    private async Task HandleControlProfileChangedAsync(ChangeEventArgs args)
+    {
+        ApplyControlSettings(Space3DMouseControlSettings.CreateProfile(args.Value?.ToString()), persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private async Task ResetControlProfileAsync()
+    {
+        ApplyControlSettings(Space3DMouseControlSettings.CreateProfile(controlSettings.ProfileName), persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private async Task ExportControlSettingsAsync()
+    {
+        controlSettingsJson = controlSettings.ToJson();
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", controlSettingsJson);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task ImportControlSettingsAsync()
+    {
+        if (Space3DMouseControlSettings.TryFromJson(controlSettingsJson, out var imported))
+        {
+            ApplyControlSettings(imported, persist: true);
+            await PersistControlSettingsAsync();
+            mouseActionMessage = "Imported host control settings.";
+        }
+        else
+        {
+            mouseActionMessage = "Settings JSON could not be imported.";
+        }
+    }
+
+    private Task HandleControlSettingsJsonChangedAsync(ChangeEventArgs args)
+    {
+        controlSettingsJson = args.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePanSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.PanPixelsPerSecondAtFullInput = value);
+
+    private Task HandleZoomSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.ZoomLogRatePerSecondAtFullInput = value);
+
+    private Task HandleOrbitSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.OrbitDegreesPerSecondAtFullInput = value);
+
+    private Task HandleAccelDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.AccelDeadzoneG = value);
+
+    private Task HandleGyroDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.GyroDeadzoneDps = value);
+
+    private Task HandleAccelTauChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.AccelSmoothingTauMs = value);
+
+    private Task HandleGyroTauChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.GyroSmoothingTauMs = value);
+
+    private async Task ChangeControlNumberAsync(ChangeEventArgs args, Action<double> assign)
+    {
+        if (!TryParseDouble(args.Value?.ToString(), out var value))
+        {
+            mouseActionMessage = "Control setting expects a numeric value.";
             return;
         }
 
-        var deltaSeconds = ResolveNavigationDeltaSeconds(sceneTelemetry.Source.ReceivedAt);
-        if (ButtonState.IsPressed(1))
+        assign(value);
+        ApplyControlSettings(controlSettings, persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private void ApplyControlSettings(Space3DMouseControlSettings settings, bool persist)
+    {
+        controlSettings = settings.Clone().Normalize();
+        controlFilter.ApplySettings(controlSettings);
+        sceneTransform.ApplyControlSettings(controlSettings);
+        controlSettingsJson = controlSettings.ToJson();
+        sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+        filteredState = sceneTelemetry is null ? null : controlFilter.Update(sceneTelemetry);
+        lastNavigationCommand = Space3DNavigationCommand.None;
+        if (persist)
         {
-            var accel = sceneTelemetry.LinearAccel;
-            var panX = ApplyDeadzone(accel.X, AccelDeadzoneG) * 155d;
-            var panY = ApplyDeadzone(accel.Z + (accel.Y * 0.35d), AccelDeadzoneG) * 155d;
-            if (Math.Abs(panX) > 0.2d || Math.Abs(panY) > 0.2d)
-            {
-                await workbench.PanAsync(panX, panY);
-                mouseActionMessage = $"Pan from accel {FormatVector(accel)}";
-            }
+            mouseActionMessage = $"Applied {controlSettings.ProfileName} control settings.";
         }
-        else if (ButtonState.IsPressed(2))
+    }
+
+    private async Task PersistControlSettingsAsync()
+    {
+        try
         {
-            var gyro = sceneTelemetry.Gyro;
-            var azimuth = DegreesToRadians(ApplyDeadzone(gyro.Z, GyroDeadzoneDps) * deltaSeconds * 0.85d);
-            var polar = DegreesToRadians(-ApplyDeadzone(gyro.X, GyroDeadzoneDps) * deltaSeconds * 0.85d);
-            if (Math.Abs(azimuth) > 0.0001d || Math.Abs(polar) > 0.0001d)
-            {
-                await workbench.OrbitAsync(azimuth, polar);
-                mouseActionMessage = $"Rotate from gyro {FormatVector(gyro)}";
-            }
+            await JS.InvokeVoidAsync("localStorage.setItem", ControlSettingsStorageKey, controlSettings.ToJson());
         }
-        else if (ButtonState.IsPressed(3))
+        catch (JSException)
         {
-            var accel = sceneTelemetry.LinearAccel;
-            var zoomSignal = ApplyDeadzone(accel.Y, AccelDeadzoneG);
-            var factor = 1d + Math.Clamp(zoomSignal * 0.18d, -0.12d, 0.12d);
-            if (Math.Abs(factor - 1d) > 0.004d)
-            {
-                await workbench.ZoomAsync(factor);
-                mouseActionMessage = $"Zoom from forward accel {accel.Y:+0.000;-0.000;+0.000} g";
-            }
         }
     }
 
@@ -518,37 +756,36 @@
         RefreshSurface();
     }
 
-    private double ResolveNavigationDeltaSeconds(DateTimeOffset timestamp)
-    {
-        var deltaSeconds = lastNavigationAt is null
-            ? 0.02d
-            : Math.Max(0.001d, (timestamp - lastNavigationAt.Value).TotalSeconds);
-        lastNavigationAt = timestamp;
-        return Math.Clamp(deltaSeconds, 0.001d, 0.08d);
-    }
-
-    private static double ApplyDeadzone(double value, double deadzone)
-    {
-        var magnitude = Math.Abs(value);
-        if (magnitude <= deadzone)
-        {
-            return 0d;
-        }
-
-        return Math.Sign(value) * (magnitude - deadzone);
-    }
-
     private static bool IsNeutralCaptureStable(MouseTelemetrySnapshot pose)
         => pose.GyroMagnitudeDps <= NeutralCaptureGyroThresholdDps &&
            pose.LinearAccelMagnitudeG <= NeutralCaptureAccelThresholdG;
-
-    private static double DegreesToRadians(double degrees)
-        => degrees * Math.PI / 180d;
 
     private static string FormatVector(SceneVector? vector)
         => vector is null
             ? "--"
             : $"{vector.Value.X:+0.000;-0.000;+0.000}, {vector.Value.Y:+0.000;-0.000;+0.000}, {vector.Value.Z:+0.000;-0.000;+0.000}";
+
+    private static string FormatNumber(double value)
+        => value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static bool TryParseDouble(string? valueText, out double value)
+        => double.TryParse(valueText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) ||
+           double.TryParse(valueText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out value);
+
+    private bool IsPrecisionProfile
+        => string.Equals(controlSettings.ProfileName, "Precision", StringComparison.OrdinalIgnoreCase);
+
+    private string OrientationSourceLabel
+        => LatestTelemetry?.OrientationSource switch
+        {
+            MouseOrientationSource.GameRotationVectorNoMag => "Game RV no mag",
+            MouseOrientationSource.RotationVectorMag => "Rotation RV mag",
+            MouseOrientationSource.GeomagneticNoGyro => "Geomagnetic no gyro",
+            MouseOrientationSource.ArvrStabilizedMag => "AR/VR mag",
+            MouseOrientationSource.ArvrStabilizedGameNoMag => "AR/VR game no mag",
+            MouseOrientationSource.Unknown => "Unknown",
+            _ => "--"
+        };
 
     private static string ResolveCameraViewLabel(string cameraViewMode)
     {

@@ -39,10 +39,10 @@
 
 .webgl-shell__header {
     display: grid;
-    gap: 0.6rem;
-    max-width: 64rem;
-    margin: 0 auto 1rem;
-    padding: 0.75rem 0.2rem 0.25rem;
+    gap: 0.25rem;
+    max-width: none;
+    margin: 0 0 0.45rem;
+    padding: 0.35rem 19rem 0.1rem 0.2rem;
 }
 
 .webgl-shell__brand {
@@ -67,10 +67,10 @@
 }
 
 .webgl-shell__summary {
-    max-width: 52rem;
+    max-width: 46rem;
     margin: 0;
-    font-size: 0.95rem;
-    line-height: 1.6;
+    font-size: 0.82rem;
+    line-height: 1.35;
     color: rgba(51, 65, 85, 0.86);
 }
 
@@ -361,6 +361,76 @@
     min-height: 0;
 }
 
+.space3d-global-connection {
+    position: absolute;
+    top: 0.95rem;
+    right: 1.25rem;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.42rem;
+    max-width: min(30rem, calc(100vw - 2rem));
+}
+
+.space3d-connection-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding: 0.22rem 0.58rem;
+    border: 1px solid rgba(148, 163, 184, 0.36);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.84);
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.space3d-connection-status.is-success {
+    border-color: rgba(22, 163, 74, 0.34);
+    background: #e8fff0;
+    color: #0f6b34;
+}
+
+.space3d-connection-status.is-warn {
+    border-color: rgba(217, 119, 6, 0.34);
+    background: #fff5d7;
+    color: #8b5e00;
+}
+
+.space3d-connection-status.is-error {
+    border-color: rgba(220, 38, 38, 0.28);
+    background: #ffe5e5;
+    color: #9a1f1f;
+}
+
+.space3d-connect-button {
+    min-height: 1.75rem;
+    padding: 0.32rem 0.66rem;
+    border: 1px solid #bcc7dc;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #12233e;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.space3d-connect-button--primary {
+    border-color: #1d63cb;
+    background: #1d63cb;
+    color: white;
+}
+
+.space3d-connect-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+}
+
 .space3d-process-workbench {
     display: grid;
     gap: 1rem;
@@ -437,6 +507,16 @@
 @media (max-width: 1024px) {
     .webgl-shell {
         padding: 0.8rem;
+    }
+
+    .webgl-shell__header {
+        padding-right: 0.2rem;
+    }
+
+    .space3d-global-connection {
+        position: static;
+        margin: -0.1rem 0 0.45rem;
+        justify-content: flex-start;
     }
 
     .webgl-stage-frame {

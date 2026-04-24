@@ -1,4 +1,5 @@
 using System.Numerics;
+using CanDoItAll.Space3D.Mouse.Driver.Control;
 using CanDoItAll.Space3D.Mouse.Driver.Protocol;
 
 namespace CanDoItAll.Space3D.Mouse.Driver.Scene;
@@ -56,15 +57,11 @@ public sealed class MouseLabPoseTransform
     private DateTimeOffset? lastAngularSampleAt;
     private DateTimeOffset zeroLockUntil = DateTimeOffset.MinValue;
     private bool haveFilteredAngularState;
-    private const double PointerYawFullScaleDeg = 55d;
-    private const double PointerPitchFullScaleDeg = 55d;
-    private const double PointerDeadzoneDeg = 2.25d;
-    private const double PointerSnapMagnitude = 0.035d;
-    private const double PointerSmoothingTauMs = 42d;
-    private const double CaptureZeroLockMs = 180d;
+    private Space3DMouseControlSettings settings;
 
-    public MouseLabPoseTransform()
+    public MouseLabPoseTransform(Space3DMouseControlSettings? settings = null)
     {
+        this.settings = (settings ?? Space3DMouseControlSettings.CreateDefault()).Clone().Normalize();
         ApplyDefaultPreset();
     }
 
@@ -84,6 +81,12 @@ public sealed class MouseLabPoseTransform
 
     public string MappingSummary
         => $"Map X <- {FormatRule(SceneX)}, Y <- {FormatRule(SceneY)}, Z <- {FormatRule(SceneZ)} | Rot X {RotationXDeg:+0;-0;+0} deg, Y {RotationYDeg:+0;-0;+0} deg, Z {RotationZDeg:+0;-0;+0} deg";
+
+    public void ApplyControlSettings(Space3DMouseControlSettings nextSettings)
+    {
+        settings = nextSettings.Clone().Normalize();
+        ResetAngularState();
+    }
 
     public void ApplyDefaultPreset()
     {
@@ -214,9 +217,9 @@ public sealed class MouseLabPoseTransform
         var gyro = ProjectLocalVector(right, up, forward, pose.LocalGyro);
         var linearAccel = ProjectLocalVector(right, up, forward, pose.LocalLinearAccel);
         var (rawYawDeg, rawPitchDeg, rawRollDeg) = ComputeOrientationAngles(right, up, forward);
-        rawYawDeg = ApplySignedDeadzone(rawYawDeg, PointerDeadzoneDeg);
-        rawPitchDeg = ApplySignedDeadzone(rawPitchDeg, PointerDeadzoneDeg);
-        rawRollDeg = ApplySignedDeadzone(rawRollDeg, PointerDeadzoneDeg);
+        rawYawDeg = ApplySignedDeadzone(rawYawDeg, settings.PointerDeadzoneDeg);
+        rawPitchDeg = ApplySignedDeadzone(rawPitchDeg, settings.PointerDeadzoneDeg);
+        rawRollDeg = ApplySignedDeadzone(rawRollDeg, settings.PointerDeadzoneDeg);
         var (yawDeg, pitchDeg, rollDeg, pointer) = UpdateAngularState(rawYawDeg, rawPitchDeg, rawRollDeg, pose.Source.ReceivedAt);
 
         return BuildSnapshot(
@@ -299,7 +302,7 @@ public sealed class MouseLabPoseTransform
         lastAngularSampleAt = timestamp;
         haveFilteredAngularState = false;
         zeroLockUntil = lockToZero
-            ? (timestamp ?? DateTimeOffset.UtcNow).AddMilliseconds(CaptureZeroLockMs)
+            ? (timestamp ?? DateTimeOffset.UtcNow).AddMilliseconds(settings.PointerZeroLockMs)
             : DateTimeOffset.MinValue;
     }
 
@@ -331,14 +334,14 @@ public sealed class MouseLabPoseTransform
         else
         {
             var deltaSeconds = ResolveAngularDeltaSeconds(timestamp);
-            var alpha = AlphaFromTau(PointerSmoothingTauMs, deltaSeconds);
+            var alpha = AlphaFromTau(settings.PointerSmoothingTauMs, deltaSeconds);
             filteredYawDeg = LerpAngle(filteredYawDeg, yawDeg, alpha);
             filteredPitchDeg = LerpAngle(filteredPitchDeg, pitchDeg, alpha);
             filteredRollDeg = LerpAngle(filteredRollDeg, rollDeg, alpha);
         }
 
         filteredPointer = MapOrientationPointer(filteredYawDeg, filteredPitchDeg, filteredRollDeg);
-        if (filteredPointer.Length <= PointerSnapMagnitude)
+        if (filteredPointer.Length <= settings.PointerSnapMagnitude)
         {
             filteredPointer = SceneVector.Zero;
             filteredYawDeg = 0d;
@@ -442,10 +445,10 @@ public sealed class MouseLabPoseTransform
         return (yawDeg, pitchDeg, rollDeg);
     }
 
-    private static SceneVector MapOrientationPointer(double yawDeg, double pitchDeg, double rollDeg)
+    private SceneVector MapOrientationPointer(double yawDeg, double pitchDeg, double rollDeg)
     {
-        var x = ClampUnit(yawDeg / PointerYawFullScaleDeg);
-        var z = ClampUnit(pitchDeg / PointerPitchFullScaleDeg);
+        var x = ClampUnit(yawDeg / settings.PointerYawFullScaleDeg);
+        var z = ClampUnit(pitchDeg / settings.PointerPitchFullScaleDeg);
         var radialSquared = (x * x) + (z * z);
         if (radialSquared > 1d)
         {

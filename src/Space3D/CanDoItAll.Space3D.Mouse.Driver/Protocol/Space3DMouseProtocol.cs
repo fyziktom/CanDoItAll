@@ -5,9 +5,14 @@ namespace CanDoItAll.Space3D.Mouse.Driver.Protocol;
 public enum MouseOrientationSource
 {
     Unknown = 0,
-    Geomagnetic = 1,
-    RotationVector = 2,
-    ArvrStabilized = 3
+    RotationVectorMag = 1,
+    GameRotationVectorNoMag = 2,
+    GeomagneticNoGyro = 3,
+    ArvrStabilizedMag = 4,
+    ArvrStabilizedGameNoMag = 5,
+    RotationVector = RotationVectorMag,
+    Geomagnetic = GeomagneticNoGyro,
+    ArvrStabilized = ArvrStabilizedMag
 }
 
 public enum MouseAdcSignalState
@@ -82,6 +87,11 @@ public sealed record MouseTelemetrySnapshot(
     bool SensorReady,
     bool ResetObserved,
     MouseOrientationSource OrientationSource,
+    bool OrientationSourceUsesMagnetometer,
+    bool OrientationFallbackUsed,
+    bool ReportsReconfigured,
+    bool SettingsDirty,
+    bool RuntimeSettingsValid,
     int OrientationAccuracy,
     int LinearAccelAccuracy,
     int GyroAccuracy,
@@ -107,6 +117,8 @@ public static class Space3DMouseProtocol
 {
     private const byte ManufacturerId = 0x7D;
     private const byte MouseStateTelemetryType = 0x31;
+    private const int MinSupportedProtocolMinor = 1;
+    private const int MaxSupportedProtocolMinor = 4;
 
     public static bool TryParseTelemetry(IReadOnlyList<int>? rawData, out MouseTelemetrySnapshot telemetry)
         => TryParseTelemetry(rawData, out telemetry, out _);
@@ -143,9 +155,17 @@ public static class Space3DMouseProtocol
             return false;
         }
 
+        var protocolMajor = ReadByte(rawData, 6) & 0x7F;
         var protocolMinor = ReadByte(rawData, 7) & 0x7F;
+        if (protocolMajor != 1 || protocolMinor < MinSupportedProtocolMinor || protocolMinor > MaxSupportedProtocolMinor)
+        {
+            rejectReason = $"Unsupported protocol version: {protocolMajor}.{protocolMinor:00}.";
+            return false;
+        }
+
         var hasSourceByte = protocolMinor == 1;
         var hasPackedSourceBits = protocolMinor >= 2;
+        var hasExtendedSourceStatus = protocolMinor >= 4;
         var hasExtendedAdcPayload = protocolMinor >= 3;
         if (hasSourceByte && rawData.Count < 41)
         {
@@ -159,6 +179,12 @@ public static class Space3DMouseProtocol
             return false;
         }
 
+        if (hasExtendedSourceStatus && rawData.Count < 50)
+        {
+            rejectReason = $"Protocol minor {protocolMinor} frame too short for extended source status: {rawData.Count}.";
+            return false;
+        }
+
         var expectedCrc = (byte)(ReadByte(rawData, rawData.Count - 2) & 0x7F);
         var actualCrc = ComputeCrc7(rawData, 1, rawData.Count - 2);
         if (expectedCrc != actualCrc)
@@ -169,13 +195,23 @@ public static class Space3DMouseProtocol
 
         var flags = ReadByte(rawData, 12) & 0x7F;
         var status = ReadByte(rawData, 13) & 0x7F;
-        var orientationSource = hasSourceByte
-            ? DecodeOrientationSource(ReadByte(rawData, 14) & 0x7F)
+        var orientationSource = hasExtendedSourceStatus
+            ? DecodeExtendedOrientationSource(ReadByte(rawData, 14) & 0x7F)
+            : hasSourceByte
+            ? DecodeLegacySourceByte(ReadByte(rawData, 14) & 0x7F)
             : hasPackedSourceBits
-                ? DecodeOrientationSource(((flags >> 5) & 0x02) | ((status >> 6) & 0x01))
+                ? DecodePackedOrientationSource(((flags >> 5) & 0x02) | ((status >> 6) & 0x01))
                 : DecodeLegacyOrientationSource(status);
+        var sourceStatus = hasExtendedSourceStatus ? ReadByte(rawData, 15) & 0x7F : 0;
+        var sourceUsesMagnetometer = hasExtendedSourceStatus
+            ? (sourceStatus & 0x01) != 0
+            : OrientationSourceUsesMagnetometer(orientationSource);
+        var orientationFallbackUsed = hasExtendedSourceStatus && (sourceStatus & 0x02) != 0;
+        var reportsReconfigured = hasExtendedSourceStatus && (sourceStatus & 0x04) != 0;
+        var settingsDirty = hasExtendedSourceStatus && (sourceStatus & 0x08) != 0;
+        var runtimeSettingsValid = !hasExtendedSourceStatus || (sourceStatus & 0x10) != 0;
 
-        var payloadOffset = hasSourceByte ? 1 : 0;
+        var payloadOffset = hasExtendedSourceStatus ? 2 : hasSourceByte ? 1 : 0;
         var payloadStart = 14 + payloadOffset;
         var pressedButtons = ReadByte(rawData, payloadStart) & 0x7F;
 
@@ -245,6 +281,11 @@ public static class Space3DMouseProtocol
             SensorReady: (flags & 0x10) != 0,
             ResetObserved: (flags & 0x20) != 0,
             OrientationSource: orientationSource,
+            OrientationSourceUsesMagnetometer: sourceUsesMagnetometer,
+            OrientationFallbackUsed: orientationFallbackUsed,
+            ReportsReconfigured: reportsReconfigured,
+            SettingsDirty: settingsDirty,
+            RuntimeSettingsValid: runtimeSettingsValid,
             OrientationAccuracy: status & 0x03,
             LinearAccelAccuracy: (status >> 2) & 0x03,
             GyroAccuracy: (status >> 4) & 0x03,
@@ -273,21 +314,40 @@ public static class Space3DMouseProtocol
     private static int ReadSigned14(IReadOnlyList<int> bytes, int index)
         => ReadUnsigned14(bytes, index) - 8192;
 
-    private static MouseOrientationSource DecodeOrientationSource(int source)
+    private static MouseOrientationSource DecodePackedOrientationSource(int source)
         => (source & 0x03) switch
         {
-            1 => MouseOrientationSource.Geomagnetic,
-            2 => MouseOrientationSource.RotationVector,
-            3 => MouseOrientationSource.ArvrStabilized,
+            1 => MouseOrientationSource.GeomagneticNoGyro,
+            2 => MouseOrientationSource.RotationVectorMag,
+            3 => MouseOrientationSource.ArvrStabilizedMag,
+            _ => MouseOrientationSource.Unknown
+        };
+
+    private static MouseOrientationSource DecodeLegacySourceByte(int source)
+        => DecodePackedOrientationSource(source);
+
+    private static MouseOrientationSource DecodeExtendedOrientationSource(int source)
+        => source switch
+        {
+            1 => MouseOrientationSource.RotationVectorMag,
+            2 => MouseOrientationSource.GameRotationVectorNoMag,
+            3 => MouseOrientationSource.GeomagneticNoGyro,
+            4 => MouseOrientationSource.ArvrStabilizedMag,
+            5 => MouseOrientationSource.ArvrStabilizedGameNoMag,
             _ => MouseOrientationSource.Unknown
         };
 
     private static MouseOrientationSource DecodeLegacyOrientationSource(int status)
         => (status >> 6) switch
         {
-            1 => MouseOrientationSource.Geomagnetic,
+            1 => MouseOrientationSource.GeomagneticNoGyro,
             _ => MouseOrientationSource.Unknown
         };
+
+    private static bool OrientationSourceUsesMagnetometer(MouseOrientationSource source)
+        => source is MouseOrientationSource.RotationVectorMag
+            or MouseOrientationSource.GeomagneticNoGyro
+            or MouseOrientationSource.ArvrStabilizedMag;
 
     private static MouseAdcSignalState DecodeAdcSignalState(int value)
         => value switch

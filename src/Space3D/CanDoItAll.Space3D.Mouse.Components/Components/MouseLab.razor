@@ -12,16 +12,6 @@
                             Compact="true">
                     <Actions>
                         <div class="visualizer-actions">
-                            <button class="visualizer-button visualizer-button--primary"
-                                    @onclick="ConnectAsync"
-                                    disabled="@(!bleDiagnostics.Supported || connectBusy)">
-                                @(connectBusy ? "Connecting..." : "Connect BLE")
-                            </button>
-                            <button class="visualizer-button"
-                                    @onclick="DisconnectAsync"
-                                    disabled="@(!bleDiagnostics.NotificationsActive || connectBusy)">
-                                Disconnect
-                            </button>
                             <button class="visualizer-button"
                                     @onclick="CaptureSceneCalibrationAsync"
                                     disabled="@(latestTelemetry is null || !latestTelemetry.PoseValid)">
@@ -430,6 +420,120 @@
                                     </div>
                                 </TabsItem>
 
+                                <TabsItem Text="Control">
+                                    <div class="visualizer-tab-panel">
+                                        <div class="visualizer-inline-actions">
+                                            <select class="visualizer-select"
+                                                    value="@controlSettings.ProfileName"
+                                                    @onchange="HandleControlProfileChangedAsync">
+                                                @foreach (var profileName in ControlProfiles)
+                                                {
+                                                    <option value="@profileName">@profileName</option>
+                                                }
+                                            </select>
+                                            <button class="visualizer-button visualizer-button--compact"
+                                                    @onclick="ResetControlProfileAsync">
+                                                Reset Profile
+                                            </button>
+                                            <button class="visualizer-button visualizer-button--compact"
+                                                    @onclick="ExportControlSettingsAsync">
+                                                Export JSON
+                                            </button>
+                                        </div>
+
+                                        <div class="visualizer-axis-grid">
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Accel tau</span>
+                                                <input class="visualizer-input" type="number" step="5" value="@FormatNumber(controlSettings.AccelSmoothingTauMs)" @onchange="HandleAccelTauChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Gyro tau</span>
+                                                <input class="visualizer-input" type="number" step="5" value="@FormatNumber(controlSettings.GyroSmoothingTauMs)" @onchange="HandleGyroTauChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Accel dz</span>
+                                                <input class="visualizer-input" type="number" step="0.005" value="@FormatNumber(controlSettings.AccelDeadzoneG)" @onchange="HandleAccelDeadzoneChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Gyro dz</span>
+                                                <input class="visualizer-input" type="number" step="0.1" value="@FormatNumber(controlSettings.GyroDeadzoneDps)" @onchange="HandleGyroDeadzoneChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Pan</span>
+                                                <input class="visualizer-input" type="number" step="25" value="@FormatNumber(controlSettings.PanPixelsPerSecondAtFullInput)" @onchange="HandlePanSensitivityChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Zoom</span>
+                                                <input class="visualizer-input" type="number" step="0.1" value="@FormatNumber(controlSettings.ZoomLogRatePerSecondAtFullInput)" @onchange="HandleZoomSensitivityChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Orbit</span>
+                                                <input class="visualizer-input" type="number" step="5" value="@FormatNumber(controlSettings.OrbitDegreesPerSecondAtFullInput)" @onchange="HandleOrbitSensitivityChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Precision</span>
+                                                <input class="visualizer-input" type="number" step="0.05" value="@FormatNumber(controlSettings.PrecisionMultiplier)" @onchange="HandlePrecisionMultiplierChangedAsync" />
+                                            </label>
+                                        </div>
+
+                                        <details class="visualizer-hint">
+                                            <summary>Diagnostics</summary>
+                                            <dl class="visualizer-metrics visualizer-metrics--vector">
+                                                <div>
+                                                    <dt>Raw accel</dt>
+                                                    <dd>@FormatVector(sceneTelemetry?.LinearAccel)</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Filtered accel</dt>
+                                                    <dd>@FormatVector(filteredState?.FilteredAccel)</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Accel bias</dt>
+                                                    <dd>@FormatVector(filteredState?.AccelBias)</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Raw gyro</dt>
+                                                    <dd>@FormatVector(sceneTelemetry?.Gyro)</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Filtered gyro</dt>
+                                                    <dd>@FormatVector(filteredState?.FilteredGyro)</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Still</dt>
+                                                    <dd>@(filteredState?.Still == true ? "yes" : "no")</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Button action</dt>
+                                                    <dd>@LogicalButtonActionLabel</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Frame interval</dt>
+                                                    <dd>@FrameIntervalLabel</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Source mag</dt>
+                                                    <dd>@SourceMagnetometerLabel</dd>
+                                                </div>
+                                            </dl>
+                                        </details>
+
+                                        <details class="visualizer-hint">
+                                            <summary>Firmware serial commands</summary>
+                                            <pre class="visualizer-debug-log">@FirmwareSerialCommandHint</pre>
+                                        </details>
+
+                                        <textarea class="visualizer-debug-log"
+                                                  rows="5"
+                                                  value="@controlSettingsJson"
+                                                  @onchange="HandleControlSettingsJsonChangedAsync"></textarea>
+                                        <button class="visualizer-button visualizer-button--compact"
+                                                @onclick="ImportControlSettingsAsync">
+                                            Import JSON
+                                        </button>
+                                    </div>
+                                </TabsItem>
+
                                 <TabsItem Text="Sensor">
                                     <div class="visualizer-tab-panel">
                                         <details class="visualizer-hint">
@@ -511,8 +615,10 @@
     private static readonly TimeSpan MinUiRefreshInterval = TimeSpan.FromMilliseconds(20d);
     private const int BleDebugCapturePacketLimit = 96;
     private const string BleBridgeModulePath = "/_content/CanDoItAll.Space3D.Mouse.Components/js/space3dMouseBle.js?v=20260423";
+    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v1";
     private const double NeutralCaptureGyroThresholdDps = 8d;
     private const double NeutralCaptureAccelThresholdG = 0.05d;
+    private static readonly IReadOnlyList<string> ControlProfiles = Space3DMouseControlSettings.ProfileNames;
 
     private IJSObjectReference? bleBridgeModule;
     private DotNetObjectReference<MouseLab>? objectReference;
@@ -520,8 +626,11 @@
     private WebGlWorkbenchSurface surface = default!;
     private WebGlWorkbenchUiState uiState = MouseLabSceneFactory.CreateDefaultUiState();
     private readonly MouseLabPoseTransform sceneTransform = new();
+    private readonly Space3DMouseControlFilter controlFilter = new();
     private MouseTelemetrySnapshot? latestTelemetry;
     private MouseSceneSnapshot? sceneTelemetry;
+    private Space3DMouseFilteredState? filteredState;
+    private Space3DMouseControlSettings controlSettings = Space3DMouseControlSettings.CreateDefault();
     private BleBridgeDiagnostics bleDiagnostics = new();
     private string? selectedNodeId;
     private string statusMessage = "Initializing browser BLE bridge.";
@@ -538,10 +647,12 @@
     private string lastRejectedFrameHex = "--";
     private string lastRejectedFrameReason = "--";
     private DateTimeOffset? lastFrameAt;
+    private double? lastTelemetryIntervalMs;
     private DateTimeOffset lastUiRefreshAt;
     private int? lastModuleCalibrationGeneration;
     private bool? lastModuleCalibrationValid;
     private int? pendingModuleCalibrationGeneration;
+    private string controlSettingsJson = string.Empty;
 
     [Parameter]
     public string BleDebugCaptureFilePath { get; set; } = string.Empty;
@@ -550,10 +661,28 @@
     public EventCallback<MouseTelemetrySnapshot> TelemetryReceived { get; set; }
 
     [Parameter]
+    public EventCallback ConnectionStateChanged { get; set; }
+
+    [Parameter]
     public Space3DMouseButtonSnapshot? LogicalButtonState { get; set; }
+
+    public string SharedConnectionLabel => ConnectionLabel;
+
+    public bool BleSupported => bleDiagnostics.Supported;
+
+    public bool NotificationsActive => bleDiagnostics.NotificationsActive;
+
+    public bool GattConnected => bleDiagnostics.GattConnected;
+
+    public bool IsConnectBusy => connectBusy;
+
+    public bool CanConnectBle => bleDiagnostics.Supported && !connectBusy;
+
+    public bool CanDisconnectBle => bleDiagnostics.NotificationsActive && !connectBusy;
 
     protected override void OnInitialized()
     {
+        ApplyControlSettings(controlSettings, persist: false);
         surface = MouseLabSceneFactory.CreateSurface(sceneTelemetry, uiState, ConnectionLabel);
     }
 
@@ -567,6 +696,7 @@
         objectReference = DotNetObjectReference.Create(this);
         bleBridgeModule = await JS.InvokeAsync<IJSObjectReference>("import", BleBridgeModulePath);
         bleDiagnostics = await bleBridgeModule.InvokeAsync<BleBridgeDiagnostics>("initialize", objectReference);
+        await LoadControlSettingsFromStorageAsync();
         statusMessage = bleDiagnostics.Supported
             ? "Bridge ready. Use Connect BLE to request or reuse the 3D mouse."
             : "Web Bluetooth is not available in this browser.";
@@ -606,6 +736,11 @@
         bleDiagnostics.FrameCount = Math.Max(bleDiagnostics.FrameCount + 1, receivedFrameCount + parseFailureCount + 1);
         if (Space3DMouseProtocol.TryParseTelemetry(data, out var pose, out var rejectReason))
         {
+            if (lastFrameAt is DateTimeOffset previousFrameAt)
+            {
+                lastTelemetryIntervalMs = Math.Max(0d, (pose.ReceivedAt - previousFrameAt).TotalMilliseconds);
+            }
+
             latestTelemetry = pose;
             receivedFrameCount++;
             lastFrameAt = pose.ReceivedAt;
@@ -640,7 +775,7 @@
         return RequestUiRefreshAsync(force: true);
     }
 
-    private async Task ConnectAsync()
+    public async Task ConnectAsync()
     {
         if (bleBridgeModule is null)
         {
@@ -649,7 +784,7 @@
 
         connectBusy = true;
         statusMessage = "Connecting through the browser BLE-MIDI flow...";
-        await InvokeAsync(StateHasChanged);
+        await RequestUiRefreshAsync(force: true);
 
         try
         {
@@ -670,7 +805,7 @@
         }
     }
 
-    private async Task DisconnectAsync()
+    public async Task DisconnectAsync()
     {
         if (bleBridgeModule is null)
         {
@@ -742,6 +877,130 @@
         await RequestUiRefreshAsync(force: true);
     }
 
+    private async Task LoadControlSettingsFromStorageAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", ControlSettingsStorageKey);
+            if (Space3DMouseControlSettings.TryFromJson(json, out var storedSettings))
+            {
+                ApplyControlSettings(storedSettings, persist: false);
+            }
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task HandleControlProfileChangedAsync(ChangeEventArgs args)
+    {
+        ApplyControlSettings(Space3DMouseControlSettings.CreateProfile(args.Value?.ToString()), persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private async Task ResetControlProfileAsync()
+    {
+        ApplyControlSettings(Space3DMouseControlSettings.CreateProfile(controlSettings.ProfileName), persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private async Task ExportControlSettingsAsync()
+    {
+        controlSettingsJson = controlSettings.ToJson();
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", controlSettingsJson);
+        }
+        catch (JSException)
+        {
+        }
+
+        statusMessage = "Host control settings exported.";
+    }
+
+    private async Task ImportControlSettingsAsync()
+    {
+        if (Space3DMouseControlSettings.TryFromJson(controlSettingsJson, out var imported))
+        {
+            ApplyControlSettings(imported, persist: true);
+            await PersistControlSettingsAsync();
+            statusMessage = "Host control settings imported.";
+        }
+        else
+        {
+            statusMessage = "Settings JSON could not be imported.";
+        }
+    }
+
+    private Task HandleControlSettingsJsonChangedAsync(ChangeEventArgs args)
+    {
+        controlSettingsJson = args.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAccelTauChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.AccelSmoothingTauMs = value);
+
+    private Task HandleGyroTauChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.GyroSmoothingTauMs = value);
+
+    private Task HandleAccelDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.AccelDeadzoneG = value);
+
+    private Task HandleGyroDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.GyroDeadzoneDps = value);
+
+    private Task HandlePanSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.PanPixelsPerSecondAtFullInput = value);
+
+    private Task HandleZoomSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.ZoomLogRatePerSecondAtFullInput = value);
+
+    private Task HandleOrbitSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.OrbitDegreesPerSecondAtFullInput = value);
+
+    private Task HandlePrecisionMultiplierChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.PrecisionMultiplier = value);
+
+    private async Task ChangeControlNumberAsync(ChangeEventArgs args, Action<double> assign)
+    {
+        if (!TryParseDouble(args.Value?.ToString(), out var value))
+        {
+            statusMessage = "Control setting expects a numeric value.";
+            await RequestUiRefreshAsync(force: true);
+            return;
+        }
+
+        assign(value);
+        ApplyControlSettings(controlSettings, persist: true);
+        await PersistControlSettingsAsync();
+        await RequestUiRefreshAsync(force: true);
+    }
+
+    private void ApplyControlSettings(Space3DMouseControlSettings settings, bool persist)
+    {
+        controlSettings = settings.Clone().Normalize();
+        controlFilter.ApplySettings(controlSettings);
+        sceneTransform.ApplyControlSettings(controlSettings);
+        controlSettingsJson = controlSettings.ToJson();
+        RebuildSurface();
+        if (persist)
+        {
+            statusMessage = $"Applied {controlSettings.ProfileName} host control settings.";
+        }
+    }
+
+    private async Task PersistControlSettingsAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", ControlSettingsStorageKey, controlSettings.ToJson());
+        }
+        catch (JSException)
+        {
+        }
+    }
+
     private async Task FitViewAsync()
     {
         if (workbench is null)
@@ -801,6 +1060,7 @@
     private void RebuildSurface()
     {
         sceneTelemetry = sceneTransform.Transform(latestTelemetry);
+        filteredState = sceneTelemetry is null ? null : controlFilter.Update(sceneTelemetry);
         surface = MouseLabSceneFactory.CreateSurface(sceneTelemetry, uiState, ConnectionLabel);
         selectedNodeId ??= MouseLabSceneFactory.PointerNodeId;
     }
@@ -997,16 +1257,20 @@
         return RequestUiRefreshAsync(force: true);
     }
 
-    private Task RequestUiRefreshAsync(bool force = false)
+    private async Task RequestUiRefreshAsync(bool force = false)
     {
         var now = DateTimeOffset.UtcNow;
         if (!force && (now - lastUiRefreshAt) < MinUiRefreshInterval)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         lastUiRefreshAt = now;
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+        if (force && ConnectionStateChanged.HasDelegate)
+        {
+            await ConnectionStateChanged.InvokeAsync();
+        }
     }
 
     private string ConnectionLabel
@@ -1036,12 +1300,41 @@
     private string OrientationSourceLabel
         => latestTelemetry?.OrientationSource switch
         {
-            MouseOrientationSource.Geomagnetic => "Geomagnetic",
-            MouseOrientationSource.RotationVector => "Rotation",
-            MouseOrientationSource.ArvrStabilized => "AR/VR",
+            MouseOrientationSource.GameRotationVectorNoMag => "Game RV no mag",
+            MouseOrientationSource.RotationVectorMag => "Rotation RV mag",
+            MouseOrientationSource.GeomagneticNoGyro => "Geomagnetic no gyro",
+            MouseOrientationSource.ArvrStabilizedMag => "AR/VR mag",
+            MouseOrientationSource.ArvrStabilizedGameNoMag => "AR/VR game no mag",
             MouseOrientationSource.Unknown => "Unknown",
             _ => "--"
         };
+
+    private string SourceMagnetometerLabel
+        => latestTelemetry is null
+            ? "--"
+            : latestTelemetry.OrientationSourceUsesMagnetometer ? "mag=1" : "mag=0";
+
+    private string FrameIntervalLabel
+        => lastTelemetryIntervalMs is null
+            ? "--"
+            : $"{lastTelemetryIntervalMs.Value:0.0} ms";
+
+    private string FirmwareSerialCommandHint
+        => """
+           set orientation game
+           sensor-reconfigure
+           get json
+
+           set orientation rotation
+           sensor-reconfigure
+           get json
+
+           set telemetry_ms 10
+           set q_us 5000
+           set accel_us 2500
+           set gyro_us 2500
+           save
+           """;
 
     private string ButtonsLabel
     {
@@ -1178,6 +1471,13 @@
         => vector is null
             ? "--"
             : $"{vector.Value.X:+0.000;-0.000;+0.000}, {vector.Value.Y:+0.000;-0.000;+0.000}, {vector.Value.Z:+0.000;-0.000;+0.000}";
+
+    private static string FormatNumber(double value)
+        => value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static bool TryParseDouble(string? valueText, out double value)
+        => double.TryParse(valueText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) ||
+           double.TryParse(valueText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out value);
 
     private static string FormatQuaternion(System.Numerics.Quaternion? quaternion)
         => quaternion is null
