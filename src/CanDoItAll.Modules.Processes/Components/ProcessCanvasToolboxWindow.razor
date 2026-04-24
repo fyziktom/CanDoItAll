@@ -8,14 +8,15 @@
                       Kicker="@Kicker"
                       Title="@Title"
                       Summary="@Summary"
+                      BodyClass="processes-canvas-toolbox-window__body"
                       DefaultPlacement="top-left"
                       DefaultWidth="@DefaultWidth"
-                      DefaultHeight="540"
+                      DefaultHeight="@DefaultToolboxWindowHeight"
                       MinWidth="320"
-                      MinHeight="260"
+                      MinHeight="320"
                       MaxWidth="560"
-                      MaxHeight="640"
-                      State="@State"
+                      MaxHeight="800"
+                      State="@ResolvedState"
                       StateChanged="StateChanged">
     <OverlayComponentToolbox TestId="processes-canvas-toolbox"
                              AriaLabel="Process templates toolbox"
@@ -26,12 +27,17 @@
                              SearchText="@SearchText"
                              SearchTextChanged="SearchTextChanged"
                              SearchPlaceholder="Search templates, roles, steps, review, or release"
+                             BodyClass="processes-canvas-toolbox__body"
+                             SectionsClass="processes-canvas-toolbox__sections"
                              Badges="@ToolboxBadges"
                              Sections="@ToolboxSections"
                              ItemSelected="OpenAction" />
 </CanvasFloatingWindow>
 
 @code {
+    private const double LegacyDefaultToolboxWindowHeight = 540;
+    private const double DefaultToolboxWindowHeight = 640;
+
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 
@@ -67,6 +73,9 @@
 
     [Parameter]
     public double DefaultWidth { get; set; } = 420;
+
+    private CanvasWorkbenchWindowState ResolvedState
+        => UpgradeLegacyDefaultHeight(State, LegacyDefaultToolboxWindowHeight, DefaultToolboxWindowHeight);
 
     [Parameter]
     public EventCallback<string> OpenAction { get; set; }
@@ -112,4 +121,22 @@
 
     private static string ResolveItemIcon(ProcessCanvasToolboxAction action)
         => action.ActionId.Contains("role", StringComparison.OrdinalIgnoreCase) ? "person" : "route";
+
+    private static CanvasWorkbenchWindowState UpgradeLegacyDefaultHeight(
+        CanvasWorkbenchWindowState state,
+        double legacyDefaultHeight,
+        double defaultHeight)
+    {
+        var normalized = CanvasWorkbenchWindowState.Normalize(state);
+        if (normalized.IsMinimized ||
+            !normalized.Height.HasValue ||
+            normalized.Height.Value > legacyDefaultHeight + 0.5)
+        {
+            return normalized;
+        }
+
+        var upgraded = normalized.Clone();
+        upgraded.Height = defaultHeight;
+        return CanvasWorkbenchWindowState.Normalize(upgraded);
+    }
 }

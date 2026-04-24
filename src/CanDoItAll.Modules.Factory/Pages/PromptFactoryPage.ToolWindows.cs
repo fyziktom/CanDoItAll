@@ -10,6 +10,8 @@ namespace CanDoItAll.Modules.Factory.Pages;
 public partial class PromptFactoryPage
 {
     private const string ComponentsToolboxWindowKey = "prompt-factory.components-toolbox";
+    private const double LegacyComponentsToolboxWindowHeight = 620;
+    private const double DefaultComponentsToolboxWindowHeight = 700;
     private const double ComponentPreviewPopoverPreferredWidth = 420;
     private const double ComponentPreviewPopoverPreferredHeight = 360;
     private const double ComponentPreviewViewportMargin = 24;
@@ -21,7 +23,10 @@ public partial class PromptFactoryPage
     private int componentPreviewVersion;
 
     private CanvasWorkbenchWindowState ComponentsToolboxWindowState
-        => ResolveCanvasWindowState(ComponentsToolboxWindowKey, true);
+        => UpgradeLegacyDefaultHeight(
+            ResolveCanvasWindowState(ComponentsToolboxWindowKey, true),
+            LegacyComponentsToolboxWindowHeight,
+            DefaultComponentsToolboxWindowHeight);
 
     private IReadOnlyList<OverlayToolboxSection> ComponentToolboxSections
         => BuildComponentToolboxSections();
@@ -220,6 +225,24 @@ public partial class PromptFactoryPage
                         IsExpanded: true))
                     .ToList()))
             .ToList();
+    }
+
+    private static CanvasWorkbenchWindowState UpgradeLegacyDefaultHeight(
+        CanvasWorkbenchWindowState state,
+        double legacyDefaultHeight,
+        double defaultHeight)
+    {
+        var normalized = CanvasWorkbenchWindowState.Normalize(state);
+        if (normalized.IsMinimized ||
+            !normalized.Height.HasValue ||
+            normalized.Height.Value > legacyDefaultHeight + 0.5)
+        {
+            return normalized;
+        }
+
+        var upgraded = normalized.Clone();
+        upgraded.Height = defaultHeight;
+        return CanvasWorkbenchWindowState.Normalize(upgraded);
     }
 
     private bool MatchesComponentToolboxSearch(PromptBlockSummary block)
