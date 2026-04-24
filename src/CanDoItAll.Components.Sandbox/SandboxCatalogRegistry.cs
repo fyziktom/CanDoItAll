@@ -66,7 +66,7 @@ public static class SandboxCatalogRegistry
             "Inputs",
             "/groups/inputs",
             "Field-level components for fast data entry, review, and configuration flows.",
-            ["text inputs", "numeric", "dropdown", "checkbox", "switch", "password", "text area"],
+            ["text inputs", "numeric", "dropdown", "checkbox", "switch", "password", "text area", "editable"],
             ["Form state stays explicit.", "Disabled and long-text states must remain legible.", "Mobile stacking should still scan quickly."]),
         new(
             SandboxGroupKey.Actions,
@@ -125,6 +125,7 @@ public static class SandboxCatalogRegistry
         CreateExample("foundations-dense", SandboxGroupKey.Foundations, "Dense editorial stack", SandboxScenarioKey.DenseContent, "Denser heading, copy, and icon combinations.", ["dense", "copy"], "TextBlock", "Card"),
         CreateExample("foundations-empty", SandboxGroupKey.Foundations, "Empty orientation", SandboxScenarioKey.EmptyState, "Foundation-only empty orientation surface.", ["empty"], "EmptyState"),
         CreateExample("inputs-happy", SandboxGroupKey.Inputs, "Form entry", SandboxScenarioKey.HappyPath, "Standard field layout with validation and helper context.", ["forms"], "FormField", "TextBox", "DropDown", "Numeric"),
+        CreateExample("inputs-editable", SandboxGroupKey.Inputs, "Inline property editing", SandboxScenarioKey.HappyPath, "Editable property rows switch from displayed values to shared text and checkbox inputs.", ["forms", "inline-edit"], "Editable", "Stack", "TextBox", "CheckBox"),
         CreateExample("inputs-dense", SandboxGroupKey.Inputs, "Dense intake form", SandboxScenarioKey.DenseContent, "High-density entry form with stacked fields.", ["dense", "forms"], "FormSection", "TextArea", "Switch"),
         CreateExample("inputs-empty", SandboxGroupKey.Inputs, "No draft selected", SandboxScenarioKey.EmptyState, "Entry workflow before a draft is created.", ["empty"], "EmptyState"),
         CreateExample("actions-happy", SandboxGroupKey.Actions, "Primary action hierarchy", SandboxScenarioKey.HappyPath, "Primary, secondary, ghost, and copy action contrast.", ["buttons", "copy"], "Button", "CopyButton"),

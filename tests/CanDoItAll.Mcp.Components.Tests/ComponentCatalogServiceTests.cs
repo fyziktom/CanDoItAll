@@ -125,6 +125,21 @@ public sealed class ComponentCatalogServiceTests
     }
 
     [Fact]
+    public void Component_Get_Returns_Editable_Metadata_And_Sandbox_Example()
+    {
+        var service = CreateService();
+
+        var component = service.GetComponent("Editable");
+        var examples = service.GetExamples("Editable");
+
+        Assert.Equal("BaseLib", component.Library);
+        Assert.EndsWith(Path.Combine("Components", "Forms", "Editable.razor"), component.SourcePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(component.Parameters, parameter => string.Equals(parameter.Name, "ParameterName", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.Events, @event => string.Equals(@event.Name, "ItemChanged", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(examples.Examples, example => string.Equals(example.Id, "inputs-editable", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void All_Discovered_Components_Resolve_To_Existing_Source_Paths()
     {
         var service = CreateService();
