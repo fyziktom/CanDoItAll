@@ -9,6 +9,7 @@ public sealed class ProcessTemplateProjectionServiceTests
     {
         var loader = new ProcessTemplatePackLoader();
         var projection = new ProcessTemplateProjectionService(loader);
+        var process = loader.Load().Processes["software-delivery"];
 
         var projectId = Guid.NewGuid();
         var envelope = projection.GetProjectedEnvelope("software-delivery", projectId, "Projected software delivery");
@@ -17,22 +18,37 @@ public sealed class ProcessTemplateProjectionServiceTests
         Assert.Null(envelope.Definition.WorkingVersionId);
         Assert.Equal(projectId, envelope.Definition.ProjectId);
         Assert.Equal("Projected software delivery", envelope.Definition.Name);
-        Assert.Equal(7, envelope.Definition.Roles.Count);
-        Assert.Equal(9, envelope.Definition.Steps.Count);
+        Assert.Equal(process.RoleUsages.Count, envelope.Definition.Roles.Count);
+        Assert.Equal(process.Steps.Count, envelope.Definition.Steps.Count);
 
         var releaseApproval = envelope.Definition.Steps.Single(step => step.Key == "release-approval");
+        var releaseApprovalTemplate = process.Steps.Single(step => step.Key == "release-approval");
         Assert.Equal("Approve release readiness", releaseApproval.Title);
-        Assert.Equal(3, releaseApproval.Dependencies.Count);
-        Assert.Equal(3, releaseApproval.ArtifactInputs.Count);
+        Assert.Equal(releaseApprovalTemplate.Dependencies.Count, releaseApproval.Dependencies.Count);
+        Assert.Equal(releaseApprovalTemplate.ArtifactInputs.Count, releaseApproval.ArtifactInputs.Count);
 
         var architectureReview = envelope.Definition.Steps.Single(step => step.Key == "architecture-review");
         var qaValidation = envelope.Definition.Steps.Single(step => step.Key == "qa-validation");
         var securityReview = envelope.Definition.Steps.Single(step => step.Key == "security-review");
+        var architectureReviewTemplate = process.Steps.Single(step => step.Key == "architecture-review");
+        var qaValidationTemplate = process.Steps.Single(step => step.Key == "qa-validation");
+        var securityReviewTemplate = process.Steps.Single(step => step.Key == "security-review");
 
-        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(architectureReview.ArtifactExpectations).TrustRequirement);
-        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
-        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
-        Assert.Equal(ProcessArtifactTrustRequirement.HumanApproved, Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(architectureReviewTemplate.ArtifactExpectations.Count, architectureReview.ArtifactExpectations.Count);
+        Assert.All(architectureReview.ArtifactExpectations, artifact =>
+            Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, artifact.TrustRequirement));
+
+        Assert.Equal(qaValidationTemplate.ArtifactExpectations.Count, qaValidation.ArtifactExpectations.Count);
+        Assert.All(qaValidation.ArtifactExpectations, artifact =>
+            Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, artifact.TrustRequirement));
+
+        Assert.Equal(securityReviewTemplate.ArtifactExpectations.Count, securityReview.ArtifactExpectations.Count);
+        Assert.All(securityReview.ArtifactExpectations, artifact =>
+            Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, artifact.TrustRequirement));
+
+        Assert.Equal(releaseApprovalTemplate.ArtifactExpectations.Count, releaseApproval.ArtifactExpectations.Count);
+        Assert.All(releaseApproval.ArtifactExpectations, artifact =>
+            Assert.Equal(ProcessArtifactTrustRequirement.HumanApproved, artifact.TrustRequirement));
     }
 
     [Fact]
@@ -40,11 +56,12 @@ public sealed class ProcessTemplateProjectionServiceTests
     {
         var loader = new ProcessTemplatePackLoader();
         var projection = new ProcessTemplateProjectionService(loader);
+        var process = loader.Load().Processes["ai-assisted-change-delivery"];
 
         var envelope = projection.GetProjectedEnvelope("ai-assisted-change-delivery");
 
-        Assert.Equal(9, envelope.Definition.Roles.Count);
-        Assert.Equal(6, envelope.Definition.Steps.Count);
+        Assert.Equal(process.RoleUsages.Count, envelope.Definition.Roles.Count);
+        Assert.Equal(process.Steps.Count, envelope.Definition.Steps.Count);
 
         var architect = envelope.Definition.Roles.Single(role => role.Key == "solution-architect");
         var delegationDesign = envelope.Definition.Steps.Single(step => step.Key == "delegation-design");

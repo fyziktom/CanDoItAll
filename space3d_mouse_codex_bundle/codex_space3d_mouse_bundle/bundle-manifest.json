@@ -1,0 +1,52 @@
+{
+  "bundleName": "space3d-mouse-bno085-smoothing-settings",
+  "version": "1.0.0",
+  "createdFor": "Codex execution",
+  "subBundles": [
+    {
+      "id": "firmware-sensor-source",
+      "path": "01-sub-bundle-firmware-sensor-source/TASK.md",
+      "priority": 1,
+      "required": true
+    },
+    {
+      "id": "firmware-control-protocol",
+      "path": "02-sub-bundle-firmware-control-protocol/TASK.md",
+      "priority": 2,
+      "required": false
+    },
+    {
+      "id": "host-motion-filter-settings",
+      "path": "03-sub-bundle-host-motion-filter-settings/TASK.md",
+      "priority": 3,
+      "required": true
+    },
+    {
+      "id": "host-ui-diagnostics",
+      "path": "04-sub-bundle-host-ui-diagnostics/TASK.md",
+      "priority": 4,
+      "required": true
+    },
+    {
+      "id": "validation",
+      "path": "05-sub-bundle-validation/TASK.md",
+      "priority": 5,
+      "required": true
+    },
+    {
+      "id": "rollout",
+      "path": "06-sub-bundle-rollout/TASK.md",
+      "priority": 6,
+      "required": true
+    }
+  ],
+  "settingsFixtures": [
+    "settings/default-control-profile.json",
+    "settings/test-profiles.json"
+  ],
+  "validationDocs": [
+    "validation/serial-test-plan.md",
+    "validation/manual-ble-checklist.md",
+    "validation/acceptance-metrics.md"
+  ]
+}

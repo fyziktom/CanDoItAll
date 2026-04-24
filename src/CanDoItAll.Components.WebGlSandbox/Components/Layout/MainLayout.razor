@@ -1,0 +1,21 @@
+@namespace CanDoItAll.Components.WebGlSandbox.Components
+@inherits LayoutComponentBase
+
+<ThemeHost>
+    <div class="webgl-shell">
+        <div class="webgl-shell__aurora webgl-shell__aurora--left" aria-hidden="true"></div>
+        <div class="webgl-shell__aurora webgl-shell__aurora--right" aria-hidden="true"></div>
+
+        <header class="webgl-shell__header">
+            <a class="webgl-shell__brand" href="/webgl/process-workbench">
+                <span class="webgl-shell__eyebrow">CanDoItAll</span>
+                <strong class="webgl-shell__title">WebGL Process Workbench Concept</strong>
+            </a>
+            <p class="webgl-shell__summary">Dedicated review host for the universal WebGL runtime, representative template switching, and sandbox-only authoring proof.</p>
+        </header>
+
+        <main class="webgl-shell__body">
+            @Body
+        </main>
+    </div>
+</ThemeHost>

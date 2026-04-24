@@ -1,0 +1,33 @@
+{
+  "Key": "06-dedicated-webgl-sandbox-and-template-switching",
+  "Title": "Dedicated WebGL sandbox and template switching",
+  "Purpose": "Add the dedicated WebGL sandbox project, surface the projected templates, and provide camera/view controls for human concept review.",
+  "DependsOn": [
+    "05-process-template-projection-and-2_5d-scene-adapter"
+  ],
+  "Deliverables": [
+    "New dedicated sandbox project for the WebGL concept with its own routes/startup.",
+    "Template switching between representative template processes.",
+    "Camera/view preset controls and a clean review surface for screenshots."
+  ],
+  "RepositoryTouchpoints": [
+    "CanDoItAll.slnx",
+    "src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj",
+    "src/CanDoItAll.Components.Sandbox/Program.cs",
+    "src/CanDoItAll.Components.Sandbox/Components/Pages/Canvas.razor",
+    "src/CanDoItAll.Components.Sandbox/SandboxCatalogRegistry.cs",
+    "src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
+    "Templates/Processes/manifest.json"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter \"FullyQualifiedName~WebGlSandboxSmoke\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Does the dedicated sandbox stay concept-focused and isolated from the production workspace?",
+    "Do the representative templates cover a meaningful range of complexity?",
+    "Do screenshots suggest the guided 3D scene improves or at least clarifies some dense cases?"
+  ],
+  "CorrectiveOnFailure": "If this task fails, stop immediately and execute `subbundles/_corrective-scene-contract-and-layout-reset` before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-scene-contract-and-layout-reset"
+}

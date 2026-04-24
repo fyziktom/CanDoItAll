@@ -1,0 +1,302 @@
+@namespace CanDoItAll.Components.OverlayLib
+@implements IAsyncDisposable
+@using System.Text.Json
+@using CanDoItAll.Components.BaseLib
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JsRuntime
+
+<section class="cda-overlay-window cw-floating-window @(State.IsMinimized ? "is-minimized" : string.Empty) @(!ShowHeader ? "is-headerless" : string.Empty)"
+         data-testid="@TestId"
+         aria-label="@AriaLabel"
+         data-cda-overlay-window="@WindowId"
+         @ref="host"
+         @onclick:stopPropagation="true">
+    @if (State.IsMinimized)
+    {
+        <div class="cda-overlay-window__chip cw-floating-window__chip">
+            <div class="cda-overlay-window__drag cw-floating-window__drag" data-cda-overlay-drag="true" data-cw-window-drag="true">
+                @if (!string.IsNullOrWhiteSpace(Kicker))
+                {
+                    <p class="cda-overlay-window__kicker cw-panel-kicker">@Kicker</p>
+                }
+                <strong class="cda-overlay-window__chip-title cw-floating-window__chip-title">@Title</strong>
+            </div>
+            <div class="cda-overlay-window__chip-actions cw-floating-window__chip-actions">
+                <button type="button"
+                        class="cda-overlay-window__action cw-floating-window__action"
+                        aria-label="@RestoreLabel"
+                        title="@RestoreLabel"
+                        @onclick="RestoreWindowAsync">
+                    <Icon Name="open_in_full" />
+                </button>
+                <button type="button"
+                        class="cda-overlay-window__action cw-floating-window__action"
+                        aria-label="@HideLabel"
+                        title="@HideLabel"
+                        @onclick="HideWindowAsync">
+                    <Icon Name="visibility_off" />
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (ShowHeader)
+        {
+            <header class="cda-overlay-window__header cw-floating-window__header">
+                <div class="cda-overlay-window__drag cw-floating-window__drag" data-cda-overlay-drag="true" data-cw-window-drag="true">
+                    @if (!string.IsNullOrWhiteSpace(Kicker))
+                    {
+                        <p class="cda-overlay-window__kicker cw-panel-kicker">@Kicker</p>
+                    }
+                    <h3 class="cda-overlay-window__title cw-floating-window__title">@Title</h3>
+
+                    @if (!string.IsNullOrWhiteSpace(Summary))
+                    {
+                        <p class="cda-overlay-window__summary cw-floating-window__summary">@Summary</p>
+                    }
+                </div>
+
+                <div class="cda-overlay-window__actions cw-floating-window__actions">
+                    <button type="button"
+                            class="cda-overlay-window__action cw-floating-window__action"
+                            aria-label="@MinimizeLabel"
+                            title="@MinimizeLabel"
+                            @onclick="MinimizeWindowAsync">
+                        <Icon Name="minimize" />
+                    </button>
+                    <button type="button"
+                            class="cda-overlay-window__action cw-floating-window__action"
+                            aria-label="@NormalizeLabel"
+                            title="@NormalizeLabel"
+                            disabled="@IsNormalized"
+                            @onclick="NormalizeWindowAsync">
+                        <Icon Name="restart_alt" />
+                    </button>
+                    <button type="button"
+                            class="cda-overlay-window__action cw-floating-window__action"
+                            aria-label="@HideLabel"
+                            title="@HideLabel"
+                            @onclick="HideWindowAsync">
+                        <Icon Name="visibility_off" />
+                    </button>
+                </div>
+            </header>
+        }
+
+        <div class="cda-overlay-window__body cw-floating-window__body @BodyClass">
+            @ChildContent
+        </div>
+    }
+</section>
+
+@code {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private ElementReference host;
+    private DotNetObjectReference<OverlayWindow>? objectReference;
+    private string? appliedStateKey;
+    private string? pendingStateKey;
+
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Overlay window";
+
+    [Parameter]
+    public string BodyClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DefaultPlacement { get; set; } = "top-right";
+
+    [Parameter]
+    public string ContainerSelector { get; set; } = "[data-cda-overlay-container], .cw-stage-surface, .wgl-workbench-stage";
+
+    [Parameter]
+    public string SafeTopSelector { get; set; } = "[data-cda-overlay-safe-top], .cw-toolbar, .wgl-overlay-toolbar";
+
+    [Parameter]
+    public string InteropApiRoot { get; set; } = "CanDoItAll.overlayWindow";
+
+    [Parameter]
+    public double DefaultWidth { get; set; } = 360;
+
+    [Parameter]
+    public double DefaultHeight { get; set; } = 480;
+
+    [Parameter]
+    public double MinWidth { get; set; } = 280;
+
+    [Parameter]
+    public double MinHeight { get; set; } = 180;
+
+    [Parameter]
+    public double? MaxWidth { get; set; }
+
+    [Parameter]
+    public double? MaxHeight { get; set; }
+
+    [Parameter]
+    public bool AllowResize { get; set; } = true;
+
+    [Parameter]
+    public string RestoreLabel { get; set; } = "Expand window";
+
+    [Parameter]
+    public string MinimizeLabel { get; set; } = "Minimize window";
+
+    [Parameter]
+    public string NormalizeLabel { get; set; } = "Restart window position and size";
+
+    [Parameter]
+    public string HideLabel { get; set; } = "Hide window";
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter, EditorRequired]
+    public OverlayWindowState State { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<OverlayWindowState> StateChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingStateKey = JsonSerializer.Serialize(BuildInteropPayload(), SerializerOptions);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        objectReference ??= DotNetObjectReference.Create(this);
+        if (string.IsNullOrWhiteSpace(appliedStateKey))
+        {
+            await JsRuntime.InvokeVoidAsync($"{InteropApiRoot}.create", host, objectReference, BuildInteropPayload());
+            appliedStateKey = pendingStateKey;
+            return;
+        }
+
+        if (string.Equals(appliedStateKey, pendingStateKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync($"{InteropApiRoot}.update", host, BuildInteropPayload());
+        appliedStateKey = pendingStateKey;
+    }
+
+    [JSInvokable]
+    public Task OnGeometryChanged(double? left, double? top, double? width, double? height)
+    {
+        var next = OverlayWindowState.Normalize(
+            new OverlayWindowState
+            {
+                IsVisible = true,
+                IsMinimized = State.IsMinimized,
+                Left = left,
+                Top = top,
+                Width = State.IsMinimized ? State.Width : width,
+                Height = State.IsMinimized ? State.Height : height
+            });
+
+        return PublishStateAsync(next);
+    }
+
+    private Task MinimizeWindowAsync()
+    {
+        var next = State.Clone();
+        next.IsVisible = true;
+        next.IsMinimized = true;
+        return PublishStateAsync(next);
+    }
+
+    private Task RestoreWindowAsync()
+    {
+        var next = State.Clone();
+        next.IsVisible = true;
+        next.IsMinimized = false;
+        return PublishStateAsync(next);
+    }
+
+    private Task NormalizeWindowAsync()
+        => PublishStateAsync(new OverlayWindowState { IsVisible = true });
+
+    private Task HideWindowAsync()
+    {
+        var next = State.Clone();
+        next.IsVisible = false;
+        next.IsMinimized = false;
+        return PublishStateAsync(next);
+    }
+
+    private bool IsNormalized => !State.IsMinimized && !State.HasCustomGeometry;
+
+    private object BuildInteropPayload()
+        => new
+        {
+            windowId = WindowId,
+            placement = DefaultPlacement,
+            containerSelector = ContainerSelector,
+            safeTopSelector = SafeTopSelector,
+            defaultWidth = DefaultWidth,
+            defaultHeight = DefaultHeight,
+            minWidth = MinWidth,
+            minHeight = MinHeight,
+            maxWidth = MaxWidth,
+            maxHeight = MaxHeight,
+            allowResize = AllowResize,
+            state = OverlayWindowState.Normalize(State)
+        };
+
+    private Task PublishStateAsync(OverlayWindowState state)
+    {
+        var normalized = OverlayWindowState.Normalize(state);
+        if (OverlayWindowState.AreEquivalent(State, normalized))
+        {
+            return Task.CompletedTask;
+        }
+
+        return StateChanged.InvokeAsync(normalized);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(appliedStateKey))
+        {
+            objectReference?.Dispose();
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync($"{InteropApiRoot}.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+
+        objectReference?.Dispose();
+    }
+}

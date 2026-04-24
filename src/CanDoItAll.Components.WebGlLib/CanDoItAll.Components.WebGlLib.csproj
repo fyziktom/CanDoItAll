@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CanDoItAll.Components.WebGlLib</AssemblyName>
+    <RootNamespace>CanDoItAll.Components.WebGlLib</RootNamespace>
+    <Description>Universal WebGL workbench concept runtime with typed scene contracts and deterministic browser proof hooks.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj" />
+  </ItemGroup>
+
+</Project>

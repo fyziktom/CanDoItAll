@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <AssemblyName>CanDoItAll.Space3D.Mouse.Components</AssemblyName>
+    <RootNamespace>CanDoItAll.Space3D.Mouse.Components</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj" />
+    <ProjectReference Include="..\..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
+    <ProjectReference Include="..\..\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj" />
+  </ItemGroup>
+
+</Project>

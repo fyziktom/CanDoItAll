@@ -10,6 +10,8 @@
   "scripts": {
     "canvaslib:build-assets": "node tools/canvaslib/build-assets.cjs",
     "canvaslib:verify-assets": "node tools/canvaslib/verify-assets.cjs",
+    "webgllib:build-assets": "node tools/webgllib/build-assets.cjs",
+    "webgllib:verify-assets": "node tools/webgllib/verify-assets.cjs",
     "tailwind:build": "npm --prefix Tailwind run build",
     "tailwind:watch": "npm --prefix Tailwind run watch",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -25,5 +27,8 @@
   "bugs": {
     "url": "https://github.com/fyziktom/CanDoItAll/issues"
   },
-  "homepage": "https://github.com/fyziktom/CanDoItAll#readme"
+  "homepage": "https://github.com/fyziktom/CanDoItAll#readme",
+  "devDependencies": {
+    "three": "^0.184.0"
+  }
 }

@@ -1,0 +1,307 @@
+[
+  {
+    "id": "COD-WGL-001",
+    "phase": "Phase 1",
+    "priority": "Critical",
+    "title": "Baseline and renderer decision lock",
+    "desired_outcome": "Establish the current-process and current-canvas baseline, document the renderer strategy, and lock the concept boundaries before any implementation starts.",
+    "dependencies": [],
+    "primary_touchpoints": [
+      "CanDoItAll.slnx",
+      "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+      "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasSurfaceFactory.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+      "Templates/Processes/manifest.json",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+    ],
+    "acceptance": [
+      "Prepared-stage analysis documents and workbook baseline are finalized.",
+      "Renderer choice, perspective-first 3D default, and concept non-goals are explicitly recorded.",
+      "Representative template set and proof scenarios are locked before implementation.",
+      "The baseline docs are specific to the current repository and not generic WebGL advice.",
+      "The renderer and boundary decisions are explicit enough that Codex can implement without reopening fundamental questions.",
+      "The template set and proof expectations are locked."
+    ],
+    "tests_to_add_or_update": [
+      "python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py webgl_process_workbench_concept_bundle --profile initiative --stage prepared"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-renderer-boundary-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-002",
+    "phase": "Phase 2",
+    "priority": "Critical",
+    "title": "Universal WebGL library skeleton and typed contracts",
+    "desired_outcome": "Create the new universal WebGL RCL, wire it into the solution, and define generic scene and event contracts without any Processes dependency.",
+    "dependencies": [
+      "01-baseline-and-renderer-decision-lock"
+    ],
+    "primary_touchpoints": [
+      "CanDoItAll.slnx",
+      "src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj",
+      "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+      "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs",
+      "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchEvents.cs",
+      "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchUiState.cs",
+      "src/CanDoItAll.Components.CanvasLib/Components/Shared/Assets/CanvasLibHeadAssets.razor",
+      "src/CanDoItAll.Components.CanvasLib/Components/Shared/Assets/CanvasLibBodyAssets.razor",
+      "tools/canvaslib/asset-manifest.json"
+    ],
+    "acceptance": [
+      "New `CanDoItAll.Components.WebGlLib` project in the solution with no Processes reference.",
+      "Typed generic contracts for scene, nodes, edges, camera/UI state, diagnostics, and semantic interaction events.",
+      "Asset-loading pattern and project skeleton consistent with repository conventions.",
+      "The new library is solution-integrated and compiles independently.",
+      "The contracts are generic enough to host non-process scenes later.",
+      "The asset strategy is deterministic and documented."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter \"FullyQualifiedName~WebGl|FullyQualifiedName~ProjectStructure\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-renderer-boundary-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-003",
+    "phase": "Phase 3",
+    "priority": "Critical",
+    "title": "Three.js runtime foundation and host component",
+    "desired_outcome": "Implement the JS-owned WebGL runtime foundation, host-state lifecycle, label overlay shell, and the first interactive component wrapper for the new library.",
+    "dependencies": [
+      "02-universal-webgl-library-skeleton-and-typed-contracts"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07-runtime-entry.js",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07a-runtime-interaction-router.js",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07b-runtime-rendering.js",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/services/viewport-controller.js",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/services/selection-model.js",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+    ],
+    "acceptance": [
+      "Initial WebGL runtime foundation built around a JS scene host and a global `window.CanDoItAll.webglWorkbench` entry.",
+      "Perspective-capable camera controls, scene lifecycle, fit/focus/update/dispose flows, and deterministic test mode hooks.",
+      "DOM label/accessibility/automation mirror shell aligned with the scene host.",
+      "A minimal generic scene can render in the new component.",
+      "The runtime exposes lifecycle and view controls behind a stable global API.",
+      "Labels and anchor data are available through the DOM mirror layer."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~WebGl|FullyQualifiedName~CanvasWorkbench\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-renderer-boundary-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-004",
+    "phase": "Gate A",
+    "priority": "Critical",
+    "title": "Architecture review gate A",
+    "desired_outcome": "Review the new library and runtime foundation before any process-template projection or sandbox growth continues.",
+    "dependencies": [
+      "03-threejs-runtime-foundation-and-host-component"
+    ],
+    "primary_touchpoints": [
+      "architecture_hardening_bundle/architecture/01-target-solution.md",
+      "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07-runtime-entry.js",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+    ],
+    "acceptance": [
+      "Architecture gate memo with a go/no-go decision.",
+      "Explicit confirmation that the library remained universal and the runtime boundary is still JS-owned.",
+      "A corrective trigger if the renderer or contract direction is wrong.",
+      "A written go/no-go memo exists.",
+      "Any required corrective subbundle is either triggered or explicitly not needed with reasons.",
+      "The next phase can rely on a stable universal foundation."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-renderer-boundary-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-005",
+    "phase": "Phase 5",
+    "priority": "Critical",
+    "title": "Process template projection and center-lane 3D scene adapter",
+    "desired_outcome": "Build the process-specific adapter that projects real template processes into the generic WebGL scene while reusing the current process IDs, categories, and branching semantics.",
+    "dependencies": [
+      "04-architecture-review-gate-a"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/ProcessDefinitionEditorModels.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasCatalog.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasBranching.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessDependencyCompatibilityBridge.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessTemplatePackLoader.cs",
+      "Templates/Processes/manifest.json"
+    ],
+    "acceptance": [
+      "Process-template-to-WebGL scene adapter outside the universal library.",
+      "Deterministic center-lane 3D layout rules that reuse current process positions, spread roles around the lane, and add semantic depth.",
+      "Visual-style mapping for process connection categories and branching semantics.",
+      "At least three representative templates can be projected into the generic scene contract.",
+      "Process IDs and connection categories are preserved or explicitly mapped.",
+      "The 3D lane rules are deterministic enough for testing and screenshots."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj --filter \"FullyQualifiedName~ProcessTemplate|FullyQualifiedName~WebGl\" -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~ProcessCanvasSurfaceFactory|FullyQualifiedName~WebGl\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-scene-contract-and-layout-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-006",
+    "phase": "Phase 6",
+    "priority": "Critical",
+    "title": "Dedicated WebGL sandbox and template switching",
+    "desired_outcome": "Add the dedicated WebGL sandbox project, surface the projected templates, and provide camera/view controls for human concept review.",
+    "dependencies": [
+      "05-process-template-projection-and-2_5d-scene-adapter"
+    ],
+    "primary_touchpoints": [
+      "CanDoItAll.slnx",
+      "src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj",
+      "src/CanDoItAll.Components.Sandbox/Program.cs",
+      "src/CanDoItAll.Components.Sandbox/Components/Pages/Canvas.razor",
+      "src/CanDoItAll.Components.Sandbox/SandboxCatalogRegistry.cs",
+      "src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
+      "Templates/Processes/manifest.json"
+    ],
+    "acceptance": [
+      "New dedicated sandbox project for the WebGL concept with its own routes/startup.",
+      "Template switching between representative template processes.",
+      "Camera/view preset controls and a clean review surface for screenshots.",
+      "A dedicated sandbox project exists and runs.",
+      "The sandbox can switch between representative templates.",
+      "First-pass screenshots show a readable concept route for simple, medium, and dense scenes."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter \"FullyQualifiedName~WebGlSandboxSmoke\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-scene-contract-and-layout-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-007",
+    "phase": "Phase 7",
+    "priority": "Critical",
+    "title": "Authoring interactions and in-memory edit model",
+    "desired_outcome": "Make the sandbox concept interactive through in-memory node movement, connection changes, selection/inspector context, and resettable command history.",
+    "dependencies": [
+      "06-dedicated-webgl-sandbox-and-template-switching"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Actions.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Links.cs",
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Persistence.cs",
+      "src/CanDoItAll.Modules.Processes/ProcessCanvasSurfaceFactory.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessCanvasSurfaceFactoryTests.cs"
+    ],
+    "acceptance": [
+      "In-memory sandbox state holder for the selected template and its unsaved edits.",
+      "Node-drag, connect/disconnect, selection, reset, and lightweight inspector/event-log flows.",
+      "Focused tests proving semantic changes update the sandbox scene model.",
+      "A reviewer can move a node and modify at least one connection in the sandbox.",
+      "The in-memory model updates consistently and can be reset.",
+      "Focused tests and browser proof cover the touched interaction paths."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~WebGl|FullyQualifiedName~ProcessWorkspace\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-scene-contract-and-layout-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-008",
+    "phase": "Gate B",
+    "priority": "Critical",
+    "title": "Architecture review gate B",
+    "desired_outcome": "Review the interactive sandbox concept before automation and final proof work proceeds.",
+    "dependencies": [
+      "07-authoring-interactions-and-in-memory-edit-model"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Actions.cs",
+      "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+    ],
+    "acceptance": [
+      "Gate B review memo with explicit go/no-go decision.",
+      "Readability assessment for the interactive guided 3D scene and whether the concept justifies final automation/proof work.",
+      "Trigger for scene/layout corrective work if the concept is visually or semantically wrong.",
+      "A written go/no-go memo exists for Gate B.",
+      "Any unresolved readability or semantic issues are either corrected or explicitly blocked with a corrective path.",
+      "Downstream automation work can assume the scene is worth proving."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-scene-contract-and-layout-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-009",
+    "phase": "Phase 9",
+    "priority": "Critical",
+    "title": "Automation bridge and proof surface",
+    "desired_outcome": "Add the semantic automation bridge, host debug state, DOM mirror queries, export hooks, and Playwright tests needed to prove WebGL interactions deterministically.",
+    "dependencies": [
+      "08-architecture-review-gate-b"
+    ],
+    "primary_touchpoints": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07-runtime-entry.js",
+      "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/SharedCanvasBrowserTests.cs"
+    ],
+    "acceptance": [
+      "Semantic runtime helpers such as scene snapshot, diagnostics, export image data, simulate drag, finish interaction, and connection simulation.",
+      "Stable host debug state and DOM mirror data attributes for nodes/ports/edges.",
+      "Focused Playwright tests for screenshot capture and semantic interaction validation.",
+      "Playwright can read the scene semantically and drive at least move/connect flows through the automation bridge.",
+      "The runtime can export screenshots directly.",
+      "DOM mirror anchors and host debug state stay stable enough for test assertions."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter \"FullyQualifiedName~WebGl\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-automation-and-proof-reset` before downstream work continues."
+  },
+  {
+    "id": "COD-WGL-010",
+    "phase": "Final closure",
+    "priority": "High",
+    "title": "Final proof, closure, and migration guidance",
+    "desired_outcome": "Close the concept with full proof, final review notes, workbook completion, and a migration rubric for any future pilot on the real Processes workspace.",
+    "dependencies": [
+      "09-automation-bridge-and-proof-surface"
+    ],
+    "primary_touchpoints": [
+      "CanDoItAll.slnx",
+      "tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "Templates/Processes/manifest.json"
+    ],
+    "acceptance": [
+      "Completed execution report with build/test/browser evidence.",
+      "Fresh screenshot analytics and final architecture/migration guidance.",
+      "Updated workbook and traceability closure notes.",
+      "The execution report contains fresh proof and explicit analytics review notes.",
+      "The workbook reflects the completed scope and unresolved follow-ups.",
+      "The final guidance clearly states whether the concept merits a future pilot and under what conditions."
+    ],
+    "tests_to_add_or_update": [
+      "dotnet build CanDoItAll.slnx -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj -v:minimal",
+      "dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter \"FullyQualifiedName~WebGl\" -v:minimal"
+    ],
+    "risk_notes": "If this phase fails, stop and execute `_corrective-automation-and-proof-reset` before downstream work continues."
+  }
+]

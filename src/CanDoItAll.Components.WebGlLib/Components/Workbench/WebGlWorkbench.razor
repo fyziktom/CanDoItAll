@@ -1,0 +1,191 @@
+@namespace CanDoItAll.Components.WebGlLib
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+<div class="wgl-workbench-shell"
+     data-webgl-surface-id="@Surface.SurfaceId"
+     data-webgl-scene-key="@Surface.SceneKey"
+     data-webgl-view-preset="@Surface.UiState.ActiveViewPreset">
+    <div class="wgl-workbench-stage">
+        <div @ref="host"
+             class="wgl-workbench-host"
+             tabindex="0"
+             aria-label="WebGL process workbench concept">
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly System.Text.Json.JsonSerializerOptions SerializerOptions = new(System.Text.Json.JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private ElementReference host;
+    private DotNetObjectReference<WebGlWorkbench>? objectReference;
+    private string? pendingSurfaceKey;
+    private string? appliedSurfaceKey;
+
+    [Parameter, EditorRequired]
+    public WebGlWorkbenchSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<WebGlSelectionChangedEventArgs> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<WebGlNodeMovedEventArgs> NodesMoved { get; set; }
+
+    [Parameter]
+    public EventCallback<WebGlConnectionChangeRequest> ConnectionChangeRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<WebGlDeleteRequest> DeleteRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<string> StateChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ChromeActionRequested { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        pendingSurfaceKey = SerializeSurface(Surface);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        objectReference ??= DotNetObjectReference.Create(this);
+        if (string.IsNullOrWhiteSpace(appliedSurfaceKey))
+        {
+            var created = await JsRuntime.InvokeAsync<bool>(
+                "CanDoItAll.webglWorkbench.create",
+                host,
+                objectReference,
+                Surface);
+            if (created)
+            {
+                appliedSurfaceKey = pendingSurfaceKey;
+            }
+
+            return;
+        }
+
+        if (string.Equals(appliedSurfaceKey, pendingSurfaceKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var updated = await JsRuntime.InvokeAsync<bool>(
+            "CanDoItAll.webglWorkbench.update",
+            host,
+            Surface);
+        if (updated)
+        {
+            appliedSurfaceKey = pendingSurfaceKey;
+        }
+    }
+
+    [JSInvokable]
+    public Task OnSelectionChanged(string? primaryNodeId, string selectedNodeIdsJson)
+    {
+        var selectedNodeIds = WebGlWorkbenchUiState.Parse(
+            $$"""{"selectedNodeIds":{{selectedNodeIdsJson}}}""").SelectedNodeIds;
+        return SelectionChanged.InvokeAsync(new WebGlSelectionChangedEventArgs(primaryNodeId, selectedNodeIds));
+    }
+
+    [JSInvokable]
+    public Task OnNodesMoved(string positionsJson)
+    {
+        var positions = Deserialize<IReadOnlyList<WebGlNodePositionChange>>(positionsJson) ?? [];
+        return NodesMoved.InvokeAsync(new WebGlNodeMovedEventArgs(positions));
+    }
+
+    [JSInvokable]
+    public Task OnConnectionChangeRequested(string requestJson)
+    {
+        var request = Deserialize<WebGlConnectionChangeRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : ConnectionChangeRequested.InvokeAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnDeleteRequested(string requestJson)
+    {
+        var request = Deserialize<WebGlDeleteRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : DeleteRequested.InvokeAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnStateChanged(string stateJson)
+        => StateChanged.InvokeAsync(WebGlWorkbenchUiState.Parse(stateJson).ToJson());
+
+    [JSInvokable]
+    public Task OnChromeActionRequested(string actionId)
+        => string.IsNullOrWhiteSpace(actionId)
+            ? Task.CompletedTask
+            : ChromeActionRequested.InvokeAsync(actionId);
+
+    public Task FitViewToSceneAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.fitView", host).AsTask();
+
+    public Task FocusNodeAsync(string nodeId)
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.focusNode", host, nodeId).AsTask();
+
+    public Task<string?> CaptureImageAsync()
+        => JsRuntime.InvokeAsync<string?>("CanDoItAll.webglWorkbench.exportImageData", host).AsTask();
+
+    public Task<int> CaptureImageLengthAsync()
+        => JsRuntime.InvokeAsync<int>("CanDoItAll.webglWorkbench.exportImageLength", host).AsTask();
+
+    public Task OrbitAsync(double deltaAzimuth, double deltaPolar)
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.orbitView", host, deltaAzimuth, deltaPolar).AsTask();
+
+    public Task PanAsync(double deltaX, double deltaY)
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.panView", host, deltaX, deltaY).AsTask();
+
+    public Task ZoomAsync(double factor)
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.zoomView", host, factor).AsTask();
+
+    public Task TriggerPrimaryClickAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.triggerPrimaryClick", host).AsTask();
+
+    public Task TriggerDoubleClickAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.triggerDoubleClick", host).AsTask();
+
+    public Task TriggerContextMenuAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.triggerContextMenu", host).AsTask();
+
+    public Task ResetCameraAsync()
+        => JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.resetView", host).AsTask();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(appliedSurfaceKey))
+        {
+            objectReference?.Dispose();
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.webglWorkbench.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+
+        objectReference?.Dispose();
+    }
+
+    private static string SerializeSurface(WebGlWorkbenchSurface surface)
+        => System.Text.Json.JsonSerializer.Serialize(surface, SerializerOptions);
+
+    private static T? Deserialize<T>(string json)
+        => System.Text.Json.JsonSerializer.Deserialize<T>(json, SerializerOptions);
+}

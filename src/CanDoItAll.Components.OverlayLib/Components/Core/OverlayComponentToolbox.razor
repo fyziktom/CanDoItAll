@@ -1,0 +1,292 @@
+@namespace CanDoItAll.Components.OverlayLib
+@using CanDoItAll.Components.BaseLib
+
+<section class="cda-component-toolbox cw-context-toolbox @Class"
+         data-testid="@ResolvedTestId"
+         aria-label="@AriaLabel">
+    @if (ShowHeader)
+    {
+        <div class="cda-component-toolbox__header cw-context-toolbox__header">
+            <div class="cda-component-toolbox__header-copy cw-context-toolbox__header-copy">
+                @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                {
+                    <p class="cda-component-toolbox__eyebrow cw-context-toolbox__eyebrow">@Eyebrow</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <h3 class="cda-component-toolbox__title cw-context-toolbox__title">@Title</h3>
+                }
+                @if (!string.IsNullOrWhiteSpace(Summary))
+                {
+                    <p class="cda-component-toolbox__copy cw-context-toolbox__copy">@Summary</p>
+                }
+            </div>
+            <span class="cda-component-toolbox__count cw-context-toolbox__count"
+                  data-testid="@($"{ResolvedTestId}-count")">@($"{ItemCount} items")</span>
+        </div>
+    }
+
+    @if (Badges.Count > 0)
+    {
+        <div class="cda-component-toolbox__badges">
+            @foreach (var badge in Badges)
+            {
+                <span class="@BuildBadgeClass(badge)"
+                      data-testid="@badge.DataTestId">@badge.Text</span>
+            }
+        </div>
+    }
+
+    <input class="cda-component-toolbox__search cw-context-toolbox__search @SearchClass"
+           type="search"
+           value="@SearchText"
+           placeholder="@SearchPlaceholder"
+           data-testid="@SearchTestId"
+           @oninput="HandleSearchInputAsync" />
+
+    <div class="cda-component-toolbox__body cw-context-toolbox__body @BodyClass">
+        <div class="cda-component-toolbox__sections cw-context-toolbox__sections @SectionsClass">
+            @if (Sections.Count == 0)
+            {
+                <div class="cda-component-toolbox__empty cw-context-toolbox__empty"
+                     data-testid="@($"{ResolvedTestId}-empty")">
+                    <strong>@EmptyTitle</strong>
+                    <span>@EmptyDescription</span>
+                </div>
+            }
+            else
+            {
+                @foreach (var sectionItem in Sections)
+                {
+                    <section class="cda-component-toolbox__section cw-context-toolbox__section"
+                             data-overlay-toolbox-section="@sectionItem.Key"
+                             data-testid="@sectionItem.DataTestId">
+                        @if (ShowSectionHeaders)
+                        {
+                            <button type="button"
+                                    class="cda-component-toolbox__section-summary cw-context-toolbox__section-summary"
+                                    aria-expanded="@sectionItem.IsExpanded"
+                                    @onclick="@(() => HandleSectionToggledAsync(sectionItem.Key))">
+                                <span class="cda-component-toolbox__section-copy cw-context-toolbox__section-copy">
+                                    <strong>@sectionItem.Label</strong>
+                                    <small>@sectionItem.Description</small>
+                                </span>
+                                <span class="@BuildSectionBadgeClass(sectionItem)">@SectionItemCount(sectionItem)</span>
+                            </button>
+                        }
+
+                        @if (!ShowSectionHeaders || sectionItem.IsExpanded)
+                        {
+                            <div class="cda-component-toolbox__section-body cw-context-toolbox__section-body"
+                                 data-testid="@sectionItem.BodyDataTestId">
+                                @foreach (var groupItem in sectionItem.Groups)
+                                {
+                                    <section class="cda-component-toolbox__group cw-context-toolbox__group"
+                                             data-overlay-toolbox-group="@groupItem.Key">
+                                        @if (ShowGroupHeaders)
+                                        {
+                                            <button type="button"
+                                                    class="cda-component-toolbox__group-summary cw-context-toolbox__group-summary"
+                                                    aria-expanded="@groupItem.IsExpanded"
+                                                    data-testid="@groupItem.DataTestId"
+                                                    @onclick="@(() => HandleGroupToggledAsync(groupItem.Key))">
+                                                <span class="cda-component-toolbox__group-copy">
+                                                    <strong>@groupItem.Label</strong>
+                                                    <small>@groupItem.Summary</small>
+                                                </span>
+                                                <span class="cda-component-toolbox__group-count">@groupItem.Items.Count</span>
+                                            </button>
+                                        }
+
+                                        @if (!ShowGroupHeaders || groupItem.IsExpanded)
+                                        {
+                                            <div class="cda-component-toolbox__item-list cw-context-toolbox__item-list"
+                                                 data-testid="@groupItem.BodyDataTestId">
+                                                @foreach (var item in groupItem.Items)
+                                                {
+                                                    <div class="cda-component-toolbox__item-row @ItemRowClass">
+                                                        <button type="button"
+                                                                class="@BuildItemClass(item)"
+                                                                disabled="@item.IsDisabled"
+                                                                data-testid="@item.DataTestId"
+                                                                @onclick="@(() => HandleItemSelectedAsync(item.ActionId))">
+                                                            <span class="cda-component-toolbox__item-icon cw-context-toolbox__item-icon @ItemIconClass">
+                                                                @if (!string.IsNullOrWhiteSpace(item.Icon))
+                                                                {
+                                                                    <Icon Name="@item.Icon" />
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="cw-context-menu__glyph">@ResolveItemGlyph(item)</span>
+                                                                }
+                                                            </span>
+                                                            <span class="cda-component-toolbox__item-body cw-context-toolbox__item-body @ItemBodyClass">
+                                                                <strong class="@ItemLabelClass">@item.Label</strong>
+                                                                <small class="@ItemSummaryClass">@item.Summary</small>
+                                                            </span>
+                                                        </button>
+                                                        @if (ItemTrailingContent is not null)
+                                                        {
+                                                            @ItemTrailingContent(item)
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </section>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<OverlayToolboxSection> Sections { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<OverlayToolboxBadge> Badges { get; set; } = [];
+
+    [Parameter]
+    public string TestId { get; set; } = "overlay-component-toolbox";
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Component toolbox";
+
+    [Parameter]
+    public string Eyebrow { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Title { get; set; } = "Components";
+
+    [Parameter]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSectionHeaders { get; set; } = true;
+
+    [Parameter]
+    public bool ShowGroupHeaders { get; set; } = true;
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search components";
+
+    [Parameter]
+    public string SearchTestId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No components match the current search.";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Clear the filter to restore the full catalog.";
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+
+    [Parameter]
+    public string BodyClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SearchClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ItemRowClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SectionsClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ItemButtonClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ItemBodyClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ItemIconClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ItemLabelClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ItemSummaryClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ItemSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SectionToggled { get; set; }
+
+    [Parameter]
+    public EventCallback<string> GroupToggled { get; set; }
+
+    [Parameter]
+    public RenderFragment<OverlayToolboxItem>? ItemTrailingContent { get; set; }
+
+    private string ResolvedTestId
+        => string.IsNullOrWhiteSpace(TestId) ? "overlay-component-toolbox" : TestId;
+
+    private int ItemCount
+        => Sections.Sum(section => SectionItemCount(section));
+
+    private static int SectionItemCount(OverlayToolboxSection section)
+        => section.Groups.Sum(group => group.Items.Count);
+
+    private Task HandleSearchInputAsync(ChangeEventArgs args)
+        => SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private Task HandleItemSelectedAsync(string actionId)
+        => ItemSelected.InvokeAsync(actionId);
+
+    private Task HandleSectionToggledAsync(string key)
+        => SectionToggled.InvokeAsync(key);
+
+    private Task HandleGroupToggledAsync(string key)
+        => GroupToggled.InvokeAsync(key);
+
+    private static string BuildBadgeClass(OverlayToolboxBadge badge)
+        => $"cda-component-toolbox__badge tone-{NormalizeTone(badge.Tone)}";
+
+    private static string BuildSectionBadgeClass(OverlayToolboxSection section)
+        => $"cda-component-toolbox__section-badge cw-context-toolbox__section-badge tone-{NormalizeTone(section.Tone)}";
+
+    private string BuildItemClass(OverlayToolboxItem item)
+    {
+        var disabledClass = item.IsDisabled ? " is-disabled" : string.Empty;
+        return $"cda-component-toolbox__item cw-context-toolbox__item {ItemButtonClass} tone-{NormalizeTone(item.Tone)}{disabledClass}".Trim();
+    }
+
+    private static string ResolveItemGlyph(OverlayToolboxItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Glyph))
+        {
+            return item.Glyph;
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Icon))
+        {
+            return item.Icon.Trim()[0].ToString().ToUpperInvariant();
+        }
+
+        return string.IsNullOrWhiteSpace(item.Label)
+            ? "+"
+            : item.Label.Trim()[0].ToString().ToUpperInvariant();
+    }
+
+    private static string NormalizeTone(string? tone)
+        => string.IsNullOrWhiteSpace(tone)
+            ? "neutral"
+            : tone.Trim().ToLowerInvariant();
+}

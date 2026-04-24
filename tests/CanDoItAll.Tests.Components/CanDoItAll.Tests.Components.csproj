@@ -27,7 +27,10 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Components.Sandbox\CanDoItAll.Components.Sandbox.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />

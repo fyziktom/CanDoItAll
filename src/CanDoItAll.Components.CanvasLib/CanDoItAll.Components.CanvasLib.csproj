@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,32 @@
+{
+  "Key": "01-baseline-and-renderer-decision-lock",
+  "Title": "Baseline and renderer decision lock",
+  "Purpose": "Establish the current-process and current-canvas baseline, document the renderer strategy, and lock the concept boundaries before any implementation starts.",
+  "DependsOn": [],
+  "Deliverables": [
+    "Prepared-stage analysis documents and workbook baseline are finalized.",
+    "Renderer choice, perspective-first 3D default, and concept non-goals are explicitly recorded.",
+    "Representative template set and proof scenarios are locked before implementation."
+  ],
+  "RepositoryTouchpoints": [
+    "CanDoItAll.slnx",
+    "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+    "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs",
+    "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasSurfaceFactory.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+    "Templates/Processes/manifest.json",
+    "tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs",
+    "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+  ],
+  "ValidationCommands": [
+    "python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py webgl_process_workbench_concept_bundle --profile initiative --stage prepared"
+  ],
+  "ReviewQuestions": [
+    "Is the WebGL plan clearly a concept branch rather than a hidden production rewrite?",
+    "Is the guided 3D recommendation justified by current repository constraints?",
+    "Are the template and proof scenarios representative enough to de-risk later phases?"
+  ],
+  "CorrectiveOnFailure": "If this task fails, stop immediately and execute `subbundles/_corrective-renderer-boundary-reset` before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-renderer-boundary-reset"
+}

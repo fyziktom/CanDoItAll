@@ -1,0 +1,22 @@
+@namespace CanDoItAll.Components.WebGlSandbox.Components
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/material-icons.css"]" />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/output.css"]" />
+    <WebGlLibHeadAssets />
+    <link rel="stylesheet" href="@Assets["webgl-sandbox.css"]" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <WebGlLibBodyAssets />
+    <script src="_framework/blazor.web.js"></script>
+</body>
+
+</html>

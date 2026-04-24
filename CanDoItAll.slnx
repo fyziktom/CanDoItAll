@@ -4,7 +4,10 @@
     <Project Path="src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj" />
     <Project Path="src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj" />
+    <Project Path="src/CanDoItAll.Components.OverlayLib/CanDoItAll.Components.OverlayLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj" />
+    <Project Path="src/CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj" />
+    <Project Path="src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj" />
     <Project Path="src/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj" />
@@ -38,6 +41,9 @@
     <Project Path="src/CanDoItAll.Modules.Validation/CanDoItAll.Modules.Validation.csproj" />
     <Project Path="src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj" />
     <Project Path="src/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj" />
+    <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj" />
+    <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Components/CanDoItAll.Space3D.Mouse.Components.csproj" />
+    <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Sandbox/CanDoItAll.Space3D.Mouse.Sandbox.csproj" />
     <Project Path="src/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj" />
     <Project Path="src/CanDoItAll.Web/CanDoItAll.Web.csproj" />
   </Folder>
