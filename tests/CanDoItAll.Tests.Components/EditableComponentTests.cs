@@ -68,6 +68,36 @@ public sealed class EditableComponentTests : TestContext
         Assert.Contains("True", cut.Markup);
     }
 
+    [Fact]
+    public void Renders_compact_class_by_default()
+    {
+        var item = new EditableTestItem { Title = "Compact" };
+
+        var cut = RenderEditable(item, nameof(EditableTestItem.Title), _ => { });
+
+        var root = cut.Find(".cda-editable");
+        Assert.Contains("cda-editable--compact", root.ClassList);
+        Assert.Empty(cut.FindAll(".cda-editable--xs"));
+    }
+
+    [Fact]
+    public void Renders_extra_small_class_for_dense_icon_layouts()
+    {
+        var item = new EditableTestItem { Title = "Tiny" };
+
+        var cut = RenderEditable(
+            item,
+            nameof(EditableTestItem.Title),
+            _ => { },
+            parameters => parameters.Add(component => component.Size, EditableSize.ExtraSmall));
+
+        var root = cut.Find(".cda-editable");
+        var action = cut.Find("button[aria-label='Edit Title']");
+
+        Assert.Contains("cda-editable--xs", root.ClassList);
+        Assert.Contains("cda-editable__action", action.ClassList);
+    }
+
     private IRenderedComponent<Editable<EditableTestItem>> RenderEditable(
         EditableTestItem item,
         string parameterName,

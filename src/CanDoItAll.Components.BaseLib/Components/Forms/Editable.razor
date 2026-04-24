@@ -5,7 +5,7 @@
 @using System.Reflection
 
 <Stack GapScale="LayoutGap.XSmall"
-       Class='@BuildClass("min-w-0")'
+       Class="@RootCssClass"
        Style="@Style"
        @attributes="AdditionalAttributes">
     @if (!HasSupportedProperty)
@@ -17,14 +17,15 @@
         <Stack Orientation="Orientation.Horizontal"
                AlignItems="AlignItems.Center"
                GapScale="LayoutGap.XSmall"
-               Class="min-w-0">
+               Class="cda-editable__row min-w-0">
             @if (!Editing)
             {
-                <TextBlock TextStyle="@(TextStyle.Body2)" Value="@DisplayValue" Class="min-w-0" />
+                <TextBlock TextStyle="@(TextStyle.Body2)" Value="@DisplayValue" Class="cda-editable__value min-w-0" />
                 <Button Icon="@EditIcon"
                         ButtonStyle="@(ButtonStyle.Light)"
                         Variant="@(Variant.Outlined)"
                         Size="@(ButtonSize.Small)"
+                        Class="cda-editable__action"
                         Disabled="@(!CanEdit)"
                         Click="Edit"
                         aria-label="@EditAriaLabel" />
@@ -34,12 +35,14 @@
                 <CheckBox TValue="bool"
                           Value="@editBool"
                           ValueChanged="OnBoolChangedAsync"
+                          Class="cda-editable__checkbox"
                           Disabled="@Disabled"
                           aria-label="@InputAriaLabel" />
-                <TextBlock TextStyle="@(TextStyle.Caption)" Value="@BooleanEditLabel" />
+                <TextBlock TextStyle="@(TextStyle.Caption)" Value="@BooleanEditLabel" Class="cda-editable__bool-label" />
                 <Button Icon="@SaveIcon"
                         ButtonStyle="@(ButtonStyle.Success)"
                         Size="@(ButtonSize.Small)"
+                        Class="cda-editable__action cda-editable__action--save"
                         Disabled="@Disabled"
                         Click="SaveAsync"
                         aria-label="@SaveAriaLabel" />
@@ -49,11 +52,13 @@
                 <TextBox Value="@editText"
                          ValueChanged="OnTextChangedAsync"
                          Placeholder="@Placeholder"
+                         Class="cda-editable__input"
                          Disabled="@Disabled"
                          aria-label="@InputAriaLabel" />
                 <Button Icon="@SaveIcon"
                         ButtonStyle="@(ButtonStyle.Success)"
                         Size="@(ButtonSize.Small)"
+                        Class="cda-editable__action cda-editable__action--save"
                         Disabled="@Disabled"
                         Click="SaveAsync"
                         aria-label="@SaveAriaLabel" />
@@ -62,7 +67,7 @@
 
         @if (!string.IsNullOrWhiteSpace(validationMessage))
         {
-            <TextBlock TextStyle="@(TextStyle.Caption)" Value="@validationMessage" />
+            <TextBlock TextStyle="@(TextStyle.Caption)" Value="@validationMessage" Class="cda-editable__validation" />
         }
     }
 </Stack>
@@ -116,6 +121,9 @@
     [Parameter]
     public string SaveIcon { get; set; } = "save";
 
+    [Parameter]
+    public EditableSize Size { get; set; } = EditableSize.Compact;
+
     public bool Editing { get; private set; }
 
     private EditableValueKind ValueKind { get; set; } = EditableValueKind.Unsupported;
@@ -147,6 +155,9 @@
 
     private string InputAriaLabel
         => $"Editing {ParameterLabel}";
+
+    private string RootCssClass
+        => BuildClass("cda-editable", ResolveSizeCssClass(), Editing ? "cda-editable--editing" : null, "min-w-0");
 
     protected override void OnParametersSet()
     {
@@ -370,6 +381,13 @@
     private bool IsNullableProperty()
         => propertyInfo?.PropertyType == typeof(string)
             || Nullable.GetUnderlyingType(propertyInfo?.PropertyType ?? typeof(object)) is not null;
+
+    private string ResolveSizeCssClass()
+        => Size switch
+        {
+            EditableSize.ExtraSmall => "cda-editable--xs",
+            _ => "cda-editable--compact"
+        };
 
     private enum EditableValueKind
     {
