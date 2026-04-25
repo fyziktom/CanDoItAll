@@ -8,6 +8,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using static CanDoItAll.Tests.Integration.ProcessCalculatorRepairDefinitionTestFixture;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -1218,6 +1219,149 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task Calculator_repair_process_routes_qa_rejection_repair_recheck_and_release()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Calculator repair process graph project");
+        var fixture = ProcessCalculatorRepairDefinitionTestFixture.Create(projectId);
+        AssertCalculatorRepairGraph(fixture);
+
+        var saveResult = await processesService.SaveAsync(fixture.Editor);
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Calculator QA repair loop validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify deterministic calculator QA repair progression"
+        });
+
+        AssertSuccess(runResult);
+
+        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        Assert.Equal(8, stepRuns.Count);
+        Assert.Equal(ProcessStepRunStatus.Ready, GetStepRunByKey(stepRuns, fixture, StepKeys.Scope).Status);
+        Assert.Equal(ProcessStepRunStatus.Pending, GetStepRunByKey(stepRuns, fixture, StepKeys.Architecture).Status);
+        Assert.All(stepRuns, stepRun => AssertExpectedArtifactOutput(fixture, stepRun));
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            GetStepRunByKey(stepRuns, fixture, StepKeys.Scope),
+            ProcessArtifactKind.Brief);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        Assert.Equal(ProcessStepRunStatus.Ready, GetStepRunByKey(stepRuns, fixture, StepKeys.Architecture).Status);
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            GetStepRunByKey(stepRuns, fixture, StepKeys.Architecture),
+            ProcessArtifactKind.Decision);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var firstImplementationStep = GetStepRunByKey(stepRuns, fixture, StepKeys.FirstImplementation);
+        Assert.Equal(ProcessStepRunStatus.Ready, firstImplementationStep.Status);
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            firstImplementationStep,
+            ProcessArtifactKind.Deliverable,
+            assertMissingArtifactGate: true);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var qaFirstReviewStep = GetStepRunByKey(stepRuns, fixture, StepKeys.QaFirstReview);
+        var repairsRequiredOutcome = Assert.Single(qaFirstReviewStep.AvailableBranchOutcomes, item => item.Title == "Repairs required");
+        var firstPassApprovedOutcome = Assert.Single(qaFirstReviewStep.AvailableBranchOutcomes, item => item.Title == "Approved");
+        var repairsRequiredOutcomeId = repairsRequiredOutcome.Id;
+
+        Assert.Equal(ProcessStepRunStatus.Ready, qaFirstReviewStep.Status);
+        Assert.NotEqual(Guid.Empty, repairsRequiredOutcome.Id);
+        Assert.NotEqual(Guid.Empty, firstPassApprovedOutcome.Id);
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            qaFirstReviewStep,
+            ProcessArtifactKind.Evidence,
+            selectedBranchOutcomeId: repairsRequiredOutcomeId);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        qaFirstReviewStep = GetStepRunByKey(stepRuns, fixture, StepKeys.QaFirstReview);
+        var directReleaseNotesStep = GetStepRunByKey(stepRuns, fixture, StepKeys.DirectReleaseNotes);
+        var repairImplementationStep = GetStepRunByKey(stepRuns, fixture, StepKeys.RepairImplementation);
+
+        Assert.Equal(repairsRequiredOutcomeId, qaFirstReviewStep.SelectedBranchOutcomeId);
+        Assert.Equal("Repairs required", qaFirstReviewStep.SelectedBranchOutcomeTitle);
+        Assert.Equal(ProcessStepRunStatus.Skipped, directReleaseNotesStep.Status);
+        Assert.Equal(ProcessStepRunStatus.Ready, repairImplementationStep.Status);
+        Assert.Equal(ProcessStepRunStatus.Pending, GetStepRunByKey(stepRuns, fixture, StepKeys.QaRecheck).Status);
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            repairImplementationStep,
+            ProcessArtifactKind.Deliverable);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var qaRecheckStep = GetStepRunByKey(stepRuns, fixture, StepKeys.QaRecheck);
+        var qaRecheckApprovedOutcomeId = Assert.Single(qaRecheckStep.AvailableBranchOutcomes, item => item.Title == "Approved").Id;
+
+        Assert.Equal(ProcessStepRunStatus.Ready, qaRecheckStep.Status);
+        Assert.NotEqual(Guid.Empty, qaRecheckApprovedOutcomeId);
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            qaRecheckStep,
+            ProcessArtifactKind.Evidence,
+            selectedBranchOutcomeId: qaRecheckApprovedOutcomeId);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var releaseNotesStep = GetStepRunByKey(stepRuns, fixture, StepKeys.ReleaseNotes);
+
+        Assert.Equal(ProcessStepRunStatus.Ready, releaseNotesStep.Status);
+
+        await CompleteRequiredArtifactStepAsync(
+            processesService,
+            runResult.Value,
+            releaseNotesStep,
+            ProcessArtifactKind.Deliverable);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        Assert.Equal(ProcessStepRunStatus.Skipped, GetStepRunByKey(stepRuns, fixture, StepKeys.DirectReleaseNotes).Status);
+        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, StepKeys.ReleaseNotes).Status);
+
+        var run = Assert.Single(await processesService.ListRunsAsync(saveResult.Value, projectId), item => item.Id == runResult.Value);
+        Assert.Equal(ProcessRunStatus.Completed, run.Status);
+
+        var artifacts = await processesService.ListArtifactsAsync(runResult.Value);
+        var artifactTitles = artifacts.Select(item => item.Title).ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains(ArtifactTitles.Scope, artifactTitles);
+        Assert.Contains(ArtifactTitles.Architecture, artifactTitles);
+        Assert.Contains(ArtifactTitles.FirstImplementation, artifactTitles);
+        Assert.Contains(ArtifactTitles.QaFirstReview, artifactTitles);
+        Assert.Contains(ArtifactTitles.RepairImplementation, artifactTitles);
+        Assert.Contains(ArtifactTitles.QaRecheck, artifactTitles);
+        Assert.Contains(ArtifactTitles.ReleaseNotes, artifactTitles);
+        Assert.DoesNotContain(ArtifactTitles.DirectReleaseNotes, artifactTitles);
+
+        var decisions = await processesService.ListDecisionRecordsAsync(runResult.Value);
+        Assert.Contains(decisions, item => item.BranchOutcomeTitle == "Repairs required");
+        Assert.Contains(decisions, item => item.BranchOutcomeTitle == "Approved");
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_rejects_branch_outcome_selection_for_non_completed_transition()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -2329,6 +2473,152 @@ public sealed class ProcessesServiceIntegrationTests
                 })
                 .ToList()
         });
+    }
+
+    private static void AssertCalculatorRepairGraph(CalculatorRepairProcessDefinitionFixture fixture)
+    {
+        Assert.Equal(8, fixture.Editor.Steps.Count);
+        Assert.All(
+            fixture.Editor.Steps,
+            step =>
+            {
+                var artifactExpectation = Assert.Single(step.ArtifactExpectations);
+                Assert.Equal(fixture.ArtifactExpectationId(step.Key), artifactExpectation.Id);
+            });
+
+        var qaFirstReviewStep = Assert.Single(fixture.Editor.Steps, item => item.Key == StepKeys.QaFirstReview);
+        Assert.Equal(
+            [BranchOutcomeKeys.RepairsRequired, BranchOutcomeKeys.Approved],
+            qaFirstReviewStep.BranchOutcomes.Select(item => item.Key).ToArray());
+
+        var directReleaseDependency = Assert.Single(
+            fixture.Editor.Steps.Single(item => item.Key == StepKeys.DirectReleaseNotes).Dependencies);
+        Assert.Equal(fixture.StepId(StepKeys.QaFirstReview), directReleaseDependency.DependsOnStepId);
+        Assert.Equal(fixture.BranchOutcomeId(StepKeys.QaFirstReview, BranchOutcomeKeys.Approved), directReleaseDependency.DependsOnBranchOutcomeId);
+
+        var repairDependency = Assert.Single(
+            fixture.Editor.Steps.Single(item => item.Key == StepKeys.RepairImplementation).Dependencies);
+        Assert.Equal(fixture.StepId(StepKeys.QaFirstReview), repairDependency.DependsOnStepId);
+        Assert.Equal(fixture.BranchOutcomeId(StepKeys.QaFirstReview, BranchOutcomeKeys.RepairsRequired), repairDependency.DependsOnBranchOutcomeId);
+
+        var qaRecheckDependency = Assert.Single(
+            fixture.Editor.Steps.Single(item => item.Key == StepKeys.QaRecheck).Dependencies);
+        Assert.Equal(fixture.StepId(StepKeys.RepairImplementation), qaRecheckDependency.DependsOnStepId);
+        Assert.Null(qaRecheckDependency.DependsOnBranchOutcomeId);
+
+        var releaseNotesDependency = Assert.Single(
+            fixture.Editor.Steps.Single(item => item.Key == StepKeys.ReleaseNotes).Dependencies);
+        Assert.Equal(fixture.StepId(StepKeys.QaRecheck), releaseNotesDependency.DependsOnStepId);
+        Assert.Equal(fixture.BranchOutcomeId(StepKeys.QaRecheck, BranchOutcomeKeys.Approved), releaseNotesDependency.DependsOnBranchOutcomeId);
+    }
+
+    private static async Task CompleteRequiredArtifactStepAsync(
+        ProcessesService processesService,
+        Guid processRunId,
+        ProcessStepRunViewModel stepRun,
+        ProcessArtifactKind artifactKind,
+        bool assertMissingArtifactGate = false,
+        Guid? selectedBranchOutcomeId = null)
+    {
+        AssertSuccess(await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = stepRun.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = $"Start {stepRun.Title}.",
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        }));
+
+        if (assertMissingArtifactGate)
+        {
+            var failedCompletionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                SelectedBranchOutcomeId = selectedBranchOutcomeId,
+                Reason = "Attempt completion before the required artifact is recorded.",
+                DecidedBy = "integration-tests",
+                SuppressAutomationDispatch = true
+            });
+
+            Assert.True(failedCompletionResult.IsFailure);
+            Assert.Contains(failedCompletionResult.Errors, error => error.Code == "processes.step-completion-missing-required-artifacts");
+        }
+
+        var artifactOutput = Assert.Single(stepRun.ArtifactOutputs);
+        AssertSuccess(await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRun.Id,
+            ArtifactExpectationId = artifactOutput.ArtifactExpectationId,
+            ArtifactKind = artifactKind,
+            Title = artifactOutput.Title,
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded by integration test for {stepRun.Title}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Required artifact is present."
+        }));
+        AssertSuccess(await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = stepRun.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            SelectedBranchOutcomeId = selectedBranchOutcomeId,
+            Reason = "Required artifact recorded.",
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        }));
+    }
+
+    private static ProcessStepRunViewModel GetStepRunByKey(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        CalculatorRepairProcessDefinitionFixture fixture,
+        string stepKey)
+    {
+        var stepDefinitionId = fixture.StepId(stepKey);
+        return Assert.Single(stepRuns, item => item.StepDefinitionId == stepDefinitionId);
+    }
+
+    private static void AssertExpectedArtifactOutput(
+        CalculatorRepairProcessDefinitionFixture fixture,
+        ProcessStepRunViewModel stepRun)
+    {
+        var stepKey = fixture.StepIdsByKey.Single(item => item.Value == stepRun.StepDefinitionId).Key;
+        var artifactOutput = Assert.Single(stepRun.ArtifactOutputs);
+
+        Assert.Equal(GetExpectedCalculatorArtifactTitle(stepKey), artifactOutput.Title);
+        Assert.True(artifactOutput.IsRequired);
+    }
+
+    private static string GetExpectedCalculatorArtifactTitle(string stepKey)
+    {
+        return stepKey switch
+        {
+            StepKeys.Scope => ArtifactTitles.Scope,
+            StepKeys.Architecture => ArtifactTitles.Architecture,
+            StepKeys.FirstImplementation => ArtifactTitles.FirstImplementation,
+            StepKeys.QaFirstReview => ArtifactTitles.QaFirstReview,
+            StepKeys.DirectReleaseNotes => ArtifactTitles.DirectReleaseNotes,
+            StepKeys.RepairImplementation => ArtifactTitles.RepairImplementation,
+            StepKeys.QaRecheck => ArtifactTitles.QaRecheck,
+            StepKeys.ReleaseNotes => ArtifactTitles.ReleaseNotes,
+            _ => throw new InvalidOperationException($"Unknown calculator process step key '{stepKey}'.")
+        };
+    }
+
+    private static void AssertSuccess(Result result)
+    {
+        Assert.True(result.IsSuccess, FormatErrors(result.Errors));
+    }
+
+    private static void AssertSuccess<T>(Result<T> result)
+    {
+        Assert.True(result.IsSuccess, FormatErrors(result.Errors));
+    }
+
+    private static string FormatErrors(IEnumerable<Error> errors)
+    {
+        return string.Join(" | ", errors.Select(error => $"{error.Code}:{error.Message}"));
     }
 
     private static ProcessDefinitionEditorModel BuildDefinitionEditor(Guid projectId, Guid managerRoleId)

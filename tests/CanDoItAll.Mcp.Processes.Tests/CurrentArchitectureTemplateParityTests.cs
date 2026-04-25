@@ -49,8 +49,8 @@ public sealed class CurrentArchitectureTemplateParityTests
 
         var software = pack.Processes["software-delivery"];
         var releaseApproval = software.Steps.Single(step => step.Key == "release-approval");
-        Assert.Equal(3, releaseApproval.Dependencies.Count);
-        Assert.Equal(3, releaseApproval.ArtifactInputs.Count);
+        Assert.Equal(4, releaseApproval.Dependencies.Count);
+        Assert.Equal(4, releaseApproval.ArtifactInputs.Count);
 
         var hotfix = pack.Processes["hotfix-rollout"];
         var emergencyApproval = hotfix.Steps.Single(step => step.Key == "approve-emergency-release");
@@ -74,7 +74,9 @@ public sealed class CurrentArchitectureTemplateParityTests
         var securityReview = software.Steps.Single(step => step.Key == "security-review");
         var releaseApproval = software.Steps.Single(step => step.Key == "release-approval");
 
-        Assert.Equal("ReviewRequired", Assert.Single(architectureReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(
+            "ReviewRequired",
+            architectureReview.ArtifactExpectations.Single(item => item.Key == "architecture-decision-record").TrustRequirement);
         Assert.Equal("ReviewRequired", Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
         Assert.Equal("ReviewRequired", Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
         Assert.Equal("HumanApproved", Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);

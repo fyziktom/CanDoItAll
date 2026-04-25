@@ -4,7 +4,6 @@ using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
@@ -21,7 +20,6 @@ public sealed partial class ProcessesService(
     HrService hrService,
     AiAgentService aiAgentService,
     CollaborationService collaborationService,
-    IServiceScopeFactory serviceScopeFactory,
     ILogger<ProcessesService> logger)
 {
     private const string DefaultActor = "process-management";

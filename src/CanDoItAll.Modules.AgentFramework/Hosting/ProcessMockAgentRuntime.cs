@@ -414,11 +414,10 @@ internal sealed class ProcessMockAgentRuntime(
 
     private static bool IsApprovalQaPass(string prompt)
     {
-        return prompt.Contains("qa-approval", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("qa approval", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("qa recheck", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("approve repaired", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains(ProcessMockAgentCatalog.BranchApproved, StringComparison.OrdinalIgnoreCase);
+        return prompt.Contains("qa recheck", StringComparison.OrdinalIgnoreCase) ||
+               prompt.Contains("recheck repaired", StringComparison.OrdinalIgnoreCase) ||
+               prompt.Contains("repaired calculator implementation", StringComparison.OrdinalIgnoreCase) ||
+               prompt.Contains("approve repaired", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveRunKey(WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)

@@ -45,6 +45,18 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private const int DefaultMaxExecutionAttempts = 3;
     private const int ConcreteImplementationMaxExecutionAttempts = 5;
     private const int MaxBrowserSnapshotInspectionCharacters = 262_144;
+    private const string ProcessMockSessionFlagPropertyName = "processMockAgent";
+    private const string ProcessMockRoleKeyPropertyName = "roleKey";
+    private const string ProcessMockArtifactRootPropertyName = "artifactRoot";
+    private const string ProcessMockBranchOutcomeKeyPropertyName = "branchOutcomeKey";
+    private const string ProcessMockProductOwnerRoleKey = "product-owner";
+    private const string ProcessMockArchitectRoleKey = "architect";
+    private const string ProcessMockDeveloperRoleKey = "developer";
+    private const string ProcessMockQaRoleKey = "qa";
+    private const string ProcessMockRepairDeveloperRoleKey = "repair-developer";
+    private const string ProcessMockReleaseManagerRoleKey = "release-manager";
+    private const string ProcessMockBranchRepairsRequired = "repairs-required";
+    private const string ProcessMockBranchApproved = "approved";
     private static readonly TimeSpan FreshInProgressRecoveryGracePeriod = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan StaleAutomationExecutionRunTimeout = TimeSpan.FromMinutes(10);
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> StepDispatchGuards = [];
@@ -533,6 +545,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 continue;
             }
 
+            var executorPartyId = stepRun.CurrentExecutorPartyId.Value;
             var executionRuns = await workspaceService.ListExecutionRunsAsync(
                 new ExecutionRunQuery(
                     ProcessRunId: processRunId.ToString("D"),
@@ -546,11 +559,22 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
             var recoveryExecutionRunId = ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns);
             var reusableChatSessionId = ResolveReusableAutomationChatSessionId(executionRuns);
-            var summaries = await technicalAgentBridge.GetDirectorySummariesAsync([stepRun.CurrentExecutorPartyId.Value], cancellationToken);
-            if (!summaries.TryGetValue(stepRun.CurrentExecutorPartyId.Value, out var technicalAgentSummary) ||
+            var summaries = await technicalAgentBridge.GetDirectorySummariesAsync([executorPartyId], cancellationToken);
+            var hasTechnicalAgentSummary = summaries.TryGetValue(executorPartyId, out var technicalAgentSummary);
+            if (!hasTechnicalAgentSummary ||
+                technicalAgentSummary is null ||
                 !technicalAgentSummary.TechnicalAgentId.HasValue ||
                 technicalAgentSummary.BindingStatus != AiResourceBindingStatus.Bound)
             {
+                logger.LogWarning(
+                    "{Diagnostic}",
+                    BuildMissingTechnicalAgentBindingDiagnostic(
+                        run.Id,
+                        stepRun.Id,
+                        stepRun.Title,
+                        executorPartyId,
+                        technicalAgentSummary?.BindingStatus,
+                        technicalAgentSummary?.TechnicalAgentId));
                 continue;
             }
 
@@ -1070,6 +1094,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         CancellationToken cancellationToken)
     {
         var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        var workspaceScope = WorkspaceScopeDescriptor.Organization(
+            databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N"));
         foreach (var artifact in detail.Artifacts)
         {
             if (IsTransientExecutionArtifact(artifact))
@@ -1164,6 +1190,12 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             }
         }
 
+        await ProjectProcessMockArtifactsAsync(
+            candidate,
+            detail,
+            workspaceRoot,
+            workspaceScope,
+            cancellationToken);
         await ProjectResponseTextArtifactsAsync(
             candidate,
             detail,
@@ -1178,6 +1210,105 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             responseText,
             completionStatus,
             cancellationToken);
+    }
+
+    private async Task ProjectProcessMockArtifactsAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        CancellationToken cancellationToken)
+    {
+        if (candidate.ExpectedArtifacts.Count == 0 ||
+            !TryResolveProcessMockArtifactProjection(detail.Run.SerializedSessionStateJson, out var projection))
+        {
+            return;
+        }
+
+        var matchedExpectations = candidate.ExpectedArtifacts
+            .Where(item => item.IsRequired)
+            .Where(item => ProcessMockArtifactMatchesExpectation(item, projection))
+            .ToList();
+        if (matchedExpectations.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Process mock artifact '{projection.RelativePath}' for role '{projection.RoleKey}' did not match any required artifact expectation for step '{candidate.StepRun.Title}'.");
+        }
+
+        if (matchedExpectations.Count > 1)
+        {
+            throw new InvalidOperationException(
+                $"Process mock artifact '{projection.RelativePath}' for role '{projection.RoleKey}' matched multiple required artifact expectations for step '{candidate.StepRun.Title}': {string.Join(", ", matchedExpectations.Select(item => item.Title))}.");
+        }
+
+        var expectedArtifact = matchedExpectations[0];
+        var externalReferenceKey = BuildProcessMockArtifactExternalReferenceKey(
+            candidate.StepRun.Id,
+            expectedArtifact.Id,
+            projection.RelativePath);
+        if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+        {
+            return;
+        }
+
+        var scopedRelativePath = ResolveScopedManagedRelativePath(workspaceScope, projection.RelativePath);
+        if (!TryResolveArtifactFullPath(workspaceRoot, scopedRelativePath, out var fullPath, out var pathResolutionFailure) ||
+            !File.Exists(fullPath))
+        {
+            throw new InvalidOperationException(
+                $"Process mock artifact '{projection.RelativePath}' for expected artifact '{expectedArtifact.Title}' was declared by execution run {detail.Run.Id:D}, but scoped path '{scopedRelativePath}' could not be found. {pathResolutionFailure}".Trim());
+        }
+
+        byte[] content;
+        try
+        {
+            content = await File.ReadAllBytesAsync(fullPath, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException(
+                $"Process mock artifact '{projection.RelativePath}' for expected artifact '{expectedArtifact.Title}' at scoped path '{scopedRelativePath}' could not be read: {exception.Message}",
+                exception);
+        }
+
+        var contentType = GuessContentTypeFromPath(fullPath);
+        var placement = await storagePlacementService.PlaceAsync(
+            new StoragePlacementRequest(
+                Path.GetFileName(fullPath),
+                contentType,
+                content,
+                StorageUsagePurpose.Evidence,
+                ResolveStorageContentKind(contentType, fullPath),
+                ProjectId: candidate.Run.ProjectId,
+                RelativePathHint: scopedRelativePath),
+            cancellationToken);
+
+        var recordResult = await RecordArtifactAsync(
+            new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = candidate.Run.Id,
+                StepRunId = candidate.StepRun.Id,
+                ArtifactExpectationId = expectedArtifact.Id,
+                ArtifactKind = expectedArtifact.ArtifactKind,
+                Title = expectedArtifact.Title,
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = expectedArtifact.SensitivityLevel,
+                ProvenanceSummary = $"Projected from deterministic process mock artifact '{projection.RelativePath}' at scoped workspace path '{scopedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+                    ? "Process mock evidence and regression audit review."
+                    : expectedArtifact.AllowedFutureUsageSummary,
+                ReviewSummary = $"Process mock role '{projection.RoleKey}' produced '{Path.GetFileName(projection.RelativePath)}'.",
+                ManagedStoragePath = placement.RelativePath,
+                ExternalReferenceKey = externalReferenceKey
+            },
+            cancellationToken);
+        if (recordResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Process mock artifact projection failed for expected artifact '{expectedArtifact.Title}': {string.Join(" | ", recordResult.Errors.Select(error => error.Message))}");
+        }
+
+        candidate.ExternalReferenceKeys.Add(externalReferenceKey);
     }
 
     private async Task EnsureDecisionArtifactsForCompletedStepAsync(
@@ -4214,6 +4345,11 @@ ORDER BY CreatedAtUtc, Title;
             }
         }
 
+        foreach (var toolName in ResolveProcessMockSatisfiedToolNames(candidate, detail, requiredToolNames))
+        {
+            successfulToolNames.Add(toolName);
+        }
+
         var missing = new List<string>();
 
         foreach (var requiredToolName in requiredToolNames)
@@ -4225,6 +4361,35 @@ ORDER BY CreatedAtUtc, Title;
         }
 
         return missing;
+    }
+
+    private static IReadOnlyList<string> ResolveProcessMockSatisfiedToolNames(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyCollection<string> requiredToolNames)
+    {
+        if (!TryResolveProcessMockArtifactProjection(detail.Run.SerializedSessionStateJson, out var projection) ||
+            !ProcessMockProjectionMatchesRequiredArtifact(candidate, projection))
+        {
+            return [];
+        }
+
+        var satisfiedToolNames = new List<string>();
+        if (RequiresGovernedInspection(candidate.StepRun))
+        {
+            satisfiedToolNames.AddRange(requiredToolNames
+                .Where(toolName => GovernedInspectionToolNames.Contains(toolName, StringComparer.Ordinal)));
+        }
+
+        if (CanSatisfyConcreteImplementationProofWithProcessMock(candidate, projection))
+        {
+            satisfiedToolNames.AddRange(requiredToolNames
+                .Where(toolName => ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal)));
+        }
+
+        return satisfiedToolNames
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     private static bool ShouldCarryForwardSuccessfulToolName(DispatchCandidate candidate, string normalizedToolName)
@@ -5452,6 +5617,12 @@ ORDER BY CreatedAtUtc, Title;
             return string.Empty;
         }
 
+        if (TryResolveProcessMockArtifactProjection(detail.Run.SerializedSessionStateJson, out var processMockProjection) &&
+            CanSatisfyConcreteImplementationProofWithProcessMock(candidate, processMockProjection))
+        {
+            return string.Empty;
+        }
+
         var successfulReceipts = detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))
             .ToList();
@@ -6492,7 +6663,7 @@ ORDER BY CreatedAtUtc, Title;
         var missingRequiredArtifacts = candidate.ExpectedArtifacts
             .Where(item => item.IsRequired)
             .Where(item => !HasRecordedExpectedArtifact(candidate, detail, item))
-            .Where(item => !CanAutoSatisfyRequiredArtifact(item, responseText))
+            .Where(item => !CanAutoSatisfyRequiredArtifact(candidate, detail, item, responseText))
             .Select(item => item.Title.Trim())
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -6513,9 +6684,16 @@ ORDER BY CreatedAtUtc, Title;
     }
 
     private static bool CanAutoSatisfyRequiredArtifact(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact,
         string? responseText)
     {
+        if (CanProjectProcessMockArtifact(candidate, detail, expectedArtifact))
+        {
+            return true;
+        }
+
         if (ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact))
         {
             return true;
@@ -6530,6 +6708,15 @@ ORDER BY CreatedAtUtc, Title;
 
         return IsUsableProjectedResponseArtifactContent(expectedArtifact, responseText) &&
                CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact);
+    }
+
+    private static bool CanProjectProcessMockArtifact(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        return TryResolveProcessMockArtifactProjection(detail.Run.SerializedSessionStateJson, out var projection) &&
+               ProcessMockArtifactMatchesExpectation(expectedArtifact, projection);
     }
 
     private static bool IsUsableProjectedResponseArtifactContent(
@@ -6973,6 +7160,29 @@ ORDER BY CreatedAtUtc, Title;
     private static string BuildProviderNativeBrowserArtifactExternalReferenceKey(Guid executionRunId, string relativePath)
     {
         return $"agentframework-browser-artifact:{executionRunId:D}:{WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath)}";
+    }
+
+    private static string BuildProcessMockArtifactExternalReferenceKey(
+        Guid stepRunId,
+        Guid artifactExpectationId,
+        string relativePath)
+    {
+        return $"process-mock-artifact:{stepRunId:D}:{artifactExpectationId:D}:{NormalizeManagedRelativePathForComparison(relativePath)}";
+    }
+
+    private static string BuildMissingTechnicalAgentBindingDiagnostic(
+        Guid processRunId,
+        Guid stepRunId,
+        string stepTitle,
+        Guid currentExecutorPartyId,
+        AiResourceBindingStatus? bindingStatus,
+        Guid? technicalAgentId)
+    {
+        var statusSummary = bindingStatus?.ToString() ?? "MissingDirectorySummary";
+        var technicalAgentSummary = technicalAgentId.HasValue
+            ? technicalAgentId.Value.ToString("D")
+            : "none";
+        return $"Process automation dispatch cannot run step '{stepTitle}' ({stepRunId:D}) for process run {processRunId:D} because executor party {currentExecutorPartyId:D} is not bound to an active technical agent. Binding status: {statusSummary}; technical agent ID: {technicalAgentSummary}.";
     }
 
     private static string BuildStorageRelativePath(
@@ -7594,6 +7804,127 @@ ORDER BY CreatedAtUtc, Title;
         return normalized;
     }
 
+    private static bool TryResolveProcessMockArtifactProjection(
+        string? serializedSessionStateJson,
+        out ProcessMockArtifactProjection projection)
+    {
+        projection = default;
+        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(serializedSessionStateJson);
+            var root = document.RootElement;
+            if (!root.TryGetProperty(ProcessMockSessionFlagPropertyName, out var processMockFlag) ||
+                processMockFlag.ValueKind != JsonValueKind.True ||
+                !TryGetStringProperty(root, ProcessMockRoleKeyPropertyName, out var roleKey) ||
+                !TryGetStringProperty(root, ProcessMockArtifactRootPropertyName, out var artifactRoot) ||
+                !TryResolveProcessMockArtifactFile(roleKey, TryGetStringProperty(root, ProcessMockBranchOutcomeKeyPropertyName, out var branchOutcomeKey) ? branchOutcomeKey : null, out var fileName, out var contentSignalText))
+            {
+                return false;
+            }
+
+            var normalizedRoot = WorkspaceScopeDescriptor.NormalizeRelativePath(artifactRoot);
+            if (string.IsNullOrWhiteSpace(normalizedRoot))
+            {
+                return false;
+            }
+
+            projection = new ProcessMockArtifactProjection(
+                roleKey.Trim(),
+                branchOutcomeKey,
+                WorkspaceScopeDescriptor.NormalizeRelativePath($"{normalizedRoot.TrimEnd('/')}/{fileName}"),
+                contentSignalText);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryResolveProcessMockArtifactFile(
+        string roleKey,
+        string? branchOutcomeKey,
+        out string fileName,
+        out string contentSignalText)
+    {
+        var normalizedRoleKey = roleKey.Trim().ToLowerInvariant();
+        var normalizedBranchOutcomeKey = branchOutcomeKey?.Trim().ToLowerInvariant() ?? string.Empty;
+        (fileName, contentSignalText) = (normalizedRoleKey, normalizedBranchOutcomeKey) switch
+        {
+            (ProcessMockProductOwnerRoleKey, _) => ("01-scope.md", "calculator scope acceptance criteria arithmetic divide zero"),
+            (ProcessMockArchitectRoleKey, _) => ("02-architecture.md", "calculator architecture boundary implementation qa expectations"),
+            (ProcessMockDeveloperRoleKey, _) => ("03-implementation.md", "calculator first implementation deliverable deterministic defect"),
+            (ProcessMockQaRoleKey, ProcessMockBranchRepairsRequired) => ("04-qa-finding.md", "calculator qa rejection finding repair branch reason"),
+            (ProcessMockRepairDeveloperRoleKey, _) => ("05-repair.md", "calculator repair implementation divide zero fix"),
+            (ProcessMockQaRoleKey, ProcessMockBranchApproved) => ("06-qa-approval.md", "calculator qa approval repaired implementation release"),
+            (ProcessMockReleaseManagerRoleKey, _) => ("07-release-notes.md", "calculator release notes qa approval repair evidence"),
+            _ => (string.Empty, string.Empty)
+        };
+
+        return !string.IsNullOrWhiteSpace(fileName);
+    }
+
+    private static bool ProcessMockArtifactMatchesExpectation(
+        DispatchArtifactExpectation expectedArtifact,
+        ProcessMockArtifactProjection projection)
+    {
+        var observedTokens = TokenizeArtifactContentSignalText($"{projection.RelativePath} {projection.ContentSignalText}")
+            .ToHashSet(StringComparer.Ordinal);
+        var titleTokens = TokenizeArtifactContentSignalText(expectedArtifact.Title)
+            .ToList();
+        if (observedTokens.Count == 0 || titleTokens.Count == 0)
+        {
+            return false;
+        }
+
+        return titleTokens.All(observedTokens.Contains);
+    }
+
+    private static bool CanSatisfyConcreteImplementationProofWithProcessMock(
+        DispatchCandidate candidate,
+        ProcessMockArtifactProjection projection)
+    {
+        return RequiresConcreteImplementationProof(candidate) &&
+               IsProcessMockImplementationRole(projection.RoleKey) &&
+               ProcessMockProjectionMatchesRequiredArtifact(candidate, projection);
+    }
+
+    private static bool IsProcessMockImplementationRole(string roleKey)
+    {
+        var normalizedRoleKey = roleKey.Trim().ToLowerInvariant();
+        return normalizedRoleKey is ProcessMockDeveloperRoleKey or ProcessMockRepairDeveloperRoleKey;
+    }
+
+    private static bool ProcessMockProjectionMatchesRequiredArtifact(
+        DispatchCandidate candidate,
+        ProcessMockArtifactProjection projection)
+    {
+        return candidate.ExpectedArtifacts
+            .Where(item => item.IsRequired)
+            .Any(item => ProcessMockArtifactMatchesExpectation(item, projection));
+    }
+
+    private static bool TryGetStringProperty(
+        JsonElement root,
+        string propertyName,
+        out string value)
+    {
+        if (root.TryGetProperty(propertyName, out var property) &&
+            property.ValueKind == JsonValueKind.String)
+        {
+            value = property.GetString()?.Trim() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
     private static bool TryExtractExpectedArtifactRelativePath(string validationRequirementSummary, out string relativePath)
     {
         foreach (var marker in new[]
@@ -8193,6 +8524,12 @@ ORDER BY CreatedAtUtc, Title;
         string Key,
         string Title,
         string Description);
+
+    private readonly record struct ProcessMockArtifactProjection(
+        string RoleKey,
+        string? BranchOutcomeKey,
+        string RelativePath,
+        string ContentSignalText);
 
     private sealed record SessionToolCall(string ToolName, string OutputFileName);
 

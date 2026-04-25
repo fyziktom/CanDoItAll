@@ -422,6 +422,7 @@ public sealed partial class ProcessesService
             score += aiFact.BindingStatus == AiResourceBindingStatus.Bound && aiFact.TechnicalAgentId.HasValue
                 ? 6m
                 : -8m;
+            score += ScoreExplicitAgentTagAlias(additionalRoleContext, aiFact.Tags);
             score += ScoreAiRoleCapabilityFit(displayName, roleKey, additionalRoleContext, aiFact);
         }
 
@@ -443,6 +444,23 @@ public sealed partial class ProcessesService
         }
 
         return score;
+    }
+
+    private static decimal ScoreExplicitAgentTagAlias(
+        IReadOnlyList<string?> additionalRoleContext,
+        IReadOnlyList<string> candidateTags)
+    {
+        if (additionalRoleContext.Count == 0 || candidateTags.Count == 0)
+        {
+            return 0m;
+        }
+
+        var hasExactTagAlias = additionalRoleContext
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item!.Trim())
+            .Any(alias => candidateTags.Any(tag => string.Equals(tag, alias, StringComparison.OrdinalIgnoreCase)));
+
+        return hasExactTagAlias ? 240m : 0m;
     }
 
     private static decimal ScoreAiRoleCapabilityFit(

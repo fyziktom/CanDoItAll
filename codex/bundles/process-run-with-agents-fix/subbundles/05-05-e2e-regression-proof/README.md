@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -97,6 +97,14 @@ Add final regression proof that the process service can run the deterministic mu
 - Focused process outbox tests.
 - Focused dispatcher tests from subbundle 04.
 
+## Proof Captured
+
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~Process_mock_calculator_process_completes_end_to_end_through_durable_outbox_dispatch"` passed: 1/1.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests"` passed: 5/5.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessOutboxIntegrationTests"` passed: 7/7.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"` passed: 125/125.
+- The E2E run completed through durable process outbox dispatch with `Process Mock Agent Provider` / `process-mock-local`, no dead-letter outbox records, QA first pass selecting `Repairs required`, repair developer execution, QA recheck selecting `Approved`, direct release skipped, release notes completed, and required process artifacts linked to their persisted step artifact outputs.
+
 ## Browser Validation Logging
 
 - N/A unless implementation touches browser-visible Process Workspace UI.
@@ -105,6 +113,7 @@ Add final regression proof that the process service can run the deterministic mu
 ## Progression Gate
 
 - Final closure may pass only when the deterministic mock-agent process run completes end to end and every raw note in `reviews/01-execution-report.md` is closed with proof.
+- Gate result: passed. The deterministic mock-agent process run completes end to end and execution report raw notes are closed with proof.
 
 ## Suggested Agent Prompt
 

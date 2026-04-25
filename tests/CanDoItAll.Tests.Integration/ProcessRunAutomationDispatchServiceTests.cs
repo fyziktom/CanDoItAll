@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using System.Reflection;
 using System.Text.Json;
@@ -311,8 +313,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Theory]
-    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:Completed", true)]
-    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:InProgress", true)]
+    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:Completed", false)]
+    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:InProgress", false)]
     [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "runtime-recovery-scan", true)]
     [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:03:00+00:00", "runtime-recovery-scan", true)]
     [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:11:00+00:00", "runtime-recovery-scan", false)]
@@ -930,7 +932,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.NotNull(prompt);
         Assert.Contains("This step requires runnable browser proof or screenshots", prompt, StringComparison.Ordinal);
         Assert.Contains("inspect the concrete host project, launch settings, or prior successful build/test receipts", prompt, StringComparison.Ordinal);
-        Assert.Contains("start the concrete host yourself with `workspace_dotnet_run`", prompt, StringComparison.Ordinal);
+        Assert.Contains("start the concrete host yourself before you open the browser", prompt, StringComparison.Ordinal);
+        Assert.Contains("If `workspace_dotnet_run` is not available", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not assume the app must be reachable at `http://localhost:5000/`", prompt, StringComparison.Ordinal);
         Assert.Contains("empty `bin/Debug/<tfm>` folder as an acceptable blocker", prompt, StringComparison.Ordinal);
         Assert.Contains("return `Blocked` instead of `Completed`", prompt, StringComparison.Ordinal);
@@ -971,7 +974,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
 
         var candidate = CreateDispatchCandidate(
-            "Implement the calculator.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
+            "Implement the units converter.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
         var now = DateTimeOffset.UtcNow;
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
@@ -1036,9 +1039,11 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
 
         var candidate = CreateDispatchCandidate(
-            "Implement the calculator.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
+            "Implement the units converter.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
         var now = DateTimeOffset.UtcNow;
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
@@ -1077,6 +1082,58 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_stat_path",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_pwsh_run_script",
                     "LocalExecution",
@@ -1104,8 +1161,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         };
 
         var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Implement feature"]) as string;
 
-        Assert.Equal(ProcessStepRunStatus.Completed, status);
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
     }
 
     [Fact]
@@ -1148,7 +1206,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 now,
                 now,
                 string.Empty,
-                null,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists."))),
                 []),
             null,
             [],
@@ -1156,6 +1215,19 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         {
             ToolReceipts =
             [
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
@@ -1172,12 +1244,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ]
         };
 
-        var priorSuccessfulTools = new[] { "workspace_pwsh_run_script", "workspace_stat_path", "workspace_read_file" };
+        var priorSuccessfulTools = new[] { "workspace_pwsh_run_script" };
         var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools]);
         var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Implement feature", priorSuccessfulTools]) as string;
 
-        Assert.Equal(ProcessStepRunStatus.Completed, status);
         Assert.NotNull(reason);
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
         Assert.Contains("completed step", reason, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("workspace_pwsh_run_script", reason, StringComparison.Ordinal);
     }
@@ -1240,7 +1312,8 @@ Downstream artifact expectations: implementation change set, migration checklist
                 now,
                 now,
                 string.Empty,
-                null,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists."))),
                 []),
             null,
             [],
@@ -1252,7 +1325,7 @@ Downstream artifact expectations: implementation change set, migration checklist
             null,
             [candidate, detail, "Review architecture and canonical-model impact", priorSuccessfulTools, responseText]) as string;
 
-        Assert.Equal(ProcessStepRunStatus.Completed, status);
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
         Assert.NotNull(reason);
         Assert.Contains("inferred the governed completed outcome", reason, StringComparison.OrdinalIgnoreCase);
     }
@@ -1263,7 +1336,7 @@ Downstream artifact expectations: implementation change set, migration checklist
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
-        var candidate = CreateDispatchCandidate("Implement the calculator and prove the build passes.");
+        var candidate = CreateDispatchCandidate("Implement the units converter and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
         var detail = new ExecutionRunDetail(
@@ -1303,6 +1376,19 @@ Downstream artifact expectations: implementation change set, migration checklist
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_dotnet_build",
                     "LocalExecution",
@@ -1318,7 +1404,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 1]);
+            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -1330,7 +1416,7 @@ Downstream artifact expectations: implementation change set, migration checklist
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
-        var candidate = CreateDispatchCandidate("Implement the calculator and prove the build passes.");
+        var candidate = CreateDispatchCandidate("Implement the units converter and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
         var detail = new ExecutionRunDetail(
@@ -1368,6 +1454,19 @@ Downstream artifact expectations: implementation change set, migration checklist
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_dotnet_build",
                     "LocalExecution",
@@ -1383,7 +1482,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), 1]);
+            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -1438,6 +1537,19 @@ Downstream artifact expectations: implementation change set, migration checklist
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_stat_path",
                     "LocalExecution",
@@ -1466,7 +1578,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1]);
+            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -1518,7 +1630,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1]);
+            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -1594,7 +1706,7 @@ Downstream artifact expectations: implementation change set, migration checklist
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
-        var candidate = CreateDispatchCandidate("Implement the calculator and prove the build passes.");
+        var candidate = CreateDispatchCandidate("Implement the units converter and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
         var detail = new ExecutionRunDetail(
@@ -1629,7 +1741,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 3]);
+            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 3, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.False((bool)shouldRetryResult);
@@ -1643,7 +1755,7 @@ Downstream artifact expectations: implementation change set, migration checklist
             ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
 
         var candidate = CreateDispatchCandidate(
-            "Implement the calculator.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.");
+            "Implement the units converter.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.");
 
         var requiredToolNames = resolveRequiredToolNames.Invoke(null, [candidate]) as IReadOnlyList<string>;
 
@@ -1777,9 +1889,11 @@ Downstream artifact expectations: implementation change set, migration checklist
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
 
         var candidate = CreateDispatchCandidate(
-            "Implement the calculator.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.");
+            "Implement the units converter.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.");
         var now = DateTimeOffset.UtcNow;
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
@@ -1818,6 +1932,19 @@ Downstream artifact expectations: implementation change set, migration checklist
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_pwsh_run_script",
                     "LocalExecution",
@@ -1845,8 +1972,9 @@ Downstream artifact expectations: implementation change set, migration checklist
         };
 
         var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Implement feature"]) as string;
 
-        Assert.Equal(ProcessStepRunStatus.Completed, status);
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
     }
 
     [Fact]
@@ -2465,7 +2593,8 @@ Downstream artifact expectations: implementation change set, migration checklist
                 now,
                 now,
                 string.Empty,
-                null,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists."))),
                 []),
             null,
             [],
@@ -2663,7 +2792,7 @@ Downstream artifact expectations: implementation change set, migration checklist
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildExecutionPrompt method was not found.");
-        var candidate = CreateDispatchCandidate("Implement the calculator and prove the build passes.");
+        var candidate = CreateDispatchCandidate("Implement the units converter and prove the build passes.");
 
         var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
 
@@ -3003,8 +3132,8 @@ Descendant requirement context from sibling planning nodes:
         var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
         var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Complete governed code review"]) as string;
 
-        Assert.Equal(ProcessStepRunStatus.Failed, status);
         Assert.NotNull(reason);
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
         Assert.Contains("PROCESS_STEP_OUTCOME", reason, StringComparison.Ordinal);
     }
 
@@ -3067,6 +3196,19 @@ Descendant requirement context from sibling planning nodes:
         {
             ToolReceipts =
             [
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
@@ -3150,6 +3292,19 @@ Descendant requirement context from sibling planning nodes:
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_dotnet_build",
                     "LocalExecution",
@@ -3157,6 +3312,19 @@ Descendant requirement context from sibling planning nodes:
                     "PolicyOnlyLocal",
                     "CalculatorApp.csproj",
                     "external-target/C/programovani/csharp/calculator/CalculatorApp",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-process",
+                    "workspace_dotnet_test",
+                    "LocalExecution",
+                    "Required",
+                    "PolicyOnlyLocal",
+                    "external-target/C/programovani/csharp/calculator/CalculatorApp.Tests/CalculatorApp.Tests.csproj",
+                    "external-target/C/programovani/csharp/calculator/CalculatorApp.Tests",
                     "Succeeded",
                     now,
                     now)
@@ -3221,6 +3389,19 @@ Descendant requirement context from sibling planning nodes:
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_dotnet_build",
                     "LocalExecution",
@@ -3230,13 +3411,26 @@ Descendant requirement context from sibling planning nodes:
                     "external-target/C/programovani/csharp/calculator/CalculatorApp",
                     "Succeeded",
                     now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-process",
+                    "workspace_dotnet_test",
+                    "LocalExecution",
+                    "Required",
+                    "PolicyOnlyLocal",
+                    "external-target/C/programovani/csharp/calculator/CalculatorApp.Tests/CalculatorApp.Tests.csproj",
+                    "external-target/C/programovani/csharp/calculator/CalculatorApp.Tests",
+                    "Succeeded",
+                    now,
                     now)
             ]
         };
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1]);
+            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -3305,6 +3499,19 @@ Descendant requirement context from sibling planning nodes:
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_dotnet_build",
                     "LocalExecution",
@@ -3312,6 +3519,19 @@ Descendant requirement context from sibling planning nodes:
                     "PolicyOnlyLocal",
                     "CalculatorApp.csproj",
                     "external-target/C/programovani/csharp/calculator/CalculatorApp",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-process",
+                    "workspace_dotnet_test",
+                    "LocalExecution",
+                    "Required",
+                    "PolicyOnlyLocal",
+                    "external-target/C/programovani/csharp/calculator/CalculatorApp.Tests/CalculatorApp.Tests.csproj",
+                    "external-target/C/programovani/csharp/calculator/CalculatorApp.Tests",
                     "Succeeded",
                     now,
                     now)
@@ -3382,6 +3602,19 @@ Descendant requirement context from sibling planning nodes:
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/units-converter/src/Units/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now,
+                    now),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
                     "workspace_dotnet_build",
                     "LocalExecution",
@@ -3397,7 +3630,7 @@ Descendant requirement context from sibling planning nodes:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1]);
+            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -4090,6 +4323,135 @@ Descendant requirement context from sibling planning nodes:
     }
 
     [Fact]
+    public void ResolveCompletionStatus_allows_process_mock_completed_step_with_required_artifact_projection()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Write calculator scope.",
+            ProcessStepKind.Start,
+            (ProcessArtifactKind.Brief, "Calculator scope artifact", true, "Scope artifact must describe arithmetic operations and divide-by-zero acceptance criteria."));
+        var detail = CreateProcessMockExecutionDetail(
+            "Scope complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Calculator scope and acceptance criteria were written.\"} -->",
+            ProcessMockAgentRoleKeys.ProductOwner);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, status);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_process_mock_required_artifact_when_metadata_does_not_match_expectation()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Write calculator scope.",
+            ProcessStepKind.Start,
+            (ProcessArtifactKind.Brief, "Unrelated compliance packet", true, "Compliance packet must include unrelated governance metadata."));
+        var responseText = "Scope complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Calculator scope and acceptance criteria were written.\"} -->";
+        var detail = CreateProcessMockExecutionDetail(responseText, ProcessMockAgentRoleKeys.ProductOwner);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("Unrelated compliance packet", reason, StringComparison.Ordinal);
+        Assert.Contains("required artifacts", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_allows_process_mock_qa_rejection_branch_and_artifact()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var resolveSelectedBranchOutcomeId = ResolveSelectedBranchOutcomeIdMethod(serviceType);
+        var candidate = CreateDispatchCandidateCore(
+            "Review the first calculator implementation and route the next step.",
+            ProcessStepKind.Review,
+            [
+                (ProcessMockAgentCatalog.BranchRepairsRequired, "Repairs required", "Route the calculator implementation through defect repair."),
+                (ProcessMockAgentCatalog.BranchApproved, "Approved", "Route directly to release notes when no repair is required.")
+            ],
+            true,
+            [(ProcessArtifactKind.Evidence, "Calculator QA rejection artifact", true, "QA first review artifact must record the branch reason.")],
+            []);
+        var responseText = $"QA rejection. <!-- PROCESS_STEP_OUTCOME {{\"status\":\"Completed\",\"reason\":\"Divide-by-zero handling is missing; repair is required.\",\"branchOutcomeKey\":\"{ProcessMockAgentCatalog.BranchRepairsRequired}\"}} -->";
+        var detail = CreateProcessMockExecutionDetail(
+            responseText,
+            ProcessMockAgentRoleKeys.Qa,
+            branchOutcomeKey: ProcessMockAgentCatalog.BranchRepairsRequired);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var selectedBranchOutcomeId = (Guid?)resolveSelectedBranchOutcomeId.Invoke(null, [candidate, ProcessStepRunStatus.Completed, responseText]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+        Assert.Equal(ResolveBranchOutcomeId(candidate, ProcessMockAgentCatalog.BranchRepairsRequired), selectedBranchOutcomeId);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_allows_process_mock_qa_approval_branch_and_artifact()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var resolveSelectedBranchOutcomeId = ResolveSelectedBranchOutcomeIdMethod(serviceType);
+        var candidate = CreateDispatchCandidateCore(
+            "Recheck the repaired calculator implementation and approve the release path.",
+            ProcessStepKind.Review,
+            [(ProcessMockAgentCatalog.BranchApproved, "Approved", "Route repaired calculator implementation to release notes.")],
+            true,
+            [(ProcessArtifactKind.Evidence, "Calculator QA approval artifact", true, "QA recheck artifact must record approval for release.")],
+            []);
+        var responseText = $"QA approval. <!-- PROCESS_STEP_OUTCOME {{\"status\":\"Completed\",\"reason\":\"Repaired calculator implementation passed QA.\",\"branchOutcomeKey\":\"{ProcessMockAgentCatalog.BranchApproved}\"}} -->";
+        var detail = CreateProcessMockExecutionDetail(
+            responseText,
+            ProcessMockAgentRoleKeys.Qa,
+            branchOutcomeKey: ProcessMockAgentCatalog.BranchApproved);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var selectedBranchOutcomeId = (Guid?)resolveSelectedBranchOutcomeId.Invoke(null, [candidate, ProcessStepRunStatus.Completed, responseText]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+        Assert.Equal(ResolveBranchOutcomeId(candidate, ProcessMockAgentCatalog.BranchApproved), selectedBranchOutcomeId);
+    }
+
+    [Fact]
+    public void BuildMissingTechnicalAgentBindingDiagnostic_includes_actionable_state()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildDiagnostic = serviceType.GetMethod("BuildMissingTechnicalAgentBindingDiagnostic", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildMissingTechnicalAgentBindingDiagnostic method was not found.");
+        var processRunId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var stepRunId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var partyId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+
+        var diagnostic = buildDiagnostic.Invoke(
+            null,
+            [processRunId, stepRunId, "Review first calculator implementation", partyId, AiResourceBindingStatus.Unbound, null]) as string;
+
+        Assert.NotNull(diagnostic);
+        Assert.Contains("Review first calculator implementation", diagnostic, StringComparison.Ordinal);
+        Assert.Contains(processRunId.ToString("D"), diagnostic, StringComparison.Ordinal);
+        Assert.Contains(stepRunId.ToString("D"), diagnostic, StringComparison.Ordinal);
+        Assert.Contains(partyId.ToString("D"), diagnostic, StringComparison.Ordinal);
+        Assert.Contains(AiResourceBindingStatus.Unbound.ToString(), diagnostic, StringComparison.Ordinal);
+        Assert.Contains("technical agent ID: none", diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ShouldRetryIncompleteSuccessfulRun_returns_true_for_provider_failure_that_returned_no_text()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -4133,7 +4495,7 @@ Descendant requirement context from sibling planning nodes:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1]);
+            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -4458,8 +4820,8 @@ Descendant requirement context from sibling planning nodes:
         bool requiresExplicitBranchOutcomeSelection,
         (ProcessArtifactKind ArtifactKind, string Title, bool IsRequired, string ValidationRequirementSummary)[] expectedArtifactDefinitions,
         (string SourceStepTitle, string ExpectedArtifactTitle, (string Title, string ArtifactKind, string ManagedStoragePath, string ReviewSummary, string ProvenanceSummary)[] Artifacts)[] artifactInputDefinitions,
-        string triggerReason = "Deliver the calculator showcase.",
-        string stepTitle = "Implement feature, tests, and migration notes")
+        string triggerReason = "Deliver the implementation showcase.",
+        string stepTitle = "Implement feature")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -4555,7 +4917,7 @@ Descendant requirement context from sibling planning nodes:
                        {
                            WorkBriefText = workBriefText,
                            HandoffSummary = "Architecture decision record.",
-                           ExpectedOutcome = "Buildable calculator implementation.",
+                           ExpectedOutcome = "Buildable implementation.",
                            EvidenceExpectationSummary = expectedArtifactDefinitions.Length == 0
                                ? "Implementation change set"
                                : string.Join(", ", expectedArtifactDefinitions.Select(item => item.Title))
@@ -4570,6 +4932,85 @@ Descendant requirement context from sibling planning nodes:
                        requiresExplicitBranchOutcomeSelection
                    ])
                ?? throw new InvalidOperationException("DispatchCandidate could not be constructed.");
+    }
+
+    private static MethodInfo ResolveSelectedBranchOutcomeIdMethod(Type serviceType)
+    {
+        return serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method =>
+                method.Name == "ResolveSelectedBranchOutcomeId" &&
+                method.GetParameters().Length == 3);
+    }
+
+    private static Guid ResolveBranchOutcomeId(object candidate, string branchOutcomeKey)
+    {
+        var branchOutcomes = candidate.GetType().GetProperty("BranchOutcomes")
+            ?.GetValue(candidate) as System.Collections.IEnumerable
+            ?? throw new InvalidOperationException("DispatchCandidate.BranchOutcomes was not available.");
+        foreach (var branchOutcome in branchOutcomes)
+        {
+            if (branchOutcome is null)
+            {
+                continue;
+            }
+
+            var key = branchOutcome.GetType().GetProperty("Key")?.GetValue(branchOutcome) as string;
+            if (!string.Equals(key, branchOutcomeKey, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return (Guid)(branchOutcome.GetType().GetProperty("Id")?.GetValue(branchOutcome)
+                ?? throw new InvalidOperationException("DispatchBranchOutcome.Id was not available."));
+        }
+
+        throw new InvalidOperationException($"Branch outcome '{branchOutcomeKey}' was not found.");
+    }
+
+    private static ExecutionRunDetail CreateProcessMockExecutionDetail(
+        string responseText,
+        string roleKey,
+        string artifactRoot = "artifacts/process-mock/mockrun001",
+        string? branchOutcomeKey = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Process mock step run",
+                ProcessMockAgentCatalog.ProcessSourceKind,
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                ProcessMockAgentCatalog.ProviderName,
+                ProcessMockAgentCatalog.Model,
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        processMockAgent = true,
+                        roleKey,
+                        runKey = "mockrun001",
+                        artifactRoot,
+                        branchOutcomeKey
+                    }),
+                []),
+            null,
+            [],
+            []);
     }
 
     private static ExecutionRunRecord CreateExecutionRun(string requestedBy, ExecutionState state, RunOutcome? outcome)

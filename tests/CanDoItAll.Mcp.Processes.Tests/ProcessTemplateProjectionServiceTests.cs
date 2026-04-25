@@ -22,14 +22,16 @@ public sealed class ProcessTemplateProjectionServiceTests
 
         var releaseApproval = envelope.Definition.Steps.Single(step => step.Key == "release-approval");
         Assert.Equal("Approve release readiness", releaseApproval.Title);
-        Assert.Equal(3, releaseApproval.Dependencies.Count);
-        Assert.Equal(3, releaseApproval.ArtifactInputs.Count);
+        Assert.Equal(4, releaseApproval.Dependencies.Count);
+        Assert.Equal(4, releaseApproval.ArtifactInputs.Count);
 
         var architectureReview = envelope.Definition.Steps.Single(step => step.Key == "architecture-review");
         var qaValidation = envelope.Definition.Steps.Single(step => step.Key == "qa-validation");
         var securityReview = envelope.Definition.Steps.Single(step => step.Key == "security-review");
 
-        Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(architectureReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(
+            ProcessArtifactTrustRequirement.ReviewRequired,
+            architectureReview.ArtifactExpectations.Single(item => item.Title == "Architecture decision record").TrustRequirement);
         Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
         Assert.Equal(ProcessArtifactTrustRequirement.ReviewRequired, Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
         Assert.Equal(ProcessArtifactTrustRequirement.HumanApproved, Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);
@@ -44,7 +46,7 @@ public sealed class ProcessTemplateProjectionServiceTests
         var envelope = projection.GetProjectedEnvelope("ai-assisted-change-delivery");
 
         Assert.Equal(9, envelope.Definition.Roles.Count);
-        Assert.Equal(6, envelope.Definition.Steps.Count);
+        Assert.Equal(8, envelope.Definition.Steps.Count);
 
         var architect = envelope.Definition.Roles.Single(role => role.Key == "solution-architect");
         var delegationDesign = envelope.Definition.Steps.Single(step => step.Key == "delegation-design");
