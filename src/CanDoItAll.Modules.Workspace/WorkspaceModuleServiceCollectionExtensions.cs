@@ -10,6 +10,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddHttpClient();
         services.AddScoped<IProviderAdapter, OpenAiProviderAdapter>();
         services.AddScoped<IProviderAdapter, ScenarioHarnessProviderAdapter>();
+        services.AddScoped<IProviderAdapter, ProcessMockProviderAdapter>();
         services.AddScoped<IProviderAdapter, OllamaProviderAdapter>();
         services.AddScoped<IProviderAdapter, OllamaRemoteProviderAdapter>();
         services.AddScoped<ProviderRegistry>();

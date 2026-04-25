@@ -323,6 +323,75 @@ public sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
     }
 }
 
+public sealed class ProcessMockProviderAdapter : IProviderAdapter
+{
+    public const string PluginKey = "provider.process-mock";
+    public const string BaseUrl = "process-mock://agents";
+    public const string DefaultModel = "process-mock-local";
+
+    private static readonly ConnectorPluginManifest PluginManifest = new(
+        PluginKey,
+        "Process mock provider",
+        "1.0.0",
+        ConnectorManifestCapability.ProviderExecution | ConnectorManifestCapability.AgentExposure,
+        new ConnectorConfigurationSchema(
+            "1.0",
+            [
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.BaseUrl, "Base URL", ConnectorConfigFieldType.Url, true, "Deterministic process mock endpoint."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.DefaultModel, "Default model", ConnectorConfigFieldType.Text, true, "Process mock model alias."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.TimeoutSeconds, "Timeout", ConnectorConfigFieldType.Number, true, "Execution timeout in seconds.")
+            ]),
+        [],
+        new ConnectorHealthCheckDescriptor("process-mock", "Confirms that deterministic process mock routing is configured."),
+        new ConnectorAgentExposure("workspace.prompt.send", true, true, "Allows deterministic process-flow execution without an external secret."),
+        null);
+
+    public ConnectorPluginManifest Manifest => PluginManifest;
+
+    public ProviderKind? LegacyProviderKind => null;
+
+    public Task<ProviderHealthResult> CheckHealthAsync(
+        ProviderProfile profile,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        var isConfigured = string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase);
+        var message = isConfigured
+            ? "Process mock provider is available for deterministic process automation flow tuning."
+            : $"Process mock profiles must use '{BaseUrl}'.";
+
+        return Task.FromResult(new ProviderHealthResult(isConfigured, message));
+    }
+
+    public Task<Result<ProviderExecutionResponse>> SendAsync(
+        ProviderProfile profile,
+        ProviderExecutionRequest request,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(Result<ProviderExecutionResponse>.Failure(
+                Error.Validation($"Process mock profiles must use '{BaseUrl}'.")));
+        }
+
+        return Task.FromResult(Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+            profile.Name,
+            string.IsNullOrWhiteSpace(request.ModelOverride) ? ResolveModel(profile) : request.ModelOverride!,
+            "Process mock provider routes execution through the AgentFramework process mock runtime. Use role-specific process mock agents from a process run instead of raw provider send.",
+            request.OutputFormat,
+            request.ContainsSensitiveContent,
+            request.ContainsSensitiveContent ? "Sensitive content was included in the deterministic process mock request." : null)));
+    }
+
+    private static string ResolveModel(ProviderProfile profile)
+    {
+        return string.IsNullOrWhiteSpace(profile.DefaultModel)
+            ? DefaultModel
+            : profile.DefaultModel;
+    }
+}
+
 public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
     public const string PluginKey = "provider.ollama.local";

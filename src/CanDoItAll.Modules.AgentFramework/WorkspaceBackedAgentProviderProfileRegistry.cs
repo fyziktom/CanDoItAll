@@ -247,12 +247,14 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedKind = provider.ConnectorPluginKey switch
         {
             ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
             OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
             _ => AgentFrameworkProviderKind.Ollama
         };
         var mappedTransport = provider.ConnectorPluginKey switch
         {
             ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
+            ProcessMockProviderAdapter.PluginKey => ProviderTransportKind.Responses,
             OpenAiProviderAdapter.PluginKey when IsOpenAiChatCompletionsProvider(provider) => ProviderTransportKind.ChatCompletions,
             OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
             _ => ProviderTransportKind.ChatCompletions
@@ -317,6 +319,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         return connectorPluginKey switch
         {
             ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
+            ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
             OpenAiProviderAdapter.PluginKey => "gpt-4.1",
             _ => "llama3.1"
         };

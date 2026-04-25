@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,6 +9,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class AgentFrameworkCatalogWarmupService(
     IAgentFrameworkOrganizationCatalogRepairService organizationCatalogRepairService,
+    ProcessMockAgentCatalogService processMockAgentCatalogService,
     IAiTechnicalAgentBridge technicalAgentBridge,
     ILogger<AgentFrameworkCatalogWarmupService> logger)
 {
@@ -15,6 +17,7 @@ internal sealed class AgentFrameworkCatalogWarmupService(
     {
         var stopwatch = Stopwatch.StartNew();
         await organizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync(cancellationToken);
+        await processMockAgentCatalogService.EnsureCatalogAsync(cancellationToken);
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         stopwatch.Stop();
 

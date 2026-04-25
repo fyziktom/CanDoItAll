@@ -6,6 +6,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -27,7 +28,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IProviderProfileService providerProfileService,
     IProviderProfileRegistry providerProfileRegistry,
     IAgentProviderCredentialResolver providerCredentialResolver,
-    ICapabilityProofService capabilityProofService) : ICanDoItAllAgentWorkspaceFactory
+    ICapabilityProofService capabilityProofService,
+    IOptions<ProcessMockAgentOptions> processMockAgentOptions) : ICanDoItAllAgentWorkspaceFactory
 {
     private readonly Dictionary<string, IAgentFrameworkWorkspaceService> workspaceServices = new(StringComparer.Ordinal);
 
@@ -52,12 +54,17 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var fileService = new WorkspaceFileService(workspaceRoot, scope);
         var commandExecutionService = new WorkspaceCommandExecutionService(workspaceRoot, processHost, scope);
         var artifactToolService = new WorkspaceArtifactToolService(workspaceRoot, commandExecutionService, scope);
-        var runtime = new ScenarioHarnessAgentRuntime(
-            new MafAgentRuntime(workspaceRoot, serviceProvider, scope),
+        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope);
+        var scenarioRuntime = new ScenarioHarnessAgentRuntime(
+            mafRuntime,
             workspaceRoot,
             scope,
             fileService,
             commandExecutionService);
+        var runtime = new ProcessMockAgentRuntime(
+            scenarioRuntime,
+            fileService,
+            processMockAgentOptions);
         var checkpointBridge = new WorkflowBackedAgentExecutionCheckpointBridge(store, workspaceRoot, scope);
         var governanceBridge = new DurableAgentExecutionGovernanceBridge(checkpointBridge);
         var providerDiagnosticsService = new ProviderDiagnosticsService(runtime);

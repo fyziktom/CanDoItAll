@@ -386,6 +386,7 @@ public sealed partial class WorkspaceService(
         return pluginKey.Trim() switch
         {
             ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
+            ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
             OpenAiProviderAdapter.PluginKey => "gpt-4.1",
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
             _ => "unknown"

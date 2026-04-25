@@ -134,6 +134,11 @@ internal static class AgentFrameworkProviderMetadata
             return ScenarioHarnessProviderAdapter.PluginKey;
         }
 
+        if (string.Equals(model.BaseUrl, ProcessMockProviderAdapter.BaseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessMockProviderAdapter.PluginKey;
+        }
+
         return model.Kind switch
         {
             AgentFrameworkProviderKind.Ollama when LooksLikeLocalOllama(model.BaseUrl) => OllamaProviderAdapter.PluginKey,

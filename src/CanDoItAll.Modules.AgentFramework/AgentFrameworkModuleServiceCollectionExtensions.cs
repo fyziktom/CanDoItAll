@@ -22,6 +22,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);
 
+        services.AddOptions<ProcessMockAgentOptions>()
+            .Bind(configuration.GetSection(ProcessMockAgentOptions.SectionName));
         services.AddSingleton<IProviderProfileService, ProviderProfileService>();
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
@@ -41,6 +43,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkWorkspaceService, CurrentProfileAgentFrameworkWorkspaceService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
+        services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
