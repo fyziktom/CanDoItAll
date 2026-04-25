@@ -130,13 +130,15 @@ internal sealed class AgentFrameworkExecutionRecoveryWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<AgentFrameworkExecutionRecoveryWorker> logger) : BackgroundService
 {
+    private readonly DateTimeOffset startupCutoffUtc = DateTimeOffset.UtcNow;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var recoveryService = scope.ServiceProvider.GetRequiredService<AgentFrameworkExecutionRecoveryService>();
-            var repairedCount = await recoveryService.RecoverInterruptedRunsAsync(stoppingToken);
+            var repairedCount = await recoveryService.RecoverInterruptedRunsAsync(startupCutoffUtc, stoppingToken);
             if (repairedCount > 0)
             {
                 logger.LogInformation(

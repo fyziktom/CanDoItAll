@@ -698,9 +698,19 @@ public sealed class ProcessOutboxIntegrationTests
             releaseDispatch.TrySetResult();
         }
 
-        public async Task DispatchAsync(Guid processRunId, Guid? triggerStepRunId, string trigger, CancellationToken cancellationToken = default)
+        public async Task DispatchAsync(
+            Guid processRunId,
+            Guid? triggerStepRunId,
+            string trigger,
+            Func<CancellationToken, Task>? renewLeaseAsync = null,
+            CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref callCount);
+            if (renewLeaseAsync is not null)
+            {
+                await renewLeaseAsync(cancellationToken);
+            }
+
             firstDispatchStarted.TrySetResult();
             if (HoldDispatch)
             {

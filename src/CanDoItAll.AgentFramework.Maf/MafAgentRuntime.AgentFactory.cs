@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -17,6 +18,8 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed partial class MafAgentRuntime
 {
+    private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+
     private static readonly IAgentProviderCredentialResolver FallbackProviderCredentialResolver = new EnvironmentVariableAgentProviderCredentialResolver();
     private static readonly TimeSpan ModelNetworkTimeout = TimeSpan.FromMinutes(10);
 
@@ -52,6 +55,7 @@ public sealed partial class MafAgentRuntime
             ? ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile: true)
             : provider;
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, managedSeedProvider, openAiCredentialOverride);
+        PromoteResolvedProviderCredentialEnvironment(effectiveProvider);
         var model = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
         if (string.IsNullOrWhiteSpace(model))
         {
@@ -122,6 +126,7 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(credential.FailureMessage);
         }
 
+        PromoteProviderCredentialEnvironment(provider, credential);
         var clientOptions = CreateOpenAiClientOptions(provider);
         var client = new OpenAIClient(
             credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
@@ -157,6 +162,7 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(credential.FailureMessage);
         }
 
+        PromoteProviderCredentialEnvironment(provider, credential);
         var client = new AzureOpenAIClient(
             new Uri(provider.BaseUrl, UriKind.Absolute),
             new System.ClientModel.ApiKeyCredential(credential.ApiKey),
@@ -312,8 +318,140 @@ public sealed partial class MafAgentRuntime
 
     private ProviderCredentialResolution ResolveProviderCredential(ProviderProfile provider)
     {
-        return services.GetService<IAgentProviderCredentialResolver>()?.Resolve(provider)
-            ?? FallbackProviderCredentialResolver.Resolve(provider);
+        var primaryResolution = services.GetService<IAgentProviderCredentialResolver>()?.Resolve(provider);
+        if (primaryResolution is { IsResolved: true })
+        {
+            return primaryResolution;
+        }
+
+        var configurationFallback = TryResolveConfigurationCredential(provider);
+        if (configurationFallback.IsResolved)
+        {
+            return configurationFallback;
+        }
+
+        var environmentFallback = FallbackProviderCredentialResolver.Resolve(provider);
+        if (environmentFallback.IsResolved)
+        {
+            return environmentFallback;
+        }
+
+        if (primaryResolution is null)
+        {
+            return environmentFallback;
+        }
+
+        return BuildUnresolvedCredentialResult(provider, primaryResolution, environmentFallback);
+    }
+
+    private ProviderCredentialResolution TryResolveConfigurationCredential(ProviderProfile provider)
+    {
+        var configuration = services.GetService<IConfiguration>();
+        if (configuration is null)
+        {
+            return new ProviderCredentialResolution(string.Empty, "application configuration", "Application configuration is not available.");
+        }
+
+        foreach (var key in EnumerateCredentialConfigurationKeys(provider))
+        {
+            var configuredValue = configuration[key];
+            if (string.IsNullOrWhiteSpace(configuredValue))
+            {
+                continue;
+            }
+
+            var trimmedValue = configuredValue.Trim();
+            PromoteResolvedConfigurationCredential(provider, key, trimmedValue);
+            return new ProviderCredentialResolution(
+                trimmedValue,
+                $"application configuration key '{key}'",
+                string.Empty);
+        }
+
+        return new ProviderCredentialResolution(
+            string.Empty,
+            "application configuration",
+            "No matching application configuration key contained a usable API key.");
+    }
+
+    private IEnumerable<string> EnumerateCredentialConfigurationKeys(ProviderProfile provider)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable))
+        {
+            var providerKey = provider.ApiKeyEnvironmentVariable.Trim();
+            if (seen.Add(providerKey))
+            {
+                yield return providerKey;
+            }
+        }
+
+        if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+            seen.Add(OpenAiApiKeyEnvironmentVariable))
+        {
+            yield return OpenAiApiKeyEnvironmentVariable;
+        }
+    }
+
+    private static ProviderCredentialResolution BuildUnresolvedCredentialResult(
+        ProviderProfile provider,
+        ProviderCredentialResolution primaryResolution,
+        ProviderCredentialResolution environmentFallback)
+    {
+        var failureMessages = new[]
+            {
+                primaryResolution.FailureMessage,
+                environmentFallback.FailureMessage
+            }
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var failureMessage = failureMessages.Count == 0
+            ? $"Provider '{provider.Name}' did not resolve a usable API key."
+            : string.Join(" ", failureMessages);
+
+        return new ProviderCredentialResolution(
+            string.Empty,
+            primaryResolution.ResolutionSource,
+            failureMessage);
+    }
+
+    private static void PromoteResolvedConfigurationCredential(
+        ProviderProfile provider,
+        string configurationKey,
+        string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable))
+        {
+            AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, value);
+        }
+
+        if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ||
+            string.Equals(configurationKey, OpenAiApiKeyEnvironmentVariable, StringComparison.OrdinalIgnoreCase))
+        {
+            AgentProviderEnvironmentCredential.PromoteProcessValue(OpenAiApiKeyEnvironmentVariable, value);
+        }
+    }
+
+    private static void PromoteProviderCredentialEnvironment(
+        ProviderProfile provider,
+        ProviderCredentialResolution credential)
+    {
+        if (!credential.IsResolved)
+        {
+            return;
+        }
+
+        AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, credential.ApiKey);
+        if (provider.Kind == ProviderKind.OpenAi)
+        {
+            AgentProviderEnvironmentCredential.PromoteProcessValue(OpenAiApiKeyEnvironmentVariable, credential.ApiKey);
+        }
     }
 
     private string ResolveOpenAiCredentialOverride(ProviderProfile provider)
@@ -323,9 +461,29 @@ public sealed partial class MafAgentRuntime
             return "resolved";
         }
 
-        return ResolveProviderCredential(provider).IsResolved
-            ? "resolved"
-            : string.Empty;
+        var credential = ResolveProviderCredential(provider);
+        if (!credential.IsResolved)
+        {
+            return string.Empty;
+        }
+
+        PromoteProviderCredentialEnvironment(provider, credential);
+        return "resolved";
+    }
+
+    private void PromoteResolvedProviderCredentialEnvironment(
+        ProviderProfile provider)
+    {
+        if (provider.Kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
+        {
+            return;
+        }
+
+        var credential = ResolveProviderCredential(provider);
+        if (credential.IsResolved)
+        {
+            PromoteProviderCredentialEnvironment(provider, credential);
+        }
     }
 
     private static string ResolveHealthCheckModel(

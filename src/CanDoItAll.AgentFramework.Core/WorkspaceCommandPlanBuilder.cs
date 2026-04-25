@@ -209,15 +209,43 @@ internal sealed class WorkspaceCommandPlanBuilder
             throw new InvalidOperationException("Provide a project name without path separators or invalid file-name characters.");
         }
 
+        var trimmedName = name.Trim();
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(parentDirectory, createIfMissing: true, out var workingDirectoryResolution);
-        var targetRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, name.Trim()));
+        if (AllowedProjectExtensions.Contains(Path.GetExtension(workingDirectoryRelative)))
+        {
+            throw new InvalidOperationException(
+                $"workspace_dotnet_new parentDirectory '{workingDirectoryRelative}' ends with a project-file extension. Pass the containing directory as parentDirectory and the project name separately.");
+        }
+
+        if (Directory.Exists(workingDirectoryResolution.FullPath) &&
+            ContainsTopLevelProjectFile(workingDirectoryResolution.FullPath))
+        {
+            throw new InvalidOperationException(
+                $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'. Inspect and repair that project in place, or create a sibling project from its parent directory.");
+        }
+
+        var targetRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, trimmedName));
+        var targetFullPath = Path.Combine(workingDirectoryResolution.FullPath, trimmedName);
+        if (Directory.Exists(targetFullPath) && ContainsProjectFile(targetFullPath))
+        {
+            throw new InvalidOperationException(
+                $"workspace_dotnet_new is not allowed for existing project target '{targetRelativePath}' because it already contains a .NET project or solution file. Inspect and repair the existing scaffold in place instead of re-scaffolding.");
+        }
+
+        if (force &&
+            Directory.Exists(targetFullPath) &&
+            Directory.EnumerateFileSystemEntries(targetFullPath).Any())
+        {
+            throw new InvalidOperationException(
+                $"workspace_dotnet_new --force is not allowed over existing non-empty target '{targetRelativePath}'. Inspect and repair the existing scaffold, or explicitly delete the target directory first when replacement is intentional.");
+        }
 
         var arguments = new List<string>
         {
             "new",
             template.Trim(),
             "-n",
-            name.Trim()
+            trimmedName
         };
         if (force)
         {
@@ -240,6 +268,22 @@ internal sealed class WorkspaceCommandPlanBuilder
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 64 * 1024);
     }
+
+    private static bool ContainsProjectFile(string directory)
+        => Directory.EnumerateFiles(
+                directory,
+                "*.*",
+                new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = true,
+                    AttributesToSkip = 0
+                })
+            .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
+
+    private static bool ContainsTopLevelProjectFile(string directory)
+        => Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
+            .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
 
     public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
     {

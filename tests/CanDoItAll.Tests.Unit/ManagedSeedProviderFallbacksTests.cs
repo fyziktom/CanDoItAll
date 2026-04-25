@@ -5,7 +5,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ManagedSeedProviderFallbacksTests
 {
     [Fact]
-    public void Managed_seed_openai_agents_fall_back_to_remote_ollama_when_the_openai_key_is_missing()
+    public void Managed_seed_openai_agents_keep_openai_provider_when_the_openai_key_is_missing()
     {
         var agent = CreateManagedSeedAgent(model: "gpt-4.1");
         var provider = CreateOpenAiProvider();
@@ -13,17 +13,12 @@ public sealed class ManagedSeedProviderFallbacksTests
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiApiKeyOverride: string.Empty);
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, provider, openAiApiKeyOverride: string.Empty);
 
-        Assert.Equal(provider.Id, effectiveProvider.Id);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackProviderName, effectiveProvider.Name);
-        Assert.Equal(ProviderKind.Ollama, effectiveProvider.Kind);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackBaseUrl, effectiveProvider.BaseUrl);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveProvider.DefaultModel);
-        Assert.Equal(ProviderTransportKind.ChatCompletions, effectiveProvider.Transport);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+        Assert.Equal(provider, effectiveProvider);
+        Assert.Equal("gpt-4.1", effectiveModel);
     }
 
     [Fact]
-    public void Managed_seed_openai_agents_fall_back_to_remote_ollama_even_when_the_openai_key_is_present()
+    public void Managed_seed_openai_agents_keep_openai_provider_when_the_openai_key_is_present()
     {
         var agent = CreateManagedSeedAgent(model: "gpt-4.1");
         var provider = CreateOpenAiProvider();
@@ -31,11 +26,8 @@ public sealed class ManagedSeedProviderFallbacksTests
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, provider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(provider.Id, effectiveProvider.Id);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackProviderName, effectiveProvider.Name);
-        Assert.Equal(ProviderKind.Ollama, effectiveProvider.Kind);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackBaseUrl, effectiveProvider.BaseUrl);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+        Assert.Equal(provider, effectiveProvider);
+        Assert.Equal("gpt-4.1", effectiveModel);
     }
 
     [Fact]
@@ -60,13 +52,12 @@ public sealed class ManagedSeedProviderFallbacksTests
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiApiKeyOverride: string.Empty);
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, provider, openAiApiKeyOverride: string.Empty);
 
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackProviderName, effectiveProvider.Name);
-        Assert.Equal(ProviderKind.Ollama, effectiveProvider.Kind);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+        Assert.Equal(provider, effectiveProvider);
+        Assert.Equal("gpt-4.1", effectiveModel);
     }
 
     [Fact]
-    public void Managed_seed_openai_provider_falls_back_even_when_agent_marker_is_missing()
+    public void Managed_seed_openai_provider_keeps_openai_even_when_agent_marker_is_missing()
     {
         var agent = CreateUnmanagedAgent(model: "gpt-4.1");
         var provider = CreateOpenAiProvider();
@@ -74,9 +65,8 @@ public sealed class ManagedSeedProviderFallbacksTests
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiApiKeyOverride: string.Empty);
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: string.Empty);
 
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackProviderName, effectiveProvider.Name);
-        Assert.Equal(ProviderKind.Ollama, effectiveProvider.Kind);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+        Assert.Equal(provider, effectiveProvider);
+        Assert.Equal("gpt-4.1", effectiveModel);
     }
 
     [Fact]
@@ -111,13 +101,33 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackProviderName, effectiveProvider.Name);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackBaseUrl, effectiveProvider.BaseUrl);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName, effectiveProvider.Name);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiBaseUrl, effectiveProvider.BaseUrl);
+        Assert.Equal(ProviderKind.OpenAi, effectiveProvider.Kind);
+        Assert.Equal("gpt-4.1", effectiveModel);
     }
 
     [Fact]
-    public void Catalog_shadow_provider_is_fallback_adjusted_when_registry_provider_is_missing()
+    public void Remote_ollama_registry_provider_is_remapped_to_openai_and_uses_openai_model_for_ollama_model_assignments()
+    {
+        var agent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.FallbackModel);
+        var registryProvider = CreateFallbackProvider();
+        var catalogShadowProvider = CreateOpenAiProvider();
+
+        var effectiveProvider = ManagedSeedProviderFallbacks.ResolvePreferredProvider(
+            agent,
+            registryProvider,
+            catalogShadowProvider,
+            openAiApiKeyOverride: "present");
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
+
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName, effectiveProvider.Name);
+        Assert.Equal(ProviderKind.OpenAi, effectiveProvider.Kind);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, effectiveModel);
+    }
+
+    [Fact]
+    public void Catalog_shadow_openai_provider_is_used_when_registry_provider_is_missing()
     {
         var agent = CreateManagedSeedAgent(model: "gpt-4.1");
         var catalogShadowProvider = CreateOpenAiProvider();
@@ -129,9 +139,8 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackProviderName, effectiveProvider.Name);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackBaseUrl, effectiveProvider.BaseUrl);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+        Assert.Equal(catalogShadowProvider, effectiveProvider);
+        Assert.Equal("gpt-4.1", effectiveModel);
     }
 
     private static AgentDefinition CreateManagedSeedAgent(string model)

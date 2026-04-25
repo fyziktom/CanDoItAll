@@ -15,7 +15,6 @@ internal sealed class FileSandboxWorkspaceJsonStore
         TimeSpan.FromMilliseconds(200),
         TimeSpan.FromMilliseconds(400)
     ];
-
     public JsonSerializerOptions SerializerOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -33,25 +32,58 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     public async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken)
     {
-        if (!File.Exists(fullPath))
+        if (string.IsNullOrWhiteSpace(fullPath))
         {
-            return default;
+            throw new ArgumentException("Workspace JSON path must be provided.", nameof(fullPath));
         }
 
-        await using var stream = OpenSharedReadStream(fullPath);
-        return await JsonSerializer.DeserializeAsync<T>(stream, SerializerOptions, cancellationToken);
+        const int maxTransientReadRetries = 3;
+        for (var attempt = 0; attempt <= maxTransientReadRetries; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var stream = TryOpenSharedReadStream(fullPath);
+                if (stream is null)
+                {
+                    return default;
+                }
+
+                await using (stream)
+                {
+                    return await JsonSerializer.DeserializeAsync<T>(stream, SerializerOptions, cancellationToken);
+                }
+            }
+            catch (Exception exception) when (IsTransientJsonReadException(exception) && attempt < maxTransientReadRetries)
+            {
+                await Task.Delay(GetSharedJsonReadRetryDelay(attempt), cancellationToken);
+            }
+            catch (Exception exception) when (IsTransientJsonReadException(exception))
+            {
+                throw CreateWorkspaceJsonReadException<T>(fullPath, exception);
+            }
+            catch (JsonException exception)
+            {
+                throw CreateWorkspaceJsonReadException<T>(fullPath, exception);
+            }
+        }
+
+        throw CreateWorkspaceJsonReadException<T>(fullPath, null);
     }
 
     public async Task<string> ReadTextAsync(string fullPath, CancellationToken cancellationToken)
     {
-        if (!File.Exists(fullPath))
+        var stream = TryOpenSharedReadStream(fullPath);
+        if (stream is null)
         {
             return string.Empty;
         }
 
-        await using var stream = OpenSharedReadStream(fullPath);
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        return await reader.ReadToEndAsync(cancellationToken);
+        await using (stream)
+        {
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            return await reader.ReadToEndAsync(cancellationToken);
+        }
     }
 
     public async Task<IReadOnlyList<T>> LoadRecordsFromDirectoryAsync<T>(
@@ -195,6 +227,49 @@ internal sealed class FileSandboxWorkspaceJsonStore
             fullPath,
             JsonSerializer.Serialize(payload, SerializerOptions),
             cancellationToken);
+    }
+
+    private static FileStream? TryOpenSharedReadStream(string fullPath)
+    {
+        if (!File.Exists(fullPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            return OpenSharedReadStream(fullPath);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsTransientJsonReadException(Exception exception)
+    {
+        return exception is IOException or NullReferenceException;
+    }
+
+    private static TimeSpan GetSharedJsonReadRetryDelay(int attempt)
+    {
+        return attempt switch
+        {
+            0 => TimeSpan.FromMilliseconds(25),
+            1 => TimeSpan.FromMilliseconds(50),
+            _ => TimeSpan.FromMilliseconds(100)
+        };
+    }
+
+    private static InvalidDataException CreateWorkspaceJsonReadException<T>(string fullPath, Exception? innerException)
+    {
+        return new InvalidDataException(
+            $"Could not read workspace JSON file '{fullPath}' as {typeof(T).Name}.",
+            innerException);
     }
 
     private async Task WriteJsonAtomicallyAsync(string fullPath, string serialized, CancellationToken cancellationToken)

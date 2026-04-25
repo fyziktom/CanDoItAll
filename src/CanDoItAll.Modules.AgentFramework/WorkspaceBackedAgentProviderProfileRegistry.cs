@@ -19,6 +19,9 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     ProviderRegistry providerRegistry,
     IProviderProfileService providerProfileService) : IProviderProfileRegistry
 {
+    private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+    private const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
+
     public async Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
         CancellationToken cancellationToken = default)
     {
@@ -250,22 +253,28 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedTransport = provider.ConnectorPluginKey switch
         {
             ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
+            OpenAiProviderAdapter.PluginKey when IsOpenAiChatCompletionsProvider(provider) => ProviderTransportKind.ChatCompletions,
             OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
             _ => ProviderTransportKind.ChatCompletions
         };
+        var preferFrameworkManagedChatHistory = mappedKind == AgentFrameworkProviderKind.Ollama ||
+                                                mappedTransport == ProviderTransportKind.ChatCompletions ||
+                                                IsOpenAiChatCompletionsProvider(provider);
+        var supportsBackgroundResponses = mappedKind == AgentFrameworkProviderKind.OpenAi &&
+                                          mappedTransport == ProviderTransportKind.Responses;
         var mappedProvider = new AgentFrameworkProviderProfile(
             provider.Id,
             provider.Name,
             mappedKind,
             provider.BaseUrl,
-            provider.ApiKeySecretId.HasValue ? $"secret:{provider.ApiKeySecretId.Value:D}" : string.Empty,
+            ResolveApiKeyEnvironmentVariable(provider, mappedKind),
             provider.DefaultModel,
             mappedTransport,
             provider.IsEnabled,
             provider.SupportsStreaming,
             provider.SupportsToolCalling,
-            mappedKind == AgentFrameworkProviderKind.Ollama,
-            mappedKind == AgentFrameworkProviderKind.OpenAi,
+            preferFrameworkManagedChatHistory,
+            supportsBackgroundResponses,
             AgentFrameworkProviderMetadata.BuildConfigurationJson(provider),
             providerRegistry.Resolve(provider)?.Manifest.DisplayName ?? provider.ConnectorPluginKey,
             provider.LastHealthStatus ?? "Not checked",
@@ -273,6 +282,26 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel]);
 
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
+    }
+
+    private static string ResolveApiKeyEnvironmentVariable(
+        WorkspaceProviderProfile provider,
+        AgentFrameworkProviderKind mappedKind)
+    {
+        if (provider.ApiKeySecretId.HasValue)
+        {
+            return $"secret:{provider.ApiKeySecretId.Value:D}";
+        }
+
+        return mappedKind == AgentFrameworkProviderKind.OpenAi
+            ? OpenAiApiKeyEnvironmentVariable
+            : string.Empty;
+    }
+
+    private static bool IsOpenAiChatCompletionsProvider(
+        WorkspaceProviderProfile provider)
+    {
+        return string.Equals(provider.Name, OpenAiChatCompletionsProviderName, StringComparison.OrdinalIgnoreCase);
     }
 
     private AgentFrameworkProviderProfile ApplyManagedSqliteFallbackIfNeeded(

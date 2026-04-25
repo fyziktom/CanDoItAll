@@ -311,13 +311,13 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Theory]
-    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:Completed", false)]
-    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:InProgress", false)]
+    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:Completed", true)]
+    [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "step-transition:InProgress", true)]
     [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:01:00+00:00", "runtime-recovery-scan", true)]
     [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:03:00+00:00", "runtime-recovery-scan", true)]
     [InlineData(ProcessStepRunStatus.InProgress, null, "2026-04-19T02:00:00+00:00", "2026-04-19T02:11:00+00:00", "runtime-recovery-scan", false)]
     [InlineData(ProcessStepRunStatus.Ready, null, null, "2026-04-19T02:01:00+00:00", "step-transition:Completed", false)]
-    public void ShouldSkipFreshAutomationDispatch_skips_only_early_recovery_redispatches(
+    public void ShouldSkipFreshAutomationDispatch_skips_early_redispatches_for_fresh_inprogress_steps(
         ProcessStepRunStatus currentStatus,
         string? recoverableExecutionRunIdText,
         string? currentAttemptStartedAtUtcText,
@@ -3571,6 +3571,146 @@ Descendant requirement context from sibling planning nodes:
         Assert.Contains("repair the concrete solution or project configuration", directive, StringComparison.Ordinal);
         Assert.Contains("rerun the originally required dotnet validation successfully", directive, StringComparison.Ordinal);
         Assert.Contains("prefer `net10.0`", directive, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildRecoveryDirective_adds_concrete_home_razor_char_to_string_repair_guidance()
+    {
+        var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
+        var candidate = CreateCalculatorImplementationDispatchCandidate();
+        var now = DateTimeOffset.UtcNow;
+        const string responseText = "Calculator/Components/Pages/Home.razor(42,33): error CS1503: Argument 1: cannot convert from 'char' to 'string'.";
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Implementation retry",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Failed,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists.")),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete."))),
+                []),
+            null,
+            [],
+            []);
+
+        var directive = buildRecoveryDirective.Invoke(
+            null,
+            [
+                candidate,
+                detail,
+                responseText,
+                Array.Empty<string>(),
+                Array.Empty<ToolExecutionReceiptRecord>(),
+                2
+            ]) as string;
+
+        Assert.NotNull(directive);
+        Assert.Contains("handlers accept `char`", directive, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"() => AppendDigit('1')\"", directive, StringComparison.Ordinal);
+        Assert.Contains("@onclick='() => AppendDigit(\"1\")'", directive, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"() => AppendDigit(\"1\")\"", directive, StringComparison.Ordinal);
+        Assert.Contains("Do not leave `AppendToResult('1')`", directive, StringComparison.Ordinal);
+        Assert.Contains("methods that still accept `string`", directive, StringComparison.Ordinal);
+        Assert.Contains("do not rewrite the test project again", directive, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ContainsInjectedCalculatorEngine_detects_fully_qualified_razor_inject_directive()
+    {
+        var containsInjectedCalculatorEngine = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsInjectedCalculatorEngine", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ContainsInjectedCalculatorEngine method was not found.");
+        const string content = """
+            @page "/"
+            @inject Calculator.Domain.CalculatorEngine CalculatorEngine
+            """;
+
+        var result = containsInjectedCalculatorEngine.Invoke(null, [content]);
+
+        Assert.True((bool)(result ?? false));
+    }
+
+    [Fact]
+    public void ContainsMalformedDoubleQuotedRazorStringCallback_detects_unescaped_string_literal_event_attribute()
+    {
+        var containsMalformedDoubleQuotedRazorStringCallback = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsMalformedDoubleQuotedRazorStringCallback", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ContainsMalformedDoubleQuotedRazorStringCallback method was not found.");
+        const string malformed = """<button @onclick="() => AppendDigit("1")">1</button>""";
+        const string validChar = """<button @onclick="() => AppendDigit('1')">1</button>""";
+        const string validString = """<button @onclick='() => AppendDigit("1")'>1</button>""";
+
+        Assert.True((bool)(containsMalformedDoubleQuotedRazorStringCallback.Invoke(null, [malformed]) ?? false));
+        Assert.False((bool)(containsMalformedDoubleQuotedRazorStringCallback.Invoke(null, [validChar]) ?? true));
+        Assert.False((bool)(containsMalformedDoubleQuotedRazorStringCallback.Invoke(null, [validString]) ?? true));
+    }
+
+    [Fact]
+    public void ContainsCalculatorStringHandlerWithCharCallback_detects_type_inconsistent_event_callback()
+    {
+        var containsCalculatorStringHandlerWithCharCallback = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsCalculatorStringHandlerWithCharCallback", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ContainsCalculatorStringHandlerWithCharCallback method was not found.");
+        const string invalid = """
+            <button @onclick="() => AppendToResult('1')">1</button>
+
+            @code {
+                private void AppendToResult(string value)
+                {
+                }
+            }
+            """;
+        const string validChar = """
+            <button @onclick="() => AppendDigit('1')">1</button>
+
+            @code {
+                private void AppendDigit(char digit)
+                {
+                }
+            }
+            """;
+        const string validString = """
+            <button @onclick='() => AppendToResult("1")'>1</button>
+
+            @code {
+                private void AppendToResult(string value)
+                {
+                }
+            }
+            """;
+
+        Assert.True((bool)(containsCalculatorStringHandlerWithCharCallback.Invoke(null, [invalid]) ?? false));
+        Assert.False((bool)(containsCalculatorStringHandlerWithCharCallback.Invoke(null, [validChar]) ?? true));
+        Assert.False((bool)(containsCalculatorStringHandlerWithCharCallback.Invoke(null, [validString]) ?? true));
+    }
+
+    [Fact]
+    public void ContainsCalculatorEngineServiceRegistration_detects_fully_qualified_service_registration()
+    {
+        var containsCalculatorEngineServiceRegistration = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsCalculatorEngineServiceRegistration", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ContainsCalculatorEngineServiceRegistration method was not found.");
+        const string content = "builder.Services.AddScoped<Calculator.Domain.CalculatorEngine>();";
+
+        var result = containsCalculatorEngineServiceRegistration.Invoke(null, [content]);
+
+        Assert.True((bool)(result ?? false));
     }
 
     [Fact]

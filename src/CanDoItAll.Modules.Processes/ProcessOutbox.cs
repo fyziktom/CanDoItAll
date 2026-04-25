@@ -513,11 +513,53 @@ public sealed class ProcessOutboxService(
 
         if (payload.AutomationDispatch is not null)
         {
+            var leaseToken = record.LeaseToken;
             await automationDispatchService.DispatchAsync(
                 payload.AutomationDispatch.ProcessRunId,
                 payload.AutomationDispatch.StepRunId,
                 payload.AutomationDispatch.Trigger,
+                token => RenewClaimedLeaseAsync(record.Id, leaseToken, record.CommandKey, token),
                 cancellationToken);
+        }
+    }
+
+    private async Task RenewClaimedLeaseAsync(
+        Guid outboxId,
+        string leaseToken,
+        string commandKey,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(leaseToken))
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var now = clock.GetUtcNow();
+        var leaseExpiresAtUtc = now.Add(ResolveClaimLeaseDuration(commandKey, DefaultLeaseDuration));
+        var updatedRows = dbContext.Database.IsSqlite()
+            ? await RenewClaimedLeaseForSqliteAsync(
+                dbContext,
+                outboxId,
+                leaseToken,
+                now,
+                leaseExpiresAtUtc,
+                cancellationToken)
+            : await dbContext.Set<ProcessOutboxRecord>()
+                .Where(item => item.Id == outboxId)
+                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+                .Where(item => item.LeaseToken == leaseToken)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                        .SetProperty(item => item.UpdatedAtUtc, now),
+                    cancellationToken);
+
+        if (updatedRows == 0)
+        {
+            logger.LogWarning(
+                "Could not renew process outbox lease for record {OutboxId}; another worker may have claimed or completed it.",
+                outboxId);
         }
     }
 
@@ -620,6 +662,25 @@ public sealed class ProcessOutboxService(
                                                                  AND "Status" = {(int)ProcessOutboxRecordStatus.Pending}
                                                                  AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
                                                                  AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
+                                                               """,
+            cancellationToken);
+    }
+
+    private static Task<int> RenewClaimedLeaseForSqliteAsync(
+        AppDbContext dbContext,
+        Guid outboxId,
+        string leaseToken,
+        DateTimeOffset now,
+        DateTimeOffset leaseExpiresAtUtc,
+        CancellationToken cancellationToken)
+    {
+        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                                                               UPDATE "Processes_Outbox"
+                                                               SET "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
+                                                                   "UpdatedAtUtc" = {now}
+                                                               WHERE "Id" = {outboxId}
+                                                                 AND "Status" = {(int)ProcessOutboxRecordStatus.Pending}
+                                                                 AND "LeaseToken" = {leaseToken}
                                                                """,
             cancellationToken);
     }

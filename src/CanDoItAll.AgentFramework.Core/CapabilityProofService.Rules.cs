@@ -412,7 +412,7 @@ public sealed partial class CapabilityProofService
             return Failed($"Memory capability '{capability.Name}' is missing apiKeyEnvironmentVariable.", checkedAt);
         }
 
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(apiKeyEnvironmentVariable)))
+        if (string.IsNullOrWhiteSpace(AgentProviderEnvironmentCredential.ResolveAndPromote(apiKeyEnvironmentVariable)))
         {
             return Failed($"Environment variable '{apiKeyEnvironmentVariable}' is not set for memory capability '{capability.Name}'.", checkedAt);
         }

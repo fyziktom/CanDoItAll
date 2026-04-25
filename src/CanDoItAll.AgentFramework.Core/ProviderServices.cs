@@ -1,4 +1,9 @@
+using System.Collections.Concurrent;
+using System.Runtime.Versioning;
+using System.Security;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Win32;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -353,15 +358,266 @@ public sealed class EnvironmentVariableAgentProviderCredentialResolver : IAgentP
         }
 
         var normalizedVariableName = provider.ApiKeyEnvironmentVariable.Trim();
-        var apiKey = Environment.GetEnvironmentVariable(normalizedVariableName)?.Trim() ?? string.Empty;
+        var apiKey = AgentProviderEnvironmentCredential.ResolveAndPromote(normalizedVariableName);
         return string.IsNullOrWhiteSpace(apiKey)
             ? new ProviderCredentialResolution(
                 string.Empty,
                 $"environment variable '{normalizedVariableName}'",
-                $"Environment variable '{normalizedVariableName}' is not set.")
+                $"Environment variable '{normalizedVariableName}' is not set. {AgentProviderEnvironmentCredential.DescribePresence(normalizedVariableName)}")
             : new ProviderCredentialResolution(
                 apiKey,
                 $"environment variable '{normalizedVariableName}'",
                 string.Empty);
+    }
+}
+
+public static class AgentProviderEnvironmentCredential
+{
+    private static readonly ConcurrentDictionary<string, string> ApplicationConfigurationCache = new(StringComparer.OrdinalIgnoreCase);
+
+    public static string ResolveAndPromote(
+        string variableName)
+    {
+        if (string.IsNullOrWhiteSpace(variableName))
+        {
+            return string.Empty;
+        }
+
+        var normalizedVariableName = variableName.Trim();
+        var processValue = Environment.GetEnvironmentVariable(normalizedVariableName);
+        if (!string.IsNullOrWhiteSpace(processValue))
+        {
+            return processValue.Trim();
+        }
+
+        var scopedValue = FirstNonEmpty(
+            Environment.GetEnvironmentVariable(normalizedVariableName, EnvironmentVariableTarget.User),
+            Environment.GetEnvironmentVariable(normalizedVariableName, EnvironmentVariableTarget.Machine),
+            ResolveFromWindowsRegistry(normalizedVariableName),
+            ResolveFromApplicationConfiguration(normalizedVariableName));
+        if (string.IsNullOrWhiteSpace(scopedValue))
+        {
+            return string.Empty;
+        }
+
+        var resolvedValue = scopedValue.Trim();
+        PromoteProcessValue(normalizedVariableName, resolvedValue);
+        return resolvedValue;
+    }
+
+    public static void PromoteProcessValue(
+        string variableName,
+        string value)
+    {
+        if (string.IsNullOrWhiteSpace(variableName) || string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        Environment.SetEnvironmentVariable(variableName.Trim(), value.Trim(), EnvironmentVariableTarget.Process);
+    }
+
+    private static string? FirstNonEmpty(
+        params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+    }
+
+    private static string ResolveFromWindowsRegistry(
+        string variableName)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return string.Empty;
+        }
+
+        return ReadRegistryEnvironmentVariable(Registry.CurrentUser, "Environment", variableName) ??
+               ReadRegistryEnvironmentVariable(RegistryHive.CurrentUser, RegistryView.Registry64, "Environment", variableName) ??
+               ReadRegistryEnvironmentVariable(RegistryHive.CurrentUser, RegistryView.Registry32, "Environment", variableName) ??
+               ReadRegistryEnvironmentVariable(Registry.LocalMachine, @"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", variableName) ??
+               ReadRegistryEnvironmentVariable(RegistryHive.LocalMachine, RegistryView.Registry64, @"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", variableName) ??
+               ReadRegistryEnvironmentVariable(RegistryHive.LocalMachine, RegistryView.Registry32, @"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", variableName) ??
+               string.Empty;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static string? ReadRegistryEnvironmentVariable(
+        RegistryHive hive,
+        RegistryView view,
+        string subKeyName,
+        string variableName)
+    {
+        try
+        {
+            using var root = RegistryKey.OpenBaseKey(hive, view);
+            return ReadRegistryEnvironmentVariable(root, subKeyName, variableName);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (SecurityException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static string? ReadRegistryEnvironmentVariable(
+        RegistryKey root,
+        string subKeyName,
+        string variableName)
+    {
+        try
+        {
+            using var key = root.OpenSubKey(subKeyName, writable: false);
+            return key?.GetValue(variableName) as string;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (SecurityException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    public static string DescribePresence(
+        string variableName)
+    {
+        if (string.IsNullOrWhiteSpace(variableName))
+        {
+            return "No environment variable name was provided.";
+        }
+
+        var normalizedVariableName = variableName.Trim();
+        return $"Checked scopes: process={HasValue(Environment.GetEnvironmentVariable(normalizedVariableName))}, user={HasValue(Environment.GetEnvironmentVariable(normalizedVariableName, EnvironmentVariableTarget.User))}, machine={HasValue(Environment.GetEnvironmentVariable(normalizedVariableName, EnvironmentVariableTarget.Machine))}, registry={HasValue(ResolveFromWindowsRegistry(normalizedVariableName))}, appsettings={HasValue(ResolveFromApplicationConfiguration(normalizedVariableName))}.";
+    }
+
+    private static string ResolveFromApplicationConfiguration(
+        string variableName)
+    {
+        if (string.IsNullOrWhiteSpace(variableName))
+        {
+            return string.Empty;
+        }
+
+        return ApplicationConfigurationCache.GetOrAdd(
+            variableName.Trim(),
+            ResolveFromApplicationConfigurationCore);
+    }
+
+    private static string ResolveFromApplicationConfigurationCore(
+        string variableName)
+    {
+        foreach (var path in EnumerateAppSettingsCandidates())
+        {
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    continue;
+                }
+
+                using var stream = File.OpenRead(path);
+                using var document = JsonDocument.Parse(stream);
+                if (!document.RootElement.TryGetProperty(variableName, out var property) ||
+                    property.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var value = property.GetString();
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value.Trim();
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static IEnumerable<string> EnumerateAppSettingsCandidates()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var directory in EnumerateCandidateDirectories())
+        {
+            foreach (var fileName in EnumerateCandidateAppSettingsFileNames())
+            {
+                var path = Path.Combine(directory, fileName);
+                if (seen.Add(path))
+                {
+                    yield return path;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCandidateDirectories()
+    {
+        foreach (var root in new[] { AppContext.BaseDirectory, Environment.CurrentDirectory })
+        {
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                continue;
+            }
+
+            var current = Path.GetFullPath(root);
+            for (var depth = 0; depth < 6 && !string.IsNullOrWhiteSpace(current); depth++)
+            {
+                if (Directory.Exists(current))
+                {
+                    yield return current;
+                }
+
+                current = Directory.GetParent(current)?.FullName ?? string.Empty;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCandidateAppSettingsFileNames()
+    {
+        yield return "appsettings.json";
+
+        var environmentName = FirstNonEmpty(
+            Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+        if (!string.IsNullOrWhiteSpace(environmentName))
+        {
+            yield return $"appsettings.{environmentName.Trim()}.json";
+        }
+        else
+        {
+            yield return "appsettings.Development.json";
+        }
+    }
+
+    private static bool HasValue(
+        string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value);
     }
 }

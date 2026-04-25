@@ -128,19 +128,20 @@ internal sealed class WorkspaceCommandProcessRunner
                 StderrLimitCharacters: plan.StderrLimitCharacters),
             cancellationToken).ConfigureAwait(false);
 
-        var succeeded = processResult.Started && !processResult.TimedOut && processResult.ExitCode == 0;
-        if (processResult.TimedOut)
+        var effectiveProcessResult = NormalizeProcessResult(plan.Decision.ToolName, processResult);
+        var succeeded = effectiveProcessResult.Started && !effectiveProcessResult.TimedOut && effectiveProcessResult.ExitCode == 0;
+        if (effectiveProcessResult.TimedOut)
         {
             AgentFrameworkTelemetry.RecordCommandTimeout(plan.Decision.RecipeId, plan.Decision.RiskClass);
         }
 
-        var message = !processResult.Started
-            ? $"Recipe '{plan.Decision.RecipeId}' failed to start: {processResult.FailureMessage}"
-            : processResult.TimedOut
+        var message = !effectiveProcessResult.Started
+            ? $"Recipe '{plan.Decision.RecipeId}' failed to start: {effectiveProcessResult.FailureMessage}"
+            : effectiveProcessResult.TimedOut
                 ? $"Recipe '{plan.Decision.RecipeId}' timed out after {plan.TimeoutSeconds} second(s)."
                 : succeeded
                     ? $"Recipe '{plan.Decision.RecipeId}' completed successfully."
-                    : $"Recipe '{plan.Decision.RecipeId}' failed with exit code {processResult.ExitCode}.";
+                    : $"Recipe '{plan.Decision.RecipeId}' failed with exit code {effectiveProcessResult.ExitCode}.";
         var receipt = receiptWriter.PersistProcessReceipt(
             plan.Decision.ToolName,
             plan.Decision.RecipeId,
@@ -150,7 +151,7 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.TargetPaths,
             plan.MutatesWorkspace,
             message,
-            processResult);
+            effectiveProcessResult);
 
         return new WorkspaceCommandExecutionResult(
             Succeeded: succeeded,
@@ -160,13 +161,53 @@ internal sealed class WorkspaceCommandProcessRunner
             RecipeId: plan.Decision.RecipeId,
             RiskClass: plan.Decision.RiskClass,
             ApprovalRequired: plan.Decision.ApprovalRequired,
-            Boundary: processResult.Boundary,
+            Boundary: effectiveProcessResult.Boundary,
             WorkingDirectory: plan.WorkingDirectory,
             ArgumentsSummary: WorkspaceCommandReceiptWriter.BuildArgumentsSummary(plan.Arguments),
-            ExitCode: processResult.ExitCode,
-            StdoutPreview: processResult.Stdout,
-            StderrPreview: processResult.Stderr,
-            StdoutTruncated: processResult.StdoutTruncated,
-            StderrTruncated: processResult.StderrTruncated);
+            ExitCode: effectiveProcessResult.ExitCode,
+            StdoutPreview: effectiveProcessResult.Stdout,
+            StderrPreview: effectiveProcessResult.Stderr,
+            StdoutTruncated: effectiveProcessResult.StdoutTruncated,
+            StderrTruncated: effectiveProcessResult.StderrTruncated);
+    }
+
+    private static WorkspaceProcessExecutionResult NormalizeProcessResult(
+        string toolName,
+        WorkspaceProcessExecutionResult processResult)
+    {
+        if (!string.Equals(toolName, "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase) ||
+            !processResult.Started ||
+            processResult.TimedOut ||
+            processResult.ExitCode != 0 ||
+            !ContainsPowerShellErrorRecord(processResult.Stderr))
+        {
+            return processResult;
+        }
+
+        var failureMessage = string.IsNullOrWhiteSpace(processResult.FailureMessage)
+            ? "PowerShell reported errors on stderr despite exit code 0."
+            : $"PowerShell reported errors on stderr despite exit code 0. {processResult.FailureMessage}";
+
+        return processResult with
+        {
+            ExitCode = 1,
+            FailureMessage = failureMessage
+        };
+    }
+
+    private static bool ContainsPowerShellErrorRecord(string? stderr)
+    {
+        if (string.IsNullOrWhiteSpace(stderr))
+        {
+            return false;
+        }
+
+        return stderr.Contains("WriteError:", StringComparison.OrdinalIgnoreCase) ||
+               stderr.Contains("ParserError:", StringComparison.OrdinalIgnoreCase) ||
+               stderr.Contains("RuntimeException:", StringComparison.OrdinalIgnoreCase) ||
+               stderr.Contains("CommandNotFoundException:", StringComparison.OrdinalIgnoreCase) ||
+               stderr.Contains("ParameterBindingException:", StringComparison.OrdinalIgnoreCase) ||
+               stderr.Contains("FullyQualifiedErrorId", StringComparison.OrdinalIgnoreCase) ||
+               stderr.Contains("Cannot overwrite variable PID", StringComparison.OrdinalIgnoreCase);
     }
 }

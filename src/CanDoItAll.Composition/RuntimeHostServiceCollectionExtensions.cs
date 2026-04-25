@@ -30,9 +30,13 @@ namespace CanDoItAll.Composition;
 
 public static class RuntimeHostServiceCollectionExtensions
 {
+    private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
+
     public static IServiceCollection AddCanDoItAllRuntimeModules(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+
+        PromoteConfiguredOpenAiCredential(configuration);
 
         services.AddSecurityModule();
         services.AddWorkspaceModule();
@@ -50,6 +54,20 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         return services;
+    }
+
+    private static void PromoteConfiguredOpenAiCredential(
+        IConfiguration configuration)
+    {
+        var configuredOpenAiApiKey = configuration[OpenAiApiKeyConfigurationKey];
+        if (string.IsNullOrWhiteSpace(configuredOpenAiApiKey))
+        {
+            return;
+        }
+
+        AgentProviderEnvironmentCredential.PromoteProcessValue(
+            OpenAiApiKeyConfigurationKey,
+            configuredOpenAiApiKey);
     }
 
     public static IServiceCollection AddCanDoItAllRuntimeDatabaseSwitching(this IServiceCollection services)
@@ -76,28 +94,27 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid ManagedDeliveryManagerProfileId = Guid.Parse("E0EBEC09-C37B-4F42-9FA4-1B2DDAC20572");
     private const string ManagedSqliteOpenAiDefaultProviderName = "OpenAI default";
     private const string ManagedSqliteOpenAiChatCompletionsProviderName = "OpenAI chat completions";
-    private static readonly Guid ManagedSqliteRemoteOllamaProviderId = Guid.Parse("2DB76580-21A4-B156-81A7-68DC0EE7513C");
+    private static readonly Guid ManagedSqliteOpenAiProviderId = Guid.Parse("2DB76580-21A4-B156-81A7-68DC0EE7513C");
     private static readonly IReadOnlySet<string> ManagedSqliteOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ManagedSqliteOpenAiDefaultProviderName,
         ManagedSqliteOpenAiChatCompletionsProviderName
     };
-    private static readonly IReadOnlyList<string> ManagedSqliteRemoteOllamaSuggestedModels =
+    private static readonly IReadOnlyList<string> ManagedSqliteOpenAiSuggestedModels =
     [
-        "gptoss32k:latest",
-        "gptoss64k:latest",
-        "gpt-oss:20b",
-        "qwen3.5:9b",
-        "phi4-16k:latest"
+        "gpt-4o-mini",
+        "gpt-4.1-mini",
+        "gpt-4.1"
     ];
 
     private const string ManagedSqliteBootstrapActor = "managed-sqlite-bootstrap";
     private const string ManagedSqliteSeedMarker = "managedSeedVersion";
-    private const string ManagedSqliteRemoteOllamaProviderName = "Remote Ollama";
-    private const string ManagedSqliteRemoteOllamaBaseUrl = "http://192.168.10.132:11434";
-    private const string ManagedSqliteRemoteOllamaModel = "gptoss32k:latest";
+    private const string ManagedSqliteOpenAiProviderName = "OpenAI chat completions";
+    private const string ManagedSqliteOpenAiBaseUrl = "https://api.openai.com/v1";
+    private const string ManagedSqliteOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+    private const string ManagedSqliteOpenAiModel = "gpt-4o-mini";
     private const string ManagedSqliteProviderSchemaVersion = "1.0";
-    private const int ManagedSqliteRemoteOllamaTimeoutSeconds = 600;
+    private const int ManagedSqliteOpenAiTimeoutSeconds = 600;
 
     public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -369,40 +386,41 @@ public sealed class AppDatabaseBootstrapper(
 
         var timestamp = DateTimeOffset.UtcNow;
         var changed = false;
-        var remoteProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .SingleOrDefaultAsync(item => item.Id == ManagedSqliteRemoteOllamaProviderId, cancellationToken);
-        if (remoteProvider is null)
+        var openAiProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            .SingleOrDefaultAsync(item => item.Id == ManagedSqliteOpenAiProviderId, cancellationToken);
+        if (openAiProvider is null)
         {
             dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(new CanDoItAll.Modules.Workspace.ProviderProfile
             {
-                Id = ManagedSqliteRemoteOllamaProviderId,
-                Name = ManagedSqliteRemoteOllamaProviderName,
-                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OllamaRemote,
-                ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
+                Id = ManagedSqliteOpenAiProviderId,
+                Name = ManagedSqliteOpenAiProviderName,
+                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
+                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
                 ConfigSchemaVersion = ManagedSqliteProviderSchemaVersion,
-                BaseUrl = ManagedSqliteRemoteOllamaBaseUrl,
-                DefaultModel = ManagedSqliteRemoteOllamaModel,
-                TimeoutSeconds = ManagedSqliteRemoteOllamaTimeoutSeconds,
+                BaseUrl = ManagedSqliteOpenAiBaseUrl,
+                DefaultModel = ManagedSqliteOpenAiModel,
+                TimeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds,
                 IsEnabled = true,
                 SupportsStreaming = true,
                 SupportsToolCalling = true,
                 SupportsStructuredOutput = false,
                 SupportsVision = false,
-                LastHealthStatus = "Bootstrap fallback",
+                LastHealthStatus = "OpenAI active",
                 LastHealthCheckAtUtc = null,
                 ExtraSettingsJson = JsonSerializer.Serialize(new
                 {
                     history = "framework-managed",
-                    connectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
+                    apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+                    connectorPluginKey = OpenAiProviderAdapter.PluginKey,
                     configSchemaVersion = ManagedSqliteProviderSchemaVersion,
-                    timeoutSeconds = ManagedSqliteRemoteOllamaTimeoutSeconds
+                    timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
                 })
             });
             changed = true;
         }
         else
         {
-            changed |= UpdateManagedSqliteRemoteOllamaProvider(remoteProvider);
+            changed |= UpdateManagedSqliteOpenAiProvider(openAiProvider);
         }
 
         var settings = await dbContext.Set<WorkspaceSettings>()
@@ -411,7 +429,7 @@ public sealed class AppDatabaseBootstrapper(
         {
             dbContext.Set<WorkspaceSettings>().Add(new WorkspaceSettings
             {
-                DefaultProviderProfileId = ManagedSqliteRemoteOllamaProviderId,
+                DefaultProviderProfileId = ManagedSqliteOpenAiProviderId,
                 WorkspaceName = "CanDoItAll",
                 DefaultPromptOutputFormat = "Markdown",
                 Notes = "Managed SQLite bootstrap default provider.",
@@ -419,9 +437,9 @@ public sealed class AppDatabaseBootstrapper(
             });
             changed = true;
         }
-        else if (settings.DefaultProviderProfileId != ManagedSqliteRemoteOllamaProviderId)
+        else if (settings.DefaultProviderProfileId != ManagedSqliteOpenAiProviderId)
         {
-            settings.DefaultProviderProfileId = ManagedSqliteRemoteOllamaProviderId;
+            settings.DefaultProviderProfileId = ManagedSqliteOpenAiProviderId;
             settings.UpdatedAtUtc = timestamp;
             changed = true;
         }
@@ -430,7 +448,7 @@ public sealed class AppDatabaseBootstrapper(
         {
             await dbContext.SaveChangesAsync(cancellationToken);
             logger.LogInformation(
-                "Seeded managed SQLite Remote Ollama provider bootstrap for profile {ProfileId}.",
+                "Seeded managed SQLite OpenAI provider bootstrap for profile {ProfileId}.",
                 profile.Profile.Id);
         }
 
@@ -446,23 +464,24 @@ public sealed class AppDatabaseBootstrapper(
         var catalogChanged = false;
         await store.UpdateCatalogAsync(catalog =>
         {
-            var remoteCatalogProvider = CreateManagedSqliteRemoteOllamaCatalogProvider();
+            var openAiCatalogProvider = CreateManagedSqliteOpenAiCatalogProvider();
             var providerIdsToRedirect = catalog.Providers
                 .Where(item => ManagedSqliteOpenAiProviderNames.Contains(item.Name))
                 .Select(item => item.Id)
+                .Append(ManagedSqliteOpenAiProviderId)
                 .ToHashSet();
 
             var updatedProviders = catalog.Providers
-                .Where(item => item.Id != ManagedSqliteRemoteOllamaProviderId)
-                .Append(remoteCatalogProvider)
+                .Where(item => item.Id != ManagedSqliteOpenAiProviderId)
+                .Append(openAiCatalogProvider)
                 .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             var updatedAgents = catalog.Agents
                 .Select(agent => ShouldRedirectManagedSqliteAgent(agent, providerIdsToRedirect)
                     ? agent with
                     {
-                        ProviderProfileId = ManagedSqliteRemoteOllamaProviderId,
-                        Model = ManagedSqliteRemoteOllamaModel,
+                        ProviderProfileId = ManagedSqliteOpenAiProviderId,
+                        Model = ManagedSqliteOpenAiModel,
                         UpdatedAtUtc = timestamp
                     }
                     : agent)
@@ -483,29 +502,29 @@ public sealed class AppDatabaseBootstrapper(
         if (catalogChanged)
         {
             logger.LogInformation(
-                "Remapped managed SQLite seeded agents to Remote Ollama for profile {ProfileId}.",
+                "Remapped managed SQLite seeded agents to OpenAI for profile {ProfileId}.",
                 profile.Profile.Id);
         }
     }
 
-    private static bool UpdateManagedSqliteRemoteOllamaProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    private static bool UpdateManagedSqliteOpenAiProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
     {
         var changed = false;
-        if (!string.Equals(provider.Name, ManagedSqliteRemoteOllamaProviderName, StringComparison.Ordinal))
+        if (!string.Equals(provider.Name, ManagedSqliteOpenAiProviderName, StringComparison.Ordinal))
         {
-            provider.Name = ManagedSqliteRemoteOllamaProviderName;
+            provider.Name = ManagedSqliteOpenAiProviderName;
             changed = true;
         }
 
-        if (provider.ProviderKind != CanDoItAll.Modules.Workspace.ProviderKind.OllamaRemote)
+        if (provider.ProviderKind != CanDoItAll.Modules.Workspace.ProviderKind.OpenAi)
         {
-            provider.ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OllamaRemote;
+            provider.ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi;
             changed = true;
         }
 
-        if (!string.Equals(provider.ConnectorPluginKey, OllamaRemoteProviderAdapter.PluginKey, StringComparison.Ordinal))
+        if (!string.Equals(provider.ConnectorPluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.Ordinal))
         {
-            provider.ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey;
+            provider.ConnectorPluginKey = OpenAiProviderAdapter.PluginKey;
             changed = true;
         }
 
@@ -515,21 +534,21 @@ public sealed class AppDatabaseBootstrapper(
             changed = true;
         }
 
-        if (!string.Equals(provider.BaseUrl, ManagedSqliteRemoteOllamaBaseUrl, StringComparison.Ordinal))
+        if (!string.Equals(provider.BaseUrl, ManagedSqliteOpenAiBaseUrl, StringComparison.Ordinal))
         {
-            provider.BaseUrl = ManagedSqliteRemoteOllamaBaseUrl;
+            provider.BaseUrl = ManagedSqliteOpenAiBaseUrl;
             changed = true;
         }
 
-        if (!string.Equals(provider.DefaultModel, ManagedSqliteRemoteOllamaModel, StringComparison.Ordinal))
+        if (!string.Equals(provider.DefaultModel, ManagedSqliteOpenAiModel, StringComparison.Ordinal))
         {
-            provider.DefaultModel = ManagedSqliteRemoteOllamaModel;
+            provider.DefaultModel = ManagedSqliteOpenAiModel;
             changed = true;
         }
 
-        if (provider.TimeoutSeconds != ManagedSqliteRemoteOllamaTimeoutSeconds)
+        if (provider.TimeoutSeconds != ManagedSqliteOpenAiTimeoutSeconds)
         {
-            provider.TimeoutSeconds = ManagedSqliteRemoteOllamaTimeoutSeconds;
+            provider.TimeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds;
             changed = true;
         }
 
@@ -569,18 +588,19 @@ public sealed class AppDatabaseBootstrapper(
             changed = true;
         }
 
-        if (!string.Equals(provider.LastHealthStatus, "Bootstrap fallback", StringComparison.Ordinal))
+        if (!string.Equals(provider.LastHealthStatus, "OpenAI active", StringComparison.Ordinal))
         {
-            provider.LastHealthStatus = "Bootstrap fallback";
+            provider.LastHealthStatus = "OpenAI active";
             changed = true;
         }
 
         var expectedExtraSettingsJson = JsonSerializer.Serialize(new
         {
             history = "framework-managed",
-            connectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
+            apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+            connectorPluginKey = OpenAiProviderAdapter.PluginKey,
             configSchemaVersion = ManagedSqliteProviderSchemaVersion,
-            timeoutSeconds = ManagedSqliteRemoteOllamaTimeoutSeconds
+            timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
         });
         if (!string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
         {
@@ -591,26 +611,26 @@ public sealed class AppDatabaseBootstrapper(
         return changed;
     }
 
-    private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteRemoteOllamaCatalogProvider()
+    private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteOpenAiCatalogProvider()
     {
         return new CanDoItAll.AgentFramework.Models.ProviderProfile(
-            ManagedSqliteRemoteOllamaProviderId,
-            ManagedSqliteRemoteOllamaProviderName,
-            CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
-            ManagedSqliteRemoteOllamaBaseUrl,
-            string.Empty,
-            ManagedSqliteRemoteOllamaModel,
+            ManagedSqliteOpenAiProviderId,
+            ManagedSqliteOpenAiProviderName,
+            CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            ManagedSqliteOpenAiBaseUrl,
+            ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+            ManagedSqliteOpenAiModel,
             ProviderTransportKind.ChatCompletions,
             true,
             true,
             true,
             true,
             false,
-            JsonSerializer.Serialize(new { history = "framework-managed" }),
-            "Managed SQLite fallback provider used when OPENAI_API_KEY is unavailable.",
-            "Bootstrap fallback",
+            JsonSerializer.Serialize(new { history = "framework-managed", timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds }),
+            "Managed SQLite OpenAI provider for seeded delivery agents.",
+            "OpenAI active",
             null,
-            ManagedSqliteRemoteOllamaSuggestedModels);
+            ManagedSqliteOpenAiSuggestedModels);
     }
 
     private async Task<bool> HasManagedSqliteOpenAiCredentialAsync(

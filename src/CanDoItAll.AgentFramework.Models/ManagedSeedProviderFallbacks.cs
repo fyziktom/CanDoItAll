@@ -36,6 +36,16 @@ public static class ManagedSeedProviderFallbacks
         "phi4-16k:latest"
     ];
 
+    private static readonly IReadOnlyList<string> ManagedSeedOpenAiSuggestedModels =
+    [
+        "gpt-4o-mini",
+        "gpt-4.1-mini",
+        "gpt-4.1"
+    ];
+
+    public const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
+    public const string OpenAiBaseUrl = "https://api.openai.com/v1";
+    public const string OpenAiDefaultModel = "gpt-4o-mini";
     public const string FallbackProviderName = "Remote Ollama";
     public const string FallbackBaseUrl = "http://192.168.10.132:11434";
     public const string FallbackModel = "gptoss32k:latest";
@@ -48,6 +58,11 @@ public static class ManagedSeedProviderFallbacks
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
+
+        if (IsFallbackProvider(provider))
+        {
+            return CreateOpenAiChatCompletionsProvider(provider);
+        }
 
         if (!ShouldUseFallback(agent, provider, openAiApiKeyOverride))
         {
@@ -87,47 +102,10 @@ public static class ManagedSeedProviderFallbacks
 
         if (IsFallbackProvider(provider))
         {
-            return provider with
-            {
-                DefaultModel = FallbackModel,
-                ConfigurationJson = EnsureFallbackTimeout(provider.ConfigurationJson, "managed-sqlite-provider"),
-                SuggestedModels = ManagedSeedFallbackSuggestedModels
-            };
+            return CreateOpenAiChatCompletionsProvider(provider);
         }
 
-        if (provider.Kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
-        {
-            return provider;
-        }
-
-        if (!ManagedSeedOpenAiProviderNames.Contains(provider.Name))
-        {
-            return provider;
-        }
-
-        if (!provider.BaseUrl.Contains("api.openai.com", StringComparison.OrdinalIgnoreCase))
-        {
-            return provider;
-        }
-
-        return provider with
-        {
-            Name = FallbackProviderName,
-            Kind = ProviderKind.Ollama,
-            BaseUrl = FallbackBaseUrl,
-            ApiKeyEnvironmentVariable = string.Empty,
-            DefaultModel = FallbackModel,
-            Transport = ProviderTransportKind.ChatCompletions,
-            IsEnabled = true,
-            SupportsStreaming = true,
-            SupportsTools = true,
-            PreferFrameworkManagedChatHistory = true,
-            SupportsBackgroundResponses = false,
-            ConfigurationJson = CreateFallbackConfigurationJson("managed-sqlite-provider"),
-            Notes = "Managed SQLite fallback provider resolved from the seed catalog.",
-            HealthStatus = "Fallback active",
-            SuggestedModels = ManagedSeedFallbackSuggestedModels
-        };
+        return provider;
     }
 
     public static ProviderProfile ResolvePreferredProvider(
@@ -159,11 +137,18 @@ public static class ManagedSeedProviderFallbacks
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
 
-        return ShouldUseFallback(agent, provider, openAiApiKeyOverride)
-            ? FallbackModel
-            : string.IsNullOrWhiteSpace(agent.Model)
-                ? provider.DefaultModel
-                : agent.Model;
+        if (ShouldUseFallback(agent, provider, openAiApiKeyOverride))
+        {
+            return FallbackModel;
+        }
+
+        if (string.IsNullOrWhiteSpace(agent.Model) ||
+            IsOpenAiProvider(provider) && IsKnownOllamaFallbackModel(agent.Model))
+        {
+            return provider.DefaultModel;
+        }
+
+        return agent.Model;
     }
 
     public static bool ShouldUseFallback(
@@ -176,7 +161,7 @@ public static class ManagedSeedProviderFallbacks
 
         if (IsFallbackProvider(provider))
         {
-            return IsManagedSeedAgent(agent) || IsGeneratedManagedSeedFallbackProvider(provider);
+            return false;
         }
 
         if (!IsManagedSeedOpenAiProvider(provider))
@@ -184,13 +169,7 @@ public static class ManagedSeedProviderFallbacks
             return false;
         }
 
-        if (IsManagedSeedAgent(agent))
-        {
-            return true;
-        }
-
-        var openAiApiKey = openAiApiKeyOverride ?? Environment.GetEnvironmentVariable(OpenAiApiKeyVariableName);
-        return string.IsNullOrWhiteSpace(openAiApiKey);
+        return false;
     }
 
     public static bool IsManagedSeedAgent(AgentDefinition agent)
@@ -220,6 +199,38 @@ public static class ManagedSeedProviderFallbacks
         return provider.ConfigurationJson.Contains("\"fallback\"", StringComparison.OrdinalIgnoreCase) ||
                provider.Notes.Contains("managed-seed fallback", StringComparison.OrdinalIgnoreCase) ||
                provider.Notes.Contains("managed SQLite fallback provider", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsOpenAiProvider(ProviderProfile provider)
+    {
+        return provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
+    }
+
+    private static bool IsKnownOllamaFallbackModel(string model)
+    {
+        return ManagedSeedFallbackSuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static ProviderProfile CreateOpenAiChatCompletionsProvider(ProviderProfile provider)
+    {
+        return provider with
+        {
+            Name = OpenAiChatCompletionsProviderName,
+            Kind = ProviderKind.OpenAi,
+            BaseUrl = OpenAiBaseUrl,
+            ApiKeyEnvironmentVariable = OpenAiApiKeyVariableName,
+            DefaultModel = OpenAiDefaultModel,
+            Transport = ProviderTransportKind.ChatCompletions,
+            IsEnabled = true,
+            SupportsStreaming = true,
+            SupportsTools = true,
+            PreferFrameworkManagedChatHistory = true,
+            SupportsBackgroundResponses = false,
+            ConfigurationJson = "{\"history\":\"framework-managed\"}",
+            Notes = "OpenAI provider selected for managed seed agents.",
+            HealthStatus = "OpenAI active",
+            SuggestedModels = ManagedSeedOpenAiSuggestedModels
+        };
     }
 
     private static string CreateFallbackConfigurationJson(string fallbackReason)

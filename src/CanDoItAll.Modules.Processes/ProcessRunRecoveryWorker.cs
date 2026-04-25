@@ -49,7 +49,7 @@ internal sealed class ProcessRunRecoveryService(
                     runId,
                     triggerStepRunId: null,
                     RecoveryTrigger,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
                 dispatchedCount++;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

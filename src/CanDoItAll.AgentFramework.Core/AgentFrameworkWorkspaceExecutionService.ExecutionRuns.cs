@@ -544,6 +544,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var memory = ResolveAgentMemory(catalog, agent.Id);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
 
+        PrimeProviderCredentialEnvironment(provider);
+
         await AppendExecutionLogAsync(
             run.Id,
             agent.Id,
@@ -762,6 +764,26 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             }
 
             throw;
+        }
+    }
+
+    private void PrimeProviderCredentialEnvironment(ProviderProfile provider)
+    {
+        var resolution = providerCredentialResolver.Resolve(provider);
+        if (!resolution.IsResolved)
+        {
+            return;
+        }
+
+        AgentProviderEnvironmentCredential.PromoteProcessValue(
+            provider.ApiKeyEnvironmentVariable,
+            resolution.ApiKey);
+
+        if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
+        {
+            AgentProviderEnvironmentCredential.PromoteProcessValue(
+                "OPENAI_API_KEY",
+                resolution.ApiKey);
         }
     }
 

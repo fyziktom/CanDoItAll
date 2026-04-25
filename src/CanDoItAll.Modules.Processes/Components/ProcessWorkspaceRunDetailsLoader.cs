@@ -23,7 +23,11 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         IReadOnlyList<ProcessRunListItem> runs,
         CancellationToken cancellationToken = default)
     {
-        if (runs.Count == 0)
+        var activeRuns = runs
+            .Where(run => run is not null && run.Status == ProcessRunStatus.Active)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList();
+        if (activeRuns.Count == 0)
         {
             return [];
         }
@@ -32,7 +36,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             .ToDictionary(item => item.Id);
         var summaries = new List<ProcessActiveRunSummaryViewModel>();
 
-        foreach (var run in runs.OrderByDescending(item => item.UpdatedAtUtc))
+        foreach (var run in activeRuns)
         {
             var executionRuns = await workspaceService.ListExecutionRunsAsync(
                 new ExecutionRunQuery(

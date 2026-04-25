@@ -59,95 +59,95 @@ public sealed partial class MafAgentRuntime
             return
             [
                 AIFunctionFactory.Create(
-                    (CancellationToken cancellationToken) => ProjectStructureProjectsListAsync(agent, accessState, cancellationToken),
+                    (CancellationToken cancellationToken = default) => ProjectStructureProjectsListAsync(agent, accessState, cancellationToken),
                     "project_structure_projects_list",
                     "Lists the CanDoItAll projects that this internal agent is allowed to access."),
                 AIFunctionFactory.Create(
-                    (ProjectStructureProjectSaveRequest request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureProjectCreateAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
+                    (ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectCreateAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
                     "project_structure_project_create",
                     "Creates a new CanDoItAll project through the internal workspace project-structure service."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureProjectSaveRequest request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureProjectUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_project_update",
                     "Updates an existing CanDoItAll project through the internal workspace project-structure service."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, CancellationToken cancellationToken) => ProjectStructureHierarchyGetAsync(agent, accessState, projectId, cancellationToken),
+                    (Guid projectId, CancellationToken cancellationToken = default) => ProjectStructureHierarchyGetAsync(agent, accessState, projectId, cancellationToken),
                     "project_structure_hierarchy_get",
                     "Reads the project and subproject hierarchy for a specific project."),
                 AIFunctionFactory.Create(
-                    (Guid parentProjectId, ProjectStructureSubprojectChangeRequest request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureSubprojectLinkAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
+                    (Guid parentProjectId, ProjectStructureSubprojectChangeRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureSubprojectLinkAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_subproject_link",
                     "Adds or reconnects a subproject under a parent project."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureReadRequest? request, CancellationToken cancellationToken) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
+                    (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
                     "Reads a filtered project structure with compact node payloads by default."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureChecklistRequest? request, CancellationToken cancellationToken) => ProjectStructureChecklistAsync(agent, accessState, projectId, request, cancellationToken),
+                    (Guid projectId, ProjectStructureChecklistRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureChecklistAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_checklist",
                     "Returns unfinished project-structure items with prerequisite context and effective priority propagation."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureDependencyQueryRequest? request, CancellationToken cancellationToken) => ProjectStructureDependenciesQueryAsync(agent, accessState, projectId, request, cancellationToken),
+                    (Guid projectId, ProjectStructureDependencyQueryRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureDependenciesQueryAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_dependencies_query",
                     "Returns dependency readiness, prerequisite chains, dependents, and effective durations."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
                     "Creates a new project-structure node through the internal workspace service. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
                     "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeMoveAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMoveAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_move",
                     "Moves an existing project-structure node to exact canvas coordinates. Use this when recomposition still leaves overlap, crowding, or unreadable spacing."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeRecomposeAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeRecomposeAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_recompose",
                     "Redistributes a selected branch after imports or manual edits so the project mindmap opens in a readable layout."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureNodeReparentAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeReparentAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_reparent",
                     "Reconnects an existing project-structure node under a new logical parent node or back to the project root."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
+                    (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
                     "Records an approval-request node in the project structure so blocked work is written back into the graph."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, string nodeId, CancellationToken cancellationToken) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
+                    (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_get",
                     "Returns readonly metadata for an existing managed asset node."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, string nodeId, ProjectStructureAssetRevisionRequest request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, string nodeId, ProjectStructureAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create_revision",
                     "Creates a new revision asset node under an existing asset node instead of overwriting the original asset."),
                 AIFunctionFactory.Create(
-                    (ProjectStructureImportRequest request, int? estimatedMinutes, CancellationToken cancellationToken) => ProjectStructureImportAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
+                    (ProjectStructureImportRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureImportAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
                     "project_structure_import",
                     "Imports Mermaid, DOCX outline, XMind, or JSON outline content into the central project structure."),
                 AIFunctionFactory.Create(
-                    (ProjectManagementGuidanceQueryRequest? request, CancellationToken cancellationToken) => ProjectStructureKnowledgeQueryAsync(agent, accessState, request, cancellationToken),
+                    (ProjectManagementGuidanceQueryRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureKnowledgeQueryAsync(agent, accessState, request, cancellationToken),
                     "project_structure_knowledge_query",
                     "Queries project-management guidance that supports planning, reporting, approval, estimation, and mission discussions."),
                 AIFunctionFactory.Create(
-                    (ProjectStructureAnalyticsQueryRequest? request, CancellationToken cancellationToken) => ProjectStructureAnalyticsQueryAsync(agent, accessState, request, cancellationToken),
+                    (ProjectStructureAnalyticsQueryRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureAnalyticsQueryAsync(agent, accessState, request, cancellationToken),
                     "project_structure_analytics_query",
                     "Queries project-structure operation analytics so validation and post-implementation review can inspect what agents actually did."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, string reason, int durationMinutes, CancellationToken cancellationToken) => ProjectStructureProjectLeaseAcquireAsync(agent, accessState, projectId, reason, durationMinutes, cancellationToken),
+                    (Guid projectId, string reason, int durationMinutes, CancellationToken cancellationToken = default) => ProjectStructureProjectLeaseAcquireAsync(agent, accessState, projectId, reason, durationMinutes, cancellationToken),
                     "project_structure_project_lease_acquire",
                     "Acquires or renews a project-scoped lease so concurrent agents do not mutate the same project at the same time."),
                 AIFunctionFactory.Create(
-                    (string reason, string? repositoryRoot, string? branchName, int durationMinutes, CancellationToken cancellationToken) => ProjectStructureRepoBranchLeaseAcquireAsync(agent, accessState, reason, repositoryRoot, branchName, durationMinutes, cancellationToken),
+                    (string reason, string? repositoryRoot = null, string? branchName = null, int durationMinutes = 60, CancellationToken cancellationToken = default) => ProjectStructureRepoBranchLeaseAcquireAsync(agent, accessState, reason, repositoryRoot, branchName, durationMinutes, cancellationToken),
                     "project_structure_repo_branch_lease_acquire",
                     "Acquires or renews a repo-branch lease so separate agents do not collide on the same branch."),
                 AIFunctionFactory.Create(
-                    (ProjectStructureScopeInput scope, CancellationToken cancellationToken) => ProjectStructureLeaseGetAsync(agent, accessState, scope, cancellationToken),
+                    (ProjectStructureScopeInput scope, CancellationToken cancellationToken = default) => ProjectStructureLeaseGetAsync(agent, accessState, scope, cancellationToken),
                     "project_structure_lease_get",
                     "Gets the current active project, node, or repo-branch lease for the supplied scope."),
                 AIFunctionFactory.Create(
-                    (ProjectStructureScopeInput scope, string leaseToken, CancellationToken cancellationToken) => ProjectStructureLeaseReleaseAsync(agent, accessState, scope, leaseToken, cancellationToken),
+                    (ProjectStructureScopeInput scope, string leaseToken, CancellationToken cancellationToken = default) => ProjectStructureLeaseReleaseAsync(agent, accessState, scope, leaseToken, cancellationToken),
                     "project_structure_lease_release",
                     "Releases an existing project, node, or repo-branch lease token.")
             ];

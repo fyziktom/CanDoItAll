@@ -9,7 +9,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ManagedSeedExecutionFallbackIntegrationTests
 {
     [Fact]
-    public async Task Managed_seed_execution_resolution_uses_remote_ollama_when_openai_key_is_missing()
+    public async Task Managed_seed_execution_resolution_stays_on_openai_when_openai_key_is_missing()
     {
         var originalOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
@@ -40,10 +40,10 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
 
             var provider = await resolveTask!;
 
-            Assert.Equal("Remote Ollama", provider.Name);
-            Assert.Equal(ProviderKind.Ollama, provider.Kind);
-            Assert.Equal("http://192.168.10.132:11434", provider.BaseUrl);
-            Assert.Equal("gptoss32k:latest", provider.DefaultModel);
+            Assert.Contains(provider.Name, new[] { "OpenAI default", "OpenAI chat completions" });
+            Assert.Equal(ProviderKind.OpenAi, provider.Kind);
+            Assert.Equal("https://api.openai.com/v1", provider.BaseUrl);
+            Assert.Equal("OPENAI_API_KEY", provider.ApiKeyEnvironmentVariable);
         }
         finally
         {
@@ -52,7 +52,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
     }
 
     [Fact]
-    public async Task Organization_catalog_repair_rewrites_managed_seed_agents_to_remote_ollama_when_openai_key_is_missing()
+    public async Task Organization_catalog_repair_rewrites_managed_seed_agents_to_openai_chat_completions()
     {
         var originalOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
@@ -81,16 +81,16 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
             await repairService.EnsureCurrentOrganizationCatalogAsync();
 
             var providersAfterRepair = await workspaceService.ListProvidersAsync();
-            var fallbackProvider = Assert.Single(
+            var openAiChatProvider = Assert.Single(
                 providersAfterRepair,
-                item => item.Kind == ProviderKind.Ollama &&
-                        string.Equals(item.Name, "Remote Ollama", StringComparison.Ordinal));
+                item => item.Kind == ProviderKind.OpenAi &&
+                        string.Equals(item.Name, "OpenAI chat completions", StringComparison.Ordinal));
             var qaAgentAfterRepair = Assert.Single(
                 await workspaceService.ListAgentsAsync(includeTemplates: false),
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
-            Assert.Equal(fallbackProvider.Id, qaAgentAfterRepair.ProviderProfileId);
-            Assert.Equal("gptoss32k:latest", qaAgentAfterRepair.Model);
+            Assert.Equal(openAiChatProvider.Id, qaAgentAfterRepair.ProviderProfileId);
+            Assert.Equal("gpt-4o-mini", qaAgentAfterRepair.Model);
         }
         finally
         {

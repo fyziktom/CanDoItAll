@@ -17,6 +17,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Logging
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
@@ -27,6 +28,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ILogger<ProjectStructurePage> Logger
 @implements IDisposable
 
 <PageTitle>Project Structure</PageTitle>

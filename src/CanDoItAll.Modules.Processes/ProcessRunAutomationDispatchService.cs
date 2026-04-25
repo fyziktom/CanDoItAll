@@ -25,6 +25,7 @@ public interface IProcessRunAutomationDispatchService
         Guid processRunId,
         Guid? triggerStepRunId,
         string trigger,
+        Func<CancellationToken, Task>? renewLeaseAsync = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -40,7 +41,10 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     ILogger<ProcessRunAutomationDispatchService> logger) : IProcessRunAutomationDispatchService
 {
     private const string AutomationActor = "process-automation-dispatch";
-    private const int MaxExecutionAttempts = 3;
+    private const string ExternalTargetAliasRoot = "external-target";
+    private const int DefaultMaxExecutionAttempts = 3;
+    private const int ConcreteImplementationMaxExecutionAttempts = 5;
+    private const int MaxBrowserSnapshotInspectionCharacters = 262_144;
     private static readonly TimeSpan FreshInProgressRecoveryGracePeriod = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan StaleAutomationExecutionRunTimeout = TimeSpan.FromMinutes(10);
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> StepDispatchGuards = [];
@@ -49,6 +53,27 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex DeclaredStepOutcomeRegex = new(
         @"<!--\s*PROCESS_STEP_OUTCOME\s*(?<json>\{[^\r\n]*\})\s*-->",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex ProjectPathInToolRequestRegex = new(
+        @"(?<path>[A-Za-z]:\\[^`""'\r\n]+?\.csproj|external-target/[^\s`""']+?\.csproj)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex WorkspacePathInToolRequestRegex = new(
+        @"(?<path>[A-Za-z]:\\[^`""'\r\n\s]+|external-target/[^\s`""']+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex RazorPageDirectiveRegex = new(
+        @"(?m)^\s*@page\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex CalculatorEngineInjectDirectiveRegex = new(
+        @"(?m)^\s*@inject\s+[^\r\n]*\bCalculatorEngine\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex CalculatorEngineServiceRegistrationRegex = new(
+        @"\bAdd(?:Scoped|Singleton|Transient)\s*<\s*[^>]*\bCalculatorEngine\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex MalformedDoubleQuotedRazorStringCallbackRegex = new(
+        @"@on\w+\s*=\s*""[^""\r\n]*=>[^""\r\n]*\(\s*""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex RazorCharLiteralCallbackRegex = new(
+        @"@on\w+\s*=\s*""[^""\r\n]*=>[^""\r\n]*\b(?<handler>[A-Za-z_][A-Za-z0-9_]*)\s*\(\s*'[^'\r\n]+'",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly string[] NegatedRequiredToolPhrases =
     [
@@ -89,6 +114,34 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         "workspace_stat_path",
         "workspace_read_file",
         "workspace_dotnet_build"
+    ];
+    private static readonly HashSet<string> CurrentAttemptOnlyImplementationProofToolNames =
+    [
+        "workspace_stat_path",
+        "workspace_read_file",
+        "workspace_dotnet_build",
+        "workspace_dotnet_test"
+    ];
+    private static readonly HashSet<string> CurrentAttemptOnlyBrowserProofToolNames =
+    [
+        "browser_console_messages",
+        "browser_snapshot",
+        "browser_take_screenshot"
+    ];
+    private static readonly HashSet<string> ConcreteProductMutationToolNames =
+    [
+        "workspace_dotnet_new",
+        "workspace_write_file",
+        "workspace_append_file",
+        "workspace_move_path",
+        "workspace_delete_path",
+        "workspace_create_directory"
+    ];
+    private static readonly HashSet<string> ConcreteProductSourceWriteToolNames =
+    [
+        "workspace_write_file",
+        "workspace_append_file",
+        "workspace_move_path"
     ];
     private static readonly string[] ImplicitBrowserProofToolNames =
     [
@@ -165,6 +218,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         Guid processRunId,
         Guid? triggerStepRunId,
         string trigger,
+        Func<CancellationToken, Task>? renewLeaseAsync = null,
         CancellationToken cancellationToken = default)
     {
         if (processRunId == Guid.Empty)
@@ -249,7 +303,21 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
                 try
                 {
-                    var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, cancellationToken);
+                    var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, renewLeaseAsync, cancellationToken);
+                    var competingExecution = executionOutcome.CompletionStatus is not ProcessStepRunStatus.Completed
+                        ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, cancellationToken)
+                        : null;
+                    if (competingExecution is not null)
+                    {
+                        logger.LogInformation(
+                            "Skipping non-successful automation completion transition for run {RunId}, step {StepRunId}, execution run {ExecutionRunId} because execution run {CompetingExecutionRunId} is still active for the same process step.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id,
+                            executionOutcome.Detail.Run.Id,
+                            competingExecution.Id);
+                        return;
+                    }
+
                     var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
                         ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded before completion.");
                     if (ShouldSkipAutomationCompletionTransition(stepRunSnapshot.Status, executionOutcome.CompletionStatus))
@@ -524,6 +592,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private async Task<DispatchExecutionOutcome> ExecuteUntilSettledAsync(
         DispatchCandidate candidate,
         string trigger,
+        Func<CancellationToken, Task>? renewLeaseAsync,
         CancellationToken cancellationToken)
     {
         DispatchExecutionOutcome? finalOutcome = null;
@@ -536,9 +605,15 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             prefetchedProjectStructureGrounding.SatisfiedToolNames,
             StringComparer.Ordinal);
         successfulToolNamesAcrossAttempts.UnionWith(prefetchedArtifactInspectionGrounding.SatisfiedToolNames);
+        var maxExecutionAttempts = ResolveMaxExecutionAttempts(candidate);
 
-        for (var attemptNumber = 1; attemptNumber <= MaxExecutionAttempts; attemptNumber++)
+        for (var attemptNumber = 1; attemptNumber <= maxExecutionAttempts; attemptNumber++)
         {
+            if (renewLeaseAsync is not null)
+            {
+                await renewLeaseAsync(cancellationToken);
+            }
+
             ExecutionRunDetail detail;
             Guid executionRunId;
             string responseText;
@@ -609,7 +684,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                                         : trigger.Trim(),
                                     RequestedBy: AutomationActor,
                                     RequestedByKind: "system",
-                                    MetadataJson: BuildExecutionMetadataJson(candidate, trigger),
+                                    MetadataJson: "{}",
                                     ProcessRunId: candidate.Run.Id.ToString("D"),
                                     ProcessStepId: candidate.StepRun.Id.ToString("D")),
                                 AutoApprovePendingToolCalls: true),
@@ -685,6 +760,11 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             }
 
             successfulToolNamesAcrossAttempts.UnionWith(ResolveSuccessfulToolNames(detail));
+            if (renewLeaseAsync is not null)
+            {
+                await renewLeaseAsync(cancellationToken);
+            }
+
             var missingRequiredTools = ResolveMissingRequiredToolExecutionsWithCarryForward(
                 candidate,
                 detail,
@@ -709,8 +789,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             if (attemptNumber > 1)
             {
                 completionReason = completionStatus == ProcessStepRunStatus.Completed
-                    ? $"{completionReason} Recovered on attempt {attemptNumber} of {MaxExecutionAttempts}."
-                    : $"{completionReason} Recovery attempt {attemptNumber} of {MaxExecutionAttempts}.";
+                    ? $"{completionReason} Recovered on attempt {attemptNumber} of {maxExecutionAttempts}."
+                    : $"{completionReason} Recovery attempt {attemptNumber} of {maxExecutionAttempts}.";
             }
 
             finalOutcome = new DispatchExecutionOutcome(
@@ -727,6 +807,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 detail,
                 responseText,
                 attemptNumber,
+                maxExecutionAttempts,
                 cancellationToken);
             if (providerRepair is not null)
             {
@@ -753,7 +834,24 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 continue;
             }
 
-            if (!ShouldRetryIncompleteSuccessfulRun(candidate, detail, responseText, missingRequiredTools, attemptNumber))
+            var shouldRetry =
+                ShouldRetryIncompleteSuccessfulRun(
+                    candidate,
+                    detail,
+                    responseText,
+                    missingRequiredTools,
+                    attemptNumber,
+                    maxExecutionAttempts) ||
+                ShouldRetryRecoverableFailedRun(
+                    candidate,
+                    detail,
+                    responseText,
+                    missingRequiredTools,
+                    unresolvedCriticalToolFailures,
+                    attemptNumber,
+                    maxExecutionAttempts);
+
+            if (!shouldRetry)
             {
                 return finalOutcome;
             }
@@ -774,7 +872,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                             .Take(2)
                             .Select(item => $"{item.ToolName}: {item.ExitSummary}")),
                 attemptNumber + 1,
-                MaxExecutionAttempts);
+                maxExecutionAttempts);
 
             // Start recovery attempts on a fresh chat session so stale context or provider-side errors
             // from the previous attempt do not poison the next governed retry.
@@ -793,14 +891,22 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                ?? throw new InvalidOperationException($"No AgentFramework execution outcome was captured for process step '{candidate.StepRun.Id:D}'.");
     }
 
+    private static int ResolveMaxExecutionAttempts(DispatchCandidate candidate)
+    {
+        return RequiresConcreteImplementationProof(candidate)
+            ? ConcreteImplementationMaxExecutionAttempts
+            : DefaultMaxExecutionAttempts;
+    }
+
     private async Task<ProviderRepairOutcome?> TryRepairAssignedAgentProvidersAsync(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
         string responseText,
         int attemptNumber,
+        int maxExecutionAttempts,
         CancellationToken cancellationToken)
     {
-        if (attemptNumber >= MaxExecutionAttempts ||
+        if (attemptNumber >= maxExecutionAttempts ||
             !TryResolveRecoverableProviderFailure(detail, responseText, out var failureSummary))
         {
             return null;
@@ -984,14 +1090,15 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 continue;
             }
 
-            var fullPath = Path.GetFullPath(Path.Combine(workspaceRoot, artifact.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!IsWithinWorkspace(workspaceRoot, fullPath) || !File.Exists(fullPath))
+            if (!TryResolveArtifactFullPath(workspaceRoot, artifact.RelativePath, out var fullPath, out var pathResolutionFailure) ||
+                !File.Exists(fullPath))
             {
                 logger.LogDebug(
-                    "Skipping execution artifact projection for run {RunId}, step {StepRunId}, artifact {ArtifactId} because the file path is unavailable.",
+                    "Skipping execution artifact projection for run {RunId}, step {StepRunId}, artifact {ArtifactId} because the file path is unavailable. Reason: {Reason}",
                     candidate.Run.Id,
                     candidate.StepRun.Id,
-                    artifact.Id);
+                    artifact.Id,
+                    string.IsNullOrWhiteSpace(pathResolutionFailure) ? "File does not exist." : pathResolutionFailure);
                 continue;
             }
 
@@ -1545,6 +1652,16 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine();
         }
 
+        if (ShouldIncludeBlazorWebAppHostingContract(
+                candidate,
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary))
+        {
+            builder.AppendLine("Blazor Web App hosting contract:");
+            AppendBlazorWebAppHostingContract(builder);
+            builder.AppendLine();
+        }
+
         builder.AppendLine("Work brief:");
         builder.AppendLine(workBrief?.WorkBriefText ?? "No work brief was captured for this step.");
         builder.AppendLine();
@@ -1642,14 +1759,47 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine("- If the current step contract describes greenfield implementation or gives you a bootstrap or init script, missing solution or project files are expected pre-bootstrap state, not a blocker. Run the bootstrap or init step first, then inspect the scaffolded files and continue.");
         builder.AppendLine("- Do not claim that planned scaffold targets are missing deliverables when the current step contract explicitly tells you to create, bootstrap, or scaffold them in this step.");
         builder.AppendLine("- If a required build, test, launch, browser check, or artifact import fails, inspect the real diagnostics, fix the underlying problem, and rerun the same required validation before you conclude. Do not treat the first failed validation as acceptable end-state evidence.");
+        builder.AppendLine("- After a failed validation tool call, the next tool call must inspect the failing diagnostics or mutate files that directly address the failure. Repeating the same failed build/test/run command without an intervening cause-directed change is no-progress behavior.");
         builder.AppendLine("- Do not stop after inspection, reconnaissance, bootstrap confirmation, or a next-steps summary if required tools, concrete deliverables, or required artifacts are still missing.");
         if (RequiresConcreteImplementationProof(candidate))
         {
             builder.AppendLine("- Because this is an implementation step, create the real scaffold or code now. A markdown change set alone is not a completed implementation.");
+            builder.AppendLine("- Follow this implementation critical path: scaffold or inspect the runnable host, identify the generated project shape, create the real domain/application logic, wire the UI to that logic, create sibling automated tests with a ProjectReference to the host, replace stale template content, then build the host and run the tests.");
+            builder.AppendLine("- Use `workspace_dotnet_new` only for the first bootstrap when the target project is missing. If a runnable host or test project already exists, inspect and repair it in place; do not rerun `workspace_dotnet_new --force` because it can overwrite the implemented route back to starter template content.");
+            builder.AppendLine("- If a previous attempt already created a stock scaffold, treat that scaffold as the host to repair. Do not delete it or scaffold again; edit concrete source/project files such as `Components/Pages/Home.razor`, `Domain/CalculatorEngine.cs`, the sibling test `.csproj`, and test source.");
+            builder.AppendLine("- When the project structure gives an exact product output root, treat that directory as the outer container. If the host project name is `Calculator`, scaffold with parentDirectory set to the exact output root and name `Calculator`, producing `<output-root>/Calculator/Calculator.csproj`; do not scaffold into the output root itself.");
+            builder.AppendLine("- After `workspace_dotnet_new -n <Name>` under an output root, the canonical host is usually `<output-root>/<Name>/<Name>.csproj`. Do not create `<output-root>/<Name>.csproj`, `<output-root>/Program.cs`, or root `Pages/*.razor` files beside that nested host; target the actual scaffolded project path.");
+            builder.AppendLine("- Do not use `workspace_delete_path` recursively on a directory that contains a `.csproj`, `.fsproj`, `.vbproj`, `.sln`, or `.slnx` just to make `workspace_dotnet_new` succeed. Repair the project in place.");
+            builder.AppendLine("- Do not delete scaffold core files such as `.csproj`, `Program.cs`, `Components/App.razor`, `Components/Routes.razor`, `_Imports.razor`, `Components/Pages/Home.razor`, layout files, `appsettings*.json`, or `wwwroot/app.css`. Edit or overwrite those files instead.");
+            builder.AppendLine("- After `workspace_dotnet_new`, do not guess framework-era file locations. Inspect the scaffolded `.csproj`, `Program.cs`, and routed page paths before writing UI or tests.");
+            builder.AppendLine("- Do not write implementation change-set or rollout artifacts until after concrete source/project mutations and successful build/test validation in the same attempt.");
+            builder.AppendLine("- For a calculator-like Blazor app, the minimum concrete implementation is a public domain/application type such as `CalculatorEngine`, a non-placeholder routed UI that calls it, and tests that instantiate that concrete type through a sibling test project.");
+            builder.AppendLine("- For a calculator-like app, write and then read `Calculator/Domain/CalculatorEngine.cs`, include concrete Add/Subtract/Multiply/Divide operations there, wire the routed page to that engine, and test that engine directly.");
+            builder.AppendLine("- Do not leave the generated empty `UnitTest1.cs` as the test evidence. Replace it or add meaningful test source that asserts CalculatorEngine addition, subtraction, multiplication, division, and division-by-zero behavior.");
+            builder.AppendLine("- If tests fail with `CS0118` or text like `'Calculator' is a namespace but is used like a type`, do not rerun the same tests. Create or read the concrete engine type, add the test ProjectReference, update tests to `new CalculatorEngine()`, and rerun the host build plus test project.");
             builder.AppendLine("- Concrete feature and constraint nodes from the live project structure are required scope for this implementation step. Treat them as mandatory deliverables now, not as later backlog or rollout notes.");
             builder.AppendLine("- Do not defer grounded features, UI behavior, acceptance notes, or output constraints into `future steps`, follow-up work, or QA-only cleanup while still returning `Completed`.");
             builder.AppendLine("- Before you conclude this implementation step, use `workspace_stat_path` on the concrete solution, project, and source paths you created or changed, and use `workspace_read_file` on at least one concrete project or source file from that implementation.");
             builder.AppendLine("- Run `workspace_dotnet_build` against the implemented solution or project before you claim the scaffold or code is build-ready.");
+            builder.AppendLine("- Build/read proof must happen after the last scaffold or source mutation in the same attempt. Previous attempt receipts do not prove the current mutated output.");
+            builder.AppendLine("- Keep automated test projects as siblings of the runnable web host, not inside the host project directory. If a `*.Tests` folder or test source file is nested under the Blazor host, use `workspace_delete_path` with `recursive: true` on that stale nested test folder before building the host.");
+            builder.AppendLine("- Never create or write test project files under the runnable web host. For a host at `external-target/.../Calculator/Calculator.csproj`, the sibling test project path is `external-target/.../Calculator.Tests/...`; `external-target/.../Calculator/Calculator.Tests/...` is invalid and must be deleted before the host build.");
+            builder.AppendLine("- If `workspace_dotnet_test` is denied or fails because the sibling test project path does not exist, create or repair that sibling test project first, add a ProjectReference to the host project, and only then rerun `workspace_dotnet_test`. Repeating the same missing-path test command is not recovery.");
+            builder.AppendLine("- `workspace_dotnet_test` targetPath must be a solution or test project file such as `Calculator.Tests/Calculator.Tests.csproj`. Never pass a `.cs` source file or a plain test directory as the target.");
+            builder.AppendLine("- When repairing a scaffolded test project, clean stale template and duplicate test files before rerunning tests. Delete or replace files such as `UnitTest1.cs`, `<Project>.Tests.cs`, old `.bak` sources that are still compiled, or duplicate `CalculatorTests` classes instead of repeatedly rewriting only one new test file.");
+            builder.AppendLine("- After creating, moving, or repairing tests, rerun `workspace_dotnet_build` against the runnable web host and `workspace_dotnet_test` against the test project. A successful test run does not recover an earlier failed host build unless the same host build is rerun successfully.");
+            builder.AppendLine("- If `workspace_dotnet_build` reports missing xUnit, MSTest, or test attribute namespaces from the web project, inspect for misplaced test files under the host and remove or move them; do not fix that by adding test packages to the production web project.");
+            builder.AppendLine("- Put business logic that needs automated coverage in a public domain or application class and test that class through a sibling test project with a ProjectReference to the host. For calculator-like tasks, use a concrete type such as `CalculatorEngine` under `<RootNamespace>.Domain`; do not instantiate the project namespace, root namespace, or a Razor component as if it were the calculator engine.");
+            builder.AppendLine("- When tests use host-domain types, edit the sibling test `.csproj` to include a real `<ProjectReference Include=\"..\\<HostProject>\\<HostProject>.csproj\" />` before running tests; package references alone do not make the host code visible.");
+            builder.AppendLine("- Avoid C# types whose simple name equals the Blazor project or root namespace, such as a `Calculator` class inside namespace `Calculator`. Use a name like `CalculatorEngine` under a non-conflicting namespace such as `<RootNamespace>.Domain`, and import that concrete namespace in `_Imports.razor`.");
+            builder.AppendLine("- A `.razor` component file also generates a C# type. In a project/root namespace named `Calculator`, do not create `Components/Calculator.razor`; put the route in `Components/Pages/Home.razor` or name the component `CalculatorPage.razor` so `_Imports.razor` can still import namespaces.");
+            builder.AppendLine("- For Blazor Web App scaffolds from `dotnet new blazor`, routed pages live under `Components/Pages`. If `Components/Pages/Home.razor` exists, it is the effective primary route. Put the primary `/` calculator surface there or another `Components/Pages/*.razor` route; do not create legacy root `Pages/*.razor` routes such as `Pages/Home.razor` or `Pages/Index.razor`.");
+            builder.AppendLine("- Do not add `@page` directives to `Components/Routes.razor`. That file must stay the generated Router host; route directives belong in `Components/Pages/*.razor`.");
+            builder.AppendLine("- If you find both `Components/Pages/Home.razor` and a legacy root `Pages/*.razor` file declaring `@page \"/\"`, delete or move the legacy root route with `workspace_delete_path` before build or runtime validation. Duplicate routes can build successfully but fail at app startup/browser proof.");
+            builder.AppendLine("- Do not convert a `dotnet new blazor` Blazor Web App into older Blazor Server/Razor Pages hosting. Do not add `Pages/_Host.cshtml`, `Startup.cs`, `UseStartup<Startup>()`, `blazor.server.js`, or ASP.NET Core 7.x component package references to a net10 Blazor Web App scaffold.");
+            builder.AppendLine("- If a repair attempt already added older Blazor Server hosting files or package references, delete `Pages/_Host.cshtml` and other legacy root `Pages/*.cshtml` files, remove obsolete `Microsoft.AspNetCore.Components*` package references, restore the generated minimal `Program.cs`/`Components/App.razor`/`Components/Routes.razor` shape, then rebuild.");
+            builder.AppendLine("- Keep the generated `MainLayout` type/file unless you update every `@layout MainLayout`, `DefaultLayout=\"typeof(MainLayout)\"`, and `NotFound.razor` reference in the same change. For recovery, prefer editing `MainLayout` content/styles instead of renaming it.");
+            builder.AppendLine("- Do not substitute repeated `workspace_stat_path` calls or checks for `bin/Debug/...` outputs for `workspace_dotnet_build`. The build tool creates and validates those outputs; stat polling does not.");
             builder.AppendLine("- If you scaffold from a starter template, replace placeholder output with the requested product surface before you conclude. Default starter content such as `Hello, world!`, untouched sample routes, or stock template pages is not a completed implementation.");
             builder.AppendLine("- Do not write implementation artifacts that say the requested UI, logic, tests, or rollout preparation will happen in a later step while this implementation step still returns `Completed`.");
             if (artifactInputInspectionPaths.StatPaths.Count > 0 || artifactInputInspectionPaths.ReadPaths.Count > 0)
@@ -1673,7 +1823,13 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine("- If you must write a new `.csproj` manually, choose a target framework supported by this workspace and repo baseline. For this repository, prefer `net10.0` unless the project structure or existing solution explicitly requires another target.");
             builder.AppendLine("- If you create browser-facing UI files such as `.razor`, `.cshtml`, or `wwwroot` assets, scaffold a runnable web host with the required startup entrypoint. Do not leave browser UI inside a plain class library or non-host project.");
             builder.AppendLine("- If the inherited requirements or project structure describe a browser-validated Blazor or web app, leave a runnable browser surface for downstream QA instead of concluding with service-only or library-only output.");
+            builder.AppendLine("- If project-structure scope names Blazor SSR, do not replace it with MVC, Razor Pages, or controller/view placeholder scaffolding unless the project structure explicitly changed that architecture.");
             builder.AppendLine("- If no concrete solution, project, or source files exist yet, do not return Completed.");
+            if (ContainsCalculatorContext(candidate))
+            {
+                AppendCalculatorImplementationContract(builder);
+            }
+
             if (projectStructureContext is not null)
             {
                 builder.AppendLine("- If the project structure sends you to an external target directory, map that directory to `external-target/<drive>/...`, scaffold the real solution there, inspect those mapped paths, and run `workspace_dotnet_build` against that mapped solution or project.");
@@ -1707,10 +1863,15 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         {
             builder.AppendLine("- This step requires runnable browser proof or screenshots, not build-only or file-only evidence.");
             builder.AppendLine("- Before browser proof, inspect the concrete host project, launch settings, or prior successful build/test receipts so you derive the actual launch target and reachable URL from the reviewed implementation.");
-            builder.AppendLine("- If no reviewed app is already running, start the concrete host yourself with `workspace_dotnet_run` or the approved runtime command before you open the browser.");
+            builder.AppendLine("- If no reviewed app is already running, start the concrete host yourself before you open the browser. If `workspace_dotnet_run` is not available in your tool list, create or repair a short PowerShell helper with `workspace_write_file` and run it with `workspace_pwsh_run_script`; the helper should launch `dotnet run --no-build --project <reviewed .csproj> --urls http://127.0.0.1:<free-port>` in the background, wait until the URL returns a successful HTTP status, write a small JSON receipt containing `appProcessId`, URL, stdout log path, and stderr log path, then exit nonzero on 4xx/5xx or early process exit.");
+            builder.AppendLine("- In PowerShell helpers, never assign to `$PID`; it is a built-in read-only variable. Use names such as `$appProcess` and `$appProcessId`, and capture stdout/stderr so a runtime 500 includes actionable logs.");
+            builder.AppendLine("- After a successful build/test receipt for the same unchanged project, do not repeat `workspace_dotnet_build` or `workspace_dotnet_test` just because browser proof is still missing. The next required action is app launch plus Playwright browser tools; repeated build/test receipts are not progress.");
             builder.AppendLine("- Do not assume the app must be reachable at `http://localhost:5000/`. Use the actual URL reported by the launch command, host logs, or `launchSettings.json`.");
+            builder.AppendLine("- If a Blazor Web App returns HTTP 500 on the primary route after a successful build, inspect the app logs and route files before concluding. A common cause is duplicate `@page \"/\"` routes, especially legacy root `Pages/Index.razor` plus `Components/Pages/Home.razor`.");
             builder.AppendLine("- Do not treat an unstarted app, a missing published deployment, or an empty `bin/Debug/<tfm>` folder as an acceptable blocker when this QA step can launch the reviewed host itself. Launch it, confirm the reachable URL, and only return `Blocked` if launch or browser interaction still fails after you inspect the real diagnostics.");
             builder.AppendLine("- When the implementation lives under a grounded external target, run and inspect the reviewed host project from that target instead of expecting a separate published deployment.");
+            builder.AppendLine("- Use the attached Playwright MCP tools after launch: `browser_navigate` to the launched URL, `browser_snapshot` for accessibility proof, `browser_take_screenshot` for visual proof, and `browser_console_messages` for console diagnostics.");
+            builder.AppendLine("- After `browser_snapshot`, inspect the saved snapshot content. If it shows starter template text such as `Hello, world!` or `Welcome to your new app.`, return `Blocked` and repair the implementation instead of claiming proof.");
             builder.AppendLine("- If the app cannot be launched, the browser cannot be reached, screenshots cannot be captured, or the required UI flow is still missing, return `Blocked` instead of `Completed`.");
             builder.AppendLine("- Do not reframe missing browser proof as a residual risk, deferred next step, or artifact-only note while still marking the step complete.");
         }
@@ -1726,6 +1887,70 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine("- Use status Failed only when tool, execution, or environment failure prevented you from producing a governed step result.");
         builder.Append("Before concluding, create one durable workspace artifact for every required output listed above. Do not ask for confirmation, permission, or a follow-up reply before writing required artifacts. If a required artifact is a text or markdown file you can produce now, write it yourself with workspace tools instead of drafting it in chat. If required upstream artifacts are missing or the concrete deliverable does not exist, stop and say so explicitly. Keep the response concise and mention what you completed.");
         return builder.ToString();
+    }
+
+    private static bool ContainsCalculatorContext(DispatchCandidate candidate)
+    {
+        var contextText = string.Join(
+            Environment.NewLine,
+            candidate.Definition.Name,
+            candidate.Definition.Summary,
+            candidate.Definition.ValueStatement,
+            candidate.Run.Name,
+            candidate.Run.TriggerReason,
+            candidate.StepRun.Title,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary);
+
+        return contextText.Contains("Calculator", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AppendCalculatorImplementationContract(StringBuilder builder)
+    {
+        builder.AppendLine("- Calculator implementation contract: the exact product root is the outer directory `external-target/C/programovani/csharp/calculator`. Bootstrap with `workspace_create_directory` for that exact root, then `workspace_dotnet_new` with parentDirectory `external-target/C/programovani/csharp/calculator` and name `Calculator` so the host is `external-target/C/programovani/csharp/calculator/Calculator/Calculator.csproj`.");
+        builder.AppendLine("- Calculator implementation contract: never call `workspace_dotnet_new` with parentDirectory `external-target/C/programovani/csharp` and name `Calculator` for this task. On Windows that targets the same lowercase output root by casing and creates the wrong top-level host shape.");
+        builder.AppendLine("- Calculator implementation contract: after `workspace_dotnet_new` creates `external-target/.../calculator/Calculator/Calculator.csproj`, that nested host is the canonical app. Do not hand-write or repair `external-target/.../calculator/Calculator.csproj` or `external-target/.../calculator/Program.cs` at the output root.");
+        builder.AppendLine("- Calculator implementation contract: preserve the generated Blazor Web App hosting shape. Do not replace `Calculator/Program.cs` with `WebAssemblyHostBuilder`, do not add `Microsoft.AspNetCore.Components.WebAssembly`, and do not add ASP.NET Core 7 component package references to a net10 host.");
+        builder.AppendLine("- Calculator implementation contract: complete the concrete source sequence before any artifact writing or final answer: `Calculator/Domain/CalculatorEngine.cs`, `Calculator/Program.cs`, `Calculator/Components/Pages/Home.razor`, `Calculator.Tests/Calculator.Tests.csproj`, and one meaningful sibling test source.");
+        builder.AppendLine("- Calculator implementation contract: `Calculator/Program.cs` must register `CalculatorEngine` in DI before `builder.Build()` if `Home.razor` injects it.");
+        builder.AppendLine("- Calculator implementation contract: `Calculator/Components/Pages/Home.razor` must be the primary `/` route, call `CalculatorEngine`, and expose add, subtract, multiply, divide, equals/evaluate, numeric keypad, current display/result, divide-by-zero feedback, and calculation history behavior.");
+        builder.AppendLine("- Calculator implementation contract: `Calculator/Components/Pages/Home.razor` must start with a valid route such as `@page \"/\"`; `@page \"\"` and `RZ9988` route-template failures mean the app is not buildable.");
+        builder.AppendLine("- Calculator implementation contract: Razor keypad callbacks in `Home.razor` must be syntax-safe and type-consistent. Prefer char handlers such as `AppendDigit(char digit)` and `ChooseOperator(char op)` with callbacks like `@onclick=\"() => AppendDigit('1')\"` and `@onclick=\"() => ChooseOperator('+')\"`. If a handler accepts `string`, wrap the whole Razor attribute in single quotes, for example `@onclick='() => AppendDigit(\"1\")'`. Never pass char literals to string handlers, for example do not write `AppendToResult('1')` when the method is `AppendToResult(string value)`, and never write `@onclick=\"() => AppendDigit(\"1\")\"`.");
+        builder.AppendLine("- Calculator implementation contract: create the sibling test project with `workspace_dotnet_new` using parentDirectory `external-target/C/programovani/csharp/calculator` and name `Calculator.Tests`, producing `external-target/C/programovani/csharp/calculator/Calculator.Tests/Calculator.Tests.csproj`. Never set parentDirectory to a path already ending in `Calculator.Tests`, and never move `Calculator.Tests/Calculator.Tests` to `Calculator.Tests/Calculator.Tests.csproj`.");
+        builder.AppendLine("- Calculator implementation contract: `Calculator.Tests/Calculator.Tests.csproj` must contain `<ProjectReference Include=\"..\\Calculator\\Calculator.csproj\" />`; package references alone do not make `Calculator.Domain.CalculatorEngine` visible to tests.");
+        builder.AppendLine("- Calculator implementation contract: test source must use the host domain type, for example `using Calculator.Domain;` and `new CalculatorEngine()`, and must assert addition, subtraction, multiplication, division, and divide-by-zero behavior.");
+        builder.AppendLine("- Calculator implementation contract: the template `Calculator.Tests/UnitTest1.cs` must not remain as an empty placeholder test; replace it with meaningful tests or delete it if another meaningful test source exists.");
+        builder.AppendLine("- Calculator implementation contract: do not use a free-form text box with placeholder parsing or a `Calculate` handler that assigns a fixed result. The UI must invoke the concrete engine operations and update visible state from user-entered keypad/operator interactions.");
+        builder.AppendLine("- Calculator implementation contract: repair product behavior before test-project polish. If `Home.razor` is still placeholder/free-form UI, the next concrete mutation must be `Calculator/Components/Pages/Home.razor`; repeatedly rewriting `Calculator.Tests/Calculator.Tests.csproj` is no-progress behavior.");
+        builder.AppendLine("- Calculator implementation contract: a valid minimal recovery overwrites or repairs `Calculator/Program.cs`, `Calculator/Components/Pages/Home.razor`, `Calculator/Domain/CalculatorEngine.cs`, `Calculator.Tests/Calculator.Tests.csproj` when its ProjectReference is missing, and a meaningful sibling test source before build/test validation.");
+    }
+
+    private static void AppendCalculatorRecoveryChecklist(StringBuilder builder, string missingConcreteImplementationProofSummary)
+    {
+        builder.AppendLine("Calculator recovery checklist for this retry:");
+        if (!string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
+        {
+            builder.AppendLine($"- Last concrete proof failure: {missingConcreteImplementationProofSummary}.");
+        }
+
+        builder.AppendLine("- Do not call `workspace_dotnet_new` again if either `external-target/C/programovani/csharp/calculator/Calculator/Calculator.csproj` or `external-target/C/programovani/csharp/calculator/Calculator.Tests/Calculator.Tests.csproj` exists.");
+        builder.AppendLine("- If `external-target/C/programovani/csharp/calculator/Calculator.csproj`, `external-target/C/programovani/csharp/calculator/Program.cs`, or `external-target/C/programovani/csharp/calculator/Components` exists at the output-root level, the host was scaffolded in the wrong place. Do not build that root host or create a second project under it in the same attempt; return Blocked/Failed so the next clean run can start from the correct outer-root shape.");
+        builder.AppendLine("- If `external-target/C/programovani/csharp/calculator/Calculator.Tests/Calculator.Tests.csproj` is a directory, do not write or delete it repeatedly. That path shape is corrupt; stop targeting it, report the path-shape failure, and continue only from a clean sibling test project path on a clean retry.");
+        builder.AppendLine("- First read these exact files when present: `external-target/C/programovani/csharp/calculator/Calculator/Calculator.csproj`, `external-target/C/programovani/csharp/calculator/Calculator/Program.cs`, `external-target/C/programovani/csharp/calculator/Calculator/CalculatorEngine.cs`, `external-target/C/programovani/csharp/calculator/Calculator/Components/Routes.razor`, `external-target/C/programovani/csharp/calculator/Calculator/Components/Pages/Home.razor`, `external-target/C/programovani/csharp/calculator/Calculator/Domain/CalculatorEngine.cs`, `external-target/C/programovani/csharp/calculator/Calculator.Tests/Calculator.Tests.csproj`, `external-target/C/programovani/csharp/calculator/Calculator.Tests/UnitTest1.cs`, `external-target/C/programovani/csharp/calculator/Calculator.Tests/CalculatorTests.cs`, and `external-target/C/programovani/csharp/calculator/Calculator.Tests/CalculatorEngineTests.cs`.");
+        builder.AppendLine("- Repair, in place, with `workspace_write_file`: keep `Calculator/Calculator.csproj` as a net10 Blazor Web App project without ASP.NET Core 7 component package references; keep `Calculator/Program.cs` on the generated `WebApplication`/`AddRazorComponents`/`MapRazorComponents<App>()` hosting path; add `using Calculator.Domain;` and `builder.Services.AddScoped<CalculatorEngine>();` before `builder.Build()` when the page injects the engine.");
+        builder.AppendLine("- Repair `Calculator/Components/Pages/Home.razor` as the `/` route instead of editing `Components/Routes.razor`; `Routes.razor` must remain the Router host without `@page`.");
+        builder.AppendLine("- If the host build reports `RZ9988`, `@page directive must specify a route template`, or `@page \"\"` in `Home.razor`, the next mutation must set `Home.razor` to `@page \"/\"` before any test-project repair or test rerun.");
+        builder.AppendLine("- Replace placeholder UI in `Home.razor`; a free-form expression text box, TODO/parser comment, or `Calculate` method that sets a fixed/default result is not implementation. The route needs numeric keypad buttons, `+`, `-`, `*`, `/`, `=`, display/result state, divide-by-zero feedback, history, and calls to `CalculatorEngine` operations.");
+        builder.AppendLine("- When writing `Home.razor` keypad buttons, use syntax-safe callbacks. Preferred pattern: handlers accept `char` and buttons use `@onclick=\"() => AppendDigit('1')\"` and `@onclick=\"() => ChooseOperator('+')\"`. Alternative pattern: handlers accept `string` and buttons use single-quoted Razor attributes such as `@onclick='() => AppendDigit(\"1\")'`. Do not write `@onclick=\"() => AppendDigit(\"1\")\"`, `@onclick=\"() => SetOperation(\"+\")\"`, `AppendToResult('1')` with a string parameter, or `SetOperation('+')` with a string parameter; these caused prior Razor/CS1503 failures.");
+        builder.AppendLine("- If `Calculator.Tests/Calculator.Tests.csproj` already contains `<ProjectReference Include=\"..\\Calculator\\Calculator.csproj\" />`, do not rewrite that project file again until after the routed UI proof passes. The blocker is the effective UI, not the test project file.");
+        builder.AppendLine("- If tests fail with `CS0234`, `CS0246`, `Calculator.Domain` missing, or `CalculatorEngine` missing from the sibling test project, the next mutation must repair `Calculator.Tests/Calculator.Tests.csproj` to include `<ProjectReference Include=\"..\\Calculator\\Calculator.csproj\" />` and confirm `Calculator/Domain/CalculatorEngine.cs` exists in namespace `Calculator.Domain`.");
+        builder.AppendLine("- If the host build fails with `CS0101` or `CS0111` for `Calculator.Domain.CalculatorEngine`, inspect both `Calculator/CalculatorEngine.cs` and `Calculator/Domain/CalculatorEngine.cs`. Delete stale `Calculator/CalculatorEngine.cs` if both define `CalculatorEngine`; deleting and rewriting only `Domain/CalculatorEngine.cs` does not remove the duplicate type.");
+        builder.AppendLine("- Repair `Calculator.Tests/Calculator.Tests.csproj` only when the ProjectReference or test packages are missing; replace or delete the generated empty `UnitTest1.cs`; keep concrete arithmetic tests in the sibling test project.");
+        builder.AppendLine("- Replace duplicate add/divide-only tests with one meaningful test source that covers Add, Subtract, Multiply, Divide, and divide-by-zero behavior against `CalculatorEngine`.");
+        builder.AppendLine("- After the last source or project-file mutation, read back at least `Calculator/Program.cs`, `Calculator/Components/Pages/Home.razor`, `Calculator/Domain/CalculatorEngine.cs`, and `Calculator.Tests/Calculator.Tests.csproj`, then run `workspace_dotnet_build` on `Calculator/Calculator.csproj` and `workspace_dotnet_test` on `Calculator.Tests/Calculator.Tests.csproj`.");
+        builder.AppendLine("- Write required markdown artifacts only after those build and test commands succeed in this same retry.");
     }
 
     private static void AppendRequiredArtifactResponseContract(
@@ -1770,19 +1995,6 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static string BuildCorrelationId(Guid stepRunId)
     {
         return $"process-step:{stepRunId:D}";
-    }
-
-    private static string BuildExecutionMetadataJson(DispatchCandidate candidate, string trigger)
-    {
-        return System.Text.Json.JsonSerializer.Serialize(
-            new
-            {
-                processDefinitionId = candidate.Definition.Id,
-                processRunId = candidate.Run.Id,
-                processStepRunId = candidate.StepRun.Id,
-                processStepTitle = candidate.StepRun.Title,
-                trigger = string.IsNullOrWhiteSpace(trigger) ? "process-runtime" : trigger.Trim()
-            });
     }
 
     internal static bool HasBlockingAutomationExecutionRun(IReadOnlyList<ExecutionRunRecord> executionRuns)
@@ -1878,6 +2090,28 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             ResolveRecoveredExecutionResponseText(detail));
     }
 
+    private async Task<ExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
+        DispatchCandidate candidate,
+        DispatchExecutionOutcome executionOutcome,
+        CancellationToken cancellationToken)
+    {
+        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+            new ExecutionRunQuery(
+                ProcessRunId: candidate.Run.Id.ToString("D"),
+                ProcessStepId: candidate.StepRun.Id.ToString("D"),
+                Take: 20),
+            cancellationToken);
+        var now = clock.GetUtcNow();
+        return executionRuns
+            .Where(executionRun => executionRun.Id != executionOutcome.Detail.Run.Id)
+            .Where(executionRun => IsBlockingAutomationExecutionRun(executionRun, now))
+            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
+                ? executionRun.CreatedAtUtc
+                : executionRun.UpdatedAtUtc)
+            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
+            .FirstOrDefault();
+    }
+
     internal static bool ShouldSkipAutomationCompletionTransition(
         ProcessStepRunStatus currentStatus,
         ProcessStepRunStatus requestedStatus)
@@ -1910,12 +2144,12 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             return false;
         }
 
-        if (recoverableExecutionRunId.HasValue)
+        if (!IsRecoveryTrigger(trigger))
         {
             return false;
         }
 
-        if (!IsRecoveryTrigger(trigger))
+        if (recoverableExecutionRunId.HasValue)
         {
             return false;
         }
@@ -2050,18 +2284,21 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         ExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
-        int attemptNumber)
+        int attemptNumber,
+        int maxExecutionAttempts)
     {
         var run = detail.Run;
         var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
         var recoverableImplementationPunt = IsRecoverableImplementationPunt(candidate, responseText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
+        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
         var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText) &&
             !CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, responseText);
         var recoverableProviderFailure = TryResolveRecoverableProviderFailure(detail, responseText, out _);
-        return attemptNumber < MaxExecutionAttempts
+        return attemptNumber < maxExecutionAttempts
                && run.State == ExecutionState.Completed
                && run.PendingApprovals.Count == 0
                && run.Outcome == RunOutcome.Succeeded
@@ -2070,9 +2307,41 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                     recoverableImplementationPunt ||
                     !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
                     !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
+                    !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
+                    !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
                     !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
                     recoverableGovernedOutcomeGap ||
                     recoverableProviderFailure);
+    }
+
+    private static bool ShouldRetryRecoverableFailedRun(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        int attemptNumber,
+        int maxExecutionAttempts)
+    {
+        var run = detail.Run;
+        if (attemptNumber >= maxExecutionAttempts ||
+            run.State != ExecutionState.Failed ||
+            run.PendingApprovals.Count > 0)
+        {
+            return false;
+        }
+
+        if (!RequiresConcreteImplementationProof(candidate) &&
+            !RequiresConcreteBrowserProof(candidate))
+        {
+            return false;
+        }
+
+        return missingRequiredTools.Count > 0 ||
+               unresolvedCriticalToolFailures.Any(IsFrameworkRecoverableDotnetToolFailure) ||
+               TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
+               MentionsRepeatedToolInvocation(responseText) ||
+               MentionsRepeatedToolInvocation(run.ResultSummary);
     }
 
     private static string BuildCompletionReason(DispatchCandidate candidate, ExecutionRunDetail detail, string stepTitle)
@@ -2123,11 +2392,19 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
         if (missingRequiredTools.Count > 0)
         {
+            var missingImplementationProofForRequiredTools = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+            if (!string.IsNullOrWhiteSpace(missingImplementationProofForRequiredTools))
+            {
+                return $"AgentFramework run '{run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}. Current-attempt implementation proof is also invalid: {missingImplementationProofForRequiredTools}";
+            }
+
             return $"AgentFramework run '{run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}";
         }
 
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
+        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
         if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome))
         {
@@ -2150,6 +2427,18 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
+            {
+                return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but current-attempt implementation proof is invalid: {missingConcreteImplementationProofSummary}";
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
+            {
+                return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but browser proof is invalid: {invalidBrowserProofSummary}";
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
                 !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
             {
                 return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but required artifacts still could not be recorded automatically: {missingRequiredArtifactSummary}";
@@ -2166,6 +2455,16 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         if (!string.IsNullOrWhiteSpace(incompleteImplementationSummary))
         {
             return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because the response still deferred required implementation work: {incompleteImplementationSummary}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
+        {
+            return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because current-attempt implementation proof is invalid: {missingConcreteImplementationProofSummary}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
+        {
+            return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because browser proof is invalid: {invalidBrowserProofSummary}";
         }
 
         if (!string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
@@ -2198,10 +2497,19 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         builder.AppendLine($"Attempt {attemptNumber} ended before the step was actually complete.");
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
+        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
 
         if (missingRequiredTools.Count > 0)
         {
             builder.AppendLine($"Missing required step tools: {string.Join(", ", missingRequiredTools)}.");
+        }
+
+        if (missingRequiredTools.Contains("workspace_dotnet_build", StringComparer.Ordinal))
+        {
+            builder.AppendLine("The previous attempt failed because it never invoked `workspace_dotnet_build`.");
+            builder.AppendLine("On this retry, after you know the concrete solution or project path, call `workspace_dotnet_build` directly against that path before any final answer.");
+            builder.AppendLine("Do not poll `bin/`, `obj/`, DLL, PDB, or test-output paths as a replacement for `workspace_dotnet_build`; repeated successful stat results are not validation progress.");
         }
 
         if (unresolvedCriticalToolFailures.Count > 0)
@@ -2220,8 +2528,30 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine($"Browser proof remains incomplete: {missingConcreteProofSummary}.");
         }
 
+        if (!string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
+        {
+            builder.AppendLine($"Current-attempt implementation proof is invalid: {missingConcreteImplementationProofSummary}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
+        {
+            builder.AppendLine($"Browser proof is invalid: {invalidBrowserProofSummary}.");
+        }
+
+        var calculatorRecoveryFocusGuidance = BuildCalculatorRecoveryFocusGuidance(
+            candidate,
+            responseText,
+            missingConcreteImplementationProofSummary,
+            missingRequiredTools,
+            unresolvedCriticalToolFailures);
+        if (!string.IsNullOrWhiteSpace(calculatorRecoveryFocusGuidance))
+        {
+            builder.AppendLine(calculatorRecoveryFocusGuidance);
+        }
+
         builder.AppendLine("Do not stop after inspection, planning, bootstrap confirmation, or a next-steps summary on this retry.");
         builder.AppendLine("Finish the concrete work, rerun every failed or missing required validation successfully, and then write every required durable artifact.");
+        builder.AppendLine("Do not repeat the same failed validation command or rewrite the same file with the same content in a loop. Before rerunning validation, inspect the diagnostic source or change/delete files that directly address that diagnostic.");
 
         var governedInspectionPaths = ResolveGovernedInspectionPaths(candidate.ExpectedArtifacts);
         var artifactInputInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
@@ -2231,10 +2561,34 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine("This retry is still the implementation step. Do not report that implementation or code artifacts are missing before you attempt the bootstrap or scaffold yourself.");
             builder.AppendLine("Bootstrap the runnable solution or project now, then validate the concrete files you created with workspace_stat_path, workspace_read_file, and workspace_dotnet_build before you conclude.");
             builder.AppendLine("If the scaffold is greenfield, create the actual solution and project files now with workspace_dotnet_new or a controlled helper path instead of writing only a source file set.");
+            builder.AppendLine("If the host or sibling test project already exists from an earlier attempt, do not call workspace_dotnet_new again with --force. Inspect and repair the existing scaffold in place; a forced re-scaffold can erase the implemented Components/Pages route and reset the app to Hello, world.");
+            builder.AppendLine("Do not recover by deleting scaffold core files one by one. Preserve and edit `.csproj`, `Program.cs`, `Components/App.razor`, `Components/Routes.razor`, `_Imports.razor`, `Components/Pages/Home.razor`, layout files, `appsettings*.json`, and `wwwroot/app.css`.");
             builder.AppendLine("If you retry a greenfield .NET bootstrap with workspace_dotnet_new, explicitly request a supported target framework such as `net10.0` instead of accepting an older template default.");
             builder.AppendLine("If a prior workspace_dotnet_new attempt failed because files already existed or the template wanted to overwrite content, inspect the target directory immediately. When the scaffold is already present at the required path, continue by repairing, reading, and building that existing project in place instead of declaring the retry blocked.");
             builder.AppendLine("If this implementation produces browser-facing UI files such as `.razor`, `.cshtml`, or `wwwroot` assets, leave a runnable web host and startup entrypoint in place for downstream QA. Do not stop at a plain class library.");
+            builder.AppendLine("If the project structure names Blazor SSR, repair toward a runnable Blazor SSR app instead of MVC, Razor Pages, or controller/view placeholders.");
+            builder.AppendLine("Keep test projects outside the Blazor host folder. If a previous attempt left `*.Tests` folders or test files nested under the host project, use `workspace_delete_path` with `recursive: true` on that stale nested test folder before rerunning the host build.");
+            builder.AppendLine("Do not recreate nested test files under the host after deleting them. For a host at `external-target/.../Calculator/Calculator.csproj`, test files belong in the sibling `external-target/.../Calculator.Tests/...` project, not in `external-target/.../Calculator/Calculator.Tests/...`.");
+            builder.AppendLine("If `workspace_dotnet_test` was denied because the sibling test project is missing, create or repair the sibling test project and ProjectReference before rerunning the identical test command.");
+            builder.AppendLine("If the failed validation was `workspace_dotnet_build`, rerun `workspace_dotnet_build` against the exact failed host project after every repair. A later `workspace_dotnet_test` success does not recover that failed build by itself.");
+            builder.AppendLine("Call `workspace_dotnet_test` only against a test `.csproj`, `.sln`, or `.slnx`. A `.cs` test source file or plain test directory is an invalid target; repair or create the sibling test project and use its `.csproj` path.");
+            builder.AppendLine("If the build error mentions missing xUnit, MSTest, `Fact`, or test attribute namespaces in the host project, treat that as misplaced test code under the host and fix the file layout, not the production host dependencies.");
+            builder.AppendLine("If tests fail with `CS0118` or because a project/root namespace is being used like a type, create or inspect the concrete domain/application type first, such as `<RootNamespace>.Domain.CalculatorEngine`, add the test ProjectReference, update the tests to target that type, and then rerun workspace_dotnet_build and workspace_dotnet_test.");
+            builder.AppendLine("If tests compile against a host-domain type but cannot resolve it, edit the sibling test project file to add `<ProjectReference Include=\"..\\<HostProject>\\<HostProject>.csproj\" />`; do not try to solve that by adding packages or rewriting only the test source.");
+            builder.AppendLine("For calculator-like apps, write and read `Calculator/Domain/CalculatorEngine.cs`, add a sibling test project ProjectReference to the host, and replace empty template tests with assertions against `CalculatorEngine` operations before rerunning validation.");
+            builder.AppendLine("If the build error mentions `_Imports.razor` and `CS0138` because the root name is a type instead of a namespace, rename the conflicting domain type to a non-root name such as `CalculatorEngine` under a concrete namespace such as `<RootNamespace>.Domain`, then update `_Imports.razor` to import that namespace or remove the bad root import.");
+            builder.AppendLine("If the conflicting type comes from a Razor component file such as `Components/Calculator.razor` in a project/root namespace named `Calculator`, rename that component to `CalculatorPage.razor` or move its routed content into `Components/Pages/Home.razor`; a `.razor` file name is also a generated type name.");
+            builder.AppendLine("For Blazor Web App scaffolds, do not create legacy root `Pages/*.razor` routes. Use `Components/Pages/Home.razor` for `/`, and delete any stale root `Pages/Home.razor`, `Pages/Index.razor`, or other root `Pages/*.razor` route that duplicates or replaces `Components/Pages/Home.razor` before rerunning build or launch validation.");
+            builder.AppendLine("Never put `@page` in `Components/Routes.razor`; if it is present there, remove it and keep `Routes.razor` as the Router-only host before rerunning build or tests.");
+            builder.AppendLine("Do not repair `_Imports.razor` by repeatedly rebuilding. Change the conflicting file/type first, then rerun the exact failed host build.");
+            builder.AppendLine("If you renamed or deleted `MainLayout`, either restore `MainLayout.razor` or update every `MainLayout` reference before building, including `Routes.razor`, `NotFound.razor`, and any `_Imports.razor` layout namespace.");
             builder.AppendLine("Do not stop at a starter template or say the app is merely ready for later feature implementation. Replace default template output with the requested product behavior before you conclude.");
+            builder.AppendLine("On this retry, repair placeholder or incomplete product files before validating. A validation-only retry is acceptable only when read-back proves the current concrete source already satisfies the full implementation contract, then build and tests pass without any later mutation.");
+            if (RequiresCalculatorLikeImplementationProof(candidate, detail))
+            {
+                AppendCalculatorRecoveryChecklist(builder, missingConcreteImplementationProofSummary);
+            }
+
             if (artifactInputInspectionPaths.StatPaths.Count > 0 || artifactInputInspectionPaths.ReadPaths.Count > 0)
             {
                 builder.AppendLine("Inspect the inherited durable artifacts directly on this retry instead of relying only on prior summaries or response text.");
@@ -2264,6 +2618,21 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             builder.AppendLine("If a prior runtime host, launch script, or locked output file is blocking the build or launch retry, stop the prior host before rerunning validation. Use any provided stop script or recorded PID file when the workspace includes one.");
         }
 
+        var misplacedTestProjectRecoveryGuidance = BuildMisplacedTestProjectRecoveryGuidance(unresolvedCriticalToolFailures);
+        if (!string.IsNullOrWhiteSpace(misplacedTestProjectRecoveryGuidance))
+        {
+            builder.AppendLine(misplacedTestProjectRecoveryGuidance);
+        }
+
+        var blazorBuildRecoveryGuidance = BuildBlazorBuildRecoveryGuidance(
+            candidate,
+            unresolvedCriticalToolFailures,
+            responseText);
+        if (!string.IsNullOrWhiteSpace(blazorBuildRecoveryGuidance))
+        {
+            builder.AppendLine(blazorBuildRecoveryGuidance);
+        }
+
         var frameworkRecoveryGuidance = BuildDotnetFrameworkRecoveryGuidance(
             candidate,
             unresolvedCriticalToolFailures,
@@ -2282,8 +2651,12 @@ internal sealed partial class ProcessRunAutomationDispatchService(
             }
 
             builder.AppendLine("Do not assume the app must be reachable at `http://localhost:5000/`. Derive the real launch URL from the reviewed host project, `launchSettings.json`, prior run diagnostics, or the URL reported by the launch command.");
-            builder.AppendLine("If the app is not already running, start the reviewed host yourself with `workspace_dotnet_run` or the approved runtime command before opening the browser.");
+            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. If `workspace_dotnet_run` is not available, write or repair a short PowerShell helper that starts `dotnet run --no-build --project <reviewed .csproj> --urls http://127.0.0.1:<free-port>` in the background, waits for a successful HTTP response, writes appProcessId/URL/stdout/stderr log-path evidence, and exits nonzero on 4xx/5xx or early process exit.");
+            builder.AppendLine("Do not assign to `$PID` in the PowerShell helper; use `$appProcess` and `$appProcessId`. If a helper already exists, inspect and repair it instead of rewriting the same broken content.");
+            builder.AppendLine("If the launched Blazor app returns HTTP 500, inspect the captured logs and route files. For Blazor Web App scaffolds, remove duplicate primary routes such as legacy root `Pages/Home.razor` or `Pages/Index.razor` when `Components/Pages/Home.razor` already declares `@page \"/\"`.");
+            builder.AppendLine("Do not repeat a successful `workspace_dotnet_build` or `workspace_dotnet_test` receipt for the same unchanged project while browser proof is missing. Repeating build/test is not recovery; app launch plus Playwright evidence is the recovery path.");
             builder.AppendLine("Capture fresh browser evidence with `browser_take_screenshot`, `browser_snapshot`, and `browser_console_messages` before you conclude this retry.");
+            builder.AppendLine("Inspect the saved `browser_snapshot` output before concluding. If it still contains starter template text such as `Hello, world!` or `Welcome to your new app.`, repair or block instead of returning Completed.");
         }
 
         if (missingRequiredTools.Contains("workspace_stat_path", StringComparer.Ordinal) &&
@@ -2485,10 +2858,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                         continue;
                     }
 
-                    var fullPath = Path.GetFullPath(Path.Combine(
-                        workspaceRoot,
-                        normalizedPath.Replace('/', Path.DirectorySeparatorChar)));
-                    if (!IsWithinWorkspace(workspaceRoot, fullPath) || !File.Exists(fullPath))
+                    if (!TryResolveArtifactFullPath(workspaceRoot, normalizedPath, out var fullPath, out _) ||
+                        !File.Exists(fullPath))
                     {
                         continue;
                     }
@@ -3393,6 +3764,320 @@ ORDER BY CreatedAtUtc, Title;
         return value?.ToString()?.Trim() ?? string.Empty;
     }
 
+    private static string BuildCalculatorRecoveryFocusGuidance(
+        DispatchCandidate candidate,
+        string? responseText,
+        string missingConcreteImplementationProofSummary,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+    {
+        if (!ContainsCalculatorContext(candidate))
+        {
+            return string.Empty;
+        }
+
+        var unresolvedFailureText = string.Join(
+            Environment.NewLine,
+            unresolvedCriticalToolFailures.Select(item => $"{item.ToolName} {item.RequestSummary} {item.ExitSummary}"));
+        var recoveryDiagnosticText = string.Join(
+            Environment.NewLine,
+            responseText,
+            missingConcreteImplementationProofSummary,
+            unresolvedFailureText);
+        var repeatedTestProjectWrite = MentionsRepeatedToolInvocation(responseText) &&
+            responseText?.Contains("Calculator.Tests/Calculator.Tests.csproj", StringComparison.OrdinalIgnoreCase) == true;
+        var repeatedHomeRazorWrite = MentionsRepeatedToolInvocation(responseText) &&
+            responseText?.Contains("Calculator/Components/Pages/Home.razor", StringComparison.OrdinalIgnoreCase) == true;
+        var homeRazorCharStringCompilerFailure = MentionsHomeRazorCharStringCompilerFailure(recoveryDiagnosticText);
+        var homeRazorRouteTemplateFailure = MentionsHomeRazorRouteTemplateFailure(recoveryDiagnosticText);
+        var calculatorEngineDuplicateCompilerFailure = MentionsCalculatorEngineDuplicateCompilerFailure(recoveryDiagnosticText);
+        var testProjectReferenceFailure =
+            MentionsCalculatorTestProjectReferenceFailure(responseText) ||
+            MentionsCalculatorTestProjectReferenceFailure(missingConcreteImplementationProofSummary) ||
+            MentionsCalculatorTestProjectReferenceFailure(unresolvedFailureText);
+        var missingTestValidation = missingRequiredTools.Contains("workspace_dotnet_test", StringComparer.Ordinal);
+        var routedUiProofMissing =
+            missingConcreteImplementationProofSummary.Contains("routed UI", StringComparison.OrdinalIgnoreCase) ||
+            missingConcreteImplementationProofSummary.Contains("Home.razor", StringComparison.OrdinalIgnoreCase) ||
+            missingConcreteImplementationProofSummary.Contains("keypad", StringComparison.OrdinalIgnoreCase) ||
+            missingConcreteImplementationProofSummary.Contains("history", StringComparison.OrdinalIgnoreCase);
+        if (!repeatedTestProjectWrite &&
+            !repeatedHomeRazorWrite &&
+            !homeRazorCharStringCompilerFailure &&
+            !homeRazorRouteTemplateFailure &&
+            !calculatorEngineDuplicateCompilerFailure &&
+            !testProjectReferenceFailure &&
+            !missingTestValidation &&
+            !routedUiProofMissing)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("Immediate calculator recovery focus:");
+        if (repeatedTestProjectWrite)
+        {
+            builder.AppendLine("- The previous attempt looped rewriting `Calculator.Tests/Calculator.Tests.csproj`. If that file already has the host ProjectReference, it is not the active blocker. Do not write it again until after the routed UI proof passes.");
+        }
+
+        if (routedUiProofMissing)
+        {
+            builder.AppendLine("- The next concrete mutation must repair `external-target/C/programovani/csharp/calculator/Calculator/Components/Pages/Home.razor`. Read it, then overwrite the placeholder/free-form textbox route with a `CalculatorEngine`-backed keypad/operator/equal/history UI before touching artifacts or rerunning tests.");
+        }
+
+        if (repeatedHomeRazorWrite)
+        {
+            builder.AppendLine("- The previous attempt looped rewriting `Calculator/Components/Pages/Home.razor`. Do not write the same page again unchanged; first inspect the latest build diagnostic and change the event handler signatures, button literal types, or calculation logic that directly addresses it.");
+        }
+
+        if (homeRazorCharStringCompilerFailure)
+        {
+            builder.AppendLine("- The host build is failing in `Calculator/Components/Pages/Home.razor` with `CS1503` char-to-string errors. Use one type-consistent Razor callback pattern: either handlers accept `char` and callbacks use `@onclick=\"() => AppendDigit('1')\"`, or handlers accept `string` and callbacks use single-quoted Razor attributes such as `@onclick='() => AppendDigit(\"1\")'`.");
+            builder.AppendLine("- Do not leave `AppendToResult('1')` or `SetOperation('+')` calling methods that still accept `string`; that is the exact prior compiler failure. Also never write malformed double-quoted callbacks such as `@onclick=\"() => AppendDigit(\"1\")\"`.");
+            builder.AppendLine("- If `Calculator.Tests/Calculator.Tests.csproj` already has the host ProjectReference, do not rewrite the test project again while the compiler error points at `Calculator/Components/Pages/Home.razor`; repair the routed UI first.");
+            builder.AppendLine("- After the `Home.razor` compile fix, remove placeholder `CalculateResult` behavior and connect equals/evaluate, operators, display/result state, divide-by-zero feedback, and history to `CalculatorEngine`; then rerun `workspace_dotnet_build` on `Calculator/Calculator.csproj` before `workspace_dotnet_test`.");
+        }
+
+        if (homeRazorRouteTemplateFailure)
+        {
+            builder.AppendLine("- The host build is failing in `Calculator/Components/Pages/Home.razor` with `RZ9988` because the page route is empty. Change `@page \"\"` to `@page \"/\"` before any test-project repair or test rerun.");
+        }
+
+        if (calculatorEngineDuplicateCompilerFailure)
+        {
+            builder.AppendLine("- The host build is failing with duplicate `CalculatorEngine` definitions (`CS0101`/`CS0111`). Read both `Calculator/CalculatorEngine.cs` and `Calculator/Domain/CalculatorEngine.cs`; delete the stale top-level `Calculator/CalculatorEngine.cs` if both define the engine, then rebuild. Do not delete and recreate only `Domain/CalculatorEngine.cs` because that leaves the duplicate in place.");
+        }
+
+        if (testProjectReferenceFailure)
+        {
+            builder.AppendLine("- The previous test failure was a host visibility failure, not a package or assertion failure. Read `Calculator.Tests/Calculator.Tests.csproj` and `Calculator/Domain/CalculatorEngine.cs`, then repair the test project so it contains `<ProjectReference Include=\"..\\Calculator\\Calculator.csproj\" />` and the engine source is in namespace `Calculator.Domain`.");
+        }
+
+        if (missingTestValidation)
+        {
+            builder.AppendLine("- `workspace_dotnet_test` is still required. Do not rerun it until the host ProjectReference, `CalculatorEngine`, `Program.cs` DI registration, and routed UI have been read back after the latest mutations.");
+        }
+
+        builder.AppendLine("- Required repair order: fix `Calculator/Program.cs`, `Calculator/Components/Pages/Home.razor`, `Calculator/Domain/CalculatorEngine.cs`, `Calculator.Tests/Calculator.Tests.csproj`, and meaningful sibling tests; read those files back; then build the host and run the sibling test project.");
+        return builder.ToString().Trim();
+    }
+
+    private static bool MentionsHomeRazorCharStringCompilerFailure(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("Home.razor", StringComparison.OrdinalIgnoreCase) &&
+               text.Contains("CS1503", StringComparison.OrdinalIgnoreCase) &&
+               text.Contains("char", StringComparison.OrdinalIgnoreCase) &&
+               text.Contains("string", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MentionsHomeRazorRouteTemplateFailure(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("Home.razor", StringComparison.OrdinalIgnoreCase) &&
+               (text.Contains("RZ9988", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("@page directive must specify a route template", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("@page \"\"", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool MentionsCalculatorEngineDuplicateCompilerFailure(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("CalculatorEngine", StringComparison.OrdinalIgnoreCase) &&
+               (text.Contains("CS0101", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("CS0111", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("already contains a definition", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("already defines a member", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool MentionsCalculatorTestProjectReferenceFailure(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var mentionsCalculatorTestOrValidation =
+            text.Contains("Calculator.Tests", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("workspace_dotnet_test", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("ProjectReference", StringComparison.OrdinalIgnoreCase);
+        var mentionsHostTypeVisibility =
+            text.Contains("Calculator.Domain", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("CalculatorEngine", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("CS0234", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("CS0246", StringComparison.OrdinalIgnoreCase);
+
+        return mentionsCalculatorTestOrValidation && mentionsHostTypeVisibility;
+    }
+
+    private static string BuildMisplacedTestProjectRecoveryGuidance(
+        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+    {
+        var cleanupTargets = ResolveMisplacedTestProjectCleanupTargets(unresolvedCriticalToolFailures);
+        if (cleanupTargets.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("A previous host build failed while a sibling test project build succeeded or was attempted. Treat stale nested test folders under the host as the first repair target before more scaffolding.");
+        foreach (var target in cleanupTargets)
+        {
+            builder.AppendLine($"For failed host build `{target.HostProjectPath}`, remove the stale nested test directory `{target.NestedTestDirectoryPath}` with `workspace_delete_path` using `recursive: true`, then rerun `workspace_dotnet_build` against `{target.HostProjectPath}`.");
+            builder.AppendLine($"Do not recreate test files under `{target.NestedTestDirectoryPath}`. If tests are still required, create or repair a sibling test project outside the host folder.");
+        }
+
+        builder.AppendLine("Do not add xUnit, MSTest, or test SDK packages to the production host to satisfy misplaced test files.");
+        return builder.ToString().Trim();
+    }
+
+    private static string BuildBlazorBuildRecoveryGuidance(
+        DispatchCandidate candidate,
+        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        string responseText)
+    {
+        if (!RequiresConcreteImplementationProof(candidate) ||
+            !unresolvedCriticalToolFailures.Any(IsFrameworkRecoverableDotnetToolFailure) &&
+            !MentionsRepeatedToolInvocation(responseText))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("Do not rerun the identical `workspace_dotnet_build` request until you have changed or deleted files that directly address the current compiler errors.");
+        builder.AppendLine("Do not rerun the identical `workspace_dotnet_test` request after a denied or missing-path result until you have created or repaired the sibling test project and ProjectReference that the command targets.");
+        builder.AppendLine("Do not recover from scaffold conflicts by recursively deleting the runnable host, sibling test project, or target root. If a directory contains a .NET project or solution file, repair it in place.");
+        builder.AppendLine("Do not delete scaffold core files one by one to make re-scaffolding succeed. Preserve and edit `.csproj`, `Program.cs`, `Components/App.razor`, `Components/Routes.razor`, `_Imports.razor`, `Components/Pages/Home.razor`, layout files, `appsettings*.json`, and `wwwroot/app.css`.");
+        builder.AppendLine("If the previous attempt only scaffolded or wrote markdown artifacts, the next recovery attempt must mutate concrete source/project files before writing any artifacts or running validations.");
+        builder.AppendLine("If a `.csproj` exists anywhere under the target root, do not call `workspace_dotnet_new` for that same host again. Read the project shape and repair the existing scaffold.");
+        builder.AppendLine("For Blazor host builds that mention nested `*.Tests` files, delete the nested host test folder and do not recreate it; use a sibling test project outside the host folder if tests are required.");
+        builder.AppendLine("For test-project failures with duplicate test classes or methods (`CS0101`, `CS0111`), inspect the sibling test project files and remove stale template sources such as `UnitTest1.cs`, `<Project>.Tests.cs`, old `.bak` sources that are still compiled, or duplicate `CalculatorTests` files before rerunning `workspace_dotnet_test`.");
+        builder.AppendLine("If a test retry keeps failing after rewriting the same test file, stop rewriting that file. Inspect the whole test project shape, add the missing `ProjectReference` or domain class, and remove the conflicting stale source files first.");
+        builder.AppendLine("If `Calculator.Tests/Calculator.Tests.csproj` already has a host `ProjectReference` and the compiler error points at `Calculator/Components/Pages/Home.razor`, do not rewrite the test project again. Repair `Home.razor` first, especially `CS1503` char/string callback mismatches.");
+        builder.AppendLine("For test failures such as `CS0118` or `'Calculator' is a namespace but is used like a type`, create a distinct concrete domain type such as `<RootNamespace>.Domain.CalculatorEngine`, update the sibling tests to instantiate that type, and add a ProjectReference to the host before rerunning validation.");
+        builder.AppendLine("For Blazor Web App scaffolds, the primary route belongs under `Components/Pages`. Move any calculator UI from legacy root `Pages/*.razor` into `Components/Pages/Home.razor` and delete the stale root route before rerunning build/test/launch validation.");
+        builder.AppendLine("For `Home.razor` build errors such as `CS1503` converting `char` to `string`, fix the Razor callback argument mismatch before rerunning tests. Either change the handler signatures to `char` (`AppendDigit(char digit)`, `ChooseOperator(char op)`) and keep callbacks such as `@onclick=\"() => AppendDigit('1')\"`, or keep `string` handlers and use single-quoted Razor attributes such as `@onclick='() => AppendDigit(\"1\")'`. Do not leave `AppendToResult('1')` or `SetOperation('+')` calling methods that still accept `string`.");
+        builder.AppendLine("For `Home.razor` `RZ9988` or `@page \"\"` build errors, set the route directive to `@page \"/\"` before touching tests; do not rerun `workspace_dotnet_test` while the host build is red.");
+        builder.AppendLine("For host build errors `CS0101` or `CS0111` involving `CalculatorEngine`, inspect for duplicate source files such as `Calculator/CalculatorEngine.cs` plus `Calculator/Domain/CalculatorEngine.cs`. Delete the stale top-level engine file and keep one concrete engine under `Calculator/Domain` before rerunning build/test.");
+        builder.AppendLine("If the host build mentions `Pages/_Host.cshtml`, `typeof(App)`, `Startup.cs`, `UseStartup<Startup>()`, `blazor.server.js`, or ASP.NET Core 7.x component package warnings, a repair attempt polluted the Blazor Web App with old Blazor Server hosting. Delete `Pages/_Host.cshtml`, `Startup.cs`, legacy root `Pages/*.cshtml`, and stale root `Pages/*.razor` routes, remove obsolete `Microsoft.AspNetCore.Components*` package references, restore the generated minimal `Program.cs`/`Components/App.razor`/`Components/Routes.razor` shape, and put the UI in `Components/Pages/Home.razor` before rebuilding.");
+        builder.AppendLine("For Blazor builds that mention `_Imports.razor` with `CS0138` or a type being used as a namespace, remove the bad root namespace import or rename the conflicting domain type to a distinct name such as `CalculatorEngine` under a concrete namespace such as `<RootNamespace>.Domain`.");
+        builder.AppendLine("Remember that `Components/Calculator.razor` in a root namespace named `Calculator` generates a `Calculator` type too. Rename that component to `CalculatorPage.razor` or move the route into `Components/Pages/Home.razor` before rebuilding.");
+        builder.AppendLine("If `MainLayout` was renamed, restore it or update all `MainLayout` references in the same repair before rerunning the build.");
+        return builder.ToString().Trim();
+    }
+
+    private static IReadOnlyList<MisplacedTestProjectCleanupTarget> ResolveMisplacedTestProjectCleanupTargets(
+        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+    {
+        var targets = new Dictionary<string, MisplacedTestProjectCleanupTarget>(StringComparer.OrdinalIgnoreCase);
+        foreach (var receipt in unresolvedCriticalToolFailures)
+        {
+            if (!string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_build", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (var projectPath in ResolveProjectPathsFromToolRequest(receipt.RequestSummary))
+            {
+                var projectName = Path.GetFileNameWithoutExtension(projectPath);
+                if (string.IsNullOrWhiteSpace(projectName) || IsTestProjectName(projectName))
+                {
+                    continue;
+                }
+
+                var projectDirectory = ResolvePromptDirectory(projectPath);
+                if (string.IsNullOrWhiteSpace(projectDirectory))
+                {
+                    continue;
+                }
+
+                var nestedTestDirectoryPath = $"{projectDirectory}/{projectName}.Tests";
+                targets.TryAdd(
+                    nestedTestDirectoryPath,
+                    new MisplacedTestProjectCleanupTarget(projectPath, nestedTestDirectoryPath));
+            }
+        }
+
+        return targets.Values.ToList();
+    }
+
+    private static IReadOnlyList<string> ResolveProjectPathsFromToolRequest(string requestSummary)
+    {
+        if (string.IsNullOrWhiteSpace(requestSummary))
+        {
+            return [];
+        }
+
+        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in ProjectPathInToolRequestRegex.Matches(requestSummary))
+        {
+            var candidatePath = match.Groups["path"].Value;
+            if (TryMapProjectPathForPrompt(candidatePath, out var promptPath))
+            {
+                paths.Add(promptPath);
+            }
+        }
+
+        return paths.ToList();
+    }
+
+    private static bool TryMapProjectPathForPrompt(string projectPath, out string promptPath)
+    {
+        promptPath = string.Empty;
+        var normalized = projectPath.Trim().TrimEnd(',', ';', '.', ')', ']').Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase))
+        {
+            promptPath = normalized;
+            return true;
+        }
+
+        if (normalized.Length < 3 || !char.IsLetter(normalized[0]) || normalized[1] != ':' || normalized[2] != '/')
+        {
+            return false;
+        }
+
+        var driveLetter = char.ToUpperInvariant(normalized[0]);
+        var remainder = normalized.Length == 3
+            ? string.Empty
+            : normalized[3..].Trim('/');
+        promptPath = string.IsNullOrWhiteSpace(remainder)
+            ? $"{ExternalTargetAliasRoot}/{driveLetter}"
+            : $"{ExternalTargetAliasRoot}/{driveLetter}/{remainder}";
+        return true;
+    }
+
+    private static string ResolvePromptDirectory(string promptPath)
+    {
+        var normalized = promptPath.Replace('\\', '/').TrimEnd('/');
+        var lastSlash = normalized.LastIndexOf('/');
+        return lastSlash <= 0
+            ? string.Empty
+            : normalized[..lastSlash];
+    }
+
+    private static bool IsTestProjectName(string projectName)
+    {
+        return projectName.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase) ||
+               projectName.EndsWith("Tests", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string BuildDotnetFrameworkRecoveryGuidance(
         DispatchCandidate candidate,
         IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
@@ -3471,6 +4156,12 @@ ORDER BY CreatedAtUtc, Title;
                text.Contains("net7.0", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool MentionsRepeatedToolInvocation(string? text)
+    {
+        return !string.IsNullOrWhiteSpace(text) &&
+               text.Contains("repeated identical tool invocation", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static IReadOnlyList<ToolExecutionReceiptRecord> ResolveUnresolvedCriticalToolFailures(ExecutionRunDetail detail)
     {
         var latestCriticalReceipts = detail.ToolReceipts
@@ -3516,7 +4207,8 @@ ORDER BY CreatedAtUtc, Title;
         foreach (var toolName in successfulToolNamesFromPriorAttempts)
         {
             var normalizedToolName = NormalizeToolToken(toolName);
-            if (!string.IsNullOrWhiteSpace(normalizedToolName))
+            if (!string.IsNullOrWhiteSpace(normalizedToolName) &&
+                ShouldCarryForwardSuccessfulToolName(candidate, normalizedToolName))
             {
                 successfulToolNames.Add(normalizedToolName);
             }
@@ -3533,6 +4225,28 @@ ORDER BY CreatedAtUtc, Title;
         }
 
         return missing;
+    }
+
+    private static bool ShouldCarryForwardSuccessfulToolName(DispatchCandidate candidate, string normalizedToolName)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedToolName))
+        {
+            return false;
+        }
+
+        if (RequiresConcreteImplementationProof(candidate) &&
+            CurrentAttemptOnlyImplementationProofToolNames.Contains(normalizedToolName))
+        {
+            return false;
+        }
+
+        if (RequiresConcreteBrowserProof(candidate) &&
+            CurrentAttemptOnlyBrowserProofToolNames.Contains(normalizedToolName))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
@@ -3596,6 +4310,8 @@ ORDER BY CreatedAtUtc, Title;
 
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
+        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
         if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome))
         {
@@ -3617,6 +4333,18 @@ ORDER BY CreatedAtUtc, Title;
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
+            {
+                return ProcessStepRunStatus.Blocked;
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
+            {
+                return ProcessStepRunStatus.Blocked;
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
                 !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
             {
                 return ProcessStepRunStatus.Blocked;
@@ -3627,6 +4355,8 @@ ORDER BY CreatedAtUtc, Title;
 
         if (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
             !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
+            !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
+            !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
         {
             return ProcessStepRunStatus.Blocked;
@@ -3885,6 +4615,157 @@ ORDER BY CreatedAtUtc, Title;
             }
 
             return successfulToolNames.ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson)
+    {
+        return ResolveSuccessfulSessionFileContents(
+            serializedSessionStateJson,
+            static toolName => string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
+                               string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal),
+            static callContent =>
+            {
+                if (!callContent.TryGetProperty("arguments", out var arguments) ||
+                    arguments.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                var path = TryResolveStringProperty(arguments, "path");
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return null;
+                }
+
+                var content = TryResolveStringProperty(arguments, "content") ?? string.Empty;
+                return new SessionFileContent(path.Trim(), content);
+            },
+            static _ => null);
+    }
+
+    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileReads(string? serializedSessionStateJson)
+    {
+        return ResolveSuccessfulSessionFileContents(
+            serializedSessionStateJson,
+            static toolName => string.Equals(toolName, "workspace_read_file", StringComparison.Ordinal),
+            static callContent =>
+            {
+                if (!callContent.TryGetProperty("arguments", out var arguments) ||
+                    arguments.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                var path = TryResolveStringProperty(arguments, "path");
+                return string.IsNullOrWhiteSpace(path)
+                    ? null
+                    : new SessionFileContent(path.Trim(), string.Empty);
+            },
+            static resultContent =>
+            {
+                var path = TryResolveStringProperty(resultContent, "path");
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return null;
+                }
+
+                var content = TryResolveStringProperty(resultContent, "content") ?? string.Empty;
+                return new SessionFileContent(path.Trim(), content);
+            });
+    }
+
+    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileContents(
+        string? serializedSessionStateJson,
+        Func<string, bool> isTargetTool,
+        Func<JsonElement, SessionFileContent?> resolveCallContent,
+        Func<JsonElement, SessionFileContent?> resolveResultContent)
+    {
+        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(serializedSessionStateJson);
+            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
+                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
+                !historyProvider.TryGetProperty("messages", out var messages) ||
+                messages.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var callsById = new Dictionary<string, SessionFileContent>(StringComparer.Ordinal);
+            var successfulContents = new List<SessionFileContent>();
+
+            foreach (var message in messages.EnumerateArray())
+            {
+                if (!message.TryGetProperty("contents", out var contents) ||
+                    contents.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var content in contents.EnumerateArray())
+                {
+                    if (!content.TryGetProperty("$type", out var typeElement))
+                    {
+                        continue;
+                    }
+
+                    var contentType = typeElement.GetString();
+                    if (string.Equals(contentType, "functionCall", StringComparison.Ordinal))
+                    {
+                        var callId = content.TryGetProperty("callId", out var callIdElement)
+                            ? callIdElement.GetString()
+                            : null;
+                        var toolName = content.TryGetProperty("name", out var nameElement)
+                            ? NormalizeToolToken(nameElement.GetString() ?? string.Empty)
+                            : string.Empty;
+                        if (string.IsNullOrWhiteSpace(callId) ||
+                            string.IsNullOrWhiteSpace(toolName) ||
+                            !isTargetTool(toolName))
+                        {
+                            continue;
+                        }
+
+                        var fileContent = resolveCallContent(content);
+                        if (fileContent is not null)
+                        {
+                            callsById[callId] = fileContent;
+                        }
+
+                        continue;
+                    }
+
+                    if (!string.Equals(contentType, "functionResult", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
+                        ? resultCallIdElement.GetString()
+                        : null;
+                    if (string.IsNullOrWhiteSpace(resultCallId) ||
+                        !callsById.TryGetValue(resultCallId, out var callFileContent) ||
+                        !content.TryGetProperty("result", out var resultElement) ||
+                        !IsSuccessfulSessionFunctionResult(resultElement))
+                    {
+                        continue;
+                    }
+
+                    var resultFileContent = resolveResultContent(resultElement);
+                    successfulContents.Add(resultFileContent ?? callFileContent);
+                }
+            }
+
+            return successfulContents;
         }
         catch (JsonException)
         {
@@ -4344,6 +5225,11 @@ ORDER BY CreatedAtUtc, Title;
             requiredToolNames.AddRange(ImplementationProofToolNames);
         }
 
+        if (RequiresConcreteTestProof(candidate))
+        {
+            requiredToolNames.Add("workspace_dotnet_test");
+        }
+
         if (RequiresConcreteBrowserProof(candidate))
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
@@ -4402,6 +5288,7 @@ ORDER BY CreatedAtUtc, Title;
             TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
             !string.IsNullOrWhiteSpace(ResolveMissingRequiredArtifactSummary(candidate, detail, responseText)) ||
             !string.IsNullOrWhiteSpace(ResolveIncompleteImplementationSummary(candidate, responseText)) ||
+            !string.IsNullOrWhiteSpace(ResolveMissingConcreteImplementationProofSummary(candidate, detail)) ||
             TryResolveDeclaredStepOutcome(candidate, responseText, out _))
         {
             return false;
@@ -4455,6 +5342,15 @@ ORDER BY CreatedAtUtc, Title;
                 candidate.ExpectedArtifacts.Any(item =>
                     item.ArtifactKind == ProcessArtifactKind.Deliverable &&
                     item.Title.Contains("change set", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool RequiresConcreteTestProof(DispatchCandidate candidate)
+    {
+        return RequiresConcreteImplementationProof(candidate) &&
+               (candidate.StepRun.Title.Contains("test", StringComparison.OrdinalIgnoreCase) ||
+                (candidate.WorkBrief?.WorkBriefText?.Contains("test", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (candidate.WorkBrief?.ExpectedOutcome?.Contains("test", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (candidate.WorkBrief?.EvidenceExpectationSummary?.Contains("test", StringComparison.OrdinalIgnoreCase) ?? false));
     }
 
     private static bool RequiresConcreteImplementationReview(DispatchCandidate candidate)
@@ -4545,6 +5441,931 @@ ORDER BY CreatedAtUtc, Title;
                candidate.ExpectedArtifacts.Any(item =>
                    ContainsConcreteBrowserProofSignal(item.Title) ||
                    ContainsConcreteBrowserProofSignal(item.ValidationRequirementSummary));
+    }
+
+    private static string ResolveMissingConcreteImplementationProofSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!RequiresConcreteImplementationProof(candidate))
+        {
+            return string.Empty;
+        }
+
+        var successfulReceipts = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .ToList();
+        var concreteReadReceipt = ResolveLatestReceipt(
+            successfulReceipts,
+            "workspace_read_file",
+            requireConcreteProductPath: true,
+            requireConcreteSourceOrProjectPath: true);
+        if (concreteReadReceipt is null)
+        {
+            return "the current attempt did not read any concrete product source or project file";
+        }
+
+        var concreteMutationReceipts = successfulReceipts
+            .Where(receipt => ConcreteProductMutationToolNames.Contains(NormalizeToolToken(receipt.ToolName)))
+            .Where(IsConcreteProductMutationReceipt)
+            .ToList();
+
+        var latestMutationReceipt = concreteMutationReceipts
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .ThenByDescending(receipt => receipt.StartedAtUtc)
+            .FirstOrDefault();
+
+        var blazorRouteProofSummary = ResolveMissingBlazorWebAppRouteProofSummary(candidate, detail, successfulReceipts);
+        if (!string.IsNullOrWhiteSpace(blazorRouteProofSummary))
+        {
+            return blazorRouteProofSummary;
+        }
+
+        var blazorHostingShapeSummary = ResolveInvalidBlazorWebAppHostingShapeSummary(candidate, detail, successfulReceipts);
+        if (!string.IsNullOrWhiteSpace(blazorHostingShapeSummary))
+        {
+            return blazorHostingShapeSummary;
+        }
+
+        var calculatorImplementationSummary = ResolveMissingCalculatorLikeImplementationProofSummary(candidate, detail, successfulReceipts);
+        if (!string.IsNullOrWhiteSpace(calculatorImplementationSummary))
+        {
+            return calculatorImplementationSummary;
+        }
+
+        var successfulBuildReceipt = ResolveLatestReceipt(
+            successfulReceipts,
+            "workspace_dotnet_build",
+            requireConcreteProductPath: false,
+            requireConcreteSourceOrProjectPath: false);
+        if (successfulBuildReceipt is null)
+        {
+            return "the current attempt did not run workspace_dotnet_build successfully";
+        }
+
+        var buildTargetPaths = ResolveWorkspacePathsFromToolRequest(successfulBuildReceipt.RequestSummary);
+        if (buildTargetPaths.Count > 0 && !buildTargetPaths.Any(IsConcreteProductPath))
+        {
+            return "the current attempt built only managed artifact paths instead of the concrete product project";
+        }
+
+        if (latestMutationReceipt is not null)
+        {
+            if (IsReceiptAfter(latestMutationReceipt, successfulBuildReceipt))
+            {
+                return "workspace_dotnet_build ran before the latest concrete product mutation";
+            }
+
+            if (IsReceiptAfter(latestMutationReceipt, concreteReadReceipt))
+            {
+                return "workspace_read_file ran before the latest concrete product mutation";
+            }
+
+            var latestScaffoldReceipt = concreteMutationReceipts
+                .Where(receipt => string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_new", StringComparison.Ordinal))
+                .OrderByDescending(receipt => receipt.CompletedAtUtc)
+                .ThenByDescending(receipt => receipt.StartedAtUtc)
+                .FirstOrDefault();
+            if (latestScaffoldReceipt is not null &&
+                !successfulReceipts.Any(receipt =>
+                    ConcreteProductSourceWriteToolNames.Contains(NormalizeToolToken(receipt.ToolName)) &&
+                    IsReceiptAfter(receipt, latestScaffoldReceipt) &&
+                    HasConcreteProductSourceOrProjectPath(receipt)))
+            {
+                return "the latest scaffold was not followed by a concrete product source or project file write";
+            }
+        }
+
+        if (RequiresConcreteTestProof(candidate))
+        {
+            var successfulTestReceipt = ResolveLatestReceipt(
+                successfulReceipts,
+                "workspace_dotnet_test",
+                requireConcreteProductPath: false,
+                requireConcreteSourceOrProjectPath: false);
+            if (successfulTestReceipt is null)
+            {
+                return "the current implementation attempt did not run workspace_dotnet_test successfully even though this step includes tests";
+            }
+
+            var testTargetPaths = ResolveWorkspacePathsFromToolRequest(successfulTestReceipt.RequestSummary);
+            if (testTargetPaths.Count > 0 && !testTargetPaths.Any(IsConcreteProductPath))
+            {
+                return "the current implementation attempt tested only managed artifact paths instead of the concrete product test project";
+            }
+
+            if (latestMutationReceipt is not null &&
+                IsReceiptAfter(latestMutationReceipt, successfulTestReceipt))
+            {
+                return "workspace_dotnet_test ran before the latest concrete product mutation";
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveMissingBlazorWebAppRouteProofSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+    {
+        if (!RequiresBlazorWebAppRouteProof(candidate, detail, successfulReceipts))
+        {
+            return string.Empty;
+        }
+
+        var hasComponentsPagesMutation = successfulReceipts
+            .Where(IsConcreteProductSourceMutationReceipt)
+            .Any(HasConcreteBlazorComponentsPagePath);
+        var componentPageReads = successfulReceipts
+            .Where(receipt => string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_read_file", StringComparison.Ordinal))
+            .Where(HasConcreteBlazorComponentsPagePath)
+            .ToList();
+        if (!hasComponentsPagesMutation &&
+            componentPageReads.Count == 0)
+        {
+            var hasLegacyRootPageMutation = successfulReceipts
+                .Where(IsConcreteProductSourceMutationReceipt)
+                .Any(HasConcreteLegacyRootPagePath);
+            return hasLegacyRootPageMutation
+                ? "the current Blazor Web App attempt mutated a legacy root Pages/*.razor route instead of Components/Pages/*.razor; move that UI into Components/Pages/Home.razor and delete stale root Pages/Home.razor or Pages/Index.razor routes"
+                : "the current Blazor Web App attempt did not read or mutate any routed page under Components/Pages";
+        }
+
+        var latestComponentsPagesMutation = successfulReceipts
+            .Where(IsConcreteProductSourceMutationReceipt)
+            .Where(HasConcreteBlazorComponentsPagePath)
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .ThenByDescending(receipt => receipt.StartedAtUtc)
+            .FirstOrDefault();
+        var latestComponentsPagesRead = componentPageReads
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .ThenByDescending(receipt => receipt.StartedAtUtc)
+            .FirstOrDefault();
+        if (latestComponentsPagesMutation is not null &&
+            (latestComponentsPagesRead is null || IsReceiptAfter(latestComponentsPagesMutation, latestComponentsPagesRead)))
+        {
+            return "workspace_read_file for the Components/Pages routed page ran before the latest routed page mutation";
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveInvalidBlazorWebAppHostingShapeSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+    {
+        if (!RequiresBlazorWebAppRouteProof(candidate, detail, successfulReceipts))
+        {
+            return string.Empty;
+        }
+
+        var routeFileWrites = ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
+            .Where(item => IsBlazorRoutesPath(item.Path))
+            .ToList();
+        var routeFileReads = ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson)
+            .Where(item => IsBlazorRoutesPath(item.Path))
+            .ToList();
+
+        if (routeFileWrites.Concat(routeFileReads).Any(item => ContainsRazorPageDirective(item.Content)))
+        {
+            return "the current Blazor Web App attempt left an @page directive in Components/Routes.razor; restore Routes.razor as the Router-only host and keep route directives in Components/Pages/Home.razor";
+        }
+
+        var sessionFileContents = routeFileWrites
+            .Concat(routeFileReads)
+            .Concat(ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson))
+            .Concat(ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson))
+            .ToList();
+        if (sessionFileContents
+            .Where(item => IsBlazorHostProgramPath(item.Path))
+            .Any(item => ContainsBlazorWebAssemblyHostingContent(item.Content)))
+        {
+            return "the current Blazor Web App attempt replaced Program.cs with WebAssemblyHostBuilder hosting; restore the generated WebApplication/AddRazorComponents/MapRazorComponents<App>() server-side Blazor Web App shape";
+        }
+
+        if (sessionFileContents
+            .Where(item => IsBlazorHostProjectFilePath(item.Path))
+            .Any(item => ContainsLegacyBlazorComponentPackageReferences(item.Content)))
+        {
+            return "the current Blazor Web App attempt added obsolete ASP.NET Core 7 component package references to the net10 host project; remove those package references and rely on the shared framework";
+        }
+
+        return routeFileReads.Count == 0
+            ? "the current Blazor Web App attempt did not read Components/Routes.razor to verify the generated Router hosting shape"
+            : string.Empty;
+    }
+
+    private static string ResolveMissingCalculatorLikeImplementationProofSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+    {
+        if (!RequiresCalculatorLikeImplementationProof(candidate, detail))
+        {
+            return string.Empty;
+        }
+
+        var fileWrites = ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson);
+        var fileReads = ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson);
+        var fileContents = fileWrites
+            .Concat(fileReads)
+            .ToList();
+        var engineWrites = fileWrites
+            .Where(item => IsCalculatorEngineSourcePath(item.Path))
+            .ToList();
+        var engineContents = fileContents
+            .Where(item => IsCalculatorEngineSourcePath(item.Path))
+            .ToList();
+        if (engineContents.Count == 0)
+        {
+            return "the current calculator implementation attempt did not write or read a concrete CalculatorEngine domain/application source file";
+        }
+
+        if (!engineContents.Any(item => ContainsCalculatorEngineImplementation(item.Content)))
+        {
+            return "the current calculator implementation wrote CalculatorEngine without concrete Add, Subtract, Multiply, and Divide operations";
+        }
+
+        if (engineWrites.Count > 0 &&
+            !successfulReceipts.Any(receipt =>
+                string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_read_file", StringComparison.Ordinal) &&
+                ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary).Any(IsCalculatorEngineSourcePath)))
+        {
+            return "the current calculator implementation attempt did not read CalculatorEngine after writing it";
+        }
+
+        var routedPageContents = fileContents
+            .Where(item => IsBlazorComponentsPagePath(item.Path))
+            .ToList();
+        if (routedPageContents.Any(item => ContainsMalformedDoubleQuotedRazorStringCallback(item.Content)))
+        {
+            return "the current calculator routed UI wrote a string literal inside a double-quoted Razor event attribute; either change the handlers to char signatures and use @onclick=\"() => AppendDigit('1')\", or keep string handlers and use single-quoted attributes such as @onclick='() => AppendDigit(\"1\")'";
+        }
+
+        if (routedPageContents.Any(item => ContainsCalculatorStringHandlerWithCharCallback(item.Content)))
+        {
+            return "the current calculator routed UI passes char literals to handlers that still accept string, causing CS1503; either change those handlers to char parameters or keep string handlers and use single-quoted attributes such as @onclick='() => AppendToResult(\"1\")'";
+        }
+
+        if (!routedPageContents.Any(item => ContainsCalculatorRoutedUiContent(item.Content)))
+        {
+            return "the current calculator implementation attempt did not leave a non-placeholder Components/Pages routed UI with CalculatorEngine-backed arithmetic controls, equals/evaluate behavior, keypad, and history";
+        }
+
+        if (routedPageContents.Any(item => ContainsInjectedCalculatorEngine(item.Content)))
+        {
+            var programContents = fileContents
+                .Where(item => IsBlazorHostProgramPath(item.Path))
+                .ToList();
+            if (!programContents.Any(item => ContainsCalculatorEngineServiceRegistration(item.Content)))
+            {
+                return "the current calculator implementation injects CalculatorEngine in the routed UI but did not register CalculatorEngine in Program.cs before building the app";
+            }
+        }
+
+        if (!RequiresConcreteTestProof(candidate))
+        {
+            return string.Empty;
+        }
+
+        var testProjectWrites = fileContents
+            .Where(item => IsConcreteTestProjectFilePath(item.Path))
+            .ToList();
+        if (!testProjectWrites.Any(item => ContainsCalculatorHostProjectReference(item.Content)))
+        {
+            return "the current calculator implementation attempt did not write or read a sibling test project with a ProjectReference to the Calculator host project";
+        }
+
+        var testSourceWrites = fileContents
+            .Where(item => IsConcreteTestSourcePath(item.Path))
+            .ToList();
+        if (testSourceWrites.Count == 0)
+        {
+            return "the current calculator implementation attempt did not write or read meaningful sibling test source";
+        }
+
+        return testSourceWrites.Any(item => ContainsCalculatorEngineTestContent(item.Content))
+            ? string.Empty
+            : "the current calculator implementation attempt wrote tests that do not exercise CalculatorEngine arithmetic behavior";
+    }
+
+    private static bool RequiresCalculatorLikeImplementationProof(DispatchCandidate candidate, ExecutionRunDetail detail)
+    {
+        if (!RequiresConcreteImplementationProof(candidate))
+        {
+            return false;
+        }
+
+        var contextText = string.Join(
+            Environment.NewLine,
+            candidate.Definition.Name,
+            candidate.Definition.Summary,
+            candidate.Definition.ValueStatement,
+            candidate.Run.Name,
+            candidate.Run.TriggerReason,
+            candidate.StepRun.Title,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            detail.Run.InputSummary,
+            detail.Run.ResultSummary);
+
+        return contextText.Contains("Calculator", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsRazorPageDirective(string content)
+    {
+        return !string.IsNullOrWhiteSpace(content) &&
+               RazorPageDirectiveRegex.IsMatch(content);
+    }
+
+    private static bool ContainsMalformedDoubleQuotedRazorStringCallback(string content)
+    {
+        return !string.IsNullOrWhiteSpace(content) &&
+               MalformedDoubleQuotedRazorStringCallbackRegex.IsMatch(content);
+    }
+
+    private static bool ContainsCalculatorStringHandlerWithCharCallback(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        return RazorCharLiteralCallbackRegex
+            .Matches(content)
+            .Cast<Match>()
+            .Select(match => match.Groups["handler"].Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Any(handlerName => ContainsStringParameterHandler(content, handlerName));
+    }
+
+    private static bool ContainsStringParameterHandler(string content, string handlerName)
+    {
+        return Regex.IsMatch(
+            content,
+            $@"\b{Regex.Escape(handlerName)}\s*\(\s*string\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsBlazorWebAssemblyHostingContent(string content)
+    {
+        return !string.IsNullOrWhiteSpace(content) &&
+               (content.Contains("WebAssemblyHostBuilder", StringComparison.Ordinal) ||
+                content.Contains("Microsoft.AspNetCore.Components.WebAssembly.Hosting", StringComparison.Ordinal) ||
+                content.Contains("RootComponents.Add<App>", StringComparison.Ordinal));
+    }
+
+    private static bool ContainsLegacyBlazorComponentPackageReferences(string content)
+    {
+        return !string.IsNullOrWhiteSpace(content) &&
+               (content.Contains("Microsoft.AspNetCore.Components.WebAssembly", StringComparison.OrdinalIgnoreCase) ||
+                content.Contains("Microsoft.AspNetCore.Components.Web\" Version=\"7.", StringComparison.OrdinalIgnoreCase) ||
+                content.Contains("Microsoft.AspNetCore.Components\" Version=\"7.", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsCalculatorEngineImplementation(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) ||
+            !content.Contains("CalculatorEngine", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return ContainsCalculatorOperation(content, "Add") &&
+               ContainsCalculatorOperation(content, "Subtract") &&
+               ContainsCalculatorOperation(content, "Multiply") &&
+               ContainsCalculatorOperation(content, "Divide");
+    }
+
+    private static bool ContainsCalculatorRoutedUiContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) ||
+            !ContainsRazorPageDirective(content) ||
+            !content.Contains("CalculatorEngine", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return ContainsCalculatorUiOperation(content, "Add", "+") &&
+               ContainsCalculatorUiOperation(content, "Subtract", "-") &&
+               ContainsCalculatorUiOperation(content, "Multiply", "*") &&
+               ContainsCalculatorUiOperation(content, "Divide", "/") &&
+               ContainsEqualsOrEvaluateAction(content) &&
+               ContainsCalculatorHistoryUi(content) &&
+               ContainsCalculatorKeypadUi(content);
+    }
+
+    private static bool ContainsCalculatorUiOperation(string content, string operationName, string operationSymbol)
+    {
+        return content.Contains(operationName, StringComparison.OrdinalIgnoreCase) ||
+               content.Contains(operationSymbol, StringComparison.Ordinal);
+    }
+
+    private static bool ContainsEqualsOrEvaluateAction(string content)
+    {
+        return content.Contains("Equals", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("Evaluate", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("Calculate", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("=", StringComparison.Ordinal);
+    }
+
+    private static bool ContainsCalculatorHistoryUi(string content)
+    {
+        return content.Contains("history", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsCalculatorKeypadUi(string content)
+    {
+        if (content.Contains("keypad", StringComparison.OrdinalIgnoreCase) ||
+            content.Contains("AppendDigit", StringComparison.OrdinalIgnoreCase) ||
+            content.Contains("InputDigit", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var digitButtonMatches = Regex.Matches(
+            content,
+            @"(?is)<button\b[^>]*>\s*[0-9]\s*</button>|['""]\s*[0-9]\s*['""]");
+        return digitButtonMatches.Count >= 10;
+    }
+
+    private static bool ContainsInjectedCalculatorEngine(string content)
+    {
+        return !string.IsNullOrWhiteSpace(content) &&
+               (CalculatorEngineInjectDirectiveRegex.IsMatch(content) ||
+                content.Contains("[Inject]", StringComparison.Ordinal) &&
+                content.Contains("CalculatorEngine", StringComparison.Ordinal));
+    }
+
+    private static bool ContainsCalculatorEngineServiceRegistration(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) ||
+            !content.Contains("CalculatorEngine", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return CalculatorEngineServiceRegistrationRegex.IsMatch(content);
+    }
+
+    private static bool ContainsCalculatorHostProjectReference(string content)
+    {
+        return !string.IsNullOrWhiteSpace(content) &&
+               content.Contains("<ProjectReference", StringComparison.OrdinalIgnoreCase) &&
+               content.Contains("Calculator.csproj", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsCalculatorEngineTestContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) ||
+            !content.Contains("CalculatorEngine", StringComparison.Ordinal) ||
+            !content.Contains("Assert.", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var hasTestAttribute =
+            content.Contains("[Fact]", StringComparison.Ordinal) ||
+            content.Contains("[Theory]", StringComparison.Ordinal) ||
+            content.Contains("[TestMethod]", StringComparison.Ordinal) ||
+            content.Contains("[Test]", StringComparison.Ordinal);
+        return hasTestAttribute &&
+               ContainsCalculatorOperation(content, "Add") &&
+               ContainsCalculatorOperation(content, "Subtract") &&
+               ContainsCalculatorOperation(content, "Multiply") &&
+               ContainsCalculatorOperation(content, "Divide");
+    }
+
+    private static bool ContainsCalculatorOperation(string content, string operationName)
+    {
+        return content.Contains(operationName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresBlazorWebAppRouteProof(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+    {
+        if (!RequiresConcreteImplementationProof(candidate))
+        {
+            return false;
+        }
+
+        return successfulReceipts.Any(IsBlazorWebAppScaffoldReceipt) ||
+               successfulReceipts.Any(HasConcreteBlazorComponentsPagePath) ||
+               ContainsStrongBlazorWebAppContext(candidate, detail);
+    }
+
+    private static bool ContainsStrongBlazorWebAppContext(DispatchCandidate candidate, ExecutionRunDetail detail)
+    {
+        var contextText = string.Join(
+            Environment.NewLine,
+            candidate.Definition.Name,
+            candidate.Definition.Summary,
+            candidate.Definition.ValueStatement,
+            candidate.Run.Name,
+            candidate.Run.TriggerReason,
+            candidate.StepRun.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.HandoffSummary,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            detail.Run.InputSummary,
+            detail.Run.ResultSummary,
+            detail.Run.SerializedSessionStateJson);
+
+        return contextText.Contains("notes: Blazor", StringComparison.OrdinalIgnoreCase) ||
+               contextText.Contains("Blazor Server-Side Rendering", StringComparison.OrdinalIgnoreCase) ||
+               contextText.Contains("Blazor SSR (", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldIncludeBlazorWebAppHostingContract(
+        DispatchCandidate candidate,
+        string? projectStructureGroundingSummary,
+        string? artifactInspectionGroundingSummary)
+    {
+        var contextText = string.Join(
+            Environment.NewLine,
+            candidate.Definition.Name,
+            candidate.Definition.Summary,
+            candidate.Definition.ValueStatement,
+            candidate.Run.Name,
+            candidate.Run.TriggerReason,
+            candidate.StepRun.Title,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.HandoffSummary,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            projectStructureGroundingSummary,
+            artifactInspectionGroundingSummary);
+
+        return contextText.Contains("Blazor", StringComparison.OrdinalIgnoreCase) ||
+               contextText.Contains("dotnet new blazor", StringComparison.OrdinalIgnoreCase) ||
+               contextText.Contains("Components/Pages", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AppendBlazorWebAppHostingContract(StringBuilder builder)
+    {
+        builder.AppendLine("- On current .NET, `dotnet new blazor` creates a Blazor Web App: `Program.cs` maps Razor components, the app shell is `Components/App.razor`, routing is `Components/Routes.razor`, and routed UI belongs under `Components/Pages`.");
+        builder.AppendLine("- Treat `Blazor SSR`, `Blazor Server-Side Rendering`, or `Blazor Web App` as this Blazor Web App hosting shape, not as legacy Blazor Server plus Razor Pages.");
+        builder.AppendLine("- Do not recommend, create, or preserve `Pages/_Host.cshtml`, `Startup.cs`, `UseStartup<Startup>()`, root `Pages/*.razor` routes, `blazor.server.js`, or ASP.NET Core 7.x `Microsoft.AspNetCore.Components*` package references for a net10 Blazor Web App.");
+        builder.AppendLine("- If an upstream artifact says `Blazor Server-Side`, `Blazor Server`, or `Razor Pages` while the live project structure or scaffold says Blazor SSR/Web App, treat that wording as stale shorthand and normalize the implementation plan back to Blazor Web App with routed pages under `Components/Pages`.");
+        builder.AppendLine("- If legacy hosting files are present from a prior bad repair, delete those specific legacy files first, restore the generated minimal Blazor Web App shape, then build and test. Do not recursively delete the host project directory or build on top of both hosting models.");
+    }
+
+    private static bool IsBlazorWebAppScaffoldReceipt(ToolExecutionReceiptRecord receipt)
+    {
+        return string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_new", StringComparison.Ordinal) &&
+               receipt.RequestSummary.Contains("blazor", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsConcreteProductSourceMutationReceipt(ToolExecutionReceiptRecord receipt)
+    {
+        var toolName = NormalizeToolToken(receipt.ToolName);
+        return (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
+                string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal) ||
+                string.Equals(toolName, "workspace_move_path", StringComparison.Ordinal)) &&
+               HasConcreteProductSourceOrProjectPath(receipt);
+    }
+
+    private static bool HasConcreteBlazorComponentsPagePath(ToolExecutionReceiptRecord receipt)
+    {
+        return ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary)
+            .Any(path => IsConcreteProductPath(path) && IsBlazorComponentsPagePath(path));
+    }
+
+    private static bool HasConcreteLegacyRootPagePath(ToolExecutionReceiptRecord receipt)
+    {
+        return ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary)
+            .Any(path => IsConcreteProductPath(path) && IsLegacyRootRazorPagePath(path));
+    }
+
+    private static bool IsBlazorRoutesPath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        return normalized.EndsWith("/Components/Routes.razor", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBlazorComponentsPagePath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        return string.Equals(Path.GetExtension(normalized), ".razor", StringComparison.OrdinalIgnoreCase) &&
+               normalized.Contains("/Components/Pages/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLegacyRootRazorPagePath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        return string.Equals(Path.GetExtension(normalized), ".razor", StringComparison.OrdinalIgnoreCase) &&
+               normalized.Contains("/Pages/", StringComparison.OrdinalIgnoreCase) &&
+               !normalized.Contains("/Components/Pages/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBlazorHostProgramPath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        return IsConcreteProductSourceOrProjectPath(normalized) &&
+               !normalized.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(Path.GetFileName(normalized), "Program.cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBlazorHostProjectFilePath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        if (!IsConcreteProductSourceOrProjectPath(normalized) ||
+            !string.Equals(Path.GetExtension(normalized), ".csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !IsTestProjectName(Path.GetFileNameWithoutExtension(normalized));
+    }
+
+    private static bool IsCalculatorEngineSourcePath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        return IsConcreteProductSourceOrProjectPath(normalized) &&
+               !normalized.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(Path.GetFileName(normalized), "CalculatorEngine.cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsConcreteTestProjectFilePath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        if (!IsConcreteProductSourceOrProjectPath(normalized) ||
+            !string.Equals(Path.GetExtension(normalized), ".csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var projectName = Path.GetFileNameWithoutExtension(normalized);
+        return IsTestProjectName(projectName);
+    }
+
+    private static bool IsConcreteTestSourcePath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        return IsConcreteProductSourceOrProjectPath(normalized) &&
+               string.Equals(Path.GetExtension(normalized), ".cs", StringComparison.OrdinalIgnoreCase) &&
+               normalized.Contains(".Tests/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ToolExecutionReceiptRecord? ResolveLatestReceipt(
+        IEnumerable<ToolExecutionReceiptRecord> receipts,
+        string normalizedToolName,
+        bool requireConcreteProductPath,
+        bool requireConcreteSourceOrProjectPath)
+    {
+        return receipts
+            .Where(receipt => string.Equals(NormalizeToolToken(receipt.ToolName), normalizedToolName, StringComparison.Ordinal))
+            .Where(receipt => !requireConcreteProductPath || HasConcreteProductPath(receipt))
+            .Where(receipt => !requireConcreteSourceOrProjectPath || HasConcreteProductSourceOrProjectPath(receipt))
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .ThenByDescending(receipt => receipt.StartedAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static bool IsConcreteProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+    {
+        var toolName = NormalizeToolToken(receipt.ToolName);
+        if (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
+            string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal))
+        {
+            return HasConcreteProductSourceOrProjectPath(receipt);
+        }
+
+        return HasConcreteProductPath(receipt);
+    }
+
+    private static bool HasConcreteProductPath(ToolExecutionReceiptRecord receipt)
+    {
+        return ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary)
+            .Any(IsConcreteProductPath);
+    }
+
+    private static bool HasConcreteProductSourceOrProjectPath(ToolExecutionReceiptRecord receipt)
+    {
+        return ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary)
+            .Any(IsConcreteProductSourceOrProjectPath);
+    }
+
+    private static IReadOnlyList<string> ResolveWorkspacePathsFromToolRequest(string requestSummary)
+    {
+        if (string.IsNullOrWhiteSpace(requestSummary))
+        {
+            return [];
+        }
+
+        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in WorkspacePathInToolRequestRegex.Matches(requestSummary))
+        {
+            var candidatePath = match.Groups["path"].Value;
+            if (TryMapWorkspacePathForPrompt(candidatePath, out var promptPath))
+            {
+                paths.Add(promptPath);
+            }
+        }
+
+        return paths.ToList();
+    }
+
+    private static bool TryMapWorkspacePathForPrompt(string path, out string promptPath)
+    {
+        promptPath = string.Empty;
+        var normalized = path.Trim().TrimEnd(',', ';', '.', ')', ']', '}').Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase))
+        {
+            promptPath = normalized;
+            return true;
+        }
+
+        if (normalized.Length < 3 || !char.IsLetter(normalized[0]) || normalized[1] != ':' || normalized[2] != '/')
+        {
+            return false;
+        }
+
+        var driveLetter = char.ToUpperInvariant(normalized[0]);
+        var remainder = normalized.Length == 3
+            ? string.Empty
+            : normalized[3..].Trim('/');
+        promptPath = string.IsNullOrWhiteSpace(remainder)
+            ? $"{ExternalTargetAliasRoot}/{driveLetter}"
+            : $"{ExternalTargetAliasRoot}/{driveLetter}/{remainder}";
+        return true;
+    }
+
+    private static bool IsConcreteProductSourceOrProjectPath(string promptPath)
+    {
+        if (!IsConcreteProductPath(promptPath))
+        {
+            return false;
+        }
+
+        var extension = Path.GetExtension(promptPath);
+        return IsCodeOrProjectExtension(extension);
+    }
+
+    private static bool IsConcreteProductPath(string promptPath)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length > 0 &&
+               !IsManagedRootSegment(segments[0]) &&
+               !segments.Any(IsNonProductPathSegment);
+    }
+
+    private static bool IsNonProductPathSegment(string segment)
+    {
+        return IsManagedRootSegment(segment) ||
+               string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsReceiptAfter(ToolExecutionReceiptRecord candidate, ToolExecutionReceiptRecord baseline)
+    {
+        return candidate.CompletedAtUtc > baseline.CompletedAtUtc ||
+               candidate.CompletedAtUtc == baseline.CompletedAtUtc &&
+               candidate.StartedAtUtc > baseline.StartedAtUtc;
+    }
+
+    private static string ResolveInvalidBrowserProofSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!RequiresConcreteBrowserProof(candidate))
+        {
+            return string.Empty;
+        }
+
+        if (ContainsSerializedPowerShellErrorRecord(detail.Run.SerializedSessionStateJson))
+        {
+            return "the launch helper reported PowerShell errors on stderr despite a successful tool result";
+        }
+
+        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
+        if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
+        {
+            return string.Empty;
+        }
+
+        var outputsByToolName = ResolveSuccessfulSessionToolOutputFiles(detail.Run.SerializedSessionStateJson ?? string.Empty);
+        if (!outputsByToolName.TryGetValue("browser_snapshot", out var snapshotFiles) ||
+            snapshotFiles.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        foreach (var snapshotFile in snapshotFiles)
+        {
+            if (!TryReadBrowserOutputText(browserWorkingDirectory, snapshotFile, out var snapshotText))
+            {
+                continue;
+            }
+
+            if (ContainsStarterTemplateBrowserProof(snapshotText))
+            {
+                return "browser proof captured the default Blazor starter page instead of the requested application";
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool ContainsSerializedPowerShellErrorRecord(string? serializedSessionStateJson)
+    {
+        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
+        {
+            return false;
+        }
+
+        return serializedSessionStateJson.Contains("Cannot overwrite variable PID because it is read-only or constant", StringComparison.OrdinalIgnoreCase) ||
+               serializedSessionStateJson.Contains("WriteError:", StringComparison.OrdinalIgnoreCase) ||
+               serializedSessionStateJson.Contains("ParserError:", StringComparison.OrdinalIgnoreCase) ||
+               serializedSessionStateJson.Contains("RuntimeException:", StringComparison.OrdinalIgnoreCase) ||
+               serializedSessionStateJson.Contains("FullyQualifiedErrorId", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryReadBrowserOutputText(
+        string browserWorkingDirectory,
+        string relativeOutputPath,
+        out string text)
+    {
+        text = string.Empty;
+        if (!TryResolveSafeBrowserOutputPath(browserWorkingDirectory, relativeOutputPath, out var fullPath) ||
+            !File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(fullPath);
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            var buffer = new char[MaxBrowserSnapshotInspectionCharacters];
+            var length = reader.ReadBlock(buffer, 0, buffer.Length);
+            text = new string(buffer, 0, length);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryResolveSafeBrowserOutputPath(
+        string browserWorkingDirectory,
+        string relativeOutputPath,
+        out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(browserWorkingDirectory) ||
+            string.IsNullOrWhiteSpace(relativeOutputPath) ||
+            Path.IsPathRooted(relativeOutputPath))
+        {
+            return false;
+        }
+
+        var root = Path.GetFullPath(browserWorkingDirectory);
+        var candidate = Path.GetFullPath(Path.Combine(root, relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)));
+        var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar)
+            ? root
+            : root + Path.DirectorySeparatorChar;
+        if (!candidate.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        fullPath = candidate;
+        return true;
+    }
+
+    private static bool ContainsStarterTemplateBrowserProof(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("Hello, world!", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("Welcome to your new app.", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveMissingConcreteProofSummary(
@@ -5000,7 +6821,8 @@ ORDER BY CreatedAtUtc, Title;
         ArgumentNullException.ThrowIfNull(detail);
         ArgumentNullException.ThrowIfNull(receipt);
 
-        if (!receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) ||
+        if ((!receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) &&
+             !receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase)) ||
             !string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_new", StringComparison.Ordinal))
         {
             return false;
@@ -5282,7 +7104,86 @@ ORDER BY CreatedAtUtc, Title;
 
     private static bool IsWithinWorkspace(string workspaceRoot, string fullPath)
     {
-        return fullPath.StartsWith(workspaceRoot, StringComparison.OrdinalIgnoreCase);
+        var normalizedWorkspaceRoot = Path.GetFullPath(workspaceRoot);
+        var normalizedFullPath = Path.GetFullPath(fullPath);
+        return string.Equals(normalizedFullPath, normalizedWorkspaceRoot, StringComparison.OrdinalIgnoreCase) ||
+               normalizedFullPath.StartsWith(EnsureTrailingDirectorySeparator(normalizedWorkspaceRoot), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryResolveArtifactFullPath(
+        string workspaceRoot,
+        string relativePath,
+        out string fullPath,
+        out string failureReason)
+    {
+        fullPath = string.Empty;
+        failureReason = string.Empty;
+
+        var normalizedRelativePath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
+        if (string.IsNullOrWhiteSpace(normalizedRelativePath))
+        {
+            failureReason = "Artifact relative path is empty.";
+            return false;
+        }
+
+        if (IsExternalTargetAliasPath(normalizedRelativePath))
+        {
+            return TryResolveExternalTargetArtifactFullPath(normalizedRelativePath, out fullPath, out failureReason);
+        }
+
+        fullPath = Path.GetFullPath(Path.Combine(
+            workspaceRoot,
+            normalizedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (IsWithinWorkspace(workspaceRoot, fullPath))
+        {
+            return true;
+        }
+
+        failureReason = $"Artifact path '{normalizedRelativePath}' resolves outside the workspace root.";
+        fullPath = string.Empty;
+        return false;
+    }
+
+    private static bool TryResolveExternalTargetArtifactFullPath(
+        string normalizedRelativePath,
+        out string fullPath,
+        out string failureReason)
+    {
+        fullPath = string.Empty;
+        failureReason = string.Empty;
+
+        var suffix = normalizedRelativePath.Length == ExternalTargetAliasRoot.Length
+            ? string.Empty
+            : normalizedRelativePath[(ExternalTargetAliasRoot.Length + 1)..];
+        var segments = suffix.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0 ||
+            segments[0].Length != 1 ||
+            !char.IsLetter(segments[0][0]))
+        {
+            failureReason = $"Artifact path '{normalizedRelativePath}' uses invalid external-target syntax.";
+            return false;
+        }
+
+        var driveRoot = $"{char.ToUpperInvariant(segments[0][0])}:{Path.DirectorySeparatorChar}";
+        var remainingSegments = segments.Skip(1).ToArray();
+        fullPath = Path.GetFullPath(
+            remainingSegments.Length == 0
+                ? driveRoot
+                : Path.Combine(driveRoot, Path.Combine(remainingSegments)));
+        return true;
+    }
+
+    private static bool IsExternalTargetAliasPath(string normalizedRelativePath)
+    {
+        return string.Equals(normalizedRelativePath, ExternalTargetAliasRoot, StringComparison.OrdinalIgnoreCase) ||
+               normalizedRelativePath.StartsWith(ExternalTargetAliasRoot + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string EnsureTrailingDirectorySeparator(string path)
+    {
+        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
     }
 
     private static IReadOnlyList<DispatchArtifactInput> BuildResolvedArtifactInputs(
@@ -5853,7 +7754,8 @@ ORDER BY CreatedAtUtc, Title;
             or ProcessArtifactKind.Checklist
             or ProcessArtifactKind.Prompt
             or ProcessArtifactKind.Transcript ||
-               IsPathlessResponseProjectableDeliverable(expectedArtifact);
+               IsPathlessResponseProjectableDeliverable(expectedArtifact) ||
+               IsPathlessResponseProjectableEvidence(expectedArtifact);
     }
 
     private static bool IsPathlessResponseProjectableDeliverable(DispatchArtifactExpectation expectedArtifact)
@@ -5867,6 +7769,22 @@ ORDER BY CreatedAtUtc, Title;
         var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
         return normalizedTitle.Contains("change set", StringComparison.Ordinal) ||
                normalizedValidation.Contains("change set", StringComparison.Ordinal);
+    }
+
+    private static bool IsPathlessResponseProjectableEvidence(DispatchArtifactExpectation expectedArtifact)
+    {
+        if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Evidence)
+        {
+            return false;
+        }
+
+        var normalizedTitle = CollapsePromptWhitespace(expectedArtifact.Title).ToLowerInvariant();
+        var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
+        return normalizedTitle.Contains("note", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("review", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("accepted issues", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("rejected concerns", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("residual risk", StringComparison.Ordinal);
     }
 
     private static string BuildFallbackResponseTextArtifactRelativePath(
@@ -6139,9 +8057,14 @@ ORDER BY CreatedAtUtc, Title;
                extension.Equals(".razor", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".cshtml", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".css", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".ts", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".props", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".targets", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".json", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -6233,6 +8156,10 @@ ORDER BY CreatedAtUtc, Title;
         IReadOnlyList<string> StatPaths,
         IReadOnlyList<string> ReadPaths);
 
+    private sealed record MisplacedTestProjectCleanupTarget(
+        string HostProjectPath,
+        string NestedTestDirectoryPath);
+
     private sealed record DispatchExecutionOutcome(
         ExecutionRunDetail Detail,
         string ResponseText,
@@ -6268,4 +8195,6 @@ ORDER BY CreatedAtUtc, Title;
         string Description);
 
     private sealed record SessionToolCall(string ToolName, string OutputFileName);
+
+    private sealed record SessionFileContent(string Path, string Content);
 }

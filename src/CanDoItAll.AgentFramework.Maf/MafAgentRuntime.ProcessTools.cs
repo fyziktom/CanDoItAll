@@ -53,87 +53,87 @@ public sealed partial class MafAgentRuntime
             return
             [
                 AIFunctionFactory.Create(
-                    (Guid? projectId, CancellationToken cancellationToken) => ProcessesDefinitionsListAsync(accessState, projectId, cancellationToken),
+                    (Guid? projectId = null, CancellationToken cancellationToken = default) => ProcessesDefinitionsListAsync(accessState, projectId, cancellationToken),
                     "processes_definitions_list",
                     "Lists process definitions. Use projectId to scope the list to one project."),
                 AIFunctionFactory.Create(
-                    (Guid? definitionId, Guid? projectId, CancellationToken cancellationToken) => ProcessesDefinitionEditorGetAsync(accessState, definitionId, projectId, cancellationToken),
+                    (Guid? definitionId = null, Guid? projectId = null, CancellationToken cancellationToken = default) => ProcessesDefinitionEditorGetAsync(accessState, definitionId, projectId, cancellationToken),
                     "processes_definition_editor_get",
                     "Loads the full process-definition editor model. Omit definitionId to get a blank editor template optionally scoped to projectId."),
                 AIFunctionFactory.Create(
-                    (ProcessDefinitionEditorModel model, CancellationToken cancellationToken) => ProcessesDefinitionSaveAsync(accessState, model, cancellationToken),
+                    (ProcessDefinitionEditorModel model, CancellationToken cancellationToken = default) => ProcessesDefinitionSaveAsync(accessState, model, cancellationToken),
                     "processes_definition_save",
                     "Creates or updates a process definition from the editor model and returns the definition id."),
                 AIFunctionFactory.Create(
-                    (Guid definitionId, CancellationToken cancellationToken) => ProcessesDefinitionPublishAsync(accessState, definitionId, cancellationToken),
+                    (Guid definitionId, CancellationToken cancellationToken = default) => ProcessesDefinitionPublishAsync(accessState, definitionId, cancellationToken),
                     "processes_definition_publish",
                     "Publishes the current draft version of a process definition and makes it runtime-usable."),
                 AIFunctionFactory.Create(
-                    (Guid definitionId, CancellationToken cancellationToken) => ProcessesDefinitionDeleteAsync(accessState, definitionId, cancellationToken),
+                    (Guid definitionId, CancellationToken cancellationToken = default) => ProcessesDefinitionDeleteAsync(accessState, definitionId, cancellationToken),
                     "processes_definition_delete",
                     "Deletes a process definition and its related runtime records."),
                 AIFunctionFactory.Create(
-                    (Guid definitionId, CancellationToken cancellationToken) => ProcessesDefinitionExportAsync(accessState, definitionId, cancellationToken),
+                    (Guid definitionId, CancellationToken cancellationToken = default) => ProcessesDefinitionExportAsync(accessState, definitionId, cancellationToken),
                     "processes_definition_export",
                     "Exports a process definition into the CanDoItAll process import-export envelope."),
                 AIFunctionFactory.Create(
-                    (ProcessImportExportEnvelope envelope, CancellationToken cancellationToken) => ProcessesDefinitionImportAsync(accessState, envelope, cancellationToken),
+                    (ProcessImportExportEnvelope envelope, CancellationToken cancellationToken = default) => ProcessesDefinitionImportAsync(accessState, envelope, cancellationToken),
                     "processes_definition_import",
                     "Imports a process definition from a CanDoItAll process import-export envelope and returns the imported definition id."),
                 AIFunctionFactory.Create(
-                    (Guid? definitionId, Guid? projectId, CancellationToken cancellationToken) => ProcessesRunsListAsync(accessState, definitionId, projectId, cancellationToken),
+                    (Guid? definitionId = null, Guid? projectId = null, CancellationToken cancellationToken = default) => ProcessesRunsListAsync(accessState, definitionId, projectId, cancellationToken),
                     "processes_runs_list",
                     "Lists process runs. Use definitionId or projectId to narrow the scope."),
                 AIFunctionFactory.Create(
-                    (Guid runId, CancellationToken cancellationToken) => ProcessesRunDetailGetAsync(accessState, runId, cancellationToken),
+                    (Guid runId, CancellationToken cancellationToken = default) => ProcessesRunDetailGetAsync(accessState, runId, cancellationToken),
                     "processes_run_detail_get",
                     "Loads a process run with step runs, decisions, artifacts, assignments, work briefs, conformance observations, and improvements."),
                 AIFunctionFactory.Create(
-                    (Guid? definitionId, Guid? projectId, CancellationToken cancellationToken) => ProcessesAnalyticsGetAsync(accessState, definitionId, projectId, cancellationToken),
+                    (Guid? definitionId = null, Guid? projectId = null, CancellationToken cancellationToken = default) => ProcessesAnalyticsGetAsync(accessState, definitionId, projectId, cancellationToken),
                     "processes_analytics_get",
                     "Returns summary analytics for process definitions or project-scoped process execution."),
                 AIFunctionFactory.Create(
-                    (ProcessRunStartRequest request, CancellationToken cancellationToken) => ProcessesRunStartAsync(accessState, request, cancellationToken),
+                    (ProcessRunStartRequest request, CancellationToken cancellationToken = default) => ProcessesRunStartAsync(accessState, request, cancellationToken),
                     "processes_run_start",
                     "Starts a new process run from a published definition and returns the run id."),
                 AIFunctionFactory.Create(
-                    (ProcessStepTransitionRequest request, CancellationToken cancellationToken) => ProcessesStepTransitionAsync(accessState, request, cancellationToken),
+                    (ProcessStepTransitionRequest request, CancellationToken cancellationToken = default) => ProcessesStepTransitionAsync(accessState, request, cancellationToken),
                     "processes_step_transition",
                     "Transitions a process step run to the requested status and records the decision evidence."),
                 AIFunctionFactory.Create(
-                    (ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken) => ProcessesAssignmentResolveAsync(accessState, request, cancellationToken),
+                    (ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken = default) => ProcessesAssignmentResolveAsync(accessState, request, cancellationToken),
                     "processes_assignment_resolve",
                     "Resolves or updates a runtime role assignment for a process run."),
                 AIFunctionFactory.Create(
-                    (ProcessArtifactRecordRequest request, CancellationToken cancellationToken) => ProcessesArtifactRecordAsync(accessState, request, cancellationToken),
+                    (ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default) => ProcessesArtifactRecordAsync(accessState, request, cancellationToken),
                     "processes_artifact_record",
                     "Records artifact metadata against a process run or step and returns the artifact id."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, CancellationToken cancellationToken) => ProcessesPartyOptionsListAsync(accessState, projectId, cancellationToken),
+                    (Guid projectId, CancellationToken cancellationToken = default) => ProcessesPartyOptionsListAsync(accessState, projectId, cancellationToken),
                     "processes_party_options_list",
                     "Lists project party options that can be used for process assignment decisions."),
                 AIFunctionFactory.Create(
-                    (CancellationToken cancellationToken) => ProcessesExecutorOptionsListAsync(accessState, cancellationToken),
+                    (CancellationToken cancellationToken = default) => ProcessesExecutorOptionsListAsync(accessState, cancellationToken),
                     "processes_executor_options_list",
                     "Lists executor registry options available to process runtime assignment flows."),
                 AIFunctionFactory.Create(
-                    (CancellationToken cancellationToken) => ProcessesTemplatesListAsync(accessState, cancellationToken),
+                    (CancellationToken cancellationToken = default) => ProcessesTemplatesListAsync(accessState, cancellationToken),
                     "processes_templates_list",
                     "Lists the folder-based process template pack entries that can be inspected or imported without hardcoding templates in code."),
                 AIFunctionFactory.Create(
-                    (string processKey, CancellationToken cancellationToken) => ProcessesTemplateGetAsync(accessState, processKey, cancellationToken),
+                    (string processKey, CancellationToken cancellationToken = default) => ProcessesTemplateGetAsync(accessState, processKey, cancellationToken),
                     "processes_template_get",
                     "Loads a detailed template definition from the process template pack, including sidecar metadata and compatibility notes."),
                 AIFunctionFactory.Create(
-                    (string processKey, CancellationToken cancellationToken) => ProcessesTemplateMermaidGetAsync(accessState, processKey, cancellationToken),
+                    (string processKey, CancellationToken cancellationToken = default) => ProcessesTemplateMermaidGetAsync(accessState, processKey, cancellationToken),
                     "processes_template_mermaid_get",
                     "Exports Mermaid flowchart and sequence content for a process template together with the supporting sidecar files."),
                 AIFunctionFactory.Create(
-                    (InternalProcessTemplateImportRequest request, CancellationToken cancellationToken) => ProcessesTemplateImportAsync(accessState, request, cancellationToken),
+                    (InternalProcessTemplateImportRequest request, CancellationToken cancellationToken = default) => ProcessesTemplateImportAsync(accessState, request, cancellationToken),
                     "processes_template_import",
                     "Projects a folder-based process template into the current module import envelope, imports it, and optionally publishes it."),
                 AIFunctionFactory.Create(
-                    (CancellationToken cancellationToken) => ProcessesTemplateBaselineScenariosListAsync(accessState, cancellationToken),
+                    (CancellationToken cancellationToken = default) => ProcessesTemplateBaselineScenariosListAsync(accessState, cancellationToken),
                     "processes_template_baseline_scenarios_list",
                     "Lists baseline runtime scenarios stored in the process template pack for seeded regression coverage.")
             ];

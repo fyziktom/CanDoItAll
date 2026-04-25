@@ -1,1 +1,0 @@
-Review the just-completed subbundles against the gate questions using only live repository evidence and fresh proof artifacts. If any answer is weaker than an explicit yes, fail the gate, record why, create the corrective subbundle, and block all downstream work until the corrective path is complete and the gate is rerun.

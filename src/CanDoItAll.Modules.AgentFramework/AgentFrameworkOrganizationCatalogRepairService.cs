@@ -16,8 +16,7 @@ public interface IAgentFrameworkOrganizationCatalogRepairService
 internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    IProviderProfileService providerProfileService,
-    IAgentProviderCredentialResolver providerCredentialResolver) : IAgentFrameworkOrganizationCatalogRepairService
+    IProviderProfileService providerProfileService) : IAgentFrameworkOrganizationCatalogRepairService
 {
     private static readonly IReadOnlySet<string> ManagedSeedOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -135,13 +134,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         CancellationToken cancellationToken)
     {
         var providers = (await currentWorkspace.ListProvidersAsync(cancellationToken)).ToList();
-        var fallbackProvider = providers.FirstOrDefault(IsManagedSeedFallbackProvider);
-        if (fallbackProvider is null)
-        {
-            return;
-        }
-
-        if (HasAvailableOpenAiCredentials(providers))
+        var openAiProvider = SelectManagedSeedOpenAiProvider(providers);
+        if (openAiProvider is null)
         {
             return;
         }
@@ -150,8 +144,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         var agentsNeedingRepair = agents
             .Where(RequiresManagedSeedFallbackRepair)
             .Where(agent =>
-                agent.ProviderProfileId != fallbackProvider.Id ||
-                !string.Equals(agent.Model, ManagedSeedProviderFallbacks.FallbackModel, StringComparison.Ordinal))
+                agent.ProviderProfileId != openAiProvider.Id ||
+                !string.Equals(agent.Model, openAiProvider.DefaultModel, StringComparison.Ordinal))
             .ToList();
         if (agentsNeedingRepair.Count == 0)
         {
@@ -171,8 +165,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 .Select(agent => agentIdsNeedingRepair.Contains(agent.Id)
                     ? agent with
                     {
-                        ProviderProfileId = fallbackProvider.Id,
-                        Model = ManagedSeedProviderFallbacks.FallbackModel,
+                        ProviderProfileId = openAiProvider.Id,
+                        Model = openAiProvider.DefaultModel,
                         UpdatedAtUtc = updatedAtUtc
                     }
                     : agent)
@@ -181,18 +175,13 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         }, cancellationToken);
     }
 
-    private bool HasAvailableOpenAiCredentials(
+    private static ProviderProfile? SelectManagedSeedOpenAiProvider(
         IReadOnlyList<ProviderProfile> providers)
     {
-        var openAiProviders = providers
-            .Where(IsManagedSeedOpenAiProvider)
-            .ToList();
-        if (openAiProviders.Count == 0)
-        {
-            return providerCredentialResolver.Resolve(CreateBootstrapOpenAiProvider()).IsResolved;
-        }
-
-        return openAiProviders.Any(provider => providerCredentialResolver.Resolve(provider).IsResolved);
+        return providers.FirstOrDefault(provider =>
+                   provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+                   string.Equals(provider.Name, "OpenAI chat completions", StringComparison.OrdinalIgnoreCase)) ??
+               providers.FirstOrDefault(IsManagedSeedOpenAiProvider);
     }
 
     private static bool RequiresManagedSeedFallbackRepair(
@@ -206,36 +195,6 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     {
         return provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
                ManagedSeedOpenAiProviderNames.Contains(provider.Name);
-    }
-
-    private static bool IsManagedSeedFallbackProvider(
-        ProviderProfile provider)
-    {
-        return provider.Kind == ProviderKind.Ollama &&
-               string.Equals(provider.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(provider.BaseUrl, ManagedSeedProviderFallbacks.FallbackBaseUrl, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static ProviderProfile CreateBootstrapOpenAiProvider()
-    {
-        return new ProviderProfile(
-            Id: Guid.Empty,
-            Name: "OpenAI default",
-            Kind: ProviderKind.OpenAi,
-            BaseUrl: "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable: "OPENAI_API_KEY",
-            DefaultModel: "gpt-4.1",
-            Transport: ProviderTransportKind.Responses,
-            IsEnabled: true,
-            SupportsStreaming: true,
-            SupportsTools: true,
-            PreferFrameworkManagedChatHistory: false,
-            SupportsBackgroundResponses: true,
-            ConfigurationJson: "{\"history\":\"service-managed\"}",
-            Notes: "Managed-seed OpenAI bootstrap probe.",
-            HealthStatus: "Not checked",
-            LastCheckedAtUtc: null,
-            SuggestedModels: ["gpt-4.1"]);
     }
 
     private IReadOnlyList<string> GetLegacyOrganizationScopeKeys()

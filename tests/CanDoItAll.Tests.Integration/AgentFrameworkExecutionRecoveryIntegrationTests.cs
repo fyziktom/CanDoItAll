@@ -1,3 +1,4 @@
+using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
@@ -139,6 +140,105 @@ public sealed class AgentFrameworkExecutionRecoveryIntegrationTests
 
             lifetime?.NotifyStopped();
         }
+    }
+
+    [Fact]
+    public async Task Startup_recovery_skips_execution_runs_created_after_recovery_worker_started()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-execution-recovery-fresh-run");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services => services.RemoveAll<IHostedService>());
+
+        var startupCutoffUtc = DateTimeOffset.UtcNow.AddSeconds(-1);
+        var runId = Guid.Empty;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+            var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+            var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false)).First();
+            var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+            var createdAtUtc = DateTimeOffset.UtcNow;
+            runId = Guid.NewGuid();
+
+            var persistedSession = session with
+            {
+                UpdatedAtUtc = createdAtUtc,
+                LatestExecutionRunId = runId,
+                Compatibility = ChatSessionRuntimeCompatibilityRecord.Create(
+                    "runtime-session-key",
+                    """{"kind":"partial"}""",
+                    [],
+                    autoApprovePendingToolCalls: true)
+            };
+            var run = new ExecutionRunRecord(
+                Id: runId,
+                AgentId: agent.Id,
+                ChatSessionId: persistedSession.Id,
+                Title: "Fresh execution",
+                SourceKind: "process-step",
+                SourceId: "step-001",
+                CorrelationId: "corr-001",
+                CausationId: "cause-001",
+                RequestedBy: "process-automation-dispatch",
+                RequestedByKind: "system",
+                MetadataJson: "{}",
+                InputSummary: "Implement the feature.",
+                ResultSummary: string.Empty,
+                ProviderName: "OpenAI",
+                Model: "gpt-4.1",
+                State: ExecutionState.Running,
+                Outcome: null,
+                CreatedAtUtc: createdAtUtc,
+                UpdatedAtUtc: createdAtUtc,
+                StartedAtUtc: createdAtUtc,
+                CompletedAtUtc: null,
+                RuntimeSessionKey: "runtime-session-key",
+                SerializedSessionStateJson: """{"kind":"partial"}""",
+                PendingApprovals: [],
+                AutoApprovePendingToolCalls: true,
+                Revision: 1);
+            var detail = new ExecutionRunDetail(
+                run,
+                persistedSession,
+                [],
+                [])
+            {
+                Approvals = [],
+                Artifacts = [],
+                Checkpoints = [],
+                ToolReceipts = []
+            };
+
+            await executionRunStore.SaveExecutionRunDetailAsync(detail);
+        }
+
+        await using var recoveryScope = provider.CreateAsyncScope();
+        var recoveryServiceType = typeof(AgentFrameworkModuleAssemblyMarker).Assembly.GetType(
+            "CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService",
+            throwOnError: true)
+            ?? throw new InvalidOperationException("AgentFrameworkExecutionRecoveryService type was not found.");
+        var recoveryService = recoveryScope.ServiceProvider.GetRequiredService(recoveryServiceType);
+        var recoverMethod = recoveryServiceType.GetMethod(
+            "RecoverInterruptedRunsAsync",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            [typeof(DateTimeOffset), typeof(CancellationToken)])
+            ?? throw new InvalidOperationException("RecoverInterruptedRunsAsync overload was not found.");
+        var recoverTask = recoverMethod.Invoke(recoveryService, [startupCutoffUtc, CancellationToken.None])
+            as Task<int>;
+        Assert.NotNull(recoverTask);
+        var recoveredCount = await recoverTask!;
+
+        var verificationStore = recoveryScope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var freshDetail = await verificationStore.GetExecutionRunDetailAsync(runId);
+
+        Assert.Equal(0, recoveredCount);
+        Assert.NotNull(freshDetail);
+        Assert.Equal(ExecutionState.Running, freshDetail.Run.State);
+        Assert.Null(freshDetail.Run.Outcome);
     }
 
     private static async Task WaitForAsync(

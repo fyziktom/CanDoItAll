@@ -9,6 +9,10 @@ public sealed partial class MafAgentRuntime
 {
     private sealed class McpCapabilityBuilder(MafAgentRuntime owner)
     {
+        private const string PlaywrightMcpPackagePrefix = "@playwright/mcp";
+        private const string PlaywrightCapsArgument = "--caps";
+        private const string PlaywrightVisionCapability = "vision";
+
         public async Task AddMcpToolsAsync(
             RuntimeCapabilityState state,
             CapabilityCatalogItem capability,
@@ -45,7 +49,7 @@ public sealed partial class MafAgentRuntime
                 return;
             }
 
-            var mcpClient = await CreateMcpClientAsync(capability, configuration, cancellationToken);
+            var mcpClient = await CreateMcpClientAsync(capability, configuration, provider, cancellationToken);
             state.AsyncDisposables.Add(mcpClient);
 
             var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
@@ -132,6 +136,7 @@ public sealed partial class MafAgentRuntime
         private async Task<McpClient> CreateMcpClientAsync(
             CapabilityCatalogItem capability,
             McpCapabilityConfiguration configuration,
+            ProviderProfile provider,
             CancellationToken cancellationToken)
         {
             if (!string.IsNullOrWhiteSpace(configuration.Command))
@@ -146,16 +151,18 @@ public sealed partial class MafAgentRuntime
                         allowedExternalRoots: configuration.AllowedWorkingDirectories);
                 var commandExecutionService = owner.services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
                     ?? new WorkspaceCommandExecutionService(owner.workspaceRoot, new LocalWorkspaceProcessHost(), owner.workspaceScope);
+                var environmentVariables = ResolveSecretBindings(configuration.EnvironmentVariableBindings, capability.Name, "environment variable")
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => (string?)pair.Value,
+                        StringComparer.OrdinalIgnoreCase);
+                AttachProviderCredentialForLocalMcp(capability, configuration, provider, environmentVariables);
                 var launchDescriptor = commandExecutionService.PrepareLocalMcpServerLaunch(
                     capability.Name,
                     configuration.Command,
                     configuration.Arguments?.ToArray(),
                     workingDirectory,
-                    ResolveSecretBindings(configuration.EnvironmentVariableBindings, capability.Name, "environment variable")
-                        .ToDictionary(
-                            pair => pair.Key,
-                            pair => (string?)pair.Value,
-                            StringComparer.OrdinalIgnoreCase),
+                    environmentVariables,
                     approvalRequired: string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase));
                 var transport = new StdioClientTransport(new StdioClientTransportOptions
                 {
@@ -253,7 +260,7 @@ public sealed partial class MafAgentRuntime
                         $"MCP capability '{capabilityName}' contains a {bindingKind} binding for '{binding.Key}' without an environment variable name.");
                 }
 
-                var resolvedValue = Environment.GetEnvironmentVariable(binding.Value);
+                var resolvedValue = AgentProviderEnvironmentCredential.ResolveAndPromote(binding.Value);
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     throw new InvalidOperationException(
@@ -264,6 +271,79 @@ public sealed partial class MafAgentRuntime
             }
 
             return resolved;
+        }
+
+        private void AttachProviderCredentialForLocalMcp(
+            CapabilityCatalogItem capability,
+            McpCapabilityConfiguration configuration,
+            ProviderProfile provider,
+            IDictionary<string, string?> environmentVariables)
+        {
+            if (provider.Kind != ProviderKind.OpenAi ||
+                !UsesPlaywrightVisionMcp(configuration))
+            {
+                return;
+            }
+
+            var credential = owner.ResolveProviderCredential(provider);
+            if (!credential.IsResolved)
+            {
+                throw new InvalidOperationException(
+                    $"Local MCP capability '{capability.Name}' requires provider credential for '{provider.Name}' to enable Playwright vision. {credential.FailureMessage}");
+            }
+
+            AddCredentialEnvironmentVariable(environmentVariables, provider.ApiKeyEnvironmentVariable, credential.ApiKey);
+            AddCredentialEnvironmentVariable(environmentVariables, OpenAiApiKeyEnvironmentVariable, credential.ApiKey);
+        }
+
+        private static void AddCredentialEnvironmentVariable(
+            IDictionary<string, string?> environmentVariables,
+            string variableName,
+            string value)
+        {
+            if (string.IsNullOrWhiteSpace(variableName) || string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            environmentVariables[variableName.Trim()] = value.Trim();
+        }
+
+        private static bool UsesPlaywrightVisionMcp(McpCapabilityConfiguration configuration)
+        {
+            var arguments = configuration.Arguments ?? [];
+            return arguments.Any(argument => argument.StartsWith(PlaywrightMcpPackagePrefix, StringComparison.OrdinalIgnoreCase))
+                   && HasVisionCapability(arguments);
+        }
+
+        private static bool HasVisionCapability(IReadOnlyList<string> arguments)
+        {
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                var argument = arguments[index];
+                if (string.Equals(argument, PlaywrightCapsArgument, StringComparison.OrdinalIgnoreCase))
+                {
+                    return index + 1 < arguments.Count &&
+                           ArgumentContainsCapability(arguments[index + 1], PlaywrightVisionCapability);
+                }
+
+                if (argument.StartsWith($"{PlaywrightCapsArgument}=", StringComparison.OrdinalIgnoreCase) &&
+                    ArgumentContainsCapability(argument[(PlaywrightCapsArgument.Length + 1)..], PlaywrightVisionCapability))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ArgumentContainsCapability(
+            string argument,
+            string capability)
+        {
+            return argument
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(item => string.Equals(item, capability, StringComparison.OrdinalIgnoreCase));
         }
 
         private static void EnsureHostedMcpSupported(CapabilityCatalogItem capability, ProviderProfile provider)

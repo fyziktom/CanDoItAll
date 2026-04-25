@@ -1,1 +1,0 @@
-Create a corrective subbundle from the corrective template when a stop rule or gate failure occurs. The corrective work must restore the broken invariant first, update the task queue and gate memo log, rerun the failed proof, and only then allow downstream execution to resume.

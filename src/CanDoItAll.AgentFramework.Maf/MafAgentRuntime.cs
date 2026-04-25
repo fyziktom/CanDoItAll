@@ -14,6 +14,7 @@ public sealed partial class MafAgentRuntime(
     WorkspaceScopeDescriptor? workspaceScope = null) : IAgentRuntime
 {
     private const string LocalHistoryConversationId = "_agent_local_chat_history";
+    private const int MaxRepeatedToolInvocationCount = 3;
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly HttpClient HttpClient = new()
@@ -144,6 +145,8 @@ public sealed partial class MafAgentRuntime(
         var updates = new List<AgentResponseUpdate>();
         var announcedStreaming = false;
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var repeatedToolInvocationGuard = new RepeatedToolInvocationGuard();
         var pollCount = 0;
         var resolvedModel = string.IsNullOrWhiteSpace(agent.Model) ? provider.DefaultModel : agent.Model;
 
@@ -181,6 +184,11 @@ public sealed partial class MafAgentRuntime(
                         foreach (var toolCall in snapshot.Contents.OfType<ToolCallContent>())
                         {
                             var toolKey = ResolveToolCallKey(toolCall);
+                            if (toolCall.CallId is null || guardedToolCallIds.Add(toolCall.CallId))
+                            {
+                                repeatedToolInvocationGuard.Guard(toolCall);
+                            }
+
                             if (!announcedToolCalls.Add(toolKey))
                             {
                                 continue;
@@ -406,6 +414,118 @@ public sealed partial class MafAgentRuntime(
     {
         return toolCall.CallId
             ?? $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall)}";
+    }
+
+    private sealed class RepeatedToolInvocationGuard
+    {
+        private readonly Dictionary<string, int> repeatedToolInvocationCounts = new(StringComparer.OrdinalIgnoreCase);
+        private int mutationGeneration;
+
+        public void Guard(ToolCallContent toolCall)
+        {
+            var toolName = ResolveToolName(toolCall);
+            if (!ShouldGuardRepeatedToolInvocation(toolName))
+            {
+                return;
+            }
+
+            var signature = ResolveToolInvocationSignature(toolCall);
+            if (IsValidationToolInvocation(toolName))
+            {
+                signature = $"{signature}|mutationGeneration={mutationGeneration}";
+            }
+
+            var repeatedToolInvocationCount = repeatedToolInvocationCounts.TryGetValue(signature, out var currentCount)
+                ? currentCount + 1
+                : 1;
+            repeatedToolInvocationCounts[signature] = repeatedToolInvocationCount;
+            if (repeatedToolInvocationCount > MaxRepeatedToolInvocationCount)
+            {
+                var recoveryHint = ResolveRepeatedToolInvocationRecoveryHint(signature);
+                throw new InvalidOperationException(
+                    $"Agent repeated identical tool invocation '{signature}' {repeatedToolInvocationCount} times in one run. Stop repeating the same tool call and either call the required next validation tool, inspect and change the underlying cause, or return a governed blocked/failed outcome.{recoveryHint}");
+            }
+
+            if (IsMutationToolInvocation(toolName))
+            {
+                mutationGeneration++;
+            }
+        }
+    }
+
+    private static bool ShouldGuardRepeatedToolInvocation(string toolName)
+    {
+        return IsValidationToolInvocation(toolName) || IsMutationToolInvocation(toolName);
+    }
+
+    private static bool IsValidationToolInvocation(string toolName)
+    {
+        return string.Equals(toolName, "workspace_dotnet_build", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_dotnet_test", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMutationToolInvocation(string toolName)
+    {
+        return string.Equals(toolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_create_directory", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_append_file", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_move_path", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, "workspace_delete_path", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveToolInvocationSignature(ToolCallContent toolCall)
+    {
+        return $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall)}";
+    }
+
+    private static string ResolveRepeatedToolInvocationRecoveryHint(string signature)
+    {
+        if (signature.Contains("workspace_delete_path", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator.Tests", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If this is the calculator process, do not keep deleting the sibling test project. Inspect the path shape first. If `Calculator.Tests/Calculator.Tests.csproj` is a directory, the prior scaffold was nested incorrectly; stop repair-by-delete and recreate the sibling test project from the output root on the next clean run.";
+        }
+
+        if (signature.Contains("workspace_move_path", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator.Tests/Calculator.Tests", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator.Tests.csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If this is the calculator process, never move a directory to `Calculator.Tests/Calculator.Tests.csproj`. That creates a directory named like a project file; use `workspace_dotnet_new` with parentDirectory set to the output root and name `Calculator.Tests`.";
+        }
+
+        if (signature.Contains("workspace_write_file", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator.Tests/Calculator.Tests.csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If this is the calculator process, do not keep rewriting the sibling test project when it already references the host. If that path is a directory, the test project was nested incorrectly; stop rewriting it and repair from a clean sibling project path. If the current compiler error is `CS1503` in `Home.razor`, the valid next mutation is the effective routed UI (`Calculator/Components/Pages/Home.razor`), not `Calculator.Tests.csproj`: either change `AppendToResult(string value)` to `AppendToResult(char value)` for char callbacks, or keep string handlers and use single-quoted Razor attributes such as `@onclick='() => AppendToResult(\"1\")'`.";
+        }
+
+        if (signature.Contains("workspace_write_file", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator/Components/Pages/Home.razor", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If this is the calculator process, do not keep overwriting the same routed page. Inspect the latest build output and change the actual blocker: for Razor callback syntax or `CS1503` errors, either use char handlers (`AppendDigit(char digit)`, `ChooseOperator(char op)`) with callbacks like `@onclick=\"() => AppendDigit('1')\"`, or keep string handlers and wrap the whole Razor attribute in single quotes, for example `@onclick='() => AppendDigit(\"1\")'`. Do not leave `AppendToResult('1')` or `SetOperation('+')` calling methods that still accept `string`, and never write `@onclick=\"() => AppendDigit(\"1\")\"`. Also replace placeholder `CalculateResult` logic with `CalculatorEngine`-backed operations, history, and divide-by-zero feedback before validating again.";
+        }
+
+        if (signature.Contains("workspace_dotnet_test", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator.Tests/Calculator.Tests.csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If this is the calculator process, do not rerun the same sibling test command again until you inspect the compiler diagnostic and mutate the source that addresses it. For `Calculator.Domain`, `CalculatorEngine`, `CS0234`, or `CS0246` failures, repair `Calculator.Tests/Calculator.Tests.csproj` with a host ProjectReference and confirm `Calculator/Domain/CalculatorEngine.cs` exists before testing again.";
+        }
+
+        if (signature.Contains("workspace_dotnet_build", StringComparison.OrdinalIgnoreCase) &&
+            signature.Contains("Calculator/Calculator.csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If this is the calculator process, do not rerun the same host build until you inspect the compiler diagnostic and mutate the source that addresses it. For duplicate `CalculatorEngine` failures (`CS0101` or `CS0111`), inspect `Calculator/CalculatorEngine.cs` and `Calculator/Domain/CalculatorEngine.cs`; delete the stale top-level engine file and keep one domain engine before rebuilding.";
+        }
+
+        if (signature.Contains("workspace_write_file", StringComparison.OrdinalIgnoreCase))
+        {
+            return " If the same content is already present, read a different relevant file or mutate the file that actually addresses the remaining validation failure instead of writing this unchanged file again.";
+        }
+
+        return string.Empty;
     }
 
     private static string DescribeToolInvocation(ToolCallContent toolCall)

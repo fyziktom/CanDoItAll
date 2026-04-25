@@ -44,6 +44,89 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     }
 
     [Fact]
+    public void WriteTextFile_rejects_razor_char_callbacks_to_string_handlers()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Components", "Pages", "Home.razor");
+        var aliasPath = BuildExternalTargetAlias(externalFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+@page "/"
+<button @onclick="() => AppendToResult('1')">1</button>
+<button @onclick="() => SetOperation('+')">+</button>
+
+@code {
+    private void AppendToResult(string value) {
+    }
+
+    private void SetOperation(string op) {
+    }
+}
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("CS1503", result.Message, StringComparison.Ordinal);
+        Assert.Contains("AppendToResult", result.Message, StringComparison.Ordinal);
+        Assert.Contains("SetOperation", result.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(externalFilePath));
+    }
+
+    [Fact]
+    public void WriteTextFile_allows_razor_char_callbacks_to_char_handlers()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Components", "Pages", "Home.razor");
+        var aliasPath = BuildExternalTargetAlias(externalFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+@page "/"
+<button @onclick="() => AppendDigit('1')">1</button>
+
+@code {
+    private void AppendDigit(char digit) {
+    }
+}
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(externalFilePath));
+    }
+
+    [Fact]
+    public void WriteTextFile_rejects_razor_double_quoted_string_callback_inside_double_quoted_attribute()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Components", "Pages", "Home.razor");
+        var aliasPath = BuildExternalTargetAlias(externalFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+@page "/"
+<button @onclick="() => AppendToResult("1")">1</button>
+
+@code {
+    private void AppendToResult(string value) {
+    }
+}
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("unescaped double-quoted string literal", result.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(externalFilePath));
+    }
+
+    [Fact]
     public void ReadTextFile_reads_from_real_external_target_for_alias_path()
     {
         var workspaceRoot = CreateDirectory("workspace");

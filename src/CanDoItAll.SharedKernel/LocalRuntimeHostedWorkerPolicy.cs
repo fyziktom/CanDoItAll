@@ -3,6 +3,7 @@ namespace CanDoItAll.SharedKernel;
 public static class LocalRuntimeHostedWorkerPolicy
 {
     public const string LaneKindConfigurationKey = "CanDoItAllMcpLaneKind";
+    public const string McpToolHostLaneKind = "McpToolHost";
 
     public static bool AreBackgroundHostedWorkersEnabled(params string?[] laneKinds)
     {
@@ -17,7 +18,8 @@ public static class LocalRuntimeHostedWorkerPolicy
     public static bool IsSuppressedBackgroundWorkerLane(string? laneKind)
     {
         return string.Equals(laneKind, "PublishedActive", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(laneKind, "PublishedCandidate", StringComparison.OrdinalIgnoreCase);
+               string.Equals(laneKind, "PublishedCandidate", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(laneKind, McpToolHostLaneKind, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? FirstNonEmpty(params string?[] values)

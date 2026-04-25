@@ -8,6 +8,12 @@ namespace CanDoItAll.Modules.Processes;
 public sealed partial class ProcessesService
 {
     private const string HrStaffingManagerDisplayName = "HR Staffing Manager";
+    private const string WorkspaceDotnetBuildCapability = "workspace-dotnet-build";
+    private const string WorkspaceDotnetNewCapability = "workspace-dotnet-new";
+    private const string WorkspaceDotnetTestCapability = "workspace-dotnet-test";
+    private const string RunTestsCapability = "run-tests";
+    private const string PlaywrightLocalMcpCapability = "playwright-local-mcp";
+    private const string ArchitectureSourceRagCapability = "architecture-source-rag";
     private static readonly HashSet<string> RoleKeywordStopWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "and",
@@ -346,7 +352,7 @@ public sealed partial class ProcessesService
             role.DisplayName,
             role.Key,
             role.PreferredExecutorKind,
-            [role.Purpose, role.StaffingIntent, role.SnapshotSummary],
+            [role.Purpose, role.StaffingIntent, role.SnapshotSummary, role.RoleTemplateSourceKey, role.RoleTemplateSnapshotName],
             IsAiRole(role),
             candidate,
             requiredSkillIds,
@@ -416,6 +422,7 @@ public sealed partial class ProcessesService
             score += aiFact.BindingStatus == AiResourceBindingStatus.Bound && aiFact.TechnicalAgentId.HasValue
                 ? 6m
                 : -8m;
+            score += ScoreAiRoleCapabilityFit(displayName, roleKey, additionalRoleContext, aiFact);
         }
 
         score += ScorePreferredExecutorFit(preferredExecutorKind, candidate);
@@ -433,6 +440,155 @@ public sealed partial class ProcessesService
         if (candidate.CandidateKind == ProcessLaunchCandidateKind.Gap)
         {
             score -= 120m;
+        }
+
+        return score;
+    }
+
+    private static decimal ScoreAiRoleCapabilityFit(
+        string displayName,
+        string roleKey,
+        IReadOnlyList<string?> additionalRoleContext,
+        AiAgentStaffingFactListItemModel aiFact)
+    {
+        var primaryRoleText = BuildRoleFitText(displayName, roleKey, []);
+        var roleText = BuildRoleFitText(displayName, roleKey, additionalRoleContext);
+        var agentText = BuildAgentFitText(aiFact);
+        var capabilityNames = aiFact.Capabilities
+            .Select(item => item.Name)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList();
+
+        var score = 0m;
+        var isArchitectureRole = RoleMentions(primaryRoleText, "solution-architect") ||
+                                 RoleMentions(primaryRoleText, "architect");
+        var isQaRole = RoleMentions(primaryRoleText, "qa") ||
+                       RoleMentions(primaryRoleText, "quality");
+        var isImplementationRole = !isArchitectureRole &&
+                                   !isQaRole &&
+                                   (RoleMentions(primaryRoleText, "lead-engineer") ||
+                                    RoleMentions(primaryRoleText, "engineer") ||
+                                    RoleMentions(roleText, "software-engineer") ||
+                                    RoleMentions(roleText, "implementation") ||
+                                    RoleMentions(roleText, "build-capable"));
+
+        if (TextEqualsNormalized(aiFact.DisplayName, displayName) ||
+            TextEqualsNormalized(aiFact.RoleTitle, displayName))
+        {
+            score += 35m;
+        }
+
+        if (isImplementationRole)
+        {
+            if (HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+            {
+                score += 72m;
+            }
+
+            if (HasCapability(capabilityNames, WorkspaceDotnetTestCapability))
+            {
+                score += 16m;
+            }
+
+            if (HasCapability(capabilityNames, WorkspaceDotnetNewCapability))
+            {
+                score += 14m;
+            }
+
+            if (RoleMentions(agentText, "programming") ||
+                RoleMentions(agentText, "implements"))
+            {
+                score += 30m;
+            }
+
+            if (RoleMentions(agentText, "review") &&
+                !HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+            {
+                score -= 20m;
+            }
+        }
+
+        if (isQaRole)
+        {
+            if (RoleMentions(aiFact.DisplayName, "qa") ||
+                RoleMentions(aiFact.RoleTitle, "qa") ||
+                RoleMentions(aiFact.TemplateKey, "qa"))
+            {
+                score += 110m;
+            }
+            else if (RoleMentions(agentText, "qa"))
+            {
+                score += 40m;
+            }
+            else if (RoleMentions(agentText, "quality"))
+            {
+                score += 24m;
+            }
+
+            if (HasCapability(capabilityNames, RunTestsCapability))
+            {
+                score += 14m;
+            }
+
+            if (HasCapability(capabilityNames, PlaywrightLocalMcpCapability))
+            {
+                score += 12m;
+            }
+
+            if (RoleMentions(agentText, "programming"))
+            {
+                score -= 16m;
+            }
+        }
+
+        if (RoleMentions(primaryRoleText, "security"))
+        {
+            score += RoleMentions(agentText, "security") ? 40m : -12m;
+        }
+
+        if (RoleMentions(primaryRoleText, "release"))
+        {
+            if (RoleMentions(agentText, "release") ||
+                RoleMentions(agentText, "readiness") ||
+                RoleMentions(agentText, "rollout"))
+            {
+                score += 50m;
+            }
+        }
+
+        if (RoleMentions(primaryRoleText, "delivery-manager"))
+        {
+            if (RoleMentions(agentText, "portfolio") ||
+                RoleMentions(agentText, "governance") ||
+                RoleMentions(agentText, "delivery"))
+            {
+                score += 18m;
+            }
+
+            if (RoleMentions(agentText, "programming"))
+            {
+                score -= 14m;
+            }
+        }
+
+        if (isArchitectureRole)
+        {
+            if (RoleMentions(aiFact.DisplayName, "architect") ||
+                RoleMentions(aiFact.RoleTitle, "architect") ||
+                RoleMentions(aiFact.TemplateKey, "architect"))
+            {
+                score += 90m;
+            }
+            else if (RoleMentions(agentText, "architect") ||
+                     HasCapability(capabilityNames, ArchitectureSourceRagCapability))
+            {
+                score += 24m;
+            }
+
+            if (RoleMentions(agentText, "programming"))
+            {
+                score -= 40m;
+            }
         }
 
         return score;
@@ -502,5 +658,64 @@ public sealed partial class ProcessesService
         }
 
         return keywords.Count(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string BuildRoleFitText(
+        string displayName,
+        string roleKey,
+        IReadOnlyList<string?> additionalRoleContext)
+    {
+        return string.Join(
+            ' ',
+            new[] { displayName, roleKey }
+                .Concat(additionalRoleContext)
+                .Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static string BuildAgentFitText(AiAgentStaffingFactListItemModel aiFact)
+    {
+        return string.Join(
+            ' ',
+            new[]
+            {
+                aiFact.DisplayName,
+                aiFact.RoleTitle,
+                aiFact.Summary,
+                aiFact.Instructions,
+                aiFact.TemplateKey,
+                string.Join(' ', aiFact.Tags),
+                string.Join(' ', aiFact.Capabilities.Select(item => item.Name))
+            }.Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static bool RoleMentions(string text, string value)
+    {
+        return !string.IsNullOrWhiteSpace(text) &&
+               text.Contains(value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasCapability(IReadOnlyCollection<string> capabilityNames, string capabilityKey)
+    {
+        var normalizedCapabilityKey = NormalizeRoleFitToken(capabilityKey);
+        return capabilityNames.Any(item =>
+            string.Equals(NormalizeRoleFitToken(item), normalizedCapabilityKey, StringComparison.Ordinal));
+    }
+
+    private static bool TextEqualsNormalized(string left, string right)
+    {
+        return string.Equals(NormalizeRoleFitToken(left), NormalizeRoleFitToken(right), StringComparison.Ordinal);
+    }
+
+    private static string NormalizeRoleFitToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+                .Where(char.IsLetterOrDigit)
+                .Select(char.ToLowerInvariant)
+                .ToArray());
     }
 }

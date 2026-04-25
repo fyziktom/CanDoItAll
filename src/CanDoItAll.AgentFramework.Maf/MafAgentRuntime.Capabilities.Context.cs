@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Mem0;
@@ -84,7 +85,7 @@ public sealed partial class MafAgentRuntime
 
             var apiKey = string.IsNullOrWhiteSpace(configuration.ApiKeyEnvironmentVariable)
                 ? string.Empty
-                : Environment.GetEnvironmentVariable(configuration.ApiKeyEnvironmentVariable) ?? string.Empty;
+                : AgentProviderEnvironmentCredential.ResolveAndPromote(configuration.ApiKeyEnvironmentVariable);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 throw new InvalidOperationException($"Capability '{capability.Name}' requires environment variable '{configuration.ApiKeyEnvironmentVariable}' for Mem0.");

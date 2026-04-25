@@ -4,6 +4,8 @@ using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -32,7 +34,7 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements);
-        await AttachCompactionAsync(composition, agent, progressCallback);
+        await AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements);
 
         DeduplicateTools(composition.State.Tools);
         return composition.State;
@@ -303,10 +305,38 @@ public sealed partial class MafAgentRuntime
     private async Task AttachCompactionAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
-        Func<ExecutionState, string, string, Task> progressCallback)
+        Func<ExecutionState, string, string, Task> progressCallback,
+        bool suppressApprovalRequirements)
     {
         if (!ShouldEnableCompaction(agent, composition.AgentConfiguration))
         {
+            return;
+        }
+
+        if (IsGovernedProcessAutomationRun())
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Compaction",
+                "Skipped Microsoft Agent Framework compaction for governed process automation. Process-step prompts are bounded, and compaction must not block the run before the agent session starts.");
+            return;
+        }
+
+        if (suppressApprovalRequirements)
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Compaction",
+                "Skipped Microsoft Agent Framework compaction for auto-approved non-interactive execution. Compaction is optional and must not block unattended runs before the agent session starts.");
+            return;
+        }
+
+        if (!EnsureCompactionCredentialAvailable())
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Compaction",
+                "Skipped Microsoft Agent Framework compaction because OPENAI_API_KEY is not available to the runtime. Core provider execution will resolve credentials through the configured provider profile.");
             return;
         }
 
@@ -326,6 +356,32 @@ public sealed partial class MafAgentRuntime
 
         return agent.ChatHistoryMode == AgentChatHistoryMode.FrameworkManaged
             || agent.Workload is AgentWorkloadKind.Programming or AgentWorkloadKind.Research;
+    }
+
+    private static bool IsGovernedProcessAutomationRun()
+    {
+        var auditScope = WorkspaceExecutionAuditContext.Current;
+        return auditScope is not null &&
+               (!string.IsNullOrWhiteSpace(auditScope.ProcessRunId) ||
+                !string.IsNullOrWhiteSpace(auditScope.ProcessStepId));
+    }
+
+    private bool EnsureCompactionCredentialAvailable()
+    {
+        var processValue = AgentProviderEnvironmentCredential.ResolveAndPromote(OpenAiApiKeyEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(processValue))
+        {
+            return true;
+        }
+
+        var configuredValue = services.GetService<IConfiguration>()?[OpenAiApiKeyEnvironmentVariable];
+        if (string.IsNullOrWhiteSpace(configuredValue))
+        {
+            return false;
+        }
+
+        AgentProviderEnvironmentCredential.PromoteProcessValue(OpenAiApiKeyEnvironmentVariable, configuredValue.Trim());
+        return true;
     }
 
     private static CompactionProvider CreateCompactionProvider(AgentRuntimeConfiguration configuration)

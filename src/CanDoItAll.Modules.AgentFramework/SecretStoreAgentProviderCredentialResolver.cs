@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -10,7 +11,8 @@ using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderP
 
 internal sealed class SecretStoreAgentProviderCredentialResolver(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ISecretProtector secretProtector) : IAgentProviderCredentialResolver
+    ISecretProtector secretProtector,
+    IConfiguration configuration) : IAgentProviderCredentialResolver
 {
     public ProviderCredentialResolution Resolve(
         AgentFrameworkProviderProfile provider)
@@ -33,8 +35,10 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
 
             try
             {
+                var secretValue = secretProtector.Unprotect(secret.EncryptedPayload);
+                AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, secretValue);
                 return new ProviderCredentialResolution(
-                    secretProtector.Unprotect(secret.EncryptedPayload),
+                    secretValue,
                     $"secret record '{secret.Name}'",
                     string.Empty);
             }
@@ -56,15 +60,28 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         }
 
         var variableName = provider.ApiKeyEnvironmentVariable.Trim();
-        var value = Environment.GetEnvironmentVariable(variableName)?.Trim() ?? string.Empty;
-        return string.IsNullOrWhiteSpace(value)
-            ? new ProviderCredentialResolution(
-                string.Empty,
-                $"environment variable '{variableName}'",
-                $"Environment variable '{variableName}' is not set.")
-            : new ProviderCredentialResolution(
+        var value = AgentProviderEnvironmentCredential.ResolveAndPromote(variableName);
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return new ProviderCredentialResolution(
                 value,
                 $"environment variable '{variableName}'",
                 string.Empty);
+        }
+
+        var configuredValue = configuration[variableName];
+        if (!string.IsNullOrWhiteSpace(configuredValue))
+        {
+            AgentProviderEnvironmentCredential.PromoteProcessValue(variableName, configuredValue);
+            return new ProviderCredentialResolution(
+                configuredValue.Trim(),
+                $"application configuration key '{variableName}'",
+                string.Empty);
+        }
+
+        return new ProviderCredentialResolution(
+            string.Empty,
+            $"environment variable '{variableName}'",
+            $"Environment variable '{variableName}' is not set and application configuration key '{variableName}' is empty. {AgentProviderEnvironmentCredential.DescribePresence(variableName)}");
     }
 }
