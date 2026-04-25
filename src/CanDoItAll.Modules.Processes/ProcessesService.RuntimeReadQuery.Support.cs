@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Collaboration;
 using Microsoft.EntityFrameworkCore;
@@ -85,17 +86,367 @@ public sealed partial class ProcessRuntimeReadQueryService
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessArtifactViewModel(
                 item.Id,
+                item.StepRunId,
+                item.ArtifactExpectationId,
                 item.ArtifactKind,
                 item.Title,
                 item.TrustStatus,
                 item.SensitivityLevel,
                 item.ProvenanceSummary,
                 item.AllowedFutureUsageSummary,
+                item.ManagedStoragePath,
+                item.ExternalReferenceKey,
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
         return items
             .OrderByDescending(item => item.CreatedAtUtc)
             .ToList();
+    }
+
+    private static async Task<IReadOnlyList<ProcessOutboxRecordViewModel>> ListOutboxRecordsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var records = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runId)
+            .ToListAsync(cancellationToken);
+
+        return records
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .Select(item => MapOutboxRecord(item, now))
+            .ToList();
+    }
+
+    private static ProcessOutboxRecordViewModel MapOutboxRecord(ProcessOutboxRecord record, DateTimeOffset now)
+    {
+        var automationDispatch = TryReadAutomationDispatch(record.PayloadJson);
+        return new ProcessOutboxRecordViewModel(
+            record.Id,
+            automationDispatch?.StepRunId,
+            record.CommandKey,
+            record.Status,
+            ResolveOutboxHealth(record, now),
+            record.AttemptCount,
+            record.LastAttemptAtUtc,
+            record.NextAttemptAtUtc,
+            record.LeaseExpiresAtUtc,
+            record.CompletedAtUtc,
+            record.LastError,
+            automationDispatch?.Trigger ?? string.Empty,
+            record.UpdatedAtUtc);
+    }
+
+    private static ProcessOutboxHealthStatus ResolveOutboxHealth(ProcessOutboxRecord record, DateTimeOffset now)
+    {
+        return record.Status switch
+        {
+            ProcessOutboxRecordStatus.Completed => ProcessOutboxHealthStatus.Completed,
+            ProcessOutboxRecordStatus.DeadLettered => ProcessOutboxHealthStatus.DeadLettered,
+            _ when record.LeaseExpiresAtUtc.HasValue && record.LeaseExpiresAtUtc.Value > now => ProcessOutboxHealthStatus.Leased,
+            _ when record.NextAttemptAtUtc.HasValue && record.NextAttemptAtUtc.Value > now => ProcessOutboxHealthStatus.WaitingToRetry,
+            _ => ProcessOutboxHealthStatus.Pending
+        };
+    }
+
+    private static ProcessOutboxAutomationDispatchRequest? TryReadAutomationDispatch(string payloadJson)
+    {
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ProcessOutboxPayload>(payloadJson, OutboxPayloadSerializerOptions)?.AutomationDispatch;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> BuildArtifactLedger(
+        ProcessStepRun stepRun,
+        IReadOnlyDictionary<Guid, List<ProcessArtifactExpectation>> artifactExpectationsByStepId,
+        IReadOnlyDictionary<Guid, List<ProcessArtifactRecord>> artifactRecordsByStepRunId)
+    {
+        if (!artifactExpectationsByStepId.TryGetValue(stepRun.StepDefinitionId, out var expectations) || expectations.Count == 0)
+        {
+            return [];
+        }
+
+        artifactRecordsByStepRunId.TryGetValue(stepRun.Id, out var stepArtifacts);
+        stepArtifacts ??= [];
+
+        return expectations
+            .Select(expectation => BuildArtifactLedgerItem(stepRun, expectation, stepArtifacts))
+            .ToList();
+    }
+
+    private static ProcessArtifactExpectationSatisfactionViewModel BuildArtifactLedgerItem(
+        ProcessStepRun stepRun,
+        ProcessArtifactExpectation expectation,
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+    {
+        var artifact = stepArtifacts.FirstOrDefault(item => SatisfiesArtifactExpectation(item, expectation));
+        if (artifact is not null)
+        {
+            var sourceKind = ResolveArtifactSourceKind(artifact.ExternalReferenceKey);
+            return new ProcessArtifactExpectationSatisfactionViewModel(
+                stepRun.Id,
+                expectation.Id,
+                expectation.ArtifactKind,
+                expectation.Title,
+                expectation.IsRequired,
+                sourceKind is ProcessArtifactExpectationSourceKind.AgentExecutionArtifact or ProcessArtifactExpectationSourceKind.ProcessArtifactRecord
+                    ? ProcessArtifactExpectationSatisfactionStatus.Satisfied
+                    : ProcessArtifactExpectationSatisfactionStatus.AutoProjected,
+                sourceKind,
+                artifact.Id,
+                artifact.Title,
+                artifact.ManagedStoragePath,
+                BuildArtifactSatisfiedDiagnostic(sourceKind));
+        }
+
+        var status = ResolveUnsatisfiedArtifactStatus(stepRun, expectation);
+        return new ProcessArtifactExpectationSatisfactionViewModel(
+            stepRun.Id,
+            expectation.Id,
+            expectation.ArtifactKind,
+            expectation.Title,
+            expectation.IsRequired,
+            status,
+            ProcessArtifactExpectationSourceKind.None,
+            null,
+            string.Empty,
+            string.Empty,
+            BuildUnsatisfiedArtifactDiagnostic(stepRun, expectation, status));
+    }
+
+    private static ProcessArtifactExpectationSatisfactionStatus ResolveUnsatisfiedArtifactStatus(
+        ProcessStepRun stepRun,
+        ProcessArtifactExpectation expectation)
+    {
+        if (!expectation.IsRequired)
+        {
+            return ProcessArtifactExpectationSatisfactionStatus.Expected;
+        }
+
+        if (stepRun.Status == ProcessStepRunStatus.Failed &&
+            ContainsProjectionFailureSignal(stepRun.ExceptionSummary))
+        {
+            return ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed;
+        }
+
+        if (stepRun.Status is ProcessStepRunStatus.Pending or ProcessStepRunStatus.Ready)
+        {
+            return ProcessArtifactExpectationSatisfactionStatus.Expected;
+        }
+
+        return ProcessArtifactExpectationSatisfactionStatus.Missing;
+    }
+
+    private static bool ContainsProjectionFailureSignal(string value)
+    {
+        return value.Contains("artifact", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("projection", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("storage", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildArtifactSatisfiedDiagnostic(ProcessArtifactExpectationSourceKind sourceKind)
+    {
+        return sourceKind switch
+        {
+            ProcessArtifactExpectationSourceKind.AgentExecutionArtifact => "Satisfied by a projected AgentFramework artifact.",
+            ProcessArtifactExpectationSourceKind.AssistantResponse => "Auto-projected from the final assistant response.",
+            ProcessArtifactExpectationSourceKind.ProcessMockArtifact => "Auto-projected from deterministic process mock output.",
+            ProcessArtifactExpectationSourceKind.CompletedDecision => "Auto-recorded from the governed decision outcome.",
+            ProcessArtifactExpectationSourceKind.ProviderNativeBrowserArtifact => "Auto-projected from provider-native browser evidence.",
+            _ => "Satisfied by a process artifact record."
+        };
+    }
+
+    private static string BuildUnsatisfiedArtifactDiagnostic(
+        ProcessStepRun stepRun,
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactExpectationSatisfactionStatus status)
+    {
+        if (!expectation.IsRequired)
+        {
+            return "Optional artifact expectation has not been recorded.";
+        }
+
+        return status switch
+        {
+            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed => "Required artifact projection failed; inspect the failed step reason before retrying.",
+            ProcessArtifactExpectationSatisfactionStatus.Expected => "Required artifact is expected when this step runs.",
+            _ => string.IsNullOrWhiteSpace(stepRun.BlockedReason) && string.IsNullOrWhiteSpace(stepRun.ExceptionSummary)
+                ? "Required artifact is missing from process evidence."
+                : $"{(string.IsNullOrWhiteSpace(stepRun.BlockedReason) ? stepRun.ExceptionSummary : stepRun.BlockedReason)}"
+        };
+    }
+
+    private static ProcessArtifactExpectationSourceKind ResolveArtifactSourceKind(string externalReferenceKey)
+    {
+        if (externalReferenceKey.StartsWith("agentframework-artifact:", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactExpectationSourceKind.AgentExecutionArtifact;
+        }
+
+        if (externalReferenceKey.StartsWith("assistant-response|", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactExpectationSourceKind.AssistantResponse;
+        }
+
+        if (externalReferenceKey.StartsWith("process-mock-artifact:", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactExpectationSourceKind.ProcessMockArtifact;
+        }
+
+        if (externalReferenceKey.StartsWith("process-step-decision:", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactExpectationSourceKind.CompletedDecision;
+        }
+
+        if (externalReferenceKey.StartsWith("agentframework-browser-artifact:", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactExpectationSourceKind.ProviderNativeBrowserArtifact;
+        }
+
+        return string.IsNullOrWhiteSpace(externalReferenceKey)
+            ? ProcessArtifactExpectationSourceKind.ProcessArtifactRecord
+            : ProcessArtifactExpectationSourceKind.ProcessArtifactRecord;
+    }
+
+    private static bool SatisfiesArtifactExpectation(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectation expectation)
+    {
+        if (artifact.ArtifactKind != expectation.ArtifactKind)
+        {
+            return false;
+        }
+
+        if (artifact.SensitivityLevel < expectation.SensitivityLevel)
+        {
+            return false;
+        }
+
+        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
+        {
+            return false;
+        }
+
+        if (artifact.ArtifactExpectationId.HasValue)
+        {
+            return artifact.ArtifactExpectationId.Value == expectation.Id;
+        }
+
+        return string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool SatisfiesTrustRequirement(
+        ProcessArtifactTrustStatus trustStatus,
+        ProcessArtifactTrustRequirement trustRequirement)
+    {
+        return trustRequirement switch
+        {
+            ProcessArtifactTrustRequirement.None => true,
+            ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
+                ProcessArtifactTrustStatus.ReviewRequired or
+                ProcessArtifactTrustStatus.Approved or
+                ProcessArtifactTrustStatus.TrustedSource,
+            ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
+            _ => false
+        };
+    }
+
+    private static ProcessStepRunHealthViewModel BuildInitialStepHealth(
+        ProcessStepRun stepRun,
+        IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> artifactLedger,
+        string manualRecoveryDirective)
+    {
+        var missingArtifacts = artifactLedger
+            .Where(item => item.IsRequired)
+            .Where(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed)
+            .Select(item => item.Title)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var recoveryClassification = ResolveInitialRecoveryClassification(stepRun, missingArtifacts, manualRecoveryDirective);
+        return ProcessStepRunHealthViewModel.Empty with
+        {
+            RecoveryClassification = recoveryClassification,
+            ActionableReason = BuildInitialActionableReason(stepRun, missingArtifacts, manualRecoveryDirective),
+            CanManualRerun = CanManualRerun(stepRun)
+        };
+    }
+
+    private static ProcessRecoveryClassification ResolveInitialRecoveryClassification(
+        ProcessStepRun stepRun,
+        IReadOnlyCollection<string> missingArtifacts,
+        string manualRecoveryDirective)
+    {
+        if (!string.IsNullOrWhiteSpace(manualRecoveryDirective))
+        {
+            return ProcessRecoveryClassification.ManualRerun;
+        }
+
+        if (missingArtifacts.Count > 0)
+        {
+            return ProcessRecoveryClassification.MissingArtifact;
+        }
+
+        return stepRun.Status switch
+        {
+            ProcessStepRunStatus.InProgress when !string.IsNullOrWhiteSpace(stepRun.ExceptionSummary) => ProcessRecoveryClassification.CrashRecovery,
+            ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed => ProcessRecoveryClassification.AutomaticRetry,
+            _ => ProcessRecoveryClassification.None
+        };
+    }
+
+    private static string BuildInitialActionableReason(
+        ProcessStepRun stepRun,
+        IReadOnlyCollection<string> missingArtifacts,
+        string manualRecoveryDirective)
+    {
+        if (!string.IsNullOrWhiteSpace(manualRecoveryDirective))
+        {
+            return manualRecoveryDirective.Trim();
+        }
+
+        if (missingArtifacts.Count > 0)
+        {
+            return $"Missing required artifacts: {string.Join(", ", missingArtifacts.Take(3))}.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(stepRun.BlockedReason))
+        {
+            return stepRun.BlockedReason.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(stepRun.ExceptionSummary))
+        {
+            return stepRun.ExceptionSummary.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(stepRun.DecisionSummary))
+        {
+            return stepRun.DecisionSummary.Trim();
+        }
+
+        return string.Empty;
+    }
+
+    private static bool CanManualRerun(ProcessStepRun stepRun)
+    {
+        return stepRun.CurrentExecutorPartyId.HasValue &&
+               stepRun.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed;
     }
 
     private static async Task<IReadOnlyList<ProcessRunAssignmentViewModel>> ListAssignmentsAsync(
@@ -347,4 +698,6 @@ public sealed partial class ProcessRuntimeReadQueryService
         string AuthorName,
         string Body,
         DateTimeOffset CreatedAtUtc);
+
+    private static readonly JsonSerializerOptions OutboxPayloadSerializerOptions = new(JsonSerializerDefaults.Web);
 }

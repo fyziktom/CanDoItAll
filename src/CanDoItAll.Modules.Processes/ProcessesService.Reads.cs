@@ -60,12 +60,16 @@ public sealed partial class ProcessesService {
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessArtifactViewModel(
                 item.Id,
+                item.StepRunId,
+                item.ArtifactExpectationId,
                 item.ArtifactKind,
                 item.Title,
                 item.TrustStatus,
                 item.SensitivityLevel,
                 item.ProvenanceSummary,
                 item.AllowedFutureUsageSummary,
+                item.ManagedStoragePath,
+                item.ExternalReferenceKey,
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
         return items

@@ -19,6 +19,136 @@ public sealed record ProcessRunListItem(
     decimal ActualCost,
     DateTimeOffset UpdatedAtUtc);
 
+public enum ProcessArtifactExpectationSatisfactionStatus {
+    Expected,
+    Satisfied,
+    AutoProjected,
+    Missing,
+    ProjectionFailed,
+    NotApplicable
+}
+
+public enum ProcessArtifactExpectationSourceKind {
+    None,
+    ProcessArtifactRecord,
+    AgentExecutionArtifact,
+    AssistantResponse,
+    ProcessMockArtifact,
+    CompletedDecision,
+    ProviderNativeBrowserArtifact
+}
+
+public enum ProcessRecoveryClassification {
+    None,
+    AutomaticRetry,
+    CrashRecovery,
+    ContextResetRetry,
+    ProviderRepairRetry,
+    ManualRerun,
+    MissingArtifact,
+    OutboxDeadLetter
+}
+
+public enum ProcessOutboxHealthStatus {
+    Pending,
+    Leased,
+    WaitingToRetry,
+    Completed,
+    DeadLettered
+}
+
+public sealed record ProcessArtifactExpectationSatisfactionViewModel(
+    Guid StepRunId,
+    Guid ArtifactExpectationId,
+    ProcessArtifactKind ArtifactKind,
+    string Title,
+    bool IsRequired,
+    ProcessArtifactExpectationSatisfactionStatus Status,
+    ProcessArtifactExpectationSourceKind SourceKind,
+    Guid? ProcessArtifactRecordId,
+    string SatisfiedByTitle,
+    string ManagedStoragePath,
+    string Diagnostic);
+
+public sealed record ProcessStepExecutionAttemptViewModel(
+    Guid ExecutionRunId,
+    string StatusBadgeText,
+    string StatusTone,
+    string RawStatusBadgeText,
+    ExecutionState State,
+    RunOutcome? Outcome,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    bool IsLatest);
+
+public sealed record ProcessStepRunHealthViewModel(
+    int AttemptCount,
+    string LatestAttemptStatus,
+    string LatestAttemptTone,
+    int PendingApprovalCount,
+    ProcessRecoveryClassification RecoveryClassification,
+    string ActionableReason,
+    bool CanManualRerun,
+    int PendingOutboxCount,
+    int DeadLetteredOutboxCount,
+    IReadOnlyList<ProcessStepExecutionAttemptViewModel> Attempts)
+{
+    public static ProcessStepRunHealthViewModel Empty { get; } = new(
+        0,
+        string.Empty,
+        "neutral",
+        0,
+        ProcessRecoveryClassification.None,
+        string.Empty,
+        false,
+        0,
+        0,
+        []);
+}
+
+public sealed record ProcessOutboxRecordViewModel(
+    Guid Id,
+    Guid? StepRunId,
+    string CommandKey,
+    ProcessOutboxRecordStatus Status,
+    ProcessOutboxHealthStatus HealthStatus,
+    int AttemptCount,
+    DateTimeOffset? LastAttemptAtUtc,
+    DateTimeOffset? NextAttemptAtUtc,
+    DateTimeOffset? LeaseExpiresAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    string LastError,
+    string Trigger,
+    DateTimeOffset UpdatedAtUtc);
+
+public sealed record ProcessRunHealthSummaryViewModel(
+    int ActiveExecutionCount,
+    int LatestAttemptCount,
+    int PendingApprovalCount,
+    int BlockedStepCount,
+    int FailedStepCount,
+    int WaitingApprovalStepCount,
+    int MissingArtifactCount,
+    int PendingOutboxCount,
+    int DeadLetteredOutboxCount,
+    ProcessRecoveryClassification RecoveryClassification,
+    string ActionableReason)
+{
+    public static ProcessRunHealthSummaryViewModel Empty { get; } = new(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        ProcessRecoveryClassification.None,
+        string.Empty);
+}
+
 public sealed record ProcessLaunchPlanListItem(
     Guid Id,
     Guid ProcessDefinitionId,
@@ -94,6 +224,12 @@ public sealed record ProcessStepRunViewModel(
     public int ArtifactInputCount { get; init; }
 
     public IReadOnlyList<ProcessStepRunArtifactPortViewModel> ArtifactOutputs { get; init; } = [];
+
+    public string ExceptionSummary { get; init; } = string.Empty;
+
+    public IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> ArtifactExpectations { get; init; } = [];
+
+    public ProcessStepRunHealthViewModel Health { get; init; } = ProcessStepRunHealthViewModel.Empty;
 }
 
 public sealed record ProcessDecisionViewModel(
@@ -108,12 +244,16 @@ public sealed record ProcessDecisionViewModel(
 
 public sealed record ProcessArtifactViewModel(
     Guid Id,
+    Guid? StepRunId,
+    Guid? ArtifactExpectationId,
     ProcessArtifactKind ArtifactKind,
     string Title,
     ProcessArtifactTrustStatus TrustStatus,
     ProcessSensitivityLevel SensitivityLevel,
     string ProvenanceSummary,
     string AllowedFutureUsageSummary,
+    string ManagedStoragePath,
+    string ExternalReferenceKey,
     DateTimeOffset CreatedAtUtc);
 
 public sealed record ProcessRunAssignmentViewModel(
@@ -276,6 +416,14 @@ public sealed record ProcessActiveRunSummaryViewModel(
     int PendingApprovalCount)
 {
     public IReadOnlyList<ProcessActiveAgentViewModel> Agents { get; init; } = [];
+
+    public int PendingOutboxCount { get; init; }
+
+    public int DeadLetteredOutboxCount { get; init; }
+
+    public int BlockedOrFailedStepCount { get; init; }
+
+    public string HealthSummary { get; init; } = string.Empty;
 }
 
 public sealed record ProcessImprovementViewModel(
@@ -471,6 +619,15 @@ public sealed class ProcessStepTransitionRequest
     public string DecidedBy { get; set; } = string.Empty;
 
     public bool SuppressAutomationDispatch { get; set; }
+}
+
+public sealed class ProcessAgentStepRerunRequest
+{
+    public Guid StepRunId { get; set; }
+
+    public Guid? StepRunConcurrencyToken { get; set; }
+
+    public string OperatorReason { get; set; } = string.Empty;
 }
 
 public sealed class ProcessAssignmentResolutionRequest

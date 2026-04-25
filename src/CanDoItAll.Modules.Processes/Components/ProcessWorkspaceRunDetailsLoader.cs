@@ -13,9 +13,12 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
     {
         var runDetails = await processesService.GetRunDetailsAsync(runId, cancellationToken);
         var executionRuns = await LoadExecutionRunsAsync(runId, runDetails.StepRuns, cancellationToken);
+        var stepRuns = EnrichStepHealth(runDetails.StepRuns, executionRuns, runDetails.OutboxRecords);
         return runDetails with
         {
-            ExecutionRuns = executionRuns
+            StepRuns = stepRuns,
+            ExecutionRuns = executionRuns,
+            Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords)
         };
     }
 
@@ -47,15 +50,16 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
                 .Where(ExecutionRunBlocksSession)
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .ToList();
-            if (activeExecutionRuns.Count == 0)
-            {
-                continue;
-            }
+            var runDetails = await processesService.GetRunDetailsAsync(run.Id, cancellationToken);
 
             var stepTitlesById = await LoadStepTitlesByIdAsync(run.Id, activeExecutionRuns, cancellationToken);
             var activeAgents = activeExecutionRuns
                 .Select(item => MapActiveAgent(item, stepTitlesById, agentsById))
                 .ToList();
+            var outboxRecords = runDetails.OutboxRecords;
+            var deadLetteredOutboxCount = outboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);
+            var pendingOutboxCount = outboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry);
+            var blockedOrFailedStepCount = runDetails.StepRuns.Count(item => item.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed);
 
             summaries.Add(new ProcessActiveRunSummaryViewModel(
                 run.Id,
@@ -65,7 +69,11 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
                 activeAgents.Count,
                 activeExecutionRuns.Sum(item => item.PendingApprovals.Count))
             {
-                Agents = activeAgents
+                Agents = activeAgents,
+                PendingOutboxCount = pendingOutboxCount,
+                DeadLetteredOutboxCount = deadLetteredOutboxCount,
+                BlockedOrFailedStepCount = blockedOrFailedStepCount,
+                HealthSummary = BuildActiveRunHealthSummary(activeAgents.Count, pendingOutboxCount, deadLetteredOutboxCount, blockedOrFailedStepCount)
             });
         }
 
@@ -244,6 +252,224 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         };
     }
 
+    private static IReadOnlyList<ProcessStepRunViewModel> EnrichStepHealth(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        IReadOnlyList<ProcessExecutionRunViewModel> executionRuns,
+        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords)
+    {
+        var attemptsByStepRunId = executionRuns
+            .Where(item => item.StepRunId.HasValue)
+            .GroupBy(item => item.StepRunId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(item => item.CompletedAtUtc ?? item.UpdatedAtUtc)
+                    .ThenByDescending(item => item.CreatedAtUtc)
+                    .Select((item, index) => new ProcessStepExecutionAttemptViewModel(
+                        item.Id,
+                        item.StatusBadgeText,
+                        item.StatusTone,
+                        item.RawStatusBadgeText,
+                        item.State,
+                        item.Outcome,
+                        item.CreatedAtUtc,
+                        item.UpdatedAtUtc,
+                        item.CompletedAtUtc,
+                        index == 0))
+                    .ToList());
+
+        var outboxRecordsByStepRunId = outboxRecords
+            .Where(item => item.StepRunId.HasValue)
+            .GroupBy(item => item.StepRunId!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        return stepRuns
+            .Select(stepRun =>
+            {
+                attemptsByStepRunId.TryGetValue(stepRun.Id, out var attempts);
+                attempts ??= [];
+                outboxRecordsByStepRunId.TryGetValue(stepRun.Id, out var stepOutboxRecords);
+                stepOutboxRecords ??= [];
+                var latestAttempt = attempts.FirstOrDefault(item => item.IsLatest);
+                var pendingApprovals = executionRuns
+                    .Where(item => item.StepRunId == stepRun.Id)
+                    .Sum(item => item.Approvals.Count(approval => approval.Status == ExecutionApprovalStatus.Pending));
+                var pendingOutboxCount = stepOutboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry);
+                var deadLetteredOutboxCount = stepOutboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);
+                var recoveryClassification = ResolveStepRecoveryClassification(stepRun, latestAttempt, pendingOutboxCount, deadLetteredOutboxCount);
+
+                return stepRun with
+                {
+                    Health = stepRun.Health with
+                    {
+                        AttemptCount = attempts.Count,
+                        LatestAttemptStatus = latestAttempt?.StatusBadgeText ?? string.Empty,
+                        LatestAttemptTone = latestAttempt?.StatusTone ?? "neutral",
+                        PendingApprovalCount = pendingApprovals,
+                        RecoveryClassification = recoveryClassification,
+                        ActionableReason = BuildStepActionableReason(stepRun, latestAttempt, deadLetteredOutboxCount),
+                        PendingOutboxCount = pendingOutboxCount,
+                        DeadLetteredOutboxCount = deadLetteredOutboxCount,
+                        Attempts = attempts
+                    }
+                };
+            })
+            .ToList();
+    }
+
+    private static ProcessRecoveryClassification ResolveStepRecoveryClassification(
+        ProcessStepRunViewModel stepRun,
+        ProcessStepExecutionAttemptViewModel? latestAttempt,
+        int pendingOutboxCount,
+        int deadLetteredOutboxCount)
+    {
+        if (deadLetteredOutboxCount > 0)
+        {
+            return ProcessRecoveryClassification.OutboxDeadLetter;
+        }
+
+        if (stepRun.Health.RecoveryClassification != ProcessRecoveryClassification.None)
+        {
+            return stepRun.Health.RecoveryClassification;
+        }
+
+        if (pendingOutboxCount > 0 && stepRun.Status is ProcessStepRunStatus.Ready or ProcessStepRunStatus.InProgress)
+        {
+            return ProcessRecoveryClassification.AutomaticRetry;
+        }
+
+        if (latestAttempt is { State: ExecutionState.Failed })
+        {
+            return ProcessRecoveryClassification.CrashRecovery;
+        }
+
+        return ProcessRecoveryClassification.None;
+    }
+
+    private static string BuildStepActionableReason(
+        ProcessStepRunViewModel stepRun,
+        ProcessStepExecutionAttemptViewModel? latestAttempt,
+        int deadLetteredOutboxCount)
+    {
+        if (deadLetteredOutboxCount > 0)
+        {
+            return "Automation dispatch is dead-lettered for this step. Inspect the outbox error before rerunning.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(stepRun.Health.ActionableReason))
+        {
+            return stepRun.Health.ActionableReason;
+        }
+
+        if (latestAttempt is not null &&
+            latestAttempt.State == ExecutionState.Failed)
+        {
+            return "The latest AgentFramework execution failed. Rerun with recovery instructions when the process contract still requires this work.";
+        }
+
+        return string.Empty;
+    }
+
+    private static ProcessRunHealthSummaryViewModel BuildRunHealth(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        IReadOnlyList<ProcessExecutionRunViewModel> executionRuns,
+        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords)
+    {
+        var missingArtifactCount = stepRuns
+            .SelectMany(item => item.ArtifactExpectations)
+            .Count(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed);
+        var deadLetteredOutboxCount = outboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);
+        var pendingOutboxCount = outboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry);
+        var activeExecutionCount = executionRuns.Count(item =>
+            item.Approvals.Any(approval => approval.Status == ExecutionApprovalStatus.Pending) ||
+            item.State is ExecutionState.Preparing or
+                ExecutionState.Running or
+                ExecutionState.WaitingOnTool or
+                ExecutionState.Persisting);
+        var recoveryClassification = ResolveRunRecoveryClassification(stepRuns, deadLetteredOutboxCount, missingArtifactCount);
+        return new ProcessRunHealthSummaryViewModel(
+            activeExecutionCount,
+            executionRuns.Count,
+            executionRuns.Sum(item => item.Approvals.Count(approval => approval.Status == ExecutionApprovalStatus.Pending)),
+            stepRuns.Count(item => item.Status == ProcessStepRunStatus.Blocked),
+            stepRuns.Count(item => item.Status == ProcessStepRunStatus.Failed),
+            stepRuns.Count(item => item.Status == ProcessStepRunStatus.WaitingApproval),
+            missingArtifactCount,
+            pendingOutboxCount,
+            deadLetteredOutboxCount,
+            recoveryClassification,
+            BuildRunActionableReason(stepRuns, deadLetteredOutboxCount, missingArtifactCount));
+    }
+
+    private static ProcessRecoveryClassification ResolveRunRecoveryClassification(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        int deadLetteredOutboxCount,
+        int missingArtifactCount)
+    {
+        if (deadLetteredOutboxCount > 0)
+        {
+            return ProcessRecoveryClassification.OutboxDeadLetter;
+        }
+
+        if (missingArtifactCount > 0)
+        {
+            return ProcessRecoveryClassification.MissingArtifact;
+        }
+
+        return stepRuns
+            .Select(item => item.Health.RecoveryClassification)
+            .FirstOrDefault(item => item != ProcessRecoveryClassification.None);
+    }
+
+    private static string BuildRunActionableReason(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        int deadLetteredOutboxCount,
+        int missingArtifactCount)
+    {
+        if (deadLetteredOutboxCount > 0)
+        {
+            return "One or more automation dispatch records are dead-lettered.";
+        }
+
+        if (missingArtifactCount > 0)
+        {
+            return "One or more required artifact obligations are still missing.";
+        }
+
+        return stepRuns
+            .Select(item => item.Health.ActionableReason)
+            .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item)) ?? string.Empty;
+    }
+
+    private static string BuildActiveRunHealthSummary(
+        int activeAgentCount,
+        int pendingOutboxCount,
+        int deadLetteredOutboxCount,
+        int blockedOrFailedStepCount)
+    {
+        if (deadLetteredOutboxCount > 0)
+        {
+            return $"{deadLetteredOutboxCount} dead-lettered automation records need attention.";
+        }
+
+        if (blockedOrFailedStepCount > 0)
+        {
+            return $"{blockedOrFailedStepCount} blocked or failed steps need operator review.";
+        }
+
+        if (activeAgentCount > 0)
+        {
+            return $"{activeAgentCount} active AgentFramework executions are attached.";
+        }
+
+        if (pendingOutboxCount > 0)
+        {
+            return $"{pendingOutboxCount} automation records are pending or retrying.";
+        }
+
+        return "Run is active and waiting for the next runtime handoff.";
+    }
+
     private static ProcessActiveAgentViewModel MapActiveAgent(
         ExecutionRunRecord executionRun,
         IReadOnlyDictionary<Guid, string> stepTitlesById,
@@ -298,10 +524,13 @@ public sealed record ProcessWorkspaceRunDetails(
     IReadOnlyList<ProcessStepRunViewModel> StepRuns,
     IReadOnlyList<ProcessDecisionViewModel> Decisions,
     IReadOnlyList<ProcessArtifactViewModel> Artifacts,
+    IReadOnlyList<ProcessOutboxRecordViewModel> OutboxRecords,
     IReadOnlyList<ProcessRunAssignmentViewModel> Assignments,
     IReadOnlyList<ProcessWorkBriefViewModel> WorkBriefs,
     IReadOnlyList<ProcessConformanceObservationViewModel> ConformanceObservations,
     IReadOnlyList<ProcessDirectMessageThreadViewModel> DirectMessageThreads)
 {
     public IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns { get; init; } = [];
+
+    public ProcessRunHealthSummaryViewModel Health { get; init; } = ProcessRunHealthSummaryViewModel.Empty;
 }

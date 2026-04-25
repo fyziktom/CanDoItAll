@@ -174,4 +174,74 @@ public sealed class ProcessCanvasSelectionPanelTests
         Assert.False(startButton.HasAttribute("disabled"));
         Assert.True(completeButton.HasAttribute("disabled"));
     }
+
+    [Fact]
+    public void Runtime_selection_shows_health_artifact_obligations_and_rerun_action()
+    {
+        using var context = new TestContext();
+        var receiver = new object();
+        var rerunCount = 0;
+        var stepRunId = Guid.NewGuid();
+        var runtimeStep = new ProcessStepRunViewModel(
+            stepRunId,
+            Guid.NewGuid(),
+            null,
+            2,
+            "Recover blocked agent work",
+            ProcessStepKind.Work,
+            ProcessStepRunStatus.Blocked,
+            "Agent executor",
+            string.Empty,
+            "Required output is missing.",
+            string.Empty,
+            null,
+            string.Empty,
+            0,
+            12,
+            15,
+            1,
+            ProcessCapabilityGapSeverity.None,
+            [])
+        {
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationSatisfactionViewModel(
+                    stepRunId,
+                    Guid.NewGuid(),
+                    ProcessArtifactKind.Deliverable,
+                    "implementation-report.md",
+                    true,
+                    ProcessArtifactExpectationSatisfactionStatus.Missing,
+                    ProcessArtifactExpectationSourceKind.None,
+                    null,
+                    string.Empty,
+                    string.Empty,
+                    "Required artifact is missing from process evidence.")
+            ],
+            Health = ProcessStepRunHealthViewModel.Empty with
+            {
+                AttemptCount = 2,
+                LatestAttemptStatus = "Completed / Succeeded",
+                LatestAttemptTone = "mint",
+                RecoveryClassification = ProcessRecoveryClassification.MissingArtifact,
+                ActionableReason = "Missing required artifacts: implementation-report.md.",
+                CanManualRerun = true
+            }
+        };
+
+        var cut = context.RenderComponent<ProcessCanvasSelectionPanel>(
+            parameters => parameters
+                .Add(component => component.IsRuntime, true)
+                .Add(component => component.RuntimeStep, runtimeStep)
+                .Add(component => component.RerunRuntimeStep, EventCallback.Factory.Create(receiver, () => rerunCount++)));
+
+        Assert.Contains("2 attempts", cut.Markup);
+        Assert.Contains("Missing required artifacts: implementation-report.md.", cut.Markup);
+        Assert.Contains("Artifact obligations", cut.Markup);
+        Assert.Contains("implementation-report.md", cut.Markup);
+
+        cut.Find("[data-testid='processes-canvas-selection-rerun-agent-step']").Click();
+
+        Assert.Equal(1, rerunCount);
+    }
 }

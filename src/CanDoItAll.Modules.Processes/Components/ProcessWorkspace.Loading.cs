@@ -114,10 +114,12 @@ public partial class ProcessWorkspace
             stepRuns = [];
             decisions = [];
             artifacts = [];
+            outboxRecords = [];
             assignments = [];
             workBriefs = [];
             conformanceObservations = [];
             executionRuns = [];
+            selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
             directMessageThreads = [];
             selectedAssignmentId = null;
             artifactStepRunId = null;
@@ -132,10 +134,12 @@ public partial class ProcessWorkspace
         stepRuns = runDetails.StepRuns;
         decisions = runDetails.Decisions;
         artifacts = runDetails.Artifacts;
+        outboxRecords = runDetails.OutboxRecords;
         assignments = runDetails.Assignments;
         workBriefs = runDetails.WorkBriefs;
         conformanceObservations = runDetails.ConformanceObservations;
         executionRuns = runDetails.ExecutionRuns;
+        selectedRunHealth = runDetails.Health;
         directMessageThreads = runDetails.DirectMessageThreads;
         var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
         foreach (var stepRun in stepRuns)

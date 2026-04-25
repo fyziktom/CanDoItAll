@@ -4895,7 +4895,7 @@ Descendant requirement context from sibling planning nodes:
         }
 
         var constructor = candidateType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .Single(candidateConstructor => candidateConstructor.GetParameters().Length == 12);
+            .Single(candidateConstructor => candidateConstructor.GetParameters().Length == 13);
         return constructor.Invoke(
                     [
                         new ProcessRun
@@ -4928,6 +4928,7 @@ Descendant requirement context from sibling planning nodes:
                        new HashSet<string>(StringComparer.Ordinal),
                        null,
                        null,
+                       string.Empty,
                        branchOutcomes,
                        requiresExplicitBranchOutcomeSelection
                    ])

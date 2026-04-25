@@ -99,6 +99,9 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
             return [];
         }
 
+        var stepRunIds = stepRuns
+            .Select(item => item.Id)
+            .ToList();
         var stepDefinitionIds = stepRuns
             .Select(item => item.StepDefinitionId)
             .Distinct()
@@ -123,23 +126,47 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                 .ToListAsync(cancellationToken))
             .GroupBy(item => item.StepDefinitionId)
             .ToDictionary(group => group.Key, group => group.ToList());
-        var artifactOutputsByStepId = (await dbContext.Set<ProcessArtifactExpectation>()
+        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
                 .AsNoTracking()
                 .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId) && !string.IsNullOrWhiteSpace(item.Title))
                 .OrderBy(item => item.ArtifactKind)
                 .ThenBy(item => item.Title)
                 .ThenBy(item => item.Id)
-                .Select(
-                    item => new ProcessArtifactOutputProjection(
-                        item.StepDefinitionId,
-                        new ProcessStepRunArtifactPortViewModel(item.Id, item.Title, item.IsRequired)))
-                .ToListAsync(cancellationToken))
+                .ToListAsync(cancellationToken);
+        var artifactOutputsByStepId = artifactExpectations
+            .Select(
+                item => new ProcessArtifactOutputProjection(
+                    item.StepDefinitionId,
+                    new ProcessStepRunArtifactPortViewModel(item.Id, item.Title, item.IsRequired)))
             .GroupBy(item => item.StepDefinitionId)
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<ProcessStepRunArtifactPortViewModel>)group
                     .Select(item => item.ArtifactOutput)
                     .ToList());
+        var artifactExpectationsByStepId = artifactExpectations
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.Title).ThenBy(item => item.Id).ToList());
+        var artifactRecordsByStepRunId = (await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item => item.ProcessRunId == runId && item.StepRunId.HasValue && stepRunIds.Contains(item.StepRunId.Value))
+                .ToListAsync(cancellationToken))
+            .GroupBy(item => item.StepRunId!.Value)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.CreatedAtUtc).ToList());
+        var manualRecoveryEvents = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessRunId == runId &&
+                item.StepRunId.HasValue &&
+                stepRunIds.Contains(item.StepRunId.Value) &&
+                item.EventType == ProcessRuntimeEventTypes.ManualAgentStepRerun)
+            .ToListAsync(cancellationToken);
+        var manualRecoveryDirectivesByStepRunId = manualRecoveryEvents
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .GroupBy(item => item.StepRunId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Description);
         var artifactInputCountsByStepId = await dbContext.Set<ProcessStepArtifactInputDefinition>()
             .AsNoTracking()
             .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
@@ -190,6 +217,11 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                         ? resolvedDecisionRoleTitle
                         : string.Empty;
 
+                    var artifactLedger = BuildArtifactLedger(
+                        item,
+                        artifactExpectationsByStepId,
+                        artifactRecordsByStepRunId);
+
                     return new ProcessStepRunViewModel(
                         item.Id,
                         item.StepDefinitionId,
@@ -222,7 +254,13 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                             : artifactInputCountsByStepId.GetValueOrDefault(stepDefinition.Id),
                         ArtifactOutputs = stepDefinition is null
                             ? []
-                            : artifactOutputsByStepId.GetValueOrDefault(stepDefinition.Id) ?? []
+                            : artifactOutputsByStepId.GetValueOrDefault(stepDefinition.Id) ?? [],
+                        ExceptionSummary = item.ExceptionSummary,
+                        ArtifactExpectations = artifactLedger,
+                        Health = BuildInitialStepHealth(
+                            item,
+                            artifactLedger,
+                            manualRecoveryDirectivesByStepRunId.GetValueOrDefault(item.Id) ?? string.Empty)
                     };
                 })
             .ToList();
@@ -238,6 +276,7 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
         var stepRuns = await ListStepRunsAsync(dbContext, runId, cancellationToken);
         var decisions = await ListDecisionRecordsAsync(dbContext, runId, cancellationToken);
         var artifacts = await ListArtifactsAsync(dbContext, runId, cancellationToken);
+        var outboxRecords = await ListOutboxRecordsAsync(dbContext, runId, cancellationToken);
         var assignments = await ListAssignmentsAsync(dbContext, runId, cancellationToken);
         var workBriefs = await ListWorkBriefsAsync(dbContext, runId, cancellationToken);
         var conformanceObservations = await ListConformanceObservationsAsync(dbContext, runId, cancellationToken);
@@ -247,6 +286,7 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
             stepRuns,
             decisions,
             artifacts,
+            outboxRecords,
             assignments,
             workBriefs,
             conformanceObservations,

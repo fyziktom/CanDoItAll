@@ -77,6 +77,33 @@ public partial class ProcessWorkspace
         SetMessage($"Step updated to {targetStatus}.");
     }
 
+    private async Task RerunAgentStepAsync(Guid stepRunId)
+    {
+        var currentStepRun = stepRuns.FirstOrDefault(item => item.Id == stepRunId);
+        if (currentStepRun is null)
+        {
+            SetError("Reload the run before rerunning this agent step.");
+            return;
+        }
+
+        var result = await ProcessesService.RerunAgentStepAsync(
+            new ProcessAgentStepRerunRequest
+            {
+                StepRunId = stepRunId,
+                StepRunConcurrencyToken = currentStepRun.StepRunConcurrencyToken,
+                OperatorReason = "Operator requested a governed agent rerun from Process Workspace."
+            });
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        await LoadWorkspaceAsync();
+        detailTab = "runs";
+        SetMessage("Agent step rerun requested with a recovery directive.");
+    }
+
     private void SelectAssignment(Guid assignmentId)
     {
         selectedAssignmentId = assignmentId;

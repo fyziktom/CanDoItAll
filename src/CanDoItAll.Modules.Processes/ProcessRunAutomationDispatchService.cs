@@ -559,6 +559,12 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 
             var recoveryExecutionRunId = ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns);
             var reusableChatSessionId = ResolveReusableAutomationChatSessionId(executionRuns);
+            var manualRecoveryDirective = await LoadLatestManualRecoveryDirectiveAsync(
+                dbContext,
+                run.Id,
+                stepRun.Id,
+                stepRun.StartedAtUtc,
+                cancellationToken);
             var summaries = await technicalAgentBridge.GetDirectorySummariesAsync([executorPartyId], cancellationToken);
             var hasTechnicalAgentSummary = summaries.TryGetValue(executorPartyId, out var technicalAgentSummary);
             if (!hasTechnicalAgentSummary ||
@@ -606,11 +612,37 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 externalReferenceKeys,
                 reusableChatSessionId,
                 recoveryExecutionRunId,
+                manualRecoveryDirective,
                 availableBranchOutcomes,
                 requiresExplicitBranchOutcomeSelection);
         }
 
         return null;
+    }
+
+    private static async Task<string> LoadLatestManualRecoveryDirectiveAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        Guid stepRunId,
+        DateTimeOffset? stepStartedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessRunId == runId &&
+                item.StepRunId == stepRunId &&
+                item.EventType == ProcessRuntimeEventTypes.ManualAgentStepRerun);
+        if (stepStartedAtUtc.HasValue)
+        {
+            query = query.Where(item => item.OccurredAtUtc >= stepStartedAtUtc.Value);
+        }
+
+        var journalEntries = await query.ToListAsync(cancellationToken);
+        return journalEntries
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .Select(item => item.Description)
+            .FirstOrDefault() ?? string.Empty;
     }
 
     private async Task<DispatchExecutionOutcome> ExecuteUntilSettledAsync(
@@ -620,9 +652,13 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         CancellationToken cancellationToken)
     {
         DispatchExecutionOutcome? finalOutcome = null;
-        string? recoveryDirective = null;
+        string? recoveryDirective = string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective)
+            ? null
+            : candidate.ManualRecoveryDirective.Trim();
         var recoverableExecutionRunId = candidate.RecoveryExecutionRunId;
-        var automationChatSessionId = candidate.ChatSessionId;
+        var automationChatSessionId = string.IsNullOrWhiteSpace(recoveryDirective)
+            ? candidate.ChatSessionId
+            : null;
         var prefetchedProjectStructureGrounding = await TryBuildProjectStructureGroundingAsync(candidate, cancellationToken);
         var prefetchedArtifactInspectionGrounding = await TryBuildArtifactInspectionGroundingAsync(candidate, cancellationToken);
         var successfulToolNamesAcrossAttempts = new HashSet<string>(
@@ -8448,6 +8484,7 @@ ORDER BY CreatedAtUtc, Title;
         HashSet<string> ExternalReferenceKeys,
         Guid? ChatSessionId,
         Guid? RecoveryExecutionRunId,
+        string ManualRecoveryDirective,
         IReadOnlyList<DispatchBranchOutcome> BranchOutcomes,
         bool RequiresExplicitBranchOutcomeSelection);
 

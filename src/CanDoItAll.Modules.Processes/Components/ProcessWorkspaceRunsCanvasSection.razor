@@ -61,7 +61,8 @@
                                                          RequestRuntimeApproval="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.WaitingApproval))"
                                                          RefuseRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Refused))"
                                                          FailRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Failed))"
-                                                         RecordRuntimeArtifact="Presenter.PrepareSelectedRuntimeArtifactCaptureAsync" />
+                                                         RecordRuntimeArtifact="Presenter.PrepareSelectedRuntimeArtifactCaptureAsync"
+                                                         RerunRuntimeStep="@(() => Presenter.SelectedCanvasRuntimeStep is null ? Task.CompletedTask : Presenter.RerunAgentStepAsync(Presenter.SelectedCanvasRuntimeStep.Id))" />
                         </CanvasFloatingWindow>
                     }
                 </OverlayContent>

@@ -318,6 +318,81 @@ public sealed partial class AgentFrameworkAuditProofTests
             reviewStepTitle);
     }
 
+    private static AgentRecoveryDefinitionFixture BuildAgentRecoveryDefinitionEditor(Guid projectId)
+    {
+        var agentRoleId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+        const string stepTitle = "Produce implementation report";
+        const string artifactTitle = "implementation-report.md";
+
+        return new AgentRecoveryDefinitionFixture(
+            new ProcessDefinitionEditorModel
+            {
+                ProjectId = projectId,
+                Name = "Playwright agent recovery proof process",
+                Summary = "Browser proof for blocked agent-step recovery and outbox health.",
+                ValueStatement = "Operators can diagnose and rerun failed agent-backed process work.",
+                CustomerName = "Playwright Recovery Customer",
+                OwnerName = "Playwright Recovery Owner",
+                GovernancePolicySummary = "Required artifacts must remain explicit before governed completion.",
+                ChangeSummary = "Playwright browser proof for agent recovery.",
+                ConstitutionRuleSummary = "Do not complete agent work without durable required evidence.",
+                OperatingModeSummary = "Assisted execution with operator-controlled recovery.",
+                SimulationReadinessSummary = "Safe deterministic browser proof.",
+                Roles =
+                [
+                    new ProcessRoleEditorModel
+                    {
+                        Id = agentRoleId,
+                        Key = "implementation-agent",
+                        DisplayName = "Implementation agent",
+                        Purpose = "Produce and attach the implementation report.",
+                        StaffingIntent = "AI-owned implementation lane.",
+                        PreferredExecutorKind = "AI agent",
+                        DefaultAllocationPercent = 100
+                    }
+                ],
+                Steps =
+                [
+                    new ProcessStepEditorModel
+                    {
+                        Id = implementationStepId,
+                        Key = "produce-implementation-report",
+                        Title = stepTitle,
+                        StepKind = ProcessStepKind.Work,
+                        InputContractSummary = "Operator request and process context.",
+                        OutputContractSummary = "Implementation report exists and is attached.",
+                        EvidenceContractSummary = "implementation-report.md must be recorded.",
+                        DecisionRightsSummary = "The agent may complete only after producing required evidence.",
+                        ExceptionPolicySummary = "Block the step when required evidence is missing.",
+                        TargetLeadHours = 1,
+                        CanvasX = 260,
+                        CanvasY = 220,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = agentRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ],
+                        ArtifactExpectations =
+                        [
+                            new ProcessArtifactExpectationEditorModel
+                            {
+                                ArtifactKind = ProcessArtifactKind.Deliverable,
+                                Title = artifactTitle,
+                                ValidationRequirementSummary = "Agent rerun must produce and project implementation-report.md."
+                            }
+                        ]
+                    }
+                ]
+            },
+            agentRoleId,
+            stepTitle,
+            artifactTitle);
+    }
+
     private sealed record DirectMessagingDefinitionFixture(
         ProcessDefinitionEditorModel Editor,
         Guid SourceRoleRequirementId,
@@ -332,4 +407,10 @@ public sealed partial class AgentFrameworkAuditProofTests
         string GenerationStepTitle,
         string HandoffStepTitle,
         string ReviewStepTitle);
+
+    private sealed record AgentRecoveryDefinitionFixture(
+        ProcessDefinitionEditorModel Editor,
+        Guid AgentRoleRequirementId,
+        string StepTitle,
+        string ArtifactTitle);
 }

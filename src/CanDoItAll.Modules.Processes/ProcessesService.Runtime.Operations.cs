@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,43 +51,12 @@ public sealed partial class ProcessesService
             assignment.IsCapabilityGap = !request.PartyId.HasValue && string.IsNullOrWhiteSpace(request.DisplayName);
             assignment.AllowsDirectMessaging = request.AllowsDirectMessaging && !assignment.IsCapabilityGap;
 
-            if (request.StepDefinitionId.HasValue)
-            {
-                var stepRun = await dbContext.Set<ProcessStepRun>()
-                    .SingleOrDefaultAsync(
-                        item => item.ProcessRunId == request.ProcessRunId &&
-                            item.StepDefinitionId == request.StepDefinitionId.Value,
-                        cancellationToken);
-                var stepDefinition = await dbContext.Set<ProcessStepDefinition>()
-                    .SingleOrDefaultAsync(item => item.Id == request.StepDefinitionId.Value, cancellationToken);
-                if (stepRun is not null && stepDefinition is not null)
-                {
-                    var stepRoleRequirements = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
-                        .Where(item => item.StepDefinitionId == request.StepDefinitionId.Value)
-                        .ToListAsync(cancellationToken);
-                    var stepAssignments = await dbContext.Set<ProcessRunAssignment>()
-                        .Where(item =>
-                            item.ProcessRunId == request.ProcessRunId &&
-                            (!item.StepDefinitionId.HasValue || item.StepDefinitionId == request.StepDefinitionId.Value))
-                        .ToListAsync(cancellationToken);
-                    var existingAssignmentIndex = stepAssignments.FindIndex(item =>
-                        item.RoleRequirementId == assignment.RoleRequirementId &&
-                        item.StepDefinitionId == assignment.StepDefinitionId);
-                    if (existingAssignmentIndex >= 0)
-                    {
-                        stepAssignments[existingAssignmentIndex] = assignment;
-                    }
-                    else
-                    {
-                        stepAssignments.Add(assignment);
-                    }
-
-                    var currentExecutor = ResolveCurrentExecutorAssignment(stepDefinition, stepRoleRequirements, stepAssignments);
-                    stepRun.CurrentExecutorPartyId = currentExecutor?.PartyId;
-                    stepRun.CurrentExecutorName = currentExecutor?.DisplayName ?? string.Empty;
-                    stepRun.CapabilityGapSeverity = ResolveStepCapabilityGapSeverity(stepDefinition, stepRoleRequirements, stepAssignments);
-                }
-            }
+            await RefreshAffectedStepExecutorSnapshotsAsync(
+                dbContext,
+                request.ProcessRunId,
+                request.StepDefinitionId,
+                assignment,
+                cancellationToken);
 
             await dbContext.Set<ProcessDecisionRecord>().AddAsync(
                 new ProcessDecisionRecord
@@ -130,6 +100,71 @@ public sealed partial class ProcessesService
         }
 
         return Result.Failure(CreateAssignmentUniqueConflictError());
+    }
+
+    private static async Task RefreshAffectedStepExecutorSnapshotsAsync(
+        AppDbContext dbContext,
+        Guid processRunId,
+        Guid? stepDefinitionId,
+        ProcessRunAssignment assignment,
+        CancellationToken cancellationToken)
+    {
+        var stepRunsQuery = dbContext.Set<ProcessStepRun>()
+            .Where(item => item.ProcessRunId == processRunId);
+        if (stepDefinitionId.HasValue)
+        {
+            stepRunsQuery = stepRunsQuery.Where(item => item.StepDefinitionId == stepDefinitionId.Value);
+        }
+
+        var stepRuns = await stepRunsQuery.ToListAsync(cancellationToken);
+        if (stepRuns.Count == 0)
+        {
+            return;
+        }
+
+        var stepDefinitionIds = stepRuns
+            .Select(item => item.StepDefinitionId)
+            .Distinct()
+            .ToList();
+        var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var stepRoleRequirements = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var runAssignments = await dbContext.Set<ProcessRunAssignment>()
+            .Where(item =>
+                item.ProcessRunId == processRunId &&
+                (!item.StepDefinitionId.HasValue || stepDefinitionIds.Contains(item.StepDefinitionId.Value)))
+            .ToListAsync(cancellationToken);
+        var existingAssignmentIndex = runAssignments.FindIndex(item =>
+            item.RoleRequirementId == assignment.RoleRequirementId &&
+            item.StepDefinitionId == assignment.StepDefinitionId);
+        if (existingAssignmentIndex >= 0)
+        {
+            runAssignments[existingAssignmentIndex] = assignment;
+        }
+        else
+        {
+            runAssignments.Add(assignment);
+        }
+
+        var roleRequirementsByStepDefinitionId = stepRoleRequirements
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        foreach (var stepRun in stepRuns)
+        {
+            if (!stepDefinitions.TryGetValue(stepRun.StepDefinitionId, out var stepDefinition))
+            {
+                continue;
+            }
+
+            var currentStepRoleRequirements = roleRequirementsByStepDefinitionId.GetValueOrDefault(stepRun.StepDefinitionId) ?? [];
+            var currentExecutor = ResolveCurrentExecutorAssignment(stepDefinition, currentStepRoleRequirements, runAssignments);
+            stepRun.CurrentExecutorPartyId = currentExecutor?.PartyId;
+            stepRun.CurrentExecutorName = currentExecutor?.DisplayName ?? string.Empty;
+            stepRun.CapabilityGapSeverity = ResolveStepCapabilityGapSeverity(stepDefinition, currentStepRoleRequirements, runAssignments);
+        }
     }
 
     public async Task<Result<Guid>> RecordArtifactAsync(ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default)
