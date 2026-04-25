@@ -1,0 +1,28 @@
+{
+  "Key": "_corrective-scene-contract-and-layout-reset",
+  "Title": "Corrective scene-contract and layout reset",
+  "Purpose": "Repair failures where the projected process scene became visually confusing, semantically inconsistent with current process IDs/categories, or too coupled to the sandbox.",
+  "DependsOn": [],
+  "Deliverables": [
+    "A focused corrective change set that repairs depth rules, label strategy, or process-semantic projection.",
+    "Updated readability notes and screenshots proving the reset helped rather than shuffled the problem.",
+    "Fresh Gate B memo after the repair."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasCatalog.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessCanvasBranching.cs",
+    "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+    "Templates/Processes/manifest.json",
+    "tests/CanDoItAll.Tests.Components/ProcessCanvasSurfaceFactoryTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~WebGl|FullyQualifiedName~ProcessCanvasSurfaceFactory\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Did the corrective actually improve readability?",
+    "Are process IDs and categories still trustworthy?",
+    "Can Gate B now pass honestly?"
+  ],
+  "CorrectiveOnFailure": "This task is a corrective playbook; stop once the failure is contained, the proof is refreshed, and the blocked gate is ready to be re-run.",
+  "CorrectiveTemplatePath": null
+}

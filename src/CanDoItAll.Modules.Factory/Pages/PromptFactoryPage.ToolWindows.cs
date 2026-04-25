@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.OverlayLib;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -9,6 +10,8 @@ namespace CanDoItAll.Modules.Factory.Pages;
 public partial class PromptFactoryPage
 {
     private const string ComponentsToolboxWindowKey = "prompt-factory.components-toolbox";
+    private const double LegacyComponentsToolboxWindowHeight = 620;
+    private const double DefaultComponentsToolboxWindowHeight = 700;
     private const double ComponentPreviewPopoverPreferredWidth = 420;
     private const double ComponentPreviewPopoverPreferredHeight = 360;
     private const double ComponentPreviewViewportMargin = 24;
@@ -20,9 +23,12 @@ public partial class PromptFactoryPage
     private int componentPreviewVersion;
 
     private CanvasWorkbenchWindowState ComponentsToolboxWindowState
-        => ResolveCanvasWindowState(ComponentsToolboxWindowKey, true);
+        => UpgradeLegacyDefaultHeight(
+            ResolveCanvasWindowState(ComponentsToolboxWindowKey, true),
+            LegacyComponentsToolboxWindowHeight,
+            DefaultComponentsToolboxWindowHeight);
 
-    private IReadOnlyList<ComponentToolboxSectionViewModel> ComponentToolboxSections
+    private IReadOnlyList<OverlayToolboxSection> ComponentToolboxSections
         => BuildComponentToolboxSections();
 
     private bool HasComponentPreview
@@ -185,7 +191,7 @@ public partial class PromptFactoryPage
         await workbenchRef.OpenCreateDialogAsync(action, request);
     }
 
-    private IReadOnlyList<ComponentToolboxSectionViewModel> BuildComponentToolboxSections()
+    private IReadOnlyList<OverlayToolboxSection> BuildComponentToolboxSections()
     {
         var eligibleBlocks = blocks
             .Where(MatchesComponentToolboxSearch)
@@ -198,7 +204,7 @@ public partial class PromptFactoryPage
         return eligibleBlocks
             .GroupBy(item => ResolveComponentSectionKey(item.GroupKey))
             .OrderBy(group => ResolveComponentSectionOrder(group.Key))
-            .Select(section => new ComponentToolboxSectionViewModel(
+            .Select(section => new OverlayToolboxSection(
                 section.Key,
                 ResolveComponentSectionLabel(section.Key),
                 ResolveComponentSectionDescription(section.Key),
@@ -206,13 +212,37 @@ public partial class PromptFactoryPage
                     .GroupBy(item => item.GroupKey)
                     .OrderBy(group => ResolveGroupOrder(group.Key))
                     .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-                    .Select(group => new ComponentToolboxGroupViewModel(
+                    .Select(group => new OverlayToolboxGroup(
                         group.Key,
                         ResolveLibraryGroupLabel(group.Key),
                         ResolveLibraryGroupSummary(group.Key),
-                        group.ToList()))
+                        group.Select(block => new OverlayToolboxItem(
+                            block.Key,
+                            block.Name,
+                            block.Summary,
+                            Glyph: ResolveToolboxBlockGlyph(block),
+                            DataTestId: $"prompt-factory-component-{block.Key}")).ToList(),
+                        IsExpanded: true))
                     .ToList()))
             .ToList();
+    }
+
+    private static CanvasWorkbenchWindowState UpgradeLegacyDefaultHeight(
+        CanvasWorkbenchWindowState state,
+        double legacyDefaultHeight,
+        double defaultHeight)
+    {
+        var normalized = CanvasWorkbenchWindowState.Normalize(state);
+        if (normalized.IsMinimized ||
+            !normalized.Height.HasValue ||
+            normalized.Height.Value > legacyDefaultHeight + 0.5)
+        {
+            return normalized;
+        }
+
+        var upgraded = normalized.Clone();
+        upgraded.Height = defaultHeight;
+        return CanvasWorkbenchWindowState.Normalize(upgraded);
     }
 
     private bool MatchesComponentToolboxSearch(PromptBlockSummary block)
@@ -231,8 +261,18 @@ public partial class PromptFactoryPage
                block.StackTags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
     }
 
-    private string ResolveToolboxBlockIcon(PromptBlockSummary block)
-        => PromptFactoryCatalogToolbox.BuildComponentCreateAction(block).Icon;
+    private static string ResolveToolboxBlockGlyph(PromptBlockSummary block)
+    {
+        var icon = PromptFactoryCatalogToolbox.BuildComponentCreateAction(block).Icon;
+        if (!string.IsNullOrWhiteSpace(icon))
+        {
+            return icon.Trim()[0].ToString().ToUpperInvariant();
+        }
+
+        return string.IsNullOrWhiteSpace(block.Name)
+            ? "+"
+            : block.Name.Trim()[0].ToString().ToUpperInvariant();
+    }
 
     private async Task<ComponentPreviewPopoverState> BuildComponentPreviewPopoverAsync(PromptBlockSummary block, double? clientX, double? clientY)
     {
@@ -270,17 +310,22 @@ public partial class PromptFactoryPage
             ? min
             : Math.Clamp(value, min, max);
 
-    private sealed record ComponentToolboxSectionViewModel(
-        string Key,
-        string Label,
-        string Description,
-        IReadOnlyList<ComponentToolboxGroupViewModel> Groups);
+    private Task HandleComponentToolboxSearchChangedAsync(string? value)
+    {
+        componentToolboxSearchText = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
 
-    private sealed record ComponentToolboxGroupViewModel(
-        string Key,
-        string Label,
-        string Summary,
-        IReadOnlyList<PromptBlockSummary> Blocks);
+    private Task HandleComponentToolboxItemSelectedAsync(string blockKey)
+    {
+        var block = ResolveToolboxBlock(blockKey);
+        return block is null
+            ? Task.CompletedTask
+            : AddComponentFromToolboxAsync(block);
+    }
+
+    private PromptBlockSummary? ResolveToolboxBlock(string blockKey)
+        => blocks.FirstOrDefault(item => string.Equals(item.Key, blockKey, StringComparison.OrdinalIgnoreCase));
 
     private readonly record struct ComponentPreviewViewportSnapshot(double Width, double Height);
 

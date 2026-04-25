@@ -1,7 +1,6 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
-@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
-@using CanDoItAll.Components.Common
+@using CanDoItAll.Components.OverlayLib
 
 <CanvasFloatingWindow WindowId="@WindowId"
                       TestId="@TestId"
@@ -12,52 +11,38 @@
                       BodyClass="project-structure-toolbox-window__body"
                       DefaultPlacement="top-left"
                       DefaultWidth="@DefaultWidth"
-                      DefaultHeight="420"
+                      DefaultHeight="@DefaultToolboxWindowHeight"
                       MinWidth="320"
-                      MinHeight="240"
+                      MinHeight="320"
                       MaxWidth="520"
-                      MaxHeight="520"
-                      State="@State"
+                      MaxHeight="760"
+                      State="@ResolvedState"
                       StateChanged="StateChanged">
-    <div class="project-structure-toolbox"
-         data-testid="project-structure-standard-blocks-toolbox">
-        <Stack Orientation="Orientation.Horizontal" Gap="1rem">
-            <Pill Tone="PillTone.Info" Text="@SourceLabel" />
-            <Pill Tone="PillTone.Label" Text="@($"{ItemCount} items")" />
-        </Stack>
-
-        <TextBox Value="@SearchText"
-                 ValueChanged="SearchTextChanged"
-                 Placeholder="Search blocks, files, runtime, or infrastructure"
-                 Immediate="true"
-                 Class="project-structure-toolbox__search w-full" />
-
-        @if (Groups.Count == 0)
-        {
-            <PanelCard Class="cw-context-toolbox__empty">
-                <Stack GapScale="LayoutGap.Tiny">
-                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="No blocks match the current search." />
-                    <TextBlock TextStyle="TextStyle.Note" Value="Clear the filter to restore the full catalog." />
-                </Stack>
-            </PanelCard>
-        }
-        else
-        {
-            <div class="project-structure-toolbox__body">
-                <div class="project-structure-toolbox__sections">
-                    <TreeView Items="@TreeNodes"
-                              Style="TreeViewStyle.Workbench"
-                              AriaLabel="Project structure toolbox groups"
-                              OnSelect="HandleNodeSelectedAsync"
-                              OnToggle="OnToggleGroup"
-                              Class="w-full" />
-                </div>
-            </div>
-        }
-    </div>
+    <OverlayComponentToolbox TestId="project-structure-standard-blocks-toolbox"
+                             AriaLabel="Project structure standard blocks toolbox"
+                             Class="project-structure-toolbox"
+                             ShowHeader="false"
+                             SearchText="@SearchText"
+                             SearchTextChanged="SearchTextChanged"
+                             SearchPlaceholder="Search blocks, files, runtime, or infrastructure"
+                             SearchClass="project-structure-toolbox__search w-full"
+                             BodyClass="project-structure-toolbox__body"
+                             SectionsClass="project-structure-toolbox__sections"
+                             ItemButtonClass="cda-treeview__row"
+                             ItemIconClass="cda-treeview__icon"
+                             ItemLabelClass="cda-treeview__text"
+                             EmptyTitle="No blocks match the current search."
+                             EmptyDescription="Clear the filter to restore the full catalog."
+                             Badges="@ToolboxBadges"
+                             Sections="@ToolboxSections"
+                             GroupToggled="OnToggleGroup"
+                             ItemSelected="HandleNodeSelectedAsync" />
 </CanvasFloatingWindow>
 
 @code {
+    private const double LegacyDefaultToolboxWindowHeight = 420;
+    private const double DefaultToolboxWindowHeight = 560;
+
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 
@@ -97,6 +82,9 @@
     [Parameter]
     public double DefaultWidth { get; set; }
 
+    private CanvasWorkbenchWindowState ResolvedState
+        => UpgradeLegacyDefaultHeight(State, LegacyDefaultToolboxWindowHeight, DefaultToolboxWindowHeight);
+
     [Parameter]
     public EventCallback<string> OnToggleGroup { get; set; }
 
@@ -105,37 +93,62 @@
 
     private int ItemCount => Groups.Sum(group => group.Actions.Count);
 
-    private IReadOnlyList<TreeViewNode> TreeNodes
-        => Groups
-            .Select(BuildGroupNode)
-            .ToList();
+    private IReadOnlyList<OverlayToolboxBadge> ToolboxBadges
+        =>
+        [
+            new OverlayToolboxBadge(SourceLabel, "info"),
+            new OverlayToolboxBadge($"{ItemCount} items", "label")
+        ];
 
-    private TreeViewNode BuildGroupNode(ProjectStructureInspectorCreateGroup group)
+    private IReadOnlyList<OverlayToolboxSection> ToolboxSections
+        =>
+        [
+            new OverlayToolboxSection(
+                "project-structure",
+                "Project structure",
+                "Standard blocks",
+                Groups.Select(BuildGroup).ToList(),
+                IsExpanded: true,
+                DataTestId: "project-structure-toolbox-section")
+        ];
+
+    private static OverlayToolboxGroup BuildGroup(ProjectStructureInspectorCreateGroup group)
     {
-        return new TreeViewNode
-        {
-            Id = group.Key,
-            Text = group.Label,
-            Icon = group.Actions.FirstOrDefault()?.Icon ?? "folder",
-            Tooltip = group.Description,
-            IsExpanded = group.IsOpen,
-            IsSelectable = false,
-            BadgeText = group.Actions.Count.ToString(),
-            DataTestId = $"project-structure-toolbox-group-{group.Key}",
-            ChildrenDataTestId = $"project-structure-toolbox-group-body-{group.Key}",
-            Children = group.Actions
-                .Select(action => new TreeViewNode
-                {
-                    Id = action.ActionId,
-                    Text = action.Label,
-                    Icon = action.Icon,
-                    Tooltip = action.Description,
-                    DataTestId = $"project-structure-toolbox-{action.ActionId}"
-                })
-                .ToList()
-        };
+        return new OverlayToolboxGroup(
+            group.Key,
+            group.Label,
+            group.Description,
+            group.Actions.Select(action => new OverlayToolboxItem(
+                action.ActionId,
+                action.Label,
+                action.Description,
+                Icon: action.Icon,
+                Tone: action.Tone,
+                DataTestId: $"project-structure-toolbox-{action.ActionId}")).ToList(),
+            Icon: group.Actions.FirstOrDefault()?.Icon ?? "folder",
+            IsExpanded: group.IsOpen,
+            DataTestId: $"project-structure-toolbox-group-{group.Key}",
+            BodyDataTestId: $"project-structure-toolbox-group-body-{group.Key}");
     }
 
-    private Task HandleNodeSelectedAsync(string nodeId)
-        => OnOpenAction.InvokeAsync(nodeId);
+    private Task HandleNodeSelectedAsync(string actionId)
+        => OnOpenAction.InvokeAsync(actionId);
+
+    private static CanvasWorkbenchWindowState UpgradeLegacyDefaultHeight(
+        CanvasWorkbenchWindowState state,
+        double legacyDefaultHeight,
+        double defaultHeight)
+    {
+        var normalized = CanvasWorkbenchWindowState.Normalize(state);
+        if (normalized.IsMinimized ||
+            !normalized.Height.HasValue ||
+            normalized.Height.Value > legacyDefaultHeight + 0.5)
+        {
+            return normalized;
+        }
+
+        var upgraded = normalized.Clone();
+        upgraded.Height = defaultHeight;
+        return CanvasWorkbenchWindowState.Normalize(upgraded);
+    }
 }

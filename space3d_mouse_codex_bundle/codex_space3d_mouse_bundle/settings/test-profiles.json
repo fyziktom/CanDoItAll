@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "name": "Current-like",
+      "notes": "Approximate current behavior but with dt-scaled pan/zoom. Use as a rollback baseline.",
+      "host": {
+        "accelSmoothingTauMs": 20.0,
+        "gyroSmoothingTauMs": 12.0,
+        "accelDeadzoneG": 0.025,
+        "gyroDeadzoneDps": 1.5,
+        "accelSoftRangeG": 0.30,
+        "gyroSoftRangeDps": 180.0,
+        "panPixelsPerSecondAtFullInput": 700.0,
+        "zoomLogRatePerSecondAtFullInput": 2.8,
+        "orbitDegreesPerSecondAtFullInput": 85.0,
+        "panResponseExponent": 1.0,
+        "zoomResponseExponent": 1.0,
+        "orbitResponseExponent": 1.0,
+        "panForwardMix": 0.35,
+        "precisionMultiplier": 0.35
+      }
+    },
+    {
+      "name": "Smooth default",
+      "notes": "Recommended default for hand-held BNO085 control near a laptop.",
+      "host": {
+        "accelSmoothingTauMs": 70.0,
+        "gyroSmoothingTauMs": 35.0,
+        "accelDeadzoneG": 0.035,
+        "gyroDeadzoneDps": 1.2,
+        "accelSoftRangeG": 0.28,
+        "gyroSoftRangeDps": 180.0,
+        "panPixelsPerSecondAtFullInput": 650.0,
+        "zoomLogRatePerSecondAtFullInput": 2.6,
+        "orbitDegreesPerSecondAtFullInput": 95.0,
+        "panResponseExponent": 1.45,
+        "zoomResponseExponent": 1.35,
+        "orbitResponseExponent": 1.15,
+        "panForwardMix": 0.35,
+        "precisionMultiplier": 0.28
+      }
+    },
+    {
+      "name": "Precision",
+      "notes": "Lower gain and slightly stronger smoothing for fine graph/node manipulation.",
+      "host": {
+        "accelSmoothingTauMs": 95.0,
+        "gyroSmoothingTauMs": 48.0,
+        "accelDeadzoneG": 0.03,
+        "gyroDeadzoneDps": 1.0,
+        "accelSoftRangeG": 0.22,
+        "gyroSoftRangeDps": 120.0,
+        "panPixelsPerSecondAtFullInput": 380.0,
+        "zoomLogRatePerSecondAtFullInput": 1.55,
+        "orbitDegreesPerSecondAtFullInput": 55.0,
+        "panResponseExponent": 1.6,
+        "zoomResponseExponent": 1.5,
+        "orbitResponseExponent": 1.25,
+        "panForwardMix": 0.35,
+        "precisionMultiplier": 0.22
+      }
+    },
+    {
+      "name": "Fast orbit",
+      "notes": "Higher orbit gain while keeping acceleration-based pan/zoom moderate.",
+      "host": {
+        "accelSmoothingTauMs": 65.0,
+        "gyroSmoothingTauMs": 25.0,
+        "accelDeadzoneG": 0.035,
+        "gyroDeadzoneDps": 1.2,
+        "accelSoftRangeG": 0.30,
+        "gyroSoftRangeDps": 210.0,
+        "panPixelsPerSecondAtFullInput": 600.0,
+        "zoomLogRatePerSecondAtFullInput": 2.4,
+        "orbitDegreesPerSecondAtFullInput": 140.0,
+        "panResponseExponent": 1.45,
+        "zoomResponseExponent": 1.35,
+        "orbitResponseExponent": 1.10,
+        "panForwardMix": 0.35,
+        "precisionMultiplier": 0.28
+      }
+    },
+    {
+      "name": "Magnetometer comparison",
+      "notes": "Firmware profile for comparing magnetometer-assisted yaw against game/no-mag mode.",
+      "firmware": {
+        "orientationMode": "RotationVectorMag",
+        "orientationFallback": true,
+        "quaternionIntervalUs": 5000,
+        "linearAccelIntervalUs": 2500,
+        "gyroIntervalUs": 2500,
+        "telemetryIntervalMs": 10
+      }
+    }
+  ]
+}

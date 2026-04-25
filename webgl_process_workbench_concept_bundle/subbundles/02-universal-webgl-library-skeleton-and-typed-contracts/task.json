@@ -1,0 +1,35 @@
+{
+  "Key": "02-universal-webgl-library-skeleton-and-typed-contracts",
+  "Title": "Universal WebGL library skeleton and typed contracts",
+  "Purpose": "Create the new universal WebGL RCL, wire it into the solution, and define generic scene and event contracts without any Processes dependency.",
+  "DependsOn": [
+    "01-baseline-and-renderer-decision-lock"
+  ],
+  "Deliverables": [
+    "New `CanDoItAll.Components.WebGlLib` project in the solution with no Processes reference.",
+    "Typed generic contracts for scene, nodes, edges, camera/UI state, diagnostics, and semantic interaction events.",
+    "Asset-loading pattern and project skeleton consistent with repository conventions."
+  ],
+  "RepositoryTouchpoints": [
+    "CanDoItAll.slnx",
+    "src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj",
+    "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+    "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs",
+    "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchEvents.cs",
+    "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchUiState.cs",
+    "src/CanDoItAll.Components.CanvasLib/Components/Shared/Assets/CanvasLibHeadAssets.razor",
+    "src/CanDoItAll.Components.CanvasLib/Components/Shared/Assets/CanvasLibBodyAssets.razor",
+    "tools/canvaslib/asset-manifest.json"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter \"FullyQualifiedName~WebGl|FullyQualifiedName~ProjectStructure\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Is the new library truly universal?",
+    "Did the typed contracts stay generic and small enough to evolve safely?",
+    "Is the asset strategy repository-native and deterministic?"
+  ],
+  "CorrectiveOnFailure": "If this task fails, stop immediately and execute `subbundles/_corrective-renderer-boundary-reset` before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-renderer-boundary-reset"
+}

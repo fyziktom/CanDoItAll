@@ -1,0 +1,387 @@
+.wgl-workbench-shell {
+    position: relative;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+}
+
+.wgl-workbench-stage {
+    position: relative;
+    min-height: 38rem;
+    height: 100%;
+    width: 100%;
+}
+
+.wgl-workbench-host {
+    position: relative;
+    min-height: 38rem;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid rgba(71, 85, 105, 0.34);
+    border-radius: 1.75rem;
+    background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(244, 63, 94, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.98));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 28px 80px rgba(15, 23, 42, 0.28);
+}
+
+.wgl-workbench-host::before,
+.wgl-workbench-host::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.wgl-workbench-host::before {
+    z-index: 0;
+    background:
+        radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.12), transparent 28%),
+        radial-gradient(circle at 82% 18%, rgba(249, 115, 22, 0.08), transparent 24%),
+        radial-gradient(circle at 50% 92%, rgba(14, 165, 233, 0.06), transparent 34%);
+}
+
+.wgl-workbench-host::after {
+    z-index: 0;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 22%, transparent 78%, rgba(2, 6, 23, 0.22)),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02), transparent 28%, transparent 72%, rgba(255, 255, 255, 0.02));
+    mix-blend-mode: screen;
+}
+
+.wgl-workbench-host:focus-visible {
+    outline: 3px solid rgba(14, 165, 233, 0.28);
+    outline-offset: 3px;
+}
+
+.wgl-stage-surface,
+.wgl-label-layer,
+.wgl-dom-mirror,
+.wgl-empty-state,
+.wgl-diagnostics-panel {
+    position: absolute;
+    inset: 0;
+}
+
+.wgl-stage-surface canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.wgl-label-layer,
+.wgl-dom-mirror {
+    pointer-events: none;
+}
+
+.wgl-node-label {
+    position: absolute;
+    z-index: 2;
+    --wgl-label-scale: 1;
+    min-width: 8.4rem;
+    max-width: 15.5rem;
+    padding: 0.72rem 0.86rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 1rem;
+    background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.76)),
+        linear-gradient(135deg, rgba(56, 189, 248, 0.05), transparent 56%);
+    color: #e2e8f0;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 18px 52px rgba(2, 6, 23, 0.3);
+    backdrop-filter: blur(18px);
+    transform: translate(-50%, -50%) scale(var(--wgl-label-scale));
+    transform-origin: center center;
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease, background 120ms ease;
+}
+
+.wgl-node-label.is-selected {
+    border-color: rgba(56, 189, 248, 0.7);
+    background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.82)),
+        linear-gradient(135deg, rgba(56, 189, 248, 0.11), transparent 58%);
+    box-shadow:
+        0 0 0 2px rgba(56, 189, 248, 0.18),
+        0 22px 56px rgba(56, 189, 248, 0.16);
+    transform: translate(-50%, -50%) translateY(-2px) scale(var(--wgl-label-scale));
+}
+
+.wgl-node-label.is-condensed {
+    padding: 0.6rem 0.72rem;
+}
+
+.wgl-node-label.is-miniature {
+    min-width: 6.8rem;
+    max-width: 10rem;
+    padding: 0.45rem 0.58rem;
+}
+
+.wgl-node-label.is-miniature .wgl-node-label__kicker {
+    margin-bottom: 0.1rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+}
+
+.wgl-node-label.is-miniature .wgl-node-label__title {
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+.wgl-node-label.is-miniature .wgl-node-label__subtitle,
+.wgl-node-label.is-miniature .wgl-node-label__tags {
+    display: none;
+}
+
+.wgl-node-label.is-condensed .wgl-node-label__tags {
+    gap: 0.24rem;
+    margin-top: 0.36rem;
+}
+
+.wgl-node-label.is-compact .wgl-node-label__subtitle,
+.wgl-node-label.is-compact .wgl-node-label__tags {
+    display: none;
+}
+
+.wgl-node-label__kicker {
+    margin: 0 0 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(148, 163, 184, 0.82);
+}
+
+.wgl-node-label__title {
+    margin: 0;
+    font-family: "Aptos Display", "Segoe UI Variable Display", "Trebuchet MS", sans-serif;
+    font-size: 0.98rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.wgl-node-label__subtitle {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: rgba(203, 213, 225, 0.84);
+}
+
+.wgl-node-label__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+}
+
+.wgl-node-label__tag {
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(30, 41, 59, 0.94);
+    color: rgba(226, 232, 240, 0.84);
+    font-size: 0.68rem;
+    line-height: 1.2;
+}
+
+.wgl-port-anchor {
+    position: absolute;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid rgba(226, 232, 240, 0.95);
+    border-radius: 999px;
+    box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.42),
+        0 0 18px rgba(56, 189, 248, 0.24);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+
+.wgl-port-anchor.is-source,
+.wgl-port-anchor.is-current-target {
+    border-color: rgba(250, 204, 21, 0.96);
+    box-shadow:
+        0 0 0 2px rgba(250, 204, 21, 0.18),
+        0 0 24px rgba(250, 204, 21, 0.34);
+    transform: translate(-50%, -50%) scale(1.26);
+}
+
+.wgl-port-anchor.is-compatible,
+.wgl-port-anchor.is-pending-source {
+    border-color: rgba(191, 219, 254, 0.98);
+    box-shadow:
+        0 0 0 2px rgba(56, 189, 248, 0.14),
+        0 0 22px rgba(56, 189, 248, 0.32);
+}
+
+.wgl-port-anchor-label {
+    position: absolute;
+    z-index: 3;
+    max-width: 12rem;
+    padding: 0.18rem 0.52rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.92);
+    color: rgba(226, 232, 240, 0.88);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.22);
+    pointer-events: none;
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="left"] {
+    transform: translate(calc(-100% - 0.9rem), -50%);
+    text-align: right;
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="right"] {
+    transform: translate(0.9rem, -50%);
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="top"] {
+    transform: translate(-50%, calc(-100% - 0.8rem));
+    text-align: center;
+}
+
+.wgl-port-anchor-label[data-webgl-anchor-side="bottom"] {
+    transform: translate(-50%, 0.8rem);
+    text-align: center;
+}
+
+.wgl-port-anchor-label.is-compact {
+    padding: 0.12rem 0.42rem;
+    font-size: 0.66rem;
+}
+
+.wgl-port-anchor-label.is-source,
+.wgl-port-anchor-label.is-current-target {
+    border-color: rgba(250, 204, 21, 0.48);
+    color: #fef3c7;
+    box-shadow:
+        0 0 0 1px rgba(250, 204, 21, 0.16),
+        0 14px 32px rgba(250, 204, 21, 0.18);
+}
+
+.wgl-port-anchor-label.is-compatible,
+.wgl-port-anchor-label.is-pending-source {
+    border-color: rgba(56, 189, 248, 0.34);
+    color: #e0f2fe;
+    box-shadow:
+        0 0 0 1px rgba(56, 189, 248, 0.14),
+        0 14px 32px rgba(56, 189, 248, 0.16);
+}
+
+.wgl-edge-anchor {
+    position: absolute;
+    min-width: 0.7rem;
+    min-height: 0.7rem;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.9);
+    color: rgba(226, 232, 240, 0.82);
+    font-size: 0.68rem;
+    line-height: 1.1;
+    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.22);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.wgl-edge-anchor.is-primary {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow:
+        0 0 0 1px rgba(56, 189, 248, 0.16),
+        0 12px 30px rgba(56, 189, 248, 0.2);
+}
+
+.wgl-edge-anchor.is-selected {
+    border-color: rgba(250, 204, 21, 0.54);
+    box-shadow:
+        0 0 0 1px rgba(250, 204, 21, 0.22),
+        0 12px 30px rgba(250, 204, 21, 0.24);
+}
+
+.wgl-empty-state {
+    display: none;
+    align-items: end;
+    justify-content: start;
+    padding: 1.5rem;
+    pointer-events: none;
+}
+
+.wgl-empty-state.is-visible {
+    display: flex;
+}
+
+.wgl-empty-state__card {
+    max-width: 23rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 1.15rem;
+    background: rgba(15, 23, 42, 0.88);
+    box-shadow: 0 18px 42px rgba(2, 6, 23, 0.24);
+    backdrop-filter: blur(18px);
+}
+
+.wgl-empty-state__eyebrow {
+    margin: 0 0 0.2rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(148, 163, 184, 0.82);
+}
+
+.wgl-empty-state__title {
+    margin: 0;
+    font-family: "Aptos Display", "Segoe UI Variable Display", "Trebuchet MS", sans-serif;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: #f8fafc;
+}
+
+.wgl-empty-state__body {
+    margin: 0.35rem 0 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: rgba(203, 213, 225, 0.82);
+}
+
+.wgl-diagnostics-panel {
+    display: flex;
+    align-items: end;
+    justify-content: end;
+    padding: 1rem;
+    pointer-events: none;
+}
+
+.wgl-diagnostics-panel__card {
+    min-width: 12rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 1rem;
+    background: rgba(15, 23, 42, 0.84);
+    box-shadow: 0 16px 42px rgba(2, 6, 23, 0.24);
+}
+
+.wgl-diagnostics-panel__title {
+    margin: 0 0 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(148, 163, 184, 0.78);
+}
+
+.wgl-diagnostics-panel__meta {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: rgba(226, 232, 240, 0.84);
+}

@@ -1,0 +1,33 @@
+{
+  "Key": "03-threejs-runtime-foundation-and-host-component",
+  "Title": "Three.js runtime foundation and host component",
+  "Purpose": "Implement the JS-owned WebGL runtime foundation, host-state lifecycle, label overlay shell, and the first interactive component wrapper for the new library.",
+  "DependsOn": [
+    "02-universal-webgl-library-skeleton-and-typed-contracts"
+  ],
+  "Deliverables": [
+    "Initial WebGL runtime foundation built around a JS scene host and a global `window.CanDoItAll.webglWorkbench` entry.",
+    "Perspective-capable camera controls, scene lifecycle, fit/focus/update/dispose flows, and deterministic test mode hooks.",
+    "DOM label/accessibility/automation mirror shell aligned with the scene host."
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor",
+    "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07-runtime-entry.js",
+    "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07a-runtime-interaction-router.js",
+    "src/CanDoItAll.Components.CanvasLib/wwwroot/js/runtime/workbench/07b-runtime-rendering.js",
+    "src/CanDoItAll.Components.CanvasLib/wwwroot/js/services/viewport-controller.js",
+    "src/CanDoItAll.Components.CanvasLib/wwwroot/js/services/selection-model.js",
+    "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet build CanDoItAll.slnx -v:minimal",
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~WebGl|FullyQualifiedName~CanvasWorkbench\" -v:minimal"
+  ],
+  "ReviewQuestions": [
+    "Does the runtime clearly own the frame loop and hit-testing?",
+    "Are label clarity and automation hooks available from day one?",
+    "Did the component wrapper stay thin?"
+  ],
+  "CorrectiveOnFailure": "If this task fails, stop immediately and execute `subbundles/_corrective-renderer-boundary-reset` before continuing.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-renderer-boundary-reset"
+}

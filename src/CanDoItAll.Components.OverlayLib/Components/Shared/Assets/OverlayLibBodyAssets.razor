@@ -1,0 +1,10 @@
+@namespace CanDoItAll.Components.OverlayLib
+@if (IncludeRuntimeAssets)
+{
+    <script src="@Assets["_content/CanDoItAll.Components.OverlayLib/js/runtime/overlay-window.js"]"></script>
+}
+
+@code {
+    [Parameter]
+    public bool IncludeRuntimeAssets { get; set; } = true;
+}

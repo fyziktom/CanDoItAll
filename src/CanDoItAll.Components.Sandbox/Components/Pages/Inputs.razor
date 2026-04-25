@@ -98,6 +98,59 @@
                 </Grid>
             </FormSection>
 
+            <SectionCard Title="Inline editable values" Description="Editable switches a displayed property into a shared BaseLib input, then saves the value back to the source item.">
+                <Stack GapScale="LayoutGap.Large" data-testid="sandbox-editable-values">
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnTemplate="repeat(auto-fit,minmax(14rem,1fr))">
+                        <FormField Text="Title">
+                            <Editable TItem="EditableReviewItem"
+                                      Item="@EditableState"
+                                      ItemChanged="HandleEditableChanged"
+                                      ParameterName="@nameof(EditableReviewItem.Title)"
+                                      Placeholder="Review title"
+                                      Disabled="@IsDisabled"
+                                      data-testid="editable-title" />
+                        </FormField>
+
+                        <FormField Text="Confidence">
+                            <Editable TItem="EditableReviewItem"
+                                      Item="@EditableState"
+                                      ItemChanged="HandleEditableChanged"
+                                      ParameterName="@nameof(EditableReviewItem.Confidence)"
+                                      Extension="%"
+                                      Disabled="@IsDisabled"
+                                      data-testid="editable-confidence" />
+                        </FormField>
+
+                        <FormField Text="Effort">
+                            <Editable TItem="EditableReviewItem"
+                                      Item="@EditableState"
+                                      ItemChanged="HandleEditableChanged"
+                                      ParameterName="@nameof(EditableReviewItem.EffortHours)"
+                                      Format="0.0"
+                                      Extension=" h"
+                                      Disabled="@IsDisabled"
+                                      data-testid="editable-effort" />
+                        </FormField>
+
+                        <FormField Text="Approval">
+                            <Editable TItem="EditableReviewItem"
+                                      Item="@EditableState"
+                                      ItemChanged="HandleEditableChanged"
+                                      ParameterName="@nameof(EditableReviewItem.RequiresApproval)"
+                                      TrueText="Approval required"
+                                      FalseText="Self review"
+                                      Disabled="@IsDisabled"
+                                      data-testid="editable-approval" />
+                        </FormField>
+                    </Grid>
+
+                    <Alert AlertStyle="@(AlertStyle.Info)">
+                        Latest editable state: @EditableSummary. Saves: @editableSaveCount.
+                    </Alert>
+                </Stack>
+            </SectionCard>
+
             <SectionCard Title="Notes and toggles" Description="Longer text and binary settings should remain stable when the surface gets denser.">
                 <div class="space-y-4">
                     <FormField Text="Notes">
@@ -221,6 +274,9 @@
     private int uploadedFileCount;
     private long uploadedTotalSizeBytes;
     private IReadOnlyList<string> uploadedFileNames = [];
+    private SandboxScenarioKey editableStateScenario = SandboxScenarioKey.HappyPath;
+    private EditableReviewItem EditableState = CreateEditableState(SandboxScenarioKey.HappyPath);
+    private int editableSaveCount;
 
     private InputFormState FormState => CurrentScenario switch
     {
@@ -289,6 +345,19 @@
         ? "0 B"
         : FormatBytes(uploadedTotalSizeBytes);
 
+    private string EditableSummary
+        => $"{EditableState.Title} | {EditableState.Confidence}% | {EditableState.EffortHours:0.0} h | {(EditableState.RequiresApproval ? "approval" : "self-review")}";
+
+    protected override void OnParametersSet()
+    {
+        if (editableStateScenario != CurrentScenario)
+        {
+            editableStateScenario = CurrentScenario;
+            EditableState = CreateEditableState(CurrentScenario);
+            editableSaveCount = 0;
+        }
+    }
+
     private Task HandleTitleChanged(string? value)
     {
         return Task.CompletedTask;
@@ -334,6 +403,13 @@
         return Task.CompletedTask;
     }
 
+    private Task HandleEditableChanged(EditableReviewItem item)
+    {
+        EditableState = item;
+        editableSaveCount++;
+        return Task.CompletedTask;
+    }
+
     private Task HandleUploadChanged(InputFileChangeEventArgs args)
     {
         var files = args.GetMultipleFiles(10);
@@ -363,6 +439,41 @@
             : $"{value:0.0} {suffixes[suffixIndex]}";
     }
 
+    private static EditableReviewItem CreateEditableState(SandboxScenarioKey scenario)
+    {
+        return scenario switch
+        {
+            SandboxScenarioKey.DenseContent => new()
+            {
+                Title = "Migration gate review",
+                Confidence = 88,
+                EffortHours = 12.5,
+                RequiresApproval = true
+            },
+            SandboxScenarioKey.LongText => new()
+            {
+                Title = "Quarterly migration review with extended ownership and escalation notes",
+                Confidence = 91,
+                EffortHours = 18.75,
+                RequiresApproval = true
+            },
+            SandboxScenarioKey.DisabledState => new()
+            {
+                Title = "Locked review item",
+                Confidence = 64,
+                EffortHours = 4.0,
+                RequiresApproval = false
+            },
+            _ => new()
+            {
+                Title = "Component validation pass",
+                Confidence = 70,
+                EffortHours = 6.5,
+                RequiresApproval = true
+            }
+        };
+    }
+
     private sealed record SelectOption(string Text, string Value);
 
     private sealed record InputFormState(
@@ -375,4 +486,15 @@
         bool RequiresApproval,
         bool PublishExternally,
         string Notes);
+
+    private sealed class EditableReviewItem
+    {
+        public string Title { get; set; } = string.Empty;
+
+        public int Confidence { get; set; }
+
+        public double EffortHours { get; set; }
+
+        public bool RequiresApproval { get; set; }
+    }
 }

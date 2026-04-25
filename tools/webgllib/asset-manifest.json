@@ -1,0 +1,28 @@
+{
+  "styles": [
+    {
+      "source": "css/workbench/webgl-workbench.css",
+      "output": "_content/CanDoItAll.Components.WebGlLib/css/workbench/webgl-workbench.css"
+    }
+  ],
+  "runtimeScripts": [
+    {
+      "source": "js/runtime/workbench/01-webgl-workbench.js",
+      "output": "_content/CanDoItAll.Components.WebGlLib/js/runtime/workbench/01-webgl-workbench.js"
+    }
+  ],
+  "staticAssets": [
+    {
+      "source": "vendor/OrbitControls.js",
+      "output": "_content/CanDoItAll.Components.WebGlLib/vendor/OrbitControls.js"
+    },
+    {
+      "source": "vendor/three.core.min.js",
+      "output": "_content/CanDoItAll.Components.WebGlLib/vendor/three.core.min.js"
+    },
+    {
+      "source": "vendor/three.module.min.js",
+      "output": "_content/CanDoItAll.Components.WebGlLib/vendor/three.module.min.js"
+    }
+  ]
+}

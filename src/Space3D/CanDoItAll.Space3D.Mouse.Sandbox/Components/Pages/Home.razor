@@ -1,0 +1,91 @@
+@page "/"
+@using CanDoItAll.Space3D.Mouse.Driver.Protocol
+
+<PageTitle>CanDoItAll Space3D Mouse Lab</PageTitle>
+
+<div class="space3d-global-connection" aria-label="3D mouse BLE connection">
+    <span class="@ConnectionStatusClass">@SharedConnectionLabel</span>
+    <button class="space3d-connect-button space3d-connect-button--primary"
+            @onclick="ConnectBleAsync"
+            disabled="@(!CanConnectBle)">
+        @(ConnectBusy ? "Connecting..." : "Connect BLE")
+    </button>
+    <button class="space3d-connect-button"
+            @onclick="DisconnectBleAsync"
+            disabled="@(!CanDisconnectBle)">
+        Disconnect
+    </button>
+</div>
+
+<Tabs SelectedIndex="@selectedTabIndex"
+      SelectedIndexChanged="HandleSelectedTabChangedAsync"
+      RenderMode="TabRenderMode.Client"
+      Variant="TabsVariant.Workstation"
+      BorderMode="TabsBorderMode.Soft"
+      Tone="TabsTone.Secondary"
+      OverflowMode="TabsOverflowMode.Wrap"
+      PanelOverflowMode="TabsPanelOverflowMode.Visible"
+      Class="space3d-main-tabs"
+      AriaLabel="Space3D mouse sandbox tabs">
+    <TabItems>
+        <TabsItem Text="Mouse lab">
+            <MouseLab @ref="mouseLab"
+                      TelemetryReceived="HandleTelemetryReceivedAsync"
+                      ConnectionStateChanged="HandleMouseLabConnectionChangedAsync"
+                      LogicalButtonState="@buttonState" />
+        </TabsItem>
+
+        <TabsItem Text="Process scene">
+            <Space3DProcessWorkbench LatestTelemetry="@latestTelemetry"
+                                      ButtonState="@buttonState" />
+        </TabsItem>
+    </TabItems>
+</Tabs>
+
+@code {
+    private readonly Space3DMouseButtonInterpreter buttonInterpreter = Space3DMouseButtonInterpreter.CreateMeasuredLadder();
+    private MouseTelemetrySnapshot? latestTelemetry;
+    private Space3DMouseButtonSnapshot buttonState = Space3DMouseButtonSnapshot.Empty;
+    private MouseLab? mouseLab;
+    private int selectedTabIndex;
+
+    private bool ConnectBusy => mouseLab?.IsConnectBusy == true;
+
+    private bool CanConnectBle => mouseLab?.CanConnectBle == true;
+
+    private bool CanDisconnectBle => mouseLab?.CanDisconnectBle == true;
+
+    private string SharedConnectionLabel => mouseLab?.SharedConnectionLabel ?? "BLE starting";
+
+    private string ConnectionStatusClass
+        => mouseLab switch
+        {
+            null => "space3d-connection-status",
+            { BleSupported: false } => "space3d-connection-status is-error",
+            { NotificationsActive: true } => "space3d-connection-status is-success",
+            { GattConnected: true } => "space3d-connection-status is-warn",
+            _ => "space3d-connection-status"
+        };
+
+    private Task HandleTelemetryReceivedAsync(MouseTelemetrySnapshot telemetry)
+    {
+        latestTelemetry = telemetry;
+        buttonState = buttonInterpreter.Update(telemetry);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleSelectedTabChangedAsync(int index)
+    {
+        selectedTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleMouseLabConnectionChangedAsync()
+        => InvokeAsync(StateHasChanged);
+
+    private Task ConnectBleAsync()
+        => mouseLab?.ConnectAsync() ?? Task.CompletedTask;
+
+    private Task DisconnectBleAsync()
+        => mouseLab?.DisconnectAsync() ?? Task.CompletedTask;
+}
