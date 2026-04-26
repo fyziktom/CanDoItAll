@@ -3,9 +3,86 @@ Scaffold the app in the parent folder:
 - template: blazor
 - name: SimpleCalculatorApp
 - parentDirectory: <scenario-parent-folder>
+- do not rerun over a target that already contains a .NET project; inspect and repair the scaffold instead
+- after this command, target the generated project at `<scenario-parent-folder>/SimpleCalculatorApp/SimpleCalculatorApp.csproj`; do not create `<scenario-parent-folder>/SimpleCalculatorApp.csproj`, `<scenario-parent-folder>/Program.cs`, or root `Pages/*.razor` beside it
+- do not delete scaffold core files such as `.csproj`, `Program.cs`, `Components/App.razor`, `Components/Routes.razor`, `_Imports.razor`, `Components/Pages/Home.razor`, layout files, `appsettings*.json`, or `wwwroot/app.css` to make re-scaffolding succeed
+- do not use recursive delete on a host project, sibling test project, target root, or any directory containing a .NET project or solution file just to make scaffolding succeed
+- after a stock scaffold exists, recovery should edit source/project files such as Components/Pages/Home.razor, Domain/CalculatorEngine.cs, the sibling test .csproj, and test source before writing artifacts or rerunning validation
 
 Build the generated app:
 - tool: workspace_dotnet_build
 - targetPath: SimpleCalculatorApp.csproj
 - workingDirectory: <scenario-parent-folder>\SimpleCalculatorApp
+- configuration: Debug
+
+Create tests beside the generated app, not inside it:
+- tool: workspace_dotnet_new
+- template: xunit
+- name: SimpleCalculatorApp.Tests
+- parentDirectory: <scenario-parent-folder>
+
+Do not create test files under:
+- path: <scenario-parent-folder>\SimpleCalculatorApp\SimpleCalculatorApp.Tests
+
+Remove stale nested tests before rebuilding the app:
+- tool: workspace_delete_path
+- path: <scenario-parent-folder>\SimpleCalculatorApp\SimpleCalculatorApp.Tests
+- recursive: true
+- allowed only when the `*.Tests` folder is misplaced directly inside the host project directory; do not use this pattern for sibling test projects or target roots
+
+Clean duplicate scaffolded test sources before rerunning tests:
+- tool: workspace_delete_path
+- path: <scenario-parent-folder>\SimpleCalculatorApp.Tests\UnitTest1.cs
+- recursive: false
+- tool: workspace_delete_path
+- path: <scenario-parent-folder>\SimpleCalculatorApp.Tests\SimpleCalculatorApp.Tests.cs
+- recursive: false
+
+Avoid root namespace/type collisions in Blazor apps:
+- prefer type name: CalculatorEngine
+- prefer namespace: SimpleCalculatorApp.Domain
+- avoid type name: SimpleCalculatorApp
+- avoid component file: Components/SimpleCalculatorApp.razor
+- prefer component file: Components/Pages/Home.razor or Components/Pages/CalculatorPage.razor
+
+Keep calculator logic testable:
+- prefer source file: Domain/CalculatorEngine.cs
+- prefer tests targeting: SimpleCalculatorApp.Domain.CalculatorEngine
+- avoid tests targeting: new SimpleCalculatorApp() or new SimpleCalculatorApp.Components.Pages.Home()
+- required test project reference: <ProjectReference Include="..\SimpleCalculatorApp\SimpleCalculatorApp.csproj" />
+- if tests fail with CS0118 "namespace but is used like a type": create/read Domain/CalculatorEngine.cs, add the ProjectReference, update tests to instantiate CalculatorEngine, then rerun build and test
+- workspace_dotnet_test targetPath must be SimpleCalculatorApp.Tests.csproj or a solution file, never CalculatorTests.cs or a plain directory
+
+Use Blazor Web App route locations:
+- prefer route file: Components/Pages/Home.razor
+- avoid legacy route files: Pages/Home.razor and Pages/Index.razor
+- if duplicate @page "/" exists: delete or move the stale root Pages/*.razor route before launch validation
+- after dotnet new blazor: inspect the generated .csproj, Program.cs, and Components/Pages route files before writing UI
+
+Do not downgrade Blazor Web App hosting:
+- avoid files: Pages/_Host.cshtml and Startup.cs
+- avoid startup code: UseStartup<Startup>()
+- avoid script: blazor.server.js
+- avoid package references in net10 Blazor Web App: Microsoft.AspNetCore.Components.Web Version="7.0.0", Microsoft.AspNetCore.Components.WebAssembly Version="7.0.0", Microsoft.AspNetCore.Components Version="7.0.0"
+- if inherited notes say Blazor Server, Blazor Server-Side, or Razor Pages while the scaffold/project structure says Blazor SSR or Blazor Web App: treat those notes as stale shorthand and keep the Blazor Web App shape
+- if build mentions Pages/_Host.cshtml, Startup.cs, typeof(App), or UseStartup<Startup>(): delete Pages/_Host.cshtml, Startup.cs, legacy root Pages/*.cshtml files, and stale root Pages/*.razor routes, remove obsolete package references, restore generated minimal Program.cs, keep Components/App.razor and Components/Routes.razor, then rebuild
+
+Avoid no-progress validation loops:
+- after a failed workspace_dotnet_build, workspace_dotnet_test, or workspace_dotnet_run, do not repeat the identical command until you inspect diagnostics or change files that directly address the failure
+- after workspace_dotnet_test is denied because the test project path is missing, create or repair the sibling test project and ProjectReference before rerunning
+- after workspace_dotnet_test is denied because the target was a .cs file or directory, rerun it against the sibling test .csproj after fixing project references and stale test sources
+- do not rewrite the same source file with identical content in a loop
+
+Keep layout references buildable:
+- prefer: edit MainLayout.razor content/styles in place
+- avoid: renaming MainLayout.razor unless Routes.razor, NotFound.razor, and _Imports.razor references are updated together
+
+Validate both projects after test edits:
+- tool: workspace_dotnet_build
+- targetPath: SimpleCalculatorApp.csproj
+- workingDirectory: <scenario-parent-folder>\SimpleCalculatorApp
+- configuration: Debug
+- tool: workspace_dotnet_test
+- targetPath: SimpleCalculatorApp.Tests.csproj
+- workingDirectory: <scenario-parent-folder>\SimpleCalculatorApp.Tests
 - configuration: Debug

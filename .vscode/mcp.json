@@ -9,11 +9,6 @@
                                                      "cwd":  "${workspaceFolder}",
                                                      "type":  "stdio"
                                                  },
-                    "playwright":  {
-                                       "args":  "@playwright/mcp@latest",
-                                       "command":  "npx",
-                                       "type":  "stdio"
-                                   },
                     "candoitall_dotnetwatch":  {
                                                    "args":  [
                                                                 "-NoProfile",
@@ -55,15 +50,11 @@
                                         "command":  "npx",
                                         "type":  "stdio"
                                     },
-                    "candoitall_sshops":  {
-                                              "args":  [
-                                                           "--settings",
-                                                           "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
-                                                       ],
-                                              "command":  "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
-                                              "cwd":  "${workspaceFolder}",
-                                              "type":  "stdio"
-                                          },
+                    "playwright":  {
+                                       "args":  "@playwright/mcp@latest",
+                                       "command":  "npx",
+                                       "type":  "stdio"
+                                   },
                     "candoitall_projectstructure":  {
                                                         "args":  [
                                                                      "--settings",
@@ -72,6 +63,15 @@
                                                         "command":  "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260409-184529\\CanDoItAll.Mcp.ProjectStructure.exe",
                                                         "cwd":  "${workspaceFolder}",
                                                         "type":  "stdio"
-                                                    }
+                                                    },
+                    "candoitall_sshops":  {
+                                              "args":  [
+                                                           "--settings",
+                                                           "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
+                                                       ],
+                                              "command":  "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
+                                              "cwd":  "${workspaceFolder}",
+                                              "type":  "stdio"
+                                          }
                 }
 }

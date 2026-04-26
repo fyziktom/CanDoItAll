@@ -156,7 +156,7 @@ internal static class ScenarioSeederHost
         services.AddSingleton<SeederHostApplicationLifetime>();
         services.AddSingleton<IHostApplicationLifetime>(provider => provider.GetRequiredService<SeederHostApplicationLifetime>());
         services.AddCanDoItAllInfrastructure(configuration, environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
-        services.AddCanDoItAllRuntimeModules();
+        services.AddCanDoItAllRuntimeModules(configuration);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
         services.AddScoped<AgentFrameworkIntegrationSimulationSeeder>();

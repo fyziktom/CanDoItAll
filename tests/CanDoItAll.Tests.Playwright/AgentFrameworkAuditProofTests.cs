@@ -177,6 +177,83 @@ public sealed partial class AgentFrameworkAuditProofTests
     }
 
     [Fact]
+    public async Task Processes_agent_recovery_run_surfaces_missing_artifact_deadletter_and_manual_rerun()
+    {
+        var seed = await SeedAgentRecoveryRunAsync();
+        await using var context = await CreateContextAsync(1600, 900);
+        var page = await context.NewPageAsync();
+
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}&runId={seed.RunId:D}");
+
+        Assert.NotNull(response);
+        Assert.True(response!.Ok, $"Expected /processes to return 2xx, got {(int)response.Status}.");
+
+        await DismissStartupModalIfPresentAsync(page);
+        await page.GetByTestId("processes-detail-tabs").WaitForAsync();
+        await page.GetByTestId("processes-detail-tabs").GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
+        {
+            Name = "Runs",
+            Exact = true
+        }).ClickAsync();
+        await page.GetByTestId("processes-runs-tab-shell").WaitForAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-selected-run-summary"), "One or more automation dispatch records are dead-lettered.");
+        await ExpectTextContainsAsync(page.GetByTestId("processes-selected-run-summary"), "1 missing artifacts");
+        await ExpectTextContainsAsync(page.GetByTestId("processes-selected-run-summary"), "1 dead-lettered");
+
+        var stepCard = page.GetByTestId("processes-step-run-card").Filter(new LocatorFilterOptions
+        {
+            HasText = seed.StepTitle
+        });
+        await ExpectTextContainsAsync(stepCard, "Blocked");
+        await ExpectTextContainsAsync(stepCard, "1 dead-lettered");
+        await ExpectTextContainsAsync(stepCard, "Automation dispatch is dead-lettered for this step.");
+        await stepCard.GetByTestId("processes-rerun-agent-step-button").WaitForAsync();
+
+        var runsTabs = page.GetByTestId("processes-runs-tabs");
+        await runsTabs.GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
+        {
+            Name = "Evidence",
+            Exact = true
+        }).ClickAsync();
+        var artifactLedger = page.GetByTestId("processes-artifact-obligation-ledger");
+        await ExpectTextContainsAsync(artifactLedger, seed.ArtifactTitle);
+        await ExpectTextContainsAsync(artifactLedger, "Missing");
+        await SaveFullPageScreenshotAsync(page, "sb12-agent-recovery-artifact-ledger.png");
+
+        await runsTabs.GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
+        {
+            Name = "Execution",
+            Exact = true
+        }).ClickAsync();
+        var outboxLedger = page.GetByTestId("processes-automation-outbox-ledger");
+        await ExpectTextContainsAsync(outboxLedger, "dispatch-run-automation");
+        await ExpectTextContainsAsync(outboxLedger, "DeadLettered");
+        await ExpectTextContainsAsync(outboxLedger, "Provider execution failed after retry exhaustion.");
+
+        await runsTabs.GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
+        {
+            Name = "Activity",
+            Exact = true
+        }).ClickAsync();
+        await stepCard.GetByTestId("processes-rerun-agent-step-button").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-message-card"), "Agent step rerun requested with a recovery directive.", 20_000);
+        await ExpectStepCardContainsAsync(page, seed.StepTitle, "InProgress");
+
+        await runsTabs.GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
+        {
+            Name = "Execution",
+            Exact = true
+        }).ClickAsync();
+        outboxLedger = page.GetByTestId("processes-automation-outbox-ledger");
+        await ExpectTextContainsAsync(outboxLedger, "agent-step-rerun");
+        await SaveFullPageScreenshotAsync(page, "sb12-agent-recovery-rerun-outbox.png");
+        await WriteProofMetadataAsync(
+            "sb12-agent-recovery-metadata.md",
+            $"# Agent Recovery Browser Proof{Environment.NewLine}{Environment.NewLine}- Project id: `{seed.ProjectId:D}`{Environment.NewLine}- Definition id: `{seed.DefinitionId:D}`{Environment.NewLine}- Run id: `{seed.RunId:D}`{Environment.NewLine}- Step: `{seed.StepTitle}`{Environment.NewLine}- Required artifact: `{seed.ArtifactTitle}`");
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Processes_calculator_delivery_flow_runs_launch_approval_messaging_and_completion_end_to_end()
     {
         var seed = await SeedCalculatorDeliveryScenarioAsync();

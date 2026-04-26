@@ -58,9 +58,10 @@ public sealed class ProcessTemplatePackLoaderTests
     {
         using var packClone = CreatePackClone(ProcessTemplatePackLoader.FindPackRoot());
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
-        services.AddProcessesModule();
+        services.AddProcessesModule(configuration);
         services.Configure<ProcessTemplatePackOptions>(options => options.PackRoot = packClone.RootPath);
         using var provider = services.BuildServiceProvider();
 

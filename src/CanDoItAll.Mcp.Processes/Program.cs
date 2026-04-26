@@ -2,6 +2,7 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Mcp.Core.Identity;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,6 +20,10 @@ internal static class Program
 
         var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+        });
         builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
         builder.Configuration.AddEnvironmentVariables(prefix: "CanDoItAllMcp_");
 
@@ -40,7 +45,7 @@ internal static class Program
         builder.Services.AddSingleton<RuntimeConfiguration>();
         builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
         builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-        builder.Services.AddCanDoItAllRuntimeModules();
+        builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
         builder.Services.AddSingleton<IProcessesCoordinator, ProcessesCoordinator>();
 
         builder.Services

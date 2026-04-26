@@ -332,6 +332,7 @@ public partial class ProcessWorkspace
     {
         detailTab = ResolveDetailTabKey(index);
         RefreshCanvasSurface();
+        UpdateRuntimeRefreshLoop();
         return Task.CompletedTask;
     }
 }

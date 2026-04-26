@@ -4,6 +4,61 @@
 <SectionCard Title="Technical execution runs"
              Description=""
              HelpText="Process automation is only reviewable if the underlying technical execution runs, approvals, checkpoints, tool receipts, and produced artifacts remain visible beside the canonical process state.">
+    @if (Presenter.OutboxRecords.Count > 0)
+    {
+        <SurfaceCard Soft="true"
+                     data-testid="processes-automation-outbox-ledger">
+            <Split Gap="LayoutGap.Medium">
+                <div>
+                    <p class="cda-eyebrow">Automation outbox</p>
+                    <h3 class="mt-1 text-base font-semibold text-slate-950">Dispatch health</h3>
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="warning"
+                                 Text="@($"{Presenter.OutboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry)} pending")" />
+                    <StatusBadge Tone="danger"
+                                 Text="@($"{Presenter.OutboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered)} dead-lettered")" />
+                    <StatusBadge Tone="mint"
+                                 Text="@($"{Presenter.OutboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.Completed)} completed")" />
+                </Cluster>
+            </Split>
+            <Stack GapScale="LayoutGap.Small"
+                   Class="mt-4">
+                @foreach (var outboxRecord in Presenter.OutboxRecords)
+                {
+                    <SurfaceCard Soft="true">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-950">@outboxRecord.CommandKey</p>
+                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                                    @outboxRecord.Trigger / attempts @outboxRecord.AttemptCount
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(outboxRecord.LastError))
+                                {
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">@outboxRecord.LastError</p>
+                                }
+                            </div>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@ResolveOutboxTone(outboxRecord.HealthStatus)"
+                                             Text="@outboxRecord.HealthStatus.ToString()" />
+                                @if (outboxRecord.NextAttemptAtUtc.HasValue)
+                                {
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@($"next {outboxRecord.NextAttemptAtUtc.Value.ToLocalTime():g}")" />
+                                }
+                                @if (outboxRecord.LeaseExpiresAtUtc.HasValue)
+                                {
+                                    <StatusBadge Tone="info"
+                                                 Text="@($"lease {outboxRecord.LeaseExpiresAtUtc.Value.ToLocalTime():g}")" />
+                                }
+                            </Cluster>
+                        </Split>
+                    </SurfaceCard>
+                }
+            </Stack>
+        </SurfaceCard>
+    }
+
     @if (Presenter.ExecutionRuns.Count == 0)
     {
         <EmptyState Eyebrow="No executions"
@@ -240,5 +295,17 @@
             : checkpoint.RunState == ExecutionState.Failed
                 ? "danger"
                 : "info";
+    }
+
+    private static string ResolveOutboxTone(ProcessOutboxHealthStatus status)
+    {
+        return status switch
+        {
+            ProcessOutboxHealthStatus.Completed => "mint",
+            ProcessOutboxHealthStatus.DeadLettered => "danger",
+            ProcessOutboxHealthStatus.Leased => "info",
+            ProcessOutboxHealthStatus.WaitingToRetry => "warning",
+            _ => "neutral"
+        };
     }
 }

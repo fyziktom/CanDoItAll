@@ -220,6 +220,26 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_workspace_seeds_blazor_ssr_delivery_skill_with_external_target_rules()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var capability = Assert.Single(
+            await workspaceService.ListCapabilitiesAsync(),
+            item => item.Kind == CapabilityKind.Skill &&
+                    string.Equals(item.Key, "blazor-ssr-delivery-inline-skill", StringComparison.OrdinalIgnoreCase));
+        var instructions = ReadInlineSkillInstructions(capability.ConfigurationJson);
+
+        Assert.Contains("If the project structure or attached step materials name a concrete output directory", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("external-target/<drive>/...", instructions, StringComparison.Ordinal);
+        Assert.Contains("do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scaffold directly into it instead of adding an extra nested", instructions, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_serious_delivery_agents_on_openai_with_required_skills()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -260,13 +280,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var securityReviewerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal));
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
 
-        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, "gpt-4.1");
+        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
@@ -320,6 +340,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("frontend-skill", editor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("project_structure_read", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project-structure-context-brief", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("source-of-truth app root", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("external-target/<drive>/...", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not treat managed `artifacts/...`, `output/...`, or execution-run folders as the product working directory", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("scaffold directly into that directory instead of creating an extra nested app folder", editor.Instructions, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -347,6 +371,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("child branches by about 480", editor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("project_structure_node_move", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("run subtree recomposition", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("concrete external output path", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("resolved working directory", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not substitute managed `artifacts/...`, `output/...`, or execution-run evidence roots for the app directory", editor.Instructions, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -385,6 +412,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Treat untouched scaffold styling, flat stacked forms, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("filled input state and visible computed result", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("convert that alias to a native Windows path", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a relative `external-target/...` string to `dotnet run` from inside the helper", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -455,13 +486,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var securityReviewAgent = Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal));
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
 
-        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(securityReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, "gpt-4.1");
+        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(securityReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
         AssertHasCapabilities(programmingAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["blazor-ssr-delivery-inline-skill"], capabilityIdsByKey["workspace-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
@@ -560,6 +591,40 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task Loading_a_stale_managed_catalog_persists_the_refreshed_blazor_ssr_delivery_capability_for_other_processes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        _ = await workspaceService.ListCapabilitiesAsync();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var catalogPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            workspaceScope.DataRootRelativePath.Replace('/', Path.DirectorySeparatorChar),
+            "workspace.json");
+        var staleConfigurationJson = JsonSerializer.Serialize(new
+        {
+            key = "blazor-ssr-delivery",
+            instructions = "Create or improve Blazor SSR applications with maintainable, strongly typed C# and explicit validation."
+        });
+
+        MutateCapabilityConfigurationJsonInCatalog(catalogPath, "blazor-ssr-delivery-inline-skill", staleConfigurationJson);
+        var staleConfiguration = ReadCapabilityConfigurationJsonFromCatalog(catalogPath, "blazor-ssr-delivery-inline-skill");
+        Assert.DoesNotContain("external-target/<drive>/...", staleConfiguration, StringComparison.Ordinal);
+
+        var freshStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        _ = await freshStore.LoadCatalogAsync();
+
+        var refreshedInstructions = ReadInlineSkillInstructions(
+            ReadCapabilityConfigurationJsonFromCatalog(catalogPath, "blazor-ssr-delivery-inline-skill"));
+        Assert.Contains("If the project structure or attached step materials name a concrete output directory", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("external-target/<drive>/...", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scaffold directly into it instead of adding an extra nested", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId, string expectedModel)
     {
         Assert.Equal(providerId, agent.ProviderProfileId);
@@ -568,7 +633,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
     private static void AssertManagedSeedRefreshed((string Model, string ConfigurationJson) snapshot)
     {
-        Assert.Equal("gpt-4.1", snapshot.Model);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, snapshot.Model);
         Assert.Contains(GetExpectedManagedSeedVersion(), snapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
@@ -748,6 +813,26 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             agent.GetProperty("configurationJson").GetString() ?? string.Empty);
     }
 
+    private static string ReadCapabilityConfigurationJsonFromCatalog(string catalogPath, string capabilityKey)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(catalogPath));
+        var capability = document.RootElement.GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(item => string.Equals(item.GetProperty("key").GetString(), capabilityKey, StringComparison.OrdinalIgnoreCase));
+
+        return capability.GetProperty("configurationJson").GetString() ?? string.Empty;
+    }
+
+    private static string ReadInlineSkillInstructions(string configurationJson)
+    {
+        using var document = JsonDocument.Parse(configurationJson);
+        return document.RootElement
+            .GetProperty("inlineSkill")
+            .GetProperty("instructions")
+            .GetString()
+            ?? string.Empty;
+    }
+
     private static void MutateAgentSnapshotInCatalog(string catalogPath, string agentName, string model, string configurationJson)
     {
         var root = JsonNode.Parse(File.ReadAllText(catalogPath))?.AsObject()
@@ -760,6 +845,23 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         agent["model"] = model;
         agent["configurationJson"] = configurationJson;
+        File.WriteAllText(catalogPath, root.ToJsonString(new JsonSerializerOptions
+        {
+            WriteIndented = true
+        }));
+    }
+
+    private static void MutateCapabilityConfigurationJsonInCatalog(string catalogPath, string capabilityKey, string configurationJson)
+    {
+        var root = JsonNode.Parse(File.ReadAllText(catalogPath))?.AsObject()
+            ?? throw new InvalidOperationException("Catalog JSON could not be parsed.");
+        var capabilities = root["capabilities"]?.AsArray()
+            ?? throw new InvalidOperationException("Catalog JSON did not contain a capabilities array.");
+        var capability = capabilities
+            .OfType<JsonObject>()
+            .Single(item => string.Equals(item["key"]?.GetValue<string>(), capabilityKey, StringComparison.OrdinalIgnoreCase));
+
+        capability["configurationJson"] = configurationJson;
         File.WriteAllText(catalogPath, root.ToJsonString(new JsonSerializerOptions
         {
             WriteIndented = true

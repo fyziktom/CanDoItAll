@@ -1,12 +1,15 @@
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage
 {
     private const string ProjectStructureHrManagerName = "HR Staffing Manager";
+    private static readonly TimeSpan ProcessStartLaunchPlanCreateTimeout = TimeSpan.FromSeconds(120);
+    private static readonly TimeSpan ProcessStartLaunchPlanCreateRecoveryTimeout = TimeSpan.FromSeconds(90);
 
     [Inject]
     private ProcessesService ProcessesService { get; set; } = default!;
@@ -148,114 +151,212 @@ public partial class ProjectStructurePage
             return;
         }
 
-        var dialog = processStartDialog;
-        var node = ResolveNode(dialog.NodeId);
-        if (node is null)
+        try
         {
-            processStartDialog = dialog with { Error = "The selected process node could not be found. Reload the project structure and try again." };
-            return;
-        }
+            var dialog = processStartDialog;
+            var node = ResolveNode(dialog.NodeId);
+            if (node is null)
+            {
+                processStartDialog = dialog with { Error = "The selected process node could not be found. Reload the project structure and try again." };
+                return;
+            }
 
-        var startContext = CreateProcessStartContext(node);
-        if (dialog.Stage == ProjectStructureProcessStartStage.Staffing &&
-            DateTimeOffset.UtcNow - dialog.StageActivatedAtUtc < TimeSpan.FromMilliseconds(400))
-        {
-            return;
-        }
+            var startContext = CreateProcessStartContext(node);
+            if (dialog.Stage == ProjectStructureProcessStartStage.Staffing &&
+                DateTimeOffset.UtcNow - dialog.StageActivatedAtUtc < TimeSpan.FromMilliseconds(400))
+            {
+                return;
+            }
 
-        processStartDialog = dialog with
-        {
-            IsBusy = true,
-            Error = string.Empty,
-            ConfirmHrManagerMatch = false
-        };
-        await InvokeAsync(StateHasChanged);
+            processStartDialog = dialog with
+            {
+                IsBusy = true,
+                Error = string.Empty,
+                ConfirmHrManagerMatch = false
+            };
+            await InvokeAsync(StateHasChanged);
 
-        if (dialog.Stage == ProjectStructureProcessStartStage.Confirm)
-        {
-            var createResult = await ProcessesService.CreateLaunchPlanAsync(
-                new ProcessLaunchCreateRequest
+            if (dialog.Stage == ProjectStructureProcessStartStage.Confirm)
+            {
+                var launchName = $"{startContext.ResolveTargetNodeTitle()} / {node.Title}";
+                var createRequest = new ProcessLaunchCreateRequest
                 {
                     ProcessDefinitionId = dialog.ProcessDefinitionId,
                     ProjectId = startContext.ProjectId,
-                    LaunchName = $"{startContext.ResolveTargetNodeTitle()} / {node.Title}",
+                    LaunchName = launchName,
                     OperatingMode = ProcessOperatingMode.AssistedExecution,
                     TriggerReason = "Started from project structure.",
                     ProjectStructureContext = startContext,
                     RequestedBy = "project-structure"
-                });
-            if (createResult.IsFailure)
-            {
-                SetProcessActionError(createResult.Errors);
-                return;
-            }
-
-            var launchPlan = await ProcessesService.GetLaunchPlanAsync(createResult.Value);
-            if (launchPlan is null)
-            {
-                processStartDialog = dialog with
-                {
-                    LaunchPlanId = createResult.Value,
-                    IsBusy = false,
-                    Error = "The launch plan was created but could not be loaded for staffing."
                 };
-                return;
-            }
-
-            processStartDialog = MapProcessStartDialogState(
-                processStartDialog!,
-                launchPlan,
-                HasRequiredRoleGaps(launchPlan)
-                    ? "Assign the required roles before the process can start."
-                    : "Review the planned assignments before starting the process.");
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-        else if (!dialog.LaunchPlanId.HasValue)
-        {
-            processStartDialog = dialog with
-            {
-                IsBusy = false,
-                Error = "The launch plan is missing. Close the dialog and try again."
-            };
-            return;
-        }
-        else
-        {
-            if (!dialog.AssignmentsReviewed)
-            {
-                processStartDialog = dialog with
+                var createTask = ProcessesService.CreateLaunchPlanAsync(createRequest);
+                Result<Guid> createResult;
+                try
                 {
-                    IsBusy = false,
-                    Error = "Review the proposed role assignments and confirm them before starting the process."
-                };
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
-
-            var currentLaunchPlan = await ProcessesService.GetLaunchPlanAsync(dialog.LaunchPlanId.Value);
-            if (currentLaunchPlan is null)
-            {
-                processStartDialog = dialog with
+                    createResult = await createTask.WaitAsync(ProcessStartLaunchPlanCreateTimeout);
+                }
+                catch (TimeoutException exception)
                 {
-                    IsBusy = false,
-                    Error = "The launch plan could not be reloaded. Close the dialog and try again."
-                };
-                return;
-            }
+                    var delayedCreateResult = await TryCompleteTimedOutLaunchPlanCreationAsync(createTask);
+                    if (delayedCreateResult is not null)
+                    {
+                        createResult = delayedCreateResult;
+                        Logger.LogWarning(
+                            exception,
+                            "Recovered project-structure process start by awaiting the original launch plan creation after timeout. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
+                            ProjectId,
+                            dialog.ProcessDefinitionId);
+                    }
+                    else
+                    {
+                        ObserveTimedOutLaunchPlanCreation(createTask, ProjectId, dialog.ProcessDefinitionId);
+                        processStartDialog = dialog with
+                        {
+                            IsBusy = false,
+                            Error = "The launch plan request did not complete within the bounded staffing window. Close the dialog, reload the structure, and try again."
+                        };
+                        Logger.LogWarning(
+                            exception,
+                            "Project-structure process start launch plan creation exceeded the bounded staffing window. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
+                            ProjectId,
+                            dialog.ProcessDefinitionId);
+                        await InvokeAsync(StateHasChanged);
+                        return;
+                    }
+                }
 
-            if (HasRequiredRoleGaps(currentLaunchPlan))
-            {
+                if (createResult.IsFailure)
+                {
+                    await SetProcessActionErrorAsync(createResult.Errors);
+                    return;
+                }
+
+                var launchPlan = await ProcessesService.GetLaunchPlanAsync(createResult.Value);
+                if (launchPlan is null)
+                {
+                    processStartDialog = dialog with
+                    {
+                        LaunchPlanId = createResult.Value,
+                        IsBusy = false,
+                        Error = "The launch plan was created but could not be loaded for staffing."
+                    };
+                    return;
+                }
+
                 processStartDialog = MapProcessStartDialogState(
                     dialog,
-                    currentLaunchPlan,
-                    error: "Resolve every required role before starting the process.");
+                    launchPlan,
+                    HasRequiredRoleGaps(launchPlan)
+                        ? "Assign the required roles before the process can start."
+                        : "Review the planned assignments before starting the process.");
                 await InvokeAsync(StateHasChanged);
                 return;
             }
-        }
+            else if (!dialog.LaunchPlanId.HasValue)
+            {
+                processStartDialog = dialog with
+                {
+                    IsBusy = false,
+                    Error = "The launch plan is missing. Close the dialog and try again."
+                };
+                return;
+            }
+            else
+            {
+                if (!dialog.AssignmentsReviewed)
+                {
+                    processStartDialog = dialog with
+                    {
+                        IsBusy = false,
+                        Error = "Review the proposed role assignments and confirm them before starting the process."
+                    };
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
 
-        await ContinueProcessStartAsync(processStartDialog!, startContext, node);
+                var currentLaunchPlan = await ProcessesService.GetLaunchPlanAsync(dialog.LaunchPlanId.Value);
+                if (currentLaunchPlan is null)
+                {
+                    processStartDialog = dialog with
+                    {
+                        IsBusy = false,
+                        Error = "The launch plan could not be reloaded. Close the dialog and try again."
+                    };
+                    return;
+                }
+
+                if (HasRequiredRoleGaps(currentLaunchPlan))
+                {
+                    processStartDialog = MapProcessStartDialogState(
+                        dialog,
+                        currentLaunchPlan,
+                        error: "Resolve every required role before starting the process.");
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+            }
+
+            await ContinueProcessStartAsync(processStartDialog!, startContext, node);
+        }
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "starting the process");
+        }
+    }
+
+    private static async Task<Result<Guid>?> TryCompleteTimedOutLaunchPlanCreationAsync(Task<Result<Guid>> createTask)
+    {
+        try
+        {
+            return await createTask.WaitAsync(ProcessStartLaunchPlanCreateRecoveryTimeout);
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+    }
+
+    private void ObserveTimedOutLaunchPlanCreation(Task<Result<Guid>> createTask, Guid projectId, Guid processDefinitionId)
+    {
+        _ = createTask.ContinueWith(
+            task =>
+            {
+                if (task.IsFaulted)
+                {
+                    Logger.LogWarning(
+                        task.Exception,
+                        "Timed-out project-structure launch plan creation later faulted. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
+                        projectId,
+                        processDefinitionId);
+                    return;
+                }
+
+                if (task.IsCanceled)
+                {
+                    Logger.LogWarning(
+                        "Timed-out project-structure launch plan creation was later canceled. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
+                        projectId,
+                        processDefinitionId);
+                    return;
+                }
+
+                if (task.Result.IsFailure)
+                {
+                    Logger.LogWarning(
+                        "Timed-out project-structure launch plan creation later failed. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} Error={Error}",
+                        projectId,
+                        processDefinitionId,
+                        task.Result.Errors.FirstOrDefault()?.Message ?? "Unknown launch-plan creation error.");
+                    return;
+                }
+
+                Logger.LogWarning(
+                    "Timed-out project-structure launch plan creation later completed after the UI had given up. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId}",
+                    projectId,
+                    processDefinitionId,
+                    task.Result.Value);
+            },
+            TaskScheduler.Default);
     }
 
     private async Task SelectProcessStartCandidateAsync(ProjectStructureProcessStartCandidateSelection selection)
@@ -265,30 +366,37 @@ public partial class ProjectStructurePage
             return;
         }
 
-        processStartDialog = processStartDialog with
+        try
         {
-            IsBusy = true,
-            Error = string.Empty,
-            ConfirmHrManagerMatch = false
-        };
-        await InvokeAsync(StateHasChanged);
-
-        var result = await ProcessesService.SelectLaunchCandidateAsync(
-            new ProcessLaunchCandidateSelectionRequest
+            processStartDialog = processStartDialog with
             {
-                LaunchPlanId = processStartDialog.LaunchPlanId.Value,
-                LaunchPlanRoleId = selection.LaunchPlanRoleId,
-                CandidateId = selection.CandidateId
-            });
-        if (result.IsFailure)
-        {
-            SetProcessActionError(result.Errors);
-            return;
-        }
+                IsBusy = true,
+                Error = string.Empty,
+                ConfirmHrManagerMatch = false
+            };
+            await InvokeAsync(StateHasChanged);
 
-        await ReloadProcessStartLaunchPlanAsync(
-            processStartDialog.LaunchPlanId.Value,
-            "Role selection updated.");
+            var result = await ProcessesService.SelectLaunchCandidateAsync(
+                new ProcessLaunchCandidateSelectionRequest
+                {
+                    LaunchPlanId = processStartDialog.LaunchPlanId.Value,
+                    LaunchPlanRoleId = selection.LaunchPlanRoleId,
+                    CandidateId = selection.CandidateId
+                });
+            if (result.IsFailure)
+            {
+                await SetProcessActionErrorAsync(result.Errors);
+                return;
+            }
+
+            await ReloadProcessStartLaunchPlanAsync(
+                processStartDialog.LaunchPlanId.Value,
+                "Role selection updated.");
+        }
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "selecting a staffing candidate");
+        }
     }
 
     private Task HandleProcessStartAssignmentsReviewedChanged(ChangeEventArgs args)
@@ -354,25 +462,32 @@ public partial class ProjectStructurePage
             return;
         }
 
-        processStartDialog = processStartDialog with
+        try
         {
-            IsBusy = true,
-            Error = string.Empty
-        };
-        await InvokeAsync(StateHasChanged);
+            processStartDialog = processStartDialog with
+            {
+                IsBusy = true,
+                Error = string.Empty
+            };
+            await InvokeAsync(StateHasChanged);
 
-        var result = await ProcessesService.MatchLaunchPlanWithHrManagerAsync(
-            processStartDialog.LaunchPlanId.Value,
-            "project-structure");
-        if (result.IsFailure)
-        {
-            SetProcessActionError(result.Errors);
-            return;
+            var result = await ProcessesService.MatchLaunchPlanWithHrManagerAsync(
+                processStartDialog.LaunchPlanId.Value,
+                "project-structure");
+            if (result.IsFailure)
+            {
+                await SetProcessActionErrorAsync(result.Errors);
+                return;
+            }
+
+            await ReloadProcessStartLaunchPlanAsync(
+                processStartDialog.LaunchPlanId.Value,
+                $"{ProjectStructureHrManagerName} refreshed the staffing suggestions.");
         }
-
-        await ReloadProcessStartLaunchPlanAsync(
-            processStartDialog.LaunchPlanId.Value,
-            $"{ProjectStructureHrManagerName} refreshed the staffing suggestions.");
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "requesting HR manager staffing");
+        }
     }
 
     private async Task ContinueProcessStartAsync(
@@ -394,7 +509,7 @@ public partial class ProjectStructurePage
         var submitResult = await ProcessesService.SubmitLaunchPlanForApprovalAsync(launchPlanId, "project-structure");
         if (submitResult.IsFailure)
         {
-            SetProcessActionError(submitResult.Errors);
+            await SetProcessActionErrorAsync(submitResult.Errors);
             return;
         }
 
@@ -408,14 +523,14 @@ public partial class ProjectStructurePage
             });
         if (approvalResult.IsFailure)
         {
-            SetProcessActionError(approvalResult.Errors);
+            await SetProcessActionErrorAsync(approvalResult.Errors);
             return;
         }
 
         var provisioningResult = await ProcessesService.ProvisionLaunchPlanAsync(launchPlanId, "project-structure");
         if (provisioningResult.IsFailure)
         {
-            SetProcessActionError(provisioningResult.Errors);
+            await SetProcessActionErrorAsync(provisioningResult.Errors);
             return;
         }
 
@@ -427,7 +542,7 @@ public partial class ProjectStructurePage
             });
         if (executionResult.IsFailure)
         {
-            SetProcessActionError(executionResult.Errors);
+            await SetProcessActionErrorAsync(executionResult.Errors);
             return;
         }
 
@@ -461,7 +576,7 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
     }
 
-    private void SetProcessActionError(IReadOnlyCollection<Error> errors)
+    private Task SetProcessActionErrorAsync(IReadOnlyCollection<Error> errors)
     {
         var message = errors.FirstOrDefault()?.Message ?? "The process action could not be completed.";
         if (processStartDialog is not null)
@@ -476,6 +591,42 @@ public partial class ProjectStructurePage
 
         workflowFeedback = message;
         workflowFeedbackTone = "warn";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetProcessActionExceptionAsync(Exception exception, string action)
+    {
+        var message = exception.GetBaseException().Message;
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            message = $"The process action failed unexpectedly while {action}.";
+        }
+        else
+        {
+            message = $"The process action failed while {action}: {message}";
+        }
+
+        if (processStartDialog is not null)
+        {
+            processStartDialog = processStartDialog with
+            {
+                IsBusy = false,
+                ConfirmHrManagerMatch = false,
+                Error = message
+            };
+        }
+
+        Logger.LogWarning(
+            exception,
+            "Project structure process action failed while {Action}. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId} Stage={Stage}",
+            action,
+            ProjectId,
+            processStartDialog?.ProcessDefinitionId,
+            processStartDialog?.LaunchPlanId,
+            processStartDialog?.Stage);
+        workflowFeedback = message;
+        workflowFeedbackTone = "warn";
+        return InvokeAsync(StateHasChanged);
     }
 
     private static bool HasRequiredRoleGaps(ProcessLaunchPlanDetails launchPlan)
@@ -532,15 +683,39 @@ public partial class ProjectStructurePage
 
     private ProcessProjectStructureContext CreateProcessStartContext(ProjectStructureNode node)
     {
-        var parentNode = ResolveNode(node.ParentId);
+        var parentNode = ResolveProcessStartTargetNode(node) ?? ResolveNode(node.ParentId);
         return new ProcessProjectStructureContext
         {
             ProjectId = ProjectId,
             NodeId = node.Id,
             NodeTitle = node.Title,
-            ParentNodeId = node.ParentId,
+            ParentNodeId = parentNode?.Id,
             ParentNodeTitle = parentNode?.Title ?? string.Empty
         };
+    }
+
+    private ProjectStructureNode? ResolveProcessStartTargetNode(ProjectStructureNode node)
+    {
+        if (surface is null)
+        {
+            return ResolveNode(node.ParentId);
+        }
+
+        var projectRootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(ProjectId);
+        var authoredTargetLink = surface.Links
+            .Where(link =>
+                link.IsUserAuthored &&
+                string.Equals(link.TargetId, node.Id, StringComparison.Ordinal))
+            .OrderBy(link => link.Kind == ProjectObjectLinkKind.Uses ? 0 : 1)
+            .ThenBy(link => string.Equals(link.SourceId, projectRootNodeId, StringComparison.Ordinal) ? 1 : 0)
+            .Select(link => ResolveNode(link.SourceId))
+            .FirstOrDefault(candidate => candidate is not null);
+        if (authoredTargetLink is not null)
+        {
+            return authoredTargetLink;
+        }
+
+        return ResolveNode(node.ParentId);
     }
 
     private async Task TryLinkStartedProcessRunAsync(ProcessProjectStructureContext startContext, Guid runId)

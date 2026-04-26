@@ -1,11 +1,14 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Playwright;
@@ -17,16 +20,26 @@ public sealed partial class AgentFrameworkAuditProofTests
     private const string ScenarioHarnessOperatorName = "Scenario Harness Operator";
     private const string ScenarioHarnessModel = "scenario-local";
 
-    private async Task<ServiceProvider> BuildSeedServiceProviderAsync()
+    private Task<ServiceProvider> BuildSeedServiceProviderAsync()
     {
-        return await TestApplicationBootstrap.BuildServiceProviderAsync(
-            CreateActiveProfile(),
-            "CanDoItAll.Tests.Playwright.AgentFrameworkAudit",
-            TestSchemaBootstrapModules.Full,
+        var activeProfile = CreateActiveProfile();
+        var services = new ServiceCollection();
+        var environment = new TestHostEnvironment(
+            activeProfile.EnvironmentRootPath,
+            "CanDoItAll.Tests.Playwright.AgentFrameworkAudit");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(
+            activeProfile,
             new Dictionary<string, string?>
             {
                 ["DevelopmentManager:TuningModeEnabled"] = "false"
             });
+
+        TestApplicationBootstrap.ConfigureDefaultServices(services, configuration, environment);
+        return Task.FromResult(services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        }));
     }
 
     private TestDatabaseProfile CreateActiveProfile()
@@ -263,6 +276,111 @@ public sealed partial class AgentFrameworkAuditProofTests
         Assert.True(updateResult.IsSuccess, string.Join(" | ", updateResult.Errors.Select(error => error.Message)));
     }
 
+    private async Task<AgentRecoveryBrowserSeed> SeedAgentRecoveryRunAsync()
+    {
+        await using var serviceProvider = await BuildSeedServiceProviderAsync();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(projectsService, $"Playwright Agent Recovery {suffix}");
+        var definitionFixture = BuildAgentRecoveryDefinitionEditor(projectId);
+        var saveResult = await processesService.SaveAsync(definitionFixture.Editor);
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = $"Playwright Agent Recovery Run {suffix}",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Playwright agent recovery proof"
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var agentPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Recovery agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Stakeholder,
+            $"recovery.agent.{suffix}@example.test");
+        var assignmentResult = await processesService.ResolveAssignmentAsync(
+            new ProcessAssignmentResolutionRequest
+            {
+                ProcessRunId = runResult.Value,
+                RoleRequirementId = definitionFixture.AgentRoleRequirementId,
+                PartyId = agentPartyId,
+                DisplayName = "Recovery agent",
+                ExecutorKind = "AI agent",
+                BindingReason = "Playwright recovery proof binds an AI-owned process step.",
+                IsFallback = false,
+                AllowsDirectMessaging = true
+            });
+
+        Assert.True(assignmentResult.IsSuccess, string.Join(" | ", assignmentResult.Errors.Select(error => error.Message)));
+
+        var stepRun = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value));
+        var startResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.InProgress,
+                Reason = "Start agent-owned work for Playwright recovery proof.",
+                DecidedBy = "playwright-tests"
+            });
+
+        Assert.True(startResult.IsSuccess, string.Join(" | ", startResult.Errors.Select(error => error.Message)));
+
+        stepRun = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value));
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = $"Required artifacts still missing: {definitionFixture.ArtifactTitle}.",
+                DecidedBy = "playwright-tests"
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        var now = DateTimeOffset.UtcNow;
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            await dbContext.Set<ProcessOutboxRecord>().AddAsync(
+                new ProcessOutboxRecord
+                {
+                    ProjectId = projectId,
+                    ProcessDefinitionId = saveResult.Value,
+                    ProcessRunId = runResult.Value,
+                    CommandKey = "dispatch-run-automation",
+                    PayloadJson = BuildAutomationDispatchPayloadJson(runResult.Value, stepRun.Id, "dead-letter-proof"),
+                    Status = ProcessOutboxRecordStatus.DeadLettered,
+                    AttemptCount = 3,
+                    LastAttemptAtUtc = now,
+                    LastError = "Provider execution failed after retry exhaustion.",
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                });
+            await dbContext.SaveChangesAsync();
+        }
+
+        return new AgentRecoveryBrowserSeed(
+            projectId,
+            saveResult.Value,
+            runResult.Value,
+            definitionFixture.StepTitle,
+            definitionFixture.ArtifactTitle);
+    }
+
     private async Task<CalculatorScenarioSeed> SeedCalculatorDeliveryScenarioAsync()
     {
         var providerId = await EnsureScenarioHarnessCatalogAsync();
@@ -462,5 +580,23 @@ public sealed partial class AgentFrameworkAuditProofTests
             });
 
         Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
+    }
+
+    private static string BuildAutomationDispatchPayloadJson(Guid runId, Guid stepRunId, string trigger)
+    {
+        return JsonSerializer.Serialize(
+            new
+            {
+                searchUpsert = (object?)null,
+                searchDelete = (object?)null,
+                activity = (object?)null,
+                automationDispatch = new
+                {
+                    processRunId = runId,
+                    stepRunId,
+                    trigger
+                }
+            },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 }

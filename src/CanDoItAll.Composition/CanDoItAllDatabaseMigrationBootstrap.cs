@@ -13,6 +13,8 @@ namespace CanDoItAll.Composition;
 public static class CanDoItAllDatabaseMigrationBootstrap
 {
     private const string HistoryTableName = "__EFMigrationsHistory";
+    private const string MigrationLockTableName = "__EFMigrationsLock";
+    private static readonly TimeSpan StaleMigrationLockThreshold = TimeSpan.FromMinutes(2);
 
     public static async Task PrepareLegacySqliteAsync(
         AppDbContext dbContext,
@@ -57,6 +59,51 @@ public static class CanDoItAllDatabaseMigrationBootstrap
         {
             await SeedHistoryRowAsync(dbContext, migrationId, cancellationToken);
         }
+    }
+
+    public static async Task ReleaseStaleSqliteMigrationLockAsync(
+        AppDbContext dbContext,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        if (!dbContext.Database.IsSqlite())
+        {
+            return;
+        }
+
+        var tableNames = await ReadTableNamesAsync(dbContext, cancellationToken);
+        if (!tableNames.Contains(MigrationLockTableName))
+        {
+            return;
+        }
+
+        var staleLock = await ReadMigrationLockAsync(dbContext, cancellationToken);
+        if (staleLock is null)
+        {
+            return;
+        }
+
+        var utcNow = DateTimeOffset.UtcNow;
+        if (utcNow - staleLock.TimestampUtc < StaleMigrationLockThreshold)
+        {
+            return;
+        }
+
+        logger.LogWarning(
+            "Removing stale SQLite EF migration lock {LockId} from {LockedAtUtc:u} before migration execution.",
+            staleLock.Id,
+            staleLock.TimestampUtc);
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            DELETE FROM "__EFMigrationsLock"
+            WHERE "Id" = {0};
+            """,
+            [staleLock.Id],
+            cancellationToken);
     }
 
     private static async Task<bool> HasLegacySchemaWithoutHistoryAsync(
@@ -167,6 +214,52 @@ public static class CanDoItAllDatabaseMigrationBootstrap
         }
     }
 
+    private static async Task<SqliteMigrationLockRow?> ReadMigrationLockAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                SELECT "Id", "Timestamp"
+                FROM "__EFMigrationsLock"
+                ORDER BY "Id"
+                LIMIT 1;
+                """;
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken) || reader.IsDBNull(0) || reader.IsDBNull(1))
+            {
+                return null;
+            }
+
+            var id = reader.GetInt64(0);
+            var timestampText = reader.GetString(1);
+            if (!DateTimeOffset.TryParse(timestampText, out var timestampUtc))
+            {
+                return null;
+            }
+
+            return new SqliteMigrationLockRow(id, timestampUtc);
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
     private static IReadOnlyList<string> ResolveBaselineMigrationIds(
         IEnumerable<string> migrationIds,
         SqliteSchemaSnapshot schemaSnapshot)
@@ -209,6 +302,8 @@ public static class CanDoItAllDatabaseMigrationBootstrap
                 && HasColumn(schemaSnapshot, "Resources_ProjectResources", "MaintainerPartyId"),
             _ when migrationId.Contains("AddWorkbenchProjectionLayouts", StringComparison.Ordinal) =>
                 HasTable(schemaSnapshot, "Workbench_ProjectProjectionLayouts"),
+            _ when migrationId.Contains("AddWorkbenchProjectionVisibility", StringComparison.Ordinal) =>
+                HasColumn(schemaSnapshot, "Workbench_ProjectProjectionLayouts", "IsHidden"),
             _ when migrationId.Contains("AddProjectNodeBindings", StringComparison.Ordinal) =>
                 HasTable(schemaSnapshot, "Workbench_ProjectNodeBindings")
                 && HasTable(schemaSnapshot, "Workbench_ProjectNodeReferences"),
@@ -322,4 +417,8 @@ public static class CanDoItAllDatabaseMigrationBootstrap
     private sealed record SqliteSchemaSnapshot(
         HashSet<string> TableNames,
         Dictionary<string, HashSet<string>> ColumnsByTable);
+
+    private sealed record SqliteMigrationLockRow(
+        long Id,
+        DateTimeOffset TimestampUtc);
 }

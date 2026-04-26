@@ -133,6 +133,27 @@ public partial class ProjectStructurePage
             _ => new ProjectStructureInspectorAction("command:test", ResolveCommandLabel(command), "test", "warn")
         };
 
+    private IReadOnlyList<ProjectStructureSupportPanelContextAction> ResolveSupportPanelContextActions(ProjectStructureNode node)
+        => ResolveInspectorActions(node)
+            .Select(action => new ProjectStructureSupportPanelContextAction(
+                action.ActionId,
+                action.Label,
+                action.Icon,
+                action.Tone))
+            .ToList();
+
+    private async Task ExecuteOutlineContextActionAsync(ProjectStructureSupportPanelContextActionRequest request)
+    {
+        var node = ResolveNode(request.NodeId);
+        if (node is null)
+        {
+            return;
+        }
+
+        await SelectNodeAsync(node.Id);
+        await ExecuteInspectorActionAsync(node, request.ActionId);
+    }
+
     private async Task ExecuteInspectorActionAsync(ProjectStructureNode node, string actionId)
     {
         switch (actionId)

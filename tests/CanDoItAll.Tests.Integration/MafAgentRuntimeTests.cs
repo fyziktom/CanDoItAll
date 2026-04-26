@@ -137,6 +137,34 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void ResolveProviderNetworkTimeout_honors_provider_timeout_metadata()
+    {
+        var timeoutMethod = typeof(MafAgentRuntime).GetMethod(
+                                "ResolveProviderNetworkTimeout",
+                                BindingFlags.NonPublic | BindingFlags.Static)
+                            ?? throw new InvalidOperationException("Provider timeout resolver was not found.");
+        var provider = CreateProvider("""{"timeoutSeconds":600}""");
+
+        var timeout = Assert.IsType<TimeSpan>(timeoutMethod.Invoke(null, [provider]));
+
+        Assert.Equal(TimeSpan.FromSeconds(600), timeout);
+    }
+
+    [Fact]
+    public void ResolveProviderNetworkTimeout_clamps_invalid_provider_timeout_metadata()
+    {
+        var timeoutMethod = typeof(MafAgentRuntime).GetMethod(
+                                "ResolveProviderNetworkTimeout",
+                                BindingFlags.NonPublic | BindingFlags.Static)
+                            ?? throw new InvalidOperationException("Provider timeout resolver was not found.");
+        var provider = CreateProvider("""{"timeoutSeconds":1}""");
+
+        var timeout = Assert.IsType<TimeSpan>(timeoutMethod.Invoke(null, [provider]));
+
+        Assert.Equal(TimeSpan.FromSeconds(5), timeout);
+    }
+
+    [Fact]
     public async Task CreateCapabilityState_skips_unsupported_provider_native_web_search_for_ollama()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();
@@ -179,6 +207,74 @@ public sealed class MafAgentRuntimeTests
             progressMessages,
             item => item.Contains("Skipping capability 'Provider-Native Web Search'", StringComparison.Ordinal) &&
                     item.Contains("Remote Ollama", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_skips_retired_workspace_delivery_skill_even_when_its_service_type_no_longer_matches_the_legacy_assembly_name()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var retiredCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Skill,
+            "workspace-delivery-skill",
+            "Workspace Delivery Skill",
+            "Legacy workspace delivery capability retained by stale metadata.",
+            string.Empty,
+            """{"registeredSkillServiceType":"Legacy.WorkspaceDeliverySkill, Legacy.Sandbox"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            false);
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+
+        var exception = await Record.ExceptionAsync(() => InvokeCreateCapabilityStateAsync(
+            runtime,
+            seededAgent,
+            provider,
+            [retiredCapability],
+            progressMessages));
+
+        Assert.Null(exception);
+        Assert.DoesNotContain(
+            progressMessages,
+            item => item.Contains("Workspace Delivery Skill", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_skips_capability_when_raw_configuration_keeps_legacy_workspace_delivery_marker()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var retiredCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Skill,
+            "legacy-workspace-capability",
+            "Legacy Workspace Capability",
+            "Legacy workspace capability retained by stale metadata.",
+            string.Empty,
+            """{"registeredSkillServiceType":"Legacy.WorkspaceDeliverySkill, Legacy.Sandbox","legacyServiceType":"CanDoItAll.AgentFramework.Sandbox.Hosting.WorkspaceDeliverySkill, CanDoItAll.AgentFramework.Sandbox"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            false);
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+
+        var exception = await Record.ExceptionAsync(() => InvokeCreateCapabilityStateAsync(
+            runtime,
+            seededAgent,
+            provider,
+            [retiredCapability],
+            progressMessages));
+
+        Assert.Null(exception);
+        Assert.DoesNotContain(
+            progressMessages,
+            item => item.Contains("Legacy Workspace Capability", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -335,6 +431,28 @@ public sealed class MafAgentRuntimeTests
         public string Name { get; } = name;
 
         public IDictionary<string, object?> Arguments { get; } = arguments;
+    }
+
+    private static ProviderProfile CreateProvider(string configurationJson)
+    {
+        return new ProviderProfile(
+            Guid.NewGuid(),
+            "Remote Ollama",
+            ProviderKind.Ollama,
+            "http://192.168.10.132:11434",
+            string.Empty,
+            "gptoss32k:latest",
+            ProviderTransportKind.ChatCompletions,
+            true,
+            true,
+            true,
+            true,
+            false,
+            configurationJson,
+            string.Empty,
+            "Not checked",
+            null,
+            ["gptoss32k:latest"]);
     }
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(

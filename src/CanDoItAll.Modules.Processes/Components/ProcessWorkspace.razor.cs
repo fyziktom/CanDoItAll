@@ -64,6 +64,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessStepRunViewModel> stepRuns = [];
     private IReadOnlyList<ProcessDecisionViewModel> decisions = [];
     private IReadOnlyList<ProcessArtifactViewModel> artifacts = [];
+    private IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords = [];
     private IReadOnlyList<ProcessRunAssignmentViewModel> assignments = [];
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
@@ -74,6 +75,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
 
     private ProcessAnalyticsSummary analytics = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private ProcessRunHealthSummaryViewModel selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
     private ProcessDefinitionEditorModel editor = new();
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbenchUiState definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();

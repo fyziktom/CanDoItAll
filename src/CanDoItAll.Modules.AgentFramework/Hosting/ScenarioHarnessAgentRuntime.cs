@@ -1,13 +1,12 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.AgentFramework.Hosting;
 
 internal sealed partial class ScenarioHarnessAgentRuntime(
-    MafAgentRuntime inner,
+    IAgentRuntime inner,
     string workspaceRoot,
     WorkspaceScopeDescriptor workspaceScope,
     IWorkspaceFileService fileService,
