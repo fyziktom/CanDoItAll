@@ -222,14 +222,19 @@ public sealed partial class MafAgentRuntime
     private static ChatClientAgentRunOptions CreateRunOptions(
         AgentDefinition agent,
         ProviderProfile provider,
+        string model,
         bool hasApprovalTools,
-        ResponseContinuationToken? continuationToken)
+        ResponseContinuationToken? continuationToken,
+        bool forceOmitTemperature)
     {
-        return new ChatClientAgentRunOptions(new ChatOptions
-        {
-            Temperature = (float)agent.Temperature,
-            AllowMultipleToolCalls = !hasApprovalTools
-        })
+        var chatOptions = CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            (float)agent.Temperature,
+            forceOmitTemperature);
+        chatOptions.AllowMultipleToolCalls = !hasApprovalTools;
+
+        return new ChatClientAgentRunOptions(chatOptions)
         {
             AllowBackgroundResponses = agent.EnableBackgroundResponses && SupportsBackgroundResponses(provider),
             ContinuationToken = continuationToken

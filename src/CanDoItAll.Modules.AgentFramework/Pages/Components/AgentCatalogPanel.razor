@@ -146,6 +146,13 @@
                             </InputSelect>
                         </div>
                     </Grid>
+                    @if (SelectedRuntimeProvider is { } runtimeProvider)
+                    {
+                        <Alert AlertStyle="AlertStyle.Info">
+                            <p class="font-semibold">Runtime parameter policy</p>
+                            <p class="mt-1">@DescribeRuntimeParameterPolicy(runtimeProvider)</p>
+                        </Alert>
+                    }
                 </FormSection>
 
                 <FormSection Title="Project Structure Access" Description="Internal agents always carry the project-structure tool family. These settings decide whether the current agent can read or mutate project data and which projects it may touch.">

@@ -17,6 +17,8 @@ public static class ProcessesModuleServiceCollectionExtensions
 
         services.AddOptions<ProcessTemplatePackOptions>()
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
+        services.AddOptions<ProcessRuntimeOptions>()
+            .BindConfiguration(ProcessRuntimeOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
         services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();

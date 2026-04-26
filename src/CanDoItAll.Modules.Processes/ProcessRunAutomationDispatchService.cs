@@ -9,6 +9,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
@@ -37,6 +38,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     IStoragePlacementService storagePlacementService,
     IWorkspacePathResolver workspacePathResolver,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
+    IOptions<ProcessRuntimeOptions> processRuntimeOptions,
     IClock clock,
     ILogger<ProcessRunAutomationDispatchService> logger) : IProcessRunAutomationDispatchService
 {
@@ -277,6 +279,13 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                     return;
                 }
 
+                var databaseRequirementFailure = ResolveAutomationDatabaseRequirementFailure();
+                if (databaseRequirementFailure is not null)
+                {
+                    await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, cancellationToken);
+                    return;
+                }
+
                 if (candidate.StepRun.Status != ProcessStepRunStatus.InProgress)
                 {
                     var startResult = await TransitionStepAsync(
@@ -414,6 +423,87 @@ internal sealed partial class ProcessRunAutomationDispatchService(
                 dispatchGuard.Release();
             }
         }
+    }
+
+    private ProcessAutomationDatabaseRequirementFailure? ResolveAutomationDatabaseRequirementFailure()
+    {
+        if (!processRuntimeOptions.Value.RequirePostgreSqlForAgentAutomation)
+        {
+            return null;
+        }
+
+        var profile = databaseProfileRuntimeAccessor.ResolveCurrentProfile();
+        if (profile.Profile.ProviderKind == DatabaseProviderKind.PostgreSql)
+        {
+            return null;
+        }
+
+        return new ProcessAutomationDatabaseRequirementFailure(
+            $"Governed process automation requires PostgreSQL, but the active database profile is '{profile.Profile.DisplayName}' ({profile.Profile.Id:D}, provider {profile.Profile.ProviderKind}, source {profile.Profile.SourceKind}, resolved by {profile.ResolutionSource}). Switch the active database profile to PostgreSQL before rerunning automation.");
+    }
+
+    private async Task BlockDispatchForDatabaseRequirementAsync(
+        DispatchCandidate candidate,
+        ProcessAutomationDatabaseRequirementFailure failure,
+        CancellationToken cancellationToken)
+    {
+        var targetStatus = candidate.StepRun.Status switch
+        {
+            ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.Blocked => ProcessStepRunStatus.Blocked,
+            ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Failed => ProcessStepRunStatus.Failed,
+            _ => candidate.StepRun.Status
+        };
+
+        if (targetStatus == candidate.StepRun.Status &&
+            targetStatus is not ProcessStepRunStatus.Blocked and not ProcessStepRunStatus.Failed)
+        {
+            logger.LogWarning(
+                "Process automation dispatch for run {RunId}, step {StepRunId} requires PostgreSQL but current status {Status} has no supported blocking transition. Reason: {Reason}",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                candidate.StepRun.Status,
+                failure.Message);
+            return;
+        }
+
+        if (!ProcessStepRunTransitions.IsAllowed(candidate.StepRun.Status, targetStatus))
+        {
+            logger.LogWarning(
+                "Process automation dispatch for run {RunId}, step {StepRunId} requires PostgreSQL but current status {Status} cannot transition to {TargetStatus}. Reason: {Reason}",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                candidate.StepRun.Status,
+                targetStatus,
+                failure.Message);
+            return;
+        }
+
+        var transitionResult = await TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = candidate.StepRun.Id,
+                StepRunConcurrencyToken = candidate.StepRun.ConcurrencyToken,
+                TargetStatus = targetStatus,
+                Reason = failure.Message,
+                DecidedBy = AutomationActor,
+                SuppressAutomationDispatch = true
+            },
+            cancellationToken);
+
+        if (transitionResult.IsFailure)
+        {
+            logger.LogWarning(
+                "Process step {StepRunId} could not be moved to {TargetStatus} after PostgreSQL runtime requirement failed. Errors: {Errors}",
+                candidate.StepRun.Id,
+                targetStatus,
+                string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+            return;
+        }
+
+        logger.LogWarning(
+            "Blocked process automation dispatch for run {RunId}, step {StepRunId} because the active database profile is not PostgreSQL.",
+            candidate.Run.Id,
+            candidate.StepRun.Id);
     }
 
     private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
@@ -8656,6 +8746,8 @@ ORDER BY CreatedAtUtc, Title;
         string FallbackModel,
         int AffectedAgentCount,
         string FailureSummary);
+
+    private sealed record ProcessAutomationDatabaseRequirementFailure(string Message);
 
     private readonly record struct DeclaredStepOutcome(
         ProcessStepRunStatus Status,

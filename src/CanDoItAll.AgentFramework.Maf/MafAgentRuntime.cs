@@ -40,6 +40,53 @@ public sealed partial class MafAgentRuntime(
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false)
     {
+        var model = ResolveRuntimeModel(agent, provider);
+        try
+        {
+            return await RunCoreAsync(
+                agent,
+                provider,
+                session,
+                capabilities,
+                memory,
+                prompt,
+                runtimeSessionKey,
+                progressCallback,
+                cancellationToken,
+                suppressApprovalRequirements,
+                forceOmitTemperature: false);
+        }
+        catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
+        {
+            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureRetryMessage(model));
+            return await RunCoreAsync(
+                agent,
+                provider,
+                session,
+                capabilities,
+                memory,
+                prompt,
+                runtimeSessionKey,
+                progressCallback,
+                cancellationToken,
+                suppressApprovalRequirements,
+                forceOmitTemperature: true);
+        }
+    }
+
+    private async Task<AgentRuntimeResponse> RunCoreAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        ChatSessionRecord session,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        string prompt,
+        string? runtimeSessionKey,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements,
+        bool forceOmitTemperature)
+    {
         await progressCallback(ExecutionState.Preparing, "Framework", "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.");
         if (suppressApprovalRequirements)
         {
@@ -53,22 +100,35 @@ public sealed partial class MafAgentRuntime(
             memory,
             progressCallback,
             cancellationToken,
-            suppressApprovalRequirements);
+            suppressApprovalRequirements,
+            forceOmitTemperature);
 
-        await progressCallback(ExecutionState.Preparing, "Session", ResolveSessionMessage(agent, provider, session));
+        if (runtimeBuild.IsTemperatureOmitted)
+        {
+            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureOmittedMessage(runtimeBuild.Model));
+        }
+
+        await progressCallback(ExecutionState.Preparing, "Session", ResolveSessionMessage(agent, runtimeBuild.Provider, session));
         var runtimeSession = await RestoreOrCreateSessionAsync(
             runtimeBuild.Agent,
             agent,
-            provider,
+            runtimeBuild.Provider,
             session,
             cancellationToken,
             isApprovalContinuation: false);
-        var runOptions = CreateRunOptions(agent, provider, runtimeBuild.HasApprovalTools, continuationToken: null);
-        var inputMessages = CreatePromptInputMessages(agent, provider, session, prompt);
+        var runOptions = CreateRunOptions(
+            agent,
+            runtimeBuild.Provider,
+            runtimeBuild.Model,
+            runtimeBuild.HasApprovalTools,
+            continuationToken: null,
+            forceOmitTemperature: forceOmitTemperature);
+        var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt);
 
         return await ExecuteRunAsync(
             agent,
-            provider,
+            runtimeBuild.Provider,
+            runtimeBuild.Model,
             session,
             runtimeBuild.Agent,
             runtimeSession,
@@ -76,7 +136,8 @@ public sealed partial class MafAgentRuntime(
             inputMessages,
             runtimeSessionKey,
             progressCallback,
-            cancellationToken);
+            cancellationToken,
+            forceOmitTemperature);
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -91,6 +152,53 @@ public sealed partial class MafAgentRuntime(
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false)
     {
+        var model = ResolveRuntimeModel(agent, provider);
+        try
+        {
+            return await RespondToPendingApprovalsCoreAsync(
+                agent,
+                provider,
+                session,
+                capabilities,
+                memory,
+                approved,
+                runtimeSessionKey,
+                progressCallback,
+                cancellationToken,
+                suppressApprovalRequirements,
+                forceOmitTemperature: false);
+        }
+        catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
+        {
+            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureRetryMessage(model));
+            return await RespondToPendingApprovalsCoreAsync(
+                agent,
+                provider,
+                session,
+                capabilities,
+                memory,
+                approved,
+                runtimeSessionKey,
+                progressCallback,
+                cancellationToken,
+                suppressApprovalRequirements,
+                forceOmitTemperature: true);
+        }
+    }
+
+    private async Task<AgentRuntimeResponse> RespondToPendingApprovalsCoreAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        ChatSessionRecord session,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        bool approved,
+        string? runtimeSessionKey,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements,
+        bool forceOmitTemperature)
+    {
         await progressCallback(ExecutionState.Preparing, "Framework", "Rehydrating the Microsoft Agent Framework runtime to continue from a pending approval.");
         if (suppressApprovalRequirements)
         {
@@ -104,22 +212,35 @@ public sealed partial class MafAgentRuntime(
             memory,
             progressCallback,
             cancellationToken,
-            suppressApprovalRequirements);
+            suppressApprovalRequirements,
+            forceOmitTemperature);
+
+        if (runtimeBuild.IsTemperatureOmitted)
+        {
+            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureOmittedMessage(runtimeBuild.Model));
+        }
 
         await progressCallback(ExecutionState.Preparing, "Session", "Restoring the session state prior to replaying the approval response.");
         var runtimeSession = await RestoreOrCreateSessionAsync(
             runtimeBuild.Agent,
             agent,
-            provider,
+            runtimeBuild.Provider,
             session,
             cancellationToken,
             isApprovalContinuation: true);
-        var runOptions = CreateRunOptions(agent, provider, runtimeBuild.HasApprovalTools, continuationToken: null);
+        var runOptions = CreateRunOptions(
+            agent,
+            runtimeBuild.Provider,
+            runtimeBuild.Model,
+            runtimeBuild.HasApprovalTools,
+            continuationToken: null,
+            forceOmitTemperature: forceOmitTemperature);
         var inputMessages = CreateApprovalInputMessages(session, approved);
 
         return await ExecuteRunAsync(
             agent,
-            provider,
+            runtimeBuild.Provider,
+            runtimeBuild.Model,
             session,
             runtimeBuild.Agent,
             runtimeSession,
@@ -127,12 +248,14 @@ public sealed partial class MafAgentRuntime(
             inputMessages,
             runtimeSessionKey,
             progressCallback,
-            cancellationToken);
+            cancellationToken,
+            forceOmitTemperature);
     }
 
     private async Task<AgentRuntimeResponse> ExecuteRunAsync(
         AgentDefinition agent,
         ProviderProfile provider,
+        string model,
         ChatSessionRecord session,
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
@@ -140,7 +263,8 @@ public sealed partial class MafAgentRuntime(
         IEnumerable<ChatMessage> inputMessages,
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forceOmitTemperature)
     {
         var updates = new List<AgentResponseUpdate>();
         var announcedStreaming = false;
@@ -148,7 +272,7 @@ public sealed partial class MafAgentRuntime(
         var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var repeatedToolInvocationGuard = new RepeatedToolInvocationGuard();
         var pollCount = 0;
-        var resolvedModel = string.IsNullOrWhiteSpace(agent.Model) ? provider.DefaultModel : agent.Model;
+        var resolvedModel = model;
 
         while (true)
         {
@@ -245,7 +369,13 @@ public sealed partial class MafAgentRuntime(
 
             pollCount++;
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-            runOptions = CreateRunOptions(agent, provider, hasApprovalTools: false, response.ContinuationToken);
+            runOptions = CreateRunOptions(
+                agent,
+                provider,
+                resolvedModel,
+                hasApprovalTools: false,
+                continuationToken: response.ContinuationToken,
+                forceOmitTemperature: forceOmitTemperature);
             inputMessages = [];
         }
     }

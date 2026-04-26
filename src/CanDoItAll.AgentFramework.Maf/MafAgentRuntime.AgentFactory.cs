@@ -48,7 +48,8 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<AgentMemoryRecord> memory,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        bool forceOmitTemperature = false)
     {
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
         var managedSeedProvider = ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent)
@@ -71,12 +72,13 @@ public sealed partial class MafAgentRuntime
             cancellationToken,
             suppressApprovalRequirements);
         var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider);
-        var chatOptions = new ChatOptions
-        {
-            Temperature = (float)agent.Temperature,
-            Instructions = agent.Instructions,
-            AllowMultipleToolCalls = !capabilityState.HasApprovalTools
-        };
+        var chatOptions = CreateModelCompatibleChatOptions(
+            effectiveProvider,
+            model,
+            (float)agent.Temperature,
+            forceOmitTemperature);
+        chatOptions.Instructions = agent.Instructions;
+        chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
         {
@@ -96,7 +98,14 @@ public sealed partial class MafAgentRuntime
         var runtimeAgent = CreateInstrumentedAgent(
             CreateFrameworkAgent(effectiveProvider, model, options, frameworkManagedHistory),
             effectiveProvider);
-        return new RuntimeBuildResult(runtimeAgent, capabilityState.AsyncDisposables, capabilityState.Disposables, capabilityState.HasApprovalTools);
+        return new RuntimeBuildResult(
+            runtimeAgent,
+            effectiveProvider,
+            model,
+            capabilityState.AsyncDisposables,
+            capabilityState.Disposables,
+            capabilityState.HasApprovalTools,
+            ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature));
     }
 
     private AIAgent CreateFrameworkAgent(
@@ -514,13 +523,22 @@ public sealed partial class MafAgentRuntime
 
     private sealed class RuntimeBuildResult(
         AIAgent agent,
+        ProviderProfile provider,
+        string model,
         IReadOnlyList<IAsyncDisposable> asyncDisposables,
         IReadOnlyList<IDisposable> disposables,
-        bool hasApprovalTools) : IAsyncDisposable
+        bool hasApprovalTools,
+        bool isTemperatureOmitted) : IAsyncDisposable
     {
         public AIAgent Agent { get; } = agent;
 
+        public ProviderProfile Provider { get; } = provider;
+
+        public string Model { get; } = model;
+
         public bool HasApprovalTools { get; } = hasApprovalTools;
+
+        public bool IsTemperatureOmitted { get; } = isTemperatureOmitted;
 
         public async ValueTask DisposeAsync()
         {

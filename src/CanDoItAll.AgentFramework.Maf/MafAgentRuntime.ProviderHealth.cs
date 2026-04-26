@@ -27,19 +27,48 @@ public sealed partial class MafAgentRuntime
         CancellationToken cancellationToken = default)
     {
         var model = ResolveProviderTestModel(provider, request.Model);
+        try
+        {
+            return await RunProviderTestChatCoreAsync(
+                provider,
+                request,
+                model,
+                forceOmitTemperature: false,
+                cancellationToken);
+        }
+        catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
+        {
+            return await RunProviderTestChatCoreAsync(
+                provider,
+                request,
+                model,
+                forceOmitTemperature: true,
+                cancellationToken);
+        }
+    }
+
+    private async Task<ProviderTestChatResult> RunProviderTestChatCoreAsync(
+        ProviderProfile provider,
+        ProviderTestChatRequest request,
+        string model,
+        bool forceOmitTemperature,
+        CancellationToken cancellationToken)
+    {
         var instructions = string.IsNullOrWhiteSpace(request.SystemPrompt)
             ? "You are validating a provider profile. Reply clearly and directly to the user's request."
             : request.SystemPrompt.Trim();
+        var chatOptions = CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            requestedTemperature: 0.2f,
+            forceOmitTemperature: forceOmitTemperature);
+        chatOptions.Instructions = instructions;
 
         var options = new ChatClientAgentOptions
         {
             Name = "Provider Test Chat",
             Description = "Runs a lightweight provider validation conversation without changing sandbox chat history.",
-            ChatOptions = new()
-            {
-                Instructions = instructions,
-                Temperature = 0.2f
-            }
+            ChatOptions = chatOptions
         };
 
         var frameworkManagedHistory = provider.PreferFrameworkManagedChatHistory || !SupportsServiceManagedConversations(provider);
@@ -62,11 +91,13 @@ public sealed partial class MafAgentRuntime
         }
 
         var updates = new List<AgentResponseUpdate>();
-        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
-        {
-            Temperature = 0.2f,
-            AllowMultipleToolCalls = false
-        })
+        var runChatOptions = CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            requestedTemperature: 0.2f,
+            forceOmitTemperature: forceOmitTemperature);
+        runChatOptions.AllowMultipleToolCalls = false;
+        var runOptions = new ChatClientAgentRunOptions(runChatOptions)
         {
             AllowBackgroundResponses = false
         };
@@ -180,7 +211,7 @@ public sealed partial class MafAgentRuntime
                 ?? provider.SuggestedModels.ToList();
 
             var model = ResolveHealthCheckModel(provider, modelNames, "qwen3.5:9b");
-            var agent = CreateHealthProbeAgent(provider, model);
+            var agent = CreateHealthProbeAgent(provider, model, forceOmitTemperature: false);
 
             await RunProviderProbeAsync(agent, cancellationToken);
 
@@ -215,7 +246,7 @@ public sealed partial class MafAgentRuntime
         try
         {
             var model = ResolveHealthCheckModel(provider, suggestedModels, fallbackModel);
-            var agent = CreateHealthProbeAgent(provider, model);
+            var agent = CreateHealthProbeAgent(provider, model, forceOmitTemperature: false);
 
             await RunProviderProbeAsync(agent, cancellationToken);
 
@@ -224,23 +255,48 @@ public sealed partial class MafAgentRuntime
                 $"{providerLabel} completed a Microsoft Agent Framework probe run with model '{model}'.",
                 suggestedModels);
         }
+        catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, ResolveHealthCheckModel(provider, suggestedModels, fallbackModel), exception))
+        {
+            try
+            {
+                var model = ResolveHealthCheckModel(provider, suggestedModels, fallbackModel);
+                var agent = CreateHealthProbeAgent(provider, model, forceOmitTemperature: true);
+
+                await RunProviderProbeAsync(agent, cancellationToken);
+
+                return new ProviderHealthResult(
+                    true,
+                    $"{providerLabel} completed a Microsoft Agent Framework probe run with model '{model}' after omitting temperature.",
+                    suggestedModels);
+            }
+            catch (Exception retryException)
+            {
+                return new ProviderHealthResult(false, $"{providerLabel} health check failed after omitting temperature: {retryException.Message}", suggestedModels);
+            }
+        }
         catch (Exception exception)
         {
             return new ProviderHealthResult(false, $"{providerLabel} health check failed: {exception.Message}", suggestedModels);
         }
     }
 
-    private AIAgent CreateHealthProbeAgent(ProviderProfile provider, string model)
+    private AIAgent CreateHealthProbeAgent(
+        ProviderProfile provider,
+        string model,
+        bool forceOmitTemperature)
     {
+        var chatOptions = CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            requestedTemperature: 0f,
+            forceOmitTemperature: forceOmitTemperature);
+        chatOptions.Instructions = "Reply with a short confirmation.";
+
         var options = new ChatClientAgentOptions
         {
             Name = "Provider Health Probe",
             Description = "Verifies that the configured provider can execute a simple Microsoft Agent Framework run.",
-            ChatOptions = new()
-            {
-                Instructions = "Reply with a short confirmation.",
-                Temperature = 0
-            }
+            ChatOptions = chatOptions
         };
 
         return CreateFrameworkAgent(provider, model, options, frameworkManagedHistory: false);
