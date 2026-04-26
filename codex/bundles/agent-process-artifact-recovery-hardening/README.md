@@ -49,7 +49,14 @@ The run did not fail only because the checklist was semantically inappropriate. 
 ## Validation Summary
 
 - Bundle preparation status: `Passed`
-- Execution status: `Completed`
+- Execution status: `Completed; extended on 2026-04-26 for real QA Observer launch-path failure`
 - Subbundle gate review: `Passed`
 - Final closure gate: `Passed by focused build/tests and bundle validator`
-- Browser validation analytics: `Not required; implementation changed process runtime, mock runtime, and integration tests without UI surface changes`
+- Browser validation analytics: `2026-04-26 Playwright MCP proof captured; QA now reaches the generated app with a native launch path and correctly blocks its non-interactive Blazor calculator UI`
+
+## 2026-04-26 Extension
+
+- PostgreSQL run `33951fbf-9983-4a39-b440-fe0b371b4b32` failed in Delivery QA Observer at step `99413668-f019-4525-a584-a12846ea4b5c`.
+- Root cause: QA helper used a relative `external-target/...` alias inside PowerShell, so `dotnet run --no-build` resolved the project under the managed workspace alias instead of the real `C:\programovani\dotnet\calculatorblazor\Calculator` path.
+- Repair: managed OpenAI defaults now use `gpt-5-mini`; QA prompts and recovery directives now require native-path conversion inside helper scripts and browser click assertions for button-driven Blazor apps.
+- Evidence report: `reviews/02-qa-observer-real-run-extension.md`.

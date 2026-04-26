@@ -9,8 +9,16 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v24";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v25";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
+
+    private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
+    [
+        ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        "gpt-4.1-mini",
+        "gpt-4o-mini",
+        "gpt-4.1"
+    ];
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -444,7 +452,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 ProviderKind.OpenAi,
                 "https://api.openai.com/v1",
                 "OPENAI_API_KEY",
-                "gpt-4o-mini",
+                ManagedSeedProviderFallbacks.OpenAiDefaultModel,
                 ProviderTransportKind.Responses,
                 true,
                 true,
@@ -455,14 +463,14 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Responses profile for hosted routes, DevUI, and background-response scenarios.",
                 "Not checked",
                 null,
-                ["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1"]),
+                OpenAiSuggestedModels),
             new(
                 openAiChatProviderId,
                 "OpenAI chat completions",
                 ProviderKind.OpenAi,
                 "https://api.openai.com/v1",
                 "OPENAI_API_KEY",
-                "gpt-4o-mini",
+                ManagedSeedProviderFallbacks.OpenAiDefaultModel,
                 ProviderTransportKind.ChatCompletions,
                 true,
                 true,
@@ -473,7 +481,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Chat-completions profile for local history, approvals, compaction, and workload-specific skill runs.",
                 "Not checked",
                 null,
-                ["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1"]),
+                OpenAiSuggestedModels),
             new(
                 ollamaProviderId,
                 "Remote Ollama",
@@ -502,7 +510,7 @@ internal static class SandboxWorkspaceSeedBuilder
             GetSeedText("agents/portfolio-architect.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
-            "gpt-4.1",
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             AgentWorkloadKind.Research,
             AgentChatHistoryMode.ProviderDefault,
             0.2d,
@@ -564,7 +572,7 @@ internal static class SandboxWorkspaceSeedBuilder
             GetSeedText("agents/delivery-qa-observer.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
-            "gpt-4.1",
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             AgentWorkloadKind.Qa,
             AgentChatHistoryMode.FrameworkManaged,
             0.1d,
@@ -673,7 +681,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["programming", "workspace", "approval"],
             now,
-            "gpt-4.1");
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         var codeReviewAgent = CreateWorkloadAgent(
             codeReviewAgentId,
@@ -715,7 +723,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["review", "code", "quality"],
             now,
-            "gpt-4.1");
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         var uiReviewAgent = CreateWorkloadAgent(
             uiReviewAgentId,
@@ -760,7 +768,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["ui", "review", "browser"],
             now,
-            "gpt-4.1");
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         var securityReviewerAgent = CreateWorkloadAgent(
             securityReviewerAgentId,
@@ -802,7 +810,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["security", "review", "risk"],
             now,
-            "gpt-4.1");
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         var releaseManagerAgent = CreateWorkloadAgent(
             releaseManagerAgentId,
@@ -843,7 +851,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["release", "readiness", "operations"],
             now,
-            "gpt-4.1");
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         var spreadsheetAgent = CreateWorkloadAgent(
             spreadsheetAgentId,
@@ -905,7 +913,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["hr", "staffing", "assignment"],
             now,
-            "gpt-4.1");
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         var mailAgent = CreateWorkloadAgent(
             mailAgentId,
@@ -940,7 +948,7 @@ internal static class SandboxWorkspaceSeedBuilder
             GetSeedText("agents/research-deep-dive-analyst.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
-            "gpt-4o-mini",
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             AgentWorkloadKind.Research,
             AgentChatHistoryMode.ProviderManaged,
             0.2d,
@@ -1006,7 +1014,7 @@ internal static class SandboxWorkspaceSeedBuilder
                     [])
             ],
             [new ExecutionLogEntry(CreateStableGuid("execution-log/integration-target-summary"), architectAgentId, sessionId, now, ExecutionState.Completed, "Seeded run", "Created the initial sandbox summary conversation.")],
-            [new AgentRunMetric(CreateStableGuid("metrics/integration-target-summary"), architectAgentId, sessionId, now, RunOutcome.Succeeded, "OpenAI default", "gpt-4o-mini", 420, 10, 28, 0)],
+            [new AgentRunMetric(CreateStableGuid("metrics/integration-target-summary"), architectAgentId, sessionId, now, RunOutcome.Succeeded, "OpenAI default", ManagedSeedProviderFallbacks.OpenAiDefaultModel, 420, 10, 28, 0)],
             [
                 new AgentMemoryRecord(CreateStableGuid("memory/future-candoitall-seam"), architectAgentId, MemoryKind.Architecture, "Future CanDoItAll seam", "Align with CRM and HR agent identity, project-node assignments, provider profiles, automation telemetry, and rights masks.", "seed", 5, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/proof-discipline"), qaAgentId, MemoryKind.FollowUp, "Proof discipline", "Reopen any phase when browser proof or dependency gates are weak.", "seed", 4, "{}", now),
@@ -1032,7 +1040,7 @@ internal static class SandboxWorkspaceSeedBuilder
         IReadOnlyList<AgentCapabilityAssignment> capabilities,
         IReadOnlyList<string> tags,
         DateTimeOffset now,
-        string model = "gpt-4o-mini")
+        string model = ManagedSeedProviderFallbacks.OpenAiDefaultModel)
     {
         return new AgentDefinition(
             id,

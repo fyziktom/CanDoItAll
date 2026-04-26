@@ -129,6 +129,7 @@ outputs: ProviderExecutionResponse
 public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
     public const string PluginKey = "provider.openai";
+    public const string DefaultModel = "gpt-5-mini";
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,

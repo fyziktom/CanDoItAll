@@ -934,6 +934,10 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Contains("inspect the concrete host project, launch settings, or prior successful build/test receipts", prompt, StringComparison.Ordinal);
         Assert.Contains("start the concrete host yourself before you open the browser", prompt, StringComparison.Ordinal);
         Assert.Contains("If `workspace_dotnet_run` is not available", prompt, StringComparison.Ordinal);
+        Assert.Contains("convert that alias to the native Windows path inside PowerShell helper content", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a relative `external-target/...` string to `dotnet run` from a helper script", prompt, StringComparison.Ordinal);
+        Assert.Contains("click a representative sequence", prompt, StringComparison.Ordinal);
+        Assert.Contains("Blazor render-mode or static-SSR implementation defect", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not assume the app must be reachable at `http://localhost:5000/`", prompt, StringComparison.Ordinal);
         Assert.Contains("empty `bin/Debug/<tfm>` folder as an acceptable blocker", prompt, StringComparison.Ordinal);
         Assert.Contains("return `Blocked` instead of `Completed`", prompt, StringComparison.Ordinal);
@@ -4176,6 +4180,10 @@ Descendant requirement context from sibling planning nodes:
         Assert.Contains("project_structure_read now, resolve the exact reviewed host", directive, StringComparison.Ordinal);
         Assert.Contains("Do not assume the app must be reachable at `http://localhost:5000/`", directive, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_run", directive, StringComparison.Ordinal);
+        Assert.Contains("convert it to the native Windows path inside the helper", directive, StringComparison.Ordinal);
+        Assert.Contains("a relative `external-target/...` string can resolve under the managed workspace path alias", directive, StringComparison.Ordinal);
+        Assert.Contains("click a representative sequence", directive, StringComparison.Ordinal);
+        Assert.Contains("Blazor render-mode or static-SSR implementation defect", directive, StringComparison.Ordinal);
         Assert.Contains("browser_take_screenshot", directive, StringComparison.Ordinal);
     }
 

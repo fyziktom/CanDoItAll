@@ -320,7 +320,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         {
             ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
             ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
-            OpenAiProviderAdapter.PluginKey => "gpt-4.1",
+            OpenAiProviderAdapter.PluginKey => OpenAiProviderAdapter.DefaultModel,
             _ => "llama3.1"
         };
     }

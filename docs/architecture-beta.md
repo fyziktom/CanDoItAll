@@ -320,7 +320,7 @@ Tool approval is modeled in execution state. Process automation passes `AutoAppr
 
 CanDoItAll uses two different persistence concepts:
 
-- Application database profiles store module data through `AppDbContext`. The active provider can be SQLite, PostgreSQL, or in-memory for tests. Runtime database switching is mediated by profile services, a switchable DbContext factory, and `DatabaseSwitchCoordinator`.
+- Application database profiles store module data through `AppDbContext`. The active provider can be SQLite, PostgreSQL, or in-memory for tests. Runtime database switching is mediated by profile services, a switchable DbContext factory, and `DatabaseSwitchCoordinator`. Governed process-agent automation is expected to run on PostgreSQL when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled; the guard prevents slow SQLite-backed multi-agent runs.
 - Control-plane and workspace files live outside the selected application database. The control plane stores profile metadata and DataProtection keys. AgentFramework file sandbox stores organization-scoped catalog, chats, execution runs, artifacts, receipts, and output files under the active profile workspace root.
 
 This separation lets the selected app database change without losing machine-level profile metadata or AgentFramework file workspace shape.

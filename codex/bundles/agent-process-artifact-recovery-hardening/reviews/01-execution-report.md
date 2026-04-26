@@ -36,11 +36,13 @@
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
 | 05 Three-agent simplified process proof | N/A | N/A | Not run | N/A | Not required; no UI route or operator surface changed. |
+| 2026-04-26 QA Observer real-run extension | `http://127.0.0.1:5123/` | 1366x768, 390x844 | `reviews/evidence/2026-04-26-qa-observer-playwright/calculator-static-render-defect-snapshot.md` | `reviews/evidence/2026-04-26-qa-observer-playwright/calculator-qa-static-render-defect.png`, `reviews/evidence/2026-04-26-qa-observer-playwright/calculator-qa-static-render-defect-mobile.png` | Blocked as implementation defect: reachable app did not update display/history after `1 + 2 =` clicks. |
 
 ## Analytics Review
 
 - Browser proof was not required because this bundle changed process dispatch, process mock runtime, and tests only.
 - If a later bundle changes the Process Workspace route or recovery UI state, it must add Playwright proof for `/processes`.
+- The 2026-04-26 extension did require browser proof because the live failure was a QA browser-proof step. The repaired launch path reached the generated external app, and Playwright correctly exposed a non-interactive Blazor calculator UI that QA must block.
 
 ## Raw Note Closure
 

@@ -366,7 +366,7 @@ public sealed partial class WorkspaceService(
         Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
-            [ProviderConnectorFieldKeys.DefaultModel] = "gpt-4.1",
+            [ProviderConnectorFieldKeys.DefaultModel] = OpenAiProviderAdapter.DefaultModel,
             [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
         }),
         IsEnabled = true,
@@ -387,7 +387,7 @@ public sealed partial class WorkspaceService(
         {
             ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
             ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
-            OpenAiProviderAdapter.PluginKey => "gpt-4.1",
+            OpenAiProviderAdapter.PluginKey => OpenAiProviderAdapter.DefaultModel,
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
             _ => "unknown"
         };

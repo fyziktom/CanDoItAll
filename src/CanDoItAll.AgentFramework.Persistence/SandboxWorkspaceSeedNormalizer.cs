@@ -10,6 +10,12 @@ internal static class SandboxWorkspaceSeedNormalizer
 {
     private const string RetiredSandboxAssemblyName = "CanDoItAll.AgentFramework.Sandbox";
     private static readonly ProviderProfileService ProviderProfileService = new();
+    private static readonly IReadOnlySet<string> ManagedSeedOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "OpenAI default",
+        "OpenAI chat completions"
+    };
+
     private static readonly HashSet<string> ManagedSeriousDeliveryTemplateKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "portfolio-architect",
@@ -93,24 +99,39 @@ internal static class SandboxWorkspaceSeedNormalizer
             }
 
             idMap[seededProvider.Id] = match.Id;
+            var isManagedSeedOpenAiProvider = IsManagedSeedOpenAiProvider(match, seededProvider);
+            var mergedProvider = match with
+            {
+                ApiKeyEnvironmentVariable = string.IsNullOrWhiteSpace(match.ApiKeyEnvironmentVariable) ? seededProvider.ApiKeyEnvironmentVariable : match.ApiKeyEnvironmentVariable,
+                DefaultModel = isManagedSeedOpenAiProvider || string.IsNullOrWhiteSpace(match.DefaultModel)
+                    ? seededProvider.DefaultModel
+                    : match.DefaultModel,
+                SupportsStreaming = match.SupportsStreaming || seededProvider.SupportsStreaming,
+                SupportsTools = match.SupportsTools || seededProvider.SupportsTools,
+                PreferFrameworkManagedChatHistory = match.PreferFrameworkManagedChatHistory || seededProvider.PreferFrameworkManagedChatHistory,
+                SupportsBackgroundResponses = match.SupportsBackgroundResponses || seededProvider.SupportsBackgroundResponses,
+                ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededProvider.ConfigurationJson : match.ConfigurationJson,
+                Notes = string.IsNullOrWhiteSpace(match.Notes) ? seededProvider.Notes : match.Notes,
+                SuggestedModels = isManagedSeedOpenAiProvider
+                    ? seededProvider.SuggestedModels.Concat(match.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                    : match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            };
+
             ReplaceById(
                 merged,
                 match.Id,
-                ProviderProfileService.NormalizeImportedProfile(match with
-                {
-                    ApiKeyEnvironmentVariable = string.IsNullOrWhiteSpace(match.ApiKeyEnvironmentVariable) ? seededProvider.ApiKeyEnvironmentVariable : match.ApiKeyEnvironmentVariable,
-                    DefaultModel = string.IsNullOrWhiteSpace(match.DefaultModel) ? seededProvider.DefaultModel : match.DefaultModel,
-                    SupportsStreaming = match.SupportsStreaming || seededProvider.SupportsStreaming,
-                    SupportsTools = match.SupportsTools || seededProvider.SupportsTools,
-                    PreferFrameworkManagedChatHistory = match.PreferFrameworkManagedChatHistory || seededProvider.PreferFrameworkManagedChatHistory,
-                    SupportsBackgroundResponses = match.SupportsBackgroundResponses || seededProvider.SupportsBackgroundResponses,
-                    ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededProvider.ConfigurationJson : match.ConfigurationJson,
-                    Notes = string.IsNullOrWhiteSpace(match.Notes) ? seededProvider.Notes : match.Notes,
-                    SuggestedModels = match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-                }));
+                ProviderProfileService.NormalizeImportedProfile(mergedProvider));
         }
 
         return new MergeResult<ProviderProfile>(merged.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList(), idMap);
+    }
+
+    private static bool IsManagedSeedOpenAiProvider(ProviderProfile existingProvider, ProviderProfile seededProvider)
+    {
+        return existingProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+               seededProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+               ManagedSeedOpenAiProviderNames.Contains(existingProvider.Name) &&
+               ManagedSeedOpenAiProviderNames.Contains(seededProvider.Name);
     }
 
     private static MergeResult<CapabilityCatalogItem> MergeCapabilities(IReadOnlyList<CapabilityCatalogItem> existingCapabilities, IReadOnlyList<CapabilityCatalogItem> seededCapabilities)

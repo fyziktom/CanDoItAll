@@ -280,13 +280,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var securityReviewerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal));
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
 
-        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, "gpt-4.1");
+        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
@@ -412,6 +412,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Treat untouched scaffold styling, flat stacked forms, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("filled input state and visible computed result", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("convert that alias to a native Windows path", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a relative `external-target/...` string to `dotnet run` from inside the helper", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -482,13 +486,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var securityReviewAgent = Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal));
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
 
-        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(securityReviewAgent, openAiDefaultProvider.Id, "gpt-4.1");
-        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, "gpt-4.1");
+        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(securityReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
         AssertHasCapabilities(programmingAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["blazor-ssr-delivery-inline-skill"], capabilityIdsByKey["workspace-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
@@ -629,7 +633,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
     private static void AssertManagedSeedRefreshed((string Model, string ConfigurationJson) snapshot)
     {
-        Assert.Equal("gpt-4.1", snapshot.Model);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, snapshot.Model);
         Assert.Contains(GetExpectedManagedSeedVersion(), snapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 

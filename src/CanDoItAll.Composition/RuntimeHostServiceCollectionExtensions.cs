@@ -102,8 +102,9 @@ public sealed class AppDatabaseBootstrapper(
     };
     private static readonly IReadOnlyList<string> ManagedSqliteOpenAiSuggestedModels =
     [
-        "gpt-4o-mini",
+        ManagedSeedProviderFallbacks.OpenAiDefaultModel,
         "gpt-4.1-mini",
+        "gpt-4o-mini",
         "gpt-4.1"
     ];
 
@@ -112,7 +113,7 @@ public sealed class AppDatabaseBootstrapper(
     private const string ManagedSqliteOpenAiProviderName = "OpenAI chat completions";
     private const string ManagedSqliteOpenAiBaseUrl = "https://api.openai.com/v1";
     private const string ManagedSqliteOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
-    private const string ManagedSqliteOpenAiModel = "gpt-4o-mini";
+    private const string ManagedSqliteOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
     private const string ManagedSqliteProviderSchemaVersion = "1.0";
     private const int ManagedSqliteOpenAiTimeoutSeconds = 600;
 
@@ -661,7 +662,7 @@ public sealed class AppDatabaseBootstrapper(
             CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
             "https://api.openai.com/v1",
             "OPENAI_API_KEY",
-            "gpt-4.1",
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             ProviderTransportKind.Responses,
             true,
             true,
@@ -672,7 +673,7 @@ public sealed class AppDatabaseBootstrapper(
             "Managed SQLite bootstrap credential probe.",
             "Not checked",
             null,
-            ["gpt-4.1"]);
+            ManagedSqliteOpenAiSuggestedModels);
     }
 
     private static CanDoItAll.AgentFramework.Models.ProviderProfile MapManagedSqliteBootstrapProvider(

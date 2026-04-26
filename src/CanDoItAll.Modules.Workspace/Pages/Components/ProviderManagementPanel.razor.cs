@@ -171,7 +171,7 @@ public partial class ProviderManagementPanel
             OpenAiProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
-                [ProviderConnectorFieldKeys.DefaultModel] = "gpt-4.1",
+                [ProviderConnectorFieldKeys.DefaultModel] = OpenAiProviderAdapter.DefaultModel,
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             }),
             OllamaProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

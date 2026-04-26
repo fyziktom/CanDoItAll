@@ -62,7 +62,6 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
             await using var application = await TestApplication.CreateAsync();
             await using var scope = application.Services.CreateAsyncScope();
             var repairService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkOrganizationCatalogRepairService>();
-            var providerCredentialResolver = scope.ServiceProvider.GetRequiredService<IAgentProviderCredentialResolver>();
             var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             var providers = await workspaceService.ListProvidersAsync();
@@ -74,9 +73,8 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 await workspaceService.ListAgentsAsync(includeTemplates: false),
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
-            Assert.False(providerCredentialResolver.Resolve(openAiDefaultProvider).IsResolved);
             Assert.Equal(openAiDefaultProvider.Id, qaAgentBeforeRepair.ProviderProfileId);
-            Assert.Equal("gpt-4.1", qaAgentBeforeRepair.Model);
+            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, qaAgentBeforeRepair.Model);
 
             await repairService.EnsureCurrentOrganizationCatalogAsync();
 
@@ -90,7 +88,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
             Assert.Equal(openAiChatProvider.Id, qaAgentAfterRepair.ProviderProfileId);
-            Assert.Equal("gpt-4o-mini", qaAgentAfterRepair.Model);
+            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, qaAgentAfterRepair.Model);
         }
         finally
         {

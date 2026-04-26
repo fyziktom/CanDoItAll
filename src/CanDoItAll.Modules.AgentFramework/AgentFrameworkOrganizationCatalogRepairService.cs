@@ -140,6 +140,17 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             return;
         }
 
+        var store = new FileSandboxWorkspaceStore(
+            workspaceFactory.GetWorkspaceRoot(),
+            workspaceFactory.GetOrganizationScope());
+        if (!string.Equals(openAiProvider.DefaultModel, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.Ordinal))
+        {
+            openAiProvider = await RepairManagedSeedOpenAiProviderDefaultAsync(
+                store,
+                openAiProvider,
+                cancellationToken);
+        }
+
         var agents = await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var agentsNeedingRepair = agents
             .Where(RequiresManagedSeedFallbackRepair)
@@ -152,9 +163,6 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             return;
         }
 
-        var store = new FileSandboxWorkspaceStore(
-            workspaceFactory.GetWorkspaceRoot(),
-            workspaceFactory.GetOrganizationScope());
         var agentIdsNeedingRepair = agentsNeedingRepair
             .Select(agent => agent.Id)
             .ToHashSet();
@@ -173,6 +181,33 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList()
         }, cancellationToken);
+    }
+
+    private static async Task<ProviderProfile> RepairManagedSeedOpenAiProviderDefaultAsync(
+        FileSandboxWorkspaceStore store,
+        ProviderProfile openAiProvider,
+        CancellationToken cancellationToken)
+    {
+        var updatedProvider = openAiProvider with
+        {
+            DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            SuggestedModels =
+            [
+                ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+                .. openAiProvider.SuggestedModels
+                    .Where(item => !string.Equals(item, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.OrdinalIgnoreCase))
+            ]
+        };
+
+        await store.UpdateCatalogAsync(catalog => catalog with
+        {
+            Providers = catalog.Providers
+                .Select(provider => provider.Id == openAiProvider.Id ? updatedProvider : provider)
+                .OrderBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+        }, cancellationToken);
+
+        return updatedProvider;
     }
 
     private static ProviderProfile? SelectManagedSeedOpenAiProvider(

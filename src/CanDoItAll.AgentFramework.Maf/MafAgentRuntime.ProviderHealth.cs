@@ -173,7 +173,7 @@ public sealed partial class MafAgentRuntime
     {
         return TestCloudProviderAsync(
             provider,
-            fallbackModel: "gpt-4o-mini",
+            fallbackModel: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             providerLabel: provider.Transport == ProviderTransportKind.Responses ? "OpenAI Responses" : "OpenAI Chat Completions",
             cancellationToken);
     }
@@ -184,7 +184,7 @@ public sealed partial class MafAgentRuntime
     {
         return TestCloudProviderAsync(
             provider,
-            fallbackModel: "gpt-4o-mini",
+            fallbackModel: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             providerLabel: provider.Transport == ProviderTransportKind.Responses ? "Azure OpenAI Responses" : "Azure OpenAI Chat Completions",
             cancellationToken);
     }
@@ -321,7 +321,7 @@ public sealed partial class MafAgentRuntime
         return provider.Kind switch
         {
             ProviderKind.Ollama => ResolveHealthCheckModel(provider, provider.SuggestedModels, "qwen3.5:9b"),
-            _ => ResolveHealthCheckModel(provider, provider.SuggestedModels, "gpt-4o-mini")
+            _ => ResolveHealthCheckModel(provider, provider.SuggestedModels, ManagedSeedProviderFallbacks.OpenAiDefaultModel)
         };
     }
 

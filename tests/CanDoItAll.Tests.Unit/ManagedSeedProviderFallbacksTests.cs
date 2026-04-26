@@ -145,7 +145,7 @@ public sealed class ManagedSeedProviderFallbacksTests
 
     private static AgentDefinition CreateManagedSeedAgent(string model)
     {
-        return CreateAgent("{\"managedSeedVersion\":\"2026-04-serious-delivery-v24\"}", model);
+        return CreateAgent("{\"managedSeedVersion\":\"2026-04-serious-delivery-v25\"}", model);
     }
 
     private static AgentDefinition CreateUnmanagedAgent(string model)
@@ -192,7 +192,7 @@ public sealed class ManagedSeedProviderFallbacksTests
             Kind: ProviderKind.OpenAi,
             BaseUrl: "https://api.openai.com/v1",
             ApiKeyEnvironmentVariable: "OPENAI_API_KEY",
-            DefaultModel: "gpt-4o-mini",
+            DefaultModel: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             Transport: ProviderTransportKind.Responses,
             IsEnabled: true,
             SupportsStreaming: true,
@@ -203,7 +203,7 @@ public sealed class ManagedSeedProviderFallbacksTests
             Notes: "Seeded OpenAI provider.",
             HealthStatus: "Not checked",
             LastCheckedAtUtc: null,
-            SuggestedModels: ["gpt-4o-mini", "gpt-4.1"]);
+            SuggestedModels: [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-4o-mini", "gpt-4.1"]);
     }
 
     private static ProviderProfile CreateFallbackProvider()
