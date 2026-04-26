@@ -145,7 +145,12 @@ internal sealed class ProcessMockAgentRuntime(
                     roleKey,
                     state.RunKey,
                     state.ArtifactRoot,
-                    outcome.BranchOutcomeKey
+                    outcome.BranchOutcomeKey,
+                    artifacts = outcome.Artifacts.Select(artifact => new
+                    {
+                        artifact.RelativePath,
+                        artifact.ContentSignalText
+                    }).ToArray()
                 },
                 JsonOptions),
             PendingApprovals: []);
@@ -217,7 +222,8 @@ internal sealed class ProcessMockAgentRuntime(
             "Completed",
             "Calculator scope and acceptance criteria were written.",
             null,
-            "Product owner mock scope artifact saved.");
+            "Product owner mock scope artifact saved.",
+            [CreateArtifact(scopePath, "calculator scope artifact acceptance criteria arithmetic divide zero")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteArchitect(ProcessMockRuntimeState state)
@@ -241,7 +247,8 @@ internal sealed class ProcessMockAgentRuntime(
             "Completed",
             "Calculator architecture guidance was written.",
             null,
-            "Architect mock handoff artifact saved.");
+            "Architect mock handoff artifact saved.",
+            [CreateArtifact(architecturePath, "calculator architecture artifact boundary implementation qa expectations")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteDeveloper(ProcessMockRuntimeState state)
@@ -252,6 +259,12 @@ internal sealed class ProcessMockAgentRuntime(
         var implementationPath = $"{state.ArtifactRoot}/03-implementation.md";
         var enginePath = $"{state.OutputRoot}/CalculatorApp/CalculatorEngine.cs";
         fileService.WriteTextFile(enginePath, FirstPassCalculatorEngine, overwrite: true);
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                implementationPath,
+                "calculator first implementation artifact deliverable deterministic defect")
+        };
 
         var markdown =
             $"""
@@ -263,13 +276,20 @@ internal sealed class ProcessMockAgentRuntime(
             This deterministic first pass intentionally lacks explicit divide-by-zero handling so QA can send the work back for repair.
             """;
         fileService.WriteTextFile(implementationPath, markdown, overwrite: true);
+        var responseSummary = "First-pass calculator implementation completed with the deterministic QA defect.";
+        var requiredArtifactSections = BuildImplementationRequiredArtifactSections(state, repaired: false, artifacts);
+        if (!string.IsNullOrWhiteSpace(requiredArtifactSections))
+        {
+            responseSummary = requiredArtifactSections;
+        }
 
         return BuildOutcome(
-            "First-pass calculator implementation completed with the deterministic QA defect.",
+            responseSummary,
             "Completed",
             "First-pass calculator implementation artifact was written.",
             null,
-            "Developer mock implementation artifact saved.");
+            "Developer mock implementation artifact saved.",
+            artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteQa(ProcessMockRuntimeState state)
@@ -299,7 +319,8 @@ internal sealed class ProcessMockAgentRuntime(
             "Completed",
             "Divide-by-zero handling is missing; repair is required.",
             ProcessMockAgentCatalog.BranchRepairsRequired,
-            "QA mock rejection artifact saved.");
+            "QA mock rejection artifact saved.",
+            [CreateArtifact(findingPath, "calculator qa rejection artifact finding repair branch reason")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteRepairDeveloper(ProcessMockRuntimeState state)
@@ -310,6 +331,12 @@ internal sealed class ProcessMockAgentRuntime(
         var repairPath = $"{state.ArtifactRoot}/05-repair.md";
         var enginePath = $"{state.OutputRoot}/CalculatorApp/CalculatorEngine.cs";
         fileService.WriteTextFile(enginePath, RepairedCalculatorEngine, overwrite: true);
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                repairPath,
+                "calculator repair artifact implementation divide zero fix")
+        };
 
         var markdown =
             $"""
@@ -321,13 +348,20 @@ internal sealed class ProcessMockAgentRuntime(
             `CalculatorEngine.Divide` now throws `DivideByZeroException` when the denominator is zero.
             """;
         fileService.WriteTextFile(repairPath, markdown, overwrite: true);
+        var responseSummary = "Calculator divide-by-zero repair completed.";
+        var requiredArtifactSections = BuildImplementationRequiredArtifactSections(state, repaired: true, artifacts);
+        if (!string.IsNullOrWhiteSpace(requiredArtifactSections))
+        {
+            responseSummary = requiredArtifactSections;
+        }
 
         return BuildOutcome(
-            "Calculator divide-by-zero repair completed.",
+            responseSummary,
             "Completed",
             "Divide-by-zero repair artifact was written.",
             null,
-            "Repair developer mock artifact saved.");
+            "Repair developer mock artifact saved.",
+            artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteQaApproval(ProcessMockRuntimeState state)
@@ -352,7 +386,8 @@ internal sealed class ProcessMockAgentRuntime(
             "Completed",
             "Repaired calculator implementation passed QA.",
             ProcessMockAgentCatalog.BranchApproved,
-            "QA mock approval artifact saved.");
+            "QA mock approval artifact saved.",
+            [CreateArtifact(approvalPath, "calculator qa approval artifact repaired implementation release")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteReleaseManager(ProcessMockRuntimeState state)
@@ -378,7 +413,8 @@ internal sealed class ProcessMockAgentRuntime(
             "Completed",
             "Release notes were written after QA approval.",
             null,
-            "Release manager mock artifact saved.");
+            "Release manager mock artifact saved.",
+            [CreateArtifact(releasePath, "calculator release notes artifact qa approval repair evidence")]);
     }
 
     private static ProcessMockRuntimeOutcome BuildOutcome(
@@ -386,14 +422,103 @@ internal sealed class ProcessMockAgentRuntime(
         string status,
         string reason,
         string? branchOutcomeKey,
-        string progressSummary)
+        string progressSummary,
+        IReadOnlyList<ProcessMockRuntimeArtifact>? artifacts = null)
     {
         var responseText = responseSummary + Environment.NewLine + BuildOutcomeComment(status, reason, branchOutcomeKey);
         return new ProcessMockRuntimeOutcome(
             ResponseText: responseText,
             ProgressSummary: progressSummary,
             BranchOutcomeKey: branchOutcomeKey,
-            ToolCalls: 2);
+            ToolCalls: 2,
+            Artifacts: artifacts ?? []);
+    }
+
+    private string BuildImplementationRequiredArtifactSections(
+        ProcessMockRuntimeState state,
+        bool repaired,
+        List<ProcessMockRuntimeArtifact> artifacts)
+    {
+        var sections = new List<string>();
+        if (PromptRequiresArtifact(state.OriginalPrompt, "Implementation change set"))
+        {
+            var changeSetPath = repaired
+                ? $"{state.ArtifactRoot}/05-implementation-change-set.md"
+                : $"{state.ArtifactRoot}/03-implementation-change-set.md";
+            var changeSetMarkdown =
+                $$"""
+                # Implementation Change Set
+
+                ## Touched Surface Inventory
+                - `{{state.OutputRoot}}/CalculatorApp/CalculatorEngine.cs` contains the calculator arithmetic implementation.
+
+                ## Tests And Validation
+                - Deterministic process mock validation stands in for the implementation agent proof path.
+                - The change set is linked to calculator arithmetic tests and migration notes by this governed artifact.
+
+                ## Migration Notes
+                - No schema or data migration is introduced by the calculator implementation.
+                """;
+            fileService.WriteTextFile(changeSetPath, changeSetMarkdown, overwrite: true);
+            artifacts.Add(CreateArtifact(
+                changeSetPath,
+                "implementation change set tests migration notes touched surface inventory"));
+            sections.Add(
+                """
+                ## Implementation change set
+                Touched surface inventory: CalculatorEngine owns Add, Subtract, Multiply, and Divide behavior for the calculator app.
+                Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
+                Migration notes: no schema, persistent data, or backfill changes are part of this implementation.
+                """);
+        }
+
+        if (PromptRequiresArtifact(state.OriginalPrompt, "Migration and rollout preparation checklist"))
+        {
+            var checklistPath = repaired
+                ? $"{state.ArtifactRoot}/05-migration-rollout-preparation-checklist.md"
+                : $"{state.ArtifactRoot}/03-migration-rollout-preparation-checklist.md";
+            var checklistMarkdown =
+                """
+                # Migration And Rollout Preparation Checklist
+
+                ## Data Changes
+                - No data migration required.
+                - No schema migration, seed update, backfill, or data rollback step is required.
+
+                ## Operational Preconditions
+                - Implementation validation must pass before rollout.
+                - QA must verify calculator arithmetic and divide-by-zero behavior before release.
+
+                ## Rollback Steps
+                - Revert the implementation change set or restore the previous project state.
+                - No data rollback is required because no persistent data changes are introduced.
+                """;
+            fileService.WriteTextFile(checklistPath, checklistMarkdown, overwrite: true);
+            artifacts.Add(CreateArtifact(
+                checklistPath,
+                "migration rollout preparation checklist data changes operational preconditions rollback steps no data migration required"));
+            sections.Add(
+                """
+                ## Migration and rollout preparation checklist
+                Data changes: no data migration required; no schema migration, seed update, backfill, or data rollback is needed.
+                Operational preconditions: implementation validation must pass and QA must verify calculator arithmetic plus divide-by-zero behavior.
+                Rollback steps: revert the implementation change set or restore the previous project state; no data rollback is required.
+                """);
+        }
+
+        return string.Join(Environment.NewLine + Environment.NewLine, sections);
+    }
+
+    private static bool PromptRequiresArtifact(string prompt, string artifactTitle)
+    {
+        return prompt.Contains(artifactTitle, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ProcessMockRuntimeArtifact CreateArtifact(
+        string relativePath,
+        string contentSignalText)
+    {
+        return new ProcessMockRuntimeArtifact(relativePath, contentSignalText);
     }
 
     private static string BuildOutcomeComment(string status, string reason, string? branchOutcomeKey)
@@ -522,9 +647,14 @@ internal sealed class ProcessMockAgentRuntime(
         string ArtifactRoot,
         string OutputRoot);
 
+    private sealed record ProcessMockRuntimeArtifact(
+        string RelativePath,
+        string ContentSignalText);
+
     private sealed record ProcessMockRuntimeOutcome(
         string ResponseText,
         string ProgressSummary,
         string? BranchOutcomeKey,
-        int ToolCalls);
+        int ToolCalls,
+        IReadOnlyList<ProcessMockRuntimeArtifact> Artifacts);
 }

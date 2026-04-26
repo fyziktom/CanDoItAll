@@ -965,6 +965,45 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void BuildExecutionPrompt_requires_explicit_db_free_migration_rollout_checklist()
+    {
+        var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildExecutionPrompt method was not found.");
+        var candidate = CreateCalculatorImplementationDispatchCandidate();
+
+        var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Migration and rollout preparation checklist", prompt, StringComparison.Ordinal);
+        Assert.Contains("No data migration required", prompt, StringComparison.Ordinal);
+        Assert.Contains("no schema migration, seed update, backfill, or data rollback is required", prompt, StringComparison.Ordinal);
+        Assert.Contains("operational preconditions", prompt, StringComparison.Ordinal);
+        Assert.Contains("rollback steps", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPrompt_blocks_when_required_upstream_artifact_input_is_missing()
+    {
+        var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildExecutionPrompt method was not found.");
+        var candidate = CreateDispatchCandidateWithArtifactInputs(
+            "Implement the calculator as a Blazor app and prove the build passes.",
+            (
+                "Write calculator architecture",
+                "Calculator architecture artifact",
+                []));
+
+        var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Upstream artifact gate:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Write calculator architecture", prompt, StringComparison.Ordinal);
+        Assert.Contains("Calculator architecture artifact", prompt, StringComparison.Ordinal);
+        Assert.Contains("Return `Blocked`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not fabricate an upstream artifact", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_fails_when_required_step_tools_were_not_executed()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -4366,6 +4405,139 @@ Descendant requirement context from sibling planning nodes:
     }
 
     [Fact]
+    public void ResolveCompletionStatus_blocks_process_mock_implementation_when_rollout_checklist_is_missing()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateCalculatorImplementationDispatchCandidate();
+        var responseText =
+            """
+            ## Implementation change set
+            Touched surface inventory: CalculatorEngine owns the calculator arithmetic behavior.
+            Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
+            Migration notes: no schema or data migration is introduced by the implementation.
+
+            <!-- PROCESS_STEP_OUTCOME {"status":"Completed","reason":"Implementation change set was written."} -->
+            """;
+        var detail = CreateProcessMockExecutionDetail(
+            responseText,
+            ProcessMockAgentRoleKeys.Developer,
+            artifacts:
+            [
+                (
+                    "artifacts/process-mock/mockrun001/03-implementation-change-set.md",
+                    "implementation change set tests migration notes touched surface inventory")
+            ]);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("Migration and rollout preparation checklist", reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_allows_process_mock_implementation_with_db_free_rollout_checklist()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateCalculatorImplementationDispatchCandidate();
+        var responseText =
+            """
+            ## Implementation change set
+            Touched surface inventory: CalculatorEngine owns Add, Subtract, Multiply, and Divide behavior.
+            Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
+            Migration notes: no schema, persistent data, or backfill changes are part of this implementation.
+
+            ## Migration and rollout preparation checklist
+            Data changes: no data migration required; no schema migration, seed update, backfill, or data rollback is needed.
+            Operational preconditions: implementation validation must pass and QA must verify calculator arithmetic plus divide-by-zero behavior.
+            Rollback steps: revert the implementation change set or restore the previous project state; no data rollback is required.
+
+            <!-- PROCESS_STEP_OUTCOME {"status":"Completed","reason":"Implementation and DB-free rollout checklist were written."} -->
+            """;
+        var detail = CreateProcessMockExecutionDetail(
+            responseText,
+            ProcessMockAgentRoleKeys.Developer,
+            artifacts:
+            [
+                (
+                    "artifacts/process-mock/mockrun001/03-implementation-change-set.md",
+                    "implementation change set tests migration notes touched surface inventory"),
+                (
+                    "artifacts/process-mock/mockrun001/03-migration-rollout-preparation-checklist.md",
+                    "migration rollout preparation checklist data changes operational preconditions rollback steps no data migration required")
+            ]);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+    }
+
+    [Fact]
+    public void ShouldRetryIncompleteSuccessfulRun_does_not_retry_downstream_step_for_missing_upstream_artifact_block()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
+        var candidate = CreateDispatchCandidateWithArtifactInputs(
+            "Implement the calculator as a Blazor app and prove the build passes.",
+            (
+                "Write calculator architecture",
+                "Calculator architecture artifact",
+                []));
+        var now = DateTimeOffset.UtcNow;
+        const string responseText = """
+            Upstream artifact is missing.
+            <!-- PROCESS_STEP_OUTCOME {"status":"Blocked","reason":"Write calculator architecture must provide Calculator architecture artifact before implementation can proceed."} -->
+            """;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Implementation blocked by upstream artifact",
+                "process-step",
+                "step-implementation",
+                "corr-implementation",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+
+        var shouldRetryResult = shouldRetry.Invoke(
+            null,
+            [candidate, detail, responseText, new[] { "workspace_dotnet_build", "workspace_dotnet_test" }, 1, 5]);
+
+        Assert.IsType<bool>(shouldRetryResult);
+        Assert.False((bool)shouldRetryResult);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_allows_process_mock_qa_rejection_branch_and_artifact()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -4972,7 +5144,8 @@ Descendant requirement context from sibling planning nodes:
         string responseText,
         string roleKey,
         string artifactRoot = "artifacts/process-mock/mockrun001",
-        string? branchOutcomeKey = null)
+        string? branchOutcomeKey = null,
+        params (string RelativePath, string ContentSignalText)[] artifacts)
     {
         var now = DateTimeOffset.UtcNow;
         return new ExecutionRunDetail(
@@ -5006,7 +5179,12 @@ Descendant requirement context from sibling planning nodes:
                         roleKey,
                         runKey = "mockrun001",
                         artifactRoot,
-                        branchOutcomeKey
+                        branchOutcomeKey,
+                        artifacts = artifacts.Select(artifact => new
+                        {
+                            artifact.RelativePath,
+                            artifact.ContentSignalText
+                        }).ToArray()
                     }),
                 []),
             null,

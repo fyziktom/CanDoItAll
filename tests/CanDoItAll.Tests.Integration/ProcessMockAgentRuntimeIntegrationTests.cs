@@ -356,6 +356,107 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
     }
 
     [Fact]
+    public async Task Process_mock_three_agent_artifact_handoff_completes_required_outputs_without_full_delivery_process()
+    {
+        await using var application = await CreateEnabledApplicationAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectPartyBridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var context = await catalogService.EnsureCatalogAsync();
+        Assert.NotNull(context);
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(projectsService, $"Process mock three-agent handoff {suffix}");
+        var managerId = await CreateHumanManagerAsync(
+            partyDirectoryService,
+            $"Process Mock Handoff Manager {suffix}",
+            $"process.mock.handoff.manager.{suffix}@example.test");
+        await SaveAssignmentAsync(projectPartyBridge, projectId, managerId, ProjectPartyAssignmentRole.Manager, "manager", true);
+
+        var fixture = ProcessMockThreeAgentArtifactHandoffFixture.Create(projectId);
+        var saveResult = await processesService.SaveAsync(fixture.Editor);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Process mock three-agent handoff launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration test deterministic three-agent artifact handoff proof.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var submitResult = await processesService.SubmitLaunchPlanForApprovalAsync(launchResult.Value, "integration-tests");
+        Assert.True(submitResult.IsSuccess, string.Join(" | ", submitResult.Errors.Select(error => error.Message)));
+
+        var approveResult = await processesService.DecideLaunchPlanApprovalAsync(new ProcessLaunchApprovalDecisionRequest
+        {
+            LaunchPlanId = launchResult.Value,
+            Status = ProcessLaunchApprovalStatus.Approved,
+            ResolutionSummary = "Manager approved deterministic three-agent artifact handoff execution.",
+            DecidedBy = "integration-tests"
+        });
+        Assert.True(approveResult.IsSuccess, string.Join(" | ", approveResult.Errors.Select(error => error.Message)));
+
+        var executeResult = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest
+        {
+            LaunchPlanId = launchResult.Value,
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(executeResult.IsSuccess, string.Join(" | ", executeResult.Errors.Select(error => error.Message)));
+        var runId = executeResult.Value;
+
+        await DrainProcessOutboxUntilRunSettledAsync(
+            outboxService,
+            dbContextFactory,
+            processesService,
+            workspaceService,
+            runId,
+            TimeSpan.FromSeconds(30));
+
+        var run = await processesService.GetRunAsync(runId);
+        Assert.NotNull(run);
+        Assert.Equal(ProcessRunStatus.Completed, run!.Status);
+
+        var stepRuns = await processesService.ListStepRunsAsync(runId);
+        Assert.Equal(
+            [
+                fixture.StepId(ProcessMockThreeAgentArtifactHandoffFixture.StepKeys.Scope),
+                fixture.StepId(ProcessMockThreeAgentArtifactHandoffFixture.StepKeys.Implementation),
+                fixture.StepId(ProcessMockThreeAgentArtifactHandoffFixture.StepKeys.Review)
+            ],
+            stepRuns.OrderBy(stepRun => stepRun.Sequence).Select(stepRun => stepRun.StepDefinitionId).ToArray());
+        Assert.All(stepRuns, stepRun => Assert.Equal(ProcessStepRunStatus.Completed, stepRun.Status));
+
+        var artifactRecords = await ListRunArtifactRecordsAsync(dbContextFactory, runId);
+        Assert.Contains(
+            artifactRecords,
+            artifact => string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.Scope, StringComparison.Ordinal));
+        Assert.Contains(
+            artifactRecords,
+            artifact => string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.ImplementationChangeSet, StringComparison.Ordinal));
+        Assert.Contains(
+            artifactRecords,
+            artifact => string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.MigrationRolloutChecklist, StringComparison.Ordinal));
+        Assert.Contains(
+            artifactRecords,
+            artifact => string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.QaApproval, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Process_mock_runtime_runs_deterministic_calculator_rejection_repair_and_approval()
     {
         await using var application = await CreateEnabledApplicationAsync();
@@ -403,6 +504,44 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.Contains(
             approvalDetail.Artifacts,
             artifact => artifact.RelativePath.EndsWith("/06-qa-approval.md", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Process_mock_developer_single_agent_writes_change_set_and_db_free_rollout_artifacts()
+    {
+        await using var application = await CreateEnabledApplicationAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+        await catalogService.EnsureCatalogAsync();
+
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+        var developerAgent = FindRoleAgent(agents, ProcessMockAgentRoleKeys.Developer);
+
+        var implementation = await workspaceService.ExecuteRunAsync(new ExecutionRunRequest(
+            AgentId: developerAgent.Id,
+            Prompt:
+                """
+                Run the process mock developer implementation step.
+
+                Required output artifacts:
+                - Implementation change set
+                - Migration and rollout preparation checklist
+                """,
+            Context: CreateProcessContext("single-agent-implementation", "mock-run-single-agent", "implementation")));
+
+        Assert.Contains("## Implementation change set", implementation.ResponseText, StringComparison.Ordinal);
+        Assert.Contains("## Migration and rollout preparation checklist", implementation.ResponseText, StringComparison.Ordinal);
+        Assert.Contains("No data migration required", implementation.ResponseText, StringComparison.OrdinalIgnoreCase);
+
+        var detail = await workspaceService.GetExecutionRunDetailAsync(implementation.ExecutionRunId);
+        Assert.Contains(
+            detail.Artifacts,
+            artifact => artifact.RelativePath.EndsWith("/03-implementation-change-set.md", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            detail.Artifacts,
+            artifact => artifact.RelativePath.EndsWith("/03-migration-rollout-preparation-checklist.md", StringComparison.OrdinalIgnoreCase));
     }
 
     private static Task<TestApplication> CreateEnabledApplicationAsync()
