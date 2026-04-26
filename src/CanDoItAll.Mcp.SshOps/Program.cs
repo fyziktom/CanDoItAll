@@ -1,3 +1,4 @@
+using CanDoItAll.Mcp.Core.Hosting;
 using CanDoItAll.Mcp.SshOps.Configuration;
 using CanDoItAll.Mcp.SshOps.Coordination;
 using CanDoItAll.Mcp.SshOps.Operations;
@@ -5,7 +6,6 @@ using CanDoItAll.Mcp.SshOps.Security;
 using CanDoItAll.Mcp.SshOps.Tools;
 using CanDoItAll.Mcp.SshOps.Transport;
 using CanDoItAll.Mcp.Core.Concurrency;
-using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Mcp.SshOps;
 
@@ -17,22 +17,12 @@ internal static class Program
 
         var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
-        builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
-        builder.Configuration.AddEnvironmentVariables(prefix: "CanDoItAllMcp_");
+        builder.Configuration.AddCanDoItAllMcpSettings(settingsPath);
 
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(options =>
-        {
-            options.LogToStandardErrorThreshold = LogLevel.Trace;
-        });
-        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Logging.ConfigureCanDoItAllMcpStdioLogging();
 
         builder.Services
-            .AddOptions<McpServerOptions>()
-            .Bind(builder.Configuration)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-        builder.Services.AddSingleton<IValidateOptions<McpServerOptions>, McpServerOptionsValidator>();
+            .AddValidatedCanDoItAllMcpOptions<McpServerOptions, McpServerOptionsValidator>(builder.Configuration);
 
         builder.Services.AddSingleton<RuntimeConfiguration>();
         builder.Services.AddSingleton<ServerInstanceIdentity>();
