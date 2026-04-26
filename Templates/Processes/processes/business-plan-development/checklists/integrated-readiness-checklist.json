@@ -1,0 +1,22 @@
+{
+  "Kind": "process-checklist-template",
+  "Key": "integrated-readiness-checklist",
+  "DisplayName": "Integrated plan readiness checklist",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "OwnerRoleKey": "business-strategist",
+  "Phase": "Integrated review",
+  "Summary": "Verifies that the final plan reconciles strategy, finance, and marketing.",
+  "EntryCriteria": "Business plan, financial model, and marketing plan exist.",
+  "ExitCriteria": "Final decision status and next actions are explicit.",
+  "Checks": [
+    "Strategy, finance, and marketing assumptions do not conflict.",
+    "Open blockers and risks have owners.",
+    "Decision status is explicit.",
+    "Next actions are concrete enough to execute."
+  ],
+  "EvidenceExpectations": [
+    "Integrated business plan review"
+  ],
+  "DocPath": "processes/business-plan-development/checklists/integrated-readiness-checklist.md"
+}

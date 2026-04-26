@@ -931,21 +931,20 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         Assert.NotNull(prompt);
         Assert.Contains("This step requires runnable browser proof or screenshots", prompt, StringComparison.Ordinal);
-        Assert.Contains("inspect the concrete host project, launch settings, or prior successful build/test receipts", prompt, StringComparison.Ordinal);
-        Assert.Contains("start the concrete host yourself before you open the browser", prompt, StringComparison.Ordinal);
-        Assert.Contains("If `workspace_dotnet_run` is not available", prompt, StringComparison.Ordinal);
-        Assert.Contains("convert that alias to the native Windows path inside PowerShell helper content", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not pass a relative `external-target/...` string to `dotnet run` from a helper script", prompt, StringComparison.Ordinal);
-        Assert.Contains("click a representative sequence", prompt, StringComparison.Ordinal);
-        Assert.Contains("Blazor render-mode or static-SSR implementation defect", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not assume the app must be reachable at `http://localhost:5000/`", prompt, StringComparison.Ordinal);
-        Assert.Contains("empty `bin/Debug/<tfm>` folder as an acceptable blocker", prompt, StringComparison.Ordinal);
+        Assert.Contains("inspect the concrete host, launch instructions, prior validation receipts, or reviewed artifacts", prompt, StringComparison.Ordinal);
+        Assert.Contains("start it using the launch path and toolchain appropriate for the assigned agent", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not assume a fixed URL", prompt, StringComparison.Ordinal);
+        Assert.Contains("Use browser tools after launch", prompt, StringComparison.Ordinal);
+        Assert.Contains("After browser inspection, review the captured snapshot or screenshot content", prompt, StringComparison.Ordinal);
+        Assert.Contains("perform a representative user sequence", prompt, StringComparison.Ordinal);
         Assert.Contains("return `Blocked` instead of `Completed`", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not reframe missing browser proof", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_run", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Blazor render-mode", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void BuildExecutionPrompt_requires_reusing_existing_scaffold_after_dotnet_new_overwrite_conflicts()
+    public void BuildExecutionPrompt_keeps_implementation_bootstrap_guidance_domain_neutral()
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildExecutionPrompt method was not found.");
@@ -963,9 +962,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
 
         Assert.NotNull(prompt);
-        Assert.Contains("workspace_dotnet_new` reports overwrite conflicts or exits with code 73", prompt, StringComparison.Ordinal);
-        Assert.Contains("repair and continue in place", prompt, StringComparison.Ordinal);
-        Assert.Contains("deeper nested folder", prompt, StringComparison.Ordinal);
+        Assert.Contains("create the real deliverable now", prompt, StringComparison.Ordinal);
+        Assert.Contains("Follow the current step contract, assigned agent instructions, available skills", prompt, StringComparison.Ordinal);
+        Assert.Contains("Inspect existing files before creating or replacing scaffolds", prompt, StringComparison.Ordinal);
+        Assert.Contains("Repair an existing deliverable in place", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_new", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("net10.0", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2823,15 +2825,17 @@ Downstream artifact expectations: implementation change set, migration checklist
         var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
 
         Assert.NotNull(prompt);
-        Assert.Contains("Successful upstream `workspace_dotnet_build` or `workspace_dotnet_test` receipts", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not require fresh `bin/`, `obj/`, or other transient build output folders", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not assume a `.sln`, `.slnx`, or specific `bin/Debug/<tfm>` folder", prompt, StringComparison.Ordinal);
-        Assert.Contains("instead of assuming a target framework such as `net8.0`", prompt, StringComparison.Ordinal);
+        Assert.Contains("inspect actual changed files, durable artifacts, records, or outputs", prompt, StringComparison.Ordinal);
+        Assert.Contains("Successful upstream validation receipts", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not require fresh transient outputs", prompt, StringComparison.Ordinal);
         Assert.Contains("grounded external target", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_build", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(".sln", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("net8.0", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void BuildExecutionPrompt_guides_greenfield_dotnet_steps_toward_supported_frameworks()
+    public void BuildExecutionPrompt_keeps_greenfield_implementation_guidance_domain_neutral()
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildExecutionPrompt method was not found.");
@@ -2840,9 +2844,12 @@ Downstream artifact expectations: implementation change set, migration checklist
         var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
 
         Assert.NotNull(prompt);
-        Assert.Contains("Prefer `workspace_dotnet_new` over hand-written `.csproj` or `.sln` files", prompt, StringComparison.Ordinal);
-        Assert.Contains("explicitly request a supported target framework such as `net10.0`", prompt, StringComparison.Ordinal);
-        Assert.Contains("prefer `net10.0`", prompt, StringComparison.Ordinal);
+        Assert.Contains("create the real deliverable now", prompt, StringComparison.Ordinal);
+        Assert.Contains("Follow the current step contract, assigned agent instructions, available skills", prompt, StringComparison.Ordinal);
+        Assert.Contains("choose the correct project shape, folder structure, tools, and validation path", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_new", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(".csproj", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("net10.0", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2871,8 +2878,9 @@ Downstream artifact expectations: implementation change set, migration checklist
         Assert.Contains("workspace_stat_path", prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_read_file", prompt, StringComparison.Ordinal);
         Assert.Contains("artifacts/scopes/organization/demo/architecture/Calculator-Architecture.md", prompt, StringComparison.Ordinal);
-        Assert.Contains("runnable web host", prompt, StringComparison.Ordinal);
-        Assert.Contains("browser-validated Blazor or web app", prompt, StringComparison.Ordinal);
+        Assert.Contains("browser-visible UI", prompt, StringComparison.Ordinal);
+        Assert.Contains("runnable or reviewable browser surface", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser-validated Blazor or web app", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2907,8 +2915,10 @@ Descendant requirement context from sibling planning nodes:
         Assert.NotNull(prompt);
         Assert.Contains("Concrete feature and constraint nodes from the live project structure are required scope for this implementation step.", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not defer grounded features, UI behavior, acceptance notes, or output constraints", prompt, StringComparison.Ordinal);
-        Assert.Contains("Hello, world!", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not write implementation artifacts that say the requested UI, logic, tests, or rollout preparation will happen in a later step", prompt, StringComparison.Ordinal);
+        Assert.Contains("replace placeholder output with the requested product, document, analysis, workflow, or other concrete deliverable", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not write implementation artifacts that say the requested behavior, analysis, artifacts, tests", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Hello, world!", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("CalculatorEngine", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2944,17 +2954,15 @@ Descendant requirement context from sibling planning nodes:
             prompt,
             StringComparison.Ordinal);
         Assert.Contains(
-            "For this implementation, bootstrap and edit the runnable app under `external-target/C/programovani/csharp/calculator`.",
+            "For this implementation, create and edit the deliverable under `external-target/C/programovani/csharp/calculator`.",
             prompt,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Do not scaffold or repair the product in `artifacts/`, `output/`, `data/`, or other managed evidence folders",
+            "Do not build a shadow product in `artifacts/`, `output/`, `data/`, or other managed evidence folders",
             prompt,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "pass `external-target/C/programovani/csharp/calculator` as the parent directory root instead of an `artifacts/...` evidence directory",
-            prompt,
-            StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_new", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("runnable app", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

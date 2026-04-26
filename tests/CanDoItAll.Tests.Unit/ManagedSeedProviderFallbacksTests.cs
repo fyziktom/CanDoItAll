@@ -43,10 +43,16 @@ public sealed class ManagedSeedProviderFallbacksTests
         Assert.Equal("gpt-4.1", effectiveModel);
     }
 
-    [Fact]
-    public void Managed_seed_template_key_agents_fall_back_even_when_configuration_marker_is_missing()
+    [Theory]
+    [InlineData("delivery-qa-observer")]
+    [InlineData("dotnet-application-developer")]
+    [InlineData("javascript-application-developer")]
+    [InlineData("business-strategist")]
+    [InlineData("financial-strategist")]
+    [InlineData("marketing-specialist")]
+    public void Managed_seed_template_key_agents_fall_back_even_when_configuration_marker_is_missing(string templateKey)
     {
-        var agent = CreateAgent("{}", "gpt-4.1", templateKey: "delivery-qa-observer");
+        var agent = CreateAgent("{}", "gpt-4.1", templateKey);
         var provider = CreateOpenAiProvider();
 
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiApiKeyOverride: string.Empty);

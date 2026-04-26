@@ -1,0 +1,23 @@
+{
+  "Kind": "process-checklist-template",
+  "Key": "marketing-validation-checklist",
+  "DisplayName": "Marketing validation checklist",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "OwnerRoleKey": "marketing-specialist",
+  "Phase": "Marketing plan",
+  "Summary": "Verifies that marketing output is grounded and testable.",
+  "EntryCriteria": "Business plan and financial constraints exist.",
+  "ExitCriteria": "Marketing plan can be tested with concrete metrics.",
+  "Checks": [
+    "Audience and pain point are specific.",
+    "Promise and proof needs are stated.",
+    "Channels fit the segment and budget constraints.",
+    "Experiment metrics and next actions are measurable."
+  ],
+  "EvidenceExpectations": [
+    "Go-to-market plan",
+    "Experiment plan"
+  ],
+  "DocPath": "processes/business-plan-development/checklists/marketing-validation-checklist.md"
+}

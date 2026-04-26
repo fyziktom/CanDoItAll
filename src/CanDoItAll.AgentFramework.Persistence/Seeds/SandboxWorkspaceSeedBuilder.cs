@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-serious-delivery-v25";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-flexible-process-agents-v26";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -94,6 +94,15 @@ internal static class SandboxWorkspaceSeedBuilder
         var spreadsheetAgentId = CreateStableGuid("agents/spreadsheet-analyst");
         var mailAgentId = CreateStableGuid("agents/mail-triage-analyst");
         var researchAgentId = CreateStableGuid("agents/research-deep-dive-analyst");
+        var dotnetArchitectAgentId = CreateStableGuid("agents/dotnet-solution-architect");
+        var dotnetDeveloperAgentId = CreateStableGuid("agents/dotnet-application-developer");
+        var dotnetQaAgentId = CreateStableGuid("agents/dotnet-qa-review-lead");
+        var javascriptArchitectAgentId = CreateStableGuid("agents/javascript-solution-architect");
+        var javascriptDeveloperAgentId = CreateStableGuid("agents/javascript-application-developer");
+        var javascriptQaAgentId = CreateStableGuid("agents/javascript-qa-review-lead");
+        var businessStrategistAgentId = CreateStableGuid("agents/business-strategist");
+        var financialStrategistAgentId = CreateStableGuid("agents/financial-strategist");
+        var marketingSpecialistAgentId = CreateStableGuid("agents/marketing-specialist");
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
         var projectStructureReadToolNames = new[]
         {
@@ -993,9 +1002,459 @@ internal static class SandboxWorkspaceSeedBuilder
             now,
             now);
 
+        var dotnetArchitectAgent = CreateWorkloadAgent(
+            dotnetArchitectAgentId,
+            ".NET Solution Architect",
+            ".NET architecture specialist",
+            "Designs maintainable C#, ASP.NET Core, and Blazor project structures with explicit boundaries and validation plans.",
+            GetSeedText("agents/dotnet-solution-architect.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Research,
+            "dotnet-solution-architect",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
+                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag),
+                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
+                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
+            ],
+            ["dotnet", "architecture", "blazor"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var dotnetDeveloperAgent = CreateWorkloadAgent(
+            dotnetDeveloperAgentId,
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+            GetSeedText("agents/dotnet-application-developer.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Programming,
+            "dotnet-application-developer",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        slidingWindowTurns = 10,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
+                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
+                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+            ],
+            ["dotnet", "programming", "blazor"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var dotnetQaAgent = CreateWorkloadAgent(
+            dotnetQaAgentId,
+            ".NET QA Review Lead",
+            ".NET QA specialist",
+            "Reviews C#, ASP.NET Core, and Blazor deliverables with build, test, launch, browser, and durable artifact proof.",
+            GetSeedText("agents/dotnet-qa-review-lead.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "dotnet-qa-review-lead",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
+                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
+            ],
+            ["dotnet", "qa", "browser"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var javascriptArchitectAgent = CreateWorkloadAgent(
+            javascriptArchitectAgentId,
+            "JavaScript Solution Architect",
+            "JavaScript architecture specialist",
+            "Designs maintainable JavaScript and TypeScript app structures, package boundaries, and validation paths.",
+            GetSeedText("agents/javascript-solution-architect.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Research,
+            "javascript-solution-architect",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
+                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
+                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
+            ],
+            ["javascript", "typescript", "architecture"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var javascriptDeveloperAgent = CreateWorkloadAgent(
+            javascriptDeveloperAgentId,
+            "JavaScript Application Developer",
+            "JavaScript implementation specialist",
+            "Implements JavaScript and TypeScript deliverables with package-script validation and browser proof when needed.",
+            GetSeedText("agents/javascript-application-developer.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Programming,
+            "javascript-application-developer",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        slidingWindowTurns = 10,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
+                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+            ],
+            ["javascript", "typescript", "programming"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var javascriptQaAgent = CreateWorkloadAgent(
+            javascriptQaAgentId,
+            "JavaScript QA Review Lead",
+            "JavaScript QA specialist",
+            "Reviews JavaScript and TypeScript deliverables with package-script, browser, console, and screenshot evidence.",
+            GetSeedText("agents/javascript-qa-review-lead.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "javascript-qa-review-lead",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
+            ],
+            ["javascript", "qa", "browser"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var businessStrategistAgent = CreateWorkloadAgent(
+            businessStrategistAgentId,
+            "Business Strategist",
+            "Business planning specialist",
+            "Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.",
+            GetSeedText("agents/business-strategist.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Management,
+            "business-strategist",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
+                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
+                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
+            ],
+            ["business", "strategy", "planning"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var financialStrategistAgent = CreateWorkloadAgent(
+            financialStrategistAgentId,
+            "Financial Strategist",
+            "Financial planning specialist",
+            "Builds assumption-driven budgets, unit economics, spreadsheet analysis, and sensitivity views for planning processes.",
+            GetSeedText("agents/financial-strategist.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Spreadsheet,
+            "financial-strategist",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
+                CreateAssignment(officeInlineSkillCapabilityId, "office-order-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
+                CreateAssignment(workspaceInspectSpreadsheetCapabilityId, "workspace-inspect-spreadsheet", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
+                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
+                CreateAssignment(providerNativeCodeInterpreterCapabilityId, "provider-native-code-interpreter", CapabilityKind.Tool)
+            ],
+            ["finance", "strategy", "spreadsheet"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var marketingSpecialistAgent = CreateWorkloadAgent(
+            marketingSpecialistAgentId,
+            "Marketing Specialist",
+            "Marketing planning specialist",
+            "Creates positioning, messaging, go-to-market plans, campaign briefs, and validation experiments for non-code processes.",
+            GetSeedText("agents/marketing-specialist.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Sales,
+            "marketing-specialist",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
+                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
+                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
+            ],
+            ["marketing", "strategy", "go-to-market"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
         return new SandboxWorkspaceDocument(
             LatestVersion,
-            [architectAgent, qaAgent, programmingAgent, codeReviewAgent, uiReviewAgent, securityReviewerAgent, releaseManagerAgent, hrStaffingManagerAgent, spreadsheetAgent, mailAgent, researchAgent],
+            [
+                architectAgent,
+                qaAgent,
+                programmingAgent,
+                codeReviewAgent,
+                uiReviewAgent,
+                securityReviewerAgent,
+                releaseManagerAgent,
+                hrStaffingManagerAgent,
+                spreadsheetAgent,
+                mailAgent,
+                researchAgent,
+                dotnetArchitectAgent,
+                dotnetDeveloperAgent,
+                dotnetQaAgent,
+                javascriptArchitectAgent,
+                javascriptDeveloperAgent,
+                javascriptQaAgent,
+                businessStrategistAgent,
+                financialStrategistAgent,
+                marketingSpecialistAgent
+            ],
             providers,
             capabilities,
             [
