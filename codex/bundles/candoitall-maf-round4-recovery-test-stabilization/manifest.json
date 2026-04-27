@@ -1,0 +1,29 @@
+{
+  "bundle": "candoitall-maf-round4-recovery-test-stabilization-bundle-2026-04-27",
+  "created_for": "CanDoItAll post-round3 actual snapshot audit",
+  "subbundles": [
+    "00-snapshot-integrity-and-secret-emergency",
+    "01-process-mutation-tool-policy-and-approval",
+    "02-typed-recovery-decision-and-rework-packets",
+    "03-efficient-context-selection-and-session-policy",
+    "04-qa-return-rework-loop",
+    "05-proof-fingerprints-and-receipt-reuse",
+    "06-retry-ledger-backoff-loop-control",
+    "07-finalizer-sequence-trace-hardening",
+    "08-test-suite-taxonomy-and-default-green-gate",
+    "09-playwright-release-no-build-fixtures",
+    "10-mcp-stdio-path-and-configuration-fixes",
+    "11-projectstructure-api-test-host-stabilization",
+    "12-component-canvas-test-modernization",
+    "13-storage-and-projectstructure-integration-stabilization",
+    "14-dotnetwatch-live-process-test-gating",
+    "15-documentation-truthfulness-and-execution-report-validation"
+  ],
+  "critical_findings": [
+    "real-looking provider key remains in appsettings.json",
+    "claimed recovery/secret-scan files missing from snapshot",
+    "process mutation tools not classified as mutations",
+    "recovery remains text-first and not typed rework engine",
+    "broad test suite requires stabilization"
+  ]
+}
