@@ -3,6 +3,43 @@
     gap: 0.75rem;
 }
 
+.projects-board__package {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.projects-board__package-message {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    border-radius: 0.75rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+}
+
+.projects-board__package-message--success {
+    border: 1px solid rgb(187 247 208);
+    background: rgb(240 253 244);
+    color: rgb(22 101 52);
+}
+
+.projects-board__package-message--error {
+    border: 1px solid rgb(254 202 202);
+    background: rgb(254 242 242);
+    color: rgb(153 27 27);
+}
+
+@media (min-width: 1024px) {
+    .projects-board__package {
+        grid-template-columns: auto minmax(14rem, 1fr) auto;
+        align-items: center;
+    }
+
+    .projects-board__package-message {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (min-width: 1280px) {
     .projects-board__filters {
         grid-template-columns: minmax(0, 1.85fr) repeat(3, minmax(0, 0.92fr)) auto;

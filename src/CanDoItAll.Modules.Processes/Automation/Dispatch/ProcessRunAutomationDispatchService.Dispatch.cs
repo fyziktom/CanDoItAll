@@ -517,13 +517,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 item.ProcessRunId == runId &&
                 item.StepRunId == stepRunId &&
                 item.EventType == ProcessRuntimeEventTypes.ManualAgentStepRerun);
-        if (stepStartedAtUtc.HasValue)
-        {
-            query = query.Where(item => item.OccurredAtUtc >= stepStartedAtUtc.Value);
-        }
-
         var journalEntries = await query.ToListAsync(cancellationToken);
-        return journalEntries
+        var candidateEntries = stepStartedAtUtc.HasValue
+            ? journalEntries.Where(item => item.OccurredAtUtc >= stepStartedAtUtc.Value)
+            : journalEntries;
+
+        return candidateEntries
             .OrderByDescending(item => item.OccurredAtUtc)
             .Select(item => item.Description)
             .FirstOrDefault() ?? string.Empty;

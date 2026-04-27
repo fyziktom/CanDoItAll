@@ -162,6 +162,55 @@
                         Click="ResetFilters" />
             </div>
         </Toolbar>
+
+        <Toolbar Class="rounded-[1.35rem] border border-slate-200/90 bg-white/90 p-3 shadow-none"
+                 data-testid="projects-package-toolbar">
+            <div class="projects-board__package">
+                <Cluster Gap="LayoutGap.Small"
+                         Class="min-w-0">
+                    <Pill Tone="PillTone.Info"
+                          Text="Projects zip" />
+                    @if (IsProjectPackageBusy)
+                    {
+                        <StatusBadge Tone="info" Text="Working" />
+                    }
+                </Cluster>
+                <PrefixedField Prefix="ZIP"
+                               PrefixPaddingRem="3.2"
+                               Class="min-w-0">
+                    <input value="@ProjectPackagePath"
+                           @oninput="HandleProjectPackagePathInput"
+                           class="cda-input cda-input--toolbar h-10"
+                           placeholder="Package path"
+                           data-testid="projects-package-path-input" />
+                </PrefixedField>
+                <Cluster Gap="LayoutGap.Small"
+                         JustifyContent="JustifyContent.End"
+                         Class="min-w-0">
+                    <Button Class="h-10 px-3"
+                            Icon="file_download"
+                            Text="Export"
+                            Disabled="@IsProjectPackageBusy"
+                            IsBusy="@IsProjectPackageBusy"
+                            data-testid="projects-export-package-button"
+                            Click="ExportProjectsPackage" />
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Class="h-10 px-3"
+                            Icon="file_upload"
+                            Text="Import"
+                            Disabled="@IsProjectPackageBusy"
+                            data-testid="projects-import-package-button"
+                            Click="ImportProjectsPackage" />
+                </Cluster>
+                @if (!string.IsNullOrWhiteSpace(ProjectPackageMessage))
+                {
+                    <p class="projects-board__package-message @(IsProjectPackageMessageError ? "projects-board__package-message--error" : "projects-board__package-message--success")"
+                       data-testid="projects-package-message">
+                        @ProjectPackageMessage
+                    </p>
+                }
+            </div>
+        </Toolbar>
     </Stack>
 
     <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
@@ -391,6 +440,27 @@
     [Parameter]
     public EventCallback<Guid> OpenGanttPreview { get; set; }
 
+    [Parameter]
+    public string ProjectPackagePath { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ProjectPackagePathChanged { get; set; }
+
+    [Parameter]
+    public string? ProjectPackageMessage { get; set; }
+
+    [Parameter]
+    public bool IsProjectPackageMessageError { get; set; }
+
+    [Parameter]
+    public bool IsProjectPackageBusy { get; set; }
+
+    [Parameter]
+    public EventCallback ExportProjectsPackage { get; set; }
+
+    [Parameter]
+    public EventCallback ImportProjectsPackage { get; set; }
+
     private string ProjectSearchProxy
     {
         get => ProjectSearch;
@@ -400,6 +470,11 @@
     private Task HandleProjectSearchInput(ChangeEventArgs args)
     {
         return ProjectSearchChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleProjectPackagePathInput(ChangeEventArgs args)
+    {
+        return ProjectPackagePathChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
     }
 
     private string StatusFilterProxy

@@ -1,7 +1,11 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Tests.Support;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Text.Json;
 
@@ -119,6 +123,66 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             createdAtUtc.AddMinutes(8));
 
         Assert.True(hasBlockingRun);
+    }
+
+    [Fact]
+    public async Task LoadLatestManualRecoveryDirective_filters_started_at_with_sqlite()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
+        await using var connection = new SqliteConnection("Data Source=:memory:;Foreign Keys=False");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var runId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var stepStartedAtUtc = DateTimeOffset.Parse("2026-04-27T12:00:00+00:00");
+
+        dbContext.Set<ProcessJournalEntry>().AddRange(
+            new ProcessJournalEntry
+            {
+                ProcessRunId = runId,
+                StepRunId = stepRunId,
+                EventType = ProcessRuntimeEventTypes.ManualAgentStepRerun,
+                Title = "Old directive",
+                Description = "old",
+                OccurredAtUtc = stepStartedAtUtc.AddMinutes(-1)
+            },
+            new ProcessJournalEntry
+            {
+                ProcessRunId = runId,
+                StepRunId = stepRunId,
+                EventType = ProcessRuntimeEventTypes.ManualAgentStepRerun,
+                Title = "New directive",
+                Description = "new",
+                OccurredAtUtc = stepStartedAtUtc.AddMinutes(1)
+            },
+            new ProcessJournalEntry
+            {
+                ProcessRunId = runId,
+                StepRunId = stepRunId,
+                EventType = "other-event",
+                Title = "Other event",
+                Description = "wrong",
+                OccurredAtUtc = stepStartedAtUtc.AddMinutes(2)
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loadLatestManualRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "LoadLatestManualRecoveryDirectiveAsync",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("LoadLatestManualRecoveryDirectiveAsync method was not found.");
+        var directiveTask = (Task<string>)loadLatestManualRecoveryDirective.Invoke(
+            null,
+            [dbContext, runId, stepRunId, stepStartedAtUtc, CancellationToken.None])!;
+
+        var directive = await directiveTask;
+
+        Assert.Equal("new", directive);
     }
 
     [Fact]
