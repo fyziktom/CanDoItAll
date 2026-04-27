@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -225,7 +226,8 @@ public sealed partial class MafAgentRuntime
         string model,
         bool hasApprovalTools,
         ResponseContinuationToken? continuationToken,
-        bool forceOmitTemperature)
+        bool forceOmitTemperature,
+        AgentStructuredOutputContract? structuredOutput)
     {
         var chatOptions = CreateModelCompatibleChatOptions(
             provider,
@@ -233,12 +235,30 @@ public sealed partial class MafAgentRuntime
             (float)agent.Temperature,
             forceOmitTemperature);
         chatOptions.AllowMultipleToolCalls = !hasApprovalTools;
+        ApplyStructuredResponseFormat(chatOptions, structuredOutput);
 
         return new ChatClientAgentRunOptions(chatOptions)
         {
             AllowBackgroundResponses = agent.EnableBackgroundResponses && SupportsBackgroundResponses(provider),
             ContinuationToken = continuationToken
         };
+    }
+
+    internal static void ApplyStructuredResponseFormat(
+        ChatOptions chatOptions,
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        ArgumentNullException.ThrowIfNull(chatOptions);
+        if (structuredOutput is null)
+        {
+            return;
+        }
+
+        chatOptions.ResponseFormat = ChatResponseFormat.ForJsonSchema(
+            structuredOutput.OutputType,
+            AgentOutputJson.SerializerOptions,
+            string.IsNullOrWhiteSpace(structuredOutput.SchemaName) ? null : structuredOutput.SchemaName,
+            string.IsNullOrWhiteSpace(structuredOutput.SchemaDescription) ? null : structuredOutput.SchemaDescription);
     }
 
     private static bool ShouldRestoreSerializedSession(

@@ -82,7 +82,8 @@ internal sealed class ProcessMockAgentRuntime(
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
@@ -96,7 +97,8 @@ internal sealed class ProcessMockAgentRuntime(
                 runtimeSessionKey,
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements);
+                suppressApprovalRequirements,
+                structuredOutput);
         }
 
         EnsureEnabled();
@@ -166,7 +168,8 @@ internal sealed class ProcessMockAgentRuntime(
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
@@ -180,7 +183,8 @@ internal sealed class ProcessMockAgentRuntime(
                 runtimeSessionKey,
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements);
+                suppressApprovalRequirements,
+                structuredOutput);
         }
 
         throw new InvalidOperationException("Process mock agents do not use pending approval continuations.");
@@ -425,7 +429,7 @@ internal sealed class ProcessMockAgentRuntime(
         string progressSummary,
         IReadOnlyList<ProcessMockRuntimeArtifact>? artifacts = null)
     {
-        var responseText = responseSummary + Environment.NewLine + BuildOutcomeComment(status, reason, branchOutcomeKey);
+        var responseText = BuildStructuredOutcome(status, reason, branchOutcomeKey, responseSummary, artifacts ?? []);
         return new ProcessMockRuntimeOutcome(
             ResponseText: responseText,
             ProgressSummary: progressSummary,
@@ -521,20 +525,28 @@ internal sealed class ProcessMockAgentRuntime(
         return new ProcessMockRuntimeArtifact(relativePath, contentSignalText);
     }
 
-    private static string BuildOutcomeComment(string status, string reason, string? branchOutcomeKey)
+    private static string BuildStructuredOutcome(
+        string status,
+        string reason,
+        string? branchOutcomeKey,
+        string responseSummary,
+        IReadOnlyList<ProcessMockRuntimeArtifact> artifacts)
     {
-        var payload = new Dictionary<string, string>(StringComparer.Ordinal)
+        var evidenceRefs = artifacts
+            .Select(artifact => artifact.RelativePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToArray();
+        var payload = new ProcessStepOutcomeResult
         {
-            ["status"] = status,
-            ["reason"] = reason
+            Status = Enum.Parse<ProcessStepOutcomeStatus>(status, ignoreCase: true),
+            Reason = reason,
+            BranchOutcomeKey = branchOutcomeKey ?? string.Empty,
+            EvidenceRefs = evidenceRefs,
+            NextActions = [],
+            HumanReadableSummaryMarkdown = responseSummary
         };
 
-        if (!string.IsNullOrWhiteSpace(branchOutcomeKey))
-        {
-            payload["branchOutcomeKey"] = branchOutcomeKey;
-        }
-
-        return $"<!-- PROCESS_STEP_OUTCOME {JsonSerializer.Serialize(payload, JsonOptions)} -->";
+        return JsonSerializer.Serialize(payload, AgentOutputJson.SerializerOptions);
     }
 
     private static bool IsApprovalQaPass(string prompt)

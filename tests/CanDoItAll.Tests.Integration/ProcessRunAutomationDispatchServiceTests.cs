@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
@@ -648,7 +649,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             prompt,
             StringComparison.Ordinal);
         Assert.Contains(
-            "PROCESS_STEP_OUTCOME",
+            "ProcessStepOutcomeResult",
             prompt,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -680,6 +681,39 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             "Run the bootstrap or init step first, then inspect the scaffolded files and continue.",
             prompt,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryResolveDeclaredStepOutcome_rejects_legacy_markdown_comment()
+    {
+        var tryResolveOutcome = ResolveTryResolveDeclaredStepOutcomeMethod();
+        object?[] arguments =
+        [
+            "Review complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Code review passed.\"} -->",
+            null
+        ];
+
+        var parsed = Assert.IsType<bool>(tryResolveOutcome.Invoke(null, arguments));
+
+        Assert.False(parsed);
+    }
+
+    [Fact]
+    public void TryResolveDeclaredStepOutcome_accepts_valid_structured_json()
+    {
+        var tryResolveOutcome = ResolveTryResolveDeclaredStepOutcomeMethod();
+        object?[] arguments =
+        [
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Code review passed.",
+                evidenceRefs: ["execution://tool/workspace_read_file"]),
+            null
+        ];
+
+        var parsed = Assert.IsType<bool>(tryResolveOutcome.Invoke(null, arguments));
+
+        Assert.True(parsed);
     }
 
     [Fact]
@@ -1035,7 +1069,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "system",
                 "{}",
                 "Prompt",
-                "Implementation complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Implementation and required validation completed.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Implementation and required validation completed."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -1104,7 +1140,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "system",
                 "{}",
                 "Prompt",
-                "Retry complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required tools succeeded across recovery attempts.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required tools succeeded across recovery attempts."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -1241,7 +1279,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "system",
                 "{}",
                 "Prompt",
-                "Implementation complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required implementation tools succeeded.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required implementation tools succeeded."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -1300,7 +1340,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ResolveCompletionStatusWithCarryForward_allows_implicit_completion_for_governed_review_when_required_artifact_sections_are_present()
+    public void ResolveCompletionStatusWithCarryForward_allows_completion_for_governed_review_when_structured_outcome_and_required_artifact_sections_are_present()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
@@ -1319,7 +1359,10 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             (ProcessArtifactKind.Decision, "Architecture decision record", true, "Must capture selected option, rejected options, source-of-truth choice, and migration ownership."),
             (ProcessArtifactKind.Brief, "Project structure context brief", true, "Must capture the originating project-structure node, resolved working directory, touched modules or routes, dependency boundaries, and downstream artifact expectations."));
         var now = DateTimeOffset.UtcNow;
-        const string responseText = """
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Architecture decision record and project structure context brief completed.",
+            summaryMarkdown: """
 ## Architecture decision record
 Selected option: build the calculator as a single Blazor app under the grounded project output.
 Rejected options: a console-only tool and a split service/UI package were rejected because they add unnecessary seams.
@@ -1332,7 +1375,7 @@ Resolved working directory: external-target/C/programovani/csharp/calculator.
 Touched modules or routes: calculator shell, keypad interactions, result display, and history surface.
 Dependency boundaries: keep the calculator self-contained and avoid billing/process module coupling.
 Downstream artifact expectations: implementation change set, migration checklist, peer review note, and browser-proof evidence.
-""";
+""");
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -1372,7 +1415,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         Assert.True(status == ProcessStepRunStatus.Completed, reason);
         Assert.NotNull(reason);
-        Assert.Contains("inferred the governed completed outcome", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("completed step", reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1534,7 +1577,7 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
-    public void ShouldRetryIncompleteSuccessfulRun_returns_true_for_governed_review_that_only_missed_step_outcome_marker()
+    public void ShouldRetryIncompleteSuccessfulRun_returns_true_for_governed_review_that_only_missed_structured_outcome()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
@@ -1544,7 +1587,7 @@ Downstream artifact expectations: implementation change set, migration checklist
             ProcessStepKind.Review);
 
         var now = DateTimeOffset.UtcNow;
-        const string responseText = "The architecture review is complete, but the assistant forgot the governed outcome marker.";
+        const string responseText = "The architecture review is complete, but the assistant forgot the structured outcome.";
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -1640,7 +1683,10 @@ Downstream artifact expectations: implementation change set, migration checklist
             ProcessStepKind.Review);
 
         var now = DateTimeOffset.UtcNow;
-        const string responseText = "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Blocked\",\"reason\":\"Application is not running.\"} -->";
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Blocked,
+            "Application is not running.",
+            summaryMarkdown: "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured.");
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -1682,7 +1728,7 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
-    public void ResolvePreferredExecutionResponseText_prefers_recovered_chat_message_when_it_restores_governed_outcome_marker()
+    public void ResolvePreferredExecutionResponseText_prefers_recovered_chat_message_when_it_restores_structured_outcome()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolvePreferredResponseText = serviceType.GetMethod("ResolvePreferredExecutionResponseText", BindingFlags.NonPublic | BindingFlags.Static)
@@ -1692,7 +1738,10 @@ Downstream artifact expectations: implementation change set, migration checklist
             ProcessStepKind.Review);
 
         var now = DateTimeOffset.UtcNow;
-        var recoveredAssistantMessage = "Review complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Architecture decision recorded.\"} -->";
+        var recoveredAssistantMessage = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Architecture decision recorded.",
+            summaryMarkdown: "Review complete.");
         var chatSession = new ChatSessionRecord(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -1721,7 +1770,7 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "Review complete, but the fresh provider summary omitted the governed outcome marker.",
+                "Review complete, but the fresh provider summary omitted the structured outcome.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -1739,7 +1788,7 @@ Downstream artifact expectations: implementation change set, migration checklist
 
         var resolvedResponseText = resolvePreferredResponseText.Invoke(
             null,
-            [candidate, "Review complete, but the fresh provider summary omitted the governed outcome marker.", detail]) as string;
+            [candidate, "Review complete, but the fresh provider summary omitted the structured outcome.", detail]) as string;
 
         Assert.NotNull(resolvedResponseText);
         Assert.Equal(recoveredAssistantMessage, resolvedResponseText);
@@ -1954,7 +2003,9 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "Implementation complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required implementation tools succeeded without blocked follow-up.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required implementation tools succeeded without blocked follow-up."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2049,7 +2100,9 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "QA proof complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required browser evidence was captured.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2119,7 +2172,9 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "QA proof complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required browser evidence was captured.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2188,7 +2243,10 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "Critical defect: the stock scaffold still renders and the units conversion flow does not exist. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Blocked\",\"reason\":\"Critical defect: the stock scaffold still renders and the units conversion flow does not exist.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Blocked,
+                    "Critical defect: the stock scaffold still renders and the units conversion flow does not exist.",
+                    summaryMarkdown: "Critical defect: the stock scaffold still renders and the units conversion flow does not exist."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2242,7 +2300,10 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Residual risk captured.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Residual risk captured.",
+                    summaryMarkdown: "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2372,7 +2433,9 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "QA proof complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required browser evidence was captured.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2441,7 +2504,9 @@ Downstream artifact expectations: implementation change set, migration checklist
                 "system",
                 "{}",
                 "Prompt",
-                "QA proof complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Required browser evidence was captured.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
                 ExecutionState.Completed,
@@ -2805,9 +2870,10 @@ Downstream artifact expectations: implementation change set, migration checklist
         var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
 
         Assert.NotNull(prompt);
-        Assert.Contains("Required response structure:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Required display summary structure:", prompt, StringComparison.Ordinal);
         Assert.Contains("## Architecture decision record", prompt, StringComparison.Ordinal);
         Assert.Contains("## Project structure context brief", prompt, StringComparison.Ordinal);
+        Assert.Contains("HumanReadableSummaryMarkdown", prompt, StringComparison.Ordinal);
         Assert.Contains("keep those exact section titles", prompt, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -3185,7 +3251,7 @@ Descendant requirement context from sibling planning nodes:
 
         Assert.NotNull(reason);
         Assert.True(status == ProcessStepRunStatus.Failed, reason);
-        Assert.Contains("PROCESS_STEP_OUTCOME", reason, StringComparison.Ordinal);
+        Assert.Contains("valid structured ProcessStepOutcomeResult", reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3281,7 +3347,7 @@ Descendant requirement context from sibling planning nodes:
 
         Assert.Equal(ProcessStepRunStatus.Failed, status);
         Assert.NotNull(reason);
-        Assert.Contains("PROCESS_STEP_OUTCOME", reason, StringComparison.Ordinal);
+        Assert.Contains("valid structured ProcessStepOutcomeResult", reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3294,7 +3360,10 @@ Descendant requirement context from sibling planning nodes:
             ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
         var candidate = CreateCalculatorImplementationDispatchCandidate();
         var now = DateTimeOffset.UtcNow;
-        const string responseText = """
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Blazor SSR app scaffolded, build succeeded, and required artifacts written per scope and architecture requirements.",
+            summaryMarkdown: """
             - Read and validated upstream architecture and scope artifacts.
             - Confirmed the required output directory and Blazor SSR stack.
             - Successfully scaffolded a Blazor SSR app in `external-target/C/programovani/csharp/calculator/CalculatorApp` targeting .NET 10.0.
@@ -3303,9 +3372,7 @@ Descendant requirement context from sibling planning nodes:
             - Created the required implementation change set and migration/rollout checklist artifacts, including evidence of the build and next steps for feature implementation.
 
             The main application is now scaffolded and buildable in the required location, ready for feature implementation.
-
-            <!-- PROCESS_STEP_OUTCOME {"status":"Completed","reason":"Blazor SSR app scaffolded, build succeeded, and required artifacts written per scope and architecture requirements."} -->
-            """;
+            """);
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -3398,11 +3465,13 @@ Descendant requirement context from sibling planning nodes:
             ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
         var candidate = CreateCalculatorImplementationDispatchCandidate();
         var now = DateTimeOffset.UtcNow;
-        const string responseText = """
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Blazor SSR app scaffolded, build succeeded, and required artifacts written per scope and architecture requirements.",
+            summaryMarkdown: """
             Scaffolded a Blazor SSR app in the required location, verified the default pages, and wrote the implementation artifact.
             The main application is now scaffolded and buildable in the required location, ready for feature implementation.
-            <!-- PROCESS_STEP_OUTCOME {"status":"Completed","reason":"Blazor SSR app scaffolded, build succeeded, and required artifacts written per scope and architecture requirements."} -->
-            """;
+            """);
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -3703,7 +3772,7 @@ Descendant requirement context from sibling planning nodes:
         Assert.NotNull(prompt);
         Assert.Contains("Available branch outcomes:", prompt, StringComparison.Ordinal);
         Assert.Contains("approved (Approved)", prompt, StringComparison.Ordinal);
-        Assert.Contains("\"branchOutcomeKey\":\"approved\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("set BranchOutcomeKey to the exact branchOutcomeKey", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4088,7 +4157,7 @@ Descendant requirement context from sibling planning nodes:
                 "system",
                 "{}",
                 "Prompt",
-                "The browser proof is ready, but the response forgot the governed step outcome marker.",
+                "The browser proof is ready, but the response forgot the structured step outcome.",
                 "OpenAI chat completions",
                 "gpt-4.1",
                 ExecutionState.Completed,
@@ -4111,15 +4180,16 @@ Descendant requirement context from sibling planning nodes:
             [
                 candidate,
                 detail,
-                "The browser proof is ready, but the response forgot the governed step outcome marker.",
+                "The browser proof is ready, but the response forgot the structured step outcome.",
                 Array.Empty<string>(),
                 Array.Empty<ToolExecutionReceiptRecord>(),
                 2
             ]) as string;
 
         Assert.NotNull(directive);
-        Assert.Contains("Do not conclude this governed retry without the PROCESS_STEP_OUTCOME comment.", directive, StringComparison.Ordinal);
-        Assert.Contains("<!-- PROCESS_STEP_OUTCOME", directive, StringComparison.Ordinal);
+        Assert.Contains("Do not conclude this governed retry without returning a valid structured ProcessStepOutcomeResult.", directive, StringComparison.Ordinal);
+        Assert.Contains("Use the configured structured output format.", directive, StringComparison.Ordinal);
+        Assert.DoesNotContain("PROCESS_STEP_OUTCOME", directive, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4302,7 +4372,9 @@ Descendant requirement context from sibling planning nodes:
                 "system",
                 "{}",
                 "Prompt",
-                "Review complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Code review passed.\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Code review passed."),
                 "OpenAI chat completions",
                 "gpt-4.1",
                 ExecutionState.Completed,
@@ -4354,7 +4426,10 @@ Descendant requirement context from sibling planning nodes:
                 "system",
                 "{}",
                 "Prompt",
-                "Review complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Code review passed.\",\"branchOutcomeKey\":\"approved\"} -->",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Code review passed.",
+                    "approved"),
                 "OpenAI chat completions",
                 "gpt-4.1",
                 ExecutionState.Completed,
@@ -4388,7 +4463,9 @@ Descendant requirement context from sibling planning nodes:
             ProcessStepKind.Start,
             (ProcessArtifactKind.Brief, "Calculator scope artifact", true, "Scope artifact must describe arithmetic operations and divide-by-zero acceptance criteria."));
         var detail = CreateProcessMockExecutionDetail(
-            "Scope complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Calculator scope and acceptance criteria were written.\"} -->",
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Calculator scope and acceptance criteria were written."),
             ProcessMockAgentRoleKeys.ProductOwner);
 
         var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
@@ -4408,7 +4485,9 @@ Descendant requirement context from sibling planning nodes:
             "Write calculator scope.",
             ProcessStepKind.Start,
             (ProcessArtifactKind.Brief, "Unrelated compliance packet", true, "Compliance packet must include unrelated governance metadata."));
-        var responseText = "Scope complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Calculator scope and acceptance criteria were written.\"} -->";
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Calculator scope and acceptance criteria were written.");
         var detail = CreateProcessMockExecutionDetail(responseText, ProcessMockAgentRoleKeys.ProductOwner);
 
         var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
@@ -4429,15 +4508,15 @@ Descendant requirement context from sibling planning nodes:
         var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
         var candidate = CreateCalculatorImplementationDispatchCandidate();
-        var responseText =
-            """
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Implementation change set was written.",
+            summaryMarkdown: """
             ## Implementation change set
             Touched surface inventory: CalculatorEngine owns the calculator arithmetic behavior.
             Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
             Migration notes: no schema or data migration is introduced by the implementation.
-
-            <!-- PROCESS_STEP_OUTCOME {"status":"Completed","reason":"Implementation change set was written."} -->
-            """;
+            """);
         var detail = CreateProcessMockExecutionDetail(
             responseText,
             ProcessMockAgentRoleKeys.Developer,
@@ -4465,8 +4544,10 @@ Descendant requirement context from sibling planning nodes:
         var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
         var candidate = CreateCalculatorImplementationDispatchCandidate();
-        var responseText =
-            """
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Implementation and DB-free rollout checklist were written.",
+            summaryMarkdown: """
             ## Implementation change set
             Touched surface inventory: CalculatorEngine owns Add, Subtract, Multiply, and Divide behavior.
             Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
@@ -4476,9 +4557,7 @@ Descendant requirement context from sibling planning nodes:
             Data changes: no data migration required; no schema migration, seed update, backfill, or data rollback is needed.
             Operational preconditions: implementation validation must pass and QA must verify calculator arithmetic plus divide-by-zero behavior.
             Rollback steps: revert the implementation change set or restore the previous project state; no data rollback is required.
-
-            <!-- PROCESS_STEP_OUTCOME {"status":"Completed","reason":"Implementation and DB-free rollout checklist were written."} -->
-            """;
+            """);
         var detail = CreateProcessMockExecutionDetail(
             responseText,
             ProcessMockAgentRoleKeys.Developer,
@@ -4511,10 +4590,12 @@ Descendant requirement context from sibling planning nodes:
                 "Calculator architecture artifact",
                 []));
         var now = DateTimeOffset.UtcNow;
-        const string responseText = """
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Blocked,
+            "Write calculator architecture must provide Calculator architecture artifact before implementation can proceed.",
+            summaryMarkdown: """
             Upstream artifact is missing.
-            <!-- PROCESS_STEP_OUTCOME {"status":"Blocked","reason":"Write calculator architecture must provide Calculator architecture artifact before implementation can proceed."} -->
-            """;
+            """);
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -4572,7 +4653,11 @@ Descendant requirement context from sibling planning nodes:
             true,
             [(ProcessArtifactKind.Evidence, "Calculator QA rejection artifact", true, "QA first review artifact must record the branch reason.")],
             []);
-        var responseText = $"QA rejection. <!-- PROCESS_STEP_OUTCOME {{\"status\":\"Completed\",\"reason\":\"Divide-by-zero handling is missing; repair is required.\",\"branchOutcomeKey\":\"{ProcessMockAgentCatalog.BranchRepairsRequired}\"}} -->";
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Divide-by-zero handling is missing; repair is required.",
+            ProcessMockAgentCatalog.BranchRepairsRequired,
+            summaryMarkdown: "QA rejection.");
         var detail = CreateProcessMockExecutionDetail(
             responseText,
             ProcessMockAgentRoleKeys.Qa,
@@ -4602,7 +4687,11 @@ Descendant requirement context from sibling planning nodes:
             true,
             [(ProcessArtifactKind.Evidence, "Calculator QA approval artifact", true, "QA recheck artifact must record approval for release.")],
             []);
-        var responseText = $"QA approval. <!-- PROCESS_STEP_OUTCOME {{\"status\":\"Completed\",\"reason\":\"Repaired calculator implementation passed QA.\",\"branchOutcomeKey\":\"{ProcessMockAgentCatalog.BranchApproved}\"}} -->";
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Repaired calculator implementation passed QA.",
+            ProcessMockAgentCatalog.BranchApproved,
+            summaryMarkdown: "QA approval.");
         var detail = CreateProcessMockExecutionDetail(
             responseText,
             ProcessMockAgentRoleKeys.Qa,
@@ -4744,7 +4833,10 @@ Descendant requirement context from sibling planning nodes:
             ?? throw new InvalidOperationException("TryResolveRecoverableProviderFailure method was not found.");
 
         var now = DateTimeOffset.UtcNow;
-        var responseText = "Architecture review complete. <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"Reviewed successfully.\"} -->";
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Reviewed successfully.",
+            summaryMarkdown: "Architecture review complete.");
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -5350,5 +5442,45 @@ Descendant requirement context from sibling planning nodes:
             ["errorCode"] = errorCode,
             ["message"] = message
         };
+    }
+
+    private static string StructuredOutcome(
+        ProcessStepOutcomeStatus status,
+        string reason,
+        string? branchOutcomeKey = null,
+        string? summaryMarkdown = null,
+        IReadOnlyList<string>? evidenceRefs = null)
+    {
+        var outcome = new ProcessStepOutcomeResult
+        {
+            Status = status,
+            Reason = reason,
+            BranchOutcomeKey = branchOutcomeKey ?? string.Empty,
+            EvidenceRefs = evidenceRefs ?? [],
+            NextActions = status == ProcessStepOutcomeStatus.Completed
+                ? []
+                : ["Resolve the reported issue."],
+            HumanReadableSummaryMarkdown = summaryMarkdown ?? reason
+        };
+        return JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
+    }
+
+    private static MethodInfo ResolveTryResolveDeclaredStepOutcomeMethod()
+    {
+        return typeof(ProcessRunAutomationDispatchService)
+                   .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+                   .Single(method =>
+                   {
+                       if (!string.Equals(method.Name, "TryResolveDeclaredStepOutcome", StringComparison.Ordinal))
+                       {
+                           return false;
+                       }
+
+                       var parameters = method.GetParameters();
+                       return parameters.Length == 2 &&
+                              parameters[0].ParameterType == typeof(string) &&
+                              parameters[1].ParameterType.IsByRef;
+                   })
+               ?? throw new InvalidOperationException("TryResolveDeclaredStepOutcome method was not found.");
     }
 }

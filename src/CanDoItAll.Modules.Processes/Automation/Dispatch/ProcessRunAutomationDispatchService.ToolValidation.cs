@@ -210,11 +210,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.Failed;
         }
 
-        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
-        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
+        var inspectionText = ResolveOutputInspectionText(responseText);
+        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
+        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
-        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
+        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
         if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome))
         {
             if (!string.IsNullOrWhiteSpace(ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome)))
@@ -264,7 +265,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.Blocked;
         }
 
-        if (CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, responseText))
+        if (CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, inspectionText))
         {
             return ProcessStepRunStatus.Completed;
         }
@@ -309,99 +310,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool TryResolveDeclaredStepOutcome(string? responseText, out DeclaredStepOutcome declaredOutcome)
     {
         declaredOutcome = default;
-        if (string.IsNullOrWhiteSpace(responseText))
+        if (!TryReadProcessStepOutcome(responseText, out var outcome, out _))
         {
             return false;
         }
 
-        var matches = DeclaredStepOutcomeRegex.Matches(responseText);
-        if (matches.Count == 0)
-        {
-            return false;
-        }
-
-        var json = matches[^1].Groups["json"].Value;
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("status", out var statusElement) ||
-                statusElement.ValueKind != JsonValueKind.String ||
-                !TryMapDeclaredStepStatus(statusElement.GetString(), out var status))
-            {
-                return false;
-            }
-
-            var reason = document.RootElement.TryGetProperty("reason", out var reasonElement) &&
-                         reasonElement.ValueKind == JsonValueKind.String
-                ? reasonElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            var branchOutcomeKey = document.RootElement.TryGetProperty("branchOutcomeKey", out var branchOutcomeKeyElement) &&
-                                   branchOutcomeKeyElement.ValueKind == JsonValueKind.String
-                ? branchOutcomeKeyElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            var branchOutcomeTitle = document.RootElement.TryGetProperty("branchOutcomeTitle", out var branchOutcomeTitleElement) &&
-                                     branchOutcomeTitleElement.ValueKind == JsonValueKind.String
-                ? branchOutcomeTitleElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            declaredOutcome = new DeclaredStepOutcome(status, reason, null, branchOutcomeKey, branchOutcomeTitle);
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private static bool TryMapDeclaredStepStatus(string? value, out ProcessStepRunStatus status)
-    {
-        status = default;
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        var normalized = value.Trim().Replace("-", string.Empty, StringComparison.Ordinal).Replace("_", string.Empty, StringComparison.Ordinal);
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Completed), StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.Completed;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Blocked), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("block", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.Blocked;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Failed), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("error", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.Failed;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.WaitingApproval), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("approval", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.WaitingApproval;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Refused), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("reject", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("rejected", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.Refused;
-            return true;
-        }
-
-        return false;
+        declaredOutcome = new DeclaredStepOutcome(
+            MapProcessStepOutcomeStatus(outcome.Status),
+            outcome.Reason.Trim(),
+            null,
+            outcome.BranchOutcomeKey.Trim(),
+            outcome.BranchOutcomeTitle.Trim());
+        return true;
     }
 
     private static string BuildDeclaredStepOutcomeReason(string runTitle, string stepTitle, DeclaredStepOutcome declaredOutcome)

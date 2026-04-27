@@ -375,7 +375,8 @@ public sealed record ExecutionRunRequest(
     string Prompt,
     Guid? ChatSessionId = null,
     ExecutionInvocationContext? Context = null,
-    bool AutoApprovePendingToolCalls = false);
+    bool AutoApprovePendingToolCalls = false,
+    AgentStructuredOutputContract? StructuredOutput = null);
 
 public sealed record ExecutionRunQuery(
     Guid? AgentId = null,

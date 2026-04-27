@@ -138,7 +138,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                     cancellationToken,
-                    suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession));
+                    suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                    structuredOutput: null);
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -156,6 +157,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         memory,
                         runtimeResponse,
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                        structuredOutput: null,
                         cancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -572,7 +574,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                     cancellationToken,
-                    suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession));
+                    suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                    structuredOutput: request.StructuredOutput);
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -590,6 +593,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         memory,
                         runtimeResponse,
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                        request.StructuredOutput,
                         cancellationToken);
 
                     runtimeSession = continuation.Session;

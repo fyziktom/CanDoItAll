@@ -124,7 +124,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     MetadataJson: "{}",
                                     ProcessRunId: candidate.Run.Id.ToString("D"),
                                     ProcessStepId: candidate.StepRun.Id.ToString("D")),
-                                AutoApprovePendingToolCalls: true),
+                                AutoApprovePendingToolCalls: true,
+                                StructuredOutput: ProcessStepOutcomeStructuredOutputContract),
                             cancellationToken);
                     }
                     catch (AgentChatRunFailedException exception)
@@ -194,6 +195,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         responseText = ResolvePreferredExecutionResponseText(candidate, executionResult.ResponseText, detail);
                     }
                 }
+            }
+
+            if (RequiresGovernedStepOutcome(candidate.StepRun) &&
+                !TryReadProcessStepOutcome(responseText, out _, out var outputValidation))
+            {
+                logger.LogWarning(
+                    "AgentFramework run {ExecutionRunId} returned invalid structured process outcome for process run {RunId}, step {StepRunId}. Raw output hash: {RawOutputHash}. Validation errors: {ValidationErrors}",
+                    executionRunId,
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    AgentOutputJson.ComputeRawOutputHash(responseText),
+                    string.Join(
+                        "; ",
+                        outputValidation.Errors.Select(error => $"{error.Code}: {error.Message}")));
             }
 
             successfulToolNamesAcrossAttempts.UnionWith(ResolveSuccessfulToolNames(detail));

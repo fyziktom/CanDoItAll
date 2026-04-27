@@ -231,11 +231,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (RequiresGovernedStepOutcome(candidate.StepRun))
         {
-            builder.AppendLine("Do not conclude this governed retry without the PROCESS_STEP_OUTCOME comment.");
-            builder.AppendLine("End the retry response with exactly one HTML comment in this format: <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed|Blocked|Failed|WaitingApproval|Refused\",\"reason\":\"short concrete reason\"} -->.");
+            builder.AppendLine("Do not conclude this governed retry without returning a valid structured ProcessStepOutcomeResult.");
+            builder.AppendLine("Use the configured structured output format. Status must be one of Completed, Blocked, Failed, WaitingApproval, or Refused, and Reason must be concrete.");
+            builder.AppendLine("Put display-only markdown in HumanReadableSummaryMarkdown. Do not encode the workflow decision in markdown or an HTML comment.");
             if (candidate.RequiresExplicitBranchOutcomeSelection)
             {
-                builder.AppendLine("If this retry completes onto a specific downstream branch, include the exact branchOutcomeKey from the available branch outcomes, for example <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"short concrete reason\",\"branchOutcomeKey\":\"approved\"} -->.");
+                builder.AppendLine("If this retry completes onto a specific downstream branch, set BranchOutcomeKey to the exact branchOutcomeKey from the available branch outcomes.");
             }
         }
 

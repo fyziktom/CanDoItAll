@@ -137,6 +137,25 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void ApplyStructuredResponseFormat_sets_json_schema_response_format()
+    {
+        var applyMethod = typeof(MafAgentRuntime).GetMethod(
+                              "ApplyStructuredResponseFormat",
+                              BindingFlags.NonPublic | BindingFlags.Static)
+                          ?? throw new InvalidOperationException("ApplyStructuredResponseFormat method was not found.");
+        var chatOptions = new ChatOptions();
+        var contract = AgentStructuredOutputContract.For<ProcessStepOutcomeResult>(
+            "process_step_outcome_result",
+            "Process step outcome contract.");
+
+        applyMethod.Invoke(null, [chatOptions, contract]);
+
+        var responseFormat = Assert.IsType<ChatResponseFormatJson>(chatOptions.ResponseFormat);
+        Assert.Equal("process_step_outcome_result", responseFormat.SchemaName);
+        Assert.NotNull(responseFormat.Schema);
+    }
+
+    [Fact]
     public void ResolveProviderNetworkTimeout_honors_provider_timeout_metadata()
     {
         var timeoutMethod = typeof(MafAgentRuntime).GetMethod(

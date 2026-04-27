@@ -268,10 +268,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- Do not reframe missing browser proof as a residual risk, deferred next step, or artifact-only note while still marking the step complete.");
         }
 
-        builder.AppendLine("- End your final response with exactly one HTML comment in this format: <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed|Blocked|Failed|WaitingApproval|Refused\",\"reason\":\"short concrete reason\"} -->.");
+        builder.AppendLine("- Produce the final machine-readable result as a ProcessStepOutcomeResult through the configured structured output format.");
+        builder.AppendLine("- Set Status to one of Completed, Blocked, Failed, WaitingApproval, or Refused. This Status field is the only source of truth for workflow continuation.");
+        builder.AppendLine("- Put display-only markdown in HumanReadableSummaryMarkdown. Do not encode the workflow decision in markdown or an HTML comment.");
+        builder.AppendLine("- Include a concrete Reason, EvidenceRefs for files/artifacts/tool outputs you relied on when available, and NextActions when the step is not completed.");
         if (candidate.BranchOutcomes.Count > 0)
         {
-            builder.AppendLine("- If this step completes onto a specific downstream branch, include the exact branchOutcomeKey from the available branch outcomes, for example <!-- PROCESS_STEP_OUTCOME {\"status\":\"Completed\",\"reason\":\"short concrete reason\",\"branchOutcomeKey\":\"approved\"} -->.");
+            builder.AppendLine("- If this step completes onto a specific downstream branch, set BranchOutcomeKey to the exact branchOutcomeKey from the available branch outcomes.");
         }
 
         builder.AppendLine("- Use status Completed only when the actual work is done, the concrete deliverable exists, required validation passed, and the next step may proceed.");
@@ -296,8 +299,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
-        builder.AppendLine("Required response structure:");
-        builder.AppendLine("- Keep the response artifact-first. Use a dedicated markdown heading with the exact artifact title for every required output artifact.");
+        builder.AppendLine("Required display summary structure:");
+        builder.AppendLine("- In HumanReadableSummaryMarkdown, keep the display summary artifact-first. Use a dedicated markdown heading with the exact artifact title for every required output artifact.");
         builder.AppendLine("- Fill each required section with concrete content that satisfies its validation expectation. Do not leave headings empty, and do not replace the sections with a generic status summary.");
 
         foreach (var expectedArtifact in requiredArtifacts)
@@ -322,7 +325,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- A DB-free checklist is valid only when it explicitly says no schema migration, seed update, backfill, or data rollback is required, then lists rollout preconditions and code rollback steps.");
         }
 
-        builder.AppendLine("- If you finish the step successfully, keep those exact section titles in the final response before the PROCESS_STEP_OUTCOME comment.");
+        builder.AppendLine("- If you finish the step successfully, keep those exact section titles in HumanReadableSummaryMarkdown.");
         builder.AppendLine();
     }
 

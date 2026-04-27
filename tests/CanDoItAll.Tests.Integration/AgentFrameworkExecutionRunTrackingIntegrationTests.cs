@@ -132,7 +132,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             string? runtimeSessionKey,
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken = default,
-            bool suppressApprovalRequirements = false)
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null)
         {
             if (!session.LatestExecutionRunId.HasValue)
             {
@@ -164,7 +165,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             string? runtimeSessionKey,
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken = default,
-            bool suppressApprovalRequirements = false)
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null)
         {
             throw new NotSupportedException("Pending approval continuation is not used by this regression test.");
         }

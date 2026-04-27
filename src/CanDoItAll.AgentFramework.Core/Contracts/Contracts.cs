@@ -136,7 +136,8 @@ public interface IAgentRuntime
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false);
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null);
 
     Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
         AgentDefinition agent,
@@ -148,7 +149,8 @@ public interface IAgentRuntime
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false);
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null);
 }
 
 public interface ICapabilityProofService
