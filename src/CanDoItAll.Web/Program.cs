@@ -6,6 +6,8 @@ using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Readiness;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
@@ -43,7 +45,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-builder.Services.AddCanDoItAllRuntimeModules();
+builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
 builder.Services.AddMermaidJS();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
@@ -312,6 +314,360 @@ if (app.Environment.IsDevelopment())
                 item.DefaultModel,
                 item.CapabilityCount
             })
+        });
+    });
+
+    app.MapGet("/_dev/agentframework/credential", async (
+        IConfiguration configuration,
+        IAgentProviderCredentialResolver providerCredentialResolver,
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
+    {
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var providers = await workspaceService.ListProvidersAsync();
+        var provider = providers
+            .FirstOrDefault(item => string.Equals(item.Name, "OpenAI chat completions", StringComparison.OrdinalIgnoreCase))
+            ?? providers.FirstOrDefault(item => item.Kind is CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi or CanDoItAll.AgentFramework.Models.ProviderKind.AzureOpenAi);
+
+        if (provider is null)
+        {
+            return Results.NotFound(new
+            {
+                Error = "No OpenAI provider profile was found in the active workspace."
+            });
+        }
+
+        var resolution = providerCredentialResolver.Resolve(provider);
+        var processValue = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var configuredValue = configuration["OPENAI_API_KEY"];
+
+        return Results.Ok(new
+        {
+            Provider = new
+            {
+                provider.Id,
+                provider.Name,
+                provider.Kind,
+                provider.ApiKeyEnvironmentVariable,
+                provider.DefaultModel,
+                provider.Transport
+            },
+            ResolverType = providerCredentialResolver.GetType().FullName,
+            Resolver = new
+            {
+                resolution.IsResolved,
+                resolution.ResolutionSource,
+                resolution.FailureMessage
+            },
+            ProcessEnvironment = new
+            {
+                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(processValue),
+                Length = string.IsNullOrWhiteSpace(processValue) ? 0 : processValue.Length
+            },
+            Configuration = new
+            {
+                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(configuredValue),
+                Length = string.IsNullOrWhiteSpace(configuredValue) ? 0 : configuredValue.Length
+            },
+            Presence = AgentProviderEnvironmentCredential.DescribePresence("OPENAI_API_KEY")
+        });
+    });
+
+    app.MapGet("/_dev/agentframework/probe-agent/{agentId:guid}", async (
+        Guid agentId,
+        string? promptMode,
+        bool persistTranscript,
+        Guid? chatSessionId,
+        string? sourceKind,
+        string? sourceId,
+        string? correlationId,
+        string? causationId,
+        string? requestedBy,
+        string? requestedByKind,
+        string? processRunId,
+        string? processStepId,
+        string? messageId,
+        IConfiguration configuration,
+        IAgentProviderCredentialResolver providerCredentialResolver,
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
+    {
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .FirstOrDefault(item => item.Id == agentId);
+        if (agent is null)
+        {
+            return Results.NotFound(new
+            {
+                Error = $"Agent '{agentId:D}' was not found in the active workspace."
+            });
+        }
+
+        var provider = (await workspaceService.ListProvidersAsync())
+            .FirstOrDefault(item => item.Id == agent.ProviderProfileId);
+        if (provider is null)
+        {
+            return Results.NotFound(new
+            {
+                Error = $"Provider '{agent.ProviderProfileId:D}' was not found for agent '{agent.Name}'."
+            });
+        }
+
+        var resolution = providerCredentialResolver.Resolve(provider);
+        var processValue = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var configuredValue = configuration["OPENAI_API_KEY"];
+        var effectivePromptMode = string.IsNullOrWhiteSpace(promptMode)
+            ? "ok"
+            : promptMode.Trim();
+        var prompt = "Reply with the single word OK.";
+        string? promptSourceSessionId = null;
+
+        if (string.Equals(effectivePromptMode, "latest-process-step-session", StringComparison.OrdinalIgnoreCase))
+        {
+            var sessions = await workspaceService.ListChatSessionsAsync(agent.Id);
+            foreach (var session in sessions
+                         .OrderByDescending(item => item.UpdatedAtUtc)
+                         .Take(12))
+            {
+                var workspace = await workspaceService.GetChatAgentWorkspaceAsync(agent.Id, session.Id);
+                var latestProcessPrompt = workspace.SelectedSession?.Messages
+                    .Where(item => item.Role == ChatMessageRole.User)
+                    .OrderByDescending(item => item.CreatedAtUtc)
+                    .Select(item => item.Content)
+                    .FirstOrDefault(item => item.StartsWith(
+                        "You are executing a CanDoItAll process step.",
+                        StringComparison.Ordinal));
+                if (string.IsNullOrWhiteSpace(latestProcessPrompt))
+                {
+                    continue;
+                }
+
+                prompt = latestProcessPrompt;
+                promptSourceSessionId = session.Id.ToString("D");
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(promptSourceSessionId))
+            {
+                return Results.NotFound(new
+                {
+                    Error = $"No recent process-step prompt was found for agent '{agent.Name}'."
+                });
+            }
+        }
+
+        object providerProbe;
+        try
+        {
+            var providerResult = await workspaceService.RunProviderTestChatAsync(
+                provider.Id,
+                new ProviderTestChatRequest(
+                    string.Empty,
+                    string.Empty,
+                    [],
+                    "Reply with the single word OK."));
+            providerProbe = new
+            {
+                Succeeded = true,
+                providerResult.Model,
+                providerResult.ResponseText,
+                providerResult.InputTokens,
+                providerResult.OutputTokens
+            };
+        }
+        catch (Exception exception)
+        {
+            providerProbe = new
+            {
+                Succeeded = false,
+                Exception = exception.ToString(),
+                InnerException = exception.InnerException?.ToString()
+            };
+        }
+
+        object agentProbe;
+        try
+        {
+            Guid? probeChatSessionId = null;
+            if (chatSessionId.HasValue)
+            {
+                probeChatSessionId = chatSessionId.Value;
+            }
+            else if (persistTranscript)
+            {
+                probeChatSessionId = (await workspaceService.GetOrCreateChatSessionAsync(agent.Id)).Id;
+            }
+
+            var executionContext = string.IsNullOrWhiteSpace(sourceKind) &&
+                                   string.IsNullOrWhiteSpace(sourceId) &&
+                                   string.IsNullOrWhiteSpace(correlationId) &&
+                                   string.IsNullOrWhiteSpace(causationId) &&
+                                   string.IsNullOrWhiteSpace(requestedBy) &&
+                                   string.IsNullOrWhiteSpace(requestedByKind) &&
+                                   string.IsNullOrWhiteSpace(processRunId) &&
+                                   string.IsNullOrWhiteSpace(processStepId) &&
+                                   string.IsNullOrWhiteSpace(messageId)
+                ? null
+                : new ExecutionInvocationContext(
+                    SourceKind: sourceKind ?? string.Empty,
+                    SourceId: sourceId ?? string.Empty,
+                    CorrelationId: correlationId ?? string.Empty,
+                    CausationId: causationId ?? string.Empty,
+                    RequestedBy: requestedBy ?? string.Empty,
+                    RequestedByKind: requestedByKind ?? string.Empty,
+                    MetadataJson: "{}",
+                    ProcessRunId: processRunId ?? string.Empty,
+                    ProcessStepId: processStepId ?? string.Empty,
+                    SchedulerRunId: string.Empty,
+                    MessageId: messageId ?? string.Empty);
+            var executionResult = await workspaceService.ExecuteRunAsync(
+                new ExecutionRunRequest(
+                    agent.Id,
+                    prompt,
+                    probeChatSessionId,
+                    Context: executionContext,
+                    AutoApprovePendingToolCalls: true));
+            agentProbe = new
+            {
+                Succeeded = true,
+                PromptMode = effectivePromptMode,
+                PersistTranscript = persistTranscript,
+                RequestedChatSessionId = chatSessionId,
+                EffectiveChatSessionId = probeChatSessionId,
+                PromptLength = prompt.Length,
+                PromptSourceSessionId = promptSourceSessionId,
+                Context = executionContext,
+                executionResult.ExecutionRunId,
+                executionResult.ChatSessionId,
+                executionResult.ResponseText,
+                Metric = new
+                {
+                    executionResult.Metric.ProviderName,
+                    executionResult.Metric.Model,
+                    executionResult.Metric.DurationMs,
+                    executionResult.Metric.InputTokens,
+                    executionResult.Metric.OutputTokens,
+                    executionResult.Metric.ToolCalls
+                }
+            };
+        }
+        catch (AgentChatRunFailedException exception)
+        {
+            var detail = await workspaceService.GetExecutionRunDetailAsync(exception.ExecutionRunId);
+            agentProbe = new
+            {
+                Succeeded = false,
+                PromptMode = effectivePromptMode,
+                PersistTranscript = persistTranscript,
+                RequestedChatSessionId = chatSessionId,
+                EffectiveChatSessionId = chatSessionId,
+                PromptLength = prompt.Length,
+                PromptSourceSessionId = promptSourceSessionId,
+                Context = new
+                {
+                    sourceKind,
+                    sourceId,
+                    correlationId,
+                    causationId,
+                    requestedBy,
+                    requestedByKind,
+                    processRunId,
+                    processStepId,
+                    messageId
+                },
+                exception.AgentId,
+                exception.ExecutionRunId,
+                exception.ChatSessionId,
+                Exception = exception.ToString(),
+                InnerException = exception.InnerException?.ToString(),
+                Run = new
+                {
+                    detail.Run.Id,
+                    detail.Run.ProviderName,
+                    detail.Run.Model,
+                    detail.Run.State,
+                    detail.Run.Outcome,
+                    detail.Run.ResultSummary
+                },
+                Log = detail.ExecutionLog
+                    .OrderBy(item => item.CreatedAtUtc)
+                    .TakeLast(12)
+                    .Select(item => new
+                    {
+                        item.CreatedAtUtc,
+                        item.State,
+                        item.Phase,
+                        item.Message
+                    })
+                    .ToArray()
+            };
+        }
+        catch (Exception exception)
+        {
+            agentProbe = new
+            {
+                Succeeded = false,
+                PromptMode = effectivePromptMode,
+                PersistTranscript = persistTranscript,
+                RequestedChatSessionId = chatSessionId,
+                EffectiveChatSessionId = chatSessionId,
+                PromptLength = prompt.Length,
+                PromptSourceSessionId = promptSourceSessionId,
+                Context = new
+                {
+                    sourceKind,
+                    sourceId,
+                    correlationId,
+                    causationId,
+                    requestedBy,
+                    requestedByKind,
+                    processRunId,
+                    processStepId,
+                    messageId
+                },
+                Exception = exception.ToString(),
+                InnerException = exception.InnerException?.ToString()
+            };
+        }
+
+        return Results.Ok(new
+        {
+            Agent = new
+            {
+                agent.Id,
+                agent.Name,
+                agent.ProviderProfileId,
+                agent.Model,
+                agent.ChatHistoryMode,
+                agent.ConfigurationJson
+            },
+            Provider = new
+            {
+                provider.Id,
+                provider.Name,
+                provider.Kind,
+                provider.ApiKeyEnvironmentVariable,
+                provider.DefaultModel,
+                provider.Transport,
+                provider.ConfigurationJson
+            },
+            Resolver = new
+            {
+                resolution.IsResolved,
+                resolution.ResolutionSource,
+                resolution.FailureMessage
+            },
+            ProcessEnvironment = new
+            {
+                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(processValue),
+                Length = string.IsNullOrWhiteSpace(processValue) ? 0 : processValue.Length
+            },
+            Configuration = new
+            {
+                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(configuredValue),
+                Length = string.IsNullOrWhiteSpace(configuredValue) ? 0 : configuredValue.Length
+            },
+            Presence = AgentProviderEnvironmentCredential.DescribePresence("OPENAI_API_KEY"),
+            ProviderProbe = providerProbe,
+            AgentProbe = agentProbe
         });
     });
 

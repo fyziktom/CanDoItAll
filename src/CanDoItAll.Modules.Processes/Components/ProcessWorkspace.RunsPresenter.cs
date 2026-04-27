@@ -44,6 +44,10 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessArtifactViewModel> Artifacts => workspace.artifacts;
 
+        public IReadOnlyList<ProcessOutboxRecordViewModel> OutboxRecords => workspace.outboxRecords;
+
+        public ProcessRunHealthSummaryViewModel SelectedRunHealth => workspace.selectedRunHealth;
+
         public IReadOnlyList<ProcessRunAssignmentViewModel> Assignments => workspace.assignments;
 
         public ProcessRunAssignmentViewModel? SelectedAssignment => workspace.SelectedAssignment;
@@ -342,6 +346,11 @@ public partial class ProcessWorkspace
         public Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)
         {
             return workspace.ApplyStepStatusAsync(stepRunId, targetStatus);
+        }
+
+        public Task RerunAgentStepAsync(Guid stepRunId)
+        {
+            return workspace.RerunAgentStepAsync(stepRunId);
         }
 
         public void SelectAssignment(Guid assignmentId)

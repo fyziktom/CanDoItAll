@@ -242,7 +242,7 @@ public partial class SettingsPage
         var normalizedPluginKey = string.IsNullOrWhiteSpace(connectorPluginKey)
             ? OpenAiProviderAdapter.PluginKey
             : connectorPluginKey.Trim();
-        var defaults = ResolveProviderCapabilityDefaults(normalizedPluginKey);
+        var defaults = WorkspaceProviderCapabilityDefaults.Resolve(normalizedPluginKey);
         return new ProviderProfileEditorModel
         {
             ConnectorPluginKey = normalizedPluginKey,
@@ -288,7 +288,7 @@ public partial class SettingsPage
             return;
         }
 
-        var defaults = ResolveProviderCapabilityDefaults(manifest.PluginKey);
+        var defaults = WorkspaceProviderCapabilityDefaults.Resolve(manifest.PluginKey);
         providerModel.SupportsStreaming = defaults.SupportsStreaming;
         providerModel.SupportsToolCalling = defaults.SupportsToolCalling;
         providerModel.SupportsStructuredOutput = defaults.SupportsStructuredOutput;
@@ -302,7 +302,7 @@ public partial class SettingsPage
             OpenAiProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
-                [ProviderConnectorFieldKeys.DefaultModel] = "gpt-4.1",
+                [ProviderConnectorFieldKeys.DefaultModel] = OpenAiProviderAdapter.DefaultModel,
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             }),
             OllamaProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -321,17 +321,6 @@ public partial class SettingsPage
             {
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             })
-        };
-    }
-
-    private static (bool SupportsStreaming, bool SupportsToolCalling, bool SupportsStructuredOutput, bool SupportsVision) ResolveProviderCapabilityDefaults(string pluginKey)
-    {
-        return pluginKey switch
-        {
-            OpenAiProviderAdapter.PluginKey => (true, true, true, false),
-            OllamaProviderAdapter.PluginKey => (true, true, true, false),
-            OllamaRemoteProviderAdapter.PluginKey => (true, true, true, false),
-            _ => (false, false, false, false)
         };
     }
 

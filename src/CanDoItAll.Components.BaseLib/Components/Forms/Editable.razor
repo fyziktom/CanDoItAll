@@ -1,0 +1,400 @@
+@namespace CanDoItAll.Components.BaseLib
+@typeparam TItem
+@inherits StyledComponentBase
+@using System.Globalization
+@using System.Reflection
+
+<Stack GapScale="LayoutGap.XSmall"
+       Class="@RootCssClass"
+       Style="@Style"
+       @attributes="AdditionalAttributes">
+    @if (!HasSupportedProperty)
+    {
+        <TextBlock TextStyle="@(TextStyle.Caption)" Value="@UnsupportedText" />
+    }
+    else
+    {
+        <Stack Orientation="Orientation.Horizontal"
+               AlignItems="AlignItems.Center"
+               GapScale="LayoutGap.XSmall"
+               Class="cda-editable__row min-w-0">
+            @if (!Editing)
+            {
+                <TextBlock TextStyle="@(TextStyle.Body2)" Value="@DisplayValue" Class="cda-editable__value min-w-0" />
+                <Button Icon="@EditIcon"
+                        ButtonStyle="@(ButtonStyle.Light)"
+                        Variant="@(Variant.Outlined)"
+                        Size="@(ButtonSize.Small)"
+                        Class="cda-editable__action"
+                        Disabled="@(!CanEdit)"
+                        Click="Edit"
+                        aria-label="@EditAriaLabel" />
+            }
+            else if (ValueKind == EditableValueKind.Boolean)
+            {
+                <CheckBox TValue="bool"
+                          Value="@editBool"
+                          ValueChanged="OnBoolChangedAsync"
+                          Class="cda-editable__checkbox"
+                          Disabled="@Disabled"
+                          aria-label="@InputAriaLabel" />
+                <TextBlock TextStyle="@(TextStyle.Caption)" Value="@BooleanEditLabel" Class="cda-editable__bool-label" />
+                <Button Icon="@SaveIcon"
+                        ButtonStyle="@(ButtonStyle.Success)"
+                        Size="@(ButtonSize.Small)"
+                        Class="cda-editable__action cda-editable__action--save"
+                        Disabled="@Disabled"
+                        Click="SaveAsync"
+                        aria-label="@SaveAriaLabel" />
+            }
+            else
+            {
+                <TextBox Value="@editText"
+                         ValueChanged="OnTextChangedAsync"
+                         Placeholder="@Placeholder"
+                         Class="cda-editable__input"
+                         Disabled="@Disabled"
+                         aria-label="@InputAriaLabel" />
+                <Button Icon="@SaveIcon"
+                        ButtonStyle="@(ButtonStyle.Success)"
+                        Size="@(ButtonSize.Small)"
+                        Class="cda-editable__action cda-editable__action--save"
+                        Disabled="@Disabled"
+                        Click="SaveAsync"
+                        aria-label="@SaveAriaLabel" />
+            }
+        </Stack>
+
+        @if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            <TextBlock TextStyle="@(TextStyle.Caption)" Value="@validationMessage" Class="cda-editable__validation" />
+        }
+    }
+</Stack>
+
+@code {
+    private PropertyInfo? propertyInfo;
+    private object? parameterValue;
+    private string? editText;
+    private bool editBool;
+    private string? validationMessage;
+
+    [Parameter]
+    public TItem? Item { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> ItemChanged { get; set; }
+
+    [Parameter]
+    public string? ParameterName { get; set; }
+
+    [Parameter]
+    public string Prefix { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Extension { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string EmptyText { get; set; } = "Empty";
+
+    [Parameter]
+    public string UnsupportedText { get; set; } = "Not supported type";
+
+    [Parameter]
+    public string TrueText { get; set; } = "True";
+
+    [Parameter]
+    public string FalseText { get; set; } = "False";
+
+    [Parameter]
+    public string? Format { get; set; }
+
+    [Parameter]
+    public string EditIcon { get; set; } = "edit";
+
+    [Parameter]
+    public string SaveIcon { get; set; } = "save";
+
+    [Parameter]
+    public EditableSize Size { get; set; } = EditableSize.Compact;
+
+    public bool Editing { get; private set; }
+
+    private EditableValueKind ValueKind { get; set; } = EditableValueKind.Unsupported;
+
+    private bool HasSupportedProperty
+        => propertyInfo is { CanRead: true }
+            && ValueKind != EditableValueKind.Unsupported
+            && Item is not null;
+
+    private bool CanEdit
+        => HasSupportedProperty
+            && propertyInfo is { CanWrite: true }
+            && !Disabled;
+
+    private string DisplayValue
+        => FormatDisplayValue(parameterValue);
+
+    private string BooleanEditLabel
+        => editBool ? TrueText : FalseText;
+
+    private string ParameterLabel
+        => string.IsNullOrWhiteSpace(ParameterName) ? "value" : ParameterName;
+
+    private string EditAriaLabel
+        => $"Edit {ParameterLabel}";
+
+    private string SaveAriaLabel
+        => $"Save {ParameterLabel}";
+
+    private string InputAriaLabel
+        => $"Editing {ParameterLabel}";
+
+    private string RootCssClass
+        => BuildClass("cda-editable", ResolveSizeCssClass(), Editing ? "cda-editable--editing" : null, "min-w-0");
+
+    protected override void OnParametersSet()
+    {
+        if (!Editing)
+        {
+            LoadParameter();
+        }
+    }
+
+    private void LoadParameter()
+    {
+        propertyInfo = ResolvePropertyInfo();
+        ValueKind = ResolveValueKind(propertyInfo?.PropertyType);
+        parameterValue = propertyInfo?.CanRead == true && Item is not null
+            ? propertyInfo.GetValue(Item)
+            : null;
+        validationMessage = null;
+        ResetEditValue();
+    }
+
+    private PropertyInfo? ResolvePropertyInfo()
+    {
+        if (Item is null || string.IsNullOrWhiteSpace(ParameterName))
+        {
+            return null;
+        }
+
+        return typeof(TItem)
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .FirstOrDefault(property => string.Equals(property.Name, ParameterName, StringComparison.Ordinal));
+    }
+
+    private static EditableValueKind ResolveValueKind(Type? propertyType)
+    {
+        var valueType = Nullable.GetUnderlyingType(propertyType ?? typeof(object)) ?? propertyType;
+
+        if (valueType == typeof(string))
+        {
+            return EditableValueKind.Text;
+        }
+
+        if (valueType == typeof(int))
+        {
+            return EditableValueKind.Integer;
+        }
+
+        if (valueType == typeof(double))
+        {
+            return EditableValueKind.FloatingPoint;
+        }
+
+        if (valueType == typeof(bool))
+        {
+            return EditableValueKind.Boolean;
+        }
+
+        return EditableValueKind.Unsupported;
+    }
+
+    private void Edit()
+    {
+        if (!CanEdit)
+        {
+            return;
+        }
+
+        ResetEditValue();
+        validationMessage = null;
+        Editing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!CanEdit || propertyInfo is null || Item is null)
+        {
+            return;
+        }
+
+        if (!TryReadEditedValue(out var nextValue))
+        {
+            return;
+        }
+
+        propertyInfo.SetValue(Item, nextValue);
+        parameterValue = nextValue;
+        Editing = false;
+        validationMessage = null;
+        await ItemChanged.InvokeAsync(Item);
+    }
+
+    private Task OnTextChangedAsync(string? value)
+    {
+        editText = value;
+        validationMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnBoolChangedAsync(bool value)
+    {
+        editBool = value;
+        validationMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private void ResetEditValue()
+    {
+        editText = FormatEditValue(parameterValue);
+        editBool = parameterValue is bool value && value;
+    }
+
+    private string FormatDisplayValue(object? value)
+    {
+        var text = ValueKind == EditableValueKind.Boolean
+            ? value is bool boolValue && boolValue ? TrueText : FalseText
+            : FormatTextValue(value);
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            text = EmptyText;
+        }
+
+        return $"{Prefix}{text}{Extension}";
+    }
+
+    private string? FormatEditValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is IFormattable formattable)
+        {
+            return string.IsNullOrWhiteSpace(Format)
+                ? formattable.ToString(null, CultureInfo.InvariantCulture)
+                : formattable.ToString(Format, CultureInfo.InvariantCulture);
+        }
+
+        return value.ToString();
+    }
+
+    private string? FormatTextValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Format) && value is IFormattable formattable)
+        {
+            return formattable.ToString(Format, CultureInfo.InvariantCulture);
+        }
+
+        return Convert.ToString(value, CultureInfo.InvariantCulture);
+    }
+
+    private bool TryReadEditedValue(out object? value)
+    {
+        value = null;
+
+        switch (ValueKind)
+        {
+            case EditableValueKind.Text:
+                value = editText ?? string.Empty;
+                return true;
+            case EditableValueKind.Integer:
+                return TryReadInteger(out value);
+            case EditableValueKind.FloatingPoint:
+                return TryReadDouble(out value);
+            case EditableValueKind.Boolean:
+                value = editBool;
+                return true;
+            default:
+                validationMessage = UnsupportedText;
+                return false;
+        }
+    }
+
+    private bool TryReadInteger(out object? value)
+    {
+        value = null;
+
+        if (string.IsNullOrWhiteSpace(editText))
+        {
+            value = IsNullableProperty() ? null : 0;
+            return true;
+        }
+
+        var normalized = editText.Replace(',', '.');
+        if (int.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))
+        {
+            value = result;
+            return true;
+        }
+
+        validationMessage = "Enter a whole number.";
+        return false;
+    }
+
+    private bool TryReadDouble(out object? value)
+    {
+        value = null;
+
+        if (string.IsNullOrWhiteSpace(editText))
+        {
+            value = IsNullableProperty() ? null : 0d;
+            return true;
+        }
+
+        var normalized = editText.Replace(',', '.');
+        if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
+        {
+            value = result;
+            return true;
+        }
+
+        validationMessage = "Enter a number.";
+        return false;
+    }
+
+    private bool IsNullableProperty()
+        => propertyInfo?.PropertyType == typeof(string)
+            || Nullable.GetUnderlyingType(propertyInfo?.PropertyType ?? typeof(object)) is not null;
+
+    private string ResolveSizeCssClass()
+        => Size switch
+        {
+            EditableSize.ExtraSmall => "cda-editable--xs",
+            _ => "cda-editable--compact"
+        };
+
+    private enum EditableValueKind
+    {
+        Unsupported,
+        Text,
+        Integer,
+        FloatingPoint,
+        Boolean
+    }
+}

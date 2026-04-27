@@ -1640,7 +1640,9 @@ public sealed class AppRuntimeManager(
             ["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1",
             ["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1",
             ["ASPNETCORE_ENVIRONMENT"] = "Development",
-            ["DOTNET_ENVIRONMENT"] = "Development"
+            ["DOTNET_ENVIRONMENT"] = "Development",
+            ["CanDoItAllMcpLaneKind"] = template.LaneKind.ToString(),
+            ["CanDoItAllMcpLaunchType"] = template.LaunchType.ToString()
         };
 
         if (suppressBrowserRefresh)

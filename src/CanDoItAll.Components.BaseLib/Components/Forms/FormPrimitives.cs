@@ -13,3 +13,9 @@ public enum ModalSize
     Wide,
     Full
 }
+
+public enum EditableSize
+{
+    Compact,
+    ExtraSmall
+}

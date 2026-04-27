@@ -199,6 +199,8 @@ public sealed class ProjectStructureToolsTests
 
         public Func<Guid, string, ProjectStructureNodeEditInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnUpdateNode { get; init; }
 
+        public Func<Guid, ProjectStructureNodeMoveInput, int?, CancellationToken, Task<OperationAck>>? OnMoveNode { get; init; }
+
         public Func<Guid, ProjectStructureNodeReparentInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnReparentNode { get; init; }
 
         public Func<Guid, ProjectStructureNodeRecomposeInput, int?, CancellationToken, Task<ProjectStructureSubtreeRecompositionResult>>? OnRecomposeNode { get; init; }
@@ -272,6 +274,12 @@ public sealed class ProjectStructureToolsTests
         public Task<ProjectStructureNodeSummary> UpdateNodeAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
+        }
+
+        public Task<OperationAck> MoveNodeAsync(Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+        {
+            return OnMoveNode?.Invoke(projectId, request, estimatedMinutes, cancellationToken)
+                ?? Task.FromResult(new OperationAck(true));
         }
 
         public Task<ProjectStructureNodeSummary> ReparentNodeAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)

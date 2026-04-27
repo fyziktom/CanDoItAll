@@ -1,12 +1,12 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
+using CanDoItAll.Mcp.Core.Hosting;
 using CanDoItAll.Mcp.Core.Identity;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace CanDoItAll.Mcp.Processes;
@@ -19,28 +19,22 @@ internal static class Program
 
         var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
-        builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
-        builder.Configuration.AddEnvironmentVariables(prefix: "CanDoItAllMcp_");
-
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(options =>
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            options.LogToStandardErrorThreshold = LogLevel.Trace;
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         });
-        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Configuration.AddCanDoItAllMcpSettings(settingsPath);
+
+        builder.Logging.ConfigureCanDoItAllMcpStdioLogging();
 
         builder.Services
-            .AddOptions<McpServerOptions>()
-            .Bind(builder.Configuration)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-        builder.Services.AddSingleton<IValidateOptions<McpServerOptions>, McpServerOptionsValidator>();
+            .AddValidatedCanDoItAllMcpOptions<McpServerOptions, McpServerOptionsValidator>(builder.Configuration);
 
         builder.Services.AddSingleton<ServerInstanceIdentity>();
         builder.Services.AddSingleton<RuntimeConfiguration>();
         builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
         builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-        builder.Services.AddCanDoItAllRuntimeModules();
+        builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
         builder.Services.AddSingleton<IProcessesCoordinator, ProcessesCoordinator>();
 
         builder.Services

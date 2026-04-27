@@ -49,8 +49,8 @@ public sealed class CurrentArchitectureTemplateParityTests
 
         var software = pack.Processes["software-delivery"];
         var releaseApproval = software.Steps.Single(step => step.Key == "release-approval");
-        Assert.Equal(3, releaseApproval.Dependencies.Count);
-        Assert.Equal(3, releaseApproval.ArtifactInputs.Count);
+        Assert.Equal(4, releaseApproval.Dependencies.Count);
+        Assert.Equal(4, releaseApproval.ArtifactInputs.Count);
 
         var hotfix = pack.Processes["hotfix-rollout"];
         var emergencyApproval = hotfix.Steps.Single(step => step.Key == "approve-emergency-release");
@@ -74,7 +74,9 @@ public sealed class CurrentArchitectureTemplateParityTests
         var securityReview = software.Steps.Single(step => step.Key == "security-review");
         var releaseApproval = software.Steps.Single(step => step.Key == "release-approval");
 
-        Assert.Equal("ReviewRequired", Assert.Single(architectureReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal(
+            "ReviewRequired",
+            architectureReview.ArtifactExpectations.Single(item => item.Key == "architecture-decision-record").TrustRequirement);
         Assert.Equal("ReviewRequired", Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
         Assert.Equal("ReviewRequired", Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
         Assert.Equal("HumanApproved", Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);
@@ -93,6 +95,41 @@ public sealed class CurrentArchitectureTemplateParityTests
         Assert.Equal(2, delegationDesign.BranchOutcomes.Count);
         Assert.Equal("release-approver", safetyReview.DecisionRoleKey);
         Assert.Equal(2, safetyReview.BranchOutcomes.Count);
+    }
+
+    [Fact]
+    public void Business_plan_development_keeps_non_code_specialist_handoffs_explicit()
+    {
+        var pack = new ProcessTemplatePackLoader().Load();
+        var process = pack.Processes["business-plan-development"];
+
+        Assert.Contains(process.RoleUsages, role => role.Key == "business-strategist" && role.PreferredExecutorKind == "AI agent");
+        Assert.Contains(process.RoleUsages, role => role.Key == "financial-strategist" && role.PreferredExecutorKind == "AI agent");
+        Assert.Contains(process.RoleUsages, role => role.Key == "marketing-specialist" && role.PreferredExecutorKind == "AI agent");
+
+        var financialModeling = process.Steps.Single(step => step.Key == "financial-modeling");
+        Assert.Single(financialModeling.ArtifactInputs);
+        Assert.Equal("business-plan", financialModeling.ArtifactInputs[0].ArtifactExpectationKey);
+
+        var marketingPlan = process.Steps.Single(step => step.Key == "marketing-plan");
+        Assert.Equal(2, marketingPlan.ArtifactInputs.Count);
+        Assert.Contains(marketingPlan.ArtifactInputs, input => input.ArtifactExpectationKey == "business-plan");
+        Assert.Contains(marketingPlan.ArtifactInputs, input => input.ArtifactExpectationKey == "financial-model");
+
+        var integratedReview = process.Steps.Single(step => step.Key == "integrated-review");
+        Assert.Equal("business-strategist", integratedReview.DecisionRoleKey);
+        Assert.Equal(3, integratedReview.ArtifactInputs.Count);
+        Assert.Contains(integratedReview.BranchOutcomes, outcome => outcome.Key == "approved");
+        Assert.Contains(integratedReview.BranchOutcomes, outcome => outcome.Key == "blocked");
+
+        var approvedHandoff = process.Steps.Single(step => step.Key == "approved-execution-handoff");
+        var blockedCorrections = process.Steps.Single(step => step.Key == "blocked-correction-plan");
+        Assert.Contains(approvedHandoff.Dependencies, dependency =>
+            dependency.DependsOnStepKey == "integrated-review" &&
+            dependency.DependsOnBranchOutcomeKey == "approved");
+        Assert.Contains(blockedCorrections.Dependencies, dependency =>
+            dependency.DependsOnStepKey == "integrated-review" &&
+            dependency.DependsOnBranchOutcomeKey == "blocked");
     }
 
     [Fact]

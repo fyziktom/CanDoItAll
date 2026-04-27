@@ -116,6 +116,11 @@
                                     <StatusBadge Tone="warning" Text="Locked" />
                                 }
 
+                                @if (TryGetSchemaHealth(profile.Id) is { } rowSchemaHealth)
+                                {
+                                    <StatusBadge Tone="@DescribeSchemaTone(rowSchemaHealth)" Text="@DescribeSchemaStatus(rowSchemaHealth)" />
+                                }
+
                                 <StatusBadge Tone="neutral" Text="@DescribeSource(profile.SourceKind)" />
                             </Cluster>
                         </Status>
@@ -137,6 +142,40 @@
         <EditForm Model="databaseProfileModel" OnValidSubmit="SaveProfileAsync">
             <fieldset disabled="@IsDatabaseUiLocked" class="contents">
                 <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                    @if (SelectedSchemaHealth is { RequiresAction: true } selectedSchemaHealth)
+                    {
+                        <Alert AlertStyle="@ResolveSchemaAlertStyle(selectedSchemaHealth)"
+                               Variant="Variant.Outlined"
+                               data-testid="database-profile-schema-alert">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                                    <p class="font-semibold">Database schema needs attention</p>
+                                    <p>@selectedSchemaHealth.Summary</p>
+                                    @if (HasSchemaDetails(selectedSchemaHealth))
+                                    {
+                                        <p class="text-xs opacity-80">@DescribeSchemaDetails(selectedSchemaHealth)</p>
+                                    }
+                                </Stack>
+
+                                @if (selectedSchemaHealth.CanApplySchema)
+                                {
+                                    <Button Text="Apply current schema"
+                                            Icon="database"
+                                            ButtonStyle="ButtonStyle.Warning"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(databaseBusy || IsDatabaseUiLocked || schemaBusyProfileId == databaseProfileModel.Id)"
+                                            IsBusy="@(schemaBusyProfileId == databaseProfileModel.Id)"
+                                            Click="ApplySelectedSchemaAsync"
+                                            data-testid="database-profile-apply-schema" />
+                                }
+                            </Split>
+                        </Alert>
+                    }
+
                     <FormSection Title="Profile identity"
                                  Description="Choose a clear name first. Managed SQLite keeps storage under the control plane, while external SQLite and PostgreSQL expect explicit workspace roots.">
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
@@ -427,6 +466,14 @@
                                         Click="CreateEmptyAsync"
                                         data-testid="database-profile-create-empty" />
                             }
+                            @if (databaseProfileModel.Id.HasValue)
+                            {
+                                <Button Text="Transfer settings"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Disabled="@(databaseBusy || IsDatabaseUiLocked)"
+                                        Click="@(() => OpenTransferDialogAsync(databaseProfileModel.Id.Value))"
+                                        data-testid="database-profile-transfer-settings" />
+                            }
                         </SecondaryActions>
                         <PrimaryActions>
                             <Button Text="Save data source"
@@ -459,10 +506,207 @@
     </DetailContent>
 </ListDetailShell>
 
+<Dialog IsOpen="@transferDialogOpen"
+        Title="Transfer database settings"
+        Eyebrow="Data sources"
+        Subtitle="@TransferDialogSubtitle"
+        Size="ModalSize.Wide"
+        TestId="database-transfer-dialog"
+        OnClose="CloseTransferDialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (!string.IsNullOrWhiteSpace(transferMessage))
+            {
+                <div class="@TransferMessageClass"
+                     data-testid="database-transfer-message">
+                    @transferMessage
+                </div>
+            }
+
+            @if (transferTargetSchemaHealth is { RequiresAction: true } targetSchemaHealth)
+            {
+                <Alert AlertStyle="@ResolveSchemaAlertStyle(targetSchemaHealth)"
+                       Variant="Variant.Outlined"
+                       data-testid="database-transfer-target-schema-alert">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <p class="font-semibold">Target database schema needs attention</p>
+                            <p>@targetSchemaHealth.Summary</p>
+                            @if (HasSchemaDetails(targetSchemaHealth))
+                            {
+                                <p class="text-xs opacity-80">@DescribeSchemaDetails(targetSchemaHealth)</p>
+                            }
+                        </Stack>
+
+                        @if (targetSchemaHealth.CanApplySchema && transferTargetProfileId.HasValue)
+                        {
+                            <Button Text="Apply target schema"
+                                    Icon="database"
+                                    ButtonStyle="ButtonStyle.Warning"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@(transferBusy || schemaBusyProfileId == transferTargetProfileId)"
+                                    IsBusy="@(schemaBusyProfileId == transferTargetProfileId)"
+                                    Click="ApplyTransferTargetSchemaAsync"
+                                    data-testid="database-transfer-target-apply-schema" />
+                        }
+                    </Split>
+                </Alert>
+            }
+
+            @if (transferSourceSchemaHealth is { RequiresAction: true } sourceSchemaHealth)
+            {
+                <Alert AlertStyle="@ResolveSchemaAlertStyle(sourceSchemaHealth)"
+                       Variant="Variant.Outlined"
+                       data-testid="database-transfer-source-schema-alert">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <p class="font-semibold">Source database schema needs attention</p>
+                            <p>@sourceSchemaHealth.Summary</p>
+                            @if (HasSchemaDetails(sourceSchemaHealth))
+                            {
+                                <p class="text-xs opacity-80">@DescribeSchemaDetails(sourceSchemaHealth)</p>
+                            }
+                        </Stack>
+
+                        @if (sourceSchemaHealth.CanApplySchema && transferSourceProfileId.HasValue)
+                        {
+                            <Button Text="Apply source schema"
+                                    Icon="database"
+                                    ButtonStyle="ButtonStyle.Warning"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@(transferBusy || schemaBusyProfileId == transferSourceProfileId)"
+                                    IsBusy="@(schemaBusyProfileId == transferSourceProfileId)"
+                                    Click="ApplyTransferSourceSchemaAsync"
+                                    data-testid="database-transfer-source-apply-schema" />
+                        }
+                    </Split>
+                </Alert>
+            }
+
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
+                     data-testid="database-transfer-target-summary">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Target database</p>
+                        <p class="text-base font-semibold text-slate-950">@TransferTargetName</p>
+                        <p class="text-sm leading-6 text-slate-600 break-all">@TransferTargetDescriptor</p>
+                    </Stack>
+                </div>
+
+                <div>
+                    <label class="cda-field-label">Copy settings from</label>
+                    <select class="cda-input"
+                            value="@transferSourceProfileId?.ToString()"
+                            disabled="@(transferBusy || transferSources.Count == 0)"
+                            @onchange="ChangeTransferSourceAsync"
+                            data-testid="database-transfer-source-select">
+                        <option value="">Select source database</option>
+                        @foreach (var source in transferSources)
+                        {
+                            <option value="@source.ProfileId">@source.DisplayName (@DescribeSource(source.SourceKind))</option>
+                        }
+                    </select>
+                    @if (transferSources.Count == 0)
+                    {
+                        <p class="mt-2 text-sm leading-6 text-slate-600">No other saved database profiles are available as a source.</p>
+                    }
+                </div>
+            </Grid>
+
+            @if (transferItems.Count > 0)
+            {
+                <Stack GapScale="LayoutGap.Small" data-testid="database-transfer-items">
+                    @foreach (var item in transferItems)
+                    {
+                        <label class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3"
+                               data-testid="@($"database-transfer-item-{item.Descriptor.Key}")">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" AlignItems="AlignItems.Start">
+                                    <input type="checkbox"
+                                           class="mt-1 h-4 w-4 rounded border-slate-300"
+                                           checked="@selectedTransferItemKeys.Contains(item.Descriptor.Key)"
+                                           disabled="@(transferBusy || !item.IsAvailable)"
+                                           @onchange="@((args) => ToggleTransferItem(item.Descriptor.Key, args))" />
+                                    <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                            <span class="font-semibold text-slate-950">@item.Descriptor.Label</span>
+                                            @if (item.Descriptor.IsSensitive)
+                                            {
+                                                <StatusBadge Tone="warning" Text="Encrypted" />
+                                            }
+                                            @if (!item.IsAvailable)
+                                            {
+                                                <StatusBadge Tone="neutral" Text="Empty source" />
+                                            }
+                                        </Cluster>
+                                        <p class="text-sm leading-6 text-slate-600">@item.Descriptor.Description</p>
+                                        <p class="text-sm leading-6 text-slate-600">@item.Summary</p>
+                                        @if (!string.IsNullOrWhiteSpace(item.Warning))
+                                        {
+                                            <p class="text-sm leading-6 text-amber-700">@item.Warning</p>
+                                        }
+                                    </Stack>
+                                </Cluster>
+
+                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-slate-500">
+                                    <span>Source: @item.SourceRecordCount</span>
+                                    <span>Target: @item.TargetRecordCount</span>
+                                </Stack>
+                            </Split>
+                        </label>
+                    }
+                </Stack>
+            }
+            else if (transferSourceProfileId.HasValue && !transferBusy && !TransferSchemaRequiresAction)
+            {
+                <EmptyState Eyebrow="No transfer items"
+                            Title="No settings groups are available"
+                            Description="The selected source database did not return transferable settings." />
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <p class="text-sm leading-6 text-slate-600">Encrypted values are copied as protected payloads and are not shown here.</p>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@transferBusy"
+                        Click="CloseTransferDialog" />
+                <Button Text="Transfer selected"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@(!CanTransferSelected)"
+                        Click="TransferSelectedSettingsAsync"
+                        data-testid="database-transfer-apply" />
+            </Cluster>
+        </Split>
+    </Footer>
+</Dialog>
+
 @code {
     private DatabaseProfileEditorModel databaseProfileModel = NewManagedSqliteProfile();
     private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
     private DatabaseSelectionStateModel? currentSelection;
+    private IReadOnlyList<DatabaseTransferSourceSummary> transferSources = [];
+    private IReadOnlyList<DatabaseTransferItemPreview> transferItems = [];
+    private readonly HashSet<string> selectedTransferItemKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<Guid, DatabaseProfileSchemaHealth> schemaHealthByProfileId = [];
     private string profileSearch = string.Empty;
     private string cloneDisplayName = string.Empty;
     private string snapshotProfileName = string.Empty;
@@ -472,7 +716,16 @@
     private string? latestSnapshotCid;
     private string? databaseMessage;
     private string databaseMessageTone = "neutral";
+    private string? transferMessage;
+    private string transferMessageTone = "neutral";
+    private Guid? transferTargetProfileId;
+    private Guid? transferSourceProfileId;
+    private Guid? schemaBusyProfileId;
+    private DatabaseProfileSchemaHealth? transferTargetSchemaHealth;
+    private DatabaseProfileSchemaHealth? transferSourceSchemaHealth;
     private bool databaseBusy;
+    private bool transferDialogOpen;
+    private bool transferBusy;
 
     private bool IsDatabaseUiLocked => currentSelection?.IsRuntimeLocked == true;
 
@@ -487,6 +740,55 @@
         => databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql ||
            (databaseProfileModel.ProviderKind == DatabaseProviderKind.Sqlite &&
             databaseProfileModel.SourceKind is DatabaseProfileSourceKind.ManagedSqlite or DatabaseProfileSourceKind.ExternalSqliteFile or DatabaseProfileSourceKind.ImportedSqlite);
+
+    private DatabaseProfileSchemaHealth? SelectedSchemaHealth
+        => databaseProfileModel.Id.HasValue &&
+           schemaHealthByProfileId.TryGetValue(databaseProfileModel.Id.Value, out var schemaHealth)
+            ? schemaHealth
+            : null;
+
+    private bool CanTransferSelected
+        => transferDialogOpen &&
+           !transferBusy &&
+           transferTargetProfileId.HasValue &&
+           transferSourceProfileId.HasValue &&
+           selectedTransferItemKeys.Count > 0 &&
+           !TransferSchemaRequiresAction;
+
+    private bool TransferSchemaRequiresAction
+        => transferTargetSchemaHealth?.RequiresAction == true ||
+           transferSourceSchemaHealth?.RequiresAction == true;
+
+    private string TransferDialogSubtitle
+        => transferTargetProfileId.HasValue
+            ? "Choose a source database and the settings groups to copy into the selected target."
+            : "Choose a target database before transferring settings.";
+
+    private string TransferTargetName
+        => databaseProfiles.FirstOrDefault(profile => profile.Id == transferTargetProfileId)?.DisplayName
+           ?? databaseProfileModel.DisplayName
+           ?? "Selected database";
+
+    private string TransferTargetDescriptor
+        => databaseProfiles.FirstOrDefault(profile => profile.Id == transferTargetProfileId)?.Descriptor
+           ?? "Save or select a database profile first.";
+
+    private string TransferMessageClass
+    {
+        get
+        {
+            var toneClass = transferMessageTone switch
+            {
+                "success" => "border-emerald-200 bg-emerald-50 text-emerald-950",
+                "warning" => "border-amber-300 bg-amber-50 text-amber-950",
+                "danger" => "border-rose-200 bg-rose-50 text-rose-950",
+                "info" => "border-sky-200 bg-sky-50 text-sky-950",
+                _ => "border-slate-200 bg-slate-50 text-slate-700"
+            };
+
+            return $"rounded-[1.35rem] border px-4 py-3 text-sm leading-6 {toneClass}";
+        }
+    }
 
     private IReadOnlyList<DatabaseProfileSummary> FilteredProfiles => databaseProfiles
         .Where(profile =>
@@ -510,12 +812,14 @@
         if (selectedProfileId.HasValue)
         {
             databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(selectedProfileId.Value);
+            await RefreshSelectedSchemaHealthAsync();
             return;
         }
 
         if (IsDatabaseUiLocked)
         {
             databaseProfileModel = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync();
+            await RefreshSelectedSchemaHealthAsync();
             return;
         }
 
@@ -524,6 +828,7 @@
             databaseProfiles.Any(profile => profile.Id == currentSelection.ActiveProfileId))
         {
             databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(currentSelection.ActiveProfileId);
+            await RefreshSelectedSchemaHealthAsync();
             return;
         }
 
@@ -531,6 +836,7 @@
             databaseProfiles.Any(profile => profile.Id == databaseProfileModel.Id.Value))
         {
             databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(databaseProfileModel.Id.Value);
+            await RefreshSelectedSchemaHealthAsync();
             return;
         }
 
@@ -541,6 +847,7 @@
     {
         databaseMessage = null;
         databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(id);
+        await RefreshSelectedSchemaHealthAsync();
     }
 
     private Task ResetManagedSqliteProfileAsync()
@@ -626,8 +933,9 @@
             return;
         }
 
+        var targetProfileId = databaseProfileModel.Id.Value;
         databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.CreateEmptyAsync(databaseProfileModel.Id.Value);
+        var result = await DatabaseProfileWorkspaceService.CreateEmptyAsync(targetProfileId);
         databaseBusy = false;
         if (result.IsFailure)
         {
@@ -635,8 +943,277 @@
             return;
         }
 
-        await ReloadAsync(databaseProfileModel.Id.Value);
-        SetDatabaseMessage("Empty database created and schema bootstrapped.", "success");
+        await ReloadAsync(targetProfileId);
+        SetDatabaseMessage("Empty database created and schema bootstrapped. Choose any baseline settings to transfer.", "success");
+        await OpenTransferDialogAsync(targetProfileId);
+    }
+
+    private async Task ApplySelectedSchemaAsync()
+    {
+        if (!databaseProfileModel.Id.HasValue)
+        {
+            SetDatabaseMessage("Save the profile before applying the schema.", "warning");
+            return;
+        }
+
+        var profileId = databaseProfileModel.Id.Value;
+        databaseBusy = true;
+        var result = await ApplySchemaForProfileAsync(profileId);
+        databaseBusy = false;
+        if (result.IsFailure)
+        {
+            SetDatabaseMessage(DescribeErrors(result.Errors), "danger");
+            return;
+        }
+
+        var schemaHealth = await RefreshSchemaHealthAsync(profileId);
+        SetDatabaseMessage(
+            schemaHealth?.RequiresAction == true
+                ? schemaHealth.Summary
+                : "Current database schema applied.",
+            schemaHealth?.RequiresAction == true ? "warning" : "success");
+    }
+
+    private async Task<Result> ApplySchemaForProfileAsync(Guid profileId)
+    {
+        schemaBusyProfileId = profileId;
+        try
+        {
+            return await DatabaseProfileWorkspaceService.ApplySchemaAsync(profileId);
+        }
+        finally
+        {
+            schemaBusyProfileId = null;
+        }
+    }
+
+    private async Task OpenTransferDialogAsync(Guid targetProfileId)
+    {
+        transferDialogOpen = true;
+        transferBusy = true;
+        transferTargetProfileId = targetProfileId;
+        transferSourceProfileId = null;
+        transferTargetSchemaHealth = null;
+        transferSourceSchemaHealth = null;
+        transferItems = [];
+        transferSources = [];
+        selectedTransferItemKeys.Clear();
+        transferMessage = null;
+        transferMessageTone = "neutral";
+
+        try
+        {
+            transferSources = await DatabaseProfileWorkspaceService.ListTransferSourcesAsync(targetProfileId);
+            transferSourceProfileId = ResolveDefaultTransferSource(targetProfileId);
+        }
+        catch (Exception ex)
+        {
+            transferMessage = $"Could not load transfer sources: {ex.Message}";
+            transferMessageTone = "danger";
+        }
+        finally
+        {
+            transferBusy = false;
+        }
+
+        if (transferSourceProfileId.HasValue)
+        {
+            await RefreshTransferPreviewAsync(selectAvailableItems: true);
+        }
+    }
+
+    private Guid? ResolveDefaultTransferSource(Guid targetProfileId)
+    {
+        if (currentSelection is not null &&
+            currentSelection.ActiveProfileId != targetProfileId &&
+            transferSources.Any(source => source.ProfileId == currentSelection.ActiveProfileId))
+        {
+            return currentSelection.ActiveProfileId;
+        }
+
+        return transferSources.FirstOrDefault()?.ProfileId;
+    }
+
+    private async Task ChangeTransferSourceAsync(ChangeEventArgs args)
+    {
+        if (!Guid.TryParse(args.Value?.ToString(), out var sourceProfileId))
+        {
+            transferSourceProfileId = null;
+            transferItems = [];
+            selectedTransferItemKeys.Clear();
+            transferSourceSchemaHealth = null;
+            return;
+        }
+
+        transferSourceProfileId = sourceProfileId;
+        await RefreshTransferPreviewAsync(selectAvailableItems: true);
+    }
+
+    private async Task RefreshTransferPreviewAsync(bool selectAvailableItems)
+    {
+        if (!transferSourceProfileId.HasValue || !transferTargetProfileId.HasValue)
+        {
+            transferItems = [];
+            selectedTransferItemKeys.Clear();
+            transferSourceSchemaHealth = null;
+            transferTargetSchemaHealth = null;
+            return;
+        }
+
+        transferBusy = true;
+        transferMessage = null;
+        try
+        {
+            await RefreshTransferSchemaHealthAsync();
+            if (TransferSchemaRequiresAction)
+            {
+                transferItems = [];
+                selectedTransferItemKeys.Clear();
+                transferMessage = "Resolve or apply the current schema before previewing transfer settings.";
+                transferMessageTone = "warning";
+                return;
+            }
+
+            transferItems = await DatabaseProfileWorkspaceService.PreviewTransferAsync(
+                transferSourceProfileId.Value,
+                transferTargetProfileId.Value);
+
+            if (selectAvailableItems)
+            {
+                selectedTransferItemKeys.Clear();
+                foreach (var item in transferItems.Where(item => item.IsAvailable))
+                {
+                    selectedTransferItemKeys.Add(item.Descriptor.Key);
+                }
+            }
+            else
+            {
+                selectedTransferItemKeys.IntersectWith(transferItems.Select(item => item.Descriptor.Key));
+            }
+        }
+        catch (Exception ex)
+        {
+            transferItems = [];
+            selectedTransferItemKeys.Clear();
+            transferMessage = $"Could not preview settings transfer: {ex.Message}";
+            transferMessageTone = "danger";
+        }
+        finally
+        {
+            transferBusy = false;
+        }
+    }
+
+    private async Task RefreshTransferSchemaHealthAsync()
+    {
+        transferTargetSchemaHealth = transferTargetProfileId.HasValue
+            ? await RefreshSchemaHealthAsync(transferTargetProfileId.Value)
+            : null;
+        transferSourceSchemaHealth = transferSourceProfileId.HasValue
+            ? await RefreshSchemaHealthAsync(transferSourceProfileId.Value)
+            : null;
+    }
+
+    private async Task ApplyTransferTargetSchemaAsync()
+    {
+        if (!transferTargetProfileId.HasValue)
+        {
+            return;
+        }
+
+        await ApplyTransferSchemaAsync(transferTargetProfileId.Value, "target");
+    }
+
+    private async Task ApplyTransferSourceSchemaAsync()
+    {
+        if (!transferSourceProfileId.HasValue)
+        {
+            return;
+        }
+
+        await ApplyTransferSchemaAsync(transferSourceProfileId.Value, "source");
+    }
+
+    private async Task ApplyTransferSchemaAsync(Guid profileId, string role)
+    {
+        transferBusy = true;
+        transferMessage = null;
+        var result = await ApplySchemaForProfileAsync(profileId);
+        transferBusy = false;
+        if (result.IsFailure)
+        {
+            transferMessage = DescribeErrors(result.Errors);
+            transferMessageTone = "danger";
+            await RefreshTransferSchemaHealthAsync();
+            return;
+        }
+
+        await RefreshTransferSchemaHealthAsync();
+        if (TransferSchemaRequiresAction)
+        {
+            transferMessage = $"Schema apply finished, but the {role} database still needs attention.";
+            transferMessageTone = "warning";
+            return;
+        }
+
+        await RefreshTransferPreviewAsync(selectAvailableItems: true);
+        if (string.IsNullOrWhiteSpace(transferMessage))
+        {
+            transferMessage = $"Current schema applied to the {role} database.";
+            transferMessageTone = "success";
+        }
+    }
+
+    private void ToggleTransferItem(string key, ChangeEventArgs args)
+    {
+        var selected = args.Value is bool value
+            ? value
+            : string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        if (selected)
+        {
+            selectedTransferItemKeys.Add(key);
+            return;
+        }
+
+        selectedTransferItemKeys.Remove(key);
+    }
+
+    private async Task TransferSelectedSettingsAsync()
+    {
+        if (!transferSourceProfileId.HasValue || !transferTargetProfileId.HasValue)
+        {
+            transferMessage = "Select a source and target database before transferring settings.";
+            transferMessageTone = "warning";
+            return;
+        }
+
+        transferBusy = true;
+        transferMessage = null;
+        var result = await DatabaseProfileWorkspaceService.TransferSettingsAsync(new DatabaseTransferRequest
+        {
+            SourceProfileId = transferSourceProfileId.Value,
+            TargetProfileId = transferTargetProfileId.Value,
+            ItemKeys = selectedTransferItemKeys.ToList(),
+            ReplaceExisting = true
+        });
+        transferBusy = false;
+
+        transferMessage = string.Join(" ", result.Items.Select(item => $"{item.Label}: {item.Message}"));
+        transferMessageTone = result.IsSuccess ? "success" : "danger";
+        SetDatabaseMessage(result.IsSuccess
+            ? $"Transferred {result.RecordsCopied} setting record(s)."
+            : "One or more settings groups could not be transferred.",
+            result.IsSuccess ? "success" : "danger");
+
+        await RefreshTransferPreviewAsync(selectAvailableItems: false);
+        await ReloadAsync(transferTargetProfileId.Value);
+    }
+
+    private Task CloseTransferDialog()
+    {
+        transferDialogOpen = false;
+        transferBusy = false;
+        return Task.CompletedTask;
     }
 
     private async Task CreateCloneAsync()
@@ -768,8 +1345,17 @@
             return;
         }
 
+        var profileId = databaseProfileModel.Id.Value;
         databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.ActivateProfileAsync(databaseProfileModel.Id.Value);
+        var schemaHealth = await RefreshSchemaHealthAsync(profileId);
+        if (schemaHealth?.RequiresAction == true)
+        {
+            databaseBusy = false;
+            SetDatabaseMessage("Apply the current schema before activating this data source.", "warning");
+            return;
+        }
+
+        var result = await DatabaseProfileWorkspaceService.ActivateProfileAsync(profileId);
         databaseBusy = false;
         if (result.IsFailure)
         {
@@ -811,6 +1397,27 @@
         databaseMessageTone = tone;
     }
 
+    private Task RefreshSelectedSchemaHealthAsync()
+    {
+        return databaseProfileModel.Id.HasValue
+            ? RefreshSchemaHealthAsync(databaseProfileModel.Id.Value)
+            : Task.CompletedTask;
+    }
+
+    private async Task<DatabaseProfileSchemaHealth?> RefreshSchemaHealthAsync(Guid profileId)
+    {
+        var schemaHealth = await DatabaseProfileWorkspaceService.GetSchemaHealthAsync(profileId);
+        schemaHealthByProfileId[profileId] = schemaHealth;
+        return schemaHealth;
+    }
+
+    private DatabaseProfileSchemaHealth? TryGetSchemaHealth(Guid profileId)
+    {
+        return schemaHealthByProfileId.TryGetValue(profileId, out var schemaHealth)
+            ? schemaHealth
+            : null;
+    }
+
     private void RefreshSnapshotDrafts()
     {
         cloneDisplayName = currentSelection is null
@@ -825,6 +1432,61 @@
     private static string DescribeErrors(IReadOnlyList<Error> errors)
     {
         return string.Join(" ", errors.Select(error => error.Message));
+    }
+
+    private static string DescribeSchemaStatus(DatabaseProfileSchemaHealth schemaHealth)
+    {
+        return schemaHealth.Status switch
+        {
+            DatabaseProfileSchemaStatus.Current => "Schema current",
+            DatabaseProfileSchemaStatus.NeedsMigration => "Needs schema",
+            DatabaseProfileSchemaStatus.Unavailable => "Schema check failed",
+            _ => "Schema unknown"
+        };
+    }
+
+    private static string DescribeSchemaTone(DatabaseProfileSchemaHealth schemaHealth)
+    {
+        return schemaHealth.Status switch
+        {
+            DatabaseProfileSchemaStatus.Current => "success",
+            DatabaseProfileSchemaStatus.NeedsMigration => "warning",
+            DatabaseProfileSchemaStatus.Unavailable => "danger",
+            _ => "neutral"
+        };
+    }
+
+    private static AlertStyle ResolveSchemaAlertStyle(DatabaseProfileSchemaHealth schemaHealth)
+    {
+        return schemaHealth.Status switch
+        {
+            DatabaseProfileSchemaStatus.Unavailable => AlertStyle.Danger,
+            DatabaseProfileSchemaStatus.NeedsMigration => AlertStyle.Warning,
+            _ => AlertStyle.Info
+        };
+    }
+
+    private static bool HasSchemaDetails(DatabaseProfileSchemaHealth schemaHealth)
+    {
+        return schemaHealth.PendingMigrations.Count > 0 || schemaHealth.SchemaIssues.Count > 0;
+    }
+
+    private static string DescribeSchemaDetails(DatabaseProfileSchemaHealth schemaHealth)
+    {
+        if (schemaHealth.PendingMigrations.Count > 0)
+        {
+            var visibleMigrations = schemaHealth.PendingMigrations.Take(3).ToList();
+            var suffix = schemaHealth.PendingMigrations.Count > visibleMigrations.Count
+                ? $" and {schemaHealth.PendingMigrations.Count - visibleMigrations.Count} more"
+                : string.Empty;
+            return $"Pending: {string.Join(", ", visibleMigrations)}{suffix}.";
+        }
+
+        var visibleIssues = schemaHealth.SchemaIssues.Take(4).ToList();
+        var issueSuffix = schemaHealth.SchemaIssues.Count > visibleIssues.Count
+            ? $" and {schemaHealth.SchemaIssues.Count - visibleIssues.Count} more"
+            : string.Empty;
+        return $"Missing: {string.Join(", ", visibleIssues)}{issueSuffix}.";
     }
 
     private static string BuildProfileSummary(DatabaseProfileSummary profile)

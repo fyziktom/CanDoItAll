@@ -13,11 +13,12 @@ public sealed class ProcessTemplatePackLoaderTests
         var pack = loader.Load();
 
         Assert.Equal("candoitall-software-process-template-pack", pack.Manifest.PackKey);
-        Assert.Equal(9, pack.Processes.Count);
-        Assert.Equal(5, pack.BaselineScenarios.Count);
+        Assert.Equal(10, pack.Processes.Count);
+        Assert.Equal(6, pack.BaselineScenarios.Count);
         Assert.True(pack.SharedRoles.ContainsKey("review-lead"));
         Assert.True(pack.Processes.ContainsKey("branching-code-review"));
         Assert.True(pack.Processes.ContainsKey("ai-assisted-change-delivery"));
+        Assert.True(pack.Processes.ContainsKey("business-plan-development"));
         Assert.NotEmpty(pack.ChromeActions.DefinitionQuickCreateActions);
     }
 
@@ -58,9 +59,10 @@ public sealed class ProcessTemplatePackLoaderTests
     {
         using var packClone = CreatePackClone(ProcessTemplatePackLoader.FindPackRoot());
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
-        services.AddProcessesModule();
+        services.AddProcessesModule(configuration);
         services.Configure<ProcessTemplatePackOptions>(options => options.PackRoot = packClone.RootPath);
         using var provider = services.BuildServiceProvider();
 

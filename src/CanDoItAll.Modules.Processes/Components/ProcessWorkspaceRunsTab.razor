@@ -30,6 +30,10 @@
                         <p class="text-sm leading-6 text-slate-500">
                             @selectedRun.EstimatedCost.ToString("C") estimated / @selectedRun.ActualCost.ToString("C") actual
                         </p>
+                        @if (!string.IsNullOrWhiteSpace(Presenter.SelectedRunHealth.ActionableReason))
+                        {
+                            <p class="text-sm leading-6 text-slate-600">@Presenter.SelectedRunHealth.ActionableReason</p>
+                        }
                     </Stack>
                     <Cluster Gap="LayoutGap.Small"
                              Wrap="FlexWrap.Wrap">
@@ -39,6 +43,23 @@
                                      Text="@selectedRun.OperatingMode.ToString()" />
                         <StatusBadge Tone="neutral"
                                      Text="@($"{selectedRun.TotalStepCount} steps")" />
+                        <StatusBadge Tone="info"
+                                     Text="@($"{Presenter.SelectedRunHealth.LatestAttemptCount} attempts")" />
+                        @if (Presenter.SelectedRunHealth.PendingApprovalCount > 0)
+                        {
+                            <StatusBadge Tone="warning"
+                                         Text="@($"{Presenter.SelectedRunHealth.PendingApprovalCount} approvals waiting")" />
+                        }
+                        @if (Presenter.SelectedRunHealth.MissingArtifactCount > 0)
+                        {
+                            <StatusBadge Tone="warning"
+                                         Text="@($"{Presenter.SelectedRunHealth.MissingArtifactCount} missing artifacts")" />
+                        }
+                        @if (Presenter.SelectedRunHealth.DeadLetteredOutboxCount > 0)
+                        {
+                            <StatusBadge Tone="danger"
+                                         Text="@($"{Presenter.SelectedRunHealth.DeadLetteredOutboxCount} dead-lettered")" />
+                        }
                         <StatusBadge Tone="neutral"
                                      Text="@($"updated {selectedRun.UpdatedAtUtc.LocalDateTime:g}")" />
                     </Cluster>

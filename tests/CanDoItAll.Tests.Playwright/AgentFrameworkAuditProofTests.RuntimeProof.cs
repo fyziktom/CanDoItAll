@@ -359,6 +359,13 @@ public sealed partial class AgentFrameworkAuditProofTests
         Guid SourceRoleRequirementId,
         Guid TargetRoleRequirementId);
 
+    private sealed record AgentRecoveryBrowserSeed(
+        Guid ProjectId,
+        Guid DefinitionId,
+        Guid RunId,
+        string StepTitle,
+        string ArtifactTitle);
+
     private sealed record CalculatorScenarioSeed(
         Guid ProjectId,
         Guid DefinitionId,

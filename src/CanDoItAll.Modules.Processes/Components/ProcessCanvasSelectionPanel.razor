@@ -154,7 +154,32 @@ else if (RuntimeStep is not null)
                 <Cluster Gap="LayoutGap.Small">
                     <StatusBadge Tone="@RuntimeTone" Text="@RuntimeStep.Status.ToString()" />
                     <StatusBadge Tone="neutral" Text="@RuntimeStep.StepKind.ToString()" />
+                    <StatusBadge Tone="info" Text="@($"{RuntimeStep.Health.AttemptCount} attempts")" />
+                    @if (!string.IsNullOrWhiteSpace(RuntimeStep.Health.LatestAttemptStatus))
+                    {
+                        <StatusBadge Tone="@RuntimeStep.Health.LatestAttemptTone" Text="@RuntimeStep.Health.LatestAttemptStatus" />
+                    }
                 </Cluster>
+                @if (!string.IsNullOrWhiteSpace(RuntimeStep.Health.ActionableReason))
+                {
+                    <p class="text-sm leading-6 text-slate-600"
+                       data-testid="processes-canvas-selection-health-reason">
+                        @RuntimeStep.Health.ActionableReason
+                    </p>
+                }
+                @if (RuntimeStep.ArtifactExpectations.Count > 0)
+                {
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Artifact obligations</p>
+                        @foreach (var artifact in RuntimeStep.ArtifactExpectations)
+                        {
+                            <Split Gap="LayoutGap.Small">
+                                <p class="text-sm text-slate-700">@artifact.Title</p>
+                                <StatusBadge Tone="@ResolveArtifactTone(artifact.Status)" Text="@artifact.Status.ToString()" />
+                            </Split>
+                        }
+                    </Stack>
+                }
                 <Grid Gap="LayoutGap.Small"
                       ColumnsMd="4">
                     <MetricCard Label="Wait" Value="@($"{RuntimeStep.WaitMinutes}m")" />
@@ -210,6 +235,13 @@ else if (RuntimeStep is not null)
                 <Button Text="Record artifact"
                         ButtonStyle="ButtonStyle.Light"
                         Click="RecordRuntimeArtifact" />
+                @if (RuntimeStep.Health.CanManualRerun)
+                {
+                    <Button Text="Rerun agent step"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="RerunRuntimeStep"
+                            data-testid="processes-canvas-selection-rerun-agent-step" />
+                }
                 <Button Text="More actions"
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenActionDialog" />
@@ -288,6 +320,9 @@ else if (RuntimeStep is not null)
     [Parameter]
     public EventCallback RecordRuntimeArtifact { get; set; }
 
+    [Parameter]
+    public EventCallback RerunRuntimeStep { get; set; }
+
     private string DefinitionLeadText
         => DefinitionStep is null
             ? string.Empty
@@ -326,6 +361,18 @@ else if (RuntimeStep is not null)
             ProcessStepRunStatus.Failed => "danger",
             _ => "neutral"
         };
+
+    private static string ResolveArtifactTone(ProcessArtifactExpectationSatisfactionStatus status)
+    {
+        return status switch
+        {
+            ProcessArtifactExpectationSatisfactionStatus.Satisfied => "mint",
+            ProcessArtifactExpectationSatisfactionStatus.AutoProjected => "info",
+            ProcessArtifactExpectationSatisfactionStatus.Missing => "warning",
+            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed => "danger",
+            _ => "neutral"
+        };
+    }
 
     private Task HandleSelectedRuntimeBranchOutcomeChanged(Guid? branchOutcomeId)
     {

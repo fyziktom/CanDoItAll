@@ -158,7 +158,7 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunAsync_leaves_automation_dispatch_for_durable_worker()
+    public async Task StartRunAsync_enqueues_automation_dispatch_for_durable_processing()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
         await using var scope = harness.Services.CreateAsyncScope();
@@ -225,7 +225,9 @@ public sealed class ProcessOutboxIntegrationTests
         });
 
         Assert.True(runResult.IsSuccess);
+
         Assert.Equal(1, await outboxService.ProcessPendingAsync());
+
         Assert.Equal(1, harness.AutomationDispatch.CallCount);
 
         var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
@@ -253,6 +255,60 @@ public sealed class ProcessOutboxIntegrationTests
         Assert.Equal(ProcessOutboxRecordStatus.Completed, latestDispatchRecord.Status);
         Assert.Equal(1, latestDispatchRecord.AttemptCount);
         Assert.Equal(2, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
+    public async Task Automation_dispatch_lease_prevents_parallel_reclaim_during_long_agent_work()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        harness.AutomationDispatch.HoldDispatch = true;
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox long automation lease");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Long automation dispatch lease",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate long automation dispatch lease"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstDrain = outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1));
+        await harness.AutomationDispatch.FirstDispatchStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value));
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
+        Assert.Equal(1, automationDispatchRecord.AttemptCount);
+        Assert.True(automationDispatchRecord.LeaseExpiresAtUtc >= DateTimeOffset.UtcNow.AddMinutes(20));
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+
+        Assert.Equal(0, await outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1)));
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+
+        harness.AutomationDispatch.ReleaseDispatch();
+        Assert.Equal(1, await firstDrain);
+        await WaitForAsync(
+            async () =>
+            {
+                var records = await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value);
+                return records.Count == 1 &&
+                       records[0].Status == ProcessOutboxRecordStatus.Completed &&
+                       records[0].AttemptCount == 1;
+            },
+            TimeSpan.FromSeconds(5));
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -432,6 +488,22 @@ public sealed class ProcessOutboxIntegrationTests
             .AnyAsync(item => item.Id == runId);
     }
 
+    private static async Task WaitForAsync(Func<Task<bool>> predicate, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await predicate())
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
+
+        Assert.True(await predicate(), "The expected background process did not complete before the timeout.");
+    }
+
     private sealed class ProcessOutboxHarness : IAsyncDisposable
     {
         private ProcessOutboxHarness(
@@ -604,13 +676,38 @@ public sealed class ProcessOutboxIntegrationTests
     private sealed class TrackingAutomationDispatchService : IProcessRunAutomationDispatchService
     {
         private int callCount;
+        private readonly TaskCompletionSource firstDispatchStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource releaseDispatch = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public int CallCount => callCount;
 
-        public Task DispatchAsync(Guid processRunId, Guid? triggerStepRunId, string trigger, CancellationToken cancellationToken = default)
+        public bool HoldDispatch { get; set; }
+
+        public Task FirstDispatchStarted => firstDispatchStarted.Task;
+
+        public void ReleaseDispatch()
+        {
+            releaseDispatch.TrySetResult();
+        }
+
+        public async Task DispatchAsync(
+            Guid processRunId,
+            Guid? triggerStepRunId,
+            string trigger,
+            Func<CancellationToken, Task>? renewLeaseAsync = null,
+            CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref callCount);
-            return Task.CompletedTask;
+            if (renewLeaseAsync is not null)
+            {
+                await renewLeaseAsync(cancellationToken);
+            }
+
+            firstDispatchStarted.TrySetResult();
+            if (HoldDispatch)
+            {
+                await releaseDispatch.Task.WaitAsync(cancellationToken);
+            }
         }
     }
 }

@@ -38,6 +38,10 @@
       "RelativePath": "processes/customer-onboarding"
     },
     {
+      "Key": "business-plan-development",
+      "RelativePath": "processes/business-plan-development"
+    },
+    {
       "Key": "incident-response",
       "RelativePath": "processes/incident-response"
     },

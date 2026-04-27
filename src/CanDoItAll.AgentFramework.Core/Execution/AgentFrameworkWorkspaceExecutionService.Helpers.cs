@@ -1,0 +1,671 @@
+using CanDoItAll.AgentFramework.Models;
+using System.Diagnostics;
+
+namespace CanDoItAll.AgentFramework.Core;
+
+internal sealed partial class AgentFrameworkWorkspaceExecutionService
+{
+    private sealed record PreparedExecutionRunStart(
+        SandboxWorkspaceCatalog Catalog,
+        AgentDefinition Agent,
+        ProviderProfile Provider,
+        ChatSessionRecord Session,
+        ExecutionRunRecord Run,
+        ChatMessageRecord UserMessage);
+
+    private sealed record ExecutionStateMutation(
+        ExecutionRunRecord? Run = null,
+        ChatSessionRecord? Session = null,
+        IReadOnlyList<ExecutionApprovalRecord>? RunApprovals = null,
+        AgentRunMetric? Metric = null);
+
+    private Task<SandboxWorkspaceExecutionState> UpdateExecutionStateAsync(
+        Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,
+        CancellationToken cancellationToken)
+    {
+        return store.UpdateExecutionAsync(update, cancellationToken);
+    }
+
+    private ISandboxWorkspaceExecutionRunStore? TryGetExecutionRunStore()
+        => store as ISandboxWorkspaceExecutionRunStore;
+
+    private async Task AppendExecutionLogAsync(
+        Guid executionRunId,
+        Guid agentId,
+        Guid? chatSessionId,
+        ExecutionState state,
+        string phase,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        var entry = new ExecutionLogEntry(
+            Id: Guid.NewGuid(),
+            AgentId: agentId,
+            ChatSessionId: chatSessionId,
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            State: state,
+            Phase: phase,
+            Message: message)
+        {
+            ExecutionRunId = executionRunId
+        };
+
+        if (TryGetExecutionRunStore() is { } executionRunStore)
+        {
+            var currentDetail = await LoadExecutionRunDetailAsync(executionRunId, cancellationToken);
+            var updatedRun = UpdateRunProgressFromLog(currentDetail.Run, entry);
+            var updatedSession = currentDetail.ChatSession is null
+                ? null
+                : UpdateChatSessionProgressFromRun(currentDetail.ChatSession, updatedRun);
+            var persistedDetail = await executionRunStore.SaveExecutionRunDetailAsync(
+                CreateExecutionRunDetail(
+                    updatedRun,
+                    updatedSession,
+                    InsertExecutionLogEntry(currentDetail.ExecutionLog, entry),
+                    currentDetail.Metrics,
+                    currentDetail.Approvals,
+                    currentDetail.Artifacts,
+                    currentDetail.Checkpoints,
+                    currentDetail.ToolReceipts),
+                cancellationToken);
+
+            ExecutionUpdated?.Invoke(this, entry);
+            await executionEventSink.PublishAsync(CreateExecutionEvent(persistedDetail.Run, entry), cancellationToken);
+            return;
+        }
+
+        var persistedExecutionState = await UpdateExecutionStateAsync(executionState => executionState with
+        {
+            ExecutionRuns = ReplaceExecutionRunProgress(executionState.ExecutionRuns, executionRunId, entry),
+            ChatSessions = ReplaceChatSessionProgress(executionState.ChatSessions, executionState.ExecutionRuns, executionRunId, entry),
+            ExecutionLog = InsertExecutionLogEntry(executionState.ExecutionLog, entry)
+        }, cancellationToken);
+
+        ExecutionUpdated?.Invoke(this, entry);
+
+        var run = persistedExecutionState.ExecutionRuns.FirstOrDefault(item => item.Id == executionRunId);
+        if (run is null)
+        {
+            return;
+        }
+
+        await executionEventSink.PublishAsync(CreateExecutionEvent(run, entry), cancellationToken);
+    }
+
+    private async Task PersistExecutionMutationAsync(
+        ExecutionStateMutation mutation,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(mutation);
+
+        if (mutation.Run is not null && TryGetExecutionRunStore() is { } executionRunStore)
+        {
+            var currentDetail = await executionRunStore.GetExecutionRunDetailAsync(mutation.Run.Id, cancellationToken);
+            var chatSession = mutation.Run.ChatSessionId.HasValue
+                ? mutation.Session ?? currentDetail?.ChatSession
+                : null;
+
+            await executionRunStore.SaveExecutionRunDetailAsync(
+                CreateExecutionRunDetail(
+                    mutation.Run,
+                    chatSession,
+                    currentDetail?.ExecutionLog ?? [],
+                    mutation.Metric is null
+                        ? currentDetail?.Metrics ?? []
+                        : InsertMetric(currentDetail?.Metrics ?? [], mutation.Metric),
+                    mutation.RunApprovals ?? currentDetail?.Approvals ?? [],
+                    currentDetail?.Artifacts ?? [],
+                    currentDetail?.Checkpoints ?? [],
+                    currentDetail?.ToolReceipts ?? []),
+                cancellationToken);
+            return;
+        }
+
+        await UpdateExecutionStateAsync(executionState => executionState with
+        {
+            ExecutionRuns = mutation.Run is null
+                ? executionState.ExecutionRuns
+                : ReplaceExecutionRun(executionState.ExecutionRuns, mutation.Run),
+            ChatSessions = mutation.Session is null
+                ? executionState.ChatSessions
+                : ReplaceChatSession(executionState.ChatSessions, mutation.Session),
+            ExecutionApprovals = mutation.RunApprovals is null
+                ? executionState.ExecutionApprovals
+                : ReplaceRunApprovals(
+                    executionState.ExecutionApprovals,
+                    mutation.Run?.Id ?? throw new InvalidOperationException("Run approvals require an execution run."),
+                    mutation.RunApprovals),
+            Metrics = mutation.Metric is null
+                ? executionState.Metrics
+                : InsertMetric(executionState.Metrics, mutation.Metric)
+        }, cancellationToken);
+    }
+
+    private async Task SaveChatSessionAsync(
+        ChatSessionRecord session,
+        CancellationToken cancellationToken)
+    {
+        await PersistExecutionMutationAsync(new ExecutionStateMutation(Session: session), cancellationToken);
+    }
+
+    private async Task<ExecutionRunDetail> LoadExecutionRunDetailAsync(
+        Guid executionRunId,
+        CancellationToken cancellationToken)
+    {
+        if (TryGetExecutionRunStore() is { } executionRunStore)
+        {
+            return await executionRunStore.GetExecutionRunDetailAsync(executionRunId, cancellationToken)
+                ?? throw new InvalidOperationException("Execution run was not found.");
+        }
+
+        var executionState = await store.LoadExecutionAsync(cancellationToken);
+        var run = executionState.ExecutionRuns.FirstOrDefault(item => item.Id == executionRunId)
+            ?? throw new InvalidOperationException("Execution run was not found.");
+        var session = run.ChatSessionId.HasValue
+            ? executionState.ChatSessions.FirstOrDefault(item => item.Id == run.ChatSessionId.Value)
+            : null;
+
+        return CreateExecutionRunDetail(
+            run,
+            session,
+            executionState.ExecutionLog.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+            executionState.Metrics.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+            executionState.ExecutionApprovals.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+            executionState.ExecutionArtifacts.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+            executionState.ExecutionWorkflowCheckpoints.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+            executionState.ToolExecutionReceipts.Where(item => item.ExecutionRunId == executionRunId).ToList());
+    }
+
+    private static ExecutionRunDetail CreateExecutionRunDetail(
+        ExecutionRunRecord run,
+        ChatSessionRecord? session,
+        IReadOnlyList<ExecutionLogEntry> executionLog,
+        IReadOnlyList<AgentRunMetric> metrics,
+        IReadOnlyList<ExecutionApprovalRecord> approvals,
+        IReadOnlyList<ExecutionArtifactRecord> artifacts,
+        IReadOnlyList<ExecutionWorkflowCheckpointRecord> checkpoints,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        return new ExecutionRunDetail(
+            Run: run,
+            ChatSession: session,
+            ExecutionLog: executionLog.OrderByDescending(item => item.CreatedAtUtc).ToList(),
+            Metrics: metrics.OrderByDescending(item => item.CreatedAtUtc).ToList())
+        {
+            Approvals = approvals.OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc).ToList(),
+            Artifacts = artifacts.OrderByDescending(item => item.CreatedAtUtc).ToList(),
+            Checkpoints = checkpoints.OrderByDescending(item => item.CapturedAtUtc).ToList(),
+            ToolReceipts = toolReceipts.OrderByDescending(item => item.CompletedAtUtc).ToList()
+        };
+    }
+
+    private async Task<PreparedExecutionRunStart> BeginChatBackedRunAsync(
+        Guid agentId,
+        ProviderProfile provider,
+        Guid? chatSessionId,
+        string prompt,
+        ExecutionInvocationContext context,
+        bool autoApprovePendingToolCalls,
+        AgentStructuredOutputContract? structuredOutput,
+        CancellationToken cancellationToken)
+    {
+        PreparedExecutionRunStart? prepared = null;
+
+        await store.UpdateWorkspaceAsync(document =>
+        {
+            var catalog = document.ToCatalog();
+            var executionState = document.ToExecutionState();
+            var agent = EnsureAgentExists(catalog, agentId);
+            if (agent.ProviderProfileId != provider.Id)
+            {
+                throw new InvalidOperationException("The selected agent does not have a provider profile.");
+            }
+
+            var existingSession = chatSessionId.HasValue
+                ? EnsureAgentOwnsSession(executionState, agentId, chatSessionId.Value)
+                : null;
+
+            if (existingSession is not null && TryGetBlockingSessionRun(executionState, existingSession, out _))
+            {
+                throw new InvalidOperationException(DescribeSessionBusyMessage(executionState, existingSession));
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var userMessage = new ChatMessageRecord(
+                Id: Guid.NewGuid(),
+                Role: ChatMessageRole.User,
+                Content: prompt,
+                CreatedAtUtc: now,
+                TokenEstimate: EstimateTokens(prompt));
+            var session = existingSession ?? new ChatSessionRecord(
+                Id: Guid.NewGuid(),
+                AgentId: agentId,
+                Title: CreateSessionTitle(prompt),
+                CreatedAtUtc: now,
+                UpdatedAtUtc: now,
+                RuntimeSessionKey: string.Empty,
+                SerializedSessionStateJson: null,
+                Messages: [],
+                PendingApprovals: []);
+            var run = CreatePreparingRun(agent, provider, session.Id, session.Title, context, prompt, now, autoApprovePendingToolCalls, structuredOutput);
+            var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+                session with
+                {
+                    Title = string.IsNullOrWhiteSpace(session.Title) ? CreateSessionTitle(prompt) : session.Title,
+                    UpdatedAtUtc = now,
+                    Messages = session.Messages.Append(userMessage).ToList()
+                },
+                now,
+                run.Id);
+
+            prepared = new PreparedExecutionRunStart(
+                catalog,
+                agent,
+                provider,
+                updatedSession,
+                run,
+                userMessage);
+
+            return SandboxWorkspaceDocument.Combine(
+                catalog,
+                executionState with
+                {
+                    ChatSessions = ReplaceChatSession(executionState.ChatSessions, updatedSession),
+                    ExecutionRuns = ReplaceExecutionRun(executionState.ExecutionRuns, run)
+                });
+        }, cancellationToken);
+
+        return prepared ?? throw new InvalidOperationException("Chat-backed execution run start could not be prepared.");
+    }
+
+    private static string CreateSessionTitle(string prompt)
+    {
+        var cleaned = prompt.Trim();
+        return cleaned.Length <= 48
+            ? cleaned
+            : $"{cleaned[..45]}...";
+    }
+
+    private ExecutionRunRecord CreatePreparingRun(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        Guid? chatSessionId,
+        string title,
+        ExecutionInvocationContext context,
+        string prompt,
+        DateTimeOffset now,
+        bool autoApprovePendingToolCalls,
+        AgentStructuredOutputContract? structuredOutput = null)
+    {
+        var sourceKind = string.IsNullOrWhiteSpace(context.SourceKind)
+            ? ExecutionInvocationContext.Empty.SourceKind
+            : context.SourceKind;
+        var sourceId = string.IsNullOrWhiteSpace(context.SourceId) && string.Equals(sourceKind, "chat-session", StringComparison.OrdinalIgnoreCase)
+            ? chatSessionId?.ToString("N") ?? string.Empty
+            : context.SourceId ?? string.Empty;
+        var metadataJson = ExecutionInvocationMetadata.Build(context.MetadataJson, context.Policy);
+
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agent.Id,
+            ChatSessionId: chatSessionId,
+            Title: string.IsNullOrWhiteSpace(title) ? CreateSessionTitle(prompt) : title,
+            SourceKind: sourceKind,
+            SourceId: sourceId,
+            CorrelationId: context.CorrelationId ?? string.Empty,
+            CausationId: context.CausationId ?? string.Empty,
+            RequestedBy: context.RequestedBy ?? string.Empty,
+            RequestedByKind: context.RequestedByKind ?? string.Empty,
+            MetadataJson: metadataJson,
+            InputSummary: CreateExecutionSummary(prompt),
+            ResultSummary: string.Empty,
+            ProviderName: provider.Name,
+            Model: ResolveEffectiveManagedSeedModel(agent, provider),
+            State: ExecutionState.Preparing,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            AutoApprovePendingToolCalls: autoApprovePendingToolCalls,
+            ProcessRunId: context.ProcessRunId ?? string.Empty,
+            ProcessStepId: context.ProcessStepId ?? string.Empty,
+            SchedulerRunId: context.SchedulerRunId ?? string.Empty,
+            MessageId: context.MessageId ?? string.Empty,
+            Revision: 1L,
+            StructuredOutputContractKey: structuredOutput?.ContractKey ?? string.Empty,
+            StructuredOutputTypeName: structuredOutput?.OutputType.AssemblyQualifiedName ?? string.Empty,
+            StructuredOutputSchemaName: structuredOutput?.SchemaName ?? string.Empty,
+            StructuredOutputSchemaDescription: structuredOutput?.SchemaDescription ?? string.Empty);
+    }
+
+    private static AgentDefinition EnsureAgentExists(
+        SandboxWorkspaceCatalog catalog,
+        Guid agentId)
+    {
+        return catalog.Agents.FirstOrDefault(item => item.Id == agentId)
+            ?? throw new InvalidOperationException($"Agent '{agentId:N}' was not found.");
+    }
+
+    private async Task<ProviderProfile> ResolveProviderForAgentAsync(
+        AgentDefinition agent,
+        SandboxWorkspaceCatalog? catalog,
+        CancellationToken cancellationToken)
+    {
+        if (!agent.ProviderProfileId.HasValue)
+        {
+            throw new InvalidOperationException("The selected agent does not have a provider profile.");
+        }
+
+        var registryProvider = await providerRegistry.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken);
+        var catalogShadowProvider = catalog is not null &&
+                                    providerRegistry is ICatalogShadowProviderProfileRegistry catalogShadowProviderRegistry
+            ? catalogShadowProviderRegistry.TryGetProviderFromCatalog(catalog, agent.ProviderProfileId.Value)
+            : null;
+
+        var preferredProvider = ManagedSeedProviderFallbacks.ResolvePreferredProvider(
+            agent,
+            registryProvider,
+            catalogShadowProvider);
+        if (ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent))
+        {
+            preferredProvider = ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(
+                preferredProvider,
+                isManagedSqliteProfile: true);
+        }
+
+        return ApplyCredentialAwareManagedSeedFallback(agent, preferredProvider);
+    }
+
+    private ProviderProfile ApplyCredentialAwareManagedSeedFallback(
+        AgentDefinition agent,
+        ProviderProfile provider)
+    {
+        return ManagedSeedProviderFallbacks.Apply(
+            agent,
+            provider,
+            ResolveOpenAiCredentialOverride(provider));
+    }
+
+    private string ResolveEffectiveManagedSeedModel(
+        AgentDefinition agent,
+        ProviderProfile provider)
+    {
+        return ManagedSeedProviderFallbacks.ResolveModel(
+            agent,
+            provider,
+            ResolveOpenAiCredentialOverride(provider));
+    }
+
+    private string ResolveOpenAiCredentialOverride(
+        ProviderProfile provider)
+    {
+        if (provider.Kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
+        {
+            return "resolved";
+        }
+
+        return providerCredentialResolver.Resolve(provider).IsResolved
+            ? "resolved"
+            : string.Empty;
+    }
+
+    private static ChatSessionRecord EnsureAgentOwnsSession(
+        SandboxWorkspaceExecutionState executionState,
+        Guid agentId,
+        Guid chatSessionId)
+    {
+        var session = executionState.ChatSessions.FirstOrDefault(item => item.Id == chatSessionId)
+            ?? throw new InvalidOperationException("Chat session was not found.");
+        if (session.AgentId != agentId)
+        {
+            throw new InvalidOperationException(
+                $"Chat session '{chatSessionId:N}' does not belong to agent '{agentId:N}'.");
+        }
+
+        return session;
+    }
+
+    private static int EstimateTokens(string value)
+    {
+        return Math.Max(1, value.Length / 4);
+    }
+
+    private static ExecutionEvent CreateExecutionEvent(
+        ExecutionRunRecord run,
+        ExecutionLogEntry entry)
+    {
+        var activity = Activity.Current;
+        return new ExecutionEvent(
+            EventId: entry.Id,
+            ExecutionRunId: run.Id,
+            AgentId: run.AgentId,
+            ChatSessionId: run.ChatSessionId,
+            SourceKind: run.SourceKind,
+            SourceId: run.SourceId,
+            CorrelationId: run.CorrelationId,
+            CausationId: run.CausationId,
+            RequestedBy: run.RequestedBy,
+            RequestedByKind: run.RequestedByKind,
+            MetadataJson: run.MetadataJson,
+            State: entry.State,
+            Phase: entry.Phase,
+            Message: entry.Message,
+            OccurredAtUtc: entry.CreatedAtUtc,
+            Outcome: run.Outcome,
+            ProcessRunId: run.ProcessRunId,
+            ProcessStepId: run.ProcessStepId,
+            SchedulerRunId: run.SchedulerRunId,
+            MessageId: run.MessageId,
+            TraceId: activity?.TraceId.ToString() ?? string.Empty,
+            SpanId: activity?.SpanId.ToString() ?? string.Empty);
+    }
+
+    private static IReadOnlyList<ExecutionRunRecord> ReplaceExecutionRun(
+        IReadOnlyList<ExecutionRunRecord> runs,
+        ExecutionRunRecord run)
+    {
+        return InsertOrReplaceDescending(
+            runs,
+            run,
+            item => item.Id == run.Id,
+            item => item.UpdatedAtUtc);
+    }
+
+    private static IReadOnlyList<ChatSessionRecord> ReplaceChatSession(
+        IReadOnlyList<ChatSessionRecord> sessions,
+        ChatSessionRecord session)
+    {
+        return InsertOrReplaceDescending(
+            sessions,
+            session,
+            item => item.Id == session.Id,
+            item => item.UpdatedAtUtc);
+    }
+
+    private static IReadOnlyList<ExecutionApprovalRecord> ReplaceRunApprovals(
+        IReadOnlyList<ExecutionApprovalRecord> approvals,
+        Guid executionRunId,
+        IReadOnlyList<ExecutionApprovalRecord> runApprovals)
+    {
+        return approvals
+            .Where(item => item.ExecutionRunId != executionRunId)
+            .Concat(runApprovals)
+            .OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ExecutionLogEntry> InsertExecutionLogEntry(
+        IReadOnlyList<ExecutionLogEntry> executionLog,
+        ExecutionLogEntry entry)
+    {
+        return InsertOrReplaceDescending(
+            executionLog,
+            entry,
+            item => item.Id == entry.Id,
+            item => item.CreatedAtUtc);
+    }
+
+    private static IReadOnlyList<ExecutionRunRecord> ReplaceExecutionRunProgress(
+        IReadOnlyList<ExecutionRunRecord> runs,
+        Guid executionRunId,
+        ExecutionLogEntry entry)
+    {
+        var currentRun = runs.FirstOrDefault(item => item.Id == executionRunId);
+        if (currentRun is null)
+        {
+            return runs;
+        }
+
+        return ReplaceExecutionRun(runs, UpdateRunProgressFromLog(currentRun, entry));
+    }
+
+    private static IReadOnlyList<ChatSessionRecord> ReplaceChatSessionProgress(
+        IReadOnlyList<ChatSessionRecord> sessions,
+        IReadOnlyList<ExecutionRunRecord> runs,
+        Guid executionRunId,
+        ExecutionLogEntry entry)
+    {
+        var currentRun = runs.FirstOrDefault(item => item.Id == executionRunId);
+        if (currentRun?.ChatSessionId is not Guid chatSessionId)
+        {
+            return sessions;
+        }
+
+        var currentSession = sessions.FirstOrDefault(item => item.Id == chatSessionId);
+        if (currentSession is null)
+        {
+            return sessions;
+        }
+
+        var updatedRun = UpdateRunProgressFromLog(currentRun, entry);
+        return ReplaceChatSession(sessions, UpdateChatSessionProgressFromRun(currentSession, updatedRun));
+    }
+
+    private static IReadOnlyList<AgentRunMetric> InsertMetric(
+        IReadOnlyList<AgentRunMetric> metrics,
+        AgentRunMetric metric)
+    {
+        return InsertOrReplaceDescending(
+            metrics,
+            metric,
+            item => item.Id == metric.Id,
+            item => item.CreatedAtUtc);
+    }
+
+    private static IReadOnlyList<T> InsertOrReplaceDescending<T>(
+        IReadOnlyList<T> items,
+        T item,
+        Func<T, bool> isSameItem,
+        Func<T, DateTimeOffset> orderSelector)
+    {
+        var updated = new List<T>(items.Count + 1);
+        var inserted = false;
+        var itemOrder = orderSelector(item);
+
+        foreach (var current in items)
+        {
+            if (isSameItem(current))
+            {
+                continue;
+            }
+
+            if (!inserted && itemOrder >= orderSelector(current))
+            {
+                updated.Add(item);
+                inserted = true;
+            }
+
+            updated.Add(current);
+        }
+
+        if (!inserted)
+        {
+            updated.Add(item);
+        }
+
+        return updated;
+    }
+
+    private static ExecutionRunRecord UpdateRunProgressFromLog(
+        ExecutionRunRecord run,
+        ExecutionLogEntry entry)
+    {
+        if (run.State is ExecutionState.Completed or ExecutionState.Failed)
+        {
+            return run;
+        }
+
+        var nextState = entry.State == ExecutionState.Idle
+            ? run.State
+            : entry.State;
+        var nextUpdatedAtUtc = entry.CreatedAtUtc > run.UpdatedAtUtc
+            ? entry.CreatedAtUtc
+            : run.UpdatedAtUtc;
+        if (nextState == run.State && nextUpdatedAtUtc == run.UpdatedAtUtc)
+        {
+            return run;
+        }
+
+        return run with
+        {
+            State = nextState,
+            UpdatedAtUtc = nextUpdatedAtUtc
+        };
+    }
+
+    private static ChatSessionRecord UpdateChatSessionProgressFromRun(
+        ChatSessionRecord session,
+        ExecutionRunRecord run)
+    {
+        return ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+            session,
+            run.UpdatedAtUtc,
+            run.Id);
+    }
+
+    private static bool TryGetBlockingSessionRun(
+        SandboxWorkspaceExecutionState executionState,
+        ChatSessionRecord session,
+        out ExecutionRunRecord? blockingRun)
+    {
+        blockingRun = null;
+
+        if (session.LatestExecutionRunId.HasValue)
+        {
+            var latestRun = executionState.ExecutionRuns.FirstOrDefault(item => item.Id == session.LatestExecutionRunId.Value);
+            if (latestRun is not null && ExecutionRunBlocksSession(latestRun))
+            {
+                blockingRun = latestRun;
+                return true;
+            }
+        }
+
+        blockingRun = executionState.ExecutionRuns
+            .Where(item => item.ChatSessionId == session.Id && ExecutionRunBlocksSession(item))
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .FirstOrDefault();
+        return blockingRun is not null;
+    }
+
+    private static string DescribeSessionBusyMessage(
+        SandboxWorkspaceExecutionState executionState,
+        ChatSessionRecord session)
+    {
+        if (!TryGetBlockingSessionRun(executionState, session, out var blockingRun) || blockingRun is null)
+        {
+            return "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
+        }
+
+        return blockingRun.PendingApprovals.Count > 0 || blockingRun.State == ExecutionState.WaitingOnTool
+            ? "This session has pending tool approvals. Approve or reject them before sending a new prompt."
+            : "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
+    }
+
+    private static bool ExecutionRunBlocksSession(ExecutionRunRecord run)
+        => run.PendingApprovals.Count > 0
+           || run.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting;
+}

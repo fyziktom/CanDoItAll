@@ -117,3 +117,64 @@ public sealed class AppDbContextRuntimeSwitchTests
         Assert.Equal(switchResult.Value!.Generation, runtimeSnapshot.Generation);
     }
 }
+
+public sealed class SqliteMigrationLockRecoveryTests
+{
+    [Fact]
+    public async Task EnsureCurrentProfileReadyAsync_clears_a_stale_sqlite_migration_lock()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-stale-sqlite-migration-lock");
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false);
+
+        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(
+                """
+                INSERT OR REPLACE INTO "__EFMigrationsLock" ("Id", "Timestamp")
+                VALUES (1, {0});
+                """,
+                (DateTimeOffset.UtcNow - TimeSpan.FromMinutes(10)).ToString("O"));
+        }
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await bootstrapper.EnsureCurrentProfileReadyAsync(cts.Token);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var lockRowCount = await CountRowsAsync(dbContext, "__EFMigrationsLock");
+            Assert.Equal(0, lockRowCount);
+        }
+    }
+
+    private static async Task<long> CountRowsAsync(AppDbContext dbContext, string tableName)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"""SELECT COUNT(*) FROM "{tableName.Replace("\"", "\"\"", StringComparison.Ordinal)}";""";
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt64(result);
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+}

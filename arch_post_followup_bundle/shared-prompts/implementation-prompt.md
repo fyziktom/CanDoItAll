@@ -1,1 +1,0 @@
-Implement only the active subbundle. Respect the prerequisites, stop rules, proof contract, and architecture-gate policy. Keep scope tight, prefer schema-backed invariants over application-only assumptions, update the execution report from fresh evidence, and do not continue downstream until the current subbundle’s progression gate is explicitly satisfied.

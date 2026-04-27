@@ -12,9 +12,10 @@ public sealed class ProcessTemplateCatalogServiceTests
 
         var items = service.ListProcessTemplates();
 
-        Assert.Equal(9, items.Count);
+        Assert.Equal(10, items.Count);
         Assert.Contains(items, item => item.Key == "software-delivery");
         Assert.Contains(items, item => item.Key == "branching-code-review");
+        Assert.Contains(items, item => item.Key == "business-plan-development");
         Assert.Contains(items, item => item.Key == "oss-intake-supply-chain-governance");
     }
 

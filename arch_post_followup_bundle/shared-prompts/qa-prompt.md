@@ -1,1 +1,0 @@
-Verify that the code changes satisfy the active subbundle only, that the new tests actually prove the claimed invariant, and that the execution report names only the artifacts that truly exist. Do not soften the gate just because the code is improved; pass only from evidence.

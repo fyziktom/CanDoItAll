@@ -1,0 +1,48 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Calculator" [ref=e6] [cursor=pointer]:
+      - /url: ""
+    - navigation [ref=e8]:
+      - link "Home" [ref=e10] [cursor=pointer]:
+        - /url: ""
+        - text: Home
+      - link "Counter" [ref=e13] [cursor=pointer]:
+        - /url: counter
+        - text: Counter
+      - link "Weather" [ref=e16] [cursor=pointer]:
+        - /url: weather
+        - text: Weather
+  - main [ref=e18]:
+    - link "About" [ref=e20] [cursor=pointer]:
+      - /url: https://learn.microsoft.com/aspnet/core/
+    - article [ref=e21]:
+      - heading "Calculator" [level=1] [ref=e22]
+      - generic [ref=e23]:
+        - textbox [ref=e24]
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - button "7" [ref=e27] [cursor=pointer]
+            - button "8" [ref=e28] [cursor=pointer]
+            - button "9" [ref=e29] [cursor=pointer]
+            - button / [ref=e30] [cursor=pointer]
+          - generic [ref=e31]:
+            - button "4" [ref=e32] [cursor=pointer]
+            - button "5" [ref=e33] [cursor=pointer]
+            - button "6" [ref=e34] [cursor=pointer]
+            - button "*" [ref=e35] [cursor=pointer]
+          - generic [ref=e36]:
+            - button "1" [ref=e37] [cursor=pointer]
+            - button "2" [ref=e38] [cursor=pointer]
+            - button "3" [ref=e39] [cursor=pointer]
+            - button "-" [ref=e40] [cursor=pointer]
+          - generic [ref=e41]:
+            - button "0" [ref=e42] [cursor=pointer]
+            - button "." [ref=e43] [cursor=pointer]
+            - button "=" [active] [ref=e44] [cursor=pointer]
+            - button "+" [ref=e45] [cursor=pointer]
+          - generic [ref=e46]:
+            - button "C" [ref=e47] [cursor=pointer]
+            - button "H" [ref=e48] [cursor=pointer]
+        - generic [ref=e49]:
+          - heading "History (latest first)" [level=5] [ref=e50]
+          - list

@@ -117,6 +117,73 @@ public sealed class ProcessLaunchPlanningIntegrationTests
     }
 
     [Fact]
+    public async Task CreateLaunchPlanAsync_completes_with_seeded_internal_agent_projection_without_hanging()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectPartyBridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(projectsService, $"Seeded launch planning proof {suffix}");
+        var managerId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Seeded Launch Manager {suffix}",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Employee,
+            $"seeded.manager.{suffix}@example.test");
+        await SaveAssignmentAsync(projectPartyBridge, projectId, managerId, ProjectPartyAssignmentRole.Manager, "manager", true);
+
+        var roster = await aiAgentService.ListAgentDirectoryAsync();
+        var programmingAgent = Assert.Single(
+            roster,
+            item => string.Equals(item.DisplayName, "Programming Workspace Analyst", StringComparison.Ordinal));
+        var qaAgent = Assert.Single(
+            roster,
+            item => string.Equals(item.DisplayName, "Delivery QA Observer", StringComparison.Ordinal));
+
+        await SaveAssignmentAsync(projectPartyBridge, projectId, programmingAgent.PartyId, ProjectPartyAssignmentRole.AiAgent, "builder", true);
+        await SaveAssignmentAsync(projectPartyBridge, projectId, qaAgent.PartyId, ProjectPartyAssignmentRole.AiAgent, "reviewer", false);
+
+        var definition = BuildLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition.Editor);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var launchResult = await processesService.CreateLaunchPlanAsync(
+            new ProcessLaunchCreateRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                LaunchName = $"Seeded launch {suffix}",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Integration test seeded launch planning validation.",
+                RequestedBy = "integration-tests"
+            },
+            timeout.Token);
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+        Assert.Equal(ProcessLaunchPlanStatus.Draft, details!.Status);
+        Assert.Equal(2, details.Roles.Count);
+        Assert.All(details.Roles, role => Assert.True(role.SelectedCandidateId.HasValue));
+        Assert.Contains(details.Roles, role =>
+            string.Equals(role.DisplayName, definition.BuilderRoleName, StringComparison.Ordinal) &&
+            role.IsResolved);
+        Assert.Contains(details.Roles, role =>
+            string.Equals(role.DisplayName, definition.ReviewerRoleName, StringComparison.Ordinal) &&
+            role.IsResolved);
+    }
+
+    [Fact]
     public async Task SubmitLaunchPlanForApprovalAsync_uses_human_substitute_when_manager_assignment_is_missing()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -306,6 +373,87 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.Contains("does not currently match", genericCandidate.RecommendationSummary, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task CreateLaunchPlanAsync_prefers_role_matching_ai_candidate_when_skills_are_not_recorded()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(projectsService, $"Role Fit Launch {suffix}");
+        var ownerId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Role Fit Owner {suffix}",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Employee,
+            $"owner.rolefit.{suffix}@example.test");
+        var genericAgentId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Aardvark Generic Agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"generic.rolefit.{suffix}@example.test");
+        var roleMatchedAgentId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Scenario Ledger Navigator {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"rolematched.rolefit.{suffix}@example.test");
+
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            genericAgentId,
+            ownerId,
+            "General AI work",
+            "Provides a generic AI resource profile.",
+            "Workspace build",
+            "Generic AI resource for role-fit launch planning.");
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            roleMatchedAgentId,
+            ownerId,
+            "Scenario ledger navigation",
+            "Owns scenario-ledger navigation, concrete traceability, and execution flow control.",
+            "Workspace build",
+            "Role-matched AI resource for role-fit launch planning.");
+
+        var definition = BuildRoleFitLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Role fit launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration test role-fit launch validation.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var role = Assert.Single(details!.Roles);
+        Assert.True(role.SelectedCandidateId.HasValue);
+        var selectedCandidate = Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
+        var genericCandidate = Assert.Single(role.Candidates, item => item.PartyId == genericAgentId);
+
+        Assert.Equal(roleMatchedAgentId, selectedCandidate.PartyId);
+        Assert.True(selectedCandidate.Score > genericCandidate.Score);
+    }
+
     private static LaunchPlanningDefinitionFixture BuildLaunchPlanningDefinition(Guid projectId)
     {
         var builderRoleId = Guid.NewGuid();
@@ -477,6 +625,67 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                         new ProcessStepRoleRequirementEditorModel
                         {
                             RoleRequirementId = builderRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildRoleFitLaunchPlanningDefinition(Guid projectId)
+    {
+        var navigatorRoleId = Guid.NewGuid();
+        var buildStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Role-fit launch planning proof process",
+            Summary = "Prefers AI candidates whose factual role fit matches the process role even when explicit party skills are missing.",
+            ValueStatement = "Launch planning must not recommend the first alphabetically bound agent when a better role match is available.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "Role wording and staffing intent remain meaningful in launch planning.",
+            ChangeSummary = "Role-fit launch planning integration proof.",
+            ConstitutionRuleSummary = "Do not collapse skill-less AI role selection to the first bound directory entry.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = navigatorRoleId,
+                    Key = "scenario-ledger-navigator",
+                    DisplayName = "Scenario ledger navigator",
+                    Purpose = "Owns scenario-ledger navigation, traceability, and execution flow control.",
+                    StaffingIntent = "Select the AI resource whose role wording and capabilities best match scenario-ledger navigation.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = buildStepId,
+                    Key = "navigate-ledger",
+                    Title = "Navigate ledger",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Role-fit launch planning request.",
+                    OutputContractSummary = "Role-fit candidate selected.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected AI resource owns the navigation work.",
+                    ExceptionPolicySummary = "Fail when an arbitrary agent is selected ahead of a better role match.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = navigatorRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible
                         }
                     ]

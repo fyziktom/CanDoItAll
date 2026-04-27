@@ -35,13 +35,21 @@ The local settings file is [CanDoItAll.Mcp.Processes.settings.json](/C:/reposito
 
 ```json
 {
+  "CanDoItAllMcpLaneKind": "PublishedActive",
   "Server": {
     "Name": "CanDoItAll.Mcp.Processes",
     "RepositoryRoot": ".",
     "EnsureCurrentProfileReadyOnStartup": true
+  },
+  "Processes": {
+    "Runtime": {
+      "RequirePostgreSqlForAgentAutomation": true
+    }
   }
 }
 ```
+
+For governed runs that dispatch real AgentFramework agents, keep the active AppDbContext profile on PostgreSQL. The runtime guard intentionally blocks process-agent automation on SQLite when `RequirePostgreSqlForAgentAutomation` is enabled because SQLite becomes too slow for multi-step runs with tool receipts, artifacts, and recovery attempts.
 
 ## Restart Requirement
 

@@ -1429,7 +1429,7 @@ public sealed partial class AppSmokeTests
         await SetFieldByLabelAsync(page, "Profile name", "OpenAI API");
         await SetFieldByLabelAsync(page, "Connector plugin", "OpenAI provider");
         await SetFieldByLabelAsync(page, "Base URL", "https://api.openai.com/v1");
-        await SetFieldByLabelAsync(page, "Default model", "gpt-4.1");
+        await SetFieldByLabelAsync(page, "Default model", "gpt-5-mini");
         await SetFieldByLabelAsync(page, "API key secret", "OpenAI API key");
         await page.GetByRole(AriaRole.Button, new() { Name = "Save provider", Exact = true }).ClickAsync();
         await page.WaitForSelectorAsync("text=OpenAI API");
@@ -1464,7 +1464,7 @@ public sealed partial class AppSmokeTests
                 Name = "OpenAI API",
                 ProviderKind = ProviderKind.OpenAi,
                 BaseUrl = "https://api.openai.com/v1",
-                DefaultModel = "gpt-4.1",
+                DefaultModel = "gpt-5-mini",
                 TimeoutSeconds = 45,
                 IsEnabled = true,
                 SupportsStreaming = true,

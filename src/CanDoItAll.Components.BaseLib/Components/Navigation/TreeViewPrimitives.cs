@@ -29,6 +29,11 @@ public sealed record TreeViewNode
     public bool HasChildren => Children.Count > 0;
 }
 
+public sealed record TreeViewNodeContextMenuRequest(
+    string NodeId,
+    double ClientX,
+    double ClientY);
+
 public enum TreeViewStyle
 {
     Default,

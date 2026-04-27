@@ -17,6 +17,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Logging
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
@@ -27,6 +28,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ILogger<ProjectStructurePage> Logger
 @implements IDisposable
 
 <PageTitle>Project Structure</PageTitle>
@@ -186,6 +188,7 @@ else
                         }
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
                             <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
+                                                           RenderProcessStartDialog="false"
                                                            CloseProjectHierarchy="CloseProjectHierarchyDialog"
                                                            ProjectHierarchySelectionChanged="HandleProjectHierarchySelectionChanged"
                                                            ExecuteProjectHierarchyCommand="ExecuteProjectHierarchyCommandAsync"
@@ -229,6 +232,8 @@ else
                 <ProjectStructureSupportPanels Nodes="@outlineNodes"
                                               SelectedNodeIds="@selectedNodeIds"
                                               OnSelectNode="SelectNodeAsync"
+                                              ResolveContextActions="ResolveSupportPanelContextActions"
+                                              OnExecuteNodeContextAction="ExecuteOutlineContextActionAsync"
                                               LinkCount="@surface.Links.Count" />
             </Supporting>
         </CanvasWorkbenchStage>
@@ -461,6 +466,23 @@ else
                                     MermaidPreviewNode="@mermaidPreviewNode"
                                     CloseMermaidViewer="CloseMermaidViewer"
                                     ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
+</ProjectStructureDeferredSurface>
+
+<ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
+    <ProjectStructureCanvasDialogs RenderProcessStartDialog="true"
+                                   ProcessStartDialog="@processStartDialog"
+                                   CloseProcessStart="CloseProcessStartDialog"
+                                   ExecuteProcessStart="ExecuteProcessStartAsync"
+                                   SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
+                                   ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
+                                   RequestHrManagerMatch="RequestHrManagerMatchAsync"
+                                   CancelHrManagerMatch="CancelHrManagerMatchAsync"
+                                   ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
+                                   CanShowLocalOpen="CanShowLocalOpen"
+                                   ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
+                                   ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
+                                   ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
+                                   ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource" />
 </ProjectStructureDeferredSurface>
 
 <ProjectModalHost IsOpen="@showProjectCreateModal"

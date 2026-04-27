@@ -5519,6 +5519,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("NodeKey")
                         .IsRequired()
                         .HasMaxLength(160)

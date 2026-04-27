@@ -309,7 +309,7 @@
     </ProjectStructureOverlayDialog>
 }
 
-@if (ProcessStartDialog is not null)
+@if (RenderProcessStartDialog && ProcessStartDialog is not null)
 {
     var startDialog = ProcessStartDialog;
     var isStaffingStage = startDialog.Stage == ProjectStructureProcessStartStage.Staffing;
@@ -320,11 +320,12 @@
     const string processStartRequestHrKey = "project-structure-process-start-request-hr";
     const string processStartContinueKey = "project-structure-process-start-continue";
 
-    <ProjectStructureOverlayDialog CanvasScoped="true"
-                                   AriaLabel="@startDialog.Title"
+    <ProjectStructureOverlayDialog AriaLabel="@startDialog.Title"
                                    Kicker="Process start"
                                    Title="@startDialog.Title"
                                    Summary="@startDialog.Copy"
+                                   DialogClass="project-structure-process-start-dialog"
+                                   BodyClass="project-structure-process-start-dialog__body"
                                    DataTestId="project-structure-process-start-dialog"
                                    Close="CloseProcessStart">
         <Actions>
@@ -381,7 +382,9 @@
             }
         </Actions>
         <Body>
-            <Stack GapScale="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="project-structure-process-start-dialog__content"
+                   Style="min-height:0;overflow:auto;padding-right:0.3rem;">
                 <PanelCard>
                     <Stack GapScale="LayoutGap.Tiny">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution target" />
@@ -389,6 +392,12 @@
                         <TextBlock TextStyle="TextStyle.Note"
                                    Value="@($"Target node id: {startDialog.TargetNodeId}")"
                                    Class="cw-panel-copy" />
+                        @if (!string.IsNullOrWhiteSpace(startDialog.ParentNodeId))
+                        {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"Resolved parent node id: {startDialog.ParentNodeId}")"
+                                       Class="cw-panel-copy" />
+                        }
                         <TextBlock TextStyle="TextStyle.Note"
                                    Value="@($"Selected process node id: {startDialog.NodeId}")"
                                    Class="cw-panel-copy" />
@@ -463,7 +472,8 @@
                         </PanelCard>
                     }
 
-                    <div class="space-y-4"
+                    <div class="space-y-4 project-structure-process-start-dialog__roles"
+                         style="min-height:0;"
                          data-testid="project-structure-process-start-staffing-roles">
                         @foreach (var role in startDialog.Roles)
                         {
@@ -701,6 +711,9 @@
 
     [Parameter]
     public EventCallback ExecuteProcessLink { get; set; }
+
+    [Parameter]
+    public bool RenderProcessStartDialog { get; set; } = true;
 
     [Parameter]
     public ProjectStructureProcessStartDialogState? ProcessStartDialog { get; set; }

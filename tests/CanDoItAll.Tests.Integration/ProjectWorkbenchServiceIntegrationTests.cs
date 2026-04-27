@@ -209,6 +209,69 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task UnlinkObjectsAsync_hides_projected_process_definition_until_it_is_linked_again()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench process unlink visibility");
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var featureNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Calculator feature",
+                "Feature / process visibility validation",
+                "Validate that unlinking the projected process node hides it from the structure canvas.",
+                ParentNodeKey: null,
+                ObjectSubtype: "feature"));
+
+        await workbench.LinkObjectsAsync(
+            projectId,
+            featureNode.Id,
+            BuildProcessDefinitionNodeKey(definitionResult.Value),
+            ProjectObjectLinkKind.Uses);
+
+        var linkedSurface = await workbench.GetStructureAsync(projectId);
+        var linkedDefinitionNode = Assert.Single(
+            linkedSurface.Nodes,
+            node => string.Equals(node.Id, BuildProcessDefinitionNodeKey(definitionResult.Value), StringComparison.Ordinal));
+        Assert.Equal(featureNode.Id, linkedDefinitionNode.ParentId);
+
+        var removed = await workbench.UnlinkObjectsAsync(
+            projectId,
+            featureNode.Id,
+            BuildProcessDefinitionNodeKey(definitionResult.Value),
+            ProjectObjectLinkKind.Uses);
+
+        Assert.True(removed);
+
+        var hiddenSurface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(
+            hiddenSurface.Nodes,
+            node => string.Equals(node.Id, BuildProcessDefinitionNodeKey(definitionResult.Value), StringComparison.Ordinal));
+
+        await workbench.LinkObjectsAsync(
+            projectId,
+            featureNode.Id,
+            BuildProcessDefinitionNodeKey(definitionResult.Value),
+            ProjectObjectLinkKind.Uses);
+
+        var restoredSurface = await workbench.GetStructureAsync(projectId);
+        var restoredDefinitionNode = Assert.Single(
+            restoredSurface.Nodes,
+            node => string.Equals(node.Id, BuildProcessDefinitionNodeKey(definitionResult.Value), StringComparison.Ordinal));
+        Assert.Equal(featureNode.Id, restoredDefinitionNode.ParentId);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_completes_process_bound_workbench_nodes_and_rolls_up_parent_progress()
     {
         await using var application = await TestApplication.CreateAsync();

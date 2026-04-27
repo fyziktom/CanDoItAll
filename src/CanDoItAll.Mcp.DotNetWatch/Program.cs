@@ -1,4 +1,5 @@
 using CanDoItAll.Mcp.Core.Concurrency;
+using CanDoItAll.Mcp.Core.Hosting;
 using CanDoItAll.Mcp.Core.Identity;
 using CanDoItAll.Mcp.Core.Net;
 using CanDoItAll.Mcp.Core.Observability;
@@ -19,7 +20,6 @@ using CanDoItAll.Mcp.DotNetWatch.Tools;
 using CanDoItAll.Mcp.LocalRuntime.Persistence;
 using CanDoItAll.Mcp.LocalRuntime.Processes;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -28,7 +28,7 @@ using ServerConfigurationOptions = CanDoItAll.Mcp.DotNetWatch.Configuration.McpS
 
 namespace CanDoItAll.Mcp.DotNetWatch;
 
-internal static class Program
+internal static partial class Program
 {
     public static async Task Main(string[] args)
     {
@@ -57,8 +57,8 @@ internal static class Program
     {
         var builder = Host.CreateEmptyApplicationBuilder(settings: null);
         ConfigureConfiguration(builder.Configuration, launchContext);
-        ConfigureStdioLogging(builder.Logging);
-        ConfigureCommonServices(builder.Services, launchContext);
+        builder.Logging.ConfigureCanDoItAllMcpStdioLogging();
+        ConfigureCommonServices(builder.Services, builder.Configuration, launchContext);
 
         builder.Services.AddSingleton<BackendProcessLauncher>();
         builder.Services.AddSingleton<BackendConnectionManager>();
@@ -131,8 +131,8 @@ internal static class Program
         });
 
         ConfigureConfiguration(builder.Configuration, launchContext);
-        ConfigureBackendLogging(builder.Logging);
-        ConfigureCommonServices(builder.Services, launchContext);
+        builder.Logging.ConfigureCanDoItAllMcpBackendLogging();
+        ConfigureCommonServices(builder.Services, builder.Configuration, launchContext);
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.AddSingleton<IDotNetWatchToolInvoker, LocalToolInvoker>();
 
@@ -247,31 +247,16 @@ internal static class Program
     private static void ConfigureConfiguration(ConfigurationManager configuration, LaunchContext launchContext)
     {
         configuration.Sources.Clear();
-        configuration.AddJsonFile(Path.GetFullPath(launchContext.SettingsPath), optional: false, reloadOnChange: false);
-        configuration.AddEnvironmentVariables(prefix: "CanDoItAllMcp_");
+        configuration.AddCanDoItAllMcpSettings(launchContext.SettingsPath);
     }
 
-    private static void ConfigureStdioLogging(ILoggingBuilder logging)
-    {
-        logging.ClearProviders();
-        logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
-        logging.SetMinimumLevel(LogLevel.Information);
-    }
-
-    private static void ConfigureBackendLogging(ILoggingBuilder logging)
-    {
-        logging.ClearProviders();
-        logging.SetMinimumLevel(LogLevel.Information);
-    }
-
-    private static void ConfigureCommonServices(IServiceCollection services, LaunchContext launchContext)
+    private static void ConfigureCommonServices(IServiceCollection services, IConfiguration configuration, LaunchContext launchContext)
     {
         services.AddSingleton(launchContext);
         services
-            .AddOptions<ServerConfigurationOptions>()
-            .BindConfiguration(string.Empty)
-            .ValidateOnStart();
-        services.AddSingleton<IValidateOptions<ServerConfigurationOptions>, McpServerOptionsValidator>();
+            .AddValidatedCanDoItAllMcpOptions<ServerConfigurationOptions, McpServerOptionsValidator>(
+                configuration,
+                validateDataAnnotations: false);
 
         services.AddHttpClient();
         services.AddSingleton<RuntimeConfiguration>();
@@ -318,55 +303,6 @@ internal static class Program
         services.AddSingleton<LocalToolInvoker>();
         services.AddSingleton<IProjectPathPicker, WindowsProjectPathPicker>();
         services.AddSingleton<BackendManagerService>();
-    }
-
-    private static void MapToolRoutes(WebApplication app, IDotNetWatchToolInvoker invoker)
-    {
-        app.MapPost("/api/tools/workspace-info", (HttpContext httpContext, WorkspaceInfoRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "workspace-info", request, token => invoker.WorkspaceInfoAsync(request.IncludeHistory, request.IncludeConfigSnapshot, token), cancellationToken));
-        app.MapPost("/api/tools/app-start", (HttpContext httpContext, AppStartRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-start", request, token => invoker.AppStartAsync(request.LogicalAppId, request.ProjectPath, request.Mode, request.LaunchType, request.PreferredLane, request.EntryPath, request.ConfigurationName, request.Framework, request.LaunchProfile, request.WorkingDirectory, request.Arguments, request.EnvironmentOverlay, request.Urls, request.ReuseIfCompatible, request.ConflictPolicy, request.WaitFor, token), cancellationToken));
-        app.MapPost("/api/tools/app-stop", (HttpContext httpContext, AppStopRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-stop", request, token => invoker.AppStopAsync(request.SessionId, request.Reason, request.Force, token), cancellationToken));
-        app.MapPost("/api/tools/app-status", (HttpContext httpContext, AppStatusRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-status", request, token => invoker.AppStatusAsync(request.SessionId, token), cancellationToken));
-        app.MapPost("/api/tools/app-wait", (HttpContext httpContext, AppWaitRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-wait", request, token => invoker.AppWaitAsync(request.SessionId, request.Condition, request.TimeoutMs, request.PollIntervalMs, request.Cursor, request.QuietPeriodMs, request.LogPattern, request.CaseInsensitive, token), cancellationToken));
-        app.MapPost("/api/tools/app-logs", (HttpContext httpContext, AppLogsRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-logs", request, token => invoker.AppLogsAsync(request.SessionId, request.Cursor, request.Limit, request.IncludeStdOut, request.IncludeStdErr, request.IncludeSystemEvents, request.View, token), cancellationToken));
-        app.MapPost("/api/tools/app-events", (HttpContext httpContext, AppEventsRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-events", request, token => invoker.AppEventsAsync(request.LogicalAppId, request.SessionId, request.Cursor, request.Limit, token), cancellationToken));
-        app.MapPost("/api/tools/app-update-atomic", (HttpContext httpContext, AtomicUpdateRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-update-atomic", request, token => invoker.AppUpdateAtomicAsync(request.LogicalAppId, request.ProjectPath, request.ConfigurationName, request.Framework, request.Arguments, request.EnvironmentOverlay, request.ActivateOnSuccess, request.KeepPreviousRuntimeWarm, request.AllowRollback, request.TimeoutMs, token), cancellationToken));
-        app.MapPost("/api/tools/app-rollback", (HttpContext httpContext, AtomicRollbackRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "app-rollback", request, token => invoker.AppRollbackAsync(request.LogicalAppId, request.TransactionId, token), cancellationToken));
-        app.MapPost("/api/tools/solution-build", (HttpContext httpContext, SolutionBuildRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "solution-build", request, token => invoker.SolutionBuildAsync(request.TargetPath, request.ConfigurationName, request.Framework, request.Arguments, request.EnvironmentOverlay, request.WhenAppRunning, request.WaitForCompletion, request.TimeoutMs, token), cancellationToken));
-        app.MapPost("/api/tools/tests-run", (HttpContext httpContext, TestsRunRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "tests-run", request, token => invoker.TestsRunAsync(request.TargetPath, request.ConfigurationName, request.Framework, request.Filter, request.Arguments, request.EnvironmentOverlay, request.CollectCoverage, request.WhenAppRunning, request.RunnerPreference, request.WaitForCompletion, request.TimeoutMs, token), cancellationToken));
-        app.MapPost("/api/tools/operation-status", (HttpContext httpContext, OperationStatusRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "operation-status", request, token => invoker.OperationStatusAsync(request.OperationId, token), cancellationToken));
-        app.MapPost("/api/tools/operation-wait", (HttpContext httpContext, OperationWaitRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "operation-wait", request, token => invoker.OperationWaitAsync(request.OperationId, request.TimeoutMs, request.PollIntervalMs, token), cancellationToken));
-        app.MapPost("/api/tools/operation-logs", (HttpContext httpContext, OperationLogsRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "operation-logs", request, token => invoker.OperationLogsAsync(request.OperationId, request.Cursor, request.Limit, request.View, token), cancellationToken));
-        app.MapPost("/api/tools/cleanup-stale-processes", (HttpContext httpContext, CleanupStaleProcessesRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "cleanup-stale-processes", request, token => invoker.CleanupStaleProcessesAsync(request.DryRun, token), cancellationToken));
-        app.MapPost("/api/tools/diagnose-start-failure", (HttpContext httpContext, DiagnoseStartFailureRequest request, BackendRequestReplayStore replayStore, CancellationToken cancellationToken) =>
-            ExecuteToolRouteAsync(httpContext, replayStore, "diagnose-start-failure", request, token => invoker.DiagnoseStartFailureAsync(request.SessionId, request.OperationId, request.MaxLogEntries, token), cancellationToken));
-    }
-
-    private static async Task<IResult> ExecuteToolRouteAsync<TRequest, TResponse>(
-        HttpContext httpContext,
-        BackendRequestReplayStore replayStore,
-        string route,
-        TRequest request,
-        Func<CancellationToken, Task<TResponse>> callback,
-        CancellationToken cancellationToken)
-    {
-        var requestId = httpContext.Request.Headers["X-CanDoItAll-RequestId"].FirstOrDefault();
-        var json = await replayStore.ExecuteJsonAsync(route, requestId, request, callback, cancellationToken);
-        return Results.Text(json, "application/json; charset=utf-8");
     }
 
     private static LaunchContext ResolveLaunchContext(string[] args)

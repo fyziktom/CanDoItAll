@@ -69,6 +69,10 @@ public partial class AgentCatalogPanel
         .OrderBy(agent => agent.Name)
         .ToList();
 
+    private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
+        ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
+        : null;
+
     protected override async Task OnInitializedAsync()
     {
         await EnsureLoadedAsync();
@@ -347,6 +351,33 @@ public partial class AgentCatalogPanel
         return editor.ProcessAccess.AllowAllDefinitions
             ? "All current and future processes"
             : $"{CountAllowedProcesses(editor)} selected";
+    }
+
+    private string DescribeRuntimeParameterPolicy(ProviderProfile provider)
+    {
+        var model = ResolveEditorRuntimeModel(provider);
+        var modelLabel = string.IsNullOrWhiteSpace(model)
+            ? "the selected model"
+            : $"model '{model}'";
+
+        if (!AgentProviderModelParameterPolicy.IsOpenAiLikeProvider(provider.Kind))
+        {
+            return $"Configured model parameters are sent for {modelLabel}.";
+        }
+
+        if (AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider.Kind, model))
+        {
+            return $"Temperature will be omitted for {modelLabel}. Provider defaults apply.";
+        }
+
+        return $"Temperature is sent for {modelLabel}. If the provider rejects it, the runtime retries once without temperature.";
+    }
+
+    private string ResolveEditorRuntimeModel(ProviderProfile provider)
+    {
+        return string.IsNullOrWhiteSpace(editorModel.Model)
+            ? provider.DefaultModel.Trim()
+            : editorModel.Model.Trim();
     }
 
     private void ToggleProjectStructureRead(object? rawValue)

@@ -1,7 +1,13 @@
 {
+  "CanDoItAllMcpLaneKind": "PublishedActive",
   "Server": {
     "Name": "CanDoItAll.Mcp.Processes",
     "RepositoryRoot": ".",
     "EnsureCurrentProfileReadyOnStartup": true
+  },
+  "Processes": {
+    "Runtime": {
+      "RequirePostgreSqlForAgentAutomation": true
+    }
   }
 }
