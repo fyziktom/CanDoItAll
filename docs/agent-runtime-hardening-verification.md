@@ -38,6 +38,14 @@ No failure in the full-solution run referenced the round2 finalizer, tool-policy
 
 ## Focused Proof
 
+Focused unit test classes referenced by this verification record:
+
+- `AgentFinalizerPolicyTests`
+- `AgentToolInvocationPolicyTests`
+- `ProviderFeatureMatrixTests`
+- `AgentRuntimeHardeningStaticRegressionTests`
+- `AgentOutputContractTests`
+
 `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore`
 
 Result: passed. 221 tests passed, 0 failed, 0 skipped.
@@ -69,3 +77,25 @@ Result: no matches. Typed-output `RunAsync<T>` is not currently used; `docs/maf-
 ## Closure Notes
 
 Round2 implementation proof is green on the targeted unit, component, and integration coverage that exercises the requested behavior. The mandatory full-solution test command is not green because of unrelated broad-suite failures already outside this bundle's runtime/provider/finalizer scope.
+
+## Round 3 Recovery Addendum
+
+Captured: 2026-04-27.
+
+Round 3 added typed recovery/rework state, proof fingerprinting, retry ledger/backoff, process mutation approval governance, provider approval matrix proof, domain recovery guidance providers, and secret scanning.
+
+Additional focused commands run:
+
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~AgentFinalizerPolicyTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests|FullyQualifiedName~SecretScanningTests"`: passed, 68/68.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AgentRecoveryModelsTests|FullyQualifiedName~MafAgentRuntimeTests"`: passed, 37/37.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`: passed, 132/132.
+- `git grep -l "sk-[A-Za-z0-9_-]\{20,\}" -- . ":!**/bin/**" ":!**/obj/**" ":!**/.git/**"`: no tracked-file matches.
+
+Full solution validation was rerun:
+
+- `dotnet --info`: SDK 10.0.203, host 10.0.7, MSBuild 18.3.3.
+- `dotnet restore CanDoItAll.slnx`: passed with existing NU1510, NU1902, and NU1904 warnings.
+- `dotnet build CanDoItAll.slnx --configuration Release --no-restore`: passed with 0 errors and 56 warnings.
+- `dotnet test CanDoItAll.slnx --configuration Release --no-build`: failed on existing broad-suite failures outside the round 3 recovery/governance surface. The round 3 targeted fixtures above passed after the final changes.
+
+Security note: the repository no longer contains the exposed key in app configuration or tracked source scans, but the exposed credential still must be rotated or revoked outside the repository.

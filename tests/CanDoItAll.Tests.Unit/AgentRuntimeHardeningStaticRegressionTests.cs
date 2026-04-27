@@ -157,9 +157,14 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
             "ProcessRunAutomationDispatchService.DomainRecoveryGuidance.cs");
 
         Assert.DoesNotContain("BuildCalculatorRecoveryFocusGuidance", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("AppendCalculatorRecoveryChecklist", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildCalculatorRecoveryChecklist", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildBlazorBuildRecoveryGuidance", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CalculatorEngine", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Components/Pages/Home.razor", directiveSource, StringComparison.Ordinal);
         Assert.Contains("IProcessAutomationRecoveryGuidanceProvider", providerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRecoveryGuidanceContext", providerSource, StringComparison.Ordinal);
         Assert.Contains("CalculatorProcessAutomationRecoveryGuidanceProvider", providerSource, StringComparison.Ordinal);
+        Assert.Contains("BlazorProcessAutomationRecoveryGuidanceProvider", providerSource, StringComparison.Ordinal);
     }
 
     private static string ReadRepositoryFile(params string[] pathParts)

@@ -31,7 +31,7 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
-    public void ResolveFeatureMatrix_marks_openai_chat_completions_as_structured_output_without_provider_approval()
+    public void ResolveFeatureMatrix_marks_openai_chat_completions_as_structured_output_with_maf_approval()
     {
         var service = new ProviderProfileService();
         var provider = CreateProvider(
@@ -48,12 +48,12 @@ public sealed class ProviderFeatureMatrixTests
         Assert.False(matrix.SupportsHostedMcpServer);
         Assert.True(matrix.SupportsLocalMcpBridge);
         Assert.False(matrix.SupportsServiceManagedHistory);
-        Assert.False(matrix.SupportsToolApprovalRequests);
-        Assert.False(matrix.SupportsApprovalRequiredAIFunction);
+        Assert.True(matrix.SupportsToolApprovalRequests);
+        Assert.True(matrix.SupportsApprovalRequiredAIFunction);
     }
 
     [Fact]
-    public void ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_without_provider_approval()
+    public void ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_with_maf_approval()
     {
         var service = new ProviderProfileService();
         var provider = CreateProvider(
@@ -67,8 +67,8 @@ public sealed class ProviderFeatureMatrixTests
         Assert.True(matrix.SupportsStructuredOutput);
         Assert.True(matrix.SupportsResponseFormatJsonSchema);
         Assert.True(matrix.SupportsFunctionTools);
-        Assert.False(matrix.SupportsToolApprovalRequests);
-        Assert.False(matrix.SupportsApprovalRequiredAIFunction);
+        Assert.True(matrix.SupportsToolApprovalRequests);
+        Assert.True(matrix.SupportsApprovalRequiredAIFunction);
     }
 
     [Fact]

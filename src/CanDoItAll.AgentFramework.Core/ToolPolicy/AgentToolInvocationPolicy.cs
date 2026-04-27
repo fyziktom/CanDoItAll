@@ -51,6 +51,12 @@ public sealed record AgentToolInvocationTrace(
     bool Succeeded,
     string FailureMessage);
 
+public sealed record AgentToolPolicyMetadata(
+    string Name,
+    ToolInvocationClassification Classification,
+    bool RequiresApprovalByDefault,
+    bool IsStateChanging);
+
 public sealed record ToolInvocationPolicyContext(
     Guid AgentId,
     string AgentName,
@@ -180,6 +186,28 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
 public static class AgentToolInvocationPolicyMetadata
 {
+    public const string ProcessesDefinitionSave = "processes_definition_save";
+    public const string ProcessesDefinitionPublish = "processes_definition_publish";
+    public const string ProcessesDefinitionDelete = "processes_definition_delete";
+    public const string ProcessesDefinitionImport = "processes_definition_import";
+    public const string ProcessesRunStart = "processes_run_start";
+    public const string ProcessesStepTransition = "processes_step_transition";
+    public const string ProcessesAssignmentResolve = "processes_assignment_resolve";
+    public const string ProcessesArtifactRecord = "processes_artifact_record";
+    public const string ProcessesDefinitionsList = "processes_definitions_list";
+    public const string ProcessesDefinitionEditorGet = "processes_definition_editor_get";
+    public const string ProcessesDefinitionExport = "processes_definition_export";
+    public const string ProcessesRunsList = "processes_runs_list";
+    public const string ProcessesRunDetailGet = "processes_run_detail_get";
+    public const string ProcessesAnalyticsGet = "processes_analytics_get";
+    public const string ProcessesPartyOptionsList = "processes_party_options_list";
+    public const string ProcessesExecutorOptionsList = "processes_executor_options_list";
+    public const string ProcessesTemplatesList = "processes_templates_list";
+    public const string ProcessesTemplateGet = "processes_template_get";
+    public const string ProcessesTemplateMermaidGet = "processes_template_mermaid_get";
+    public const string ProcessesTemplateImport = "processes_template_import";
+    public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
+
     private static readonly string[] SensitiveArgumentNameFragments =
     [
         "api_key",
@@ -192,6 +220,47 @@ public static class AgentToolInvocationPolicyMetadata
         "token"
     ];
 
+    private static readonly IReadOnlyDictionary<string, AgentToolPolicyMetadata> RegisteredTools =
+        new[]
+        {
+            Mutation("workspace_dotnet_new"),
+            Mutation("workspace_pwsh_run_script"),
+            Mutation("workspace_python_run_file"),
+            Mutation("workspace_create_directory"),
+            Mutation("workspace_write_file"),
+            Mutation("workspace_append_file"),
+            Mutation("workspace_copy_path"),
+            Mutation("workspace_move_path"),
+            Mutation("workspace_delete_path"),
+            Validation("workspace_dotnet_restore"),
+            Validation("workspace_dotnet_build"),
+            Validation("workspace_dotnet_test"),
+            Validation("workspace_dotnet_run"),
+            Mutation(ProcessesDefinitionSave),
+            Mutation(ProcessesDefinitionPublish),
+            Mutation(ProcessesDefinitionDelete),
+            Mutation(ProcessesDefinitionImport),
+            Mutation(ProcessesRunStart),
+            Mutation(ProcessesStepTransition),
+            Mutation(ProcessesAssignmentResolve),
+            Mutation(ProcessesArtifactRecord),
+            Mutation(ProcessesTemplateImport),
+            Read(ProcessesDefinitionsList),
+            Read(ProcessesDefinitionEditorGet),
+            Read(ProcessesDefinitionExport),
+            Read(ProcessesRunsList),
+            Read(ProcessesRunDetailGet),
+            Read(ProcessesAnalyticsGet),
+            Read(ProcessesPartyOptionsList),
+            Read(ProcessesExecutorOptionsList),
+            Read(ProcessesTemplatesList),
+            Read(ProcessesTemplateGet),
+            Read(ProcessesTemplateMermaidGet),
+            Read(ProcessesTemplateBaselineScenariosList)
+        }.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+
+    public static IReadOnlyCollection<AgentToolPolicyMetadata> Tools => RegisteredTools.Values.ToList();
+
     public static ToolInvocationClassification Classify(string? toolName)
     {
         if (string.IsNullOrWhiteSpace(toolName))
@@ -200,14 +269,9 @@ public static class AgentToolInvocationPolicyMetadata
         }
 
         var normalized = toolName.Trim();
-        if (IsMutationTool(normalized))
+        if (RegisteredTools.TryGetValue(normalized, out var metadata))
         {
-            return ToolInvocationClassification.Mutation;
-        }
-
-        if (IsValidationTool(normalized))
-        {
-            return ToolInvocationClassification.Validation;
+            return metadata.Classification;
         }
 
         if (normalized.StartsWith("provider_native_", StringComparison.OrdinalIgnoreCase) ||
@@ -226,23 +290,20 @@ public static class AgentToolInvocationPolicyMetadata
 
     public static bool IsMutationTool(string toolName)
     {
-        return string.Equals(toolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_python_run_file", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_create_directory", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_append_file", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_copy_path", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_move_path", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_delete_path", StringComparison.OrdinalIgnoreCase);
+        return RegisteredTools.TryGetValue(toolName, out var metadata) &&
+               metadata.Classification == ToolInvocationClassification.Mutation;
     }
 
     public static bool IsValidationTool(string toolName)
     {
-        return string.Equals(toolName, "workspace_dotnet_restore", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_dotnet_build", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_dotnet_test", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(toolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase);
+        return RegisteredTools.TryGetValue(toolName, out var metadata) &&
+               metadata.Classification == ToolInvocationClassification.Validation;
+    }
+
+    public static bool RequiresApprovalByDefault(string toolName)
+    {
+        return RegisteredTools.TryGetValue(toolName, out var metadata) &&
+               metadata.RequiresApprovalByDefault;
     }
 
     public static IReadOnlyDictionary<string, string> RedactArguments(
@@ -299,5 +360,32 @@ public static class AgentToolInvocationPolicyMetadata
 
         text = text.ReplaceLineEndings(" ").Trim();
         return text.Length <= 160 ? text : text[..160] + "...";
+    }
+
+    private static AgentToolPolicyMetadata Mutation(string name)
+    {
+        return new AgentToolPolicyMetadata(
+            name,
+            ToolInvocationClassification.Mutation,
+            RequiresApprovalByDefault: true,
+            IsStateChanging: true);
+    }
+
+    private static AgentToolPolicyMetadata Validation(string name)
+    {
+        return new AgentToolPolicyMetadata(
+            name,
+            ToolInvocationClassification.Validation,
+            RequiresApprovalByDefault: false,
+            IsStateChanging: false);
+    }
+
+    private static AgentToolPolicyMetadata Read(string name)
+    {
+        return new AgentToolPolicyMetadata(
+            name,
+            ToolInvocationClassification.Read,
+            RequiresApprovalByDefault: false,
+            IsStateChanging: false);
     }
 }

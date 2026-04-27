@@ -451,6 +451,23 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void Maf_approval_required_function_wraps_plain_function_tool()
+    {
+        var function = AIFunctionFactory.Create(
+            (string value) => value.Trim(),
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            "Saves a process definition.");
+        var wrapped = new ApprovalRequiredAIFunction(function);
+        var chatOptions = new ChatOptions
+        {
+            Tools = [wrapped]
+        };
+
+        Assert.Equal(function.Name, wrapped.Name);
+        Assert.Contains(chatOptions.Tools, tool => tool is ApprovalRequiredAIFunction);
+    }
+
+    [Fact]
     public async Task Workspace_plugin_mutation_tools_remain_available_when_approval_requirements_are_suppressed()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -615,9 +632,65 @@ public sealed class MafAgentRuntimeTests
             Assert.Contains(toolName, toolNames);
         }
 
+        foreach (var toolName in ProcessMutationTools())
+        {
+            var tool = Assert.Single(tools, item => string.Equals(item.Name, toolName, StringComparison.OrdinalIgnoreCase));
+            Assert.IsType<ApprovalRequiredAIFunction>(tool);
+        }
+
+        foreach (var toolName in ProcessReadTools())
+        {
+            var tool = Assert.Single(tools, item => string.Equals(item.Name, toolName, StringComparison.OrdinalIgnoreCase));
+            Assert.IsNotType<ApprovalRequiredAIFunction>(tool);
+        }
+
         Assert.Contains(
             progressMessages,
             item => item.Contains("Attached internal process-module tools", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Internal_process_mutation_tools_remain_available_when_approval_requirements_are_suppressed()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProcessAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProcessAccessSettings
+                {
+                    CanRead = true,
+                    CanWrite = true,
+                    AllowedDefinitionIds =
+                    [
+                        Guid.NewGuid()
+                    ]
+                })
+        };
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(application.RootPath, scope.ServiceProvider);
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages,
+            suppressApprovalRequirements: true);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+        foreach (var toolName in ProcessMutationTools())
+        {
+            var tool = Assert.Single(tools, item => string.Equals(item.Name, toolName, StringComparison.OrdinalIgnoreCase));
+            Assert.IsNotType<ApprovalRequiredAIFunction>(tool);
+        }
     }
 
     private sealed class OpaqueToolCallContent(
@@ -692,6 +765,41 @@ public sealed class MafAgentRuntimeTests
             string.Empty,
             null,
             false);
+    }
+
+    private static string[] ProcessMutationTools()
+    {
+        return
+        [
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
+            AgentToolInvocationPolicyMetadata.ProcessesRunStart,
+            AgentToolInvocationPolicyMetadata.ProcessesStepTransition,
+            AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
+            AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateImport
+        ];
+    }
+
+    private static string[] ProcessReadTools()
+    {
+        return
+        [
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport,
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList,
+            AgentToolInvocationPolicyMetadata.ProcessesRunDetailGet,
+            AgentToolInvocationPolicyMetadata.ProcessesAnalyticsGet,
+            AgentToolInvocationPolicyMetadata.ProcessesPartyOptionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesExecutorOptionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList
+        ];
     }
 
     private static string FindRepositoryRoot()

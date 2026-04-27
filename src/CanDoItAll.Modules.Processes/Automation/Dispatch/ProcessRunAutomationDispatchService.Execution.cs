@@ -279,8 +279,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     providerRepair.FallbackModel,
                     providerRepair.FailureSummary);
 
+                var providerRecoveryDecision = AgentRecoveryDecisionFactory.Create(
+                    AgentFailureCategory.ProviderFailure,
+                    providerRepair.FailureSummary,
+                    attemptNumber,
+                    executionRunId.ToString("D"),
+                    nextAttemptAtUtc: clock.GetUtcNow().AddSeconds(Math.Min(60, attemptNumber * 5)));
+                await PersistRecoveryJournalAsync(
+                    candidate,
+                    providerRecoveryDecision,
+                    packet: null,
+                    providerFallbackCount: 1,
+                    cancellationToken);
+
                 automationChatSessionId = null;
-                recoveryDirective = BuildProviderRepairRecoveryDirective(
+                var providerRecoveryDirective = BuildProviderRepairRecoveryDirective(
                     BuildRecoveryDirective(
                         candidate,
                         detail,
@@ -289,6 +302,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         unresolvedCriticalToolFailures,
                         attemptNumber),
                     providerRepair);
+                recoveryDirective = BuildTypedRecoveryDirective(
+                    providerRecoveryDecision,
+                    packet: null,
+                    providerRecoveryDirective);
                 continue;
             }
 
@@ -332,17 +349,52 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 attemptNumber + 1,
                 maxExecutionAttempts);
 
+            var recoveryDecision = CreateRecoveryDecisionForRetry(
+                candidate,
+                detail,
+                responseText,
+                missingRequiredTools,
+                unresolvedCriticalToolFailures,
+                attemptNumber,
+                nextAttemptAtUtc: clock.GetUtcNow().AddSeconds(Math.Min(60, attemptNumber * 5)));
+            var reworkPacket = CreateReworkPacketForDecision(
+                candidate,
+                detail,
+                recoveryDecision,
+                missingRequiredTools,
+                unresolvedCriticalToolFailures,
+                clock.GetUtcNow());
+            if (reworkPacket is not null)
+            {
+                recoveryDecision = recoveryDecision with
+                {
+                    Mode = AgentRecoveryMode.ReworkContinuation,
+                    ReworkPacketId = reworkPacket.Id
+                };
+            }
+
+            await PersistRecoveryJournalAsync(
+                candidate,
+                recoveryDecision,
+                reworkPacket,
+                providerFallbackCount: 0,
+                cancellationToken);
+
             // Start recovery attempts on a fresh chat session so stale context or provider-side errors
             // from the previous attempt do not poison the next governed retry.
             automationChatSessionId = null;
 
-            recoveryDirective = BuildRecoveryDirective(
+            var legacyRecoveryDirective = BuildRecoveryDirective(
                 candidate,
                 detail,
                 responseText,
                 missingRequiredTools,
                 unresolvedCriticalToolFailures,
                 attemptNumber);
+            recoveryDirective = BuildTypedRecoveryDirective(
+                recoveryDecision,
+                reworkPacket,
+                legacyRecoveryDirective);
         }
 
         return finalOutcome

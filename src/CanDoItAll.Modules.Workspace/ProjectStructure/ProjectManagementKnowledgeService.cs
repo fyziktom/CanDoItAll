@@ -75,7 +75,7 @@ public sealed class StaticProjectManagementKnowledgeProvider : IProjectManagemen
             ["reporting", "status", "analytics"],
             false),
         new(
-            "risk-surface-shared-parts",
+            "risk_surface_shared_parts",
             ProjectManagementKnowledgeCategory.Risk,
             "Look for shared parts early",
             "Cross-project analysis should highlight shared dependencies and collision risks before they become merge or rollout problems.",

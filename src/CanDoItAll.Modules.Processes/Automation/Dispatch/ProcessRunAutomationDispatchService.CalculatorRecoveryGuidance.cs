@@ -22,8 +22,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return contextText.Contains("Calculator", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void AppendCalculatorRecoveryChecklist(StringBuilder builder, string missingConcreteImplementationProofSummary)
+    private static string BuildCalculatorRecoveryChecklist(string missingConcreteImplementationProofSummary)
     {
+        var builder = new StringBuilder();
         builder.AppendLine("Calculator recovery checklist for this retry:");
         if (!string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
         {
@@ -46,5 +47,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("- Replace duplicate add/divide-only tests with one meaningful test source that covers Add, Subtract, Multiply, Divide, and divide-by-zero behavior against `CalculatorEngine`.");
         builder.AppendLine("- After the last source or project-file mutation, read back at least `Calculator/Program.cs`, `Calculator/Components/Pages/Home.razor`, `Calculator/Domain/CalculatorEngine.cs`, and `Calculator.Tests/Calculator.Tests.csproj`, then run `workspace_dotnet_build` on `Calculator/Calculator.csproj` and `workspace_dotnet_test` on `Calculator.Tests/Calculator.Tests.csproj`.");
         builder.AppendLine("- Write required markdown artifacts only after those build and test commands succeed in this same retry.");
+        return builder.ToString();
     }
 }

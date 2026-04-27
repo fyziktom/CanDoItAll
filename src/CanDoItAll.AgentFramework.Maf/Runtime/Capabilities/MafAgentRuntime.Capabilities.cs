@@ -25,7 +25,7 @@ public sealed partial class MafAgentRuntime
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
-        await AttachInternalProcessToolsAsync(composition, agent, progressCallback);
+        await AttachInternalProcessToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachCatalogCapabilitiesAsync(
             composition,
             agent,
@@ -184,7 +184,8 @@ public sealed partial class MafAgentRuntime
     private async Task AttachInternalProcessToolsAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
-        Func<ExecutionState, string, string, Task> progressCallback)
+        Func<ExecutionState, string, string, Task> progressCallback,
+        bool suppressApprovalRequirements)
     {
         if (!agent.Permissions.CanUseTools ||
             composition.ProcessToolBuilder is null)
@@ -192,17 +193,34 @@ public sealed partial class MafAgentRuntime
             return;
         }
 
-        var tools = composition.ProcessToolBuilder.CreateTools(agent);
+        var tools = composition.ProcessToolBuilder.CreateTools(agent)
+            .Select(tool => WrapInternalProcessMutationTool(tool, suppressApprovalRequirements))
+            .ToList();
         if (tools.Count == 0)
         {
             return;
         }
 
         composition.State.Tools.AddRange(tools);
+        composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
         await progressCallback(
             ExecutionState.Preparing,
             "Processes",
             "Attached internal process-module tools backed by the workspace services and current agent policy.");
+    }
+
+    private static AITool WrapInternalProcessMutationTool(
+        AITool tool,
+        bool suppressApprovalRequirements)
+    {
+        if (suppressApprovalRequirements ||
+            tool is not AIFunction function ||
+            !AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(tool.Name))
+        {
+            return tool;
+        }
+
+        return new ApprovalRequiredAIFunction(function);
     }
 
     private async Task AttachCapabilityAsync(
