@@ -1,5 +1,75 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="rz-tooltip-host hidden" aria-hidden="true"></div>
+@implements IDisposable
+@inject TooltipService TooltipService
 
+@if (TooltipService.Current is { } tooltip)
+{
+    <div class="@ResolveTooltipCssClass(tooltip)"
+         style="@ResolveTooltipStyle(tooltip)"
+         role="tooltip"
+         data-testid="@tooltip.Options.TestId">
+        @if (!string.IsNullOrWhiteSpace(tooltip.Text))
+        {
+            <span>@tooltip.Text</span>
+        }
+        else if (tooltip.ChildContent is not null)
+        {
+            @tooltip.ChildContent(TooltipService)
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        TooltipService.Changed += HandleTooltipChanged;
+    }
+
+    private static string ResolveTooltipCssClass(TooltipState tooltip)
+    {
+        return CssClassBuilder.Join(
+            "rz-tooltip pointer-events-none fixed z-[95] max-w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-slate-700/60 bg-slate-950 px-3 py-2 text-xs font-medium leading-5 text-white shadow-2xl shadow-slate-950/25",
+            tooltip.Options.Class);
+    }
+
+    private static string ResolveTooltipStyle(TooltipState tooltip)
+    {
+        return CssClassBuilder.JoinStyles(
+            "z-index:950",
+            $"left:clamp(1rem,{tooltip.ClientX:0.##}px,calc(100vw - 1rem))",
+            $"top:clamp(1rem,{tooltip.ClientY:0.##}px,calc(100vh - 1rem))",
+            $"transform:{ResolveTransform(tooltip.Options.Position)}",
+            tooltip.Options.Style) ?? string.Empty;
+    }
+
+    private static string ResolveTransform(TooltipPosition position)
+    {
+        return position switch
+        {
+            TooltipPosition.Bottom => "translate(-50%,0.75rem)",
+            TooltipPosition.Left => "translate(calc(-100% - 0.75rem),-50%)",
+            TooltipPosition.Right => "translate(0.75rem,-50%)",
+            TooltipPosition.TopLeft => "translate(calc(-100% - 0.75rem),calc(-100% - 0.75rem))",
+            TooltipPosition.TopRight => "translate(0.75rem,calc(-100% - 0.75rem))",
+            TooltipPosition.BottomLeft => "translate(calc(-100% - 0.75rem),0.75rem)",
+            TooltipPosition.BottomRight => "translate(0.75rem,0.75rem)",
+            TooltipPosition.LeftTop => "translate(calc(-100% - 0.75rem),0)",
+            TooltipPosition.LeftBottom => "translate(calc(-100% - 0.75rem),-100%)",
+            TooltipPosition.RightTop => "translate(0.75rem,0)",
+            TooltipPosition.RightBottom => "translate(0.75rem,-100%)",
+            _ => "translate(-50%,calc(-100% - 0.75rem))"
+        };
+    }
+
+    private void HandleTooltipChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        TooltipService.Changed -= HandleTooltipChanged;
+    }
+}
 
 

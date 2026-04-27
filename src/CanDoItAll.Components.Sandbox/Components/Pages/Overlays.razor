@@ -1,6 +1,8 @@
 @namespace CanDoItAll.Components.Sandbox.Components
 @page "/groups/overlays"
 @inherits CatalogPageBase
+@inject DialogService DialogService
+@inject NotificationService NotificationService
 
 <PageTitle>Overlays</PageTitle>
 
@@ -54,6 +56,67 @@
                 </Split>
             </SectionCard>
 
+            <SectionCard Title="Overlay services" Description="Programmatic services mount once in the layout and let pages open dialogs, tooltips, and notifications without owning overlay markup.">
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplate="minmax(0,1fr)"
+                      ColumnTemplateLg="minmax(0,1.15fr) minmax(16rem,0.85fr)">
+                    <Stack GapScale="LayoutGap.Medium">
+                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="DialogService examples cover modal sizes, protected backdrop behavior, and close results returned to the caller." />
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Compact dialog"
+                                    ButtonStyle="@(ButtonStyle.Light)"
+                                    Variant="@(Variant.Outlined)"
+                                    Click="@(() => OpenSizedDialog(ModalSize.Compact))"
+                                    data-testid="open-compact-dialog" />
+                            <Button Text="Wide dialog"
+                                    ButtonStyle="@(ButtonStyle.Info)"
+                                    Variant="@(Variant.Outlined)"
+                                    Click="@(() => OpenSizedDialog(ModalSize.Wide))"
+                                    data-testid="open-wide-dialog" />
+                            <Button Text="Full dialog"
+                                    ButtonStyle="@(ButtonStyle.Secondary)"
+                                    Variant="@(Variant.Outlined)"
+                                    Click="@(() => OpenSizedDialog(ModalSize.Full))"
+                                    data-testid="open-full-dialog" />
+                            <Button Text="Return object"
+                                    Click="@OpenResultDialog"
+                                    data-testid="open-result-dialog" />
+                            <Button Text="Backdrop locked"
+                                    ButtonStyle="@(ButtonStyle.Warning)"
+                                    Variant="@(Variant.Outlined)"
+                                    Click="@OpenBackdropLockedDialog"
+                                    data-testid="open-backdrop-dialog" />
+                        </Cluster>
+
+                        <Alert AlertStyle="@(AlertStyle.Info)">
+                            <span data-testid="dialog-result">@DialogResultText</span>
+                        </Alert>
+                    </Stack>
+
+                    <Stack GapScale="LayoutGap.Medium">
+                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="TooltipService and NotificationService stay host-mounted so local pages only trigger state." />
+                        <Cluster Gap="LayoutGap.Small">
+                            <TooltipTarget Text="TooltipService opened this host-mounted tooltip from pointer coordinates."
+                                           Position="TooltipPosition.RightTop"
+                                           Duration="@((TimeSpan?)null)"
+                                           TestId="service-tooltip"
+                                           TriggerClass="inline-flex">
+                                <span class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                                      data-testid="tooltip-trigger">
+                                    Hover service tooltip
+                                </span>
+                            </TooltipTarget>
+
+                            <Button Text="Show toast"
+                                    ButtonStyle="@(ButtonStyle.Success)"
+                                    Variant="@(Variant.Outlined)"
+                                    Click="@ShowOverlayToast"
+                                    data-testid="show-overlay-toast" />
+                        </Cluster>
+                    </Stack>
+                </Grid>
+            </SectionCard>
+
             <Grid Gap="LayoutGap.Large"
                   ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
                 <SectionCard Title="Overlay hosts" Description="Hidden hosts should still be mounted centrally so pages do not create their own overlay plumbing.">
@@ -62,10 +125,9 @@
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Text="Dialog host mounted" Tone="success" />
                             <StatusBadge Text="Tooltip host mounted" Tone="success" />
+                            <StatusBadge Text="Notification host mounted" Tone="success" />
                             <StatusBadge Text="Page context preserved" Tone="info" />
                         </Cluster>
-                        <Dialog />
-                        <Tooltip />
                     </div>
                 </SectionCard>
 
@@ -116,7 +178,103 @@
     private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Overlays);
     private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Overlays);
 
+    private string DialogResultText { get; set; } = "No dialog result returned yet.";
+
     private bool IsDisabled => CurrentScenario == SandboxScenarioKey.EmptyState || CurrentScenario == SandboxScenarioKey.DisabledState;
+
+    private Task OpenSizedDialog(ModalSize size)
+    {
+        var label = ResolveSizeLabel(size);
+        var slug = ResolveSizeSlug(size);
+
+        _ = DialogService.OpenAsync(
+            $"{label} service dialog",
+            dialog => @<Stack GapScale="LayoutGap.Medium">
+                <TextBlock TextStyle="@(TextStyle.Body2)" Value="@($"This {label.ToLowerInvariant()} modal is opened by DialogService and rendered through the shared DialogHost.")" />
+                <Alert AlertStyle="@(AlertStyle.Info)">The modal keeps the existing BaseLib dialog chrome while the service owns result completion.</Alert>
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Close"
+                            ButtonStyle="@(ButtonStyle.Light)"
+                            Variant="@(Variant.Outlined)"
+                            Click="@(() => CloseDialogWithResult(dialog, $"{label} closed"))"
+                            data-testid="close-sized-dialog" />
+                </Cluster>
+            </Stack>,
+            new DialogOptions
+            {
+                Size = size,
+                Subtitle = "Service-driven modal size proof.",
+                TestId = $"service-dialog-{slug}"
+            });
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenResultDialog()
+    {
+        var result = await DialogService.OpenAsync(
+            "Return a decision object",
+            dialog => @<Stack GapScale="LayoutGap.Medium">
+                <TextBlock TextStyle="@(TextStyle.Body2)" Value="Close this dialog with an object so the caller can continue the workflow with typed data." />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Return approval"
+                            Click="@(() => CloseDialogWithDecision(dialog, ApprovedStatus))"
+                            data-testid="return-dialog-object" />
+                    <Button Text="Return review"
+                            ButtonStyle="@(ButtonStyle.Warning)"
+                            Variant="@(Variant.Outlined)"
+                            Click="@(() => CloseDialogWithDecision(dialog, ReviewStatus))" />
+                </Cluster>
+            </Stack>,
+            new DialogOptions
+            {
+                Size = ModalSize.Medium,
+                Subtitle = "The awaited service call receives the object supplied by dialog.CloseAsync.",
+                TestId = "service-dialog-result"
+            });
+
+        DialogResultText = result is DialogDecision decision
+            ? $"Dialog returned: {decision.Status} from {decision.Source}"
+            : "Dialog returned no object.";
+    }
+
+    private Task OpenBackdropLockedDialog()
+    {
+        _ = DialogService.OpenAsync(
+            "Backdrop close disabled",
+            dialog => @<Stack GapScale="LayoutGap.Medium">
+                <TextBlock TextStyle="@(TextStyle.Body2)" Value="Clicking outside this modal should leave it open. Use the explicit action to close it." />
+                <Button Text="Close locked dialog"
+                        ButtonStyle="@(ButtonStyle.Warning)"
+                        Variant="@(Variant.Outlined)"
+                        Click="@(() => CloseDialogWithResult(dialog, LockedCloseResult))"
+                        data-testid="close-backdrop-dialog" />
+            </Stack>,
+            new DialogOptions
+            {
+                Size = ModalSize.Compact,
+                CloseOnBackdrop = false,
+                Subtitle = "CloseOnBackdrop is false for this service dialog.",
+                TestId = "service-dialog-backdrop-locked"
+            });
+
+        return Task.CompletedTask;
+    }
+
+    private Task ShowOverlayToast()
+    {
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Overlay service toast",
+            Detail = "NotificationService rendered this bottom-center toast from the shared layout host.",
+            Duration = 0,
+            Position = NotificationPosition.BottomCenter,
+            TestId = "overlay-service-toast"
+        });
+
+        return Task.CompletedTask;
+    }
 
     private string HelpCopy => CurrentScenario switch
     {
@@ -160,4 +318,42 @@
     private string PrimaryActionText => CurrentScenario == SandboxScenarioKey.LongText
         ? "Approve overlay treatment and capture proof"
         : "Approve";
+
+    private const string ApprovedStatus = "Approved";
+    private const string ReviewStatus = "Needs review";
+    private const string LockedCloseResult = "locked dialog closed";
+
+    private static Task CloseDialogWithResult(DialogReference dialog, object result)
+    {
+        return dialog.CloseAsync(result);
+    }
+
+    private static Task CloseDialogWithDecision(DialogReference dialog, string status)
+    {
+        return dialog.CloseAsync(new DialogDecision(status, "service-demo"));
+    }
+
+    private static string ResolveSizeLabel(ModalSize size)
+    {
+        return size switch
+        {
+            ModalSize.Compact => "Compact",
+            ModalSize.Wide => "Wide",
+            ModalSize.Full => "Full",
+            _ => "Medium"
+        };
+    }
+
+    private static string ResolveSizeSlug(ModalSize size)
+    {
+        return size switch
+        {
+            ModalSize.Compact => "compact",
+            ModalSize.Wide => "wide",
+            ModalSize.Full => "full",
+            _ => "medium"
+        };
+    }
+
+    private sealed record DialogDecision(string Status, string Source);
 }

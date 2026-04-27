@@ -71,11 +71,13 @@
 
                 <SectionCard Title="Notifications" Description="Toasts should be short, specific, and easy to dismiss mentally.">
                     <div class="space-y-4">
-                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Use the buttons below to verify informational, success, and warning notification copy." />
+                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Use the buttons below to verify informational, success, warning, persistent, and clear notification service behavior." />
                         <Cluster Gap="LayoutGap.Medium">
-                            <Button Text="Info toast" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Click="@SendInfoToast" />
-                            <Button Text="Success toast" Click="@SendSuccessToast" />
-                            <Button Text="Warning toast" ButtonStyle="@(ButtonStyle.Warning)" Variant="@(Variant.Outlined)" Click="@SendWarningToast" />
+                            <Button Text="Info toast" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Click="@SendInfoToast" data-testid="feedback-info-toast" />
+                            <Button Text="Success toast" Click="@SendSuccessToast" data-testid="feedback-success-toast" />
+                            <Button Text="Warning toast" ButtonStyle="@(ButtonStyle.Warning)" Variant="@(Variant.Outlined)" Click="@SendWarningToast" data-testid="feedback-warning-toast" />
+                            <Button Text="Persistent toast" ButtonStyle="@(ButtonStyle.Info)" Variant="@(Variant.Outlined)" Click="@SendPersistentToast" data-testid="feedback-persistent-toast" />
+                            <Button Text="Clear toasts" ButtonStyle="@(ButtonStyle.Danger)" Variant="@(Variant.Text)" Click="@ClearToasts" data-testid="feedback-clear-toasts" />
                         </Cluster>
                     </div>
                 </SectionCard>
@@ -90,36 +92,55 @@
 
     private Task SendInfoToast()
     {
-        NotificationService.Notify(new NotificationMessage
-        {
-            Severity = NotificationSeverity.Info,
-            Summary = "Sandbox refreshed",
-            Detail = "The current group examples have been reloaded for review."
-        });
+        NotificationService.Notify(
+            NotificationSeverity.Info,
+            "Sandbox refreshed",
+            "The current group examples have been reloaded for review.");
 
         return Task.CompletedTask;
     }
 
     private Task SendSuccessToast()
     {
-        NotificationService.Notify(new NotificationMessage
-        {
-            Severity = NotificationSeverity.Success,
-            Summary = "Screenshot saved",
-            Detail = "The desktop proof image is ready for validation."
-        });
+        NotificationService.Notify(
+            NotificationSeverity.Success,
+            "Screenshot saved",
+            "The desktop proof image is ready for validation.",
+            position: NotificationPosition.TopCenter);
 
         return Task.CompletedTask;
     }
 
     private Task SendWarningToast()
     {
+        NotificationService.Notify(
+            NotificationSeverity.Warning,
+            "Review needed",
+            "The mobile proof still has a spacing concern to resolve.",
+            position: NotificationPosition.BottomLeft);
+
+        return Task.CompletedTask;
+    }
+
+    private Task SendPersistentToast()
+    {
         NotificationService.Notify(new NotificationMessage
         {
-            Severity = NotificationSeverity.Warning,
-            Summary = "Review needed",
-            Detail = "The mobile proof still has a spacing concern to resolve."
+            Severity = NotificationSeverity.Info,
+            Summary = "Persistent proof note",
+            Detail = "This notification remains until it is dismissed or cleared.",
+            Duration = 0,
+            Position = NotificationPosition.CenterRight,
+            TestId = "feedback-persistent-notification",
+            Payload = "feedback-proof"
         });
+
+        return Task.CompletedTask;
+    }
+
+    private Task ClearToasts()
+    {
+        NotificationService.Clear();
 
         return Task.CompletedTask;
     }
