@@ -50,8 +50,9 @@ public sealed partial class MafAgentRuntime
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false,
         bool forceOmitTemperature = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
+        var runtimeOptions = executionOptions ?? CreateDisabledRuntimeExecutionOptions(null);
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
         var managedSeedProvider = ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent)
             ? ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile: true)
@@ -64,8 +65,8 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException($"Provider '{effectiveProvider.Name}' does not have a default model and the agent '{agent.Name}' does not override one.");
         }
 
-        EnsureStructuredOutputCapability(effectiveProvider, structuredOutput);
-        var finalizerCapture = CreateFinalizerCapture(structuredOutput);
+        EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions.StructuredOutput);
+        var finalizerCapture = CreateFinalizerCapture(runtimeOptions.StructuredOutput, runtimeOptions.FinalizerMode);
         var capabilityState = await CreateCapabilityStateAsync(
             agent,
             effectiveProvider,
@@ -74,13 +75,18 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements);
+        await FilterUnusableApprovalToolsAsync(
+            capabilityState,
+            effectiveProvider,
+            suppressApprovalRequirements,
+            progressCallback);
         if (finalizerCapture is not null)
         {
             capabilityState.Tools.AddRange(finalizerCapture.Tools);
             await progressCallback(
                 ExecutionState.Preparing,
                 "Finalizer policy",
-                $"Attached finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
+                $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
         }
 
         var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider);
@@ -89,7 +95,7 @@ public sealed partial class MafAgentRuntime
             model,
             (float)agent.Temperature,
             forceOmitTemperature);
-        chatOptions.Instructions = AppendFinalizerInstructions(agent.Instructions, finalizerCapture?.Policy);
+        chatOptions.Instructions = AppendFinalizerInstructions(agent.Instructions, finalizerCapture?.Policy, runtimeOptions.FinalizerMode);
         chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
@@ -362,22 +368,22 @@ public sealed partial class MafAgentRuntime
                 if (policyDecision.Kind is ToolInvocationDecisionKind.Deny or ToolInvocationDecisionKind.SkipExecution)
                 {
                     activity?.SetStatus(ActivityStatusCode.Error, policyDecision.Reason);
-                    throw new InvalidOperationException(policyDecision.Reason);
+                    throw new AgentToolPolicyBlockedException(functionName, policyDecision.Reason);
                 }
 
                 if (policyDecision.Kind == ToolInvocationDecisionKind.RequireApproval &&
                     !policyContext.HasEffectiveApprovalPath)
                 {
                     activity?.SetStatus(ActivityStatusCode.Error, policyDecision.Reason);
-                    throw new InvalidOperationException(policyDecision.Reason);
+                    throw new AgentToolPolicyBlockedException(functionName, policyDecision.Reason);
                 }
 
                 return await next(context, cancellationToken);
             }
-            catch (Exception exception) when (IsPolicyException(exception))
+            catch (AgentToolPolicyBlockedException exception)
             {
                 activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-                throw new InvalidOperationException($"Tool '{functionName}' was blocked by policy. {exception.Message}", exception);
+                throw;
             }
             catch (Exception exception)
             {
@@ -410,8 +416,95 @@ public sealed partial class MafAgentRuntime
             $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce structured output contract '{structuredOutput.ContractKey}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.");
     }
 
-    private static FinalizerCapture? CreateFinalizerCapture(AgentStructuredOutputContract? structuredOutput)
+    private static AgentRuntimeExecutionOptions NormalizeRuntimeExecutionOptions(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
     {
+        if (executionOptions is null)
+        {
+            return CreateDisabledRuntimeExecutionOptions(structuredOutput);
+        }
+
+        if (structuredOutput is not null &&
+            executionOptions.StructuredOutput is not null &&
+            !string.Equals(executionOptions.StructuredOutput.ContractKey, structuredOutput.ContractKey, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Runtime execution options contract '{executionOptions.StructuredOutput.ContractKey}' does not match the requested structured output contract '{structuredOutput.ContractKey}'.");
+        }
+
+        return executionOptions.StructuredOutput is null && structuredOutput is not null
+            ? executionOptions with { StructuredOutput = structuredOutput }
+            : executionOptions;
+    }
+
+    private static AgentRuntimeExecutionOptions CreateDisabledRuntimeExecutionOptions(
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        return new AgentRuntimeExecutionOptions(
+            StructuredOutput: structuredOutput,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0);
+    }
+
+    private async Task FilterUnusableApprovalToolsAsync(
+        RuntimeCapabilityState capabilityState,
+        ProviderProfile provider,
+        bool suppressApprovalRequirements,
+        Func<ExecutionState, string, string, Task> progressCallback)
+    {
+        if (suppressApprovalRequirements)
+        {
+            capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+            return;
+        }
+
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
+        if (featureMatrix.SupportsApprovalRequiredAIFunction)
+        {
+            return;
+        }
+
+        var unusableMutationTools = capabilityState.Tools
+            .Where(tool => tool is ApprovalRequiredAIFunction)
+            .Where(tool => AgentToolInvocationPolicyMetadata.Classify(tool.Name) == ToolInvocationClassification.Mutation)
+            .ToList();
+        if (unusableMutationTools.Count == 0)
+        {
+            return;
+        }
+
+        var toolNames = unusableMutationTools
+            .Select(tool => tool.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var toolList = string.Join(", ", toolNames);
+        if (IsGovernedProcessAutomationRun())
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot expose mutation tools that require MAF approval because no effective approval path is available. Unusable tools: {toolList}.");
+        }
+
+        capabilityState.Tools.RemoveAll(unusableMutationTools.Contains);
+        capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Approval policy",
+            $"Omitted mutation tool(s) that require MAF approval because provider '{provider.Name}' using transport '{provider.Transport}' has no effective approval path: {toolList}.");
+    }
+
+    private static FinalizerCapture? CreateFinalizerCapture(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode)
+    {
+        if (finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return null;
+        }
+
         if (!AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
         {
             return null;
@@ -465,18 +558,27 @@ public sealed partial class MafAgentRuntime
 
     private static string AppendFinalizerInstructions(
         string instructions,
-        AgentFinalizerPolicy? finalizerPolicy)
+        AgentFinalizerPolicy? finalizerPolicy,
+        AgentFinalizerMode finalizerMode)
     {
-        if (finalizerPolicy is null)
+        if (finalizerPolicy is null || finalizerMode == AgentFinalizerMode.Disabled)
         {
             return instructions;
         }
 
-        var finalizerInstructions =
-            $"{Environment.NewLine}{Environment.NewLine}Finalizer tool policy:{Environment.NewLine}" +
-            $"- Call `{finalizerPolicy.ToolName}` exactly once before finishing. Its arguments are the source of truth for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
-            "- Do not call any other `submit_*` finalizer tool for this contract." + Environment.NewLine +
-            "- Treat normal assistant text as display-only; workflow state must come from typed machine output.";
+        var header = finalizerMode == AgentFinalizerMode.Shadow
+            ? "Finalizer tool shadow policy:"
+            : "Finalizer tool policy:";
+        var finalizerInstructions = finalizerMode == AgentFinalizerMode.Shadow
+            ? $"{Environment.NewLine}{Environment.NewLine}{header}{Environment.NewLine}" +
+              $"- Call `{finalizerPolicy.ToolName}` exactly once before finishing.{Environment.NewLine}" +
+              $"- Return the same JSON object through the configured `{finalizerPolicy.OutputContract.ContractKey}` structured response format so the runtime can compare both outputs.{Environment.NewLine}" +
+              "- Do not use Markdown or prose for machine output."
+            : $"{Environment.NewLine}{Environment.NewLine}{header}{Environment.NewLine}" +
+              $"- Call `{finalizerPolicy.ToolName}` exactly once before finishing.{Environment.NewLine}" +
+              $"- The finalizer arguments are the authoritative machine output for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
+              $"- After the tool call, return a JSON object matching the same `{finalizerPolicy.OutputContract.ContractKey}` schema. Do not use Markdown or prose.{Environment.NewLine}" +
+              "- Do not call any other `submit_*` finalizer tool for this contract.";
         return string.IsNullOrWhiteSpace(instructions)
             ? finalizerInstructions.Trim()
             : instructions.TrimEnd() + finalizerInstructions;
@@ -495,9 +597,6 @@ public sealed partial class MafAgentRuntime
 
         return [];
     }
-
-    private static bool IsPolicyException(Exception exception)
-        => exception is InvalidOperationException or NotSupportedException;
 
     private static ChatHistoryProvider CreateChatHistoryProvider()
     {

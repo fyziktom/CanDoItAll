@@ -142,7 +142,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                     cancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
-                    structuredOutput: structuredOutput);
+                    structuredOutput: structuredOutput,
+                    executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -586,7 +587,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                     cancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
-                    structuredOutput: request.StructuredOutput);
+                    structuredOutput: request.StructuredOutput,
+                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -997,6 +999,19 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             $"Validated structured output contract '{structuredOutput.ContractKey}'. Raw output hash: {validation.RawOutputHash}.",
             cancellationToken);
         return response;
+    }
+
+    private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
+        ExecutionRunRecord run,
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return new AgentRuntimeExecutionOptions(
+            StructuredOutput: structuredOutput,
+            FinalizerMode: AgentFinalizerPolicies.ResolveMode(run, structuredOutput),
+            RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
+            MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run));
     }
 
     private async Task<AgentRuntimeResponse> ValidateFinalizerBeforeCompletionAsync(

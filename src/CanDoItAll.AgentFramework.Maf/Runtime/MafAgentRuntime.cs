@@ -39,7 +39,8 @@ public sealed partial class MafAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         var model = ResolveRuntimeModel(agent, provider);
         try
@@ -56,6 +57,7 @@ public sealed partial class MafAgentRuntime(
                 cancellationToken,
                 suppressApprovalRequirements,
                 structuredOutput,
+                executionOptions,
                 forceOmitTemperature: false);
         }
         catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
@@ -73,6 +75,7 @@ public sealed partial class MafAgentRuntime(
                 cancellationToken,
                 suppressApprovalRequirements,
                 structuredOutput,
+                executionOptions,
                 forceOmitTemperature: true);
         }
     }
@@ -89,8 +92,10 @@ public sealed partial class MafAgentRuntime(
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
         AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions,
         bool forceOmitTemperature)
     {
+        var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
         await progressCallback(ExecutionState.Preparing, "Framework", "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.");
         if (suppressApprovalRequirements)
         {
@@ -106,7 +111,7 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             suppressApprovalRequirements,
             forceOmitTemperature,
-            structuredOutput);
+            runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -128,7 +133,7 @@ public sealed partial class MafAgentRuntime(
             runtimeBuild.HasApprovalTools,
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
-            structuredOutput: structuredOutput);
+            structuredOutput: runtimeOptions.StructuredOutput);
         var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt);
 
         return await ExecuteRunAsync(
@@ -143,7 +148,7 @@ public sealed partial class MafAgentRuntime(
             runtimeSessionKey,
             progressCallback,
             cancellationToken,
-            structuredOutput,
+            runtimeOptions.StructuredOutput,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations);
     }
@@ -159,7 +164,8 @@ public sealed partial class MafAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         var model = ResolveRuntimeModel(agent, provider);
         try
@@ -176,6 +182,7 @@ public sealed partial class MafAgentRuntime(
                 cancellationToken,
                 suppressApprovalRequirements,
                 structuredOutput,
+                executionOptions,
                 forceOmitTemperature: false);
         }
         catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
@@ -193,6 +200,7 @@ public sealed partial class MafAgentRuntime(
                 cancellationToken,
                 suppressApprovalRequirements,
                 structuredOutput,
+                executionOptions,
                 forceOmitTemperature: true);
         }
     }
@@ -209,8 +217,10 @@ public sealed partial class MafAgentRuntime(
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
         AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions,
         bool forceOmitTemperature)
     {
+        var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
         await progressCallback(ExecutionState.Preparing, "Framework", "Rehydrating the Microsoft Agent Framework runtime to continue from a pending approval.");
         if (suppressApprovalRequirements)
         {
@@ -226,7 +236,7 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             suppressApprovalRequirements,
             forceOmitTemperature,
-            structuredOutput);
+            runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -248,7 +258,7 @@ public sealed partial class MafAgentRuntime(
             runtimeBuild.HasApprovalTools,
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
-            structuredOutput: structuredOutput);
+            structuredOutput: runtimeOptions.StructuredOutput);
         var inputMessages = CreateApprovalInputMessages(session, approved);
 
         return await ExecuteRunAsync(
@@ -263,7 +273,7 @@ public sealed partial class MafAgentRuntime(
             runtimeSessionKey,
             progressCallback,
             cancellationToken,
-            structuredOutput,
+            runtimeOptions.StructuredOutput,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations);
     }

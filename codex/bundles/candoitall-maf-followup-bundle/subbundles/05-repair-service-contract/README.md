@@ -51,3 +51,27 @@ Add repair tests:
 - JSON with missing required business fields fails validation after extraction;
 - repair attempt count is clamped to `ExecutionInvocationMetadata.MaxRepairAttempts`;
 - required finalizer missing is not repaired via assistant text.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R08.
+
+## Prerequisites
+
+Subbundle 04 should be completed or the relevant output-contract tests must be updated in this pass.
+
+## Dependency Impact
+
+Supports truthful verification documentation and prevents overstating repair semantics.
+
+## Validation Depth
+
+Unit tests around the default repair service and execution repair attempt policy, plus documentation updates that describe conservative extraction accurately.
+
+## Progression Gate
+
+Downstream work may continue only after the default repair behavior is either renamed or documented as conservative JSON extraction and tests prove it does not perform semantic repair.

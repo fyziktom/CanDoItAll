@@ -98,7 +98,7 @@ Invalid output is not accepted silently. Governed process-step runs default to o
 - the target contract name and schema expectation,
 - the instruction to return only the target structured output.
 
-The default repair service is conservative. It can recover a single balanced JSON object from wrapped prose, then re-runs normal deserialization and validation. After the retry limit, the run fails with structured validation errors. Required finalizer missing, duplicate, or invalid failures are not repaired as ordinary assistant text.
+The default repair behavior is implemented by `JsonObjectExtractionAgentOutputRepairService`. It is conservative extraction, not semantic repair: it can recover a single balanced JSON object from wrapped prose, then re-runs normal deserialization and validation. It does not invent missing fields, repair invalid enum values, pick branch outcomes, or fix business-rule failures. `DefaultAgentOutputRepairService` remains as a compatibility wrapper over this extraction service. After the retry limit, the run fails with structured validation errors. Required finalizer missing, duplicate, or invalid failures are not repaired as ordinary assistant text.
 
 ## Finalizer tools
 
@@ -108,7 +108,9 @@ The agent instruction should say that the finalizer tool must be called exactly 
 
 `AgentFinalizerPolicy` and `DefaultAgentFinalizerValidator` enforce the exact-once invariant. Required finalizers fail when the expected tool is missing, called multiple times, has malformed arguments, or lacks a registered output validator. Assistant text is ignored when a finalizer is required.
 
-Governed process automation sets `agentFinalizerMode` to `required` for process-step runs. The execution service validates the finalizer before structured response validation, replaces `ResponseText` with the finalizer payload in required mode, and creates the persisted assistant transcript only after that finalization step.
+Governed process automation sets `agentFinalizerMode` to `required` for process-step runs. The execution service resolves the effective finalizer mode into `AgentRuntimeExecutionOptions` before invoking the runtime. The MAF runtime attaches finalizer tools and finalizer prompt text only for `Required` and `Shadow`; `Disabled` mode attaches no finalizer tool and adds no finalizer instructions. Required and shadow instructions tell the model to produce schema-conformant JSON as the final assistant response, not markdown or prose.
+
+The execution service validates the finalizer before structured response validation, replaces `ResponseText` with the finalizer payload in required mode, and creates the persisted assistant transcript only after that finalization step.
 
 Current typed finalizer tools:
 

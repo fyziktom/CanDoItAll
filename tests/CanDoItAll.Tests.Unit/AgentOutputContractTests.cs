@@ -198,14 +198,14 @@ public sealed class AgentOutputContractTests
     }
 
     [Fact]
-    public async Task DefaultAgentOutputRepairService_extracts_single_json_object_from_wrapped_text()
+    public async Task JsonObjectExtractionAgentOutputRepairService_extracts_single_json_object_from_wrapped_text()
     {
         var rawOutput = """
             The final result is:
             {"status":"Completed","reason":"Completed and validated.","evidenceRefs":[],"nextActions":[]}
             """;
 
-        var repair = await DefaultAgentOutputRepairService.Instance.TryRepairAsync(
+        var repair = await JsonObjectExtractionAgentOutputRepairService.Instance.TryRepairAsync(
             new AgentOutputRepairRequest
             {
                 ContractName = AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
@@ -222,6 +222,55 @@ public sealed class AgentOutputContractTests
             repair.RepairedRawOutput,
             new ProcessStepOutcomeValidator());
         Assert.True(validation.Succeeded);
+    }
+
+    [Fact]
+    public async Task JsonObjectExtractionAgentOutputRepairService_uses_first_balanced_object_when_multiple_objects_are_present()
+    {
+        var rawOutput = """
+            first: {"status":"Completed","reason":"First object.","evidenceRefs":[],"nextActions":[]}
+            second: {"status":"Failed","reason":"Second object.","evidenceRefs":[],"nextActions":["Investigate."]}
+            """;
+
+        var repair = await JsonObjectExtractionAgentOutputRepairService.Instance.TryRepairAsync(
+            CreateRepairRequest(rawOutput),
+            CancellationToken.None);
+
+        Assert.True(repair.Succeeded);
+        Assert.Contains("First object", repair.RepairedRawOutput, StringComparison.Ordinal);
+        Assert.DoesNotContain("Second object", repair.RepairedRawOutput, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("No machine JSON is present.")]
+    [InlineData("Prefix {\"status\":\"Completed\"")]
+    public async Task JsonObjectExtractionAgentOutputRepairService_fails_when_no_balanced_json_object_exists(string rawOutput)
+    {
+        var repair = await JsonObjectExtractionAgentOutputRepairService.Instance.TryRepairAsync(
+            CreateRepairRequest(rawOutput),
+            CancellationToken.None);
+
+        Assert.False(repair.Succeeded);
+        Assert.Equal(rawOutput, repair.RepairedRawOutput);
+        Assert.NotEmpty(repair.RemainingErrors);
+    }
+
+    [Fact]
+    public async Task JsonObjectExtractionAgentOutputRepairService_does_not_semantically_repair_missing_fields()
+    {
+        var rawOutput = """Result: {"status":"Completed","evidenceRefs":[],"nextActions":[]}""";
+
+        var repair = await JsonObjectExtractionAgentOutputRepairService.Instance.TryRepairAsync(
+            CreateRepairRequest(rawOutput),
+            CancellationToken.None);
+        var validation = AgentOutputJson.DeserializeAndValidate(
+            repair.RepairedRawOutput,
+            new ProcessStepOutcomeValidator());
+
+        Assert.True(repair.Succeeded);
+        Assert.DoesNotContain("reason", repair.RepairedRawOutput, StringComparison.OrdinalIgnoreCase);
+        Assert.False(validation.Succeeded);
+        Assert.Contains(validation.Validation.Errors, error => error.Code == "agent.output.malformed_json");
     }
 
     [Fact]
@@ -278,5 +327,26 @@ public sealed class AgentOutputContractTests
         {
             throw new InvalidOperationException("Validator failed.");
         }
+    }
+
+    private static AgentOutputRepairRequest CreateRepairRequest(string rawOutput)
+    {
+        return new AgentOutputRepairRequest
+        {
+            ContractName = AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+            InvalidRawOutput = rawOutput,
+            InvalidRawOutputHash = AgentOutputJson.ComputeRawOutputHash(rawOutput),
+            ValidationErrors =
+            [
+                new AgentOutputValidationError
+                {
+                    Code = "agent.output.malformed_json",
+                    Message = "Malformed output.",
+                    Path = "$"
+                }
+            ],
+            AttemptNumber = 1,
+            MaxAttempts = 1
+        };
     }
 }

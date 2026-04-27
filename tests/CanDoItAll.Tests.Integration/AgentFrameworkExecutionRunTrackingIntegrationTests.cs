@@ -567,7 +567,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken = default,
             bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null)
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
         {
             if (!session.LatestExecutionRunId.HasValue)
             {
@@ -600,7 +601,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken = default,
             bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null)
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
         {
             throw new NotSupportedException("Pending approval continuation is not used by this regression test.");
         }
@@ -676,7 +678,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken = default,
             bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null)
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
         {
             RunStructuredOutputs.Add(structuredOutput);
             if (!session.LatestExecutionRunId.HasValue)
@@ -709,7 +712,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken = default,
             bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null)
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
         {
             if (!approved)
             {

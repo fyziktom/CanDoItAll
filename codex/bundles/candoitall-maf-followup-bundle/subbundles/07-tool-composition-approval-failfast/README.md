@@ -31,3 +31,27 @@ Do not silently expose unusable mutation tools.
 - Mutation tool + approval wrapper effective => tool remains available and middleware requires approval.
 - Read-only tools remain available.
 - Validation tools are handled according to explicit project policy.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R10.
+
+## Prerequisites
+
+Subbundles 02 and 03 must be completed or implemented in the same pass so policy-block diagnostics and provider approval support are reliable.
+
+## Dependency Impact
+
+Supports stable runtime composition and reduces repeated unusable tool attempts.
+
+## Validation Depth
+
+Focused tests or code proof that unusable mutation tools fail or are omitted before model exposure, while auto-approved or approval-capable paths retain mutation tools.
+
+## Progression Gate
+
+Downstream work may continue only after unusable mutation tools are not silently exposed to the model.

@@ -279,9 +279,9 @@ public sealed class ProcessStatePatchValidator(
     }
 }
 
-public sealed class DefaultAgentOutputRepairService : IAgentOutputRepairService
+public sealed class JsonObjectExtractionAgentOutputRepairService : IAgentOutputRepairService
 {
-    public static DefaultAgentOutputRepairService Instance { get; } = new();
+    public static JsonObjectExtractionAgentOutputRepairService Instance { get; } = new();
 
     public Task<AgentOutputRepairAttemptResult> TryRepairAsync(
         AgentOutputRepairRequest repairRequest,
@@ -373,5 +373,19 @@ public sealed class DefaultAgentOutputRepairService : IAgentOutputRepairService
         }
 
         return string.Empty;
+    }
+}
+
+public sealed class DefaultAgentOutputRepairService : IAgentOutputRepairService
+{
+    public static DefaultAgentOutputRepairService Instance { get; } = new();
+
+    public Task<AgentOutputRepairAttemptResult> TryRepairAsync(
+        AgentOutputRepairRequest repairRequest,
+        CancellationToken cancellationToken)
+    {
+        return JsonObjectExtractionAgentOutputRepairService.Instance.TryRepairAsync(
+            repairRequest,
+            cancellationToken);
     }
 }

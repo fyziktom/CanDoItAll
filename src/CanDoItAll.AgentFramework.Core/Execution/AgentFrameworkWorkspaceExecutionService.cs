@@ -13,7 +13,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IAgentOutputRepairService? outputRepairService = null)
 {
     private readonly IAgentOutputRepairService outputRepairService =
-        outputRepairService ?? DefaultAgentOutputRepairService.Instance;
+        outputRepairService ?? JsonObjectExtractionAgentOutputRepairService.Instance;
 
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 }

@@ -209,7 +209,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 progressCallback,
                 cancellationToken,
                 suppressApprovalRequirements: true,
-                structuredOutput: structuredOutput);
+                structuredOutput: structuredOutput,
+                executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput));
 
             totalInputTokens += currentResponse.InputTokens;
             totalOutputTokens += currentResponse.OutputTokens;

@@ -118,6 +118,18 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.DoesNotContain("Bearer secret", signature, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AgentToolPolicyBlockedException_preserves_policy_reason_and_tool_name()
+    {
+        var exception = new AgentToolPolicyBlockedException(
+            "workspace_write_file",
+            "Mutation tools require approval.");
+
+        Assert.Equal("workspace_write_file", exception.ToolName);
+        Assert.Equal("Mutation tools require approval.", exception.Reason);
+        Assert.Contains("blocked by policy", exception.Message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("workspace_write_file", ToolInvocationClassification.Mutation)]
     [InlineData("workspace_dotnet_test", ToolInvocationClassification.Validation)]

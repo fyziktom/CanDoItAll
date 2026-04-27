@@ -23,13 +23,13 @@ This document records the runtime invariants for governed Microsoft Agent Framew
 - `submit_process_state_patch`
 - `submit_human_escalation_request`
 
-Modes are carried through `ExecutionInvocationPolicy` and normalized into execution metadata by `ExecutionInvocationMetadata`.
+Modes are carried through `ExecutionInvocationPolicy`, normalized into execution metadata by `ExecutionInvocationMetadata`, and resolved into `AgentRuntimeExecutionOptions` before the runtime build.
 
 - `Required`: exactly one valid finalizer invocation must be present. Assistant text is display-only, and the finalizer payload replaces `ResponseText` before assistant transcript persistence.
 - `Shadow`: a finalizer may be captured and compared to structured output, but structured output remains authoritative.
-- `Disabled`: no finalizer validation is performed.
+- `Disabled`: no finalizer tool is attached, no finalizer prompt text is appended, and no finalizer validation is performed.
 
-Governed process automation sets required finalizer mode by default. Deterministic process runtimes used by tests also emit matching finalizer invocations when they are asked for `ProcessStepOutcomeResult`.
+Governed process automation sets required finalizer mode by default. Required and shadow finalizer instructions are compatible with JSON-schema response format: the model is instructed to call the typed finalizer and return schema-conformant JSON, not markdown or prose. Deterministic process runtimes used by tests emit matching finalizer invocations only when the effective mode is not disabled.
 
 ## Repair and validation
 
@@ -49,7 +49,9 @@ The default repair service is intentionally conservative: it can recover a singl
 
 Policy inputs include agent identity, tool name, redacted arguments, known-tool membership, classification, auto-approval state, provider approval capability, approval-wrapper effectiveness, and execution/process/step ids.
 
-Policy decisions are explicit: `Allow`, `RequireApproval`, `Deny`, `SanitizeResult`, or `SkipExecution`. Middleware blocks `Deny` and `SkipExecution`. It also blocks `RequireApproval` when there is no effective approval path, so mutation/destructive tools cannot execute just because an approval decision was logged.
+Policy decisions are explicit: `Allow`, `RequireApproval`, `Deny`, `SanitizeResult`, or `SkipExecution`. Middleware blocks `Deny` and `SkipExecution` by throwing a dedicated policy-block exception. It also blocks `RequireApproval` when there is no effective approval path, so mutation/destructive tools cannot execute just because an approval decision was logged. Downstream tool `InvalidOperationException` and `NotSupportedException` failures are no longer reclassified as policy blocks.
+
+During tool composition, approval-wrapped mutation tools are filtered when the provider cannot surface effective approval requests. Governed process automation fails the runtime build with a clear diagnostic in that state; exploratory/manual runs omit the unusable mutation tools and continue with the remaining safe tools. Auto-approved process automation suppresses approval wrapping intentionally, so mutation tools remain available for that governed path.
 
 Sensitive argument names containing `api_key`, `apikey`, `authorization`, `credential`, `header`, `password`, `secret`, or `token` are redacted before signatures or logs are created.
 
@@ -73,6 +75,14 @@ Important flags:
 - `SupportsCompaction`
 
 Structured output support is no longer tied only to Responses transport. Compatible OpenAI and Azure OpenAI chat-completion clients may use JSON-schema response format. Tool approval support remains narrower than function-tool support and must be checked independently.
+
+Workspace-backed provider persistence stores the selected `providerTransport` explicitly in provider metadata/settings. Provider mapping reads that transport first and falls back to legacy display-name inference only for older records that do not yet carry explicit transport metadata.
+
+## Workflow checkpoint bridge
+
+Current workflow integration is deliberately narrow. CanDoItAll still uses its custom process dispatcher for process graph orchestration, while `WorkflowBackedAgentExecutionCheckpointBridge` uses the MAF `FileSystemJsonCheckpointStore` to preserve pending-approval checkpoint payloads and verify resume consistency.
+
+This is checkpoint bridging, not full MAF Workflow orchestration of the process engine. The next adapter step is to evaluate selected process subflows for MAF workflow wrapping where typed routing, checkpointing, or human-in-the-loop behavior becomes simpler. A wholesale process-engine rewrite is not a near-term goal.
 
 ## Recovery guidance
 

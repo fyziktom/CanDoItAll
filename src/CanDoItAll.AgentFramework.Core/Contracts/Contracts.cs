@@ -140,7 +140,8 @@ public interface IAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null);
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null);
 
     Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
         AgentDefinition agent,
@@ -153,7 +154,8 @@ public interface IAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null);
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null);
 }
 
 public interface ICapabilityProofService
@@ -187,6 +189,7 @@ public interface IProviderProfileService
     string GetIdentityKey(ProviderProfile provider);
     ProviderProfile ApplyHealthResult(ProviderProfile provider, ProviderHealthResult result, DateTimeOffset checkedAtUtc);
     ProviderProfile ApplyOllamaModelResult(ProviderProfile provider, OllamaModelfileResult result, DateTimeOffset checkedAtUtc);
+    ProviderFeatureMatrix ResolveFeatureMatrix(ProviderProfile provider);
 }
 
 public interface IProviderProfileRegistry

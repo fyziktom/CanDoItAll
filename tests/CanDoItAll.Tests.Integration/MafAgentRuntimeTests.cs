@@ -164,7 +164,7 @@ public sealed class MafAgentRuntimeTests
                                BindingFlags.NonPublic | BindingFlags.Static)
                            ?? throw new InvalidOperationException("CreateFinalizerCapture method was not found.");
 
-        var capture = createMethod.Invoke(null, [AgentStructuredOutputContracts.ProcessStepOutcomeResult])
+        var capture = createMethod.Invoke(null, [AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required])
                       ?? throw new InvalidOperationException("Finalizer capture was not created.");
         var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
             capture.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(capture));
@@ -172,6 +172,59 @@ public sealed class MafAgentRuntimeTests
         Assert.Contains(
             tools,
             tool => string.Equals(tool.Name, AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CreateFinalizerCapture_omits_tool_when_finalizer_mode_is_disabled()
+    {
+        var createMethod = typeof(MafAgentRuntime).GetMethod(
+                               "CreateFinalizerCapture",
+                               BindingFlags.NonPublic | BindingFlags.Static)
+                           ?? throw new InvalidOperationException("CreateFinalizerCapture method was not found.");
+
+        var capture = createMethod.Invoke(null, [AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Disabled]);
+
+        Assert.Null(capture);
+    }
+
+    [Fact]
+    public void AppendFinalizerInstructions_uses_json_response_wording_for_required_mode()
+    {
+        var appendMethod = typeof(MafAgentRuntime).GetMethod(
+                               "AppendFinalizerInstructions",
+                               BindingFlags.NonPublic | BindingFlags.Static)
+                           ?? throw new InvalidOperationException("AppendFinalizerInstructions method was not found.");
+        Assert.True(AgentFinalizerPolicies.TryResolveForStructuredOutput(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            out var policy));
+
+        var instructions = Assert.IsType<string>(appendMethod.Invoke(
+            null,
+            ["Base instructions.", policy, AgentFinalizerMode.Required]));
+
+        Assert.Contains("Call `submit_process_step_outcome` exactly once", instructions, StringComparison.Ordinal);
+        Assert.Contains("return a JSON object", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not use Markdown or prose", instructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AppendFinalizerInstructions_uses_shadow_comparison_wording_for_shadow_mode()
+    {
+        var appendMethod = typeof(MafAgentRuntime).GetMethod(
+                               "AppendFinalizerInstructions",
+                               BindingFlags.NonPublic | BindingFlags.Static)
+                           ?? throw new InvalidOperationException("AppendFinalizerInstructions method was not found.");
+        Assert.True(AgentFinalizerPolicies.TryResolveForStructuredOutput(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            out var policy));
+
+        var instructions = Assert.IsType<string>(appendMethod.Invoke(
+            null,
+            ["Base instructions.", policy, AgentFinalizerMode.Shadow]));
+
+        Assert.Contains("Finalizer tool shadow policy", instructions, StringComparison.Ordinal);
+        Assert.Contains("runtime can compare both outputs", instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not use Markdown or prose", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -368,6 +421,59 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task Approval_filter_omits_unusable_mutation_tools_for_manual_ollama_run()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent();
+        var provider = CreateProvider("{}");
+        var capability = CreateWorkspacePluginCapability();
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            [capability],
+            progressMessages);
+        await InvokeFilterUnusableApprovalToolsAsync(runtime, state, provider, suppressApprovalRequirements: false, progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(tool => tool.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.DoesNotContain("workspace_write_file", toolNames);
+        Assert.Contains(
+            progressMessages,
+            message => message.Contains("Omitted mutation tool(s) that require MAF approval", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Workspace_plugin_mutation_tools_remain_available_when_approval_requirements_are_suppressed()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent();
+        var provider = CreateProvider("{}");
+        var capability = CreateWorkspacePluginCapability();
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            [capability],
+            progressMessages,
+            suppressApprovalRequirements: true);
+        await InvokeFilterUnusableApprovalToolsAsync(runtime, state, provider, suppressApprovalRequirements: true, progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var writeTool = Assert.Single(tools, tool => string.Equals(tool.Name, "workspace_write_file", StringComparison.OrdinalIgnoreCase));
+
+        Assert.IsNotType<ApprovalRequiredAIFunction>(writeTool);
+    }
+
+    [Fact]
     public async Task CreateCapabilityState_attaches_internal_project_structure_tools_by_default_when_workspace_services_are_available()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -545,6 +651,48 @@ public sealed class MafAgentRuntimeTests
             ["gptoss32k:latest"]);
     }
 
+    private static AgentDefinition CreateToolAgent()
+    {
+        return new AgentDefinition(
+            Id: Guid.NewGuid(),
+            Name: "Tool Agent",
+            RoleTitle: "Runtime engineer",
+            Summary: "Tests capability composition.",
+            Instructions: "Use tools only when required.",
+            Status: AgentLifecycleStatus.Active,
+            ProviderProfileId: Guid.NewGuid(),
+            Model: string.Empty,
+            Workload: AgentWorkloadKind.Programming,
+            ChatHistoryMode: AgentChatHistoryMode.FrameworkManaged,
+            Temperature: 0,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            Permissions: AgentPermissionsPolicy.Default,
+            Capabilities: [],
+            Tags: [],
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            UpdatedAtUtc: DateTimeOffset.UtcNow);
+    }
+
+    private static CapabilityCatalogItem CreateWorkspacePluginCapability()
+    {
+        return new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Tool,
+            "workspace-plugin",
+            "Workspace Plugin",
+            "Workspace tools.",
+            string.Empty,
+            """{"tool":"workspace-plugin","enabled":true}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            false);
+    }
+
     private static string FindRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
@@ -566,7 +714,8 @@ public sealed class MafAgentRuntimeTests
         AgentDefinition agent,
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
-        List<string> progressMessages)
+        List<string> progressMessages,
+        bool suppressApprovalRequirements = false)
     {
         var method = typeof(MafAgentRuntime).GetMethod(
                          "CreateCapabilityStateAsync",
@@ -585,12 +734,39 @@ public sealed class MafAgentRuntimeTests
                     return Task.CompletedTask;
                 }),
                 CancellationToken.None,
-                false
+                suppressApprovalRequirements
             ]);
         var task = Assert.IsAssignableFrom<Task>(invocation);
         await task;
 
         return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
                ?? throw new InvalidOperationException("CreateCapabilityStateAsync did not produce a result.");
+    }
+
+    private static async Task InvokeFilterUnusableApprovalToolsAsync(
+        MafAgentRuntime runtime,
+        object state,
+        ProviderProfile provider,
+        bool suppressApprovalRequirements,
+        List<string> progressMessages)
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "FilterUnusableApprovalToolsAsync",
+                         BindingFlags.NonPublic | BindingFlags.Instance)
+                     ?? throw new InvalidOperationException("FilterUnusableApprovalToolsAsync method was not found.");
+        var invocation = method.Invoke(
+            runtime,
+            [
+                state,
+                provider,
+                suppressApprovalRequirements,
+                (Func<ExecutionState, string, string, Task>)((_, _, message) =>
+                {
+                    progressMessages.Add(message);
+                    return Task.CompletedTask;
+                })
+            ]);
+        var task = Assert.IsAssignableFrom<Task>(invocation);
+        await task;
     }
 }

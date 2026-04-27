@@ -84,7 +84,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!IsScenarioProvider(provider))
         {
@@ -99,7 +100,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 progressCallback,
                 cancellationToken,
                 suppressApprovalRequirements,
-                structuredOutput);
+                structuredOutput,
+                executionOptions);
         }
 
         var definition = ResolveDefinition(prompt);
@@ -129,7 +131,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
                 PendingApprovals: [])
             {
-                FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, responseText)
+                FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText)
             };
         }
 
@@ -159,7 +161,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 ]);
         }
 
-        return await ExecuteScenarioAsync(definition, state, progressCallback, structuredOutput);
+        return await ExecuteScenarioAsync(definition, state, progressCallback, structuredOutput, executionOptions);
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -173,7 +175,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!IsScenarioProvider(provider))
         {
@@ -188,7 +191,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 progressCallback,
                 cancellationToken,
                 suppressApprovalRequirements,
-                structuredOutput);
+                structuredOutput,
+                executionOptions);
         }
 
         var state = ParseState(session.Compatibility?.SerializedSessionStateJson)
@@ -223,14 +227,15 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 PendingApprovals: []);
         }
 
-        return await ExecuteScenarioAsync(definition, state with { Status = "approved" }, progressCallback, structuredOutput);
+        return await ExecuteScenarioAsync(definition, state with { Status = "approved" }, progressCallback, structuredOutput, executionOptions);
     }
 
     private async Task<AgentRuntimeResponse> ExecuteScenarioAsync(
         ScenarioHarnessDefinition definition,
         ScenarioRuntimeState state,
         Func<ExecutionState, string, string, Task> progressCallback,
-        AgentStructuredOutputContract? structuredOutput)
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
     {
         await progressCallback(
             ExecutionState.Running,
@@ -267,7 +272,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "completed" }, JsonOptions),
             PendingApprovals: [])
         {
-            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, responseText)
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText)
         };
     }
 
@@ -293,9 +298,13 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
 
     private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
         AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions,
         string responseText)
     {
-        if (structuredOutput?.OutputType != typeof(ProcessStepOutcomeResult))
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
         {
             return [];
         }

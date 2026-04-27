@@ -330,6 +330,12 @@ public sealed record ExecutionInvocationPolicy(
     int? MaxStructuredOutputRepairAttempts = null,
     bool RequireStructuredOutputValidation = true);
 
+public sealed record AgentRuntimeExecutionOptions(
+    AgentStructuredOutputContract? StructuredOutput,
+    AgentFinalizerMode FinalizerMode,
+    bool RequireStructuredOutputValidation,
+    int MaxStructuredOutputRepairAttempts);
+
 public sealed record ExecutionRunRecord(
     Guid Id,
     Guid AgentId,

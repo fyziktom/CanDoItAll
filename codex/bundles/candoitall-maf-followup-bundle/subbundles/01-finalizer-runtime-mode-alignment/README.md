@@ -67,3 +67,27 @@ Add unit/integration tests proving:
 - Manual/non-critical structured output can use disabled mode without receiving finalizer prompt text.
 
 If direct runtime build tests are hard because the method is private, extract a small internal service/helper that can be tested without reflection.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R01, R02.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Critical foundation for hardening tests and verification truthfulness.
+
+## Validation Depth
+
+Code inspection plus focused unit or integration tests for required, shadow, and disabled finalizer attachment behavior.
+
+## Progression Gate
+
+Downstream work may continue only after disabled-mode runtime builds no longer expose finalizer tools or finalizer prompt text, and required/shadow instructions are JSON-response compatible.

@@ -48,4 +48,80 @@ internal sealed partial class ProcessRunAutomationDispatchService
         };
     }
 
+    private static AgentOutputValidationResult ValidateProcessStepOutcomeContext(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        ProcessStepOutcomeResult outcome,
+        DeclaredStepOutcome declaredOutcome,
+        string inspectionText)
+    {
+        var errors = new List<AgentOutputValidationError>();
+        var branchSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
+        if (!string.IsNullOrWhiteSpace(branchSelectionFailure))
+        {
+            errors.Add(new AgentOutputValidationError
+            {
+                Code = string.IsNullOrWhiteSpace(declaredOutcome.BranchOutcomeKey) &&
+                       string.IsNullOrWhiteSpace(declaredOutcome.BranchOutcomeTitle)
+                    ? "process.step_outcome.context.branch_required"
+                    : "process.step_outcome.context.branch_invalid",
+                Message = branchSelectionFailure,
+                Path = "$.branchOutcomeKey"
+            });
+        }
+
+        if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+            RequiresContextEvidenceReferences(candidate, detail) &&
+            outcome.EvidenceRefs.Count == 0)
+        {
+            errors.Add(new AgentOutputValidationError
+            {
+                Code = "process.step_outcome.context.evidence_refs_required",
+                Message = "Completed governed process outcomes must include evidence references when the step has proof expectations or produced artifacts.",
+                Path = "$.evidenceRefs"
+            });
+        }
+
+        if (declaredOutcome.Status == ProcessStepRunStatus.Completed)
+        {
+            AddContextGap(errors, "process.step_outcome.context.missing_concrete_proof", ResolveMissingConcreteProofSummary(candidate, inspectionText));
+            AddContextGap(errors, "process.step_outcome.context.incomplete_implementation", ResolveIncompleteImplementationSummary(candidate, inspectionText));
+            AddContextGap(errors, "process.step_outcome.context.missing_implementation_proof", ResolveMissingConcreteImplementationProofSummary(candidate, detail));
+            AddContextGap(errors, "process.step_outcome.context.invalid_browser_proof", ResolveInvalidBrowserProofSummary(candidate, detail));
+            AddContextGap(errors, "process.step_outcome.context.missing_required_artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
+        }
+
+        return errors.Count == 0
+            ? AgentOutputValidationResult.Success()
+            : AgentOutputValidationResult.Failure([.. errors]);
+    }
+
+    private static bool RequiresContextEvidenceReferences(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        return detail.Artifacts.Count > 0 ||
+               candidate.ExpectedArtifacts.Any(item => item.IsRequired) ||
+               RequiresConcreteImplementationProof(candidate) ||
+               RequiresConcreteBrowserProof(candidate);
+    }
+
+    private static void AddContextGap(
+        List<AgentOutputValidationError> errors,
+        string code,
+        string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        errors.Add(new AgentOutputValidationError
+        {
+            Code = code,
+            Message = message,
+            Path = "$"
+        });
+    }
+
 }

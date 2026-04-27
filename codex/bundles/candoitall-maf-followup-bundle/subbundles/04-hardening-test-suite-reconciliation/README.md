@@ -62,3 +62,27 @@ Use repository-text/static tests sparingly to catch regressions such as:
 ## Acceptance criteria
 
 The focused hardening test filter must discover and run the expected tests. A filter that reports success because no tests were discovered is not acceptable.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R06, R07, R12.
+
+## Prerequisites
+
+Subbundles 01, 02, and 03 must be completed or their code surfaces must be testable in the same pass.
+
+## Dependency Impact
+
+Critical foundation for all later verification and documentation claims.
+
+## Validation Depth
+
+Add or update focused unit tests, then prove the hardening filter discovers and runs the intended test classes.
+
+## Progression Gate
+
+Downstream work may continue only after the named hardening test classes exist in the repository and the focused unit-test filter reports nonzero discovered tests.

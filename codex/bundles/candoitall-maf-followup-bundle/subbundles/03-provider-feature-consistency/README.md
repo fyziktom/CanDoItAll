@@ -47,3 +47,27 @@ Add `ProviderFeatureMatrixTests` covering:
 - Ollama + ChatCompletions does not claim MAF JSON schema structured output unless there is explicit supported proof.
 - Workspace-backed provider persistence stores `SupportsStructuredOutput` equal to the central matrix.
 - Provider transport round-trips through metadata and does not depend on provider display name.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R04, R05.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Critical foundation for approval/tool composition and verification claims about provider capability behavior.
+
+## Validation Depth
+
+Provider matrix unit tests plus registry persistence tests or targeted code proof for capability flags and explicit transport metadata round-trip.
+
+## Progression Gate
+
+Downstream work may continue only after provider capability persistence and UI/API flags use the central feature matrix and selected transport no longer depends on display-name inference except as a legacy fallback.

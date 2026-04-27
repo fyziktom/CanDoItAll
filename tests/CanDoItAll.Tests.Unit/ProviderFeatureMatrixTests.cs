@@ -53,6 +53,25 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
+    public void ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_without_provider_approval()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.AzureOpenAi,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: true,
+            preferFrameworkManagedHistory: true);
+
+        var matrix = service.ResolveFeatureMatrix(provider);
+
+        Assert.True(matrix.SupportsStructuredOutput);
+        Assert.True(matrix.SupportsResponseFormatJsonSchema);
+        Assert.True(matrix.SupportsFunctionTools);
+        Assert.False(matrix.SupportsToolApprovalRequests);
+        Assert.False(matrix.SupportsApprovalRequiredAIFunction);
+    }
+
+    [Fact]
     public void ResolveFeatureMatrix_limits_ollama_to_local_tool_bridge_capabilities()
     {
         var service = new ProviderProfileService();
@@ -75,6 +94,27 @@ public sealed class ProviderFeatureMatrixTests
         Assert.False(matrix.SupportsApprovalRequiredAIFunction);
     }
 
+    [Fact]
+    public void Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Providers",
+            "WorkspaceBackedAgentProviderProfileRegistry.cs");
+        var metadataSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Providers",
+            "AgentFrameworkProviderMetadata.cs");
+
+        Assert.DoesNotContain("SupportsStructuredOutput = model.Transport == ProviderTransportKind.Responses", source, StringComparison.Ordinal);
+        Assert.Contains("var selectedTransport = model.Transport;", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveFeatureMatrix", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveTransport", source, StringComparison.Ordinal);
+        Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
+    }
+
     private static ProviderProfile CreateProvider(
         ProviderKind kind,
         ProviderTransportKind transport,
@@ -83,9 +123,9 @@ public sealed class ProviderFeatureMatrixTests
     {
         return new ProviderProfile(
             Guid.NewGuid(),
-            kind == ProviderKind.Ollama ? "Remote Ollama" : "OpenAI",
+            kind == ProviderKind.Ollama ? "Remote Ollama" : kind == ProviderKind.AzureOpenAi ? "Azure OpenAI" : "OpenAI",
             kind,
-            kind == ProviderKind.Ollama ? "http://localhost:11434" : "https://api.openai.com/v1",
+            kind == ProviderKind.Ollama ? "http://localhost:11434" : kind == ProviderKind.AzureOpenAi ? "https://example.openai.azure.com" : "https://api.openai.com/v1",
             kind == ProviderKind.Ollama ? string.Empty : "OPENAI_API_KEY",
             kind == ProviderKind.Ollama ? "llama3.1" : "gpt-5.4",
             transport,
@@ -99,5 +139,27 @@ public sealed class ProviderFeatureMatrixTests
             "Not checked",
             null,
             []);
+    }
+
+    private static string ReadRepositoryFile(params string[] pathParts)
+    {
+        var root = FindRepositoryRoot();
+        return File.ReadAllText(Path.Combine([root, .. pathParts]));
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate the repository root.");
     }
 }

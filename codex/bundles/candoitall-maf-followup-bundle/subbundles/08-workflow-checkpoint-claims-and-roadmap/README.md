@@ -31,3 +31,27 @@ Do not implement a broad rewrite unless explicitly approved.
 - Docs must stop implying full workflow orchestration if only checkpoint bridging is implemented.
 - Checkpoint bridge tests should prove structured output contract metadata survives capture/resume.
 - If an adapter seam is added, test that the current process dispatcher remains the default path.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R11.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Supports truthful architecture documentation and avoids premature workflow-engine rewrites.
+
+## Validation Depth
+
+Documentation review and, if code is changed, focused tests for checkpoint metadata or adapter-default behavior.
+
+## Progression Gate
+
+Downstream work may continue only after documentation clearly distinguishes checkpoint-store bridging from full MAF workflow orchestration.

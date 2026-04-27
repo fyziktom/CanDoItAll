@@ -49,3 +49,27 @@ Add `AgentToolInvocationPolicyTests` and/or middleware-focused tests:
 - Mutation tool with effective approval path is allowed to proceed to MAF approval wrapper.
 - A fake tool that throws `InvalidOperationException("business failure")` after policy allow is not reported as blocked by policy.
 - Repeated mutation/validation signatures over the limit are denied.
+
+## Status
+
+Completed. Proof is recorded in `../../reviews/01-execution-report.md`.
+
+## Requirements Owned
+
+R03.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Critical foundation for reliable tool approval diagnostics and later tool-composition fail-fast behavior.
+
+## Validation Depth
+
+Focused unit tests for policy decisions and middleware/static regression proof that broad `InvalidOperationException`/`NotSupportedException` policy catches are gone.
+
+## Progression Gate
+
+Downstream work may continue only after policy-block diagnostics use a dedicated exception type and downstream tool failures retain their original failure cause.

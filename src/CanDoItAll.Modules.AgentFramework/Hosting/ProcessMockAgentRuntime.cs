@@ -83,7 +83,8 @@ internal sealed class ProcessMockAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
@@ -98,7 +99,8 @@ internal sealed class ProcessMockAgentRuntime(
                 progressCallback,
                 cancellationToken,
                 suppressApprovalRequirements,
-                structuredOutput);
+                structuredOutput,
+                executionOptions);
         }
 
         EnsureEnabled();
@@ -157,7 +159,7 @@ internal sealed class ProcessMockAgentRuntime(
                 JsonOptions),
             PendingApprovals: [])
         {
-            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, outcome.ResponseText)
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText)
         };
     }
 
@@ -172,7 +174,8 @@ internal sealed class ProcessMockAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
@@ -187,7 +190,8 @@ internal sealed class ProcessMockAgentRuntime(
                 progressCallback,
                 cancellationToken,
                 suppressApprovalRequirements,
-                structuredOutput);
+                structuredOutput,
+                executionOptions);
         }
 
         throw new InvalidOperationException("Process mock agents do not use pending approval continuations.");
@@ -554,9 +558,13 @@ internal sealed class ProcessMockAgentRuntime(
 
     private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
         AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions,
         string responseText)
     {
-        if (structuredOutput?.OutputType != typeof(ProcessStepOutcomeResult))
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
         {
             return [];
         }

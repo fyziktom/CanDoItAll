@@ -22,6 +22,20 @@ public enum ToolInvocationClassification
     HostedMcp
 }
 
+public sealed class AgentToolPolicyBlockedException : Exception
+{
+    public AgentToolPolicyBlockedException(string toolName, string reason)
+        : base($"Tool '{toolName}' was blocked by policy. {reason}")
+    {
+        ToolName = toolName;
+        Reason = reason;
+    }
+
+    public string ToolName { get; }
+
+    public string Reason { get; }
+}
+
 public sealed record ToolInvocationPolicyContext(
     Guid AgentId,
     string AgentName,

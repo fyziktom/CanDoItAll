@@ -115,6 +115,46 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void ResolveMode_honors_shadow_metadata()
+    {
+        var run = CreateRun(
+            metadataJson: $$"""{"{{AgentFinalizerPolicies.FinalizerModeMetadataKey}}":"{{AgentFinalizerPolicies.ShadowFinalizerModeValue}}"}""");
+
+        var mode = AgentFinalizerPolicies.ResolveMode(
+            run,
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult);
+
+        Assert.Equal(AgentFinalizerMode.Shadow, mode);
+    }
+
+    [Fact]
+    public void ResolveMode_honors_disabled_metadata()
+    {
+        var run = CreateRun(
+            metadataJson: $$"""{"{{AgentFinalizerPolicies.FinalizerModeMetadataKey}}":"{{AgentFinalizerPolicies.DisabledFinalizerModeValue}}"}""");
+
+        var mode = AgentFinalizerPolicies.ResolveMode(
+            run,
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult);
+
+        Assert.Equal(AgentFinalizerMode.Disabled, mode);
+    }
+
+    [Fact]
+    public void TryResolveForStructuredOutput_returns_false_for_unknown_contract()
+    {
+        var unknownContract = AgentStructuredOutputContract.For<UnknownOutputContract>(
+            "unknown_output_contract",
+            "Unknown output.");
+
+        var resolved = AgentFinalizerPolicies.TryResolveForStructuredOutput(unknownContract, out var policy);
+
+        Assert.False(resolved);
+        Assert.False(policy.IsRequired);
+        Assert.Empty(policy.ToolName);
+    }
+
+    [Fact]
     public void TryResolveForStructuredOutput_returns_explicit_finalizer_for_every_known_contract()
     {
         var resolvedPolicies = AgentStructuredOutputContracts.All
@@ -207,5 +247,10 @@ public sealed class AgentFinalizerPolicyTests
             PendingApprovals: [],
             ProcessRunId: "run-001",
             ProcessStepId: "step-001");
+    }
+
+    private sealed class UnknownOutputContract
+    {
+        public required string Value { get; init; }
     }
 }
