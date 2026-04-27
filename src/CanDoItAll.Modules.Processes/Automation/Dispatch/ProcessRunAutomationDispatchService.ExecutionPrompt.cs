@@ -269,6 +269,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         builder.AppendLine("- Produce the final machine-readable result as a ProcessStepOutcomeResult through the configured structured output format.");
+        builder.AppendLine("- If the runtime exposes `submit_process_step_outcome`, call that finalizer tool exactly once with the same ProcessStepOutcomeResult before concluding.");
         builder.AppendLine("- Set Status to one of Completed, Blocked, Failed, WaitingApproval, or Refused. This Status field is the only source of truth for workflow continuation.");
         builder.AppendLine("- Put display-only markdown in HumanReadableSummaryMarkdown. Do not encode the workflow decision in markdown or an HTML comment.");
         builder.AppendLine("- Include a concrete Reason, EvidenceRefs for files/artifacts/tool outputs you relied on when available, and NextActions when the step is not completed.");

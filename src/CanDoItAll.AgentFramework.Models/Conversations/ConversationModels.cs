@@ -353,7 +353,11 @@ public sealed record ExecutionRunRecord(
     string ProcessStepId = "",
     string SchedulerRunId = "",
     string MessageId = "",
-    long Revision = 1);
+    long Revision = 1,
+    string StructuredOutputContractKey = "",
+    string StructuredOutputTypeName = "",
+    string StructuredOutputSchemaName = "",
+    string StructuredOutputSchemaDescription = "");
 
 public sealed record ExecutionApprovalRecord(
     string ApprovalId,

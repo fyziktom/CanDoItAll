@@ -108,7 +108,10 @@ public sealed record AgentRuntimeResponse(
     int ToolCalls,
     string RuntimeSessionKey,
     string? SerializedSessionStateJson,
-    IReadOnlyList<PendingToolApprovalRecord> PendingApprovals);
+    IReadOnlyList<PendingToolApprovalRecord> PendingApprovals)
+{
+    public IReadOnlyList<AgentFinalizerInvocation> FinalizerInvocations { get; init; } = [];
+}
 
 public interface IAgentRuntime
 {

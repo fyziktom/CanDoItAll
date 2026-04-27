@@ -206,6 +206,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         string prompt,
         ExecutionInvocationContext context,
         bool autoApprovePendingToolCalls,
+        AgentStructuredOutputContract? structuredOutput,
         CancellationToken cancellationToken)
     {
         PreparedExecutionRunStart? prepared = null;
@@ -246,7 +247,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 SerializedSessionStateJson: null,
                 Messages: [],
                 PendingApprovals: []);
-            var run = CreatePreparingRun(agent, provider, session.Id, session.Title, context, prompt, now, autoApprovePendingToolCalls);
+            var run = CreatePreparingRun(agent, provider, session.Id, session.Title, context, prompt, now, autoApprovePendingToolCalls, structuredOutput);
             var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
                 session with
                 {
@@ -293,7 +294,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionInvocationContext context,
         string prompt,
         DateTimeOffset now,
-        bool autoApprovePendingToolCalls)
+        bool autoApprovePendingToolCalls,
+        AgentStructuredOutputContract? structuredOutput = null)
     {
         var sourceKind = string.IsNullOrWhiteSpace(context.SourceKind)
             ? ExecutionInvocationContext.Empty.SourceKind
@@ -332,7 +334,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ProcessStepId: context.ProcessStepId ?? string.Empty,
             SchedulerRunId: context.SchedulerRunId ?? string.Empty,
             MessageId: context.MessageId ?? string.Empty,
-            Revision: 1L);
+            Revision: 1L,
+            StructuredOutputContractKey: structuredOutput?.ContractKey ?? string.Empty,
+            StructuredOutputTypeName: structuredOutput?.OutputType.AssemblyQualifiedName ?? string.Empty,
+            StructuredOutputSchemaName: structuredOutput?.SchemaName ?? string.Empty,
+            StructuredOutputSchemaDescription: structuredOutput?.SchemaDescription ?? string.Empty);
     }
 
     private static AgentDefinition EnsureAgentExists(

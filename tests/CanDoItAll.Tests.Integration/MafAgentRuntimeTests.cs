@@ -1,4 +1,5 @@
 using System.Reflection;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -156,6 +157,40 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void CreateFinalizerCapture_attaches_process_step_outcome_tool()
+    {
+        var createMethod = typeof(MafAgentRuntime).GetMethod(
+                               "CreateFinalizerCapture",
+                               BindingFlags.NonPublic | BindingFlags.Static)
+                           ?? throw new InvalidOperationException("CreateFinalizerCapture method was not found.");
+
+        var capture = createMethod.Invoke(null, [AgentStructuredOutputContracts.ProcessStepOutcomeResult])
+                      ?? throw new InvalidOperationException("Finalizer capture was not created.");
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            capture.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(capture));
+
+        Assert.Contains(
+            tools,
+            tool => string.Equals(tool.Name, AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Repeated_tool_guard_does_not_embed_calculator_process_guidance()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+
+        Assert.DoesNotContain("Calculator.Tests", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Calculator/Components/Pages/Home.razor", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("If this is the calculator process", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveProviderNetworkTimeout_honors_provider_timeout_metadata()
     {
         var timeoutMethod = typeof(MafAgentRuntime).GetMethod(
@@ -294,6 +329,42 @@ public sealed class MafAgentRuntimeTests
         Assert.DoesNotContain(
             progressMessages,
             item => item.Contains("Legacy Workspace Capability", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_skips_disabled_builtin_tool_configuration()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var disabledReadCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Tool,
+            "workspace-read-file",
+            "Workspace Read File",
+            "Reads files from the workspace when explicitly enabled.",
+            string.Empty,
+            """{"tool":"workspace_read_file","enabled":false}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            seededAgent,
+            provider,
+            [disabledReadCapability],
+            progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain("workspace_read_file", toolNames);
     }
 
     [Fact]
@@ -472,6 +543,22 @@ public sealed class MafAgentRuntimeTests
             "Not checked",
             null,
             ["gptoss32k:latest"]);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "CanDoItAll.slnx")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find the repository root from the test output directory.");
     }
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(

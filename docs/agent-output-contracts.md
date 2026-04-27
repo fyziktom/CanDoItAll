@@ -74,6 +74,8 @@ Machine-critical output flows through this sequence:
 
 `AgentOutputJson` uses strict JSON settings: no comments, no trailing commas, and string enums. Raw output hashes are available for diagnostics without logging sensitive full payloads.
 
+The execution service now preserves structured-output metadata on `ExecutionRunRecord` and workflow checkpoints. Approval continuations restore the original contract before resuming the provider call, and governed process-step runs fail if the stored contract cannot be resolved.
+
 ## Business rules
 
 Validators must enforce contract-specific rules, not just JSON shape. Existing examples:
@@ -104,7 +106,9 @@ Use a finalizer function tool for critical decisions that should be committed ex
 
 The agent instruction should say that the finalizer tool must be called exactly once and that normal assistant text is display-only. Missing finalizer calls and malformed tool arguments must be treated as invalid output.
 
-The current process-step dispatcher uses structured final responses because the existing execution service already centralizes response persistence and validation. A future side-effectful transition approval should use a finalizer tool instead.
+`AgentFinalizerPolicy` and `DefaultAgentFinalizerValidator` enforce the exact-once invariant. Required finalizers fail when the expected tool is missing, called multiple times, has malformed arguments, or lacks a registered output validator. Assistant text is ignored when a finalizer is required.
+
+Process-step runs that use `ProcessStepOutcomeResult` now attach `submit_process_step_outcome` as a typed shadow finalizer. The execution service logs whether the finalizer was observed, validates captured arguments through the same validator registry, and compares valid finalizer output to the structured response. Structured output remains the default process-step source of truth in shadow mode. Set execution metadata `agentFinalizerMode` to `required` for a critical path that must ignore assistant text and complete only from the finalizer payload.
 
 ## Adding a contract
 
@@ -118,4 +122,4 @@ The current process-step dispatcher uses structured final responses because the 
 
 ## Limitations
 
-Structured output support depends on the configured provider. Providers may ignore or partially support JSON-schema response format, so post-generation validation remains mandatory. Auto-approved approval continuations preserve the structured contract; manual approval continuations currently resume without the original structured contract and rely on post-validation before workflow state changes.
+Structured output support depends on the configured provider. Providers may ignore or partially support JSON-schema response format, so post-generation validation remains mandatory. Manual and auto-approved approval continuations preserve the structured contract and are validated before a governed run can complete successfully.

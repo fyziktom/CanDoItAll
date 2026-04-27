@@ -212,7 +212,7 @@ public sealed partial class MafAgentRuntime
         }
 
         private static bool IsBuiltInToolEnabled(string toolKey, BuiltInToolConfiguration configuration)
-            => true;
+            => configuration.Enabled != false;
 
         private IReadOnlyList<AITool> ApplyConfiguredApprovalRequirement(
             CapabilityCatalogItem capability,

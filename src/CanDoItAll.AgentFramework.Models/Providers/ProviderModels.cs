@@ -13,12 +13,18 @@ public sealed record ProviderFeatureMatrix(
     ProviderTransportKind Transport,
     bool SupportsStreaming,
     bool SupportsTools,
+    bool SupportsStructuredOutput,
+    bool SupportsToolApprovalWrappers,
     bool PreferFrameworkManagedChatHistory,
     bool SupportsBackgroundResponses,
     bool SupportsNativeCodeInterpreter,
     bool SupportsNativeFileSearch,
     bool SupportsNativeWebSearch,
     bool SupportsHostedMcpServer,
+    bool SupportsLocalMcpBridge,
+    bool SupportsServiceManagedHistory,
+    bool SupportsVision,
+    bool SupportsCompaction,
     string GitHubCopilotRecommendation);
 
 public sealed record ProviderFeatureSupportResult(

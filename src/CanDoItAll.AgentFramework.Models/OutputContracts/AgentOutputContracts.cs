@@ -109,6 +109,9 @@ public sealed record AgentStructuredOutputContract
     public Type OutputType { get; }
     public string SchemaName { get; }
     public string SchemaDescription { get; }
+    public string ContractKey => string.IsNullOrWhiteSpace(SchemaName)
+        ? OutputType.FullName ?? OutputType.Name
+        : SchemaName;
 
     public static AgentStructuredOutputContract For<TOutput>(
         string schemaName = "",
@@ -134,6 +137,39 @@ public sealed record AgentStructuredOutputContract
         }
 
         return outputType.IsClass;
+    }
+}
+
+public static class AgentStructuredOutputContracts
+{
+    public const string ProcessStepOutcomeResultKey = "process_step_outcome_result";
+
+    public static AgentStructuredOutputContract ProcessStepOutcomeResult { get; } =
+        AgentStructuredOutputContract.For<ProcessStepOutcomeResult>(
+            ProcessStepOutcomeResultKey,
+            "Validated machine contract for process step completion, branch selection, next actions, and display-only markdown summary.");
+
+    private static readonly IReadOnlyDictionary<string, AgentStructuredOutputContract> KnownContracts =
+        new Dictionary<string, AgentStructuredOutputContract>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessStepOutcomeResult.ContractKey] = ProcessStepOutcomeResult,
+            [typeof(ProcessStepOutcomeResult).FullName!] = ProcessStepOutcomeResult,
+            [typeof(ProcessStepOutcomeResult).AssemblyQualifiedName!] = ProcessStepOutcomeResult
+        };
+
+    public static bool TryResolve(
+        string? contractKey,
+        out AgentStructuredOutputContract contract)
+    {
+        if (!string.IsNullOrWhiteSpace(contractKey) &&
+            KnownContracts.TryGetValue(contractKey.Trim(), out var resolved))
+        {
+            contract = resolved;
+            return true;
+        }
+
+        contract = default!;
+        return false;
     }
 }
 

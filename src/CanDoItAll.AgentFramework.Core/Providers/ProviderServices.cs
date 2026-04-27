@@ -141,18 +141,29 @@ public sealed class ProviderProfileService : IProviderProfileService
         var supportsResponsesNativeTools = normalizedProvider.SupportsTools
             && normalizedProvider.Transport == ProviderTransportKind.Responses
             && normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
+        var supportsServiceManagedHistory = normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
+            && normalizedProvider.Transport == ProviderTransportKind.Responses
+            && !normalizedProvider.PreferFrameworkManagedChatHistory;
+        var supportsStructuredOutput = normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
+            && normalizedProvider.Transport == ProviderTransportKind.Responses;
 
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,
             Transport: normalizedProvider.Transport,
             SupportsStreaming: normalizedProvider.SupportsStreaming,
             SupportsTools: normalizedProvider.SupportsTools,
+            SupportsStructuredOutput: supportsStructuredOutput,
+            SupportsToolApprovalWrappers: normalizedProvider.SupportsTools,
             PreferFrameworkManagedChatHistory: normalizedProvider.PreferFrameworkManagedChatHistory,
             SupportsBackgroundResponses: normalizedProvider.SupportsBackgroundResponses,
             SupportsNativeCodeInterpreter: supportsResponsesNativeTools,
             SupportsNativeFileSearch: supportsResponsesNativeTools,
             SupportsNativeWebSearch: supportsResponsesNativeTools,
             SupportsHostedMcpServer: supportsResponsesNativeTools,
+            SupportsLocalMcpBridge: normalizedProvider.SupportsTools,
+            SupportsServiceManagedHistory: supportsServiceManagedHistory,
+            SupportsVision: normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi,
+            SupportsCompaction: normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi,
             GitHubCopilotRecommendation: GitHubCopilotRecommendation);
     }
 

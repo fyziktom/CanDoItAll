@@ -84,6 +84,71 @@ public sealed class AgentOutputContractTests
     }
 
     [Fact]
+    public void ProcessStepOutcomeValidator_accepts_completed_machine_outcome()
+    {
+        var validator = new ProcessStepOutcomeValidator();
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "The implementation was completed and validated.",
+            EvidenceRefs = ["execution://run-001"],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = "Completed."
+        };
+
+        var result = validator.Validate(output);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void ProcessStepOutcomeValidator_rejects_completed_outcome_that_asks_for_human_input()
+    {
+        var validator = new ProcessStepOutcomeValidator();
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "The implementation was completed.",
+            EvidenceRefs = [],
+            NextActions = ["Ask the user what to do next."]
+        };
+
+        var result = validator.Validate(output);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Code == "process.step_outcome.completed_next_action_inconsistent");
+    }
+
+    [Fact]
+    public void ProcessStepOutcomeValidator_requires_next_action_for_blocked_or_failed_outcome()
+    {
+        var validator = new ProcessStepOutcomeValidator();
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Blocked,
+            Reason = "A required approval is missing.",
+            EvidenceRefs = [],
+            NextActions = []
+        };
+
+        var result = validator.Validate(output);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Code == "process.step_outcome.next_action_required");
+    }
+
+    [Fact]
+    public void DefaultAgentOutputValidatorRegistry_resolves_process_step_outcome_contract()
+    {
+        var resolved = DefaultAgentOutputValidatorRegistry.Instance.TryResolve(
+            typeof(ProcessStepOutcomeResult),
+            out var validator);
+
+        Assert.True(resolved);
+        Assert.Equal(typeof(ProcessStepOutcomeResult), validator.OutputType);
+    }
+
+    [Fact]
     public void List_outputs_are_wrapped_in_object_dtos()
     {
         var plan = new ImplementationPlanResult
