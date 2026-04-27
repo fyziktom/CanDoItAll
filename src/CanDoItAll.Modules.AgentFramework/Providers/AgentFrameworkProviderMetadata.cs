@@ -16,6 +16,7 @@ internal static class AgentFrameworkProviderMetadata
     private const string ConfigSchemaVersionPropertyName = "configSchemaVersion";
     private const string SecretRecordIdPropertyName = "secretRecordId";
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
+    private const string TransportPropertyName = "providerTransport";
 
     public static string BuildConfigurationJson(
         WorkspaceProviderProfile provider)
@@ -26,6 +27,10 @@ internal static class AgentFrameworkProviderMetadata
         configuration[ConnectorPluginKeyPropertyName] = provider.ConnectorPluginKey;
         configuration[ConfigSchemaVersionPropertyName] = provider.ConfigSchemaVersion;
         configuration[TimeoutSecondsPropertyName] = provider.TimeoutSeconds;
+        if (TryResolveTransport(provider.ExtraSettingsJson, out var transport))
+        {
+            configuration[TransportPropertyName] = transport.ToString();
+        }
         if (provider.ApiKeySecretId.HasValue)
         {
             configuration[SecretRecordIdPropertyName] = provider.ApiKeySecretId.Value.ToString("D");
@@ -43,12 +48,14 @@ internal static class AgentFrameworkProviderMetadata
         string connectorPluginKey,
         string configSchemaVersion,
         Guid? secretRecordId,
-        int timeoutSeconds)
+        int timeoutSeconds,
+        ProviderTransportKind transport)
     {
         var configuration = ParseObject(configurationJson);
         configuration[ConnectorPluginKeyPropertyName] = connectorPluginKey;
         configuration[ConfigSchemaVersionPropertyName] = configSchemaVersion;
         configuration[TimeoutSecondsPropertyName] = timeoutSeconds;
+        configuration[TransportPropertyName] = transport.ToString();
         if (secretRecordId.HasValue)
         {
             configuration[SecretRecordIdPropertyName] = secretRecordId.Value.ToString("D");
@@ -59,6 +66,17 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         return configuration.ToJsonString();
+    }
+
+    public static ProviderTransportKind ResolveTransport(
+        WorkspaceProviderProfile provider,
+        ProviderTransportKind fallback)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        return TryResolveTransport(provider.ExtraSettingsJson, out var configuredTransport)
+            ? configuredTransport
+            : fallback;
     }
 
     public static Guid? ResolveSecretRecordId(
@@ -202,6 +220,22 @@ internal static class AgentFrameworkProviderMetadata
         {
             return new JsonObject();
         }
+    }
+
+    private static bool TryResolveTransport(
+        string? json,
+        out ProviderTransportKind transport)
+    {
+        transport = default;
+        var configuration = ParseObject(json);
+        if (configuration[TransportPropertyName] is not JsonValue value ||
+            !value.TryGetValue<string>(out var configuredTransport) ||
+            string.IsNullOrWhiteSpace(configuredTransport))
+        {
+            return false;
+        }
+
+        return Enum.TryParse(configuredTransport.Trim(), ignoreCase: true, out transport);
     }
 
     private static bool LooksLikeLocalOllama(

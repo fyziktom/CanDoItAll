@@ -65,9 +65,6 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static readonly Regex RequiredToolNameRegex = new(
         @"\b(?:workspace|browser|project_structure)_[a-z0-9_]+\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex DeclaredStepOutcomeRegex = new(
-        @"<!--\s*PROCESS_STEP_OUTCOME\s*(?<json>\{[^\r\n]*\})\s*-->",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex ProjectPathInToolRequestRegex = new(
         @"(?<path>[A-Za-z]:\\[^`""'\r\n]+?\.csproj|external-target/[^\s`""']+?\.csproj)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);

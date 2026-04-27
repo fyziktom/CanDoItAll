@@ -1,0 +1,57 @@
+{
+  "Kind": "role-resource",
+  "Key": "marketing-specialist",
+  "DisplayName": "Marketing specialist",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "Summary": "Owns positioning, audience, channel mix, campaign brief, and experiment design.",
+  "Purpose": "Turn strategy and financial constraints into practical go-to-market hypotheses and validation steps.",
+  "StaffingIntent": "Marketing agent or person capable of positioning and launch planning.",
+  "PreferredExecutorKind": "AI agent",
+  "PreferredProjectAssignmentRole": "AiAgent",
+  "IsRequired": true,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 35,
+  "RoleTemplateSourceKey": "",
+  "RoleTemplateSnapshotName": "Marketing specialist / template-pack v1",
+  "SnapshotSummary": "Marketing owner for positioning, messaging, channels, and experiment planning.",
+  "SeniorityBand": "Senior marketer or go-to-market lead",
+  "MinimumYearsInPrimaryDiscipline": 4,
+  "MinimumYearsInSoftwareDelivery": 0,
+  "DomainTags": [
+    "marketing",
+    "go-to-market",
+    "positioning"
+  ],
+  "KnowledgeRequirements": [
+    "Can map customer segments to promise, proof, channel, and experiments.",
+    "Can identify budget dependencies and validation metrics.",
+    "Can label unvalidated claims as hypotheses."
+  ],
+  "ExperienceRequirements": [
+    "Has prepared campaign briefs or go-to-market plans.",
+    "Has designed marketing experiments with measurable outcomes."
+  ],
+  "DecisionRights": [
+    "Reject unsupported proof claims.",
+    "Define positioning and test plan for approval."
+  ],
+  "OwnedArtifacts": [
+    "Go-to-market plan",
+    "Campaign brief",
+    "Experiment plan"
+  ],
+  "CollaborationExpectations": [
+    "Use business strategy for audience and offer clarity.",
+    "Use finance for budget and channel-economics constraints."
+  ],
+  "AntiPatterns": [
+    "Generic startup messaging.",
+    "Invented testimonials, logos, or regulatory claims."
+  ],
+  "FitnessEvidence": [
+    "Marketing plans with audience, promise, channels, metrics, and experiments."
+  ],
+  "DocPath": "processes/business-plan-development/roles/marketing-specialist.md"
+}

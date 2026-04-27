@@ -210,46 +210,28 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.Failed;
         }
 
-        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
-        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
+        var inspectionText = ResolveOutputInspectionText(responseText);
+        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
+        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
-        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
-        if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome))
+        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome, out var processOutcome))
         {
-            if (!string.IsNullOrWhiteSpace(ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome)))
+            var contextValidation = ValidateProcessStepOutcomeContext(
+                candidate,
+                detail,
+                processOutcome,
+                declaredOutcome,
+                inspectionText);
+            if (!contextValidation.IsValid)
             {
-                return ProcessStepRunStatus.Failed;
-            }
-
-            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                !string.IsNullOrWhiteSpace(missingConcreteProofSummary))
-            {
-                return ProcessStepRunStatus.Blocked;
-            }
-
-            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                !string.IsNullOrWhiteSpace(incompleteImplementationSummary))
-            {
-                return ProcessStepRunStatus.Blocked;
-            }
-
-            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
-            {
-                return ProcessStepRunStatus.Blocked;
-            }
-
-            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                !string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
-            {
-                return ProcessStepRunStatus.Blocked;
-            }
-
-            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
-            {
-                return ProcessStepRunStatus.Blocked;
+                return contextValidation.Errors.Any(error =>
+                    error.Code is "process.step_outcome.context.branch_required" or "process.step_outcome.context.branch_invalid")
+                    ? ProcessStepRunStatus.Failed
+                    : declaredOutcome.Status == ProcessStepRunStatus.Completed
+                        ? ProcessStepRunStatus.Blocked
+                        : ProcessStepRunStatus.Failed;
             }
 
             return declaredOutcome.Status;
@@ -264,7 +246,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.Blocked;
         }
 
-        if (CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, responseText))
+        if (CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, inspectionText))
         {
             return ProcessStepRunStatus.Completed;
         }
@@ -308,100 +290,52 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool TryResolveDeclaredStepOutcome(string? responseText, out DeclaredStepOutcome declaredOutcome)
     {
-        declaredOutcome = default;
-        if (string.IsNullOrWhiteSpace(responseText))
-        {
-            return false;
-        }
-
-        var matches = DeclaredStepOutcomeRegex.Matches(responseText);
-        if (matches.Count == 0)
-        {
-            return false;
-        }
-
-        var json = matches[^1].Groups["json"].Value;
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("status", out var statusElement) ||
-                statusElement.ValueKind != JsonValueKind.String ||
-                !TryMapDeclaredStepStatus(statusElement.GetString(), out var status))
-            {
-                return false;
-            }
-
-            var reason = document.RootElement.TryGetProperty("reason", out var reasonElement) &&
-                         reasonElement.ValueKind == JsonValueKind.String
-                ? reasonElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            var branchOutcomeKey = document.RootElement.TryGetProperty("branchOutcomeKey", out var branchOutcomeKeyElement) &&
-                                   branchOutcomeKeyElement.ValueKind == JsonValueKind.String
-                ? branchOutcomeKeyElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            var branchOutcomeTitle = document.RootElement.TryGetProperty("branchOutcomeTitle", out var branchOutcomeTitleElement) &&
-                                     branchOutcomeTitleElement.ValueKind == JsonValueKind.String
-                ? branchOutcomeTitleElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            declaredOutcome = new DeclaredStepOutcome(status, reason, null, branchOutcomeKey, branchOutcomeTitle);
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
+        return TryResolveDeclaredStepOutcome(responseText, out declaredOutcome, out _);
     }
 
-    private static bool TryMapDeclaredStepStatus(string? value, out ProcessStepRunStatus status)
+    private static bool TryResolveDeclaredStepOutcome(
+        string? responseText,
+        out DeclaredStepOutcome declaredOutcome,
+        out ProcessStepOutcomeResult outcome)
     {
-        status = default;
-        if (string.IsNullOrWhiteSpace(value))
+        declaredOutcome = default;
+        outcome = default!;
+        if (!TryReadProcessStepOutcome(responseText, out var parsedOutcome, out _))
         {
             return false;
         }
 
-        var normalized = value.Trim().Replace("-", string.Empty, StringComparison.Ordinal).Replace("_", string.Empty, StringComparison.Ordinal);
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Completed), StringComparison.OrdinalIgnoreCase))
+        outcome = parsedOutcome;
+        declaredOutcome = new DeclaredStepOutcome(
+            MapProcessStepOutcomeStatus(parsedOutcome.Status),
+            parsedOutcome.Reason.Trim(),
+            null,
+            parsedOutcome.BranchOutcomeKey.Trim(),
+            parsedOutcome.BranchOutcomeTitle.Trim());
+        return true;
+    }
+
+    private static bool TryResolveDeclaredStepOutcome(
+        DispatchCandidate candidate,
+        string? responseText,
+        out DeclaredStepOutcome declaredOutcome,
+        out ProcessStepOutcomeResult outcome)
+    {
+        if (!TryResolveDeclaredStepOutcome(responseText, out var parsedOutcome, out outcome))
         {
-            status = ProcessStepRunStatus.Completed;
-            return true;
+            declaredOutcome = default;
+            return false;
         }
 
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Blocked), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("block", StringComparison.OrdinalIgnoreCase))
+        declaredOutcome = parsedOutcome with
         {
-            status = ProcessStepRunStatus.Blocked;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Failed), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("error", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.Failed;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.WaitingApproval), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("approval", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.WaitingApproval;
-            return true;
-        }
-
-        if (normalized.Equals(nameof(ProcessStepRunStatus.Refused), StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("reject", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals("rejected", StringComparison.OrdinalIgnoreCase))
-        {
-            status = ProcessStepRunStatus.Refused;
-            return true;
-        }
-
-        return false;
+            SelectedBranchOutcomeId = ResolveSelectedBranchOutcomeId(
+                candidate,
+                parsedOutcome.Status,
+                parsedOutcome.BranchOutcomeKey,
+                parsedOutcome.BranchOutcomeTitle)
+        };
+        return true;
     }
 
     private static string BuildDeclaredStepOutcomeReason(string runTitle, string stepTitle, DeclaredStepOutcome declaredOutcome)

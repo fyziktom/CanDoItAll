@@ -1,7 +1,10 @@
+using System.IO.Compression;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -166,6 +169,319 @@ public sealed class DatabaseDriverBootstrapIntegrationTests
             dropCommand.CommandText = $"drop database if exists \"{databaseName}\" with (force);";
             await dropCommand.ExecuteNonQueryAsync();
         }
+    }
+}
+
+public sealed class DatabaseTransferIntegrationTests
+{
+    [Fact]
+    public async Task Project_transfer_copies_all_project_and_workbench_records_between_profiles()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-project-transfer");
+        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+
+        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
+        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
+
+        var sourceProjectName = $"Transferred Project {Guid.NewGuid():N}"[..32];
+        var sourceNodeTitle = "Transfer note";
+        Guid sourceProjectId;
+        string sourceNodeKey;
+
+        await using (var sourceScope = provider.CreateAsyncScope())
+        {
+            var saveResult = await sourceScope.ServiceProvider.GetRequiredService<ProjectsService>().SaveAsync(new ProjectEditorModel
+            {
+                Name = sourceProjectName,
+                Description = "Transfer source description",
+                Objective = "Transfer source objective",
+                CurrentPhase = "Discovery",
+                Phases =
+                [
+                    new ProjectPhaseEditorModel
+                    {
+                        Name = "Discovery",
+                        Goal = "Confirm transfer coverage",
+                        Status = ProjectPhaseStatus.Active
+                    }
+                ],
+                Options =
+                [
+                    new ProjectOptionEditorModel
+                    {
+                        Category = ProjectOptionCategory.Language,
+                        OptionName = "C#",
+                        Notes = "Transfer option"
+                    }
+                ]
+            });
+            Assert.True(saveResult.IsSuccess, DescribeErrors(saveResult.Errors));
+            sourceProjectId = saveResult.Value;
+
+            await sourceScope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>().SeedProjectObjectsAsync(
+                sourceProjectId,
+                [
+                    new ProjectObjectSeedRequest(
+                        ProjectObjectType.Note,
+                        sourceNodeTitle,
+                        "Transfer subtitle",
+                        "Transfer notes")
+                ]);
+        }
+
+        await using (var sourceContext = await switchableFactory.CreateDbContextForProfileAsync(sourceProfile))
+        {
+            var seededNode = await sourceContext.Set<ProjectObjectRecord>()
+                .SingleAsync(item => item.ProjectId == sourceProjectId && item.Title == sourceNodeTitle);
+            sourceNodeKey = seededNode.NodeKey;
+
+            sourceContext.Set<ProjectStructureProjectionLayoutRecord>().Add(new ProjectStructureProjectionLayoutRecord
+            {
+                ProjectId = sourceProjectId,
+                NodeKey = sourceNodeKey,
+                PositionX = 42,
+                PositionY = 84,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+            sourceContext.Set<ProjectWorkbenchViewStateRecord>().Add(new ProjectWorkbenchViewStateRecord
+            {
+                ProjectId = sourceProjectId,
+                SurfaceKind = "structure",
+                StateJson = "{\"zoom\":1.25}",
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+            await sourceContext.SaveChangesAsync();
+        }
+
+        var targetSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
+        {
+            DisplayName = "Managed sqlite project transfer target",
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
+        Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
+
+        var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(targetProfile);
+
+        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        {
+            targetContext.Set<Project>().Add(new Project
+            {
+                Name = "Target-only Project",
+                Slug = "target-only-project",
+                Description = "Should be replaced",
+                Objective = "Should be replaced",
+                CurrentPhase = "Legacy",
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+            await targetContext.SaveChangesAsync();
+        }
+
+        DatabaseTransferResult transferResult;
+        await using (var transferScope = provider.CreateAsyncScope())
+        {
+            var transferService = transferScope.ServiceProvider.GetRequiredService<IDatabaseTransferService>();
+
+            var previews = await transferService.PreviewAsync(sourceProfile.Profile.Id, targetProfile.Profile.Id);
+            var projectPreview = Assert.Single(previews, item => item.Descriptor.Key == "projects");
+            Assert.True(projectPreview.IsAvailable);
+            Assert.True(projectPreview.SourceRecordCount >= 6);
+            Assert.True(projectPreview.TargetRecordCount >= 1);
+
+            transferResult = await transferService.TransferAsync(new DatabaseTransferRequest
+            {
+                SourceProfileId = sourceProfile.Profile.Id,
+                TargetProfileId = targetProfile.Profile.Id,
+                ItemKeys = ["projects"]
+            });
+        }
+
+        Assert.True(transferResult.IsSuccess, DescribeTransferResults(transferResult));
+        var itemResult = Assert.Single(transferResult.Items);
+        Assert.Equal("projects", itemResult.Key);
+        Assert.True(itemResult.RecordsCopied >= 6);
+
+        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        {
+            var projects = await targetContext.Set<Project>().ToListAsync();
+            var transferredProject = Assert.Single(projects, item => item.Id == sourceProjectId);
+            Assert.Equal(sourceProjectName, transferredProject.Name);
+            Assert.DoesNotContain(projects, item => item.Name == "Target-only Project");
+
+            Assert.True(await targetContext.Set<ProjectPhase>().AnyAsync(item => item.ProjectId == sourceProjectId && item.Name == "Discovery"));
+            Assert.True(await targetContext.Set<ProjectOptionSelection>().AnyAsync(item => item.ProjectId == sourceProjectId && item.OptionName == "C#"));
+
+            var transferredNode = await targetContext.Set<ProjectObjectRecord>()
+                .SingleAsync(item => item.ProjectId == sourceProjectId && item.NodeKey == sourceNodeKey);
+            Assert.Equal(sourceNodeTitle, transferredNode.Title);
+            Assert.True(await targetContext.Set<ProjectNodeBindingRecord>().AnyAsync(item => item.ProjectObjectId == transferredNode.Id));
+            Assert.True(await targetContext.Set<ProjectStructureProjectionLayoutRecord>().AnyAsync(item => item.ProjectId == sourceProjectId && item.NodeKey == sourceNodeKey));
+            Assert.True(await targetContext.Set<ProjectWorkbenchViewStateRecord>().AnyAsync(item => item.ProjectId == sourceProjectId && item.SurfaceKind == "structure" && item.StateJson == "{\"zoom\":1.25}"));
+        }
+    }
+
+    [Fact]
+    public async Task Project_package_export_import_round_trips_project_records_and_media()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-project-package");
+        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+
+        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
+        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
+
+        var sourceProjectName = $"Packaged Project {Guid.NewGuid():N}"[..29];
+        var sourceNodeTitle = "Packaged note";
+        Guid sourceProjectId;
+        string sourceNodeKey;
+
+        await using (var sourceScope = provider.CreateAsyncScope())
+        {
+            var saveResult = await sourceScope.ServiceProvider.GetRequiredService<ProjectsService>().SaveAsync(new ProjectEditorModel
+            {
+                Name = sourceProjectName,
+                Description = "Package source description",
+                Objective = "Package source objective",
+                CurrentPhase = "Build",
+                Phases =
+                [
+                    new ProjectPhaseEditorModel
+                    {
+                        Name = "Build",
+                        Goal = "Create package",
+                        Status = ProjectPhaseStatus.Active
+                    }
+                ]
+            });
+            Assert.True(saveResult.IsSuccess, DescribeErrors(saveResult.Errors));
+            sourceProjectId = saveResult.Value;
+
+            await sourceScope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>().SeedProjectObjectsAsync(
+                sourceProjectId,
+                [
+                    new ProjectObjectSeedRequest(
+                        ProjectObjectType.Note,
+                        sourceNodeTitle,
+                        "Package subtitle",
+                        "Package notes")
+                ]);
+        }
+
+        var mediaRelativePath = $"managed-files/project-packages/{sourceProjectId:N}/alpha.txt";
+        var mediaContent = "project package media";
+        await using (var sourceContext = await switchableFactory.CreateDbContextForProfileAsync(sourceProfile))
+        {
+            var seededNode = await sourceContext.Set<ProjectObjectRecord>()
+                .SingleAsync(item => item.ProjectId == sourceProjectId && item.Title == sourceNodeTitle);
+            sourceNodeKey = seededNode.NodeKey;
+
+            var binding = await sourceContext.Set<ProjectNodeBindingRecord>()
+                .SingleAsync(item => item.ProjectObjectId == seededNode.Id);
+            binding.MediaRelativePath = mediaRelativePath;
+            binding.MediaContentType = "text/plain";
+            binding.MediaOriginalFileName = "alpha.txt";
+            await sourceContext.SaveChangesAsync();
+        }
+
+        var sourceMediaPath = Path.Combine(
+            sourceProfile.Profile.Storage.WorkspaceRoot,
+            mediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(sourceMediaPath)!);
+        await File.WriteAllTextAsync(sourceMediaPath, mediaContent);
+
+        var targetSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
+        {
+            DisplayName = "Managed sqlite project package target",
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
+        Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
+
+        var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(targetProfile);
+
+        ProjectPackageExportResult exportResult;
+        ProjectPackageImportResult importResult;
+        await using (var packageScope = provider.CreateAsyncScope())
+        {
+            var packageService = packageScope.ServiceProvider.GetRequiredService<IProjectPackageService>();
+            var export = await packageService.ExportAllAsync(new ProjectPackageExportRequest
+            {
+                SourceProfileId = sourceProfile.Profile.Id
+            });
+            Assert.True(export.IsSuccess, DescribeErrors(export.Errors));
+            exportResult = export.Value!;
+
+            Assert.True(File.Exists(exportResult.PackagePath));
+            Assert.Equal(ProjectPackageManifest.CurrentFormat, exportResult.Manifest.Format);
+            Assert.Equal(1, Assert.Single(exportResult.Manifest.Tables, item => item.Name == "Projects_Projects").RowCount);
+            Assert.Equal(1, Assert.Single(exportResult.Manifest.Tables, item => item.Name == "Workbench_ProjectNodeBindings").RowCount);
+            Assert.Single(exportResult.Manifest.StorageFiles, item => item.RelativePath == mediaRelativePath);
+
+            using (var archive = ZipFile.OpenRead(exportResult.PackagePath))
+            {
+                Assert.Contains(archive.Entries, entry => entry.FullName == "manifest.json");
+                Assert.Contains(archive.Entries, entry => entry.FullName == "tables/projects.json");
+                Assert.Contains(archive.Entries, entry => entry.FullName == $"storage/{mediaRelativePath}");
+            }
+
+            var manifestResult = await packageService.ReadManifestAsync(exportResult.PackagePath);
+            Assert.True(manifestResult.IsSuccess, DescribeErrors(manifestResult.Errors));
+            Assert.Equal(exportResult.Manifest.PackageId, manifestResult.Value!.PackageId);
+
+            var import = await packageService.ImportAllAsync(new ProjectPackageImportRequest
+            {
+                PackagePath = exportResult.PackagePath,
+                TargetProfileId = targetProfile.Profile.Id
+            });
+            Assert.True(import.IsSuccess, DescribeErrors(import.Errors));
+            importResult = import.Value!;
+        }
+
+        Assert.Equal(exportResult.Manifest.PackageId, importResult.Manifest.PackageId);
+        Assert.Equal(exportResult.Manifest.TotalRecordCount, importResult.RecordsImported);
+        Assert.Equal(1, importResult.StorageFilesImported);
+
+        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        {
+            var transferredProject = await targetContext.Set<Project>()
+                .SingleAsync(item => item.Id == sourceProjectId);
+            Assert.Equal(sourceProjectName, transferredProject.Name);
+            Assert.True(await targetContext.Set<ProjectPhase>().AnyAsync(item => item.ProjectId == sourceProjectId && item.Name == "Build"));
+
+            var transferredNode = await targetContext.Set<ProjectObjectRecord>()
+                .SingleAsync(item => item.ProjectId == sourceProjectId && item.NodeKey == sourceNodeKey);
+            var transferredBinding = await targetContext.Set<ProjectNodeBindingRecord>()
+                .SingleAsync(item => item.ProjectObjectId == transferredNode.Id);
+            Assert.Equal(mediaRelativePath, transferredBinding.MediaRelativePath);
+        }
+
+        var targetMediaPath = Path.Combine(
+            targetProfile.Profile.Storage.WorkspaceRoot,
+            mediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(targetMediaPath));
+        Assert.Equal(mediaContent, await File.ReadAllTextAsync(targetMediaPath));
+    }
+
+    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+    {
+        return string.Join(" ", errors.Select(error => error.Message));
+    }
+
+    private static string DescribeTransferResults(DatabaseTransferResult result)
+    {
+        return string.Join(" ", result.Items.Select(item => $"{item.Label}: {item.Message}"));
     }
 }
 

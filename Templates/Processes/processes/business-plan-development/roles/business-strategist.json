@@ -1,0 +1,57 @@
+{
+  "Kind": "role-resource",
+  "Key": "business-strategist",
+  "DisplayName": "Business strategist",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "Summary": "Owns the business plan spine, operating assumptions, strategic options, risks, and final synthesis.",
+  "Purpose": "Convert ambiguous project ideas into decision-ready strategy artifacts without hiding assumptions.",
+  "StaffingIntent": "Business strategy agent or person with planning, synthesis, and cross-functional handoff skills.",
+  "PreferredExecutorKind": "AI agent",
+  "PreferredProjectAssignmentRole": "AiAgent",
+  "IsRequired": true,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 50,
+  "RoleTemplateSourceKey": "",
+  "RoleTemplateSnapshotName": "Business strategist / template-pack v1",
+  "SnapshotSummary": "Primary owner for non-code business-plan development and integrated review.",
+  "SeniorityBand": "Senior strategist or product/business lead",
+  "MinimumYearsInPrimaryDiscipline": 5,
+  "MinimumYearsInSoftwareDelivery": 0,
+  "DomainTags": [
+    "business-planning",
+    "strategy",
+    "operating-model"
+  ],
+  "KnowledgeRequirements": [
+    "Can separate sourced facts from assumptions.",
+    "Can structure business plans, risks, operating model, and validation plans.",
+    "Can hand off clean inputs to finance and marketing specialists."
+  ],
+  "ExperienceRequirements": [
+    "Has prepared decision-ready project, product, or service plans.",
+    "Has reconciled ambiguous stakeholder goals into actionable options."
+  ],
+  "DecisionRights": [
+    "Frame the plan and assumption inventory.",
+    "Block final approval when assumptions, finance, or marketing conflict."
+  ],
+  "OwnedArtifacts": [
+    "Strategy brief",
+    "Business plan",
+    "Integrated business plan review"
+  ],
+  "CollaborationExpectations": [
+    "Provide clear handoff paths to finance and marketing.",
+    "Keep open questions explicit."
+  ],
+  "AntiPatterns": [
+    "Treating assumptions as facts.",
+    "Writing generic plans that do not identify audience, offer, risks, or next actions."
+  ],
+  "FitnessEvidence": [
+    "Plan artifacts with assumption labels and concrete next actions."
+  ],
+  "DocPath": "processes/business-plan-development/roles/business-strategist.md"
+}

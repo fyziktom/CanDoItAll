@@ -24,7 +24,16 @@ public static class ManagedSeedProviderFallbacks
         "security-reviewer",
         "release-readiness-manager",
         "hr-staffing-manager",
-        "research-deep-dive-analyst"
+        "research-deep-dive-analyst",
+        "dotnet-solution-architect",
+        "dotnet-application-developer",
+        "dotnet-qa-review-lead",
+        "javascript-solution-architect",
+        "javascript-application-developer",
+        "javascript-qa-review-lead",
+        "business-strategist",
+        "financial-strategist",
+        "marketing-specialist"
     };
 
     private static readonly IReadOnlyList<string> ManagedSeedFallbackSuggestedModels =

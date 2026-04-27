@@ -92,16 +92,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyCollection<string> missingRequiredTools,
         string? responseText)
     {
-        return CanImplicitlyCompleteGovernedImplementationStep(
-                   candidate,
-                   detail,
-                   missingRequiredTools,
-                   responseText) ||
-               CanImplicitlyCompleteGovernedArtifactResponseStep(
-                   candidate,
-                   detail,
-                   missingRequiredTools,
-                   responseText);
+        return false;
     }
 
     private static bool CanImplicitlyCompleteGovernedImplementationStep(

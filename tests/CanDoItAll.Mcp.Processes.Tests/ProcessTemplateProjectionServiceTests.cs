@@ -71,6 +71,35 @@ public sealed class ProcessTemplateProjectionServiceTests
     }
 
     [Fact]
+    public void GetProjectedEnvelope_projects_business_plan_handoffs_and_approval_gate()
+    {
+        var loader = new ProcessTemplatePackLoader();
+        var projection = new ProcessTemplateProjectionService(loader);
+        var process = loader.Load().Processes["business-plan-development"];
+
+        var envelope = projection.GetProjectedEnvelope("business-plan-development");
+
+        Assert.Equal(process.RoleUsages.Count, envelope.Definition.Roles.Count);
+        Assert.Equal(process.Steps.Count, envelope.Definition.Steps.Count);
+
+        var financialModeling = envelope.Definition.Steps.Single(step => step.Key == "financial-modeling");
+        Assert.Single(financialModeling.ArtifactInputs);
+
+        var integratedReview = envelope.Definition.Steps.Single(step => step.Key == "integrated-review");
+        Assert.True(integratedReview.RequiresApproval);
+        Assert.NotNull(integratedReview.DecisionRoleRequirementId);
+        Assert.Equal(3, integratedReview.ArtifactInputs.Count);
+        Assert.Equal(2, integratedReview.BranchOutcomes.Count);
+
+        var approvedHandoff = envelope.Definition.Steps.Single(step => step.Key == "approved-execution-handoff");
+        var blockedCorrections = envelope.Definition.Steps.Single(step => step.Key == "blocked-correction-plan");
+        Assert.Single(approvedHandoff.Dependencies);
+        Assert.Single(blockedCorrections.Dependencies);
+        Assert.NotNull(approvedHandoff.Dependencies[0].DependsOnBranchOutcomeId);
+        Assert.NotNull(blockedCorrections.Dependencies[0].DependsOnBranchOutcomeId);
+    }
+
+    [Fact]
     public void GetCompatibilityReportMarkdown_returns_current_architecture_report()
     {
         var loader = new ProcessTemplatePackLoader();

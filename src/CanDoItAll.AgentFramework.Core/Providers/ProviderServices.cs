@@ -138,22 +138,47 @@ public sealed class ProviderProfileService : IProviderProfileService
         ArgumentNullException.ThrowIfNull(provider);
 
         var normalizedProvider = NormalizeImportedProfile(provider);
+        var supportsOpenAiFamily = normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
         var supportsResponsesNativeTools = normalizedProvider.SupportsTools
             && normalizedProvider.Transport == ProviderTransportKind.Responses
-            && normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
+            && supportsOpenAiFamily;
+        var supportsServiceManagedHistory = supportsOpenAiFamily
+            && normalizedProvider.Transport == ProviderTransportKind.Responses
+            && !normalizedProvider.PreferFrameworkManagedChatHistory;
+        var supportsFunctionTools = normalizedProvider.SupportsTools;
+        var supportsResponseFormatJsonSchema = supportsOpenAiFamily &&
+                                               normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
+        var supportsStructuredOutput = supportsResponseFormatJsonSchema;
+        var supportsToolApprovalRequests = supportsOpenAiFamily &&
+                                           normalizedProvider.SupportsTools &&
+                                           normalizedProvider.Transport == ProviderTransportKind.Responses;
 
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,
             Transport: normalizedProvider.Transport,
             SupportsStreaming: normalizedProvider.SupportsStreaming,
             SupportsTools: normalizedProvider.SupportsTools,
+            SupportsStructuredOutput: supportsStructuredOutput,
+            SupportsToolApprovalWrappers: supportsToolApprovalRequests,
             PreferFrameworkManagedChatHistory: normalizedProvider.PreferFrameworkManagedChatHistory,
             SupportsBackgroundResponses: normalizedProvider.SupportsBackgroundResponses,
             SupportsNativeCodeInterpreter: supportsResponsesNativeTools,
             SupportsNativeFileSearch: supportsResponsesNativeTools,
             SupportsNativeWebSearch: supportsResponsesNativeTools,
             SupportsHostedMcpServer: supportsResponsesNativeTools,
-            GitHubCopilotRecommendation: GitHubCopilotRecommendation);
+            SupportsLocalMcpBridge: normalizedProvider.SupportsTools,
+            SupportsServiceManagedHistory: supportsServiceManagedHistory,
+            SupportsVision: supportsOpenAiFamily,
+            SupportsCompaction: supportsOpenAiFamily,
+            GitHubCopilotRecommendation: GitHubCopilotRecommendation,
+            SupportsFunctionTools: supportsFunctionTools,
+            SupportsRunAsyncTypedOutput: supportsStructuredOutput,
+            SupportsResponseFormatJsonSchema: supportsResponseFormatJsonSchema,
+            SupportsToolApprovalRequests: supportsToolApprovalRequests,
+            SupportsApprovalRequiredAIFunction: supportsToolApprovalRequests,
+            SupportsHostedTools: supportsResponsesNativeTools,
+            SupportsHostedMcp: supportsResponsesNativeTools,
+            SupportsLocalMcp: normalizedProvider.SupportsTools);
     }
 
     public ProviderFeatureSupportResult GetNativeToolSupport(ProviderProfile provider, ProviderNativeToolFamily family)

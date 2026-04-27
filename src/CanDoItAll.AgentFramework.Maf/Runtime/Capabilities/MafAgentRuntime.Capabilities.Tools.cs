@@ -27,7 +27,7 @@ public sealed partial class MafAgentRuntime
 
             var tools = toolKey switch
             {
-                "workspace-plugin" => CreateWorkspacePluginTools(),
+                "workspace-plugin" => CreateWorkspacePluginTools(suppressApprovalRequirements),
                 "provider-native-code-interpreter" or ProviderNativeToolKeys.CodeInterpreter => [CreateHostedCodeInterpreterTool(capability, provider, configuration)],
                 "provider-native-file-search" or ProviderNativeToolKeys.FileSearch => [CreateHostedFileSearchTool(capability, provider, configuration)],
                 "provider-native-web-search" or ProviderNativeToolKeys.WebSearch => [CreateHostedWebSearchTool(capability, provider, configuration)],
@@ -182,7 +182,7 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException($"Registered plugin service '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' does not expose AITool instances.");
         }
 
-        private IReadOnlyList<AITool> CreateWorkspacePluginTools()
+        private IReadOnlyList<AITool> CreateWorkspacePluginTools(bool suppressApprovalRequirements)
         {
             return
             [
@@ -196,23 +196,23 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", "Runs a bounded git diff recipe in the current workspace."),
                 AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the current workspace."),
                 AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the current workspace."),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory inside the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file inside the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CopyWorkspacePath, "workspace_copy_path", "Copies a file or directory inside the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.MoveWorkspacePath, "workspace_move_path", "Moves or renames a file or directory inside the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DeleteWorkspacePath, "workspace_delete_path", "Deletes a file or directory inside the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", "Creates a bounded dotnet project scaffold in the current workspace.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePythonFile, "workspace_python_run_file", "Runs a workspace Python file with structured arguments through the controlled execution plane.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown.")),
-                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."))
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory inside the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file inside the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CopyWorkspacePath, "workspace_copy_path", "Copies a file or directory inside the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.MoveWorkspacePath, "workspace_move_path", "Moves or renames a file or directory inside the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DeleteWorkspacePath, "workspace_delete_path", "Deletes a file or directory inside the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", "Creates a bounded dotnet project scaffold in the current workspace."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePythonFile, "workspace_python_run_file", "Runs a workspace Python file with structured arguments through the controlled execution plane."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements),
+                WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."), suppressApprovalRequirements)
             ];
         }
 
         private static bool IsBuiltInToolEnabled(string toolKey, BuiltInToolConfiguration configuration)
-            => true;
+            => configuration.Enabled != false;
 
         private IReadOnlyList<AITool> ApplyConfiguredApprovalRequirement(
             CapabilityCatalogItem capability,
@@ -230,9 +230,9 @@ public sealed partial class MafAgentRuntime
             return MafAgentRuntime.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
         }
 
-        private static AITool WrapWithApproval(AITool tool)
+        private static AITool WrapWithApproval(AITool tool, bool suppressApprovalRequirements = false)
         {
-            return tool is AIFunction function
+            return !suppressApprovalRequirements && tool is AIFunction function
                 ? new ApprovalRequiredAIFunction(function)
                 : tool;
         }

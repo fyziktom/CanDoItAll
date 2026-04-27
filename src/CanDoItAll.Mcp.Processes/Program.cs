@@ -1,13 +1,12 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
+using CanDoItAll.Mcp.Core.Hosting;
 using CanDoItAll.Mcp.Core.Identity;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace CanDoItAll.Mcp.Processes;
@@ -24,22 +23,12 @@ internal static class Program
         {
             [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         });
-        builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
-        builder.Configuration.AddEnvironmentVariables(prefix: "CanDoItAllMcp_");
+        builder.Configuration.AddCanDoItAllMcpSettings(settingsPath);
 
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(options =>
-        {
-            options.LogToStandardErrorThreshold = LogLevel.Trace;
-        });
-        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Logging.ConfigureCanDoItAllMcpStdioLogging();
 
         builder.Services
-            .AddOptions<McpServerOptions>()
-            .Bind(builder.Configuration)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-        builder.Services.AddSingleton<IValidateOptions<McpServerOptions>, McpServerOptionsValidator>();
+            .AddValidatedCanDoItAllMcpOptions<McpServerOptions, McpServerOptionsValidator>(builder.Configuration);
 
         builder.Services.AddSingleton<ServerInstanceIdentity>();
         builder.Services.AddSingleton<RuntimeConfiguration>();

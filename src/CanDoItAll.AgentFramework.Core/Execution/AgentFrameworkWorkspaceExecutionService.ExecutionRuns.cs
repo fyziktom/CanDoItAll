@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -78,6 +80,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var provider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
         var memory = ResolveAgentMemory(catalog, agent.Id);
+        var structuredOutput = ResolveContinuationStructuredOutputContract(run);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run.resume", prepared.OriginalRun);
         AgentFrameworkTelemetry.RecordRunResume(prepared.OriginalRun);
 
@@ -138,7 +141,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                     cancellationToken,
-                    suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession));
+                    suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                    structuredOutput: structuredOutput,
+                    executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -156,6 +161,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         memory,
                         runtimeResponse,
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                        structuredOutput,
                         cancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -164,6 +170,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     totalOutputTokens = continuation.TotalOutputTokens;
                     totalToolCalls = continuation.TotalToolCalls;
                 }
+
+                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
+                    run,
+                    structuredOutput,
+                    runtimeResponse,
+                    cancellationToken);
 
                 var assistantMessage = session is null
                     ? null
@@ -471,6 +483,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 prompt,
                 context,
                 request.AutoApprovePendingToolCalls,
+                request.StructuredOutput,
                 cancellationToken);
 
             catalog = prepared.Catalog;
@@ -496,7 +509,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 context,
                 prompt,
                 now,
-                request.AutoApprovePendingToolCalls);
+                request.AutoApprovePendingToolCalls,
+                request.StructuredOutput);
 
             if (session is not null)
             {
@@ -572,7 +586,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                     cancellationToken,
-                    suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession));
+                    suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                    structuredOutput: request.StructuredOutput,
+                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -590,6 +606,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         memory,
                         runtimeResponse,
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                        request.StructuredOutput,
                         cancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -598,6 +615,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     totalOutputTokens = continuation.TotalOutputTokens;
                     totalToolCalls = continuation.TotalToolCalls;
                 }
+
+                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
+                    run,
+                    request.StructuredOutput,
+                    runtimeResponse,
+                    cancellationToken);
 
                 var assistantMessage = session is null
                     ? null
@@ -809,6 +832,388 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ? $"Awaiting approval for {response.PendingApprovals.Count} tool request(s)."
                 : CreateExecutionSummary(response.ResponseText)
         };
+    }
+
+    private AgentStructuredOutputContract? ResolveContinuationStructuredOutputContract(ExecutionRunRecord run)
+    {
+        if (AgentStructuredOutputContracts.TryResolve(run.StructuredOutputContractKey, out var storedContract))
+        {
+            return storedContract;
+        }
+
+        if (!string.IsNullOrWhiteSpace(run.StructuredOutputTypeName) &&
+            AgentStructuredOutputContracts.TryResolve(run.StructuredOutputTypeName, out var typeContract))
+        {
+            return typeContract;
+        }
+
+        if (IsGovernedMachineCriticalRun(run))
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{run.Id:N}' is a governed process-step run, but it does not carry a resolvable structured-output contract for approval continuation.");
+        }
+
+        return null;
+    }
+
+    private async Task<AgentRuntimeResponse> ValidateMachineOutputBeforeCompletionAsync(
+        ExecutionRunRecord run,
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeResponse response,
+        CancellationToken cancellationToken)
+    {
+        if (structuredOutput is null || response.PendingApprovals.Count > 0)
+        {
+            return response;
+        }
+
+        if (!ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run) &&
+            !IsGovernedMachineCriticalRun(run))
+        {
+            return response;
+        }
+
+        var registry = DefaultAgentOutputValidatorRegistry.Instance;
+        if (!registry.TryResolve(structuredOutput.OutputType, out var validator))
+        {
+            if (IsGovernedMachineCriticalRun(run))
+            {
+                throw new InvalidOperationException(
+                    $"Structured-output contract '{structuredOutput.ContractKey}' does not have a registered machine-output validator.");
+            }
+
+            return response;
+        }
+
+        response = await ValidateFinalizerBeforeCompletionAsync(
+            run,
+            structuredOutput,
+            response,
+            registry,
+            validator,
+            cancellationToken);
+
+        var validation = validator.DeserializeAndValidate(response.ResponseText);
+        var originalRawOutputHash = validation.RawOutputHash;
+        var repairAttemptCount = 0;
+        var maxRepairAttempts = ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run);
+        while (!validation.Succeeded && repairAttemptCount < maxRepairAttempts)
+        {
+            repairAttemptCount++;
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Output repair",
+                $"Attempting structured output repair {repairAttemptCount}/{maxRepairAttempts} for contract '{structuredOutput.ContractKey}'. Raw output hash: {validation.RawOutputHash}. Errors: {FormatValidationErrors(validation.Validation.Errors)}",
+                cancellationToken);
+
+            var repair = await outputRepairService.TryRepairAsync(
+                new AgentOutputRepairRequest
+                {
+                    ContractName = structuredOutput.ContractKey,
+                    SchemaName = structuredOutput.SchemaName,
+                    SchemaDescription = structuredOutput.SchemaDescription,
+                    InvalidRawOutput = validation.RawOutput,
+                    InvalidRawOutputHash = validation.RawOutputHash,
+                    ValidationErrors = validation.Validation.Errors,
+                    AttemptNumber = repairAttemptCount,
+                    MaxAttempts = maxRepairAttempts
+                },
+                cancellationToken);
+
+            if (!repair.Succeeded || string.IsNullOrWhiteSpace(repair.RepairedRawOutput))
+            {
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    run.AgentId,
+                    run.ChatSessionId,
+                    ExecutionState.Persisting,
+                    "Output repair",
+                    string.IsNullOrWhiteSpace(repair.FailureMessage)
+                        ? $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} did not produce a repair candidate for contract '{structuredOutput.ContractKey}'."
+                        : $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} failed for contract '{structuredOutput.ContractKey}': {repair.FailureMessage}",
+                    cancellationToken);
+                break;
+            }
+
+            validation = validator.DeserializeAndValidate(repair.RepairedRawOutput);
+            if (validation.Succeeded)
+            {
+                response = response with
+                {
+                    ResponseText = repair.RepairedRawOutput
+                };
+
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    run.AgentId,
+                    run.ChatSessionId,
+                    ExecutionState.Persisting,
+                    "Output repair",
+                    $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} succeeded for contract '{structuredOutput.ContractKey}'. Repaired raw output hash: {validation.RawOutputHash}.",
+                    cancellationToken);
+                break;
+            }
+
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Output repair",
+                $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} still failed validation for contract '{structuredOutput.ContractKey}'. Repaired raw output hash: {validation.RawOutputHash}. Errors: {FormatValidationErrors(validation.Validation.Errors)}",
+                cancellationToken);
+        }
+
+        Activity.Current?.SetTag("agentframework.repair_attempt_count", repairAttemptCount);
+        Activity.Current?.SetTag("agentframework.repair_original_raw_hash", originalRawOutputHash);
+        Activity.Current?.SetTag("agentframework.repair_final_raw_hash", validation.RawOutputHash);
+
+        var errorSummary = FormatValidationErrors(validation.Validation.Errors);
+        if (!validation.Succeeded)
+        {
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Failed,
+                "Output validation",
+                $"Structured output contract '{structuredOutput.ContractKey}' failed validation. Raw output hash: {validation.RawOutputHash}. Errors: {errorSummary}",
+                cancellationToken);
+
+            throw new InvalidOperationException(
+                $"Structured output contract '{structuredOutput.ContractKey}' failed validation. Raw output hash: {validation.RawOutputHash}. Errors: {errorSummary}");
+        }
+
+        Activity.Current?.SetTag("agentframework.structured_output_contract_key", structuredOutput.ContractKey);
+        Activity.Current?.SetTag("agentframework.structured_output_raw_hash", validation.RawOutputHash);
+
+        await AppendExecutionLogAsync(
+            run.Id,
+            run.AgentId,
+            run.ChatSessionId,
+            ExecutionState.Persisting,
+            "Output validation",
+            $"Validated structured output contract '{structuredOutput.ContractKey}'. Raw output hash: {validation.RawOutputHash}.",
+            cancellationToken);
+        return response;
+    }
+
+    private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
+        ExecutionRunRecord run,
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return new AgentRuntimeExecutionOptions(
+            StructuredOutput: structuredOutput,
+            FinalizerMode: AgentFinalizerPolicies.ResolveMode(run, structuredOutput),
+            RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
+            MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run));
+    }
+
+    private async Task<AgentRuntimeResponse> ValidateFinalizerBeforeCompletionAsync(
+        ExecutionRunRecord run,
+        AgentStructuredOutputContract structuredOutput,
+        AgentRuntimeResponse response,
+        IAgentOutputValidatorRegistry registry,
+        IAgentOutputContractValidator structuredOutputValidator,
+        CancellationToken cancellationToken)
+    {
+        var finalizerMode = AgentFinalizerPolicies.ResolveMode(run, structuredOutput);
+        if (finalizerMode == AgentFinalizerMode.Disabled ||
+            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
+        {
+            return response;
+        }
+
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("agent.finalizer.validate", ActivityKind.Internal);
+        AgentFrameworkTelemetry.ApplyRunTags(activity, run);
+        activity?.SetTag("agentframework.finalizer_mode", finalizerMode.ToString());
+        activity?.SetTag("agentframework.finalizer_tool_name", policy.ToolName);
+        activity?.SetTag("agentframework.structured_output_contract_key", structuredOutput.ContractKey);
+        activity?.SetTag("agentframework.finalizer_invocation_count", response.FinalizerInvocations.Count);
+
+        if (finalizerMode == AgentFinalizerMode.Shadow &&
+            !response.FinalizerInvocations.Any(invocation => string.Equals(invocation.ToolName, policy.ToolName, StringComparison.OrdinalIgnoreCase)))
+        {
+            activity?.SetTag("agentframework.finalizer_status", "not_observed");
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Finalizer validation",
+                $"Shadow finalizer tool '{policy.ToolName}' was not observed for structured output contract '{structuredOutput.ContractKey}'. Structured output remains the source of truth.",
+                cancellationToken);
+            return response;
+        }
+
+        var validator = new DefaultAgentFinalizerValidator(registry);
+        var result = validator.Validate(policy, response.FinalizerInvocations);
+        activity?.SetTag("agentframework.finalizer_matching_invocation_count", result.MatchingInvocationCount);
+        activity?.SetTag("agentframework.finalizer_raw_hash", result.RawOutputHash);
+        activity?.SetTag("agentframework.finalizer_status", result.Succeeded ? "valid" : "invalid");
+
+        if (!result.Succeeded)
+        {
+            var errorSummary = FormatValidationErrors(result.Errors);
+            var message =
+                $"Finalizer tool '{policy.ToolName}' in {finalizerMode} mode failed validation. Raw output hash: {result.RawOutputHash}. Errors: {errorSummary}";
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                finalizerMode == AgentFinalizerMode.Required ? ExecutionState.Failed : ExecutionState.Persisting,
+                "Finalizer validation",
+                message,
+                cancellationToken);
+
+            if (finalizerMode == AgentFinalizerMode.Required)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error, message);
+                throw new InvalidOperationException(message);
+            }
+
+            return response;
+        }
+
+        await ValidateFinalizerSequenceBeforeCompletionAsync(
+            run,
+            finalizerMode,
+            policy,
+            response,
+            cancellationToken);
+
+        var finalizerOutputJson = SerializeMachineOutput(result.Output, policy.OutputType);
+        if (finalizerMode == AgentFinalizerMode.Required)
+        {
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Finalizer validation",
+                $"Required finalizer tool '{policy.ToolName}' produced a valid '{structuredOutput.ContractKey}' result. Raw output hash: {result.RawOutputHash}.",
+                cancellationToken);
+
+            return response with
+            {
+                ResponseText = finalizerOutputJson
+            };
+        }
+
+        var structuredValidation = structuredOutputValidator.DeserializeAndValidate(response.ResponseText);
+        var finalizerMatchesStructuredOutput = structuredValidation.Succeeded &&
+                                               string.Equals(
+                                                   SerializeMachineOutput(structuredValidation.Output, structuredValidation.OutputType),
+                                                   finalizerOutputJson,
+                                                   StringComparison.Ordinal);
+        activity?.SetTag("agentframework.finalizer_matches_structured_output", finalizerMatchesStructuredOutput);
+
+        await AppendExecutionLogAsync(
+            run.Id,
+            run.AgentId,
+            run.ChatSessionId,
+            ExecutionState.Persisting,
+            "Finalizer validation",
+            finalizerMatchesStructuredOutput
+                ? $"Shadow finalizer tool '{policy.ToolName}' matched structured output contract '{structuredOutput.ContractKey}'. Raw output hash: {result.RawOutputHash}."
+                : $"Shadow finalizer tool '{policy.ToolName}' produced a valid result that differs from the structured output response. Raw output hash: {result.RawOutputHash}. Structured output remains the source of truth.",
+            cancellationToken);
+
+        return response;
+    }
+
+    private async Task ValidateFinalizerSequenceBeforeCompletionAsync(
+        ExecutionRunRecord run,
+        AgentFinalizerMode finalizerMode,
+        AgentFinalizerPolicy policy,
+        AgentRuntimeResponse response,
+        CancellationToken cancellationToken)
+    {
+        if (finalizerMode != AgentFinalizerMode.Required)
+        {
+            return;
+        }
+
+        var governedRun = IsGovernedMachineCriticalRun(run);
+        var sequenceValidation = AgentFinalizerSequenceValidator.Validate(policy, response.ToolInvocationTraces);
+        Activity.Current?.SetTag("agentframework.finalizer_trace_available", sequenceValidation.TraceAvailable);
+        Activity.Current?.SetTag("agentframework.finalizer_sequence", sequenceValidation.FinalizerSequence);
+        Activity.Current?.SetTag("agentframework.post_finalizer_significant_tool_count", sequenceValidation.ViolatingToolInvocations.Count);
+
+        if (!sequenceValidation.TraceAvailable)
+        {
+            var message =
+                $"Required finalizer tool '{policy.ToolName}' sequencing was not verifiable because the runtime did not report ordered tool invocation traces.";
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                governedRun ? ExecutionState.Failed : ExecutionState.Persisting,
+                "Finalizer sequencing",
+                message,
+                cancellationToken);
+
+            if (governedRun)
+            {
+                throw new InvalidOperationException(message);
+            }
+
+            return;
+        }
+
+        if (sequenceValidation.Succeeded)
+        {
+            return;
+        }
+
+        var errorSummary = FormatValidationErrors(sequenceValidation.Errors);
+        var sequenceSummary = string.Join(
+            ", ",
+            sequenceValidation.ViolatingToolInvocations.Select(trace => $"{trace.ToolName}#{trace.Sequence}"));
+        var validationMessage =
+            $"Required finalizer tool '{policy.ToolName}' must be the last significant tool invocation. Finalizer sequence: {sequenceValidation.FinalizerSequence}. Later significant tools: {sequenceSummary}. Errors: {errorSummary}";
+        await AppendExecutionLogAsync(
+            run.Id,
+            run.AgentId,
+            run.ChatSessionId,
+            governedRun ? ExecutionState.Failed : ExecutionState.Persisting,
+            "Finalizer sequencing",
+            validationMessage,
+            cancellationToken);
+
+        if (governedRun)
+        {
+            throw new InvalidOperationException(validationMessage);
+        }
+    }
+
+    private static string FormatValidationErrors(IReadOnlyList<AgentOutputValidationError> errors)
+    {
+        return errors.Count == 0
+            ? "none"
+            : string.Join("; ", errors.Select(error => $"{error.Code}: {error.Message}"));
+    }
+
+    private static string SerializeMachineOutput(object? output, Type outputType)
+    {
+        if (output is null)
+        {
+            return "null";
+        }
+
+        return JsonSerializer.Serialize(output, outputType, AgentOutputJson.SerializerOptions);
+    }
+
+    private static bool IsGovernedMachineCriticalRun(ExecutionRunRecord run)
+    {
+        return string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+               !string.IsNullOrWhiteSpace(run.ProcessRunId) ||
+               !string.IsNullOrWhiteSpace(run.ProcessStepId);
     }
 
     private async Task<Guid> ResolveOrCreatePendingExecutionRunIdAsync(

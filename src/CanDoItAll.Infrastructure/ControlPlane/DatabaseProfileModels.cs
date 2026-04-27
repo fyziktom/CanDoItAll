@@ -139,6 +139,26 @@ public sealed record DatabaseProfileSummary(
     DateTimeOffset CreatedUtc,
     DateTimeOffset? LastUsedUtc);
 
+public enum DatabaseProfileSchemaStatus
+{
+    Unknown,
+    Current,
+    NeedsMigration,
+    Unavailable
+}
+
+public sealed record DatabaseProfileSchemaHealth(
+    Guid ProfileId,
+    DatabaseProfileSchemaStatus Status,
+    string Summary,
+    int PendingMigrationCount,
+    IReadOnlyList<string> PendingMigrations,
+    IReadOnlyList<string> SchemaIssues,
+    bool CanApplySchema)
+{
+    public bool RequiresAction => Status is DatabaseProfileSchemaStatus.NeedsMigration or DatabaseProfileSchemaStatus.Unavailable;
+}
+
 public sealed class DatabaseProfileEditorModel
 {
     public Guid? Id { get; set; }

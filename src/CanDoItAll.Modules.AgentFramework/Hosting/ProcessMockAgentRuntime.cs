@@ -82,7 +82,9 @@ internal sealed class ProcessMockAgentRuntime(
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
@@ -96,7 +98,9 @@ internal sealed class ProcessMockAgentRuntime(
                 runtimeSessionKey,
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements);
+                suppressApprovalRequirements,
+                structuredOutput,
+                executionOptions);
         }
 
         EnsureEnabled();
@@ -153,7 +157,11 @@ internal sealed class ProcessMockAgentRuntime(
                     }).ToArray()
                 },
                 JsonOptions),
-            PendingApprovals: []);
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText),
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
+        };
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -166,7 +174,9 @@ internal sealed class ProcessMockAgentRuntime(
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
@@ -180,7 +190,9 @@ internal sealed class ProcessMockAgentRuntime(
                 runtimeSessionKey,
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements);
+                suppressApprovalRequirements,
+                structuredOutput,
+                executionOptions);
         }
 
         throw new InvalidOperationException("Process mock agents do not use pending approval continuations.");
@@ -425,7 +437,7 @@ internal sealed class ProcessMockAgentRuntime(
         string progressSummary,
         IReadOnlyList<ProcessMockRuntimeArtifact>? artifacts = null)
     {
-        var responseText = responseSummary + Environment.NewLine + BuildOutcomeComment(status, reason, branchOutcomeKey);
+        var responseText = BuildStructuredOutcome(status, reason, branchOutcomeKey, responseSummary, artifacts ?? []);
         return new ProcessMockRuntimeOutcome(
             ResponseText: responseText,
             ProgressSummary: progressSummary,
@@ -521,20 +533,76 @@ internal sealed class ProcessMockAgentRuntime(
         return new ProcessMockRuntimeArtifact(relativePath, contentSignalText);
     }
 
-    private static string BuildOutcomeComment(string status, string reason, string? branchOutcomeKey)
+    private static string BuildStructuredOutcome(
+        string status,
+        string reason,
+        string? branchOutcomeKey,
+        string responseSummary,
+        IReadOnlyList<ProcessMockRuntimeArtifact> artifacts)
     {
-        var payload = new Dictionary<string, string>(StringComparer.Ordinal)
+        var evidenceRefs = artifacts
+            .Select(artifact => artifact.RelativePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToArray();
+        var payload = new ProcessStepOutcomeResult
         {
-            ["status"] = status,
-            ["reason"] = reason
+            Status = Enum.Parse<ProcessStepOutcomeStatus>(status, ignoreCase: true),
+            Reason = reason,
+            BranchOutcomeKey = branchOutcomeKey ?? string.Empty,
+            EvidenceRefs = evidenceRefs,
+            NextActions = [],
+            HumanReadableSummaryMarkdown = responseSummary
         };
 
-        if (!string.IsNullOrWhiteSpace(branchOutcomeKey))
+        return JsonSerializer.Serialize(payload, AgentOutputJson.SerializerOptions);
+    }
+
+    private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions,
+        string responseText)
+    {
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
         {
-            payload["branchOutcomeKey"] = branchOutcomeKey;
+            return [];
         }
 
-        return $"<!-- PROCESS_STEP_OUTCOME {JsonSerializer.Serialize(payload, JsonOptions)} -->";
+        return
+        [
+            new AgentFinalizerInvocation(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                responseText,
+                Sequence: 1)
+        ];
+    }
+
+    private static IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
+    {
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return [];
+        }
+
+        var timestamp = DateTimeOffset.UtcNow;
+        return
+        [
+            new AgentToolInvocationTrace(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                ToolInvocationClassification.Read,
+                Sequence: 1,
+                StartedAtUtc: timestamp,
+                CompletedAtUtc: timestamp,
+                Succeeded: true,
+                FailureMessage: string.Empty)
+        ];
     }
 
     private static bool IsApprovalQaPass(string prompt)

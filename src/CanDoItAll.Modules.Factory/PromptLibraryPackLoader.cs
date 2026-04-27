@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Factory;
@@ -6,6 +7,12 @@ namespace CanDoItAll.Modules.Factory;
 public sealed class PromptLibraryPackLoader
 {
     public const string CatalogSource = "prompt-library-pack";
+    private const string EmbeddedPackDisplayRoot = "embedded://CanDoItAll.Modules.Factory/SeedAssets/PromptLibrary";
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private readonly Lazy<PromptLibraryPack> _pack;
 
@@ -18,12 +25,38 @@ public sealed class PromptLibraryPackLoader
 
     private static PromptLibraryPack LoadCore()
     {
-        var packRoot = ResolvePackRoot();
+        var packRoot = ResolveFilePackRoot();
+        if (string.IsNullOrWhiteSpace(packRoot))
+        {
+            return LoadEmbeddedPack();
+        }
+
         var groups = ReadJson<List<PromptLibraryGroupSeed>>(Path.Combine(packRoot, "group-catalog.json"));
         var components = ReadJson<List<PromptBlockSeed>>(Path.Combine(packRoot, "prompt-component-library.json"));
         var flows = ReadJson<List<PromptFlowTemplateSeed>>(Path.Combine(packRoot, "factory-prompt-flow-templates.seed.json"));
         var blueprints = ReadJson<List<PromptBlueprintSeed>>(Path.Combine(packRoot, "factory-prompt-blueprints.seed.json"));
 
+        return BuildPack(packRoot, groups, components, flows, blueprints);
+    }
+
+    private static PromptLibraryPack LoadEmbeddedPack()
+    {
+        EnsureEmbeddedPackManifestExists();
+        var groups = ReadEmbeddedJson<List<PromptLibraryGroupSeed>>("group-catalog.json");
+        var components = ReadEmbeddedJson<List<PromptBlockSeed>>("prompt-component-library.json");
+        var flows = ReadEmbeddedJson<List<PromptFlowTemplateSeed>>("factory-prompt-flow-templates.seed.json");
+        var blueprints = ReadEmbeddedJson<List<PromptBlueprintSeed>>("factory-prompt-blueprints.seed.json");
+
+        return BuildPack(EmbeddedPackDisplayRoot, groups, components, flows, blueprints);
+    }
+
+    private static PromptLibraryPack BuildPack(
+        string packRoot,
+        List<PromptLibraryGroupSeed> groups,
+        List<PromptBlockSeed> components,
+        List<PromptFlowTemplateSeed> flows,
+        List<PromptBlueprintSeed> blueprints)
+    {
         var groupsByKey = groups.ToDictionary(group => group.Key, StringComparer.OrdinalIgnoreCase);
         var componentOrderLookup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var componentOrder = 0;
@@ -81,19 +114,36 @@ public sealed class PromptLibraryPackLoader
         return JsonFileLoader.ReadRequired<T>(path);
     }
 
-    private static string ResolvePackRoot()
+    private static void EnsureEmbeddedPackManifestExists()
     {
-        var root = AncestorFileLocator.FindContainingDirectory(
+        OpenEmbeddedPackResource("manifest.json").Dispose();
+    }
+
+    private static T ReadEmbeddedJson<T>(string fileName) where T : class, new()
+    {
+        using var stream = OpenEmbeddedPackResource(fileName);
+        return JsonSerializer.Deserialize<T>(stream, JsonOptions) ?? new T();
+    }
+
+    private static Stream OpenEmbeddedPackResource(string fileName)
+    {
+        var resourceName = ToEmbeddedResourceName(fileName);
+        return typeof(PromptLibraryPackLoader).Assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException(
+                $"Unable to locate output/prompt-library/manifest.json from the current application base path, " +
+                $"and embedded prompt-library seed resource '{resourceName}' was not found.");
+    }
+
+    private static string ToEmbeddedResourceName(string fileName)
+        => $"CanDoItAll.Modules.Factory.SeedAssets.PromptLibrary.{fileName}";
+
+    private static string? ResolveFilePackRoot()
+    {
+        return AncestorFileLocator.FindContainingDirectory(
             Path.Combine("output", "prompt-library", "manifest.json"),
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
             Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-        if (!string.IsNullOrWhiteSpace(root))
-        {
-            return root;
-        }
-
-        throw new InvalidOperationException("Unable to locate output/prompt-library/manifest.json from the current application base path.");
     }
 }
 

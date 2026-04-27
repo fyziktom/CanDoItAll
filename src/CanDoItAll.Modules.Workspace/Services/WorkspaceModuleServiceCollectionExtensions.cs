@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using CanDoItAll.Infrastructure.ControlPlane;
 
 namespace CanDoItAll.Modules.Workspace;
 
@@ -23,6 +24,8 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
+        services.AddScoped<IDatabaseTransferHandler, ProjectStructureMcpDatabaseTransferHandler>();
+        services.AddScoped<IDatabaseTransferHandler, AiProvidersDatabaseTransferHandler>();
         services.AddScoped<ProjectStructureAgentAdministrationService>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();

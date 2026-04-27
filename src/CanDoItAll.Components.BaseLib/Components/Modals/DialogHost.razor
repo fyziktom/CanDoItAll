@@ -1,0 +1,71 @@
+@namespace CanDoItAll.Components.BaseLib
+@implements IDisposable
+@inject DialogService DialogService
+
+@foreach (var dialog in DialogService.Dialogs)
+{
+    <Dialog @key="dialog.Id"
+            IsOpen="true"
+            Title="@dialog.Title"
+            Eyebrow="@dialog.Options.Eyebrow"
+            Subtitle="@dialog.Options.Subtitle"
+            HelpText="@dialog.Options.HelpText"
+            HelpHeading="@dialog.Options.HelpHeading"
+            Size="@dialog.Options.Size"
+            AriaLabel="@dialog.Options.AriaLabel"
+            TestId="@dialog.Options.TestId"
+            Class="@dialog.Options.Class"
+            Style="@dialog.Options.Style"
+            CloseOnBackdrop="@dialog.Options.CloseOnBackdrop"
+            ShowCloseButton="@dialog.Options.ShowCloseButton"
+            DenseChrome="@dialog.Options.DenseChrome"
+            HeaderActions="@dialog.Options.HeaderActions"
+            Footer="@ResolveFooter(dialog)"
+            OnClose="@(() => CloseFromChromeAsync(dialog))">
+        <CascadingValue Value="DialogService" IsFixed="true">
+            <CascadingValue Value="dialog" IsFixed="true">
+                @if (dialog.ChildContent is not null)
+                {
+                    @dialog.ChildContent(dialog)
+                }
+                else if (dialog.ComponentType is not null)
+                {
+                    <DynamicComponent Type="@dialog.ComponentType"
+                                      Parameters="@dialog.Parameters" />
+                }
+            </CascadingValue>
+        </CascadingValue>
+    </Dialog>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        DialogService.Changed += HandleDialogsChanged;
+    }
+
+    private Task CloseFromChromeAsync(DialogReference dialog)
+    {
+        return DialogService.CloseAsync(dialog, dialog.Options.ChromeCloseResult);
+    }
+
+    private static RenderFragment? ResolveFooter(DialogReference dialog)
+    {
+        if (dialog.Options.FooterContent is null)
+        {
+            return null;
+        }
+
+        return builder => builder.AddContent(0, dialog.Options.FooterContent(dialog));
+    }
+
+    private void HandleDialogsChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        DialogService.Changed -= HandleDialogsChanged;
+    }
+}

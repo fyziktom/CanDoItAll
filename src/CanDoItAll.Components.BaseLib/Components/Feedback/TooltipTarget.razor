@@ -1,0 +1,93 @@
+@namespace CanDoItAll.Components.BaseLib
+@inject TooltipService TooltipService
+
+<span class="@ResolveTriggerCssClass()"
+      tabindex="@TabIndex"
+      @onmouseenter="OpenFromMouse"
+      @onmouseleave="CloseIfConfigured"
+      @onfocus="OpenFromFocus"
+      @onblur="CloseIfConfigured">
+    @ChildContent
+</span>
+
+@code {
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public RenderFragment<TooltipService>? TooltipContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public TooltipPosition Position { get; set; } = TooltipPosition.Top;
+
+    [Parameter]
+    public TimeSpan? Delay { get; set; }
+
+    [Parameter]
+    public TimeSpan? Duration { get; set; } = TimeSpan.FromSeconds(4);
+
+    [Parameter]
+    public bool CloseOnMouseLeave { get; set; } = true;
+
+    [Parameter]
+    public string? TriggerClass { get; set; }
+
+    [Parameter]
+    public string? TooltipClass { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public int TabIndex { get; set; } = 0;
+
+    private void OpenFromMouse(MouseEventArgs args)
+    {
+        Open(args.ClientX, args.ClientY);
+    }
+
+    private void OpenFromFocus()
+    {
+        Open(24, 24);
+    }
+
+    private void Open(double clientX, double clientY)
+    {
+        var options = new TooltipOptions
+        {
+            Position = Position,
+            Delay = Delay,
+            Duration = Duration,
+            Class = TooltipClass,
+            TestId = TestId,
+            CloseOnMouseLeave = CloseOnMouseLeave
+        };
+
+        if (TooltipContent is not null)
+        {
+            TooltipService.Open(TooltipContent, clientX, clientY, options);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Text))
+        {
+            TooltipService.Open(Text, clientX, clientY, options);
+        }
+    }
+
+    private void CloseIfConfigured()
+    {
+        if (CloseOnMouseLeave)
+        {
+            TooltipService.Close();
+        }
+    }
+
+    private string ResolveTriggerCssClass()
+    {
+        return CssClassBuilder.Join("inline-flex min-w-0", TriggerClass);
+    }
+}

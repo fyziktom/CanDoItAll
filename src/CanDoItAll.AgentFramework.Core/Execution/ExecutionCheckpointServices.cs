@@ -75,6 +75,10 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
             AutoApprovePendingToolCalls: run.AutoApprovePendingToolCalls,
             ProviderName: run.ProviderName,
             Model: run.Model,
+            StructuredOutputContractKey: run.StructuredOutputContractKey,
+            StructuredOutputTypeName: run.StructuredOutputTypeName,
+            StructuredOutputSchemaName: run.StructuredOutputSchemaName,
+            StructuredOutputSchemaDescription: run.StructuredOutputSchemaDescription,
             CapturedAtUtc: capturedAtUtc);
 
         var checkpointInfo = await CreateCheckpointAsync(GetWorkflowSessionId(run.Id), payload, cancellationToken);
@@ -300,7 +304,11 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
         if (approvalIdsMatch
             && string.Equals(payload.RuntimeSessionKey, run.RuntimeSessionKey, StringComparison.Ordinal)
             && string.Equals(payload.SerializedSessionStateJson, run.SerializedSessionStateJson, StringComparison.Ordinal)
-            && payload.AutoApprovePendingToolCalls == run.AutoApprovePendingToolCalls)
+            && payload.AutoApprovePendingToolCalls == run.AutoApprovePendingToolCalls
+            && string.Equals(payload.StructuredOutputContractKey ?? string.Empty, run.StructuredOutputContractKey, StringComparison.Ordinal)
+            && string.Equals(payload.StructuredOutputTypeName ?? string.Empty, run.StructuredOutputTypeName, StringComparison.Ordinal)
+            && string.Equals(payload.StructuredOutputSchemaName ?? string.Empty, run.StructuredOutputSchemaName, StringComparison.Ordinal)
+            && string.Equals(payload.StructuredOutputSchemaDescription ?? string.Empty, run.StructuredOutputSchemaDescription, StringComparison.Ordinal))
         {
             return;
         }
@@ -321,5 +329,9 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
         bool AutoApprovePendingToolCalls,
         string ProviderName,
         string Model,
+        string StructuredOutputContractKey,
+        string StructuredOutputTypeName,
+        string StructuredOutputSchemaName,
+        string StructuredOutputSchemaDescription,
         DateTimeOffset CapturedAtUtc);
 }

@@ -166,6 +166,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IReadOnlyList<AgentMemoryRecord> memory,
         AgentRuntimeResponse initialResponse,
         Func<ExecutionState, string, string, Task> progressCallback,
+        AgentStructuredOutputContract? structuredOutput,
         CancellationToken cancellationToken)
     {
         var currentSession = session;
@@ -207,7 +208,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     : ChatSessionRuntimeCompatibilityAdapter.RuntimeSessionKeyOrEmpty(currentSession),
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements: true);
+                suppressApprovalRequirements: true,
+                structuredOutput: structuredOutput,
+                executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput));
 
             totalInputTokens += currentResponse.InputTokens;
             totalOutputTokens += currentResponse.OutputTokens;

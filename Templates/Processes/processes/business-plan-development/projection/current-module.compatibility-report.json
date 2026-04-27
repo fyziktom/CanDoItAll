@@ -1,0 +1,18 @@
+{
+  "ProcessKey": "business-plan-development",
+  "Status": "Compatible",
+  "Summary": "The business-plan-development template uses the current process definition, role, step, artifact expectation, dependency, and artifact-input fields.",
+  "CurrentArchitectureCoverage": [
+    "Roles project to process role requirements.",
+    "Steps project with dependencies and artifact inputs.",
+    "Business, finance, and marketing handoffs are represented as artifact expectations and inputs.",
+    "Approval outcomes route to explicit terminal steps for approved and blocked paths."
+  ],
+  "SidecarOnlyFields": [
+    "Checklists",
+    "Validations",
+    "Prompt refs",
+    "Mermaid diagrams"
+  ],
+  "Warnings": []
+}

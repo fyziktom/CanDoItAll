@@ -49,8 +49,11 @@ public sealed partial class MafAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false,
-        bool forceOmitTemperature = false)
+        bool forceOmitTemperature = false,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
+        var runtimeOptions = executionOptions ?? CreateDisabledRuntimeExecutionOptions(null);
+        var toolInvocationTraceRecorder = new ToolInvocationTraceRecorder();
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
         var managedSeedProvider = ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent)
             ? ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile: true)
@@ -63,6 +66,8 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException($"Provider '{effectiveProvider.Name}' does not have a default model and the agent '{agent.Name}' does not override one.");
         }
 
+        EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions.StructuredOutput);
+        var finalizerCapture = CreateFinalizerCapture(runtimeOptions.StructuredOutput, runtimeOptions.FinalizerMode);
         var capabilityState = await CreateCapabilityStateAsync(
             agent,
             effectiveProvider,
@@ -71,13 +76,31 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements);
+        await FilterUnusableApprovalToolsAsync(
+            capabilityState,
+            effectiveProvider,
+            suppressApprovalRequirements,
+            progressCallback);
+        if (finalizerCapture is not null)
+        {
+            capabilityState.Tools.AddRange(finalizerCapture.Tools);
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Finalizer policy",
+                $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
+        }
+
         var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider);
         var chatOptions = CreateModelCompatibleChatOptions(
             effectiveProvider,
             model,
             (float)agent.Temperature,
             forceOmitTemperature);
-        chatOptions.Instructions = agent.Instructions;
+        chatOptions.Instructions = AppendFinalizerInstructions(
+            agent.Instructions,
+            finalizerCapture?.Policy,
+            runtimeOptions.FinalizerMode,
+            runtimeOptions.StructuredOutput is not null);
         chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
@@ -97,7 +120,11 @@ public sealed partial class MafAgentRuntime
 
         var runtimeAgent = CreateInstrumentedAgent(
             CreateFrameworkAgent(effectiveProvider, model, options, frameworkManagedHistory),
-            effectiveProvider);
+            effectiveProvider,
+            agent,
+            capabilityState,
+            suppressApprovalRequirements,
+            toolInvocationTraceRecorder);
         return new RuntimeBuildResult(
             runtimeAgent,
             effectiveProvider,
@@ -105,7 +132,9 @@ public sealed partial class MafAgentRuntime
             capabilityState.AsyncDisposables,
             capabilityState.Disposables,
             capabilityState.HasApprovalTools,
-            ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature));
+            ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
+            finalizerCapture,
+            toolInvocationTraceRecorder);
     }
 
     private AIAgent CreateFrameworkAgent(
@@ -273,36 +302,99 @@ public sealed partial class MafAgentRuntime
         return false;
     }
 
-    private AIAgent CreateInstrumentedAgent(AIAgent agent, ProviderProfile provider)
+    private AIAgent CreateInstrumentedAgent(
+        AIAgent agent,
+        ProviderProfile provider,
+        AgentDefinition agentDefinition,
+        RuntimeCapabilityState capabilityState,
+        bool suppressApprovalRequirements,
+        ToolInvocationTraceRecorder toolInvocationTraceRecorder)
     {
         var builder = agent.AsBuilder();
+        var toolPolicy = new DefaultAgentToolInvocationPolicy();
+        var knownToolNames = capabilityState.Tools
+            .Select(tool => tool.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var approvalWrappedToolNames = capabilityState.Tools
+            .Where(tool => tool is ApprovalRequiredAIFunction)
+            .Select(tool => tool.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
+        var logger = services.GetService<ILogger<MafAgentRuntime>>();
         builder.UseLogging(
             services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance,
             logging => logging.JsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web));
         builder.Use(async (innerAgent, context, next, cancellationToken) =>
         {
             var functionName = context.Function?.Name ?? "unknown";
+            var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(ResolveFunctionInvocationArguments(context));
+            var classification = AgentToolInvocationPolicyMetadata.Classify(functionName);
+            var auditScope = WorkspaceExecutionAuditContext.Current;
+            var policyContext = new ToolInvocationPolicyContext(
+                AgentId: agentDefinition.Id,
+                AgentName: agentDefinition.Name,
+                ToolName: functionName,
+                RedactedArguments: redactedArguments,
+                Classification: classification,
+                IsKnownTool: knownToolNames.Contains(functionName),
+                AutoApprovalAllowed: suppressApprovalRequirements,
+                ApprovalWrapperAvailable: approvalWrappedToolNames.Contains(functionName),
+                ExecutionRunId: auditScope?.ExecutionRunId.ToString("D") ?? string.Empty,
+                SourceKind: auditScope?.SourceKind ?? string.Empty,
+                ProcessRunId: auditScope?.ProcessRunId ?? string.Empty,
+                ProcessStepId: auditScope?.ProcessStepId ?? string.Empty,
+                ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
+                ApplicationApprovalAvailable: false);
+            var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
             activity?.SetTag("agentframework.tool_name", functionName);
+            activity?.SetTag("agentframework.tool_policy_decision", policyDecision.Kind.ToString());
+            activity?.SetTag("agentframework.tool_policy_signature", policyDecision.Signature);
+            activity?.SetTag("agentframework.tool_policy_reason", policyDecision.Reason);
+            activity?.SetTag("agentframework.tool_approval_effective", policyContext.HasEffectiveApprovalPath);
+            activity?.SetTag("agentframework.provider_supports_tool_approval", featureMatrix.SupportsApprovalRequiredAIFunction);
             activity?.SetTag("agentframework.tool_call_index", context.FunctionCallIndex);
             activity?.SetTag("agentframework.tool_iteration", context.Iteration);
             activity?.SetTag("agentframework.tool_count", context.FunctionCount);
             activity?.SetTag("agentframework.tool_is_streaming", context.IsStreaming);
 
+            logger?.LogInformation(
+                "Agent tool policy decision {Decision} for tool {ToolName} on agent {AgentId}. ExecutionRunId={ExecutionRunId} SourceKind={SourceKind} ProcessRunId={ProcessRunId} ProcessStepId={ProcessStepId} Signature={Signature}",
+                policyDecision.Kind,
+                functionName,
+                agentDefinition.Id,
+                policyContext.ExecutionRunId,
+                policyContext.SourceKind,
+                policyContext.ProcessRunId,
+                policyContext.ProcessStepId,
+                policyDecision.Signature);
+
+            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification);
+            var succeeded = false;
+            var failureMessage = string.Empty;
             try
             {
-                return await next(context, cancellationToken);
-            }
-            catch (Exception exception) when (IsPolicyException(exception))
-            {
-                activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-                throw new InvalidOperationException($"Tool '{functionName}' was blocked by policy. {exception.Message}", exception);
+                AgentToolPolicyBlockGuard.ThrowIfBlocked(
+                    functionName,
+                    policyDecision,
+                    policyContext.HasEffectiveApprovalPath);
+
+                var result = await next(context, cancellationToken);
+                succeeded = true;
+                return result;
             }
             catch (Exception exception)
             {
+                failureMessage = exception.Message;
                 activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
                 throw;
+            }
+            finally
+            {
+                toolInvocationTraceRecorder.Complete(traceSequence, succeeded, failureMessage);
             }
         });
         builder.UseOpenTelemetry(
@@ -311,8 +403,212 @@ public sealed partial class MafAgentRuntime
         return builder.Build(services);
     }
 
-    private static bool IsPolicyException(Exception exception)
-        => exception is InvalidOperationException or NotSupportedException;
+    private static void EnsureStructuredOutputCapability(
+        ProviderProfile provider,
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        if (structuredOutput is null)
+        {
+            return;
+        }
+
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
+        if (featureMatrix.SupportsStructuredOutput)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce structured output contract '{structuredOutput.ContractKey}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.");
+    }
+
+    private static AgentRuntimeExecutionOptions NormalizeRuntimeExecutionOptions(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
+    {
+        if (executionOptions is null)
+        {
+            return CreateDisabledRuntimeExecutionOptions(structuredOutput);
+        }
+
+        if (structuredOutput is not null &&
+            executionOptions.StructuredOutput is not null &&
+            !string.Equals(executionOptions.StructuredOutput.ContractKey, structuredOutput.ContractKey, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Runtime execution options contract '{executionOptions.StructuredOutput.ContractKey}' does not match the requested structured output contract '{structuredOutput.ContractKey}'.");
+        }
+
+        return executionOptions.StructuredOutput is null && structuredOutput is not null
+            ? executionOptions with { StructuredOutput = structuredOutput }
+            : executionOptions;
+    }
+
+    private static AgentRuntimeExecutionOptions CreateDisabledRuntimeExecutionOptions(
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        return new AgentRuntimeExecutionOptions(
+            StructuredOutput: structuredOutput,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0);
+    }
+
+    private async Task FilterUnusableApprovalToolsAsync(
+        RuntimeCapabilityState capabilityState,
+        ProviderProfile provider,
+        bool suppressApprovalRequirements,
+        Func<ExecutionState, string, string, Task> progressCallback)
+    {
+        if (suppressApprovalRequirements)
+        {
+            capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+            return;
+        }
+
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
+        if (featureMatrix.SupportsApprovalRequiredAIFunction)
+        {
+            return;
+        }
+
+        var unusableMutationTools = capabilityState.Tools
+            .Where(tool => tool is ApprovalRequiredAIFunction)
+            .Where(tool => AgentToolInvocationPolicyMetadata.Classify(tool.Name) == ToolInvocationClassification.Mutation)
+            .ToList();
+        if (unusableMutationTools.Count == 0)
+        {
+            return;
+        }
+
+        var toolNames = unusableMutationTools
+            .Select(tool => tool.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var toolList = string.Join(", ", toolNames);
+        if (IsGovernedProcessAutomationRun())
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot expose mutation tools that require MAF approval because no effective approval path is available. Unusable tools: {toolList}.");
+        }
+
+        capabilityState.Tools.RemoveAll(unusableMutationTools.Contains);
+        capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Approval policy",
+            $"Omitted mutation tool(s) that require MAF approval because provider '{provider.Name}' using transport '{provider.Transport}' has no effective approval path: {toolList}.");
+    }
+
+    private static FinalizerCapture? CreateFinalizerCapture(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode)
+    {
+        if (finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return null;
+        }
+
+        if (!AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
+        {
+            return null;
+        }
+
+        var capture = new FinalizerCapture(policy);
+        var tool = policy.OutputType switch
+        {
+            Type type when type == typeof(ProcessStepOutcomeResult) => AIFunctionFactory.Create(
+                capture.SubmitProcessStepOutcome,
+                policy.ToolName,
+                "Submits the final process-step outcome exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(CodeReviewResult) => AIFunctionFactory.Create(
+                capture.SubmitCodeReviewResult,
+                policy.ToolName,
+                "Submits the final code-review result exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ArchitectureReviewResult) => AIFunctionFactory.Create(
+                capture.SubmitArchitectureReviewResult,
+                policy.ToolName,
+                "Submits the final architecture-review result exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ImplementationPlanResult) => AIFunctionFactory.Create(
+                capture.SubmitImplementationPlan,
+                policy.ToolName,
+                "Submits the final implementation plan exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(TestPlanResult) => AIFunctionFactory.Create(
+                capture.SubmitTestPlan,
+                policy.ToolName,
+                "Submits the final test plan exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ToolExecutionDecisionResult) => AIFunctionFactory.Create(
+                capture.SubmitToolExecutionDecision,
+                policy.ToolName,
+                "Submits the final tool-execution decision exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ProcessStatePatch) => AIFunctionFactory.Create(
+                capture.SubmitProcessStatePatch,
+                policy.ToolName,
+                "Submits the final process-state patch exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(HumanEscalationRequest) => AIFunctionFactory.Create(
+                capture.SubmitHumanEscalationRequest,
+                policy.ToolName,
+                "Submits the final human-escalation request exactly once as typed machine-readable arguments."),
+            _ => null
+        };
+        if (tool is null)
+        {
+            return null;
+        }
+
+        capture.Tools.Add(tool);
+        return capture;
+    }
+
+    private static string AppendFinalizerInstructions(
+        string instructions,
+        AgentFinalizerPolicy? finalizerPolicy,
+        AgentFinalizerMode finalizerMode,
+        bool hasStructuredResponseFormat)
+    {
+        if (finalizerPolicy is null || finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return instructions;
+        }
+
+        var header = finalizerMode == AgentFinalizerMode.Shadow
+            ? "Finalizer tool shadow policy:"
+            : "Finalizer tool policy:";
+        var finalizerInstructions = finalizerMode == AgentFinalizerMode.Shadow
+            ? $"{Environment.NewLine}{Environment.NewLine}{header}{Environment.NewLine}" +
+              $"- You may call `{finalizerPolicy.ToolName}` at most once before finishing to produce a comparison copy.{Environment.NewLine}" +
+              (hasStructuredResponseFormat
+                  ? $"- The final assistant response JSON is the source of truth. Return exactly one JSON object matching `{finalizerPolicy.OutputContract.ContractKey}` through the configured structured response format.{Environment.NewLine}" +
+                    "- Do not use Markdown, prose, code fences, or any extra text around the JSON object."
+                  : "- The final assistant response remains the source of truth because no structured response format is attached.")
+            : $"{Environment.NewLine}{Environment.NewLine}{header}{Environment.NewLine}" +
+              $"- Call `{finalizerPolicy.ToolName}` exactly once after all other significant tool work is complete.{Environment.NewLine}" +
+              $"- The finalizer arguments are the authoritative machine output for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
+              (hasStructuredResponseFormat
+                  ? $"- After the tool call, return exactly one JSON object matching the same `{finalizerPolicy.OutputContract.ContractKey}` schema through the configured structured response format.{Environment.NewLine}" +
+                    "- Do not use Markdown, prose, code fences, or any extra text around the JSON object."
+                  : "- Do not emit separate machine output after the finalizer call.") + Environment.NewLine +
+              "- Do not call any other `submit_*` finalizer tool for this contract.";
+        return string.IsNullOrWhiteSpace(instructions)
+            ? finalizerInstructions.Trim()
+            : instructions.TrimEnd() + finalizerInstructions;
+    }
+
+    private static IEnumerable<KeyValuePair<string, object?>> ResolveFunctionInvocationArguments(object context)
+    {
+        foreach (var propertyName in new[] { "Arguments", "FunctionArguments", "FunctionCallArguments" })
+        {
+            var property = context.GetType().GetProperty(propertyName);
+            if (property?.GetValue(context) is IEnumerable<KeyValuePair<string, object?>> pairs)
+            {
+                return pairs;
+            }
+        }
+
+        return [];
+    }
 
     private static ChatHistoryProvider CreateChatHistoryProvider()
     {
@@ -528,7 +824,9 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<IAsyncDisposable> asyncDisposables,
         IReadOnlyList<IDisposable> disposables,
         bool hasApprovalTools,
-        bool isTemperatureOmitted) : IAsyncDisposable
+        bool isTemperatureOmitted,
+        FinalizerCapture? finalizerCapture,
+        ToolInvocationTraceRecorder toolInvocationTraceRecorder) : IAsyncDisposable
     {
         public AIAgent Agent { get; } = agent;
 
@@ -539,6 +837,12 @@ public sealed partial class MafAgentRuntime
         public bool HasApprovalTools { get; } = hasApprovalTools;
 
         public bool IsTemperatureOmitted { get; } = isTemperatureOmitted;
+
+        public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
+            => finalizerCapture?.Snapshot() ?? [];
+
+        public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
+            => toolInvocationTraceRecorder.Snapshot();
 
         public async ValueTask DisposeAsync()
         {
@@ -587,5 +891,121 @@ public sealed partial class MafAgentRuntime
         public List<IDisposable> Disposables { get; } = [];
 
         public bool HasApprovalTools { get; set; }
+    }
+
+    private sealed class ToolInvocationTraceRecorder
+    {
+        private readonly object gate = new();
+        private readonly List<AgentToolInvocationTrace> traces = [];
+        private int nextSequence;
+
+        public int Start(
+            string toolName,
+            ToolInvocationClassification classification)
+        {
+            lock (gate)
+            {
+                nextSequence++;
+                traces.Add(new AgentToolInvocationTrace(
+                    toolName,
+                    classification,
+                    nextSequence,
+                    DateTimeOffset.UtcNow,
+                    CompletedAtUtc: null,
+                    Succeeded: false,
+                    FailureMessage: string.Empty));
+                return nextSequence;
+            }
+        }
+
+        public void Complete(
+            int sequence,
+            bool succeeded,
+            string failureMessage)
+        {
+            lock (gate)
+            {
+                var index = traces.FindIndex(trace => trace.Sequence == sequence);
+                if (index < 0)
+                {
+                    return;
+                }
+
+                traces[index] = traces[index] with
+                {
+                    CompletedAtUtc = DateTimeOffset.UtcNow,
+                    Succeeded = succeeded,
+                    FailureMessage = succeeded ? string.Empty : failureMessage
+                };
+            }
+        }
+
+        public IReadOnlyList<AgentToolInvocationTrace> Snapshot()
+        {
+            lock (gate)
+            {
+                return traces.ToList();
+            }
+        }
+    }
+
+    private sealed class FinalizerCapture(AgentFinalizerPolicy policy)
+    {
+        private readonly object gate = new();
+        private readonly List<AgentFinalizerInvocation> invocations = [];
+        private int nextSequence;
+
+        public AgentFinalizerPolicy Policy { get; } = policy;
+
+        public List<AITool> Tools { get; } = [];
+
+        public string SubmitProcessStepOutcome(ProcessStepOutcomeResult result)
+            => Capture(result, "Process step outcome finalizer captured.");
+
+        public string SubmitCodeReviewResult(CodeReviewResult result)
+            => Capture(result, "Code review result finalizer captured.");
+
+        public string SubmitArchitectureReviewResult(ArchitectureReviewResult result)
+            => Capture(result, "Architecture review result finalizer captured.");
+
+        public string SubmitImplementationPlan(ImplementationPlanResult result)
+            => Capture(result, "Implementation plan finalizer captured.");
+
+        public string SubmitTestPlan(TestPlanResult result)
+            => Capture(result, "Test plan finalizer captured.");
+
+        public string SubmitToolExecutionDecision(ToolExecutionDecisionResult result)
+            => Capture(result, "Tool execution decision finalizer captured.");
+
+        public string SubmitProcessStatePatch(ProcessStatePatch result)
+            => Capture(result, "Process state patch finalizer captured.");
+
+        public string SubmitHumanEscalationRequest(HumanEscalationRequest result)
+            => Capture(result, "Human escalation request finalizer captured.");
+
+        public IReadOnlyList<AgentFinalizerInvocation> Snapshot()
+        {
+            lock (gate)
+            {
+                return invocations.ToList();
+            }
+        }
+
+        private string Capture<TOutput>(TOutput result, string message)
+        {
+            ArgumentNullException.ThrowIfNull(result);
+
+            var argumentsJson = JsonSerializer.Serialize(result, AgentOutputJson.SerializerOptions);
+            lock (gate)
+            {
+                nextSequence++;
+                invocations.Add(new AgentFinalizerInvocation(
+                    Policy.ToolName,
+                    argumentsJson,
+                    nextSequence));
+            }
+
+            return message;
+        }
     }
 }

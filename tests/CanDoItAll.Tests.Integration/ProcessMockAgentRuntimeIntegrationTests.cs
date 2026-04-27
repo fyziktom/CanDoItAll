@@ -487,7 +487,11 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
             AgentId: repairAgent.Id,
             Prompt: "Run process mock repair developer step for the calculator implementation.",
             Context: CreateProcessContext("repair", processRunId, "repair")));
-        Assert.Contains("PROCESS_STEP_OUTCOME", repair.ResponseText, StringComparison.Ordinal);
+        var repairOutcome = AgentOutputJson.DeserializeAndValidate<ProcessStepOutcomeResult>(
+            repair.ResponseText,
+            new ProcessOutcomeReasonValidator());
+        Assert.True(repairOutcome.Succeeded, string.Join("; ", repairOutcome.Validation.Errors.Select(error => error.Message)));
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, repairOutcome.Output?.Status);
 
         var fileService = new WorkspaceFileService(workspaceFactory.GetWorkspaceRoot(), workspaceFactory.GetOrganizationScope());
         var repairedEngine = fileService.ReadTextFile("output/process-mock/mockrun001/CalculatorApp/CalculatorEngine.cs", 8000);
@@ -849,5 +853,20 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
             MetadataJson: "{}",
             ProcessRunId: processRunId,
             ProcessStepId: processStepId);
+    }
+
+    private sealed class ProcessOutcomeReasonValidator : IAgentOutputValidator<ProcessStepOutcomeResult>
+    {
+        public AgentOutputValidationResult Validate(ProcessStepOutcomeResult output)
+        {
+            return string.IsNullOrWhiteSpace(output.Reason)
+                ? AgentOutputValidationResult.Failure(new AgentOutputValidationError
+                {
+                    Code = "process.step_outcome.reason_required",
+                    Message = "Process step outcome reason is required.",
+                    Path = "$.reason"
+                })
+                : AgentOutputValidationResult.Success();
+        }
     }
 }

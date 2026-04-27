@@ -1,0 +1,8 @@
+{
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection",
+  "Warnings": [
+    "Projected from template pack process 'business-plan-development'.",
+    "Detailed sidecar metadata remains in the process-template pack files."
+  ],
+  "Definition": null
+}

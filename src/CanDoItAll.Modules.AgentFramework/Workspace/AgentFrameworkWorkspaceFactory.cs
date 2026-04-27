@@ -53,7 +53,6 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var processHost = new LocalWorkspaceProcessHost();
         var fileService = new WorkspaceFileService(workspaceRoot, scope);
         var commandExecutionService = new WorkspaceCommandExecutionService(workspaceRoot, processHost, scope);
-        var artifactToolService = new WorkspaceArtifactToolService(workspaceRoot, commandExecutionService, scope);
         var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope);
         var scenarioRuntime = new ScenarioHarnessAgentRuntime(
             mafRuntime,
