@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="SeedAssets\PromptLibrary\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
