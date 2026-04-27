@@ -83,7 +83,9 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!IsScenarioProvider(provider))
         {
@@ -97,7 +99,9 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 runtimeSessionKey,
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements);
+                suppressApprovalRequirements,
+                structuredOutput,
+                executionOptions);
         }
 
         var definition = ResolveDefinition(prompt);
@@ -111,15 +115,25 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 ExecutionState.Completed,
                 "Guided proof",
                 $"{definition.Id} is a guided scenario and must be completed through the integrated process proof.");
+            var responseText = FormatScenarioResponse(
+                new ScenarioExecutionOutcome(
+                    ResponseText: $"{definition.Id} is a guided scenario. Follow the integrated proof note instead of expecting automatic execution.",
+                    ResponseMarkdown: guidedResponse,
+                    ToolCalls: 1),
+                structuredOutput);
 
             return new AgentRuntimeResponse(
-                ResponseText: $"{definition.Id} is a guided scenario. Follow the integrated proof note instead of expecting automatic execution.",
+                ResponseText: responseText,
                 InputTokens: EstimateTokens(prompt),
-                OutputTokens: 22,
+                OutputTokens: EstimateTokens(responseText),
                 ToolCalls: 1,
                 RuntimeSessionKey: state.RuntimeSessionKey,
-                SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
-                PendingApprovals: []);
+            SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText),
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
+        };
         }
 
         if (definition.RequiresApproval && !suppressApprovalRequirements)
@@ -148,7 +162,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 ]);
         }
 
-        return await ExecuteScenarioAsync(definition, state, progressCallback);
+        return await ExecuteScenarioAsync(definition, state, progressCallback, structuredOutput, executionOptions);
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -161,7 +175,9 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false)
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         if (!IsScenarioProvider(provider))
         {
@@ -175,7 +191,9 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 runtimeSessionKey,
                 progressCallback,
                 cancellationToken,
-                suppressApprovalRequirements);
+                suppressApprovalRequirements,
+                structuredOutput,
+                executionOptions);
         }
 
         var state = ParseState(session.Compatibility?.SerializedSessionStateJson)
@@ -210,13 +228,15 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 PendingApprovals: []);
         }
 
-        return await ExecuteScenarioAsync(definition, state with { Status = "approved" }, progressCallback);
+        return await ExecuteScenarioAsync(definition, state with { Status = "approved" }, progressCallback, structuredOutput, executionOptions);
     }
 
     private async Task<AgentRuntimeResponse> ExecuteScenarioAsync(
         ScenarioHarnessDefinition definition,
         ScenarioRuntimeState state,
-        Func<ExecutionState, string, string, Task> progressCallback)
+        Func<ExecutionState, string, string, Task> progressCallback,
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
     {
         await progressCallback(
             ExecutionState.Running,
@@ -243,14 +263,87 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             "Scenario complete",
             $"{definition.Id} completed successfully.");
 
+        var responseText = FormatScenarioResponse(outcome, structuredOutput);
         return new AgentRuntimeResponse(
-            ResponseText: outcome.ResponseText,
+            ResponseText: responseText,
             InputTokens: EstimateTokens(state.OriginalPrompt),
-            OutputTokens: EstimateTokens(outcome.ResponseText),
+            OutputTokens: EstimateTokens(responseText),
             ToolCalls: outcome.ToolCalls,
             RuntimeSessionKey: state.RuntimeSessionKey,
             SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "completed" }, JsonOptions),
-            PendingApprovals: []);
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText),
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
+        };
+    }
+
+    private static string FormatScenarioResponse(
+        ScenarioExecutionOutcome outcome,
+        AgentStructuredOutputContract? structuredOutput)
+    {
+        if (structuredOutput?.OutputType != typeof(ProcessStepOutcomeResult))
+        {
+            return outcome.ResponseText;
+        }
+
+        var result = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = outcome.ResponseText,
+            EvidenceRefs = [],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = outcome.ResponseMarkdown
+        };
+        return JsonSerializer.Serialize(result, AgentOutputJson.SerializerOptions);
+    }
+
+    private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions,
+        string responseText)
+    {
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return [];
+        }
+
+        return
+        [
+            new AgentFinalizerInvocation(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                responseText,
+                Sequence: 1)
+        ];
+    }
+
+    private static IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
+    {
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return [];
+        }
+
+        var timestamp = DateTimeOffset.UtcNow;
+        return
+        [
+            new AgentToolInvocationTrace(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                ToolInvocationClassification.Read,
+                Sequence: 1,
+                StartedAtUtc: timestamp,
+                CompletedAtUtc: timestamp,
+                Succeeded: true,
+                FailureMessage: string.Empty)
+        ];
     }
 
     private async Task<ScenarioExecutionOutcome> ExecuteBlazorCalculatorAsync(

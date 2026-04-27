@@ -315,13 +315,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var run = detail.Run;
         var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
         var recoverableImplementationPunt = IsRecoverableImplementationPunt(candidate, responseText);
-        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
-        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
+        var inspectionText = ResolveOutputInspectionText(responseText);
+        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
+        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
-        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
+        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
         var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText) &&
-            !CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, responseText);
+            !CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, inspectionText);
         var recoverableProviderFailure = TryResolveRecoverableProviderFailure(detail, responseText, out _);
         if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) &&
             TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) &&
@@ -433,11 +434,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return $"AgentFramework run '{run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}";
         }
 
-        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
-        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
+        var inspectionText = ResolveOutputInspectionText(responseText);
+        var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
+        var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
-        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, responseText);
+        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
         if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome))
         {
             var branchOutcomeSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
@@ -504,14 +506,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because required artifacts still could not be recorded automatically: {missingRequiredArtifactSummary}";
         }
 
-        if (CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, responseText))
+        if (CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, inspectionText))
         {
-            return $"AgentFramework run '{run.Title}' completed step '{stepTitle}' from successful governed evidence, and the dispatcher inferred the governed completed outcome because PROCESS_STEP_OUTCOME was omitted.";
+            return $"AgentFramework run '{run.Title}' completed step '{stepTitle}' from successful governed evidence, and the dispatcher inferred the governed completed outcome because a structured ProcessStepOutcomeResult was omitted.";
         }
 
         if (RequiresGovernedStepOutcome(candidate.StepRun))
         {
-            return $"AgentFramework run '{run.Title}' did not declare a required PROCESS_STEP_OUTCOME for governed step '{stepTitle}'.";
+            return $"AgentFramework run '{run.Title}' did not return a valid structured ProcessStepOutcomeResult for governed step '{stepTitle}'.";
         }
 
         return $"AgentFramework run '{run.Title}' completed successfully.";

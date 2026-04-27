@@ -109,7 +109,7 @@ public partial class ProviderManagementPanel
         var normalizedPluginKey = string.IsNullOrWhiteSpace(connectorPluginKey)
             ? OpenAiProviderAdapter.PluginKey
             : connectorPluginKey.Trim();
-        var defaults = ResolveProviderCapabilityDefaults(normalizedPluginKey);
+        var defaults = WorkspaceProviderCapabilityDefaults.Resolve(normalizedPluginKey);
         return new ProviderProfileEditorModel
         {
             ConnectorPluginKey = normalizedPluginKey,
@@ -156,7 +156,7 @@ public partial class ProviderManagementPanel
             return;
         }
 
-        var defaults = ResolveProviderCapabilityDefaults(manifest.PluginKey);
+        var defaults = WorkspaceProviderCapabilityDefaults.Resolve(manifest.PluginKey);
         providerModel.SupportsStreaming = defaults.SupportsStreaming;
         providerModel.SupportsToolCalling = defaults.SupportsToolCalling;
         providerModel.SupportsStructuredOutput = defaults.SupportsStructuredOutput;
@@ -190,18 +190,6 @@ public partial class ProviderManagementPanel
             {
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             })
-        };
-    }
-
-    private static (bool SupportsStreaming, bool SupportsToolCalling, bool SupportsStructuredOutput, bool SupportsVision) ResolveProviderCapabilityDefaults(
-        string pluginKey)
-    {
-        return pluginKey switch
-        {
-            OpenAiProviderAdapter.PluginKey => (true, true, true, false),
-            OllamaProviderAdapter.PluginKey => (true, true, true, false),
-            OllamaRemoteProviderAdapter.PluginKey => (true, true, true, false),
-            _ => (false, false, false, false)
         };
     }
 

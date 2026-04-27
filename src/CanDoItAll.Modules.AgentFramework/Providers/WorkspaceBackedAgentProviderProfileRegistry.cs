@@ -123,6 +123,12 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         }
 
         var timeoutSeconds = AgentFrameworkProviderMetadata.ResolveTimeoutSeconds(model, current?.TimeoutSeconds ?? 45);
+        var selectedTransport = model.Transport;
+        var capabilityProfile = providerProfileService.NormalizeImportedProfile(providerProfileService.CreateProfile(model) with
+        {
+            Transport = selectedTransport
+        });
+        var featureMatrix = providerProfileService.ResolveFeatureMatrix(capabilityProfile);
         entity.Name = model.Name.Trim();
         entity.ProviderKind = providerAdapter.LegacyProviderKind;
         entity.ConnectorPluginKey = providerAdapter.Manifest.PluginKey;
@@ -136,7 +142,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         entity.IsEnabled = model.IsEnabled;
         entity.SupportsStreaming = model.SupportsStreaming;
         entity.SupportsToolCalling = model.SupportsTools;
-        entity.SupportsStructuredOutput = model.Transport == ProviderTransportKind.Responses;
+        entity.SupportsStructuredOutput = featureMatrix.SupportsStructuredOutput;
         entity.SupportsVision = !string.IsNullOrWhiteSpace(model.ConfigurationJson) &&
                                 model.ConfigurationJson.Contains("vision", StringComparison.OrdinalIgnoreCase);
         entity.ExtraSettingsJson = AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
@@ -144,7 +150,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             providerAdapter.Manifest.PluginKey,
             configSchemaVersion,
             secretRecordId,
-            timeoutSeconds);
+            timeoutSeconds,
+            selectedTransport);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await UpsertCatalogProvidersAsync([MapToAgentFrameworkProvider(entity)], cancellationToken);
@@ -251,7 +258,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
             _ => AgentFrameworkProviderKind.Ollama
         };
-        var mappedTransport = provider.ConnectorPluginKey switch
+        var legacyMappedTransport = provider.ConnectorPluginKey switch
         {
             ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
             ProcessMockProviderAdapter.PluginKey => ProviderTransportKind.Responses,
@@ -259,9 +266,9 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
             _ => ProviderTransportKind.ChatCompletions
         };
+        var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(provider, legacyMappedTransport);
         var preferFrameworkManagedChatHistory = mappedKind == AgentFrameworkProviderKind.Ollama ||
-                                                mappedTransport == ProviderTransportKind.ChatCompletions ||
-                                                IsOpenAiChatCompletionsProvider(provider);
+                                                mappedTransport == ProviderTransportKind.ChatCompletions;
         var supportsBackgroundResponses = mappedKind == AgentFrameworkProviderKind.OpenAi &&
                                           mappedTransport == ProviderTransportKind.Responses;
         var mappedProvider = new AgentFrameworkProviderProfile(

@@ -310,12 +310,10 @@ public sealed partial class WorkspaceService(
         entity.DefaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
         entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
-        var isResponsesManagedPlugin =
-            string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(providerPlugin.Manifest.PluginKey, ScenarioHarnessProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase);
-        entity.SupportsStreaming = isResponsesManagedPlugin || model.SupportsStreaming;
-        entity.SupportsToolCalling = isResponsesManagedPlugin || model.SupportsToolCalling;
-        entity.SupportsStructuredOutput = isResponsesManagedPlugin || model.SupportsStructuredOutput;
+        var capabilityDefaults = WorkspaceProviderCapabilityDefaults.Resolve(providerPlugin.Manifest.PluginKey);
+        entity.SupportsStreaming = capabilityDefaults.SupportsStreaming || model.SupportsStreaming;
+        entity.SupportsToolCalling = capabilityDefaults.SupportsToolCalling || model.SupportsToolCalling;
+        entity.SupportsStructuredOutput = capabilityDefaults.SupportsStructuredOutput;
         entity.SupportsVision = string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) &&
                                 model.SupportsVision;
         entity.ExtraSettingsJson = model.Configuration.ToJson();

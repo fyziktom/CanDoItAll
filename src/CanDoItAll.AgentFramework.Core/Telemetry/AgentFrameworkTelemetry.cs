@@ -50,6 +50,8 @@ public static class AgentFrameworkTelemetry
         activity.SetTag("agentframework.process_step_id", run.ProcessStepId);
         activity.SetTag("agentframework.scheduler_run_id", run.SchedulerRunId);
         activity.SetTag("agentframework.message_id", run.MessageId);
+        activity.SetTag("agentframework.structured_output_contract_key", run.StructuredOutputContractKey);
+        activity.SetTag("agentframework.structured_output_schema_name", run.StructuredOutputSchemaName);
     }
 
     public static void ApplyCurrentAuditScope(Activity? activity)
@@ -160,6 +162,7 @@ public static class AgentFrameworkTelemetry
         tags.Add("agentframework.process_step_id", run.ProcessStepId);
         tags.Add("agentframework.scheduler_run_id", run.SchedulerRunId);
         tags.Add("agentframework.message_id", run.MessageId);
+        tags.Add("agentframework.structured_output_contract_key", run.StructuredOutputContractKey);
         return tags;
     }
 

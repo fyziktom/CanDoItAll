@@ -1,0 +1,57 @@
+{
+  "Kind": "role-resource",
+  "Key": "financial-strategist",
+  "DisplayName": "Financial strategist",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "Summary": "Owns financial assumptions, model logic, unit economics, budget, and sensitivity analysis.",
+  "Purpose": "Turn strategy assumptions and spreadsheet evidence into explicit planning numbers.",
+  "StaffingIntent": "Finance agent or person capable of spreadsheet inspection and assumption-driven modeling.",
+  "PreferredExecutorKind": "AI agent",
+  "PreferredProjectAssignmentRole": "AiAgent",
+  "IsRequired": true,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 35,
+  "RoleTemplateSourceKey": "",
+  "RoleTemplateSnapshotName": "Financial strategist / template-pack v1",
+  "SnapshotSummary": "Financial owner for model, budget, unit economics, and sensitivity evidence.",
+  "SeniorityBand": "Senior financial analyst or strategist",
+  "MinimumYearsInPrimaryDiscipline": 5,
+  "MinimumYearsInSoftwareDelivery": 0,
+  "DomainTags": [
+    "finance",
+    "unit-economics",
+    "spreadsheet-analysis"
+  ],
+  "KnowledgeRequirements": [
+    "Can inspect workbook-like inputs and extract drivers.",
+    "Can show formulas, units, currency, ranges, and confidence.",
+    "Can flag missing data without inventing precision."
+  ],
+  "ExperienceRequirements": [
+    "Has prepared budgets, forecasts, or unit-economics analysis.",
+    "Has created sensitivity views for uncertain planning inputs."
+  ],
+  "DecisionRights": [
+    "Reject unsupported forecasts.",
+    "Set confidence and sensitivity ranges for financial assumptions."
+  ],
+  "OwnedArtifacts": [
+    "Financial model",
+    "Assumptions ledger",
+    "Sensitivity analysis"
+  ],
+  "CollaborationExpectations": [
+    "Hand uncertain inputs back to business strategy for validation.",
+    "Tell marketing what budget limits or channel economics matter."
+  ],
+  "AntiPatterns": [
+    "Single-point forecasts with no assumptions.",
+    "Hidden formulas or unlabeled currencies."
+  ],
+  "FitnessEvidence": [
+    "Model artifacts with drivers, formulas, and ranges."
+  ],
+  "DocPath": "processes/business-plan-development/roles/financial-strategist.md"
+}

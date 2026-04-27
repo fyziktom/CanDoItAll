@@ -646,5 +646,128 @@
         "ReviewSummary": "Rollback trigger and accountable owner recorded."
       }
     ]
+  },
+  {
+    "Key": "baseline-business-plan-development",
+    "ProcessTemplateKey": "business-plan-development",
+    "RunName": "Business plan development / AI-assisted field-service product",
+    "Summary": "Baseline non-code strategy run that exercises business, finance, and marketing specialist handoffs.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for preparing a business plan from mixed planning inputs.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "business-strategist",
+        "DisplayName": "Business Strategist Agent",
+        "ExecutorKind": "AI agent",
+        "BindingReason": "Owns strategy intake, business-plan spine, and integrated review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "financial-modeling",
+        "RoleKey": "financial-strategist",
+        "DisplayName": "Financial Strategist Agent",
+        "ExecutorKind": "AI agent",
+        "BindingReason": "Owns assumptions, model logic, unit economics, and sensitivity ranges.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "marketing-plan",
+        "RoleKey": "marketing-specialist",
+        "DisplayName": "Marketing Specialist Agent",
+        "ExecutorKind": "AI agent",
+        "BindingReason": "Owns positioning, channels, campaign brief, and validation experiments.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "strategy-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Strategy brief captured facts, assumptions, open questions, and artifact folder.",
+        "DecidedBy": "Business Strategist Agent"
+      },
+      {
+        "StepKey": "business-plan-draft",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Business plan drafted with target segment, offer, operating model, risks, and validation plan.",
+        "DecidedBy": "Business Strategist Agent"
+      },
+      {
+        "StepKey": "financial-modeling",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Financial model produced with drivers, assumptions, ranges, and missing data.",
+        "DecidedBy": "Financial Strategist Agent"
+      },
+      {
+        "StepKey": "marketing-plan",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Go-to-market plan produced with audience, channels, metrics, and experiments.",
+        "DecidedBy": "Marketing Specialist Agent"
+      },
+      {
+        "StepKey": "integrated-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "approved",
+        "Reason": "Integrated review reconciled assumptions and approved next actions.",
+        "DecidedBy": "Business Strategist Agent"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "strategy-intake",
+        "ArtifactKind": "Brief",
+        "Title": "AI-assisted field-service strategy brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from stakeholder idea, source notes, and open assumptions.",
+        "AllowedFutureUsageSummary": "Reusable by business, finance, and marketing specialists.",
+        "ReviewSummary": "Facts, assumptions, and open questions separated."
+      },
+      {
+        "StepKey": "business-plan-draft",
+        "ArtifactKind": "Deliverable",
+        "Title": "AI-assisted field-service business plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from strategy brief and planning assumptions.",
+        "AllowedFutureUsageSummary": "Reusable for finance, marketing, and execution planning.",
+        "ReviewSummary": "Offer, audience, model, risks, and validation plan captured."
+      },
+      {
+        "StepKey": "financial-modeling",
+        "ArtifactKind": "Dataset",
+        "Title": "AI-assisted field-service financial model",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Prepared from business plan assumptions and sample cost drivers.",
+        "AllowedFutureUsageSummary": "Reusable for budget and pricing review.",
+        "ReviewSummary": "Drivers, ranges, and missing data explicit."
+      },
+      {
+        "StepKey": "marketing-plan",
+        "ArtifactKind": "Deliverable",
+        "Title": "AI-assisted field-service go-to-market plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from business plan and finance constraints.",
+        "AllowedFutureUsageSummary": "Reusable for launch and campaign planning.",
+        "ReviewSummary": "Audience, promise, channels, metrics, and experiments captured."
+      },
+      {
+        "StepKey": "integrated-review",
+        "ArtifactKind": "Decision",
+        "Title": "AI-assisted field-service integrated business plan review",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Approved from strategy, finance, and marketing artifacts.",
+        "AllowedFutureUsageSummary": "Reusable for portfolio decision and execution planning.",
+        "ReviewSummary": "Approved with explicit risks and next actions."
+      }
+    ]
   }
 ]

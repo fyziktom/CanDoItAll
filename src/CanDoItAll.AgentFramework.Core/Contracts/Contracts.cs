@@ -108,7 +108,12 @@ public sealed record AgentRuntimeResponse(
     int ToolCalls,
     string RuntimeSessionKey,
     string? SerializedSessionStateJson,
-    IReadOnlyList<PendingToolApprovalRecord> PendingApprovals);
+    IReadOnlyList<PendingToolApprovalRecord> PendingApprovals)
+{
+    public IReadOnlyList<AgentFinalizerInvocation> FinalizerInvocations { get; init; } = [];
+
+    public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
+}
 
 public interface IAgentRuntime
 {
@@ -136,7 +141,9 @@ public interface IAgentRuntime
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false);
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null);
 
     Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
         AgentDefinition agent,
@@ -148,7 +155,9 @@ public interface IAgentRuntime
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false);
+        bool suppressApprovalRequirements = false,
+        AgentStructuredOutputContract? structuredOutput = null,
+        AgentRuntimeExecutionOptions? executionOptions = null);
 }
 
 public interface ICapabilityProofService
@@ -182,6 +191,7 @@ public interface IProviderProfileService
     string GetIdentityKey(ProviderProfile provider);
     ProviderProfile ApplyHealthResult(ProviderProfile provider, ProviderHealthResult result, DateTimeOffset checkedAtUtc);
     ProviderProfile ApplyOllamaModelResult(ProviderProfile provider, OllamaModelfileResult result, DateTimeOffset checkedAtUtc);
+    ProviderFeatureMatrix ResolveFeatureMatrix(ProviderProfile provider);
 }
 
 public interface IProviderProfileRegistry

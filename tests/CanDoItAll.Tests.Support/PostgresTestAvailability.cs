@@ -13,6 +13,7 @@ public sealed record PostgresAvailabilityResult(
 public static class PostgresTestAvailability
 {
     private const string ConnectionOverrideVariable = "CANDOITALL_TESTS_POSTGRES_CONNECTION";
+    private const string LocalDefaultConnectionString = "Host=127.0.0.1;Port=5432;Database=postgres;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
     private const string DockerComposeConnectionString = "Host=127.0.0.1;Port=5432;Database=candoitall;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
 
     public static async Task<PostgresAvailabilityResult> EnsureAvailableAsync(
@@ -29,6 +30,17 @@ public static class PostgresTestAvailability
                 provisionedByDocker: false,
                 sourceDescription: $"environment variable {ConnectionOverrideVariable}",
                 cancellationToken);
+        }
+
+        var localDefaultResult = await TryConnectAsync(
+            LocalDefaultConnectionString,
+            provisionedByDocker: false,
+            sourceDescription: "local PostgreSQL service with project default credentials",
+            cancellationToken,
+            timeout: TimeSpan.FromSeconds(3));
+        if (localDefaultResult.IsAvailable)
+        {
+            return localDefaultResult;
         }
 
         var composeFilePath = Path.Combine(repositoryRoot, "docker-compose.yml");
@@ -68,10 +80,11 @@ public static class PostgresTestAvailability
         string connectionString,
         bool provisionedByDocker,
         string sourceDescription,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? timeout = null)
     {
         Exception? lastError = null;
-        var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(30);
+        var timeoutAt = DateTimeOffset.UtcNow.Add(timeout ?? TimeSpan.FromSeconds(30));
 
         while (DateTimeOffset.UtcNow < timeoutAt)
         {

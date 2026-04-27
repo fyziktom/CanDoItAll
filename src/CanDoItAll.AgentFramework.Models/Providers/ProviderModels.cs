@@ -13,13 +13,27 @@ public sealed record ProviderFeatureMatrix(
     ProviderTransportKind Transport,
     bool SupportsStreaming,
     bool SupportsTools,
+    bool SupportsStructuredOutput,
+    bool SupportsToolApprovalWrappers,
     bool PreferFrameworkManagedChatHistory,
     bool SupportsBackgroundResponses,
     bool SupportsNativeCodeInterpreter,
     bool SupportsNativeFileSearch,
     bool SupportsNativeWebSearch,
     bool SupportsHostedMcpServer,
-    string GitHubCopilotRecommendation);
+    bool SupportsLocalMcpBridge,
+    bool SupportsServiceManagedHistory,
+    bool SupportsVision,
+    bool SupportsCompaction,
+    string GitHubCopilotRecommendation,
+    bool SupportsFunctionTools = false,
+    bool SupportsRunAsyncTypedOutput = false,
+    bool SupportsResponseFormatJsonSchema = false,
+    bool SupportsToolApprovalRequests = false,
+    bool SupportsApprovalRequiredAIFunction = false,
+    bool SupportsHostedTools = false,
+    bool SupportsHostedMcp = false,
+    bool SupportsLocalMcp = false);
 
 public sealed record ProviderFeatureSupportResult(
     ProviderNativeToolFamily Family,

@@ -307,7 +307,8 @@ public sealed record ExecutionInvocationContext(
     string ProcessRunId = "",
     string ProcessStepId = "",
     string SchedulerRunId = "",
-    string MessageId = "")
+    string MessageId = "",
+    ExecutionInvocationPolicy? Policy = null)
 {
     public static ExecutionInvocationContext Empty { get; } = new(
         SourceKind: "manual",
@@ -320,8 +321,20 @@ public sealed record ExecutionInvocationContext(
         ProcessRunId: string.Empty,
         ProcessStepId: string.Empty,
         SchedulerRunId: string.Empty,
-        MessageId: string.Empty);
+        MessageId: string.Empty,
+        Policy: null);
 }
+
+public sealed record ExecutionInvocationPolicy(
+    AgentFinalizerMode? FinalizerMode = null,
+    int? MaxStructuredOutputRepairAttempts = null,
+    bool RequireStructuredOutputValidation = true);
+
+public sealed record AgentRuntimeExecutionOptions(
+    AgentStructuredOutputContract? StructuredOutput,
+    AgentFinalizerMode FinalizerMode,
+    bool RequireStructuredOutputValidation,
+    int MaxStructuredOutputRepairAttempts);
 
 public sealed record ExecutionRunRecord(
     Guid Id,
@@ -353,7 +366,11 @@ public sealed record ExecutionRunRecord(
     string ProcessStepId = "",
     string SchedulerRunId = "",
     string MessageId = "",
-    long Revision = 1);
+    long Revision = 1,
+    string StructuredOutputContractKey = "",
+    string StructuredOutputTypeName = "",
+    string StructuredOutputSchemaName = "",
+    string StructuredOutputSchemaDescription = "");
 
 public sealed record ExecutionApprovalRecord(
     string ApprovalId,
@@ -375,7 +392,8 @@ public sealed record ExecutionRunRequest(
     string Prompt,
     Guid? ChatSessionId = null,
     ExecutionInvocationContext? Context = null,
-    bool AutoApprovePendingToolCalls = false);
+    bool AutoApprovePendingToolCalls = false,
+    AgentStructuredOutputContract? StructuredOutput = null);
 
 public sealed record ExecutionRunQuery(
     Guid? AgentId = null,
