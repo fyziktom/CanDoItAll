@@ -176,11 +176,89 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("provider-native-web-search", ToolInvocationClassification.HostedProviderNative)]
     [InlineData("mcp_project_query", ToolInvocationClassification.LocalMcp)]
     [InlineData("workspace_read_file", ToolInvocationClassification.Read)]
+    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolInvocationClassification.Mutation)]
+    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolInvocationClassification.Read)]
     public void Classify_returns_expected_tool_classification(string toolName, ToolInvocationClassification expected)
     {
         var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
 
         Assert.Equal(expected, classification);
+    }
+
+    [Theory]
+    [MemberData(nameof(ProcessMutationTools))]
+    public async Task EvaluateAsync_requires_approval_for_process_mutation_tools(string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            toolName,
+            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: true,
+            approvalWrapperEffectiveForProvider: true);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationClassification.Mutation, context.Classification);
+        Assert.Equal(ToolInvocationDecisionKind.RequireApproval, decision.Kind);
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName));
+    }
+
+    [Theory]
+    [MemberData(nameof(ProcessReadTools))]
+    public async Task EvaluateAsync_allows_process_read_tools_without_approval(string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            toolName,
+            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationClassification.Read, context.Classification);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName));
+    }
+
+    public static TheoryData<string> ProcessMutationTools()
+    {
+        return new TheoryData<string>
+        {
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
+            AgentToolInvocationPolicyMetadata.ProcessesRunStart,
+            AgentToolInvocationPolicyMetadata.ProcessesStepTransition,
+            AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
+            AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateImport
+        };
+    }
+
+    public static TheoryData<string> ProcessReadTools()
+    {
+        return new TheoryData<string>
+        {
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport,
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList,
+            AgentToolInvocationPolicyMetadata.ProcessesRunDetailGet,
+            AgentToolInvocationPolicyMetadata.ProcessesAnalyticsGet,
+            AgentToolInvocationPolicyMetadata.ProcessesPartyOptionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesExecutorOptionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList
+        };
     }
 
     private static ToolInvocationPolicyContext CreateContext(

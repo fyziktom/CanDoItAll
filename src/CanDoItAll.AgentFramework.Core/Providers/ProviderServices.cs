@@ -151,7 +151,7 @@ public sealed class ProviderProfileService : IProviderProfileService
         var supportsStructuredOutput = supportsResponseFormatJsonSchema;
         var supportsToolApprovalRequests = supportsOpenAiFamily &&
                                            normalizedProvider.SupportsTools &&
-                                           normalizedProvider.Transport == ProviderTransportKind.Responses;
+                                           normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
 
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,

@@ -128,6 +128,32 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void SequenceValidator_fails_when_process_mutation_tool_runs_after_required_finalizer()
+    {
+        var policy = CreatePolicy();
+        var timestamp = DateTimeOffset.UtcNow;
+        var traces = new[]
+        {
+            CreateToolTrace(policy.ToolName, ToolInvocationClassification.Read, 1, timestamp),
+            CreateToolTrace(
+                AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
+                AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord),
+                2,
+                timestamp)
+        };
+
+        var result = AgentFinalizerSequenceValidator.Validate(policy, traces);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.TraceAvailable);
+        Assert.Contains(result.Errors, error => error.Code == "agent.finalizer.not_last");
+        Assert.Contains(
+            result.ViolatingToolInvocations,
+            trace => trace.ToolName == AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord &&
+                     trace.Classification == ToolInvocationClassification.Mutation);
+    }
+
+    [Fact]
     public void ResolveMode_defaults_process_step_contract_to_shadow()
     {
         var run = CreateRun(metadataJson: "{}");

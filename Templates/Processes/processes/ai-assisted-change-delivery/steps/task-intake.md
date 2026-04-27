@@ -31,7 +31,7 @@ Normalize the requested change into a bounded problem statement, value target, e
 
 ## Artifact expectations
 - `task-intake-intake-brief` -> `intake-brief` / Intake brief | kind= | trust= | sensitivity= | validation=Must identify request source, decision owner, scope boundary, and missing inputs explicitly.
-- `task-intake-acceptance-criteria-pack` -> `acceptance-criteria-pack` / Acceptance criteria pack | kind= | trust= | sensitivity= | validation=Must be approved or explicitly acknowledged by the accountable product owner.
+- `intake-acceptance-criteria-pack` -> `acceptance-criteria-pack` / Acceptance criteria pack | kind= | trust= | sensitivity= | validation=Must be approved or explicitly acknowledged by the accountable product owner.
 
 ## Artifact inputs
 - No explicit artifact inputs.

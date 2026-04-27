@@ -147,7 +147,7 @@
           "RetentionDays": 0,
           "AllowedFutureUsageSummary": "",
           "ValidationRequirementSummary": "",
-          "Key": "task-intake-acceptance-criteria-pack"
+          "Key": "intake-acceptance-criteria-pack"
         }
       ],
       "ChecklistRefs": [

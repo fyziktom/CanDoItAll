@@ -45,6 +45,11 @@ internal sealed class ProcessRunRecoveryService(
 
             try
             {
+                if (await ShouldSkipForRecoveryBackoffAsync(dbContext, runId, cancellationToken))
+                {
+                    continue;
+                }
+
                 await automationDispatchService.DispatchAsync(
                     runId,
                     triggerStepRunId: null,
@@ -66,6 +71,46 @@ internal sealed class ProcessRunRecoveryService(
         }
 
         return dispatchedCount;
+    }
+
+    private static async Task<bool> ShouldSkipForRecoveryBackoffAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ledgerPayloads = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runId &&
+                           item.EventType == ProcessRuntimeEventTypes.AgentRecoveryAttemptRecorded)
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .Take(20)
+            .Select(item => item.ReplayContextJson)
+            .ToListAsync(cancellationToken);
+        var entries = ledgerPayloads
+            .Select(TryReadLedgerEntry)
+            .OfType<AgentRecoveryLedgerEntry>()
+            .ToList();
+        return !AgentRecoveryLedger.CanAttemptNow(entries, now);
+    }
+
+    private static AgentRecoveryLedgerEntry? TryReadLedgerEntry(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<AgentRecoveryLedgerEntry>(
+                json,
+                CanDoItAll.AgentFramework.Core.AgentOutputJson.SerializerOptions);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 }
 

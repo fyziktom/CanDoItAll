@@ -73,7 +73,7 @@ AI execution is never treated as magic labor. Delegation scope, refusal boundari
 - Exception policy: Do not delegate ambiguous or ownerless tasks.
 - Artifact expectations:
   - `task-intake-intake-brief` => `intake-brief` / Intake brief
-  - `task-intake-acceptance-criteria-pack` => `acceptance-criteria-pack` / Acceptance criteria pack
+  - `intake-acceptance-criteria-pack` => `acceptance-criteria-pack` / Acceptance criteria pack
 - Checklists: implementation-readiness-checklist
 - Validations: validation-intake-complete
 - Prompts: prompt-implementation-brief

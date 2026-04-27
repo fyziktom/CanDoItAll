@@ -1419,7 +1419,7 @@ public sealed partial class AppSmokeTests
         await SetFieldByLabelAsync(page, "Kind", "ApiKey");
         await SetFieldByLabelAsync(page, "Scope", "workspace");
         await SetFieldByLabelAsync(page, "Rotation note", "Artifact capture only");
-        await SetFieldByLabelAsync(page, "Secret value", "sk-artifact-placeholder");
+        await SetFieldByLabelAsync(page, "Secret value", "__OPENAI_API_KEY__");
         await SetFieldByLabelAsync(page, "Metadata JSON", "{}");
         await page.GetByRole(AriaRole.Button, new() { Name = "Save secret", Exact = true }).ClickAsync();
         await page.WaitForSelectorAsync("text=OpenAI API key");

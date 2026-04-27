@@ -20,6 +20,7 @@ public sealed partial class ProcessesService {
         ProcessStepRun stepRun;
         ProcessRun run;
         string recoveryDirective;
+        AgentReworkPacket reworkPacket;
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken))
         {
             stepRun = await dbContext.Set<ProcessStepRun>()
@@ -64,6 +65,30 @@ public sealed partial class ProcessesService {
                 expectedArtifacts,
                 stepArtifacts,
                 latestDecisions);
+            reworkPacket = AgentReworkPacketFactory.CreateManualRerunPacket(
+                run.Id,
+                stepRun.Id,
+                stepRun.Title,
+                recoveryDirective,
+                stepArtifacts
+                    .Where(item => !string.IsNullOrWhiteSpace(item.ManagedStoragePath))
+                    .Select(item => new AgentReworkArtifactRef(
+                        item.Title,
+                        item.ManagedStoragePath,
+                        "Existing step artifact to preserve or repair."))
+                    .ToList(),
+                clock.GetUtcNow());
+            var recoveryDecision = new AgentRecoveryDecision(
+                AgentRecoveryMode.ReworkContinuation,
+                AgentFailureCategory.HumanRequestedRerun,
+                "Manual rerun requested by operator.",
+                AttemptNumber: 1,
+                SourceExecutionRunId: null,
+                reworkPacket.Id);
+            recoveryDirective = AgentReworkPromptRenderer.RenderRecoveryDirective(
+                recoveryDecision,
+                reworkPacket,
+                recoveryDirective);
         }
 
         var transitionResult = await TransitionStepAsync(
@@ -94,6 +119,22 @@ public sealed partial class ProcessesService {
                 {
                     ProcessRunId = run.Id,
                     StepRunId = refreshedStepRun.Id,
+                    EventType = ProcessRuntimeEventTypes.AgentReworkPacketCreated,
+                    Title = "Manual rerun rework packet created",
+                    Description = AgentReworkPromptRenderer.RenderPacketSummary(reworkPacket),
+                    CorrelationId = reworkPacket.Id.ToString("N"),
+                    OperatingMode = run.OperatingMode,
+                    PolicyVersion = $"definition-version:{run.ProcessDefinitionVersionId:D}",
+                    EnvironmentMode = run.OperatingMode.ToString(),
+                    ReplayContextJson = AgentReworkPromptRenderer.SerializePacket(reworkPacket),
+                    OccurredAtUtc = clock.GetUtcNow()
+                },
+                cancellationToken);
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry
+                {
+                    ProcessRunId = run.Id,
+                    StepRunId = refreshedStepRun.Id,
                     EventType = ProcessRuntimeEventTypes.ManualAgentStepRerun,
                     Title = "Agent step rerun requested",
                     Description = recoveryDirective,
@@ -106,7 +147,10 @@ public sealed partial class ProcessesService {
                         RunId = run.Id,
                         StepRunId = refreshedStepRun.Id,
                         Classification = ProcessRecoveryClassification.ManualRerun.ToString(),
-                        RecoveryDirective = recoveryDirective
+                        RecoveryDirective = recoveryDirective,
+                        ReworkPacketId = reworkPacket.Id,
+                        RecoveryMode = AgentRecoveryMode.ReworkContinuation.ToString(),
+                        FailureCategory = AgentFailureCategory.HumanRequestedRerun.ToString()
                     }),
                     OccurredAtUtc = clock.GetUtcNow()
                 },

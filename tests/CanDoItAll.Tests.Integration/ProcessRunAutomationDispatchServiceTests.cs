@@ -5520,7 +5520,7 @@ Descendant requirement context from sibling planning nodes:
             Status = status,
             Reason = reason,
             BranchOutcomeKey = branchOutcomeKey ?? string.Empty,
-            EvidenceRefs = evidenceRefs ?? [],
+            EvidenceRefs = evidenceRefs ?? ["execution://test-run"],
             NextActions = status == ProcessStepOutcomeStatus.Completed
                 ? []
                 : ["Resolve the reported issue."],
