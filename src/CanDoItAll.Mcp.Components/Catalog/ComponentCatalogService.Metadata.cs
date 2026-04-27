@@ -47,6 +47,22 @@ public sealed partial class ComponentCatalogService
             "Maps semantic tones to the shared status surface palette in the generated BaseLib stylesheet.",
             "Status chips should communicate state, not replace headings or summaries."
         ],
+        ["Notification"] =
+        [
+            "Renders fixed viewport toast stacks from one mounted host using Tailwind utility classes in `_content/CanDoItAll.Components.BaseLib/css/output.css`.",
+            "`NotificationMessage.Position` and the `Notify(..., position: ...)` overload override the host `Position` per message; use that instead of page-local fixed wrappers.",
+            "The close affordance is intentionally the compact X control to preserve notification width for summary and detail copy."
+        ],
+        ["Tooltip"] =
+        [
+            "Renders the active `TooltipService` state through one mounted host using Tailwind utility classes in `_content/CanDoItAll.Components.BaseLib/css/output.css`.",
+            "`TooltipOptions.Position` controls service-opened tooltip placement; choose a `TooltipPosition` side, corner, or edge alignment instead of custom absolute-positioning CSS."
+        ],
+        ["TooltipTarget"] =
+        [
+            "Wraps trigger content and forwards hover/focus coordinates to `TooltipService` with shared Tailwind tooltip rendering.",
+            "`TooltipTarget Position` uses the same `TooltipPosition` enum as service-opened tooltips, so declarative and imperative tooltip placement rules stay aligned."
+        ],
         ["CanvasWorkbench"] =
         [
             "Uses the shared CanvasLib workbench stylesheets exposed by `<CanvasLibHeadAssets />` under `_content/CanDoItAll.Components.CanvasLib/css/workbench/...` plus the typed `CanvasThemeTokenPack` theme vocabulary.",
@@ -104,6 +120,7 @@ public sealed partial class ComponentCatalogService
         ["Notification"] = [@"Tailwind\feedback\alerts.css"],
         ["HelpPopover"] = [@"Tailwind\surfaces\overlays.css"],
         ["Tooltip"] = [@"Tailwind\surfaces\overlays.css"],
+        ["TooltipTarget"] = [@"Tailwind\surfaces\overlays.css"],
         ["Dialog"] = [@"Tailwind\surfaces\overlays.css"]
     };
     private static readonly IReadOnlyDictionary<string, ComponentGuidanceDocument> GuidanceByFamily = new Dictionary<string, ComponentGuidanceDocument>(StringComparer.OrdinalIgnoreCase)
@@ -315,6 +332,9 @@ public sealed partial class ComponentCatalogService
         ["EmptyState"] = "Shared BaseLib empty-state component for zero-data, no-selection, and first-run orientation surfaces.",
         ["LoadingState"] = "Shared BaseLib loading-state component for progress and transition surfaces that should feel intentional instead of blank.",
         ["Alert"] = "Shared BaseLib alert component for actionable status and inline system feedback.",
+        ["Notification"] = "Shared BaseLib notification host for service-triggered toast stacks with per-message viewport positioning and compact X dismiss controls.",
+        ["Tooltip"] = "Shared BaseLib tooltip host for service-triggered contextual help with side, corner, and edge-aligned placement options.",
+        ["TooltipTarget"] = "Shared BaseLib tooltip trigger wrapper for hover and focus help that can choose a local TooltipPosition without page-level tooltip plumbing.",
         ["FormField"] = "Shared BaseLib form-field wrapper for label, helper, validation, and control alignment.",
         ["TextBox"] = "Shared BaseLib text input component for standard single-line entry flows.",
         ["DropDown"] = "Shared BaseLib selection input component for shared option picking flows.",
@@ -364,6 +384,30 @@ public sealed partial class ComponentCatalogService
             "path",
             "hash",
             "token"
+        ],
+        ["Notification"] =
+        [
+            "feedback",
+            "toast",
+            "notification-position",
+            "overlay-service",
+            "dismiss"
+        ],
+        ["Tooltip"] =
+        [
+            "contextual-help",
+            "placement",
+            "tooltip",
+            "overlay-service",
+            "hover"
+        ],
+        ["TooltipTarget"] =
+        [
+            "contextual-help",
+            "placement",
+            "tooltip-trigger",
+            "hover",
+            "focus"
         ],
         ["PageScaffold"] =
         [
@@ -436,6 +480,24 @@ public sealed partial class ComponentCatalogService
             ["Header"] = "Top page header region for orientation and primary actions.",
             ["Lead"] = "Optional lead content that introduces the workspace before the main body.",
             ["SecondaryRail"] = "Optional side rail for supporting context, shortcuts, or meta information."
+        },
+        ["Notification"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Position"] = "Default viewport stack used for messages that do not set `NotificationMessage.Position`; prefer per-message positions when the toast belongs near a specific action region."
+        },
+        ["TooltipTarget"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ChildContent"] = "Trigger content that opens the tooltip on hover and focus.",
+            ["CloseOnMouseLeave"] = "Closes the tooltip when the pointer leaves the trigger; keep enabled for short hover help.",
+            ["Delay"] = "Optional wait before showing the tooltip so dense toolbars do not flicker during quick pointer movement.",
+            ["Duration"] = "Optional lifetime after opening; set null or a longer value only for tooltip content that needs extra reading time.",
+            ["Position"] = "Tooltip placement relative to the pointer; choose the side or corner that keeps the bubble inside the viewport and away from the next likely action.",
+            ["TabIndex"] = "Keyboard focus order for the trigger wrapper.",
+            ["TestId"] = "Optional stable selector for Playwright checks of non-default tooltip placements.",
+            ["Text"] = "Short plain-text tooltip content for compact help.",
+            ["TooltipClass"] = "Additional Tailwind classes for the tooltip surface, without replacing the shared overlay structure.",
+            ["TooltipContent"] = "Rich tooltip content rendered with access to the shared TooltipService.",
+            ["TriggerClass"] = "Additional Tailwind classes for the inline trigger wrapper."
         }
     };
     private static readonly IReadOnlyDictionary<string, string> DefaultParameterDescriptionsByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -600,6 +662,54 @@ public sealed partial class ComponentCatalogService
                 "Default to `DisplayMode=IconOnly` with `Size=ExtraSmall` or `Size=Small` when the copy target is adjacent and self-explanatory.",
                 "Use `DisplayMode=Text`, `TextWithIcon`, or `IconButton` when the control stands alone or the copy target needs more context.",
                 "Let the built-in copied-state check icon provide lightweight confirmation instead of adding extra status chrome for simple copy flows."
+            ]),
+        ["Notification"] = new(
+            [
+                "Transient confirmations, save results, background task outcomes, and non-blocking feedback that should not interrupt the current workflow.",
+                "Short service-driven messages rendered from a single mounted `<Notification />` host."
+            ],
+            [
+                "Field validation, long instructions, or content that must remain visible until the user acts.",
+                "Confirmation, destructive, or decision-making flows where `DialogService` or an inline `Alert` is clearer."
+            ],
+            [
+                "Default to `TopRight` for ordinary desktop product toasts because it stays near global chrome and avoids the main reading column.",
+                "Use `TopCenter` only for global high-importance but still non-blocking status; if it requires a decision, use `DialogService` instead.",
+                "Use `BottomCenter` when the page header or top navigation is dense, when mobile reach matters, or when the toast should not cover top actions.",
+                "Use `BottomLeft`, `BottomRight`, `CenterLeft`, or `CenterRight` when feedback belongs near a side rail, list pane, or action region; keep the center of the working surface unobscured.",
+                "Avoid central notification stacks for routine messages; reserve `Center` or center-side positions for urgent transient feedback that still does not need a modal.",
+                "Keep notification copy short, keep the close affordance as the compact X control, and set `NotificationMessage.Position` or `Notify(..., position: ...)` when a message needs a different placement from the host default."
+            ]),
+        ["Tooltip"] = new(
+            [
+                "Short contextual help for icons, dense toolbar actions, small controls, and terms that need quick clarification.",
+                "Service-triggered tooltip content rendered from the single mounted `<Tooltip />` host."
+            ],
+            [
+                "Required instructions, validation errors, long explanatory copy, or content users need to compare while working.",
+                "Replacing visible labels on controls that are not already obvious from context."
+            ],
+            [
+                "Default to `Top` or `Right` when there is enough room, choosing the side that keeps the bubble out of the main reading path.",
+                "Use `Bottom` for triggers close to the top edge and `Top` for triggers near the bottom edge, sticky footers, or lower toolbars.",
+                "Use `Left` or `Right` for inline controls and icon clusters where vertical placement would cover neighboring rows.",
+                "Use corner and edge placements such as `TopLeft`, `TopRight`, `BottomLeft`, `BottomRight`, `LeftTop`, and `RightBottom` near viewport, card, toolbar, or panel corners so the tooltip stays visible and avoids adjacent controls.",
+                "Prefer `TooltipTarget Position` for declarative hover and focus help; use `TooltipOptions.Position` when opening through `TooltipService` from custom pointer logic.",
+                "Validate non-default placements with Playwright at the sandbox viewport sizes that match the target workflow, especially mobile or dense toolbar cases."
+            ]),
+        ["TooltipTarget"] = new(
+            [
+                "Declarative hover and focus help around a single trigger element.",
+                "Icon-only or compact controls where the trigger should stay local to the markup."
+            ],
+            [
+                "Complex help content that needs persistent reading or multiple interactions.",
+                "Cases where visible helper text, a `HelpPopover`, or an inline `Alert` would be more discoverable."
+            ],
+            [
+                "Pick the same `TooltipPosition` rules as the tooltip service: choose the side or corner that keeps the bubble inside the viewport and away from the next likely click target.",
+                "Keep `Text` short; use `TooltipContent` only for compact rich content.",
+                "Use `Delay` for crowded controls to avoid flicker, and keep `CloseOnMouseLeave` true for normal hover help."
             ]),
         ["ListDetailShell"] = new(
             [

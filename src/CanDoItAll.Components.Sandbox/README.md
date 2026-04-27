@@ -44,6 +44,10 @@ The `/groups/overlays` route mounts and exercises BaseLib overlay services:
 
 The sandbox layout mounts `<DialogHost />`, `<Tooltip />`, and `<Notification />` once so pages can focus on service calls instead of overlay plumbing.
 
+Use the overlay examples as the visual proof target for position changes. Notifications should be checked at the positions that matter to the consuming workflow, especially `TopRight`, `TopCenter`, `BottomCenter`, and any side-aligned stack used near list/detail or rail layouts. Tooltip checks should include the requested `TooltipPosition` value and at least one constrained viewport when using corner or edge placements such as `TopLeft`, `BottomRight`, `LeftTop`, or `RightBottom`.
+
+The sandbox examples should stay aligned with the Components MCP guidance: choose positions that avoid covering primary controls, keep notification alerts on the compact X close control, and use Playwright snapshots or locator checks for non-default overlay placement.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

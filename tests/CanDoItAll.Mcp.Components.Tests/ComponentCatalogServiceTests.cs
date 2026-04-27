@@ -140,6 +140,36 @@ public sealed class ComponentCatalogServiceTests
     }
 
     [Fact]
+    public void Component_Get_Returns_Overlay_Position_Guidance_For_Tooltip_And_Notification()
+    {
+        var service = CreateService();
+
+        var notification = service.GetComponent("Notification");
+        var tooltip = service.GetComponent("Tooltip");
+        var tooltipTarget = service.GetComponent("TooltipTarget");
+
+        Assert.Contains("per-message viewport positioning", notification.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(notification.Tags, tag => string.Equals(tag, "notification-position", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(notification.CssNotes, note => note.Contains("NotificationMessage.Position", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(notification.Guidance.CompositionRules, rule => rule.Contains("TopRight", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(notification.Guidance.CompositionRules, rule => rule.Contains("BottomCenter", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(notification.Guidance.CompositionRules, rule => rule.Contains("DialogService", StringComparison.OrdinalIgnoreCase));
+
+        var notificationPosition = Assert.Single(notification.Parameters, parameter => string.Equals(parameter.Name, "Position", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("BottomCenter", notificationPosition.AllowedValues);
+        Assert.Contains("per-message", notificationPosition.Summary ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains("side, corner, and edge-aligned placement", tooltip.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(tooltip.CssNotes, note => note.Contains("TooltipOptions.Position", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(tooltip.Guidance.CompositionRules, rule => rule.Contains("TopLeft", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(tooltip.Guidance.CompositionRules, rule => rule.Contains("Playwright", StringComparison.OrdinalIgnoreCase));
+
+        var tooltipTargetPosition = Assert.Single(tooltipTarget.Parameters, parameter => string.Equals(parameter.Name, "Position", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("RightBottom", tooltipTargetPosition.AllowedValues);
+        Assert.Contains("viewport", tooltipTargetPosition.Summary ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void All_Discovered_Components_Resolve_To_Existing_Source_Paths()
     {
         var service = CreateService();

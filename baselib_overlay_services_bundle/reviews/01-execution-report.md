@@ -26,6 +26,13 @@
 - Screenshots were visually reviewed for readable text, coherent z-order, and unclipped modal chrome. Playwright console checks after final browser smoke reported 0 new errors and 0 warnings.
 - Validation warning: focused test restore still reports existing package vulnerability warnings for `OpenTelemetry.Api` 1.13.1 and `Microsoft.AspNetCore.DataProtection` 10.0.6 in unrelated projects.
 
+## Follow-up Documentation Addendum
+
+- Added Components MCP metadata for `Notification`, `Tooltip`, and `TooltipTarget` so agents get explicit placement rules, service-vs-component usage notes, Tailwind/CSS guidance, and parameter descriptions from `component_get`.
+- Updated BaseLib, Sandbox, and Components MCP README guidance with position decision rules: notifications protect the active workflow and use compact X dismissal; tooltips choose a side, corner, or edge alignment that keeps help visible without covering the next action.
+- Validation: `dotnet test tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj --logger "console;verbosity=minimal"` passed with 16 tests.
+- Runtime note: the already-running Components MCP process in the validation session continued serving its old in-memory assembly until the MCP server is re-instanced.
+
 ## Raw Note Closure
 
 | Raw note | Status | Proof |

@@ -60,6 +60,16 @@ Notifications can be positioned per message with `NotificationMessage.Position` 
 
 Tooltips can be positioned with `TooltipOptions.Position` or `TooltipTarget Position`. The enum supports the standard `Top`, `Bottom`, `Left`, and `Right` placements plus corner and edge alignments such as `TopLeft`, `BottomRight`, `LeftTop`, and `RightBottom`.
 
+### Overlay Positioning Guidance
+
+Notification placement should protect the current workflow first. Use `TopRight` for ordinary desktop toasts, `BottomCenter` when top navigation or mobile reach would make top stacks awkward, and side positions such as `BottomLeft`, `CenterLeft`, or `CenterRight` when the message belongs near a side rail, list pane, or action region. Reserve `TopCenter` for global high-importance messages that still do not require a decision. If the user must choose, confirm, or resolve something before continuing, use `DialogService` or an inline `Alert` instead of a notification.
+
+Notification alerts intentionally use only the compact X close control so the message width stays available for useful summary and detail text. Keep copy short, set `Duration` deliberately, and use per-message `Position` when one notification needs to appear somewhere other than the host default.
+
+Tooltip placement should keep the bubble visible and away from the next likely action. Use `Top` or `Right` when there is room, `Bottom` for triggers near the top edge, `Top` for triggers near lower toolbars or footers, and `Left` or `Right` for dense inline controls. Use corner or edge placements such as `TopLeft`, `BottomRight`, `LeftTop`, or `RightBottom` near viewport, card, toolbar, or panel corners so the tooltip does not cover neighboring controls.
+
+For agent-driven changes, query the Components MCP metadata for `Notification`, `Tooltip`, or `TooltipTarget` before choosing non-default positions, then validate unusual placements in the sandbox with Playwright at the viewport sizes used by the target page.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
