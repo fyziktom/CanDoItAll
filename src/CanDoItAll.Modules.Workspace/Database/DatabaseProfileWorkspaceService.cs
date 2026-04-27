@@ -8,6 +8,7 @@ public sealed class DatabaseProfileWorkspaceService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IDatabaseSnapshotService snapshotService,
+    IDatabaseTransferService transferService,
     IDatabaseDriverRegistry driverRegistry,
     IAppDatabaseBootstrapper bootstrapper,
     IDatabaseSwitchCoordinator switchCoordinator,
@@ -26,6 +27,28 @@ public sealed class DatabaseProfileWorkspaceService(
     public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
     {
         return profileService.GetCurrentSelectionAsync(cancellationToken);
+    }
+
+    public Task<IReadOnlyList<DatabaseTransferSourceSummary>> ListTransferSourcesAsync(
+        Guid targetProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        return transferService.ListSourcesAsync(targetProfileId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<DatabaseTransferItemPreview>> PreviewTransferAsync(
+        Guid sourceProfileId,
+        Guid targetProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        return transferService.PreviewAsync(sourceProfileId, targetProfileId, cancellationToken);
+    }
+
+    public Task<DatabaseTransferResult> TransferSettingsAsync(
+        DatabaseTransferRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return transferService.TransferAsync(request, cancellationToken);
     }
 
     public async Task<DatabaseProfileEditorModel> GetCurrentEditorAsync(CancellationToken cancellationToken = default)

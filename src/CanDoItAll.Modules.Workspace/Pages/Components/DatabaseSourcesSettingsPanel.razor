@@ -427,6 +427,14 @@
                                         Click="CreateEmptyAsync"
                                         data-testid="database-profile-create-empty" />
                             }
+                            @if (databaseProfileModel.Id.HasValue)
+                            {
+                                <Button Text="Transfer settings"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Disabled="@(databaseBusy || IsDatabaseUiLocked)"
+                                        Click="@(() => OpenTransferDialogAsync(databaseProfileModel.Id.Value))"
+                                        data-testid="database-profile-transfer-settings" />
+                            }
                         </SecondaryActions>
                         <PrimaryActions>
                             <Button Text="Save data source"
@@ -459,10 +467,138 @@
     </DetailContent>
 </ListDetailShell>
 
+<Dialog IsOpen="@transferDialogOpen"
+        Title="Transfer database settings"
+        Eyebrow="Data sources"
+        Subtitle="@TransferDialogSubtitle"
+        Size="ModalSize.Wide"
+        TestId="database-transfer-dialog"
+        OnClose="CloseTransferDialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (!string.IsNullOrWhiteSpace(transferMessage))
+            {
+                <div class="@TransferMessageClass"
+                     data-testid="database-transfer-message">
+                    @transferMessage
+                </div>
+            }
+
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
+                     data-testid="database-transfer-target-summary">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Target database</p>
+                        <p class="text-base font-semibold text-slate-950">@TransferTargetName</p>
+                        <p class="text-sm leading-6 text-slate-600 break-all">@TransferTargetDescriptor</p>
+                    </Stack>
+                </div>
+
+                <div>
+                    <label class="cda-field-label">Copy settings from</label>
+                    <select class="cda-input"
+                            value="@transferSourceProfileId?.ToString()"
+                            disabled="@(transferBusy || transferSources.Count == 0)"
+                            @onchange="ChangeTransferSourceAsync"
+                            data-testid="database-transfer-source-select">
+                        <option value="">Select source database</option>
+                        @foreach (var source in transferSources)
+                        {
+                            <option value="@source.ProfileId">@source.DisplayName (@DescribeSource(source.SourceKind))</option>
+                        }
+                    </select>
+                    @if (transferSources.Count == 0)
+                    {
+                        <p class="mt-2 text-sm leading-6 text-slate-600">No other saved database profiles are available as a source.</p>
+                    }
+                </div>
+            </Grid>
+
+            @if (transferItems.Count > 0)
+            {
+                <Stack GapScale="LayoutGap.Small" data-testid="database-transfer-items">
+                    @foreach (var item in transferItems)
+                    {
+                        <label class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3"
+                               data-testid="@($"database-transfer-item-{item.Descriptor.Key}")">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" AlignItems="AlignItems.Start">
+                                    <input type="checkbox"
+                                           class="mt-1 h-4 w-4 rounded border-slate-300"
+                                           checked="@selectedTransferItemKeys.Contains(item.Descriptor.Key)"
+                                           disabled="@(transferBusy || !item.IsAvailable)"
+                                           @onchange="@((args) => ToggleTransferItem(item.Descriptor.Key, args))" />
+                                    <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                            <span class="font-semibold text-slate-950">@item.Descriptor.Label</span>
+                                            @if (item.Descriptor.IsSensitive)
+                                            {
+                                                <StatusBadge Tone="warning" Text="Encrypted" />
+                                            }
+                                            @if (!item.IsAvailable)
+                                            {
+                                                <StatusBadge Tone="neutral" Text="Empty source" />
+                                            }
+                                        </Cluster>
+                                        <p class="text-sm leading-6 text-slate-600">@item.Descriptor.Description</p>
+                                        <p class="text-sm leading-6 text-slate-600">@item.Summary</p>
+                                        @if (!string.IsNullOrWhiteSpace(item.Warning))
+                                        {
+                                            <p class="text-sm leading-6 text-amber-700">@item.Warning</p>
+                                        }
+                                    </Stack>
+                                </Cluster>
+
+                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-slate-500">
+                                    <span>Source: @item.SourceRecordCount</span>
+                                    <span>Target: @item.TargetRecordCount</span>
+                                </Stack>
+                            </Split>
+                        </label>
+                    }
+                </Stack>
+            }
+            else if (transferSourceProfileId.HasValue && !transferBusy)
+            {
+                <EmptyState Eyebrow="No transfer items"
+                            Title="No settings groups are available"
+                            Description="The selected source database did not return transferable settings." />
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <p class="text-sm leading-6 text-slate-600">Encrypted values are copied as protected payloads and are not shown here.</p>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@transferBusy"
+                        Click="CloseTransferDialog" />
+                <Button Text="Transfer selected"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@(!CanTransferSelected)"
+                        Click="TransferSelectedSettingsAsync"
+                        data-testid="database-transfer-apply" />
+            </Cluster>
+        </Split>
+    </Footer>
+</Dialog>
+
 @code {
     private DatabaseProfileEditorModel databaseProfileModel = NewManagedSqliteProfile();
     private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
     private DatabaseSelectionStateModel? currentSelection;
+    private IReadOnlyList<DatabaseTransferSourceSummary> transferSources = [];
+    private IReadOnlyList<DatabaseTransferItemPreview> transferItems = [];
+    private readonly HashSet<string> selectedTransferItemKeys = new(StringComparer.OrdinalIgnoreCase);
     private string profileSearch = string.Empty;
     private string cloneDisplayName = string.Empty;
     private string snapshotProfileName = string.Empty;
@@ -472,7 +608,13 @@
     private string? latestSnapshotCid;
     private string? databaseMessage;
     private string databaseMessageTone = "neutral";
+    private string? transferMessage;
+    private string transferMessageTone = "neutral";
+    private Guid? transferTargetProfileId;
+    private Guid? transferSourceProfileId;
     private bool databaseBusy;
+    private bool transferDialogOpen;
+    private bool transferBusy;
 
     private bool IsDatabaseUiLocked => currentSelection?.IsRuntimeLocked == true;
 
@@ -487,6 +629,44 @@
         => databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql ||
            (databaseProfileModel.ProviderKind == DatabaseProviderKind.Sqlite &&
             databaseProfileModel.SourceKind is DatabaseProfileSourceKind.ManagedSqlite or DatabaseProfileSourceKind.ExternalSqliteFile or DatabaseProfileSourceKind.ImportedSqlite);
+
+    private bool CanTransferSelected
+        => transferDialogOpen &&
+           !transferBusy &&
+           transferTargetProfileId.HasValue &&
+           transferSourceProfileId.HasValue &&
+           selectedTransferItemKeys.Count > 0;
+
+    private string TransferDialogSubtitle
+        => transferTargetProfileId.HasValue
+            ? "Choose a source database and the settings groups to copy into the selected target."
+            : "Choose a target database before transferring settings.";
+
+    private string TransferTargetName
+        => databaseProfiles.FirstOrDefault(profile => profile.Id == transferTargetProfileId)?.DisplayName
+           ?? databaseProfileModel.DisplayName
+           ?? "Selected database";
+
+    private string TransferTargetDescriptor
+        => databaseProfiles.FirstOrDefault(profile => profile.Id == transferTargetProfileId)?.Descriptor
+           ?? "Save or select a database profile first.";
+
+    private string TransferMessageClass
+    {
+        get
+        {
+            var toneClass = transferMessageTone switch
+            {
+                "success" => "border-emerald-200 bg-emerald-50 text-emerald-950",
+                "warning" => "border-amber-300 bg-amber-50 text-amber-950",
+                "danger" => "border-rose-200 bg-rose-50 text-rose-950",
+                "info" => "border-sky-200 bg-sky-50 text-sky-950",
+                _ => "border-slate-200 bg-slate-50 text-slate-700"
+            };
+
+            return $"rounded-[1.35rem] border px-4 py-3 text-sm leading-6 {toneClass}";
+        }
+    }
 
     private IReadOnlyList<DatabaseProfileSummary> FilteredProfiles => databaseProfiles
         .Where(profile =>
@@ -626,8 +806,9 @@
             return;
         }
 
+        var targetProfileId = databaseProfileModel.Id.Value;
         databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.CreateEmptyAsync(databaseProfileModel.Id.Value);
+        var result = await DatabaseProfileWorkspaceService.CreateEmptyAsync(targetProfileId);
         databaseBusy = false;
         if (result.IsFailure)
         {
@@ -635,8 +816,163 @@
             return;
         }
 
-        await ReloadAsync(databaseProfileModel.Id.Value);
-        SetDatabaseMessage("Empty database created and schema bootstrapped.", "success");
+        await ReloadAsync(targetProfileId);
+        SetDatabaseMessage("Empty database created and schema bootstrapped. Choose any baseline settings to transfer.", "success");
+        await OpenTransferDialogAsync(targetProfileId);
+    }
+
+    private async Task OpenTransferDialogAsync(Guid targetProfileId)
+    {
+        transferDialogOpen = true;
+        transferBusy = true;
+        transferTargetProfileId = targetProfileId;
+        transferSourceProfileId = null;
+        transferItems = [];
+        transferSources = [];
+        selectedTransferItemKeys.Clear();
+        transferMessage = null;
+        transferMessageTone = "neutral";
+
+        try
+        {
+            transferSources = await DatabaseProfileWorkspaceService.ListTransferSourcesAsync(targetProfileId);
+            transferSourceProfileId = ResolveDefaultTransferSource(targetProfileId);
+        }
+        catch (Exception ex)
+        {
+            transferMessage = $"Could not load transfer sources: {ex.Message}";
+            transferMessageTone = "danger";
+        }
+        finally
+        {
+            transferBusy = false;
+        }
+
+        if (transferSourceProfileId.HasValue)
+        {
+            await RefreshTransferPreviewAsync(selectAvailableItems: true);
+        }
+    }
+
+    private Guid? ResolveDefaultTransferSource(Guid targetProfileId)
+    {
+        if (currentSelection is not null &&
+            currentSelection.ActiveProfileId != targetProfileId &&
+            transferSources.Any(source => source.ProfileId == currentSelection.ActiveProfileId))
+        {
+            return currentSelection.ActiveProfileId;
+        }
+
+        return transferSources.FirstOrDefault()?.ProfileId;
+    }
+
+    private async Task ChangeTransferSourceAsync(ChangeEventArgs args)
+    {
+        if (!Guid.TryParse(args.Value?.ToString(), out var sourceProfileId))
+        {
+            transferSourceProfileId = null;
+            transferItems = [];
+            selectedTransferItemKeys.Clear();
+            return;
+        }
+
+        transferSourceProfileId = sourceProfileId;
+        await RefreshTransferPreviewAsync(selectAvailableItems: true);
+    }
+
+    private async Task RefreshTransferPreviewAsync(bool selectAvailableItems)
+    {
+        if (!transferSourceProfileId.HasValue || !transferTargetProfileId.HasValue)
+        {
+            transferItems = [];
+            selectedTransferItemKeys.Clear();
+            return;
+        }
+
+        transferBusy = true;
+        transferMessage = null;
+        try
+        {
+            transferItems = await DatabaseProfileWorkspaceService.PreviewTransferAsync(
+                transferSourceProfileId.Value,
+                transferTargetProfileId.Value);
+
+            if (selectAvailableItems)
+            {
+                selectedTransferItemKeys.Clear();
+                foreach (var item in transferItems.Where(item => item.IsAvailable))
+                {
+                    selectedTransferItemKeys.Add(item.Descriptor.Key);
+                }
+            }
+            else
+            {
+                selectedTransferItemKeys.IntersectWith(transferItems.Select(item => item.Descriptor.Key));
+            }
+        }
+        catch (Exception ex)
+        {
+            transferItems = [];
+            selectedTransferItemKeys.Clear();
+            transferMessage = $"Could not preview settings transfer: {ex.Message}";
+            transferMessageTone = "danger";
+        }
+        finally
+        {
+            transferBusy = false;
+        }
+    }
+
+    private void ToggleTransferItem(string key, ChangeEventArgs args)
+    {
+        var selected = args.Value is bool value
+            ? value
+            : string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        if (selected)
+        {
+            selectedTransferItemKeys.Add(key);
+            return;
+        }
+
+        selectedTransferItemKeys.Remove(key);
+    }
+
+    private async Task TransferSelectedSettingsAsync()
+    {
+        if (!transferSourceProfileId.HasValue || !transferTargetProfileId.HasValue)
+        {
+            transferMessage = "Select a source and target database before transferring settings.";
+            transferMessageTone = "warning";
+            return;
+        }
+
+        transferBusy = true;
+        transferMessage = null;
+        var result = await DatabaseProfileWorkspaceService.TransferSettingsAsync(new DatabaseTransferRequest
+        {
+            SourceProfileId = transferSourceProfileId.Value,
+            TargetProfileId = transferTargetProfileId.Value,
+            ItemKeys = selectedTransferItemKeys.ToList(),
+            ReplaceExisting = true
+        });
+        transferBusy = false;
+
+        transferMessage = string.Join(" ", result.Items.Select(item => $"{item.Label}: {item.Message}"));
+        transferMessageTone = result.IsSuccess ? "success" : "danger";
+        SetDatabaseMessage(result.IsSuccess
+            ? $"Transferred {result.RecordsCopied} setting record(s)."
+            : "One or more settings groups could not be transferred.",
+            result.IsSuccess ? "success" : "danger");
+
+        await RefreshTransferPreviewAsync(selectAvailableItems: false);
+        await ReloadAsync(transferTargetProfileId.Value);
+    }
+
+    private Task CloseTransferDialog()
+    {
+        transferDialogOpen = false;
+        transferBusy = false;
+        return Task.CompletedTask;
     }
 
     private async Task CreateCloneAsync()

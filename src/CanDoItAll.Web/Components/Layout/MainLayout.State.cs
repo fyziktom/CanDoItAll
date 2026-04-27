@@ -28,9 +28,16 @@ public partial class MainLayout
     private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
     private DatabaseSelectionStateModel? databaseSelection;
     private Guid? selectedDatabaseProfileId;
+    private Guid? pendingCreatedDatabaseProfileId;
+    private string pendingCreatedDatabaseName = string.Empty;
+    private IReadOnlyList<DatabaseTransferSourceSummary> createdDatabaseTransferSources = [];
+    private IReadOnlyList<DatabaseTransferItemPreview> createdDatabaseTransferItems = [];
+    private readonly HashSet<string> createdDatabaseSelectedTransferItemKeys = new(StringComparer.OrdinalIgnoreCase);
+    private Guid? createdDatabaseTransferSourceProfileId;
     private bool databaseDialogOpen;
     private bool databaseDialogStartupMode;
     private bool databaseDialogBusy;
+    private bool createdDatabaseTransferBusy;
     private string? databaseProfileMessage;
     private long lastObservedDatabaseSwitchGeneration;
     private string? databaseSwitchAlert;
