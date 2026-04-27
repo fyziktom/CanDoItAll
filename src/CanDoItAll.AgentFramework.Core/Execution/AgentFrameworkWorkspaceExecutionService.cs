@@ -9,7 +9,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IAgentExecutionEventSink executionEventSink,
     IAgentExecutionCheckpointBridge executionCheckpointBridge,
     IProviderProfileRegistry providerRegistry,
-    IAgentProviderCredentialResolver providerCredentialResolver)
+    IAgentProviderCredentialResolver providerCredentialResolver,
+    IAgentOutputRepairService? outputRepairService = null)
 {
+    private readonly IAgentOutputRepairService outputRepairService =
+        outputRepairService ?? DefaultAgentOutputRepairService.Instance;
+
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 }

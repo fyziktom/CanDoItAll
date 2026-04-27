@@ -70,3 +70,7 @@ Required doc sections:
 ## Acceptance gate
 
 A reviewer must be able to inspect the docs and test output and know which safety gates passed, which were skipped, and why.
+
+## Execution Result
+
+Status: Complete with repo-wide caveat. Runtime docs and command proof were updated; focused bundle tests pass. Repo-wide integration failures are documented separately because they are outside this bundle surface.

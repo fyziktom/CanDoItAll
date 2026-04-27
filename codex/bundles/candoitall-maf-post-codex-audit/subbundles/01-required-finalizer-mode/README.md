@@ -76,3 +76,7 @@ Document finalizer modes and when each is allowed.
 ## Acceptance gate
 
 A process-step run with required finalizer mode must not complete unless exactly one valid `submit_process_step_outcome` call is captured.
+
+## Execution Result
+
+Status: Complete. Governed process dispatch now uses typed invocation policy to require the process-step finalizer, and deterministic process runtimes emit matching finalizer payloads for `ProcessStepOutcomeResult`.

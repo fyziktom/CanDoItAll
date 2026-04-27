@@ -91,14 +91,14 @@ Do not read workflow approval, failure, branch, or transition decisions from `Hu
 
 ## Repair and retry
 
-Invalid output is not accepted silently. A retry prompt should include only:
+Invalid output is not accepted silently. Governed process-step runs default to one bounded repair attempt, and configured attempts are clamped to a maximum of two. A repair request includes only:
 
 - the validation errors,
 - the invalid raw output or its redacted form,
 - the target contract name and schema expectation,
 - the instruction to return only the target structured output.
 
-Retries must be bounded. After the retry limit, return a typed failure or human escalation request. Repaired output must go through the same deserialization, validation, and policy checks as first-pass output.
+The default repair service is conservative. It can recover a single balanced JSON object from wrapped prose, then re-runs normal deserialization and validation. After the retry limit, the run fails with structured validation errors. Required finalizer missing, duplicate, or invalid failures are not repaired as ordinary assistant text.
 
 ## Finalizer tools
 
@@ -108,7 +108,20 @@ The agent instruction should say that the finalizer tool must be called exactly 
 
 `AgentFinalizerPolicy` and `DefaultAgentFinalizerValidator` enforce the exact-once invariant. Required finalizers fail when the expected tool is missing, called multiple times, has malformed arguments, or lacks a registered output validator. Assistant text is ignored when a finalizer is required.
 
-Process-step runs that use `ProcessStepOutcomeResult` now attach `submit_process_step_outcome` as a typed shadow finalizer. The execution service logs whether the finalizer was observed, validates captured arguments through the same validator registry, and compares valid finalizer output to the structured response. Structured output remains the default process-step source of truth in shadow mode. Set execution metadata `agentFinalizerMode` to `required` for a critical path that must ignore assistant text and complete only from the finalizer payload.
+Governed process automation sets `agentFinalizerMode` to `required` for process-step runs. The execution service validates the finalizer before structured response validation, replaces `ResponseText` with the finalizer payload in required mode, and creates the persisted assistant transcript only after that finalization step.
+
+Current typed finalizer tools:
+
+- `submit_process_step_outcome` for `ProcessStepOutcomeResult`
+- `submit_code_review_result` for `CodeReviewResult`
+- `submit_architecture_review_result` for `ArchitectureReviewResult`
+- `submit_implementation_plan` for `ImplementationPlanResult`
+- `submit_test_plan` for `TestPlanResult`
+- `submit_tool_execution_decision` for `ToolExecutionDecisionResult`
+- `submit_process_state_patch` for `ProcessStatePatch`
+- `submit_human_escalation_request` for `HumanEscalationRequest`
+
+Shadow mode remains available for non-critical telemetry comparison, but it must be selected explicitly through execution metadata or policy.
 
 ## Adding a contract
 
@@ -122,4 +135,4 @@ Process-step runs that use `ProcessStepOutcomeResult` now attach `submit_process
 
 ## Limitations
 
-Structured output support depends on the configured provider. Providers may ignore or partially support JSON-schema response format, so post-generation validation remains mandatory. Manual and auto-approved approval continuations preserve the structured contract and are validated before a governed run can complete successfully.
+Structured output support depends on the configured provider and transport. Compatible OpenAI and Azure OpenAI chat-completion clients may use JSON-schema response format; ordinary function-tool support does not imply tool-approval support. Post-generation validation remains mandatory. Manual and auto-approved approval continuations preserve the structured contract and are validated before a governed run can complete successfully.

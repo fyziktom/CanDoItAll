@@ -18,6 +18,13 @@ public interface IAgentOutputRepairService<TOutput>
         CancellationToken cancellationToken);
 }
 
+public interface IAgentOutputRepairService
+{
+    Task<AgentOutputRepairAttemptResult> TryRepairAsync(
+        AgentOutputRepairRequest repairRequest,
+        CancellationToken cancellationToken);
+}
+
 public static class AgentOutputJson
 {
     public static JsonSerializerOptions SerializerOptions { get; } = CreateSerializerOptions();
@@ -69,7 +76,25 @@ public static class AgentOutputJson
                 }));
         }
 
-        var validation = validator.Validate(output);
+        AgentOutputValidationResult validation;
+        try
+        {
+            validation = validator.Validate(output);
+        }
+        catch (Exception exception)
+        {
+            return AgentOutputPipelineResult<TOutput>.Failure(
+                rawOutput,
+                AgentOutputValidationResult.Failure(new AgentOutputValidationError
+                {
+                    Code = "agent.output.validator_exception",
+                    Message = exception.Message,
+                    Path = "$",
+                    Severity = AgentOutputValidationSeverity.Critical
+                }),
+                output);
+        }
+
         return validation.IsValid
             ? AgentOutputPipelineResult<TOutput>.Success(rawOutput, output)
             : AgentOutputPipelineResult<TOutput>.Failure(rawOutput, validation, output);
@@ -136,6 +161,17 @@ public sealed class ProcessStatePatchValidator(
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
+        if (output.Operations is null)
+        {
+            errors.Add(new AgentOutputValidationError
+            {
+                Code = "process.patch.operations_required",
+                Message = "Process state patch operations are required.",
+                Path = "$.operations"
+            });
+            return AgentOutputValidationResult.Failure([.. errors]);
+        }
+
         if (output.Operations.Count == 0)
         {
             errors.Add(new AgentOutputValidationError
@@ -148,7 +184,19 @@ public sealed class ProcessStatePatchValidator(
 
         for (var index = 0; index < output.Operations.Count; index++)
         {
-            ValidateOperation(output.Operations[index], index, errors);
+            var operation = output.Operations[index];
+            if (operation is null)
+            {
+                errors.Add(new AgentOutputValidationError
+                {
+                    Code = "process.patch.operation_required",
+                    Message = "Patch operation entries must not be null.",
+                    Path = $"$.operations[{index}]"
+                });
+                continue;
+            }
+
+            ValidateOperation(operation, index, errors);
         }
 
         return errors.Count == 0
@@ -228,5 +276,102 @@ public sealed class ProcessStatePatchValidator(
         return protectedPaths.Any(protectedPath =>
             path.Equals(protectedPath, StringComparison.Ordinal) ||
             path.StartsWith(protectedPath.TrimEnd('/') + "/", StringComparison.Ordinal));
+    }
+}
+
+public sealed class DefaultAgentOutputRepairService : IAgentOutputRepairService
+{
+    public static DefaultAgentOutputRepairService Instance { get; } = new();
+
+    public Task<AgentOutputRepairAttemptResult> TryRepairAsync(
+        AgentOutputRepairRequest repairRequest,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(repairRequest);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var repairedJson = TryExtractFirstJsonObject(repairRequest.InvalidRawOutput);
+        if (string.IsNullOrWhiteSpace(repairedJson) ||
+            string.Equals(repairedJson, (repairRequest.InvalidRawOutput ?? string.Empty).Trim(), StringComparison.Ordinal))
+        {
+            return Task.FromResult(new AgentOutputRepairAttemptResult
+            {
+                Succeeded = false,
+                RepairedRawOutput = repairRequest.InvalidRawOutput ?? string.Empty,
+                RemainingErrors = repairRequest.ValidationErrors,
+                FailureMessage = "No bounded JSON-object repair was available for this output."
+            });
+        }
+
+        return Task.FromResult(new AgentOutputRepairAttemptResult
+        {
+            Succeeded = true,
+            RepairedRawOutput = repairedJson,
+            RemainingErrors = []
+        });
+    }
+
+    private static string TryExtractFirstJsonObject(string? rawOutput)
+    {
+        if (string.IsNullOrWhiteSpace(rawOutput))
+        {
+            return string.Empty;
+        }
+
+        var text = rawOutput.Trim();
+        var start = text.IndexOf('{');
+        if (start < 0)
+        {
+            return string.Empty;
+        }
+
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+        for (var index = start; index < text.Length; index++)
+        {
+            var current = text[index];
+            if (escaped)
+            {
+                escaped = false;
+                continue;
+            }
+
+            if (current == '\\' && inString)
+            {
+                escaped = true;
+                continue;
+            }
+
+            if (current == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+
+            if (inString)
+            {
+                continue;
+            }
+
+            if (current == '{')
+            {
+                depth++;
+                continue;
+            }
+
+            if (current != '}')
+            {
+                continue;
+            }
+
+            depth--;
+            if (depth == 0)
+            {
+                return text[start..(index + 1)];
+            }
+        }
+
+        return string.Empty;
     }
 }

@@ -34,7 +34,14 @@ public sealed record ToolInvocationPolicyContext(
     string ExecutionRunId,
     string SourceKind,
     string ProcessRunId,
-    string ProcessStepId);
+    string ProcessStepId,
+    bool ApprovalWrapperEffectiveForProvider = false,
+    bool ApplicationApprovalAvailable = false)
+{
+    public bool HasEffectiveApprovalPath =>
+        (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
+        ApplicationApprovalAvailable;
+}
 
 public sealed record ToolInvocationPolicyDecision(
     ToolInvocationDecisionKind Kind,
@@ -109,16 +116,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 return ValueTask.FromResult(ToolInvocationPolicyDecision.Allow(signature));
             }
 
-            if (context.ApprovalWrapperAvailable)
-            {
-                return ValueTask.FromResult(ToolInvocationPolicyDecision.RequireApproval(
-                    signature,
-                    $"Tool '{context.ToolName}' is a mutation tool and must pass through the configured approval wrapper."));
-            }
-
-            return ValueTask.FromResult(ToolInvocationPolicyDecision.Deny(
+            var approvalReason = context.HasEffectiveApprovalPath
+                ? $"Tool '{context.ToolName}' is a mutation tool and must pass through the configured approval path."
+                : $"Tool '{context.ToolName}' is a mutation tool, but no effective approval path is available for this provider and run.";
+            return ValueTask.FromResult(ToolInvocationPolicyDecision.RequireApproval(
                 signature,
-                $"Tool '{context.ToolName}' is a mutation tool, but neither auto-approval nor a framework approval wrapper is available."));
+                approvalReason));
         }
 
         return ValueTask.FromResult(ToolInvocationPolicyDecision.Allow(signature));

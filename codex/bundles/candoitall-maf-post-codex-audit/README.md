@@ -5,6 +5,12 @@ Scope: Review of the post-implementation repository snapshot after Codex claimed
 
 This bundle is intentionally execution-grade: it is not a design essay. It contains concrete findings, repo evidence, acceptance criteria, and Codex-ready implementation subbundles.
 
+## Execution Status
+
+Status: Implemented and bundle-surface validated on 2026-04-27.
+
+The post-audit gaps R01-R10 have been closed in code and documentation. Focused unit and integration proof is green. Repo-wide integration acceptance remains blocked by unrelated existing failures documented in `docs/agent-runtime-hardening-verification.md`.
+
 ## Verdict
 
 Codex implemented several important pieces correctly:
@@ -19,7 +25,7 @@ Codex implemented several important pieces correctly:
 - Calculator-specific recovery guidance was moved out of the generic MAF runtime.
 - Unit tests were added for contracts, finalizer policy, tool policy, and provider matrix.
 
-However, this is not yet production-stable enough. The most important gaps are:
+The original audit found these production-stability gaps:
 
 1. Required finalizer mode is not actually enabled for process automation; current process runs pass `MetadataJson: "{}"`, and process-step default is `Shadow`.
 2. Assistant chat records are created before required-finalizer validation can replace `runtimeResponse.ResponseText`, so the persisted transcript may not match the final machine output.
@@ -28,7 +34,9 @@ However, this is not yet production-stable enough. The most important gaps are:
 5. Tool policy returns `RequireApproval`, but middleware only blocks `Deny`/`SkipExecution`; unsupported approval transports can become unsafe if wrappers are absent or misreported.
 6. Several validators can throw `NullReferenceException` on missing/null collections instead of returning validation errors.
 7. Finalizer support is currently implemented only for `ProcessStepOutcomeResult`, not for the other critical decision DTOs.
-8. There is no build/test proof in this audit environment because `dotnet` is unavailable here. Codex must produce command output from a real SDK 10.0.200 environment.
+8. There was no build/test proof in the audit environment because `dotnet` was unavailable there. Execution proof was captured with .NET SDK 10.0.203.
+
+The implementation closes these with required finalizer policy for governed process runs, transcript persistence after finalization, bounded structured-output repair, provider/approval capability separation, middleware enforcement for ineffective approval paths, null-safe validators, typed finalizers for the critical DTO registry, domain recovery providers, and command proof.
 
 ## Contents
 

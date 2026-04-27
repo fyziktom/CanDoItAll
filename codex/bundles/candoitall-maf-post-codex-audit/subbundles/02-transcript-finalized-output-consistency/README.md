@@ -42,3 +42,7 @@ Required tests:
 ## Acceptance gate
 
 No persisted assistant message may contain stale pre-finalizer machine output in required finalizer mode.
+
+## Execution Result
+
+Status: Complete. Initial and approval-continuation execution paths now validate and finalize machine output before assistant transcript persistence.

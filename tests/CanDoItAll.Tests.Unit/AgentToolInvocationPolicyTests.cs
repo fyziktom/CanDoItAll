@@ -29,16 +29,18 @@ public sealed class AgentToolInvocationPolicyTests
             ToolInvocationClassification.Mutation,
             isKnownTool: true,
             autoApprovalAllowed: false,
-            approvalWrapperAvailable: true);
+            approvalWrapperAvailable: true,
+            approvalWrapperEffectiveForProvider: true);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.RequireApproval, decision.Kind);
-        Assert.Contains("approval wrapper", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.True(context.HasEffectiveApprovalPath);
+        Assert.Contains("approval path", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_mutation_when_no_auto_approval_or_wrapper_exists()
+    public async Task EvaluateAsync_requires_approval_but_marks_missing_effective_path()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -50,8 +52,9 @@ public sealed class AgentToolInvocationPolicyTests
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
-        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("neither auto-approval nor a framework approval wrapper", decision.Reason, StringComparison.Ordinal);
+        Assert.Equal(ToolInvocationDecisionKind.RequireApproval, decision.Kind);
+        Assert.False(context.HasEffectiveApprovalPath);
+        Assert.Contains("no effective approval path", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -134,6 +137,8 @@ public sealed class AgentToolInvocationPolicyTests
         bool isKnownTool,
         bool autoApprovalAllowed,
         bool approvalWrapperAvailable,
+        bool approvalWrapperEffectiveForProvider = false,
+        bool applicationApprovalAvailable = false,
         IReadOnlyDictionary<string, string>? arguments = null)
     {
         return new ToolInvocationPolicyContext(
@@ -148,6 +153,8 @@ public sealed class AgentToolInvocationPolicyTests
             ExecutionRunId: "run-001",
             SourceKind: "process-step",
             ProcessRunId: "process-run-001",
-            ProcessStepId: "step-001");
+            ProcessStepId: "step-001",
+            ApprovalWrapperEffectiveForProvider: approvalWrapperEffectiveForProvider,
+            ApplicationApprovalAvailable: applicationApprovalAvailable);
     }
 }

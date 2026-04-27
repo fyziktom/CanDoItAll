@@ -75,15 +75,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine($"Browser proof is invalid: {invalidBrowserProofSummary}.");
         }
 
-        var calculatorRecoveryFocusGuidance = BuildCalculatorRecoveryFocusGuidance(
+        var domainRecoveryFocusGuidance = BuildDomainRecoveryFocusGuidance(
             candidate,
+            detail,
             responseText,
             missingConcreteImplementationProofSummary,
             missingRequiredTools,
             unresolvedCriticalToolFailures);
-        if (!string.IsNullOrWhiteSpace(calculatorRecoveryFocusGuidance))
+        if (!string.IsNullOrWhiteSpace(domainRecoveryFocusGuidance))
         {
-            builder.AppendLine(calculatorRecoveryFocusGuidance);
+            builder.AppendLine(domainRecoveryFocusGuidance);
         }
 
         builder.AppendLine("Do not stop after inspection, planning, bootstrap confirmation, or a next-steps summary on this retry.");
@@ -121,10 +122,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("If you renamed or deleted `MainLayout`, either restore `MainLayout.razor` or update every `MainLayout` reference before building, including `Routes.razor`, `NotFound.razor`, and any `_Imports.razor` layout namespace.");
             builder.AppendLine("Do not stop at a starter template or say the app is merely ready for later feature implementation. Replace default template output with the requested product behavior before you conclude.");
             builder.AppendLine("On this retry, repair placeholder or incomplete product files before validating. A validation-only retry is acceptable only when read-back proves the current concrete source already satisfies the full implementation contract, then build and tests pass without any later mutation.");
-            if (RequiresCalculatorLikeImplementationProof(candidate, detail))
-            {
-                AppendCalculatorRecoveryChecklist(builder, missingConcreteImplementationProofSummary);
-            }
+            AppendDomainRecoveryChecklists(builder, candidate, detail, missingConcreteImplementationProofSummary);
 
             if (artifactInputInspectionPaths.StatPaths.Count > 0 || artifactInputInspectionPaths.ReadPaths.Count > 0)
             {

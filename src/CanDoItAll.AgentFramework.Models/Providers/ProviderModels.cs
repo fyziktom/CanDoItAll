@@ -25,7 +25,15 @@ public sealed record ProviderFeatureMatrix(
     bool SupportsServiceManagedHistory,
     bool SupportsVision,
     bool SupportsCompaction,
-    string GitHubCopilotRecommendation);
+    string GitHubCopilotRecommendation,
+    bool SupportsFunctionTools = false,
+    bool SupportsRunAsyncTypedOutput = false,
+    bool SupportsResponseFormatJsonSchema = false,
+    bool SupportsToolApprovalRequests = false,
+    bool SupportsApprovalRequiredAIFunction = false,
+    bool SupportsHostedTools = false,
+    bool SupportsHostedMcp = false,
+    bool SupportsLocalMcp = false);
 
 public sealed record ProviderFeatureSupportResult(
     ProviderNativeToolFamily Family,

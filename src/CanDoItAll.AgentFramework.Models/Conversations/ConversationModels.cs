@@ -307,7 +307,8 @@ public sealed record ExecutionInvocationContext(
     string ProcessRunId = "",
     string ProcessStepId = "",
     string SchedulerRunId = "",
-    string MessageId = "")
+    string MessageId = "",
+    ExecutionInvocationPolicy? Policy = null)
 {
     public static ExecutionInvocationContext Empty { get; } = new(
         SourceKind: "manual",
@@ -320,8 +321,14 @@ public sealed record ExecutionInvocationContext(
         ProcessRunId: string.Empty,
         ProcessStepId: string.Empty,
         SchedulerRunId: string.Empty,
-        MessageId: string.Empty);
+        MessageId: string.Empty,
+        Policy: null);
 }
+
+public sealed record ExecutionInvocationPolicy(
+    AgentFinalizerMode? FinalizerMode = null,
+    int? MaxStructuredOutputRepairAttempts = null,
+    bool RequireStructuredOutputValidation = true);
 
 public sealed record ExecutionRunRecord(
     Guid Id,

@@ -78,6 +78,10 @@ Register stable contracts for:
 Required tests:
 
 - Missing collection property returns validation failure, not exception.
+
+## Execution Result
+
+Status: Complete. Validators now handle null/missing collections with structured validation errors, validator exceptions are converted to structured errors, and all critical contracts are registered.
 - Explicit `null` collection returns validation failure, not exception.
 - Null nested task returns validation failure.
 - Validator exception is converted into `agent.output.validator_exception`.

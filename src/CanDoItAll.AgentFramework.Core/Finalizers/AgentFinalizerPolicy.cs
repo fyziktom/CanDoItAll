@@ -3,13 +3,6 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public enum AgentFinalizerMode
-{
-    Disabled,
-    Shadow,
-    Required
-}
-
 public sealed record AgentFinalizerPolicy(
     bool IsRequired,
     string ToolName,
@@ -36,6 +29,13 @@ public sealed record AgentFinalizerPolicy(
 public static class AgentFinalizerPolicies
 {
     public const string SubmitProcessStepOutcomeToolName = "submit_process_step_outcome";
+    public const string SubmitCodeReviewResultToolName = "submit_code_review_result";
+    public const string SubmitArchitectureReviewResultToolName = "submit_architecture_review_result";
+    public const string SubmitImplementationPlanToolName = "submit_implementation_plan";
+    public const string SubmitTestPlanToolName = "submit_test_plan";
+    public const string SubmitToolExecutionDecisionToolName = "submit_tool_execution_decision";
+    public const string SubmitProcessStatePatchToolName = "submit_process_state_patch";
+    public const string SubmitHumanEscalationRequestToolName = "submit_human_escalation_request";
     public const string FinalizerModeMetadataKey = "agentFinalizerMode";
     public const string RequiredFinalizerModeValue = "required";
     public const string ShadowFinalizerModeValue = "shadow";
@@ -45,17 +45,44 @@ public static class AgentFinalizerPolicies
         AgentStructuredOutputContract? structuredOutput,
         out AgentFinalizerPolicy policy)
     {
-        if (structuredOutput?.OutputType == typeof(ProcessStepOutcomeResult))
+        policy = structuredOutput?.OutputType switch
         {
-            policy = AgentFinalizerPolicy.Required<ProcessStepOutcomeResult>(
+            Type type when type == typeof(ProcessStepOutcomeResult) => AgentFinalizerPolicy.Required<ProcessStepOutcomeResult>(
                 SubmitProcessStepOutcomeToolName,
                 AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
-                "Final process-step outcome submitted through the exact-once finalizer tool.");
-            return true;
-        }
+                "Final process-step outcome submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(CodeReviewResult) => AgentFinalizerPolicy.Required<CodeReviewResult>(
+                SubmitCodeReviewResultToolName,
+                AgentStructuredOutputContracts.CodeReviewResultKey,
+                "Final code-review decision submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(ArchitectureReviewResult) => AgentFinalizerPolicy.Required<ArchitectureReviewResult>(
+                SubmitArchitectureReviewResultToolName,
+                AgentStructuredOutputContracts.ArchitectureReviewResultKey,
+                "Final architecture-review decision submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(ImplementationPlanResult) => AgentFinalizerPolicy.Required<ImplementationPlanResult>(
+                SubmitImplementationPlanToolName,
+                AgentStructuredOutputContracts.ImplementationPlanResultKey,
+                "Final implementation plan submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(TestPlanResult) => AgentFinalizerPolicy.Required<TestPlanResult>(
+                SubmitTestPlanToolName,
+                AgentStructuredOutputContracts.TestPlanResultKey,
+                "Final test plan submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(ToolExecutionDecisionResult) => AgentFinalizerPolicy.Required<ToolExecutionDecisionResult>(
+                SubmitToolExecutionDecisionToolName,
+                AgentStructuredOutputContracts.ToolExecutionDecisionResultKey,
+                "Final tool-execution decision submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(ProcessStatePatch) => AgentFinalizerPolicy.Required<ProcessStatePatch>(
+                SubmitProcessStatePatchToolName,
+                AgentStructuredOutputContracts.ProcessStatePatchKey,
+                "Final process-state patch submitted through the exact-once finalizer tool."),
+            Type type when type == typeof(HumanEscalationRequest) => AgentFinalizerPolicy.Required<HumanEscalationRequest>(
+                SubmitHumanEscalationRequestToolName,
+                AgentStructuredOutputContracts.HumanEscalationRequestKey,
+                "Final human-escalation request submitted through the exact-once finalizer tool."),
+            _ => AgentFinalizerPolicy.NotRequired
+        };
 
-        policy = AgentFinalizerPolicy.NotRequired;
-        return false;
+        return policy.IsRequired;
     }
 
     public static AgentFinalizerMode ResolveMode(
@@ -126,6 +153,17 @@ public static class AgentFinalizerPolicies
         return string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
                !string.IsNullOrWhiteSpace(run.ProcessRunId) ||
                !string.IsNullOrWhiteSpace(run.ProcessStepId);
+    }
+
+    public static string FormatMode(AgentFinalizerMode mode)
+    {
+        return mode switch
+        {
+            AgentFinalizerMode.Required => RequiredFinalizerModeValue,
+            AgentFinalizerMode.Shadow => ShadowFinalizerModeValue,
+            AgentFinalizerMode.Disabled => DisabledFinalizerModeValue,
+            _ => DisabledFinalizerModeValue
+        };
     }
 }
 

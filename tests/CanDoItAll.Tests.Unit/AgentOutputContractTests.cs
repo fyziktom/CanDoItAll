@@ -149,6 +149,82 @@ public sealed class AgentOutputContractTests
     }
 
     [Fact]
+    public void DefaultAgentOutputValidatorRegistry_resolves_every_known_contract()
+    {
+        foreach (var contract in AgentStructuredOutputContracts.All)
+        {
+            var resolved = DefaultAgentOutputValidatorRegistry.Instance.TryResolve(contract.OutputType, out var validator);
+
+            Assert.True(resolved, contract.ContractKey);
+            Assert.Equal(contract.OutputType, validator.OutputType);
+        }
+    }
+
+    [Fact]
+    public void AgentOutputJson_converts_validator_exception_to_validation_error()
+    {
+        var json = JsonSerializer.Serialize(
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Completed.",
+                EvidenceRefs = [],
+                NextActions = []
+            },
+            AgentOutputJson.SerializerOptions);
+
+        var result = AgentOutputJson.DeserializeAndValidate(json, new ThrowingProcessOutcomeValidator());
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Validation.Errors, error => error.Code == "agent.output.validator_exception");
+    }
+
+    [Theory]
+    [InlineData("""{"status":"Passed","findings":null,"requiredActions":[],"evidenceRefs":[]}""", typeof(CodeReviewResult), "code_review.findings_required")]
+    [InlineData("""{"status":"Completed","reason":"Done.","evidenceRefs":[],"nextActions":null}""", typeof(ProcessStepOutcomeResult), "process.step_outcome.next_actions_required")]
+    [InlineData("""{"tasks":null,"risks":[],"evidenceRefs":[]}""", typeof(ImplementationPlanResult), "implementation_plan.tasks_required")]
+    public void Validators_report_explicit_null_collections_without_throwing(
+        string json,
+        Type outputType,
+        string expectedCode)
+    {
+        Assert.True(DefaultAgentOutputValidatorRegistry.Instance.TryResolve(outputType, out var validator));
+
+        var result = validator.DeserializeAndValidate(json);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Validation.Errors, error => error.Code == expectedCode);
+        Assert.DoesNotContain(result.Validation.Errors, error => error.Code == "agent.output.validator_exception");
+    }
+
+    [Fact]
+    public async Task DefaultAgentOutputRepairService_extracts_single_json_object_from_wrapped_text()
+    {
+        var rawOutput = """
+            The final result is:
+            {"status":"Completed","reason":"Completed and validated.","evidenceRefs":[],"nextActions":[]}
+            """;
+
+        var repair = await DefaultAgentOutputRepairService.Instance.TryRepairAsync(
+            new AgentOutputRepairRequest
+            {
+                ContractName = AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+                InvalidRawOutput = rawOutput,
+                InvalidRawOutputHash = AgentOutputJson.ComputeRawOutputHash(rawOutput),
+                ValidationErrors = [new AgentOutputValidationError { Code = "agent.output.malformed_json", Message = "Wrapped text.", Path = "$" }],
+                AttemptNumber = 1,
+                MaxAttempts = 1
+            },
+            CancellationToken.None);
+
+        Assert.True(repair.Succeeded);
+        var validation = AgentOutputJson.DeserializeAndValidate(
+            repair.RepairedRawOutput,
+            new ProcessStepOutcomeValidator());
+        Assert.True(validation.Succeeded);
+    }
+
+    [Fact]
     public void List_outputs_are_wrapped_in_object_dtos()
     {
         var plan = new ImplementationPlanResult
@@ -193,6 +269,14 @@ public sealed class AgentOutputContractTests
                     Path = "$.reason"
                 })
                 : AgentOutputValidationResult.Success();
+        }
+    }
+
+    private sealed class ThrowingProcessOutcomeValidator : IAgentOutputValidator<ProcessStepOutcomeResult>
+    {
+        public AgentOutputValidationResult Validate(ProcessStepOutcomeResult output)
+        {
+            throw new InvalidOperationException("Validator failed.");
         }
     }
 }

@@ -80,7 +80,7 @@ public sealed partial class MafAgentRuntime
             await progressCallback(
                 ExecutionState.Preparing,
                 "Finalizer policy",
-                $"Attached shadow finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
+                $"Attached finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
         }
 
         var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider);
@@ -307,6 +307,7 @@ public sealed partial class MafAgentRuntime
             .Select(tool => tool.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
         var logger = services.GetService<ILogger<MafAgentRuntime>>();
         builder.UseLogging(
             services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance,
@@ -328,7 +329,9 @@ public sealed partial class MafAgentRuntime
                 ExecutionRunId: auditScope?.ExecutionRunId.ToString("D") ?? string.Empty,
                 SourceKind: auditScope?.SourceKind ?? string.Empty,
                 ProcessRunId: auditScope?.ProcessRunId ?? string.Empty,
-                ProcessStepId: auditScope?.ProcessStepId ?? string.Empty);
+                ProcessStepId: auditScope?.ProcessStepId ?? string.Empty,
+                ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
+                ApplicationApprovalAvailable: false);
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
@@ -336,6 +339,8 @@ public sealed partial class MafAgentRuntime
             activity?.SetTag("agentframework.tool_policy_decision", policyDecision.Kind.ToString());
             activity?.SetTag("agentframework.tool_policy_signature", policyDecision.Signature);
             activity?.SetTag("agentframework.tool_policy_reason", policyDecision.Reason);
+            activity?.SetTag("agentframework.tool_approval_effective", policyContext.HasEffectiveApprovalPath);
+            activity?.SetTag("agentframework.provider_supports_tool_approval", featureMatrix.SupportsApprovalRequiredAIFunction);
             activity?.SetTag("agentframework.tool_call_index", context.FunctionCallIndex);
             activity?.SetTag("agentframework.tool_iteration", context.Iteration);
             activity?.SetTag("agentframework.tool_count", context.FunctionCount);
@@ -355,6 +360,13 @@ public sealed partial class MafAgentRuntime
             try
             {
                 if (policyDecision.Kind is ToolInvocationDecisionKind.Deny or ToolInvocationDecisionKind.SkipExecution)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, policyDecision.Reason);
+                    throw new InvalidOperationException(policyDecision.Reason);
+                }
+
+                if (policyDecision.Kind == ToolInvocationDecisionKind.RequireApproval &&
+                    !policyContext.HasEffectiveApprovalPath)
                 {
                     activity?.SetStatus(ActivityStatusCode.Error, policyDecision.Reason);
                     throw new InvalidOperationException(policyDecision.Reason);
@@ -395,7 +407,7 @@ public sealed partial class MafAgentRuntime
         }
 
         throw new InvalidOperationException(
-            $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce structured output contract '{structuredOutput.ContractKey}'. Choose a Responses-backed OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.");
+            $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce structured output contract '{structuredOutput.ContractKey}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.");
     }
 
     private static FinalizerCapture? CreateFinalizerCapture(AgentStructuredOutputContract? structuredOutput)
@@ -406,10 +418,48 @@ public sealed partial class MafAgentRuntime
         }
 
         var capture = new FinalizerCapture(policy);
-        capture.Tools.Add(AIFunctionFactory.Create(
-            capture.SubmitProcessStepOutcome,
-            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
-            "Submits the final process-step outcome exactly once as typed machine-readable arguments."));
+        var tool = policy.OutputType switch
+        {
+            Type type when type == typeof(ProcessStepOutcomeResult) => AIFunctionFactory.Create(
+                capture.SubmitProcessStepOutcome,
+                policy.ToolName,
+                "Submits the final process-step outcome exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(CodeReviewResult) => AIFunctionFactory.Create(
+                capture.SubmitCodeReviewResult,
+                policy.ToolName,
+                "Submits the final code-review result exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ArchitectureReviewResult) => AIFunctionFactory.Create(
+                capture.SubmitArchitectureReviewResult,
+                policy.ToolName,
+                "Submits the final architecture-review result exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ImplementationPlanResult) => AIFunctionFactory.Create(
+                capture.SubmitImplementationPlan,
+                policy.ToolName,
+                "Submits the final implementation plan exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(TestPlanResult) => AIFunctionFactory.Create(
+                capture.SubmitTestPlan,
+                policy.ToolName,
+                "Submits the final test plan exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ToolExecutionDecisionResult) => AIFunctionFactory.Create(
+                capture.SubmitToolExecutionDecision,
+                policy.ToolName,
+                "Submits the final tool-execution decision exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(ProcessStatePatch) => AIFunctionFactory.Create(
+                capture.SubmitProcessStatePatch,
+                policy.ToolName,
+                "Submits the final process-state patch exactly once as typed machine-readable arguments."),
+            Type type when type == typeof(HumanEscalationRequest) => AIFunctionFactory.Create(
+                capture.SubmitHumanEscalationRequest,
+                policy.ToolName,
+                "Submits the final human-escalation request exactly once as typed machine-readable arguments."),
+            _ => null
+        };
+        if (tool is null)
+        {
+            return null;
+        }
+
+        capture.Tools.Add(tool);
         return capture;
     }
 
@@ -424,7 +474,8 @@ public sealed partial class MafAgentRuntime
 
         var finalizerInstructions =
             $"{Environment.NewLine}{Environment.NewLine}Finalizer tool policy:{Environment.NewLine}" +
-            $"- If the tool `{finalizerPolicy.ToolName}` is available, call it exactly once with the same `{finalizerPolicy.OutputContract.ContractKey}` decision you return as structured output.{Environment.NewLine}" +
+            $"- Call `{finalizerPolicy.ToolName}` exactly once before finishing. Its arguments are the source of truth for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
+            "- Do not call any other `submit_*` finalizer tool for this contract." + Environment.NewLine +
             "- Treat normal assistant text as display-only; workflow state must come from typed machine output.";
         return string.IsNullOrWhiteSpace(instructions)
             ? finalizerInstructions.Trim()
@@ -738,6 +789,38 @@ public sealed partial class MafAgentRuntime
         public List<AITool> Tools { get; } = [];
 
         public string SubmitProcessStepOutcome(ProcessStepOutcomeResult result)
+            => Capture(result, "Process step outcome finalizer captured.");
+
+        public string SubmitCodeReviewResult(CodeReviewResult result)
+            => Capture(result, "Code review result finalizer captured.");
+
+        public string SubmitArchitectureReviewResult(ArchitectureReviewResult result)
+            => Capture(result, "Architecture review result finalizer captured.");
+
+        public string SubmitImplementationPlan(ImplementationPlanResult result)
+            => Capture(result, "Implementation plan finalizer captured.");
+
+        public string SubmitTestPlan(TestPlanResult result)
+            => Capture(result, "Test plan finalizer captured.");
+
+        public string SubmitToolExecutionDecision(ToolExecutionDecisionResult result)
+            => Capture(result, "Tool execution decision finalizer captured.");
+
+        public string SubmitProcessStatePatch(ProcessStatePatch result)
+            => Capture(result, "Process state patch finalizer captured.");
+
+        public string SubmitHumanEscalationRequest(HumanEscalationRequest result)
+            => Capture(result, "Human escalation request finalizer captured.");
+
+        public IReadOnlyList<AgentFinalizerInvocation> Snapshot()
+        {
+            lock (gate)
+            {
+                return invocations.ToList();
+            }
+        }
+
+        private string Capture<TOutput>(TOutput result, string message)
         {
             ArgumentNullException.ThrowIfNull(result);
 
@@ -751,15 +834,7 @@ public sealed partial class MafAgentRuntime
                     nextSequence));
             }
 
-            return "Process step outcome finalizer captured.";
-        }
-
-        public IReadOnlyList<AgentFinalizerInvocation> Snapshot()
-        {
-            lock (gate)
-            {
-                return invocations.ToList();
-            }
+            return message;
         }
     }
 }

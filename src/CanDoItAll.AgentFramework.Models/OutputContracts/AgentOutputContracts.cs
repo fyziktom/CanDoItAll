@@ -34,6 +34,14 @@ public enum AgentExecutionFailureKind
     RuntimeException
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<AgentFinalizerMode>))]
+public enum AgentFinalizerMode
+{
+    Disabled,
+    Shadow,
+    Required
+}
+
 [JsonConverter(typeof(JsonStringEnumConverter<CodeReviewStatus>))]
 public enum CodeReviewStatus
 {
@@ -143,19 +151,68 @@ public sealed record AgentStructuredOutputContract
 public static class AgentStructuredOutputContracts
 {
     public const string ProcessStepOutcomeResultKey = "process_step_outcome_result";
+    public const string CodeReviewResultKey = "code_review_result";
+    public const string ArchitectureReviewResultKey = "architecture_review_result";
+    public const string ImplementationPlanResultKey = "implementation_plan_result";
+    public const string TestPlanResultKey = "test_plan_result";
+    public const string ToolExecutionDecisionResultKey = "tool_execution_decision_result";
+    public const string ProcessStatePatchKey = "process_state_patch";
+    public const string HumanEscalationRequestKey = "human_escalation_request";
 
     public static AgentStructuredOutputContract ProcessStepOutcomeResult { get; } =
         AgentStructuredOutputContract.For<ProcessStepOutcomeResult>(
             ProcessStepOutcomeResultKey,
             "Validated machine contract for process step completion, branch selection, next actions, and display-only markdown summary.");
 
+    public static AgentStructuredOutputContract CodeReviewResult { get; } =
+        AgentStructuredOutputContract.For<CodeReviewResult>(
+            CodeReviewResultKey,
+            "Validated machine contract for code-review pass, failure, findings, required actions, and evidence references.");
+
+    public static AgentStructuredOutputContract ArchitectureReviewResult { get; } =
+        AgentStructuredOutputContract.For<ArchitectureReviewResult>(
+            ArchitectureReviewResultKey,
+            "Validated machine contract for architecture approval, rejection, boundary concerns, required actions, and evidence references.");
+
+    public static AgentStructuredOutputContract ImplementationPlanResult { get; } =
+        AgentStructuredOutputContract.For<ImplementationPlanResult>(
+            ImplementationPlanResultKey,
+            "Validated machine contract for implementation tasks, risks, owned paths, and validation steps.");
+
+    public static AgentStructuredOutputContract TestPlanResult { get; } =
+        AgentStructuredOutputContract.For<TestPlanResult>(
+            TestPlanResultKey,
+            "Validated machine contract for test plan readiness, test cases, coverage gaps, and evidence references.");
+
+    public static AgentStructuredOutputContract ToolExecutionDecisionResult { get; } =
+        AgentStructuredOutputContract.For<ToolExecutionDecisionResult>(
+            ToolExecutionDecisionResultKey,
+            "Validated machine contract for tool execution allow, deny, or human-approval decisions.");
+
+    public static AgentStructuredOutputContract ProcessStatePatch { get; } =
+        AgentStructuredOutputContract.For<ProcessStatePatch>(
+            ProcessStatePatchKey,
+            "Validated machine contract for governed process-state patch operations.");
+
+    public static AgentStructuredOutputContract HumanEscalationRequest { get; } =
+        AgentStructuredOutputContract.For<HumanEscalationRequest>(
+            HumanEscalationRequestKey,
+            "Validated machine contract for human escalation requests.");
+
+    public static IReadOnlyList<AgentStructuredOutputContract> All { get; } =
+    [
+        ProcessStepOutcomeResult,
+        CodeReviewResult,
+        ArchitectureReviewResult,
+        ImplementationPlanResult,
+        TestPlanResult,
+        ToolExecutionDecisionResult,
+        ProcessStatePatch,
+        HumanEscalationRequest
+    ];
+
     private static readonly IReadOnlyDictionary<string, AgentStructuredOutputContract> KnownContracts =
-        new Dictionary<string, AgentStructuredOutputContract>(StringComparer.OrdinalIgnoreCase)
-        {
-            [ProcessStepOutcomeResult.ContractKey] = ProcessStepOutcomeResult,
-            [typeof(ProcessStepOutcomeResult).FullName!] = ProcessStepOutcomeResult,
-            [typeof(ProcessStepOutcomeResult).AssemblyQualifiedName!] = ProcessStepOutcomeResult
-        };
+        CreateKnownContracts();
 
     public static bool TryResolve(
         string? contractKey,
@@ -170,6 +227,19 @@ public static class AgentStructuredOutputContracts
 
         contract = default!;
         return false;
+    }
+
+    private static IReadOnlyDictionary<string, AgentStructuredOutputContract> CreateKnownContracts()
+    {
+        var contracts = new Dictionary<string, AgentStructuredOutputContract>(StringComparer.OrdinalIgnoreCase);
+        foreach (var contract in All)
+        {
+            contracts[contract.ContractKey] = contract;
+            contracts[contract.OutputType.FullName!] = contract;
+            contracts[contract.OutputType.AssemblyQualifiedName!] = contract;
+        }
+
+        return contracts;
     }
 }
 
@@ -231,7 +301,19 @@ public sealed class AgentOutputRepairRequest
     public required string ContractName { get; init; }
     public required string InvalidRawOutput { get; init; }
     public required IReadOnlyList<AgentOutputValidationError> ValidationErrors { get; init; }
+    public string? SchemaName { get; init; }
     public string? SchemaDescription { get; init; }
+    public string? InvalidRawOutputHash { get; init; }
+    public int AttemptNumber { get; init; }
+    public int MaxAttempts { get; init; }
+}
+
+public sealed class AgentOutputRepairAttemptResult
+{
+    public required bool Succeeded { get; init; }
+    public required string RepairedRawOutput { get; init; }
+    public required IReadOnlyList<AgentOutputValidationError> RemainingErrors { get; init; }
+    public string FailureMessage { get; init; } = string.Empty;
 }
 
 public sealed class AgentOutputRepairResult<TOutput>

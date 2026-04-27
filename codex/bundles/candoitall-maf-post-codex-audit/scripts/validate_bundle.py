@@ -6,12 +6,15 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 REQUIRED = [
     'README.md',
+    'plan/01-phase-plan.md',
     'audit/post-codex-maf-stabilization-audit.md',
     'audit/evidence-map.md',
     'requirements/requirements.md',
+    'traceability/01-requirements-traceability.md',
     'shared-prompts/codex-master-prompt.md',
     'shared-prompts/codex-qa-prompt.md',
     'reviews/readiness-gate.md',
+    'reviews/01-execution-report.md',
     'subbundles/01-required-finalizer-mode/README.md',
     'subbundles/02-transcript-finalized-output-consistency/README.md',
     'subbundles/03-output-repair-retry/README.md',

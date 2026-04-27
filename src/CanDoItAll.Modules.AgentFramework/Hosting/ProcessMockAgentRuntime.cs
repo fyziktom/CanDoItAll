@@ -155,7 +155,10 @@ internal sealed class ProcessMockAgentRuntime(
                     }).ToArray()
                 },
                 JsonOptions),
-            PendingApprovals: []);
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, outcome.ResponseText)
+        };
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -547,6 +550,24 @@ internal sealed class ProcessMockAgentRuntime(
         };
 
         return JsonSerializer.Serialize(payload, AgentOutputJson.SerializerOptions);
+    }
+
+    private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
+        AgentStructuredOutputContract? structuredOutput,
+        string responseText)
+    {
+        if (structuredOutput?.OutputType != typeof(ProcessStepOutcomeResult))
+        {
+            return [];
+        }
+
+        return
+        [
+            new AgentFinalizerInvocation(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                responseText,
+                Sequence: 1)
+        ];
     }
 
     private static bool IsApprovalQaPass(string prompt)

@@ -114,6 +114,45 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal(AgentFinalizerMode.Required, mode);
     }
 
+    [Fact]
+    public void TryResolveForStructuredOutput_returns_explicit_finalizer_for_every_known_contract()
+    {
+        var resolvedPolicies = AgentStructuredOutputContracts.All
+            .Select(contract => (
+                Contract: contract,
+                Resolved: AgentFinalizerPolicies.TryResolveForStructuredOutput(contract, out var policy),
+                Policy: policy))
+            .ToList();
+
+        Assert.All(resolvedPolicies, item => Assert.True(item.Resolved, item.Contract.ContractKey));
+        Assert.All(resolvedPolicies, item => Assert.NotEmpty(item.Policy.ToolName));
+        Assert.Equal(
+            resolvedPolicies.Count,
+            resolvedPolicies.Select(item => item.Policy.ToolName).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public void ExecutionInvocationMetadata_builds_required_finalizer_and_repair_policy()
+    {
+        var metadataJson = ExecutionInvocationMetadata.Build(
+            null,
+            new ExecutionInvocationPolicy(
+                FinalizerMode: AgentFinalizerMode.Required,
+                MaxStructuredOutputRepairAttempts: 9,
+                RequireStructuredOutputValidation: true));
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var root = document.RootElement;
+
+        Assert.Equal(
+            AgentFinalizerPolicies.RequiredFinalizerModeValue,
+            root.GetProperty(AgentFinalizerPolicies.FinalizerModeMetadataKey).GetString());
+        Assert.Equal(
+            ExecutionInvocationMetadata.MaxRepairAttempts,
+            root.GetProperty(ExecutionInvocationMetadata.MaxStructuredOutputRepairAttemptsMetadataKey).GetInt32());
+        Assert.True(root.GetProperty(ExecutionInvocationMetadata.RequireStructuredOutputValidationMetadataKey).GetBoolean());
+    }
+
     private static AgentFinalizerPolicy CreatePolicy()
     {
         return AgentFinalizerPolicy.Required<ProcessStepOutcomeResult>(

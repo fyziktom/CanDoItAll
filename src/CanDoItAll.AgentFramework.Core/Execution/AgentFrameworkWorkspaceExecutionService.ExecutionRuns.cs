@@ -170,6 +170,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     totalToolCalls = continuation.TotalToolCalls;
                 }
 
+                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
+                    run,
+                    structuredOutput,
+                    runtimeResponse,
+                    cancellationToken);
+
                 var assistantMessage = session is null
                     ? null
                     : new ChatMessageRecord(
@@ -178,12 +184,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Content: runtimeResponse.ResponseText,
                         CreatedAtUtc: DateTimeOffset.UtcNow,
                         TokenEstimate: totalOutputTokens);
-
-                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
-                    run,
-                    structuredOutput,
-                    runtimeResponse,
-                    cancellationToken);
 
                 var metric = new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -614,6 +614,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     totalToolCalls = continuation.TotalToolCalls;
                 }
 
+                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
+                    run,
+                    request.StructuredOutput,
+                    runtimeResponse,
+                    cancellationToken);
+
                 var assistantMessage = session is null
                     ? null
                     : new ChatMessageRecord(
@@ -622,12 +628,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Content: runtimeResponse.ResponseText,
                         CreatedAtUtc: DateTimeOffset.UtcNow,
                         TokenEstimate: totalOutputTokens);
-
-                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
-                    run,
-                    request.StructuredOutput,
-                    runtimeResponse,
-                    cancellationToken);
 
                 var metric = new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -865,6 +865,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return response;
         }
 
+        if (!ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run) &&
+            !IsGovernedMachineCriticalRun(run))
+        {
+            return response;
+        }
+
         var registry = DefaultAgentOutputValidatorRegistry.Instance;
         if (!registry.TryResolve(structuredOutput.OutputType, out var validator))
         {
@@ -886,6 +892,83 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             cancellationToken);
 
         var validation = validator.DeserializeAndValidate(response.ResponseText);
+        var originalRawOutputHash = validation.RawOutputHash;
+        var repairAttemptCount = 0;
+        var maxRepairAttempts = ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run);
+        while (!validation.Succeeded && repairAttemptCount < maxRepairAttempts)
+        {
+            repairAttemptCount++;
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Output repair",
+                $"Attempting structured output repair {repairAttemptCount}/{maxRepairAttempts} for contract '{structuredOutput.ContractKey}'. Raw output hash: {validation.RawOutputHash}. Errors: {FormatValidationErrors(validation.Validation.Errors)}",
+                cancellationToken);
+
+            var repair = await outputRepairService.TryRepairAsync(
+                new AgentOutputRepairRequest
+                {
+                    ContractName = structuredOutput.ContractKey,
+                    SchemaName = structuredOutput.SchemaName,
+                    SchemaDescription = structuredOutput.SchemaDescription,
+                    InvalidRawOutput = validation.RawOutput,
+                    InvalidRawOutputHash = validation.RawOutputHash,
+                    ValidationErrors = validation.Validation.Errors,
+                    AttemptNumber = repairAttemptCount,
+                    MaxAttempts = maxRepairAttempts
+                },
+                cancellationToken);
+
+            if (!repair.Succeeded || string.IsNullOrWhiteSpace(repair.RepairedRawOutput))
+            {
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    run.AgentId,
+                    run.ChatSessionId,
+                    ExecutionState.Persisting,
+                    "Output repair",
+                    string.IsNullOrWhiteSpace(repair.FailureMessage)
+                        ? $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} did not produce a repair candidate for contract '{structuredOutput.ContractKey}'."
+                        : $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} failed for contract '{structuredOutput.ContractKey}': {repair.FailureMessage}",
+                    cancellationToken);
+                break;
+            }
+
+            validation = validator.DeserializeAndValidate(repair.RepairedRawOutput);
+            if (validation.Succeeded)
+            {
+                response = response with
+                {
+                    ResponseText = repair.RepairedRawOutput
+                };
+
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    run.AgentId,
+                    run.ChatSessionId,
+                    ExecutionState.Persisting,
+                    "Output repair",
+                    $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} succeeded for contract '{structuredOutput.ContractKey}'. Repaired raw output hash: {validation.RawOutputHash}.",
+                    cancellationToken);
+                break;
+            }
+
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Output repair",
+                $"Structured output repair {repairAttemptCount}/{maxRepairAttempts} still failed validation for contract '{structuredOutput.ContractKey}'. Repaired raw output hash: {validation.RawOutputHash}. Errors: {FormatValidationErrors(validation.Validation.Errors)}",
+                cancellationToken);
+        }
+
+        Activity.Current?.SetTag("agentframework.repair_attempt_count", repairAttemptCount);
+        Activity.Current?.SetTag("agentframework.repair_original_raw_hash", originalRawOutputHash);
+        Activity.Current?.SetTag("agentframework.repair_final_raw_hash", validation.RawOutputHash);
+
         var errorSummary = FormatValidationErrors(validation.Validation.Errors);
         if (!validation.Succeeded)
         {

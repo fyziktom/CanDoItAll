@@ -93,11 +93,23 @@ public sealed class ProcessStepOutcomeValidator : IAgentOutputValidator<ProcessS
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
+        var nextActions = output.NextActions;
+        if (nextActions is null)
+        {
+            errors.Add(Error("process.step_outcome.next_actions_required", "Process step outcome next actions are required.", "$.nextActions"));
+            nextActions = [];
+        }
+
+        if (output.EvidenceRefs is null)
+        {
+            errors.Add(Error("process.step_outcome.evidence_refs_required", "Process step outcome evidence references are required.", "$.evidenceRefs"));
+        }
+
         RequireText(output.Reason, "process.step_outcome.reason_required", "Process step outcome reason is required.", "$.reason", errors);
 
         if (output.Status == ProcessStepOutcomeStatus.Completed &&
-            output.NextActions.Any(action => action.Contains("ask the user", StringComparison.OrdinalIgnoreCase) ||
-                                             action.Contains("human input", StringComparison.OrdinalIgnoreCase)))
+            nextActions.Any(action => action.Contains("ask the user", StringComparison.OrdinalIgnoreCase) ||
+                                      action.Contains("human input", StringComparison.OrdinalIgnoreCase)))
         {
             errors.Add(new AgentOutputValidationError
             {
@@ -108,7 +120,7 @@ public sealed class ProcessStepOutcomeValidator : IAgentOutputValidator<ProcessS
         }
 
         if (output.Status is ProcessStepOutcomeStatus.Failed or ProcessStepOutcomeStatus.Blocked &&
-            output.NextActions.Count == 0)
+            nextActions.Count == 0)
         {
             errors.Add(new AgentOutputValidationError
             {
@@ -119,7 +131,7 @@ public sealed class ProcessStepOutcomeValidator : IAgentOutputValidator<ProcessS
         }
 
         if (output.Status == ProcessStepOutcomeStatus.WaitingApproval &&
-            output.NextActions.Count == 0)
+            nextActions.Count == 0)
         {
             errors.Add(new AgentOutputValidationError
             {
@@ -167,6 +179,9 @@ public sealed class ProcessStepOutcomeValidator : IAgentOutputValidator<ProcessS
         => errors.Count == 0
             ? AgentOutputValidationResult.Success()
             : AgentOutputValidationResult.Failure([.. errors]);
+
+    private static AgentOutputValidationError Error(string code, string message, string path)
+        => new() { Code = code, Message = message, Path = path };
 }
 
 public sealed class CodeReviewResultValidator : IAgentOutputValidator<CodeReviewResult>
@@ -176,17 +191,54 @@ public sealed class CodeReviewResultValidator : IAgentOutputValidator<CodeReview
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
-        if (output.Status == CodeReviewStatus.Passed && (output.Findings.Count > 0 || output.RequiredActions.Count > 0))
+        var findings = RequireCollection(output.Findings, "code_review.findings_required", "Code review findings are required.", "$.findings", errors);
+        var requiredActions = RequireCollection(output.RequiredActions, "code_review.required_actions_required", "Code review required actions are required.", "$.requiredActions", errors);
+        _ = RequireCollection(output.EvidenceRefs, "code_review.evidence_refs_required", "Code review evidence references are required.", "$.evidenceRefs", errors);
+
+        if (output.Status == CodeReviewStatus.Passed && (findings.Count > 0 || requiredActions.Count > 0))
         {
             errors.Add(Error("code_review.passed_with_findings", "Passed code reviews must not contain findings or required actions.", "$.status"));
         }
 
-        if (output.Status is (CodeReviewStatus.NeedsChanges or CodeReviewStatus.Failed) && output.Findings.Count == 0)
+        if (output.Status is (CodeReviewStatus.NeedsChanges or CodeReviewStatus.Failed) && findings.Count == 0)
         {
             errors.Add(Error("code_review.findings_required", "Code reviews that need changes or fail must include findings.", "$.findings"));
         }
 
+        for (var index = 0; index < findings.Count; index++)
+        {
+            var finding = findings[index];
+            if (finding is null)
+            {
+                errors.Add(Error("code_review.finding_required", "Code review finding entries must not be null.", $"$.findings[{index}]"));
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(finding.Title) ||
+                string.IsNullOrWhiteSpace(finding.Body) ||
+                string.IsNullOrWhiteSpace(finding.FilePath))
+            {
+                errors.Add(Error("code_review.finding_detail_required", "Code review findings must include title, body, and file path.", $"$.findings[{index}]"));
+            }
+        }
+
         return ToResult(errors);
+    }
+
+    private static IReadOnlyList<T> RequireCollection<T>(
+        IReadOnlyList<T>? values,
+        string code,
+        string message,
+        string path,
+        List<AgentOutputValidationError> errors)
+    {
+        if (values is not null)
+        {
+            return values;
+        }
+
+        errors.Add(Error(code, message, path));
+        return [];
     }
 
     private static AgentOutputValidationError Error(string code, string message, string path)
@@ -203,7 +255,11 @@ public sealed class ArchitectureReviewResultValidator : IAgentOutputValidator<Ar
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
-        if (output.Status == ArchitectureReviewStatus.Approved && output.RequiredActions.Count > 0)
+        var boundaryConcerns = RequireCollection(output.BoundaryConcerns, "architecture_review.boundary_concerns_required", "Architecture review boundary concerns are required.", "$.boundaryConcerns", errors);
+        var requiredActions = RequireCollection(output.RequiredActions, "architecture_review.required_actions_required", "Architecture review required actions are required.", "$.requiredActions", errors);
+        _ = RequireCollection(output.EvidenceRefs, "architecture_review.evidence_refs_required", "Architecture review evidence references are required.", "$.evidenceRefs", errors);
+
+        if (output.Status == ArchitectureReviewStatus.Approved && requiredActions.Count > 0)
         {
             errors.Add(new AgentOutputValidationError
             {
@@ -213,7 +269,7 @@ public sealed class ArchitectureReviewResultValidator : IAgentOutputValidator<Ar
             });
         }
 
-        if (output.Status is (ArchitectureReviewStatus.NeedsChanges or ArchitectureReviewStatus.Rejected) && output.BoundaryConcerns.Count == 0)
+        if (output.Status is (ArchitectureReviewStatus.NeedsChanges or ArchitectureReviewStatus.Rejected) && boundaryConcerns.Count == 0)
         {
             errors.Add(new AgentOutputValidationError
             {
@@ -225,6 +281,27 @@ public sealed class ArchitectureReviewResultValidator : IAgentOutputValidator<Ar
 
         return errors.Count == 0 ? AgentOutputValidationResult.Success() : AgentOutputValidationResult.Failure([.. errors]);
     }
+
+    private static IReadOnlyList<T> RequireCollection<T>(
+        IReadOnlyList<T>? values,
+        string code,
+        string message,
+        string path,
+        List<AgentOutputValidationError> errors)
+    {
+        if (values is not null)
+        {
+            return values;
+        }
+
+        errors.Add(new AgentOutputValidationError
+        {
+            Code = code,
+            Message = message,
+            Path = path
+        });
+        return [];
+    }
 }
 
 public sealed class ImplementationPlanResultValidator : IAgentOutputValidator<ImplementationPlanResult>
@@ -234,7 +311,11 @@ public sealed class ImplementationPlanResultValidator : IAgentOutputValidator<Im
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
-        if (output.Tasks.Count == 0)
+        var tasks = RequireCollection(output.Tasks, "implementation_plan.tasks_required", "Implementation plan tasks are required.", "$.tasks", errors);
+        _ = RequireCollection(output.Risks, "implementation_plan.risks_required", "Implementation plan risks are required.", "$.risks", errors);
+        _ = RequireCollection(output.EvidenceRefs, "implementation_plan.evidence_refs_required", "Implementation plan evidence references are required.", "$.evidenceRefs", errors);
+
+        if (tasks.Count == 0)
         {
             errors.Add(new AgentOutputValidationError
             {
@@ -244,9 +325,20 @@ public sealed class ImplementationPlanResultValidator : IAgentOutputValidator<Im
             });
         }
 
-        for (var index = 0; index < output.Tasks.Count; index++)
+        for (var index = 0; index < tasks.Count; index++)
         {
-            var task = output.Tasks[index];
+            var task = tasks[index];
+            if (task is null)
+            {
+                errors.Add(new AgentOutputValidationError
+                {
+                    Code = "implementation_plan.task_required",
+                    Message = "Implementation task entries must not be null.",
+                    Path = $"$.tasks[{index}]"
+                });
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(task.Id) || string.IsNullOrWhiteSpace(task.Title))
             {
                 errors.Add(new AgentOutputValidationError
@@ -256,9 +348,43 @@ public sealed class ImplementationPlanResultValidator : IAgentOutputValidator<Im
                     Path = $"$.tasks[{index}]"
                 });
             }
+
+            if (string.IsNullOrWhiteSpace(task.Description))
+            {
+                errors.Add(new AgentOutputValidationError
+                {
+                    Code = "implementation_plan.task_description_required",
+                    Message = "Each implementation task must include a description.",
+                    Path = $"$.tasks[{index}].description"
+                });
+            }
+
+            _ = RequireCollection(task.OwnedPaths, "implementation_plan.task_owned_paths_required", "Each implementation task must include owned paths.", $"$.tasks[{index}].ownedPaths", errors);
+            _ = RequireCollection(task.ValidationSteps, "implementation_plan.task_validation_steps_required", "Each implementation task must include validation steps.", $"$.tasks[{index}].validationSteps", errors);
         }
 
         return errors.Count == 0 ? AgentOutputValidationResult.Success() : AgentOutputValidationResult.Failure([.. errors]);
+    }
+
+    private static IReadOnlyList<T> RequireCollection<T>(
+        IReadOnlyList<T>? values,
+        string code,
+        string message,
+        string path,
+        List<AgentOutputValidationError> errors)
+    {
+        if (values is not null)
+        {
+            return values;
+        }
+
+        errors.Add(new AgentOutputValidationError
+        {
+            Code = code,
+            Message = message,
+            Path = path
+        });
+        return [];
     }
 }
 
@@ -268,9 +394,14 @@ public sealed class TestPlanResultValidator : IAgentOutputValidator<TestPlanResu
     {
         ArgumentNullException.ThrowIfNull(output);
 
-        if (output.Status == TestPlanStatus.Ready && output.TestCases.Count == 0)
+        var errors = new List<AgentOutputValidationError>();
+        var testCases = RequireCollection(output.TestCases, "test_plan.test_cases_required", "Test plan test cases are required.", "$.testCases", errors);
+        _ = RequireCollection(output.CoverageGaps, "test_plan.coverage_gaps_required", "Test plan coverage gaps are required.", "$.coverageGaps", errors);
+        _ = RequireCollection(output.EvidenceRefs, "test_plan.evidence_refs_required", "Test plan evidence references are required.", "$.evidenceRefs", errors);
+
+        if (output.Status == TestPlanStatus.Ready && testCases.Count == 0)
         {
-            return AgentOutputValidationResult.Failure(new AgentOutputValidationError
+            errors.Add(new AgentOutputValidationError
             {
                 Code = "test_plan.test_cases_required",
                 Message = "Ready test plans must include test cases.",
@@ -278,7 +409,28 @@ public sealed class TestPlanResultValidator : IAgentOutputValidator<TestPlanResu
             });
         }
 
-        return AgentOutputValidationResult.Success();
+        return errors.Count == 0 ? AgentOutputValidationResult.Success() : AgentOutputValidationResult.Failure([.. errors]);
+    }
+
+    private static IReadOnlyList<T> RequireCollection<T>(
+        IReadOnlyList<T>? values,
+        string code,
+        string message,
+        string path,
+        List<AgentOutputValidationError> errors)
+    {
+        if (values is not null)
+        {
+            return values;
+        }
+
+        errors.Add(new AgentOutputValidationError
+        {
+            Code = code,
+            Message = message,
+            Path = path
+        });
+        return [];
     }
 }
 
@@ -289,6 +441,16 @@ public sealed class ToolExecutionDecisionResultValidator : IAgentOutputValidator
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
+        if (output.EvidenceRefs is null)
+        {
+            errors.Add(new AgentOutputValidationError
+            {
+                Code = "tool_decision.evidence_refs_required",
+                Message = "Tool execution decisions must include evidence references.",
+                Path = "$.evidenceRefs"
+            });
+        }
+
         if (string.IsNullOrWhiteSpace(output.ToolName))
         {
             errors.Add(new AgentOutputValidationError
@@ -318,6 +480,10 @@ public sealed class ToolExecutionDecisionResultValidator : IAgentOutputValidator
                 Path = "$.escalation"
             });
         }
+        else if (output.Escalation is not null)
+        {
+            errors.AddRange(new HumanEscalationRequestValidator().Validate(output.Escalation).Errors);
+        }
 
         return errors.Count == 0 ? AgentOutputValidationResult.Success() : AgentOutputValidationResult.Failure([.. errors]);
     }
@@ -330,6 +496,16 @@ public sealed class HumanEscalationRequestValidator : IAgentOutputValidator<Huma
         ArgumentNullException.ThrowIfNull(output);
 
         var errors = new List<AgentOutputValidationError>();
+        if (output.ValidationErrors is null)
+        {
+            errors.Add(new AgentOutputValidationError
+            {
+                Code = "human_escalation.validation_errors_required",
+                Message = "Human escalation requests must include validation errors.",
+                Path = "$.validationErrors"
+            });
+        }
+
         if (string.IsNullOrWhiteSpace(output.Reason))
         {
             errors.Add(new AgentOutputValidationError

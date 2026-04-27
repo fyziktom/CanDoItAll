@@ -290,6 +290,101 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteRunAsync_persists_required_finalizer_output_as_assistant_transcript()
+    {
+        var outcome = CreateCompletedOutcome("The transcript must persist the authoritative finalizer output.");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer-transcript");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialResponseText = "Display-only assistant text.",
+                    InitialPendingApprovals = [],
+                    InitialFinalizerInvocations = [CreateFinalizerInvocation(outcome)]
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Complete the process step through the required finalizer.",
+                ChatSessionId: session.Id,
+                Context: CreateProcessStepContext(CreateRequiredFinalizerMetadata()),
+                AutoApprovePendingToolCalls: false,
+                StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.NotNull(detail?.ChatSession);
+        var assistantMessage = Assert.Single(detail.ChatSession!.Messages, message => message.Role == ChatMessageRole.Assistant);
+        Assert.Equal(result.ResponseText, assistantMessage.Content);
+        Assert.Contains("authoritative", assistantMessage.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Display-only assistant text", assistantMessage.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_repairs_wrapped_structured_output_before_completion()
+    {
+        var outcome = CreateCompletedOutcome("The wrapped structured output was repaired before persistence.");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-output-repair");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialResponseText = $"The result follows:{Environment.NewLine}{SerializeOutcome(outcome)}",
+                    InitialPendingApprovals = []
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Complete the process step with repairable machine output.",
+                ChatSessionId: null,
+                Context: CreateProcessStepContext(),
+                AutoApprovePendingToolCalls: false,
+                StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.StartsWith("{", result.ResponseText, StringComparison.Ordinal);
+        Assert.Contains("repaired before persistence", result.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Completed, detail.Run.State);
+        Assert.Contains(
+            detail.ExecutionLog,
+            entry => entry.Phase == "Output repair" &&
+                     entry.Message.Contains("succeeded", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ExecuteRunAsync_required_finalizer_missing_prevents_completion()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer-missing");

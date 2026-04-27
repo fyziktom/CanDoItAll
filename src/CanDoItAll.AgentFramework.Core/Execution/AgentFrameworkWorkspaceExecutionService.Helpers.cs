@@ -303,6 +303,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var sourceId = string.IsNullOrWhiteSpace(context.SourceId) && string.Equals(sourceKind, "chat-session", StringComparison.OrdinalIgnoreCase)
             ? chatSessionId?.ToString("N") ?? string.Empty
             : context.SourceId ?? string.Empty;
+        var metadataJson = ExecutionInvocationMetadata.Build(context.MetadataJson, context.Policy);
 
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),
@@ -315,7 +316,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             CausationId: context.CausationId ?? string.Empty,
             RequestedBy: context.RequestedBy ?? string.Empty,
             RequestedByKind: context.RequestedByKind ?? string.Empty,
-            MetadataJson: string.IsNullOrWhiteSpace(context.MetadataJson) ? "{}" : context.MetadataJson,
+            MetadataJson: metadataJson,
             InputSummary: CreateExecutionSummary(prompt),
             ResultSummary: string.Empty,
             ProviderName: provider.Name,

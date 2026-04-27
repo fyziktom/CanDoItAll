@@ -61,3 +61,7 @@ Tests must cover:
 ## Acceptance gate
 
 The matrix must not block valid structured-output providers, and it must not allow approval-required tool execution on transports that cannot produce approval requests.
+
+## Execution Result
+
+Status: Complete. Provider features now distinguish structured output, JSON-schema response format, function tools, and approval-specific support.

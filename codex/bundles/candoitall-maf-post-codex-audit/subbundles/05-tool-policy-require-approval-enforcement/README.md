@@ -55,3 +55,7 @@ Required tests:
 ## Acceptance gate
 
 No write/destructive/mutation tool may execute merely because `RequireApproval` was logged.
+
+## Execution Result
+
+Status: Complete. Tool middleware blocks `RequireApproval` when the selected provider/runtime has no effective approval path.

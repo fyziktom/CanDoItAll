@@ -96,6 +96,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ExecutionRunDetail? failedExecutionDetail = null;
                     Guid? failedExecutionRunId = null;
                     string? failedResponseText = null;
+                    var processInvocationPolicy = new ExecutionInvocationPolicy(
+                        FinalizerMode: AgentFinalizerMode.Required,
+                        MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
+                        RequireStructuredOutputValidation: true);
+                    var processInvocationMetadataJson = ExecutionInvocationMetadata.Build(null, processInvocationPolicy);
 
                     try
                     {
@@ -121,9 +126,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                         : trigger.Trim(),
                                     RequestedBy: AutomationActor,
                                     RequestedByKind: "system",
-                                    MetadataJson: "{}",
+                                    MetadataJson: processInvocationMetadataJson,
                                     ProcessRunId: candidate.Run.Id.ToString("D"),
-                                    ProcessStepId: candidate.StepRun.Id.ToString("D")),
+                                    ProcessStepId: candidate.StepRun.Id.ToString("D"),
+                                    Policy: processInvocationPolicy),
                                 AutoApprovePendingToolCalls: true,
                                 StructuredOutput: ProcessStepOutcomeStructuredOutputContract),
                             cancellationToken);

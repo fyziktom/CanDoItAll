@@ -41,3 +41,7 @@ Do not infer only from free-form text when structured metadata is available.
 ## Acceptance gate
 
 Generic process automation must not hardcode calculator-specific behavior.
+
+## Execution Result
+
+Status: Complete. Calculator-specific retry guidance now lives behind a domain recovery guidance provider abstraction.

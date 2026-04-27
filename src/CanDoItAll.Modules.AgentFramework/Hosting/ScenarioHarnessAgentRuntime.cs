@@ -113,15 +113,24 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 ExecutionState.Completed,
                 "Guided proof",
                 $"{definition.Id} is a guided scenario and must be completed through the integrated process proof.");
+            var responseText = FormatScenarioResponse(
+                new ScenarioExecutionOutcome(
+                    ResponseText: $"{definition.Id} is a guided scenario. Follow the integrated proof note instead of expecting automatic execution.",
+                    ResponseMarkdown: guidedResponse,
+                    ToolCalls: 1),
+                structuredOutput);
 
             return new AgentRuntimeResponse(
-                ResponseText: $"{definition.Id} is a guided scenario. Follow the integrated proof note instead of expecting automatic execution.",
+                ResponseText: responseText,
                 InputTokens: EstimateTokens(prompt),
-                OutputTokens: 22,
+                OutputTokens: EstimateTokens(responseText),
                 ToolCalls: 1,
                 RuntimeSessionKey: state.RuntimeSessionKey,
                 SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
-                PendingApprovals: []);
+                PendingApprovals: [])
+            {
+                FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, responseText)
+            };
         }
 
         if (definition.RequiresApproval && !suppressApprovalRequirements)
@@ -256,7 +265,10 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             ToolCalls: outcome.ToolCalls,
             RuntimeSessionKey: state.RuntimeSessionKey,
             SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "completed" }, JsonOptions),
-            PendingApprovals: []);
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, responseText)
+        };
     }
 
     private static string FormatScenarioResponse(
@@ -277,6 +289,24 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             HumanReadableSummaryMarkdown = outcome.ResponseMarkdown
         };
         return JsonSerializer.Serialize(result, AgentOutputJson.SerializerOptions);
+    }
+
+    private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
+        AgentStructuredOutputContract? structuredOutput,
+        string responseText)
+    {
+        if (structuredOutput?.OutputType != typeof(ProcessStepOutcomeResult))
+        {
+            return [];
+        }
+
+        return
+        [
+            new AgentFinalizerInvocation(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                responseText,
+                Sequence: 1)
+        ];
     }
 
     private async Task<ScenarioExecutionOutcome> ExecuteBlazorCalculatorAsync(

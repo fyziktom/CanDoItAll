@@ -79,6 +79,10 @@ Required tests:
 - Retry limit is enforced.
 - Required finalizer missing is not silently repaired as a normal text response.
 
+## Execution Result
+
+Status: Complete. Added `IAgentOutputRepairService`, bounded repair metadata, default conservative JSON-object repair, revalidation, and repair telemetry. Required finalizer failures remain hard failures.
+
 ## Acceptance gate
 
 No invalid structured output may be persisted as success, and repair must never run indefinitely.
