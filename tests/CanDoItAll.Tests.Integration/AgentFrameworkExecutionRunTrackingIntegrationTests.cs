@@ -290,6 +290,67 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteRunAsync_required_finalizer_fails_when_validation_tool_runs_after_finalizer()
+    {
+        var outcome = CreateCompletedOutcome("The required finalizer cannot precede later validation.");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer-sequence");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialResponseText = "Display-only assistant text.",
+                    InitialPendingApprovals = [],
+                    InitialFinalizerInvocations = [CreateFinalizerInvocation(outcome)],
+                    InitialToolInvocationTraces =
+                    [
+                        CreateToolInvocationTrace(
+                            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                            ToolInvocationClassification.Read,
+                            sequence: 1),
+                        CreateToolInvocationTrace(
+                            "workspace_dotnet_test",
+                            ToolInvocationClassification.Validation,
+                            sequence: 2)
+                    ]
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var runtime = scope.ServiceProvider.GetRequiredService<StructuredOutputApprovalRuntime>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            workspaceService.ExecuteRunAsync(
+                new ExecutionRunRequest(
+                    agent.Id,
+                    "Complete the process step through the required finalizer.",
+                    ChatSessionId: null,
+                    Context: CreateProcessStepContext(CreateRequiredFinalizerMetadata()),
+                    AutoApprovePendingToolCalls: false,
+                    StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult)));
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(Assert.Single(runtime.ObservedExecutionRunIds));
+
+        Assert.Contains("last significant tool invocation", exception.Message, StringComparison.Ordinal);
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Failed, detail.Run.State);
+        Assert.Contains(
+            detail.ExecutionLog,
+            entry => entry.Phase == "Finalizer sequencing" &&
+                     entry.Message.Contains("workspace_dotnet_test#2", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExecuteRunAsync_persists_required_finalizer_output_as_assistant_transcript()
     {
         var outcome = CreateCompletedOutcome("The transcript must persist the authoritative finalizer output.");
@@ -472,6 +533,22 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             Sequence: 1);
     }
 
+    private static AgentToolInvocationTrace CreateToolInvocationTrace(
+        string toolName,
+        ToolInvocationClassification classification,
+        int sequence)
+    {
+        var timestamp = DateTimeOffset.UtcNow;
+        return new AgentToolInvocationTrace(
+            toolName,
+            classification,
+            sequence,
+            StartedAtUtc: timestamp,
+            CompletedAtUtc: timestamp,
+            Succeeded: true,
+            FailureMessage: string.Empty);
+    }
+
     private static string SerializeOutcome(ProcessStepOutcomeResult outcome)
     {
         return JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
@@ -631,6 +708,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
 
         public IReadOnlyList<AgentFinalizerInvocation> InitialFinalizerInvocations { get; init; } = [];
 
+        public IReadOnlyList<AgentToolInvocationTrace> InitialToolInvocationTraces { get; init; } = [];
+
         public string ContinuationResponseText { get; init; } = JsonSerializer.Serialize(
             new ProcessStepOutcomeResult
             {
@@ -643,6 +722,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             AgentOutputJson.SerializerOptions);
 
         public IReadOnlyList<AgentFinalizerInvocation> ContinuationFinalizerInvocations { get; init; } = [];
+
+        public IReadOnlyList<AgentToolInvocationTrace> ContinuationToolInvocationTraces { get; init; } = [];
 
         public Task<ProviderHealthResult> TestProviderAsync(
             ProviderProfile provider,
@@ -697,7 +778,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 SerializedSessionStateJson: """{"state":"pending"}""",
                 PendingApprovals: InitialPendingApprovals)
             {
-                FinalizerInvocations = InitialFinalizerInvocations
+                FinalizerInvocations = InitialFinalizerInvocations,
+                ToolInvocationTraces = InitialToolInvocationTraces.Count == 0
+                    ? CreateFinalizerToolInvocationTraces(InitialFinalizerInvocations)
+                    : InitialToolInvocationTraces
             });
         }
 
@@ -730,8 +814,27 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 SerializedSessionStateJson: null,
                 PendingApprovals: [])
             {
-                FinalizerInvocations = ContinuationFinalizerInvocations
+                FinalizerInvocations = ContinuationFinalizerInvocations,
+                ToolInvocationTraces = ContinuationToolInvocationTraces.Count == 0
+                    ? CreateFinalizerToolInvocationTraces(ContinuationFinalizerInvocations)
+                    : ContinuationToolInvocationTraces
             });
+        }
+
+        private static IReadOnlyList<AgentToolInvocationTrace> CreateFinalizerToolInvocationTraces(
+            IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations)
+        {
+            var timestamp = DateTimeOffset.UtcNow;
+            return finalizerInvocations
+                .Select(invocation => new AgentToolInvocationTrace(
+                    invocation.ToolName,
+                    ToolInvocationClassification.Read,
+                    invocation.Sequence,
+                    StartedAtUtc: timestamp,
+                    CompletedAtUtc: timestamp,
+                    Succeeded: true,
+                    FailureMessage: string.Empty))
+                .ToList();
         }
     }
 }

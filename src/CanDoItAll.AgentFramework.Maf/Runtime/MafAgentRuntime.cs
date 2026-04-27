@@ -150,7 +150,8 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             runtimeOptions.StructuredOutput,
             forceOmitTemperature,
-            runtimeBuild.SnapshotFinalizerInvocations);
+            runtimeBuild.SnapshotFinalizerInvocations,
+            runtimeBuild.SnapshotToolInvocationTraces);
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -275,7 +276,8 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             runtimeOptions.StructuredOutput,
             forceOmitTemperature,
-            runtimeBuild.SnapshotFinalizerInvocations);
+            runtimeBuild.SnapshotFinalizerInvocations,
+            runtimeBuild.SnapshotToolInvocationTraces);
     }
 
     private async Task<AgentRuntimeResponse> ExecuteRunAsync(
@@ -292,7 +294,8 @@ public sealed partial class MafAgentRuntime(
         CancellationToken cancellationToken,
         AgentStructuredOutputContract? structuredOutput,
         bool forceOmitTemperature,
-        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations)
+        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
     {
         var updates = new List<AgentResponseUpdate>();
         var announcedStreaming = false;
@@ -394,7 +397,8 @@ public sealed partial class MafAgentRuntime(
                     SerializedSessionStateJson: serializedSessionJson,
                     PendingApprovals: pendingApprovals)
                 {
-                    FinalizerInvocations = snapshotFinalizerInvocations()
+                    FinalizerInvocations = snapshotFinalizerInvocations(),
+                    ToolInvocationTraces = snapshotToolInvocationTraces()
                 };
             }
 

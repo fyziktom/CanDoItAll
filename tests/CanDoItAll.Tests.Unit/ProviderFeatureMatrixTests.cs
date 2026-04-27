@@ -115,6 +115,20 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Managed_sqlite_bootstrap_provider_matches_chat_completions_structured_output_support()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Composition",
+            "RuntimeHostServiceCollectionExtensions.cs");
+
+        Assert.Contains("Name = ManagedSqliteOpenAiProviderName", source, StringComparison.Ordinal);
+        Assert.Contains("SupportsStructuredOutput = true", source, StringComparison.Ordinal);
+        Assert.Contains("ProviderTransportKind.ChatCompletions", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("provider.SupportsStructuredOutput = false", source, StringComparison.Ordinal);
+    }
+
     private static ProviderProfile CreateProvider(
         ProviderKind kind,
         ProviderTransportKind transport,

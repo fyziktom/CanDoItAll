@@ -128,11 +128,12 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 OutputTokens: EstimateTokens(responseText),
                 ToolCalls: 1,
                 RuntimeSessionKey: state.RuntimeSessionKey,
-                SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
-                PendingApprovals: [])
-            {
-                FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText)
-            };
+            SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText),
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
+        };
         }
 
         if (definition.RequiresApproval && !suppressApprovalRequirements)
@@ -272,7 +273,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "completed" }, JsonOptions),
             PendingApprovals: [])
         {
-            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText)
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, responseText),
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
         };
     }
 
@@ -315,6 +317,32 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
                 AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
                 responseText,
                 Sequence: 1)
+        ];
+    }
+
+    private static IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
+    {
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return [];
+        }
+
+        var timestamp = DateTimeOffset.UtcNow;
+        return
+        [
+            new AgentToolInvocationTrace(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                ToolInvocationClassification.Read,
+                Sequence: 1,
+                StartedAtUtc: timestamp,
+                CompletedAtUtc: timestamp,
+                Succeeded: true,
+                FailureMessage: string.Empty)
         ];
     }
 

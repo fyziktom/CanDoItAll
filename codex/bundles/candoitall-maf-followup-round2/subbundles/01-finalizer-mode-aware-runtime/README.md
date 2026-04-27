@@ -82,3 +82,31 @@ A lightweight fake runtime can capture the policy passed by the execution servic
 - No exact-once finalizer instruction appears in disabled or shadow mode.
 - Required process-step automation still requires exact-one finalizer at completion.
 - Build and tests pass.
+
+## Status
+
+Completed.
+
+## Requirements Owned
+
+R01, F01.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Critical foundation for subbundles 02, 05, and 07.
+
+## Validation Depth
+
+Code inspection plus behavioral tests for required, shadow, and disabled finalizer composition across initial, continuation, and retry paths.
+
+## Progression Gate
+
+Downstream finalizer instruction and sequence work may continue only after runtime composition receives and honors the effective finalizer mode.
+
+## Closure Proof
+
+Implemented/verified through `AgentRuntimeExecutionOptions`, `CreateFinalizerCapture`, disabled-mode finalizer omission, continuation propagation, and temperature retry preservation. Focused proof: `MafAgentRuntimeTests` passed; full unit suite passed; mandatory Release build passed.

@@ -1,6 +1,6 @@
 # Agent runtime hardening verification
 
-Captured: 2026-04-27T09:14:00-04:00
+Captured: 2026-04-27T10:52:21-04:00
 
 Working directory: `C:\repositories\CanDoItAll`
 
@@ -14,71 +14,58 @@ Working directory: `C:\repositories\CanDoItAll`
 - OS: Windows 10.0.26200, win-x64
 - `global.json`: `C:\repositories\CanDoItAll\global.json`
 
-## Build
+## Mandatory Commands
+
+`dotnet restore CanDoItAll.slnx`
+
+Result: passed. Restore completed with existing warnings: NU1510 prune suggestions, NU1904 for `Microsoft.AspNetCore.DataProtection` 10.0.6, and NU1902 for `OpenTelemetry.Api` 1.13.1.
 
 `dotnet build CanDoItAll.slnx --configuration Release --no-restore`
 
-Result: passed with 0 errors and 64 warnings.
+Result: passed. Build completed with 0 errors and 56 warnings. Warning groups were existing package advisories/prune warnings and existing analyzer/nullable warnings outside this bundle.
 
-Observed existing warning groups:
+`dotnet test CanDoItAll.slnx --configuration Release --no-build`
 
-- NU1904 for `Microsoft.AspNetCore.DataProtection` 10.0.6 critical advisory `GHSA-9mv3-2cwr-p262`.
-- NU1902 for `OpenTelemetry.Api` 1.13.1 moderate advisory `GHSA-g94r-2vxg-569j`.
-- NU1510 prune warnings for `CanDoItAll.Mcp.DotNetWatch`.
-- Existing analyzer warnings in component/integration tests and nullable warnings in process persistence/provisioning code.
+Result: failed outside the round2 MAF/provider/finalizer surface. The run executed for 22m 51s and exposed existing broad-suite failures in these categories:
 
-## Focused Unit Tests
+- Component/project-structure canvas assertions such as `ProjectStructureActionCatalogAdapterTests.Process_definition_nodes_expose_execute_process_without_add_process`, `ProcessCanvasSurfaceFactoryTests.Definition_surface_projects_step_participant_ports_artifact_ports_and_explicit_links`, and `CanvasWorkbenchTests.Workbench_renders_toolbar_hint_and_help_overlay`.
+- ProjectStructure MCP/API integration tests failing while constructing the test host with `Replacing IHostApplicationLifetime is not supported`.
+- Playwright browser suites failing in bulk after startup/browser prerequisites were not satisfied for the full solution run.
+- DotNetWatch integration tests failing in the live wrapper/server validation matrix.
+- A timing-sensitive unit failure in `LocalWorkspaceProcessHostTests.ExecuteAsync_returns_after_parent_exit_when_descendant_keeps_redirected_pipe_open`.
 
-`dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Release --no-build --filter "FullyQualifiedName~AgentFinalizerPolicyTests|FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests|FullyQualifiedName~AgentOutputContractTests"`
+No failure in the full-solution run referenced the round2 finalizer, tool-policy, provider-capability, or structured-output tests added for this bundle.
 
-Result: passed. Discovered and executed 56 matching tests: 56 passed, 0 failed, 0 skipped.
+## Focused Proof
 
-Covered test classes:
+`dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore`
 
-- `AgentFinalizerPolicyTests`
-- `AgentToolInvocationPolicyTests`
-- `ProviderFeatureMatrixTests`
-- `AgentRuntimeHardeningStaticRegressionTests`
-- `AgentOutputContractTests`
+Result: passed. 221 tests passed, 0 failed, 0 skipped.
 
-## Focused Integration Tests
+`dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --configuration Release --no-restore --filter SettingsPageProvidersTests`
 
-`dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter "FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests|FullyQualifiedName~MafAgentRuntimeTests"`
+Result: passed. 2 tests passed, including the Ollama provider UI/save path assertion that persisted structured output remains false.
 
-Result: passed. Discovered and executed 35 matching tests: 35 passed, 0 failed, 0 skipped.
+`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~WorkspaceProviderCapabilityIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"`
 
-Covered test classes:
+Result: passed. 11 tests passed. This covered provider capability persistence and required-finalizer sequencing failure after a post-finalizer validation tool.
 
-- `AgentFrameworkExecutionRunTrackingIntegrationTests`
-- `ProcessMockAgentRuntimeIntegrationTests`
-- `MafAgentRuntimeTests`
+`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter MafAgentRuntimeTests`
 
-## Additional Unit Guardrail
+Result: passed. 20 tests passed. This covered finalizer tool attachment and JSON-only instruction wording.
 
-`dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Release --no-build`
+`dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter ProviderFeatureMatrixTests`
 
-First result: 216 passed, 1 failed. The failed test was `LocalWorkspaceProcessHostTests.ExecuteAsync_returns_after_parent_exit_when_descendant_keeps_redirected_pipe_open`, which exceeded its six-second timing assertion under load.
+Result: passed. 6 tests passed, including the managed SQLite OpenAI chat-completions structured-output source guard.
 
-`dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Release --no-build --filter "FullyQualifiedName~LocalWorkspaceProcessHostTests.ExecuteAsync_returns_after_parent_exit_when_descendant_keeps_redirected_pipe_open"`
+`git diff --check`
 
-Result: passed, 1/1.
+Result: passed with line-ending normalization warnings only.
 
-`dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Release --no-build`
+`git grep -n "RunAsync<" -- src tests docs`
 
-Final result: passed. Discovered and executed 217 tests: 217 passed, 0 failed, 0 skipped.
-
-## Implementation-Time Failures Fixed
-
-The first Release build failed with `CS1501` in `ProcessRunAutomationDispatchService.ToolValidation.cs` after the process outcome parsing signature changed. The caller was corrected to use a candidate-aware overload that preserves branch-outcome id resolution.
-
-An initial focused integration run failed in `Process_mock_calculator_process_completes_end_to_end_through_durable_outbox_dispatch` because the stale parse path validated the branch key without resolving it to a selected branch outcome id. The candidate-aware parse path fixed this, and the final focused integration command above passed.
-
-An initial unit assertion for extraction repair expected a semantic `reason_required` validation error for a missing required DTO member. The serializer correctly reports that shape as `agent.output.malformed_json` before semantic validation can run. The test now asserts the actual contract boundary: extraction succeeds, does not invent `reason`, and validation still fails.
-
-## Repo-Wide Test Status
-
-A repo-wide `dotnet test CanDoItAll.slnx --configuration Release --no-build` run was not executed in this pass. The validated scope for this bundle is the full Release build plus the focused hardening unit and integration filters above.
+Result: no matches. Typed-output `RunAsync<T>` is not currently used; `docs/maf-runtime-stabilization.md` records the current decision to keep dynamic response-format validation/finalizer flow.
 
 ## Closure Notes
 
-The bundle-surface proof is green. Remaining advisories and analyzer warnings are pre-existing repository issues and were not changed by this bundle.
+Round2 implementation proof is green on the targeted unit, component, and integration coverage that exercises the requested behavior. The mandatory full-solution test command is not green because of unrelated broad-suite failures already outside this bundle's runtime/provider/finalizer scope.

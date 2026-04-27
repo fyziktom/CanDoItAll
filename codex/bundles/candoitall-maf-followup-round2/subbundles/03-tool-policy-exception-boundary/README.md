@@ -77,3 +77,31 @@ or, if wrapping is still desired, wrap only this dedicated exception.
 - Policy-block telemetry is precise.
 - Tool bugs remain diagnosable as tool bugs.
 - Build and tests pass.
+
+## Status
+
+Completed.
+
+## Requirements Owned
+
+R03, F03.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Critical foundation for tool-policy diagnostics and behavior-level hardening proof.
+
+## Validation Depth
+
+Static regression plus behavior tests proving policy-block branches throw the dedicated exception and allowed tool exceptions retain their original meaning.
+
+## Progression Gate
+
+Downstream verification may continue only after policy and real tool failures are distinguishable in tests.
+
+## Closure Proof
+
+`AgentToolPolicyBlockedException` now carries `DecisionKind`, and `AgentToolPolicyBlockGuard` is the only policy-block boundary used by MAF middleware. Unit tests prove missing approval paths throw the dedicated exception and allowed tool implementation exceptions remain ordinary tool exceptions.

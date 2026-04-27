@@ -90,6 +90,44 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void SequenceValidator_accepts_finalizer_as_last_significant_tool()
+    {
+        var policy = CreatePolicy();
+        var timestamp = DateTimeOffset.UtcNow;
+        var traces = new[]
+        {
+            CreateToolTrace("workspace_dotnet_build", ToolInvocationClassification.Validation, 1, timestamp),
+            CreateToolTrace(policy.ToolName, ToolInvocationClassification.Read, 2, timestamp)
+        };
+
+        var result = AgentFinalizerSequenceValidator.Validate(policy, traces);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.TraceAvailable);
+        Assert.Equal(2, result.FinalizerSequence);
+        Assert.Empty(result.ViolatingToolInvocations);
+    }
+
+    [Fact]
+    public void SequenceValidator_fails_when_validation_tool_runs_after_required_finalizer()
+    {
+        var policy = CreatePolicy();
+        var timestamp = DateTimeOffset.UtcNow;
+        var traces = new[]
+        {
+            CreateToolTrace(policy.ToolName, ToolInvocationClassification.Read, 1, timestamp),
+            CreateToolTrace("workspace_dotnet_test", ToolInvocationClassification.Validation, 2, timestamp)
+        };
+
+        var result = AgentFinalizerSequenceValidator.Validate(policy, traces);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.TraceAvailable);
+        Assert.Contains(result.Errors, error => error.Code == "agent.finalizer.not_last");
+        Assert.Contains(result.ViolatingToolInvocations, trace => trace.ToolName == "workspace_dotnet_test");
+    }
+
+    [Fact]
     public void ResolveMode_defaults_process_step_contract_to_shadow()
     {
         var run = CreateRun(metadataJson: "{}");
@@ -216,6 +254,22 @@ public sealed class AgentFinalizerPolicyTests
                     : ["Escalate the blocked outcome."]
             },
             AgentOutputJson.SerializerOptions);
+    }
+
+    private static AgentToolInvocationTrace CreateToolTrace(
+        string toolName,
+        ToolInvocationClassification classification,
+        int sequence,
+        DateTimeOffset timestamp)
+    {
+        return new AgentToolInvocationTrace(
+            toolName,
+            classification,
+            sequence,
+            StartedAtUtc: timestamp,
+            CompletedAtUtc: timestamp,
+            Succeeded: true,
+            FailureMessage: string.Empty);
     }
 
     private static ExecutionRunRecord CreateRun(string metadataJson)

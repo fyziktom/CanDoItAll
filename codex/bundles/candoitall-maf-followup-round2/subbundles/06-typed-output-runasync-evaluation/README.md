@@ -33,3 +33,31 @@ docs/maf-runtime-stabilization.md
 - Decision documented.
 - No destabilizing refactor.
 - Process automation still uses the dynamic contract path.
+
+## Status
+
+Completed.
+
+## Requirements Owned
+
+F07 documentation evaluation.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Non-critical documentation foundation for final verification.
+
+## Validation Depth
+
+Repository search plus documentation update explaining why dynamic structured contracts remain the process automation path.
+
+## Progression Gate
+
+Final verification may continue only after the typed-output decision is documented without rewriting the dynamic process-step flow.
+
+## Closure Proof
+
+`git grep -n "RunAsync<" -- src tests docs` returned no matches. `docs/maf-runtime-stabilization.md` documents the decision to retain dynamic structured response-format validation and finalizer flow until a compile-time DTO path can preserve dynamic process contracts, repair, approval continuation, and finalizer behavior.

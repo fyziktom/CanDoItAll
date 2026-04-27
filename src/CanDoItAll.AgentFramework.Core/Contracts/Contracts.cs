@@ -111,6 +111,8 @@ public sealed record AgentRuntimeResponse(
     IReadOnlyList<PendingToolApprovalRecord> PendingApprovals)
 {
     public IReadOnlyList<AgentFinalizerInvocation> FinalizerInvocations { get; init; } = [];
+
+    public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
 }
 
 public interface IAgentRuntime

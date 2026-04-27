@@ -29,7 +29,9 @@ Modes are carried through `ExecutionInvocationPolicy`, normalized into execution
 - `Shadow`: a finalizer may be captured and compared to structured output, but structured output remains authoritative.
 - `Disabled`: no finalizer tool is attached, no finalizer prompt text is appended, and no finalizer validation is performed.
 
-Governed process automation sets required finalizer mode by default. Required and shadow finalizer instructions are compatible with JSON-schema response format: the model is instructed to call the typed finalizer and return schema-conformant JSON, not markdown or prose. Deterministic process runtimes used by tests emit matching finalizer invocations only when the effective mode is not disabled.
+Governed process automation sets required finalizer mode by default. Required and shadow finalizer instructions are compatible with JSON-schema response format: the model is instructed to return exactly one schema-conformant JSON object with no markdown, prose, code fences, or extra text. Required mode also instructs the model to call the typed finalizer after all other significant tool work. Shadow mode permits at most one finalizer call for comparison while keeping the final assistant response JSON authoritative. Deterministic process runtimes used by tests emit matching finalizer invocations only when the effective mode is not disabled.
+
+`AgentRuntimeResponse.ToolInvocationTraces` records ordered tool calls with tool name, classification, sequence, timestamps, success, and failure text. Required governed finalizers must be the last significant tool invocation; mutation, validation, hosted-provider-native, local MCP, and hosted MCP calls after the required finalizer fail the run. Non-governed required runs record the same warning rather than treating assistant text as a hidden fallback.
 
 ## Repair and validation
 
@@ -49,7 +51,7 @@ The default repair service is intentionally conservative: it can recover a singl
 
 Policy inputs include agent identity, tool name, redacted arguments, known-tool membership, classification, auto-approval state, provider approval capability, approval-wrapper effectiveness, and execution/process/step ids.
 
-Policy decisions are explicit: `Allow`, `RequireApproval`, `Deny`, `SanitizeResult`, or `SkipExecution`. Middleware blocks `Deny` and `SkipExecution` by throwing a dedicated policy-block exception. It also blocks `RequireApproval` when there is no effective approval path, so mutation/destructive tools cannot execute just because an approval decision was logged. Downstream tool `InvalidOperationException` and `NotSupportedException` failures are no longer reclassified as policy blocks.
+Policy decisions are explicit: `Allow`, `RequireApproval`, `Deny`, `SanitizeResult`, or `SkipExecution`. Middleware blocks `Deny` and `SkipExecution` through `AgentToolPolicyBlockGuard`, which throws `AgentToolPolicyBlockedException` with the tool name, decision kind, and reason. It also blocks `RequireApproval` when there is no effective approval path, so mutation/destructive tools cannot execute just because an approval decision was logged. Downstream tool `InvalidOperationException` and `NotSupportedException` failures are no longer reclassified as policy blocks.
 
 During tool composition, approval-wrapped mutation tools are filtered when the provider cannot surface effective approval requests. Governed process automation fails the runtime build with a clear diagnostic in that state; exploratory/manual runs omit the unusable mutation tools and continue with the remaining safe tools. Auto-approved process automation suppresses approval wrapping intentionally, so mutation tools remain available for that governed path.
 
@@ -77,6 +79,12 @@ Important flags:
 Structured output support is no longer tied only to Responses transport. Compatible OpenAI and Azure OpenAI chat-completion clients may use JSON-schema response format. Tool approval support remains narrower than function-tool support and must be checked independently.
 
 Workspace-backed provider persistence stores the selected `providerTransport` explicitly in provider metadata/settings. Provider mapping reads that transport first and falls back to legacy display-name inference only for older records that do not yet carry explicit transport metadata.
+
+Workspace provider UI defaults are resolved through `WorkspaceProviderCapabilityDefaults`. Ollama local and remote profiles default to `SupportsStructuredOutput = false`, and the workspace save path does not persist an editor-posted structured-output override for Ollama. Managed SQLite OpenAI chat-completions bootstrap profiles advertise structured output because the core feature matrix supports JSON-schema response format for OpenAI chat completions.
+
+## Typed output API evaluation
+
+The current MAF runtime path does not use `RunAsync<TOutput>` typed-output overloads. A repository search for `RunAsync<` under `src`, `tests`, and `docs` is empty. CanDoItAll still needs execution-time contracts because process automation selects contracts dynamically, persists those contracts through approval checkpoints, and routes finalizer policy through `AgentRuntimeExecutionOptions`. The active implementation therefore keeps `ChatResponseFormatJson` plus post-run validators/finalizers as the source of truth. Revisit typed `RunAsync<TOutput>` only when a concrete process path can carry a compile-time DTO end to end without losing dynamic contract persistence, repair, finalizer, and approval-continuation behavior.
 
 ## Workflow checkpoint bridge
 

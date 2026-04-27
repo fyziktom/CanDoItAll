@@ -64,3 +64,31 @@ public sealed record AgentToolInvocationTrace(
 
 - Required finalizer represents the final state of the run.
 - Any policy exception is explicit and logged.
+
+## Status
+
+Completed.
+
+## Requirements Owned
+
+R07, F06.
+
+## Prerequisites
+
+Subbundle 01 must be completed or already proven in current source.
+
+## Dependency Impact
+
+Critical foundation for required-finalizer trust after tool-heavy runs.
+
+## Validation Depth
+
+Unit tests for finalizer-last validation and trace classification. Integration proof if runtime trace capture touches provider execution paths.
+
+## Progression Gate
+
+Downstream verification may continue only after post-finalizer significant tool calls are observable and enforced or explicitly warned by policy.
+
+## Closure Proof
+
+`AgentRuntimeResponse` now includes ordered `AgentToolInvocationTrace` entries. MAF middleware records tool traces, deterministic runtimes emit finalizer traces, and `AgentFinalizerSequenceValidator` fails governed required finalizers when mutation/validation/hosted/local-MCP work appears after the finalizer. Unit and integration tests cover the finalizer-last invariant.

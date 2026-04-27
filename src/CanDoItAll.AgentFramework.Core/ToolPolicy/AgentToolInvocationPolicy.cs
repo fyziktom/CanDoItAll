@@ -24,17 +24,32 @@ public enum ToolInvocationClassification
 
 public sealed class AgentToolPolicyBlockedException : Exception
 {
-    public AgentToolPolicyBlockedException(string toolName, string reason)
+    public AgentToolPolicyBlockedException(
+        string toolName,
+        ToolInvocationDecisionKind decisionKind,
+        string reason)
         : base($"Tool '{toolName}' was blocked by policy. {reason}")
     {
         ToolName = toolName;
+        DecisionKind = decisionKind;
         Reason = reason;
     }
 
     public string ToolName { get; }
 
+    public ToolInvocationDecisionKind DecisionKind { get; }
+
     public string Reason { get; }
 }
+
+public sealed record AgentToolInvocationTrace(
+    string ToolName,
+    ToolInvocationClassification Classification,
+    int Sequence,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    bool Succeeded,
+    string FailureMessage);
 
 public sealed record ToolInvocationPolicyContext(
     Guid AgentId,
@@ -77,6 +92,27 @@ public interface IAgentToolInvocationPolicy
     ValueTask<ToolInvocationPolicyDecision> EvaluateAsync(
         ToolInvocationPolicyContext context,
         CancellationToken cancellationToken);
+}
+
+public static class AgentToolPolicyBlockGuard
+{
+    public static void ThrowIfBlocked(
+        string toolName,
+        ToolInvocationPolicyDecision decision,
+        bool hasEffectiveApprovalPath)
+    {
+        ArgumentNullException.ThrowIfNull(decision);
+
+        if (decision.Kind is ToolInvocationDecisionKind.Deny or ToolInvocationDecisionKind.SkipExecution)
+        {
+            throw new AgentToolPolicyBlockedException(toolName, decision.Kind, decision.Reason);
+        }
+
+        if (decision.Kind == ToolInvocationDecisionKind.RequireApproval && !hasEffectiveApprovalPath)
+        {
+            throw new AgentToolPolicyBlockedException(toolName, decision.Kind, decision.Reason);
+        }
+    }
 }
 
 public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolicy

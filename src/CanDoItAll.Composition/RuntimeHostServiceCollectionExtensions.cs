@@ -404,7 +404,7 @@ public sealed class AppDatabaseBootstrapper(
                 IsEnabled = true,
                 SupportsStreaming = true,
                 SupportsToolCalling = true,
-                SupportsStructuredOutput = false,
+                SupportsStructuredOutput = true,
                 SupportsVision = false,
                 LastHealthStatus = "OpenAI active",
                 LastHealthCheckAtUtc = null,
@@ -571,9 +571,9 @@ public sealed class AppDatabaseBootstrapper(
             changed = true;
         }
 
-        if (provider.SupportsStructuredOutput)
+        if (!provider.SupportsStructuredOutput)
         {
-            provider.SupportsStructuredOutput = false;
+            provider.SupportsStructuredOutput = true;
             changed = true;
         }
 

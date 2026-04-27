@@ -200,11 +200,11 @@ public sealed class MafAgentRuntimeTests
 
         var instructions = Assert.IsType<string>(appendMethod.Invoke(
             null,
-            ["Base instructions.", policy, AgentFinalizerMode.Required]));
+            ["Base instructions.", policy, AgentFinalizerMode.Required, true]));
 
         Assert.Contains("Call `submit_process_step_outcome` exactly once", instructions, StringComparison.Ordinal);
-        Assert.Contains("return a JSON object", instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Do not use Markdown or prose", instructions, StringComparison.Ordinal);
+        Assert.Contains("return exactly one JSON object", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not use Markdown, prose, code fences, or any extra text", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -220,11 +220,12 @@ public sealed class MafAgentRuntimeTests
 
         var instructions = Assert.IsType<string>(appendMethod.Invoke(
             null,
-            ["Base instructions.", policy, AgentFinalizerMode.Shadow]));
+            ["Base instructions.", policy, AgentFinalizerMode.Shadow, true]));
 
         Assert.Contains("Finalizer tool shadow policy", instructions, StringComparison.Ordinal);
-        Assert.Contains("runtime can compare both outputs", instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not use Markdown or prose", instructions, StringComparison.Ordinal);
+        Assert.Contains("at most once", instructions, StringComparison.Ordinal);
+        Assert.Contains("final assistant response JSON is the source of truth", instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not use Markdown, prose, code fences, or any extra text", instructions, StringComparison.Ordinal);
     }
 
     [Fact]

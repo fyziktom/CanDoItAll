@@ -72,3 +72,31 @@ Choose one of these paths:
 - No UI default claims Ollama structured-output support by default.
 - Core runtime, registry, and UI display do not contradict each other.
 - Tests prove the capability truth for OpenAI Responses, OpenAI Chat Completions, and Ollama.
+
+## Status
+
+Completed.
+
+## Requirements Owned
+
+R04, R05, R06, F04.
+
+## Prerequisites
+
+None.
+
+## Dependency Impact
+
+Critical foundation for provider capability display, registry persistence, and managed SQLite truthfulness.
+
+## Validation Depth
+
+Source audit plus unit/component tests for UI defaults, registry persistence, managed SQLite bootstrap, and core feature matrix agreement.
+
+## Progression Gate
+
+Downstream verification may continue only after OpenAI Responses, OpenAI Chat Completions, Azure where applicable, and Ollama local/remote capability truth is consistent.
+
+## Closure Proof
+
+Workspace provider defaults are centralized in `WorkspaceProviderCapabilityDefaults`; Ollama local/remote default and persist structured output as false, while OpenAI-style providers keep structured output true where the core matrix supports JSON-schema response format. Managed SQLite OpenAI chat-completions bootstrap now sets and preserves `SupportsStructuredOutput = true`. Proof: provider feature unit tests, Settings provider component tests, and provider persistence integration tests passed.

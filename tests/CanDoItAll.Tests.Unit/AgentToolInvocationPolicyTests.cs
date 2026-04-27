@@ -123,11 +123,51 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var exception = new AgentToolPolicyBlockedException(
             "workspace_write_file",
+            ToolInvocationDecisionKind.RequireApproval,
             "Mutation tools require approval.");
 
         Assert.Equal("workspace_write_file", exception.ToolName);
+        Assert.Equal(ToolInvocationDecisionKind.RequireApproval, exception.DecisionKind);
         Assert.Equal("Mutation tools require approval.", exception.Reason);
         Assert.Contains("blocked by policy", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BlockGuard_throws_policy_exception_for_missing_approval_path()
+    {
+        var decision = ToolInvocationPolicyDecision.RequireApproval(
+            "workspace_write_file|path=artifact.md",
+            "Mutation tools require approval.");
+
+        var exception = Assert.Throws<AgentToolPolicyBlockedException>(() =>
+            AgentToolPolicyBlockGuard.ThrowIfBlocked(
+                "workspace_write_file",
+                decision,
+                hasEffectiveApprovalPath: false));
+
+        Assert.Equal("workspace_write_file", exception.ToolName);
+        Assert.Equal(ToolInvocationDecisionKind.RequireApproval, exception.DecisionKind);
+    }
+
+    [Fact]
+    public void BlockGuard_does_not_reclassify_allowed_tool_exceptions()
+    {
+        var decision = ToolInvocationPolicyDecision.Allow("workspace_read_file|path=artifact.md");
+
+        AgentToolPolicyBlockGuard.ThrowIfBlocked(
+            "workspace_read_file",
+            decision,
+            hasEffectiveApprovalPath: false);
+
+        var exception = Assert.Throws<InvalidOperationException>(ThrowToolException);
+
+        Assert.IsNotType<AgentToolPolicyBlockedException>(exception);
+        Assert.Equal("Tool implementation failed.", exception.Message);
+
+        static void ThrowToolException()
+        {
+            throw new InvalidOperationException("Tool implementation failed.");
+        }
     }
 
     [Theory]

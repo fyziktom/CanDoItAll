@@ -1080,6 +1080,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return response;
         }
 
+        await ValidateFinalizerSequenceBeforeCompletionAsync(
+            run,
+            finalizerMode,
+            policy,
+            response,
+            cancellationToken);
+
         var finalizerOutputJson = SerializeMachineOutput(result.Output, policy.OutputType);
         if (finalizerMode == AgentFinalizerMode.Required)
         {
@@ -1118,6 +1125,71 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             cancellationToken);
 
         return response;
+    }
+
+    private async Task ValidateFinalizerSequenceBeforeCompletionAsync(
+        ExecutionRunRecord run,
+        AgentFinalizerMode finalizerMode,
+        AgentFinalizerPolicy policy,
+        AgentRuntimeResponse response,
+        CancellationToken cancellationToken)
+    {
+        if (finalizerMode != AgentFinalizerMode.Required)
+        {
+            return;
+        }
+
+        var governedRun = IsGovernedMachineCriticalRun(run);
+        var sequenceValidation = AgentFinalizerSequenceValidator.Validate(policy, response.ToolInvocationTraces);
+        Activity.Current?.SetTag("agentframework.finalizer_trace_available", sequenceValidation.TraceAvailable);
+        Activity.Current?.SetTag("agentframework.finalizer_sequence", sequenceValidation.FinalizerSequence);
+        Activity.Current?.SetTag("agentframework.post_finalizer_significant_tool_count", sequenceValidation.ViolatingToolInvocations.Count);
+
+        if (!sequenceValidation.TraceAvailable)
+        {
+            var message =
+                $"Required finalizer tool '{policy.ToolName}' sequencing was not verifiable because the runtime did not report ordered tool invocation traces.";
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                governedRun ? ExecutionState.Failed : ExecutionState.Persisting,
+                "Finalizer sequencing",
+                message,
+                cancellationToken);
+
+            if (governedRun)
+            {
+                throw new InvalidOperationException(message);
+            }
+
+            return;
+        }
+
+        if (sequenceValidation.Succeeded)
+        {
+            return;
+        }
+
+        var errorSummary = FormatValidationErrors(sequenceValidation.Errors);
+        var sequenceSummary = string.Join(
+            ", ",
+            sequenceValidation.ViolatingToolInvocations.Select(trace => $"{trace.ToolName}#{trace.Sequence}"));
+        var validationMessage =
+            $"Required finalizer tool '{policy.ToolName}' must be the last significant tool invocation. Finalizer sequence: {sequenceValidation.FinalizerSequence}. Later significant tools: {sequenceSummary}. Errors: {errorSummary}";
+        await AppendExecutionLogAsync(
+            run.Id,
+            run.AgentId,
+            run.ChatSessionId,
+            governedRun ? ExecutionState.Failed : ExecutionState.Persisting,
+            "Finalizer sequencing",
+            validationMessage,
+            cancellationToken);
+
+        if (governedRun)
+        {
+            throw new InvalidOperationException(validationMessage);
+        }
     }
 
     private static string FormatValidationErrors(IReadOnlyList<AgentOutputValidationError> errors)

@@ -159,7 +159,8 @@ internal sealed class ProcessMockAgentRuntime(
                 JsonOptions),
             PendingApprovals: [])
         {
-            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText)
+            FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText),
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
         };
     }
 
@@ -575,6 +576,32 @@ internal sealed class ProcessMockAgentRuntime(
                 AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
                 responseText,
                 Sequence: 1)
+        ];
+    }
+
+    private static IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
+    {
+        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
+        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
+        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
+            finalizerMode == AgentFinalizerMode.Disabled)
+        {
+            return [];
+        }
+
+        var timestamp = DateTimeOffset.UtcNow;
+        return
+        [
+            new AgentToolInvocationTrace(
+                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                ToolInvocationClassification.Read,
+                Sequence: 1,
+                StartedAtUtc: timestamp,
+                CompletedAtUtc: timestamp,
+                Succeeded: true,
+                FailureMessage: string.Empty)
         ];
     }
 

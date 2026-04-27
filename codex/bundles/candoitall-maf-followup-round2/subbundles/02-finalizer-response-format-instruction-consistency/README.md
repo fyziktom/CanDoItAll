@@ -58,3 +58,31 @@ Shadow finalizer telemetry:
 
 - Instructions never conflict with the configured response format.
 - The model receives a single coherent output protocol.
+
+## Status
+
+Completed.
+
+## Requirements Owned
+
+R02, F02.
+
+## Prerequisites
+
+Subbundle 01 must be completed or already proven in current source.
+
+## Dependency Impact
+
+Critical foundation for final hardening verification and required-finalizer reliability.
+
+## Validation Depth
+
+Behavioral or reflection tests for rendered required, shadow, and disabled instruction text.
+
+## Progression Gate
+
+Downstream verification may continue only after required-mode instructions demand JSON-only final assistant output and shadow mode does not require exact-once finalizer usage.
+
+## Closure Proof
+
+Required-mode instructions demand exactly one finalizer call after significant tool work and exactly one JSON object through the structured response format. Shadow mode now says at most one comparison call and keeps final assistant response JSON authoritative. Focused proof: `MafAgentRuntimeTests` passed.

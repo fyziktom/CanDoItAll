@@ -104,13 +104,13 @@ The default repair behavior is implemented by `JsonObjectExtractionAgentOutputRe
 
 Use a finalizer function tool for critical decisions that should be committed exactly once, such as deployment approval, security-sensitive tool decisions, architecture approval, or process-state patch submission. Register finalizer functions with typed signatures through `AIFunctionFactory.Create(...)`.
 
-The agent instruction should say that the finalizer tool must be called exactly once and that normal assistant text is display-only. Missing finalizer calls and malformed tool arguments must be treated as invalid output.
+Required-mode agent instructions say that the finalizer tool must be called exactly once after all other significant tool work and that normal assistant text is display-only. Shadow-mode instructions allow at most one finalizer call for comparison while keeping the structured assistant response authoritative. Missing required finalizer calls and malformed tool arguments must be treated as invalid output.
 
 `AgentFinalizerPolicy` and `DefaultAgentFinalizerValidator` enforce the exact-once invariant. Required finalizers fail when the expected tool is missing, called multiple times, has malformed arguments, or lacks a registered output validator. Assistant text is ignored when a finalizer is required.
 
-Governed process automation sets `agentFinalizerMode` to `required` for process-step runs. The execution service resolves the effective finalizer mode into `AgentRuntimeExecutionOptions` before invoking the runtime. The MAF runtime attaches finalizer tools and finalizer prompt text only for `Required` and `Shadow`; `Disabled` mode attaches no finalizer tool and adds no finalizer instructions. Required and shadow instructions tell the model to produce schema-conformant JSON as the final assistant response, not markdown or prose.
+Governed process automation sets `agentFinalizerMode` to `required` for process-step runs. The execution service resolves the effective finalizer mode into `AgentRuntimeExecutionOptions` before invoking the runtime. The MAF runtime attaches finalizer tools and finalizer prompt text only for `Required` and `Shadow`; `Disabled` mode attaches no finalizer tool and adds no finalizer instructions. Required and shadow instructions tell the model to produce exactly one schema-conformant JSON object as the final assistant response, with no markdown, prose, code fences, or extra text.
 
-The execution service validates the finalizer before structured response validation, replaces `ResponseText` with the finalizer payload in required mode, and creates the persisted assistant transcript only after that finalization step.
+The runtime response carries ordered `AgentToolInvocationTrace` records. Required governed finalizers must be the last significant tool invocation; mutation, validation, hosted-provider-native, local MCP, and hosted MCP calls after the required finalizer fail the run. The execution service validates the finalizer before structured response validation, replaces `ResponseText` with the finalizer payload in required mode, and creates the persisted assistant transcript only after that finalization step.
 
 Current typed finalizer tools:
 

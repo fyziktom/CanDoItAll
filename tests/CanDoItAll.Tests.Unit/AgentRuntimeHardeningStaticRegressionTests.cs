@@ -51,23 +51,30 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
             "Runtime",
             "MafAgentRuntime.AgentFactory.cs");
 
-        Assert.Contains("policyDecision.Kind == ToolInvocationDecisionKind.RequireApproval", source, StringComparison.Ordinal);
-        Assert.Contains("!policyContext.HasEffectiveApprovalPath", source, StringComparison.Ordinal);
+        Assert.Contains("AgentToolPolicyBlockGuard.ThrowIfBlocked", source, StringComparison.Ordinal);
+        Assert.Contains("policyContext.HasEffectiveApprovalPath", source, StringComparison.Ordinal);
         Assert.Contains("agentframework.tool_approval_effective", source, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Maf_middleware_uses_dedicated_policy_block_exception()
     {
-        var source = ReadRepositoryFile(
+        var runtimeSource = ReadRepositoryFile(
             "src",
             "CanDoItAll.AgentFramework.Maf",
             "Runtime",
             "MafAgentRuntime.AgentFactory.cs");
+        var policySource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.AgentFramework.Core",
+            "ToolPolicy",
+            "AgentToolInvocationPolicy.cs");
 
-        Assert.Contains("AgentToolPolicyBlockedException", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsPolicyException", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("exception is InvalidOperationException or NotSupportedException", source, StringComparison.Ordinal);
+        Assert.Contains("AgentToolPolicyBlockedException", policySource, StringComparison.Ordinal);
+        Assert.Contains("ToolInvocationDecisionKind DecisionKind", policySource, StringComparison.Ordinal);
+        Assert.Contains("AgentToolPolicyBlockGuard.ThrowIfBlocked", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsPolicyException", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("exception is InvalidOperationException or NotSupportedException", runtimeSource, StringComparison.Ordinal);
     }
 
     [Fact]

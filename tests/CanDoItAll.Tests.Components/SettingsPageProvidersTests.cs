@@ -41,6 +41,8 @@ public sealed class SettingsPageProvidersTests
         var provider = Assert.Single(providers, item => item.Name == "Component Ollama");
         Assert.Equal(OllamaProviderAdapter.PluginKey, provider.ConnectorPluginKey);
         Assert.Equal("Ollama local provider", provider.ConnectorDisplayName);
+        var providerEditor = await workspaceService.GetProviderAsync(provider.Id);
+        Assert.False(providerEditor.SupportsStructuredOutput);
     }
 
     [Fact]

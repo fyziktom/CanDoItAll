@@ -210,6 +210,128 @@ public sealed record AgentFinalizerValidationResult(
     }
 }
 
+public sealed record AgentFinalizerSequenceValidationResult(
+    bool Succeeded,
+    bool TraceAvailable,
+    int? FinalizerSequence,
+    IReadOnlyList<AgentToolInvocationTrace> ViolatingToolInvocations,
+    IReadOnlyList<AgentOutputValidationError> Errors)
+{
+    public static AgentFinalizerSequenceValidationResult Success(
+        bool traceAvailable,
+        int? finalizerSequence)
+    {
+        return new AgentFinalizerSequenceValidationResult(
+            true,
+            traceAvailable,
+            finalizerSequence,
+            [],
+            []);
+    }
+
+    public static AgentFinalizerSequenceValidationResult Failure(
+        bool traceAvailable,
+        int? finalizerSequence,
+        IReadOnlyList<AgentToolInvocationTrace> violatingToolInvocations,
+        params AgentOutputValidationError[] errors)
+    {
+        return new AgentFinalizerSequenceValidationResult(
+            false,
+            traceAvailable,
+            finalizerSequence,
+            violatingToolInvocations,
+            errors);
+    }
+}
+
+public static class AgentFinalizerSequenceValidator
+{
+    public static AgentFinalizerSequenceValidationResult Validate(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(toolInvocationTraces);
+
+        if (!policy.IsRequired)
+        {
+            return AgentFinalizerSequenceValidationResult.Success(
+                traceAvailable: toolInvocationTraces.Count > 0,
+                finalizerSequence: null);
+        }
+
+        if (toolInvocationTraces.Count == 0)
+        {
+            return AgentFinalizerSequenceValidationResult.Success(
+                traceAvailable: false,
+                finalizerSequence: null);
+        }
+
+        var finalizerTraces = toolInvocationTraces
+            .Where(trace => string.Equals(trace.ToolName, policy.ToolName, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(trace => trace.Sequence)
+            .ToList();
+        if (finalizerTraces.Count == 0)
+        {
+            return AgentFinalizerSequenceValidationResult.Failure(
+                traceAvailable: true,
+                finalizerSequence: null,
+                violatingToolInvocations: [],
+                Error(
+                    "agent.finalizer.trace_missing",
+                    $"Required finalizer tool '{policy.ToolName}' was validated but no matching ordered tool trace was reported.",
+                    "$.finalizer.sequence"));
+        }
+
+        var finalizerSequence = finalizerTraces[^1].Sequence;
+        var violatingToolInvocations = toolInvocationTraces
+            .Where(trace => trace.Sequence > finalizerSequence)
+            .Where(IsSignificantPostFinalizerTool)
+            .OrderBy(trace => trace.Sequence)
+            .ToList();
+        if (violatingToolInvocations.Count == 0)
+        {
+            return AgentFinalizerSequenceValidationResult.Success(
+                traceAvailable: true,
+                finalizerSequence);
+        }
+
+        var toolList = string.Join(
+            ", ",
+            violatingToolInvocations.Select(trace => $"{trace.ToolName}#{trace.Sequence}"));
+        return AgentFinalizerSequenceValidationResult.Failure(
+            traceAvailable: true,
+            finalizerSequence,
+            violatingToolInvocations,
+            Error(
+                "agent.finalizer.not_last",
+                $"Required finalizer tool '{policy.ToolName}' was followed by significant tool invocation(s): {toolList}.",
+                "$.finalizer.sequence"));
+    }
+
+    private static bool IsSignificantPostFinalizerTool(AgentToolInvocationTrace trace)
+    {
+        return trace.Classification is ToolInvocationClassification.Mutation
+            or ToolInvocationClassification.Validation
+            or ToolInvocationClassification.HostedProviderNative
+            or ToolInvocationClassification.LocalMcp
+            or ToolInvocationClassification.HostedMcp;
+    }
+
+    private static AgentOutputValidationError Error(
+        string code,
+        string message,
+        string path)
+    {
+        return new AgentOutputValidationError
+        {
+            Code = code,
+            Message = message,
+            Path = path
+        };
+    }
+}
+
 public interface IAgentFinalizerValidator
 {
     AgentFinalizerValidationResult Validate(
