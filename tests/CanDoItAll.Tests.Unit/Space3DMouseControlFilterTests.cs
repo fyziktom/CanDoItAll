@@ -79,21 +79,32 @@ public sealed class Space3DMouseControlFilterTests
         var panButton = Button(Space3DMouseButtonAction.Pan, 1);
 
         var origin = filter.BuildNavigationCommand(
-            Snapshot(start, new SceneVector(0.20d, 0d, 0d), SceneVector.Zero),
+            Snapshot(start, SceneVector.Zero, SceneVector.Zero, yawDeg: 6d, rollDeg: -4d),
             panButton,
             precisionMode: false);
         var samePosition = filter.BuildNavigationCommand(
-            Snapshot(start.AddMilliseconds(20), new SceneVector(0.20d, 0d, 0d), SceneVector.Zero),
+            Snapshot(start.AddMilliseconds(20), SceneVector.Zero, SceneVector.Zero, yawDeg: 6d, rollDeg: -4d),
             panButton,
             precisionMode: false);
         var relativeMove = filter.BuildNavigationCommand(
-            Snapshot(start.AddMilliseconds(40), new SceneVector(0.35d, 0d, 0d), SceneVector.Zero),
+            Snapshot(start.AddMilliseconds(40), SceneVector.Zero, SceneVector.Zero, yawDeg: 18d, rollDeg: 7d),
             panButton,
             precisionMode: false);
 
         Assert.False(origin.HasPan);
         Assert.False(samePosition.HasPan);
         Assert.True(relativeMove.PanX > 0.1d);
+        Assert.True(relativeMove.PanY > 0.1d);
+    }
+
+    [Fact]
+    public void Zoom_uses_relative_roll_or_yaw_as_joystick_axis()
+    {
+        var rollZoom = BuildZoomCommandFromAngles(yawDeg: 0d, rollDeg: 14d);
+        var yawZoom = BuildZoomCommandFromAngles(yawDeg: 14d, rollDeg: 0d);
+
+        Assert.True(rollZoom.ZoomFactor > 1.001d);
+        Assert.True(yawZoom.ZoomFactor > 1.001d);
     }
 
     [Fact]
@@ -154,7 +165,7 @@ public sealed class Space3DMouseControlFilterTests
         for (var index = 1; index <= hertz; index++)
         {
             var command = filter.BuildNavigationCommand(
-                Snapshot(start.AddSeconds((double)index / hertz), new SceneVector(0.18d, 0d, 0.04d), SceneVector.Zero),
+                Snapshot(start.AddSeconds((double)index / hertz), SceneVector.Zero, SceneVector.Zero, yawDeg: 14d, rollDeg: 10d),
                 button,
                 precisionMode: false);
             total += command.PanX;
@@ -173,7 +184,7 @@ public sealed class Space3DMouseControlFilterTests
         for (var index = 1; index <= hertz; index++)
         {
             var command = filter.BuildNavigationCommand(
-                Snapshot(start.AddSeconds((double)index / hertz), new SceneVector(0d, 0.18d, 0d), SceneVector.Zero),
+                Snapshot(start.AddSeconds((double)index / hertz), SceneVector.Zero, SceneVector.Zero, rollDeg: 12d),
                 button,
                 precisionMode: false);
             factor *= command.ZoomFactor;
@@ -201,7 +212,25 @@ public sealed class Space3DMouseControlFilterTests
         return total;
     }
 
-    private static MouseSceneSnapshot Snapshot(DateTimeOffset receivedAt, SceneVector accel, SceneVector gyro)
+    private static Space3DNavigationCommand BuildZoomCommandFromAngles(double yawDeg, double rollDeg)
+    {
+        var filter = new Space3DMouseControlFilter(Space3DMouseControlSettings.CreateDefault());
+        var button = Button(Space3DMouseButtonAction.Zoom, 3);
+        var start = DateTimeOffset.Parse("2026-04-24T00:00:00Z");
+        filter.BuildNavigationCommand(Snapshot(start, SceneVector.Zero, SceneVector.Zero), button, precisionMode: false);
+        return filter.BuildNavigationCommand(
+            Snapshot(start.AddMilliseconds(20), SceneVector.Zero, SceneVector.Zero, yawDeg: yawDeg, rollDeg: rollDeg),
+            button,
+            precisionMode: false);
+    }
+
+    private static MouseSceneSnapshot Snapshot(
+        DateTimeOffset receivedAt,
+        SceneVector accel,
+        SceneVector gyro,
+        double yawDeg = 0d,
+        double pitchDeg = 0d,
+        double rollDeg = 0d)
     {
         var source = new MouseTelemetrySnapshot(
             Sequence: 1,
@@ -243,9 +272,9 @@ public sealed class Space3DMouseControlFilterTests
             PointerPosition: SceneVector.Zero,
             Gyro: gyro,
             LinearAccel: accel,
-            ForwardAzimuthDeg: 0d,
-            ForwardElevationDeg: 0d,
-            RollDeg: 0d,
+            ForwardAzimuthDeg: yawDeg,
+            ForwardElevationDeg: pitchDeg,
+            RollDeg: rollDeg,
             GyroMagnitudeDps: gyro.Length,
             LinearAccelMagnitudeG: accel.Length);
     }

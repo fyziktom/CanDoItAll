@@ -370,7 +370,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: 0.42rem;
-    max-width: min(30rem, calc(100vw - 2rem));
+    max-width: min(56rem, calc(100vw - 2rem));
 }
 
 .space3d-connection-status {
@@ -404,6 +404,17 @@
     border-color: rgba(220, 38, 38, 0.28);
     background: #ffe5e5;
     color: #9a1f1f;
+}
+
+.space3d-connection-detail {
+    max-width: min(25rem, 34vw);
+    overflow: hidden;
+    color: rgba(51, 65, 85, 0.9);
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .space3d-connect-button {
@@ -517,6 +528,14 @@
         position: static;
         margin: -0.1rem 0 0.45rem;
         justify-content: flex-start;
+        flex-wrap: wrap;
+        max-width: none;
+    }
+
+    .space3d-connection-detail {
+        max-width: 100%;
+        flex: 1 1 18rem;
+        white-space: normal;
     }
 
     .webgl-stage-frame {

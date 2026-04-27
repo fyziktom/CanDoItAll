@@ -47,6 +47,8 @@ public sealed class Space3DMouseControlFilter
     private SceneVector accelBias = SceneVector.Zero;
     private SceneVector actionOriginAccel = SceneVector.Zero;
     private SceneVector actionOriginGyro = SceneVector.Zero;
+    private double actionOriginYawDeg;
+    private double actionOriginRollDeg;
     private NavigationAction activeAction;
     private bool haveFilteredState;
 
@@ -84,6 +86,8 @@ public sealed class Space3DMouseControlFilter
         accelBias = SceneVector.Zero;
         actionOriginAccel = SceneVector.Zero;
         actionOriginGyro = SceneVector.Zero;
+        actionOriginYawDeg = 0d;
+        actionOriginRollDeg = 0d;
         activeAction = NavigationAction.None;
         haveFilteredState = false;
         LastState = LastState with
@@ -134,13 +138,17 @@ public sealed class Space3DMouseControlFilter
             activeAction = action;
             actionOriginAccel = state.ControlAccel;
             actionOriginGyro = state.FilteredGyro;
+            actionOriginYawDeg = snapshot.ForwardAzimuthDeg;
+            actionOriginRollDeg = snapshot.RollDeg;
             LastCommand = Space3DNavigationCommand.None with
             {
-                DebugLabel = $"{action.ToString().ToLowerInvariant()} origin captured accel {FormatVector(actionOriginAccel)} gyro {FormatVector(actionOriginGyro)}"
+                DebugLabel = $"{action.ToString().ToLowerInvariant()} origin captured yaw {actionOriginYawDeg:+0.0;-0.0;+0.0} roll {actionOriginRollDeg:+0.0;-0.0;+0.0}"
             };
             return LastCommand;
         }
 
+        var relativeYawDeg = NormalizeDegrees(snapshot.ForwardAzimuthDeg - actionOriginYawDeg);
+        var relativeRollDeg = NormalizeDegrees(snapshot.RollDeg - actionOriginRollDeg);
         var relativeState = state with
         {
             ControlAccel = state.ControlAccel - actionOriginAccel,
@@ -149,7 +157,7 @@ public sealed class Space3DMouseControlFilter
 
         if (action == NavigationAction.Pan)
         {
-            LastCommand = BuildPanCommand(relativeState, precisionMultiplier);
+            LastCommand = BuildPanCommand(relativeState, relativeYawDeg, relativeRollDeg, precisionMultiplier);
             return LastCommand;
         }
 
@@ -161,7 +169,7 @@ public sealed class Space3DMouseControlFilter
 
         if (action == NavigationAction.Zoom)
         {
-            LastCommand = BuildZoomCommand(relativeState, precisionMultiplier);
+            LastCommand = BuildZoomCommand(relativeState, relativeYawDeg, relativeRollDeg, precisionMultiplier);
             return LastCommand;
         }
 
@@ -226,17 +234,21 @@ public sealed class Space3DMouseControlFilter
         return LastState;
     }
 
-    private Space3DNavigationCommand BuildPanCommand(Space3DMouseFilteredState state, double multiplier)
+    private Space3DNavigationCommand BuildPanCommand(
+        Space3DMouseFilteredState state,
+        double relativeYawDeg,
+        double relativeRollDeg,
+        double multiplier)
     {
         var panInputX = ApplySoftDeadzone(
-            state.ControlAccel.X,
-            Settings.AccelDeadzoneG,
-            Settings.AccelSoftRangeG,
+            relativeYawDeg,
+            Settings.JoystickDeadzoneDeg,
+            Settings.JoystickFullScaleDeg,
             Settings.PanResponseExponent);
         var panInputY = ApplySoftDeadzone(
-            state.ControlAccel.Z + (state.ControlAccel.Y * Settings.PanForwardMix),
-            Settings.AccelDeadzoneG,
-            Settings.AccelSoftRangeG,
+            relativeRollDeg,
+            Settings.JoystickDeadzoneDeg,
+            Settings.JoystickFullScaleDeg,
             Settings.PanResponseExponent);
         var rate = Settings.PanPixelsPerSecondAtFullInput * multiplier;
         var panX = Math.Clamp(panInputX * rate * state.DeltaSeconds, -80d, 80d);
@@ -247,15 +259,20 @@ public sealed class Space3DMouseControlFilter
             0d,
             0d,
             1d,
-            $"pan relative {panInputX:+0.000;-0.000;+0.000}/{panInputY:+0.000;-0.000;+0.000} accel {FormatVector(state.ControlAccel)}");
+            $"pan joystick {panInputX:+0.000;-0.000;+0.000}/{panInputY:+0.000;-0.000;+0.000} yaw {relativeYawDeg:+0.0;-0.0;+0.0} roll {relativeRollDeg:+0.0;-0.0;+0.0}");
     }
 
-    private Space3DNavigationCommand BuildZoomCommand(Space3DMouseFilteredState state, double multiplier)
+    private Space3DNavigationCommand BuildZoomCommand(
+        Space3DMouseFilteredState state,
+        double relativeYawDeg,
+        double relativeRollDeg,
+        double multiplier)
     {
+        var zoomAxisDeg = BlendDominantAxis(relativeRollDeg, relativeYawDeg);
         var zoomInput = ApplySoftDeadzone(
-            state.ControlAccel.Y,
-            Settings.AccelDeadzoneG,
-            Settings.AccelSoftRangeG,
+            zoomAxisDeg,
+            Settings.JoystickDeadzoneDeg,
+            Settings.JoystickFullScaleDeg,
             Settings.ZoomResponseExponent);
         var zoomRate = zoomInput * Settings.ZoomLogRatePerSecondAtFullInput * multiplier;
         var exponent = Math.Clamp(zoomRate * state.DeltaSeconds, -0.5d, 0.5d);
@@ -265,7 +282,7 @@ public sealed class Space3DMouseControlFilter
             0d,
             0d,
             Math.Exp(exponent),
-            $"zoom relative {zoomInput:+0.000;-0.000;+0.000} accelY {state.ControlAccel.Y:+0.000;-0.000;+0.000} g");
+            $"zoom joystick {zoomInput:+0.000;-0.000;+0.000} yaw {relativeYawDeg:+0.0;-0.0;+0.0} roll {relativeRollDeg:+0.0;-0.0;+0.0}");
     }
 
     private Space3DNavigationCommand BuildOrbitCommand(Space3DMouseFilteredState state, double multiplier)
@@ -367,4 +384,19 @@ public sealed class Space3DMouseControlFilter
 
     private static double DegreesToRadians(double degrees)
         => Math.PI * degrees / 180d;
+
+    private static double NormalizeDegrees(double degrees)
+    {
+        var normalized = degrees % 360d;
+        if (normalized > 180d)
+        {
+            normalized -= 360d;
+        }
+        else if (normalized <= -180d)
+        {
+            normalized += 360d;
+        }
+
+        return normalized;
+    }
 }

@@ -12,6 +12,16 @@
                             Compact="true">
                     <Actions>
                         <div class="visualizer-actions">
+                            <button class="visualizer-button visualizer-button--primary"
+                                    @onclick="ConnectAsync"
+                                    disabled="@(!CanConnectBle)">
+                                @(connectBusy ? "Connecting..." : "Connect BLE")
+                            </button>
+                            <button class="visualizer-button"
+                                    @onclick="DisconnectAsync"
+                                    disabled="@(!CanDisconnectBle)">
+                                Disconnect
+                            </button>
                             <button class="visualizer-button"
                                     @onclick="CaptureSceneCalibrationAsync"
                                     disabled="@(latestTelemetry is null || !latestTelemetry.PoseValid)">
@@ -459,6 +469,14 @@
                                                 <input class="visualizer-input" type="number" step="0.1" value="@FormatNumber(controlSettings.GyroDeadzoneDps)" @onchange="HandleGyroDeadzoneChangedAsync" />
                                             </label>
                                             <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Joy dz</span>
+                                                <input class="visualizer-input" type="number" step="0.1" value="@FormatNumber(controlSettings.JoystickDeadzoneDeg)" @onchange="HandleJoystickDeadzoneChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
+                                                <span class="visualizer-axis-row__label">Joy max</span>
+                                                <input class="visualizer-input" type="number" step="1" value="@FormatNumber(controlSettings.JoystickFullScaleDeg)" @onchange="HandleJoystickFullScaleChangedAsync" />
+                                            </label>
+                                            <label class="visualizer-axis-row">
                                                 <span class="visualizer-axis-row__label">Pan</span>
                                                 <input class="visualizer-input" type="number" step="25" value="@FormatNumber(controlSettings.PanPixelsPerSecondAtFullInput)" @onchange="HandlePanSensitivityChangedAsync" />
                                             </label>
@@ -615,7 +633,7 @@
     private static readonly TimeSpan MinUiRefreshInterval = TimeSpan.FromMilliseconds(20d);
     private const int BleDebugCapturePacketLimit = 96;
     private const string BleBridgeModulePath = "/_content/CanDoItAll.Space3D.Mouse.Components/js/space3dMouseBle.js?v=20260423";
-    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v1";
+    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v2";
     private const double NeutralCaptureGyroThresholdDps = 8d;
     private const double NeutralCaptureAccelThresholdG = 0.05d;
     private static readonly IReadOnlyList<string> ControlProfiles = Space3DMouseControlSettings.ProfileNames;
@@ -667,6 +685,8 @@
     public Space3DMouseButtonSnapshot? LogicalButtonState { get; set; }
 
     public string SharedConnectionLabel => ConnectionLabel;
+
+    public string SharedConnectionDetail => statusMessage;
 
     public bool BleSupported => bleDiagnostics.Supported;
 
@@ -779,12 +799,14 @@
     {
         if (bleBridgeModule is null)
         {
+            statusMessage = "BLE bridge is not initialized yet. Wait for the lab panel to finish loading, then try Connect BLE again.";
+            await RequestUiRefreshAsync(force: true);
             return;
         }
 
         connectBusy = true;
         statusMessage = "Connecting through the browser BLE-MIDI flow...";
-        await RequestUiRefreshAsync(force: true);
+        StateHasChanged();
 
         try
         {
@@ -795,7 +817,21 @@
         }
         catch (JSException exception)
         {
-            statusMessage = exception.Message;
+            statusMessage = string.IsNullOrWhiteSpace(exception.Message)
+                ? "Browser BLE connect request failed."
+                : exception.Message;
+        }
+        catch (InvalidOperationException exception)
+        {
+            statusMessage = string.IsNullOrWhiteSpace(exception.Message)
+                ? "Browser BLE connect request failed before it reached the bridge."
+                : exception.Message;
+        }
+        catch (OperationCanceledException exception)
+        {
+            statusMessage = string.IsNullOrWhiteSpace(exception.Message)
+                ? "Browser BLE connect request was canceled."
+                : exception.Message;
         }
         finally
         {
@@ -809,13 +845,27 @@
     {
         if (bleBridgeModule is null)
         {
+            statusMessage = "BLE bridge is not initialized, so there is no active browser connection to disconnect.";
+            await RequestUiRefreshAsync(force: true);
             return;
         }
 
-        bleDiagnostics = await bleBridgeModule.InvokeAsync<BleBridgeDiagnostics>("disconnect");
-        statusMessage = "BLE disconnected.";
-        RebuildSurface();
-        await RequestUiRefreshAsync(force: true);
+        try
+        {
+            bleDiagnostics = await bleBridgeModule.InvokeAsync<BleBridgeDiagnostics>("disconnect");
+            statusMessage = "BLE disconnected.";
+        }
+        catch (JSException exception)
+        {
+            statusMessage = string.IsNullOrWhiteSpace(exception.Message)
+                ? "Browser BLE disconnect request failed."
+                : exception.Message;
+        }
+        finally
+        {
+            RebuildSurface();
+            await RequestUiRefreshAsync(force: true);
+        }
     }
 
     private async Task StartBleDebugCaptureAsync()
@@ -949,6 +999,12 @@
 
     private Task HandleGyroDeadzoneChangedAsync(ChangeEventArgs args)
         => ChangeControlNumberAsync(args, value => controlSettings.GyroDeadzoneDps = value);
+
+    private Task HandleJoystickDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.JoystickDeadzoneDeg = value);
+
+    private Task HandleJoystickFullScaleChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.JoystickFullScaleDeg = value);
 
     private Task HandlePanSensitivityChangedAsync(ChangeEventArgs args)
         => ChangeControlNumberAsync(args, value => controlSettings.PanPixelsPerSecondAtFullInput = value);

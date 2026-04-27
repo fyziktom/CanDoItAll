@@ -211,6 +211,22 @@
                                    @onchange="HandleGyroDeadzoneChangedAsync" />
                         </label>
                         <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Joy dz</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.1"
+                                   value="@FormatNumber(controlSettings.JoystickDeadzoneDeg)"
+                                   @onchange="HandleJoystickDeadzoneChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Joy max</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="1"
+                                   value="@FormatNumber(controlSettings.JoystickFullScaleDeg)"
+                                   @onchange="HandleJoystickFullScaleChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
                             <span class="visualizer-axis-row__label">Accel tau</span>
                             <input class="visualizer-input"
                                    type="number"
@@ -333,7 +349,7 @@
 
     private const double NeutralCaptureGyroThresholdDps = 8d;
     private const double NeutralCaptureAccelThresholdG = 0.05d;
-    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v1";
+    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v2";
     private static readonly IReadOnlyList<string> ControlProfiles = Space3DMouseControlSettings.ProfileNames;
 
     private readonly MouseLabPoseTransform sceneTransform = new();
@@ -347,7 +363,7 @@
     private DateTimeOffset? lastTelemetryAt;
     private DateTimeOffset lastHandledButtonEventAt = DateTimeOffset.MinValue;
     private string mouseActionMessage = "Connect the BLE mouse in the lab tab, then use held buttons 1/2/3 for pan, rotate, and zoom.";
-    private string buttonModeDescription = "Button 1 pans, button 2 rotates, button 3 zooms, button 4 primary-clicks, button 5 opens the context menu, and button 6 captures neutral.";
+    private string buttonModeDescription = "Button 1 pans from yaw/roll, button 2 rotates from gyro, button 3 zooms from yaw/roll, button 4 primary-clicks, button 5 opens the context menu, and button 6 captures neutral.";
     private string controlSettingsJson = string.Empty;
     private bool controlSettingsLoaded;
 
@@ -589,6 +605,12 @@
 
     private Task HandleGyroDeadzoneChangedAsync(ChangeEventArgs args)
         => ChangeControlNumberAsync(args, value => controlSettings.GyroDeadzoneDps = value);
+
+    private Task HandleJoystickDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.JoystickDeadzoneDeg = value);
+
+    private Task HandleJoystickFullScaleChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.JoystickFullScaleDeg = value);
 
     private Task HandleAccelTauChangedAsync(ChangeEventArgs args)
         => ChangeControlNumberAsync(args, value => controlSettings.AccelSmoothingTauMs = value);
