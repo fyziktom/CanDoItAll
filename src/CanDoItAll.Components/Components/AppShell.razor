@@ -194,28 +194,32 @@
                 </Stack>
             </details>
 
-            @if (TopBar is not null)
-            {
-                <div class="cda-shell-topbar">
-                    @TopBar
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                    <AppTabStrip Items="Tabs"
+                                 RecentTabs="RecentTabs"
+                                 ActiveTabId="ActiveTabId"
+                                 ShowActiveSummary="ShowTabSummary"
+                                 Compact="@(Mode == AppShellMode.FocusWorkbench)"
+                                 Activate="SelectTab"
+                                 Close="CloseTab"
+                                 MoveLeft="MoveLeft"
+                                 MoveRight="MoveRight"
+                                 TogglePin="ToggleTabPin"
+                                 ToggleSleep="ToggleTabSleep"
+                                 CloseOthers="CloseOtherTabs"
+                                 CloseRight="CloseTabsToRight"
+                                 CloseBackground="CloseBackgroundTabs"
+                                 ReopenRecent="ReopenRecentTab" />
                 </div>
-            }
 
-            <AppTabStrip Items="Tabs"
-                         RecentTabs="RecentTabs"
-                         ActiveTabId="ActiveTabId"
-                         ShowActiveSummary="ShowTabSummary"
-                         Compact="@(Mode == AppShellMode.FocusWorkbench)"
-                         Activate="SelectTab"
-                         Close="CloseTab"
-                         MoveLeft="MoveLeft"
-                         MoveRight="MoveRight"
-                         TogglePin="ToggleTabPin"
-                         ToggleSleep="ToggleTabSleep"
-                         CloseOthers="CloseOtherTabs"
-                         CloseRight="CloseTabsToRight"
-                         CloseBackground="CloseBackgroundTabs"
-                         ReopenRecent="ReopenRecentTab" />
+                @if (TopBar is not null)
+                {
+                    <div class="min-w-0 flex-shrink-0">
+                        @TopBar
+                    </div>
+                }
+            </div>
 
             <div class="@ResolveBodyRegionClass()">
                 @if (Mode == AppShellMode.FocusWorkbench)

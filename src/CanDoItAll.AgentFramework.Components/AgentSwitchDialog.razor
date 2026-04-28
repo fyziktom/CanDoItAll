@@ -1,0 +1,135 @@
+@inject DialogService DialogService
+
+<div class="agent-switch-dialog" data-testid="agent-switch-dialog">
+    @if (Agents.Count == 0)
+    {
+        <EmptyState Eyebrow="Agents"
+                    Title="No agents available"
+                    Description="Create or feed a technical agent before opening chat threads." />
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Medium" ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))">
+            @foreach (var agent in Agents)
+            {
+                var isSelected = agent.Id == SelectedAgentId;
+
+                <button type="button"
+                        class="agent-switch-dialog__card @(isSelected ? "agent-switch-dialog__card--selected" : string.Empty)"
+                        @onclick="() => SelectAgentAsync(agent.Id)"
+                        data-testid="agent-switch-card">
+                    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Center">
+                        <Avatar Alt="@agent.Name"
+                                ImageUrl="@agent.AvatarImageUrl"
+                                FallbackText="@ResolveAgentInitials(agent)"
+                                DefaultImageSeed="@agent.Name"
+                                Size="AvatarSize.Large"
+                                Shape="AvatarShape.Rounded" />
+
+                        <Stack GapScale="LayoutGap.Tiny" AlignItems="AlignItems.Center" Class="min-w-0 text-center">
+                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap" Class="justify-center">
+                                <StatusBadge Tone="@ResolveAgentTone(agent.Status)" Text="@agent.Status.ToString()" />
+                                <TooltipTarget Text="@BuildAgentDetails(agent)"
+                                               Position="TooltipPosition.Bottom"
+                                               TriggerClass="items-center">
+                                    <span class="agent-switch-dialog__info"
+                                          aria-label="Show agent details"
+                                          @onclick="SuppressInfoClick"
+                                          @onclick:stopPropagation="true">
+                                        <Icon Name="circle_info" />
+                                    </span>
+                                </TooltipTarget>
+                            </Cluster>
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@agent.Name" />
+                            <TextBlock TextStyle="TextStyle.Caption" Value="@ResolveAgentRole(agent)" />
+                        </Stack>
+
+                        <p class="agent-switch-dialog__summary">@ResolveShortInfo(agent)</p>
+
+                        @if (isSelected)
+                        {
+                            <StatusBadge Tone="info" Text="Current agent" />
+                        }
+                    </Stack>
+                </button>
+            }
+        </Grid>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedAgentId { get; set; }
+
+    private Task SelectAgentAsync(Guid agentId)
+    {
+        return DialogService.CloseAsync(agentId);
+    }
+
+    private static void SuppressInfoClick()
+    {
+    }
+
+    private static string ResolveAgentRole(AgentDefinition agent)
+    {
+        return string.IsNullOrWhiteSpace(agent.RoleTitle)
+            ? "Technical agent"
+            : agent.RoleTitle;
+    }
+
+    private static string ResolveShortInfo(AgentDefinition agent)
+    {
+        var summary = string.IsNullOrWhiteSpace(agent.Summary)
+            ? "No short summary is configured yet."
+            : agent.Summary.Trim();
+
+        const int maxLength = 120;
+        return summary.Length <= maxLength
+            ? summary
+            : $"{summary[..maxLength].TrimEnd()}...";
+    }
+
+    private static string BuildAgentDetails(AgentDefinition agent)
+    {
+        var provider = string.IsNullOrWhiteSpace(agent.Model)
+            ? "No model configured"
+            : agent.Model;
+
+        var capabilityText = agent.Capabilities.Count == 1
+            ? "1 capability"
+            : $"{agent.Capabilities.Count} capabilities";
+
+        return $"{ResolveAgentRole(agent)}. {provider}. {agent.Workload}. {capabilityText}. {agent.Summary}";
+    }
+
+    private static string ResolveAgentInitials(AgentDefinition agent)
+    {
+        var name = string.IsNullOrWhiteSpace(agent.Name)
+            ? agent.RoleTitle
+            : agent.Name;
+
+        var initials = name
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(static item => char.ToUpperInvariant(item[0]))
+            .ToArray();
+
+        return initials.Length == 0
+            ? "AI"
+            : new string(initials);
+    }
+
+    private static string ResolveAgentTone(AgentLifecycleStatus status)
+    {
+        return status switch
+        {
+            AgentLifecycleStatus.Active => "success",
+            AgentLifecycleStatus.Suspended => "warning",
+            AgentLifecycleStatus.Archived => "neutral",
+            _ => "info"
+        };
+    }
+}

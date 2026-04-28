@@ -1,0 +1,58 @@
+<div class="agent-runtime-details-dialog" data-testid="agent-runtime-details-dialog-body">
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <TextBlock TextStyle="TextStyle.Subtitle2" Value="Selected execution" />
+                @if (Run is null)
+                {
+                    <TextBlock TextStyle="TextStyle.Body2" Value="No execution run is selected yet. Sending a prompt creates or reuses the thread runtime." />
+                }
+                else
+                {
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@RunStateTone" Text="@ResolveRunStateText()" />
+                        @if (Run.Outcome.HasValue)
+                        {
+                            <StatusBadge Tone="info" Text="@Run.Outcome.Value.ToString()" />
+                        }
+                        <StatusBadge Tone="neutral" Text="@Run.UpdatedAtUtc.LocalDateTime.ToString("g")" />
+                    </Cluster>
+                    <TextBlock TextStyle="TextStyle.Body2" Value="@Run.Title" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"Provider {Run.ProviderName} / {Run.Model}")" />
+                }
+            </Stack>
+        </SurfaceCard>
+
+        <Grid Gap="LayoutGap.Large" ColumnTemplate="minmax(0,1.35fr) minmax(18rem,0.65fr)">
+            <ExecutionTimelinePanel Entries="@ExecutionLog" />
+            <MetricSummaryPanel Metrics="@Metrics" />
+        </Grid>
+    </Stack>
+</div>
+
+@code {
+    [Parameter]
+    public ExecutionRunRecord? Run { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ExecutionLogEntry> ExecutionLog { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<AgentRunMetric> Metrics { get; set; } = [];
+
+    [Parameter]
+    public string RunStateText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RunStateTone { get; set; } = "neutral";
+
+    private string ResolveRunStateText()
+    {
+        if (!string.IsNullOrWhiteSpace(RunStateText))
+        {
+            return RunStateText;
+        }
+
+        return Run?.State.ToString() ?? "Idle";
+    }
+}

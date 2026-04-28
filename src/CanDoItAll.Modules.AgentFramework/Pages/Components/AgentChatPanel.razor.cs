@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -7,13 +9,16 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 public partial class AgentChatPanel : IAsyncDisposable
 {
     private const string AgentThreadsHelpText =
-        "Select a technical agent, then pick a thread or create a new one. The live runtime stays in the center, while the right rail keeps execution evidence visible.";
+        "Search and select threads for the active technical agent. Use Switch Agent when you need another agent's thread list.";
 
     [Parameter]
     public Guid? PreferredAgentId { get; set; }
 
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
 
     private IReadOnlyList<AgentDefinition> agents = [];
     private ChatAgentWorkspaceSnapshot? workspace;
@@ -32,6 +37,18 @@ public partial class AgentChatPanel : IAsyncDisposable
     private string messageLabel = "Info";
     private string runStateText = string.Empty;
     private string runStateTone = "neutral";
+    private string threadSearchText = string.Empty;
+
+    private IReadOnlyList<ChatSessionSummaryRecord> FilteredSessions
+        => workspace?.Sessions
+            .Where(MatchesThreadSearch)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList() ?? [];
+
+    private bool CanOpenRuntimeDetails
+        => workspace?.SelectedRun is not null ||
+           executionLog.Count > 0 ||
+           metrics.Count > 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,6 +98,7 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     private async Task SelectAgentAsync(Guid agentId)
     {
+        threadSearchText = string.Empty;
         await LoadWorkspaceAsync(agentId, preferredSessionId: null);
     }
 
@@ -121,6 +139,12 @@ public partial class AgentChatPanel : IAsyncDisposable
     private Task HandleDraftPromptChangedAsync(string value)
     {
         draftPrompt = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleThreadSearchChangedAsync(string? value)
+    {
+        threadSearchText = value ?? string.Empty;
         return Task.CompletedTask;
     }
 
@@ -250,6 +274,86 @@ public partial class AgentChatPanel : IAsyncDisposable
         ResolveRunState();
     }
 
+    private Task OpenAgentSwitchDialogAsync()
+    {
+        _ = HandleAgentSwitchDialogAsync();
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleAgentSwitchDialogAsync()
+    {
+        try
+        {
+            var result = await DialogService.OpenAsync<AgentSwitchDialog>(
+                "Switch Agent",
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentSwitchDialog.Agents)] = agents,
+                    [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Agent threads",
+                    Subtitle = "Choose which technical agent owns the thread list.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    TestId = "agent-switch-dialog-modal",
+                    AriaLabel = "Switch chat agent"
+                });
+
+            if (result is not Guid agentId || agentId == selectedAgentId)
+            {
+                return;
+            }
+
+            await InvokeAsync(async () =>
+            {
+                await SelectAgentAsync(agentId);
+                StateHasChanged();
+            });
+        }
+        catch (Exception exception)
+        {
+            await InvokeAsync(() =>
+            {
+                SetMessage("Attention", "danger", exception.Message);
+                StateHasChanged();
+            });
+        }
+    }
+
+    private Task OpenRuntimeDetailsDialogAsync()
+    {
+        if (!CanOpenRuntimeDetails)
+        {
+            SetMessage("Heads up", "warning", "Send a prompt first so runtime evidence can be opened.");
+            return Task.CompletedTask;
+        }
+
+        _ = DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
+            "Runtime details",
+            new Dictionary<string, object?>
+            {
+                [nameof(AgentRuntimeDetailsDialog.Run)] = workspace?.SelectedRun,
+                [nameof(AgentRuntimeDetailsDialog.ExecutionLog)] = executionLog,
+                [nameof(AgentRuntimeDetailsDialog.Metrics)] = metrics,
+                [nameof(AgentRuntimeDetailsDialog.RunStateText)] = runStateText,
+                [nameof(AgentRuntimeDetailsDialog.RunStateTone)] = runStateTone
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Agent runtime",
+                Subtitle = BuildRuntimeDialogSubtitle(),
+                Size = ModalSize.Full,
+                DenseChrome = true,
+                TestId = "agent-runtime-details-dialog",
+                AriaLabel = "Agent runtime details",
+                Style = "max-height:calc(100vh - 2rem);"
+            });
+
+        return Task.CompletedTask;
+    }
+
     private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry)
     {
         if (!ShouldAcceptExecutionEntry(entry))
@@ -354,13 +458,6 @@ Use these workspace artifacts as input:
         message = value;
     }
 
-    private static string ResolveAgentMeta(AgentDefinition agent)
-    {
-        return string.IsNullOrWhiteSpace(agent.Model)
-            ? "No model configured"
-            : agent.Model;
-    }
-
     private static string BuildSessionMeta(ChatSessionSummaryRecord session)
     {
         return session.MessageCount == 0
@@ -368,15 +465,50 @@ Use these workspace artifacts as input:
             : $"{session.MessageCount} message(s)";
     }
 
-    private static string ResolveAgentTone(AgentLifecycleStatus status)
+    private bool MatchesThreadSearch(ChatSessionSummaryRecord session)
     {
-        return status switch
+        if (string.IsNullOrWhiteSpace(threadSearchText))
         {
-            AgentLifecycleStatus.Active => "success",
-            AgentLifecycleStatus.Suspended => "warning",
-            AgentLifecycleStatus.Archived => "neutral",
-            _ => "info"
-        };
+            return true;
+        }
+
+        return session.Title.Contains(threadSearchText, StringComparison.OrdinalIgnoreCase) ||
+               session.LastMessagePreview.Contains(threadSearchText, StringComparison.OrdinalIgnoreCase) ||
+               BuildSessionMeta(session).Contains(threadSearchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolveEmptyThreadText()
+    {
+        if (workspace?.Sessions.Count > 0)
+        {
+            return "No threads match the current search.";
+        }
+
+        return "The selected agent does not have a thread yet.";
+    }
+
+    private string BuildRuntimeDialogSubtitle()
+    {
+        var agentName = selectedAgent?.Name ?? "Selected agent";
+        var threadTitle = workspace?.SelectedSession?.Title ?? "No thread selected";
+        return $"{agentName} / {threadTitle}";
+    }
+
+    private static string ResolveAgentInitials(AgentDefinition agent)
+    {
+        var name = string.IsNullOrWhiteSpace(agent.Name)
+            ? agent.RoleTitle
+            : agent.Name;
+
+        var initials = name
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(static item => char.ToUpperInvariant(item[0]))
+            .ToArray();
+
+        return initials.Length == 0
+            ? "AI"
+            : new string(initials);
     }
 
     public ValueTask DisposeAsync()

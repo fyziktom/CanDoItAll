@@ -1,8 +1,32 @@
+.agents-chat-panel-shell ::deep .agents-chat-thread-search {
+    width: 100%;
+    border: 1px solid rgb(203 213 225);
+    border-radius: 0.9rem;
+    background: rgb(255 255 255 / 0.95);
+    color: rgb(15 23 42);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+    padding: 0.65rem 0.8rem;
+}
+
+.agents-chat-panel-shell ::deep .agents-chat-thread-search:focus {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 0 0 3px rgb(14 165 233 / 0.13);
+}
+
+.agents-chat-panel-shell ::deep .agents-chat-agent-context {
+    align-items: center;
+    display: flex;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
 @media (min-width: 1280px) {
     .agents-chat-panel-shell {
         display: flex;
         min-height: 0;
-        height: clamp(32rem, calc(100vh - 24rem), 46rem);
+        height: clamp(34rem, calc(100vh - 20rem), 52rem);
         overflow: hidden;
     }
 
@@ -20,26 +44,20 @@
     .agents-chat-panel-shell ::deep .agents-chat-left-scroll {
         flex: 1 1 auto;
         min-height: 0;
+        overflow-x: hidden;
         overflow-y: auto;
     }
 
-    .agents-chat-panel-shell ::deep .agents-chat-right-rail {
-        overflow-y: auto;
-        padding-right: 0.25rem;
-        scrollbar-gutter: stable;
+    .agents-chat-panel-shell ::deep .agents-chat-left-scroll * {
+        min-width: 0;
     }
 
-    .agents-chat-panel-shell ::deep .agents-chat-right-rail .cda-section-card {
-        height: auto;
-        flex: 0 0 auto;
-    }
 }
 
 @media (max-width: 1279.98px) {
     .agents-chat-panel-shell,
     .agents-chat-panel-shell ::deep .agents-chat-grid,
-    .agents-chat-panel-shell ::deep .agents-chat-left-rail,
-    .agents-chat-panel-shell ::deep .agents-chat-right-rail {
+    .agents-chat-panel-shell ::deep .agents-chat-left-rail {
         height: auto;
         overflow: visible;
     }

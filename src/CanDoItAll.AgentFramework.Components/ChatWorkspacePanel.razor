@@ -45,7 +45,12 @@
                 </div>
             </div>
 
-            
+            @if (HeaderActions is not null)
+            {
+                <div class="flex flex-shrink-0 items-center gap-2">
+                    @HeaderActions
+                </div>
+            }
         </div>
     </div>
 
@@ -351,6 +356,9 @@
 
     [Parameter]
     public IReadOnlyList<string> DraftAttachmentPaths { get; set; } = [];
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
 
     [Parameter]
     public EventCallback<string> DraftPromptChanged { get; set; }
