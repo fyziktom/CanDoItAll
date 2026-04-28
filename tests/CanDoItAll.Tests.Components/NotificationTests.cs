@@ -105,6 +105,26 @@ public sealed class NotificationTests
     }
 
     [Fact]
+    public void NotificationHost_places_default_messages_at_bottom_center()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+        var service = context.Services.GetRequiredService<NotificationService>();
+        var cut = context.RenderComponent<Notification>();
+
+        service.Success("Saved", "The operation completed.", duration: 0);
+
+        cut.WaitForAssertion(() =>
+        {
+            var stack = cut.Find("[data-notification-position='BottomCenter']");
+            Assert.Contains("bottom-4", stack.ClassList);
+            Assert.Contains("left-1/2", stack.ClassList);
+            Assert.Contains("-translate-x-1/2", stack.ClassList);
+            Assert.Contains("Saved", stack.TextContent, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public void NotificationHost_places_messages_by_position()
     {
         using var context = new TestContext();

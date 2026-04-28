@@ -71,7 +71,7 @@
                           OpenDatabaseDialog="OpenDatabaseDialogAsync" />
     </TopBar>
     <Body>
-        <Notification />
+        <Notification Position="NotificationPosition.BottomCenter" />
         @if (databaseDialogStartupMode && databaseDialogOpen)
         {
             <EmptyState Eyebrow="Database startup"

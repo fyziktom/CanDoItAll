@@ -72,7 +72,7 @@
     private readonly Dictionary<Guid, CancellationTokenSource> removalTimers = [];
 
     [Parameter]
-    public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
+    public NotificationPosition Position { get; set; } = NotificationPosition.BottomCenter;
 
     private static readonly IReadOnlyDictionary<string, object> NotificationAttributes =
         new Dictionary<string, object>
