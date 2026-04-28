@@ -1,16 +1,7 @@
 @inject DialogService DialogService
+@inject NotificationService NotificationService
 
 <div class="agent-switch-dialog" data-testid="agent-switch-dialog">
-    @if (!string.IsNullOrWhiteSpace(favoriteError))
-    {
-        <SurfaceCard Soft="true">
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="danger" Text="Favorite failed" />
-                <TextBlock TextStyle="TextStyle.Body2" Value="@favoriteError" />
-            </Cluster>
-        </SurfaceCard>
-    }
-
     @if (localAgents.Count == 0)
     {
         <EmptyState Eyebrow="Agents"
@@ -135,7 +126,6 @@
     private IReadOnlyList<AgentDefinition>? previousAgents;
     private IReadOnlyList<string> tagFilters = [];
     private string searchText = string.Empty;
-    private string favoriteError = string.Empty;
     private Guid? favoriteBusyAgentId;
 
     [Parameter]
@@ -201,7 +191,6 @@
             return;
         }
 
-        favoriteError = string.Empty;
         favoriteBusyAgentId = agent.Id;
         try
         {
@@ -212,7 +201,7 @@
         }
         catch (Exception exception)
         {
-            favoriteError = exception.Message;
+            NotificationService.Error("Favorite update failed", exception.Message);
         }
         finally
         {

@@ -41,14 +41,26 @@
                                 <div class="text-sm leading-6">@message.Detail</div>
                             }
                         </div>
-                        <button type="button"
-                                class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-none hover:bg-black/5"
-                                aria-label="@message.CloseAriaLabel"
-                                title="@message.CloseAriaLabel"
-                                @onclick:stopPropagation="true"
-                                @onclick="@(() => DismissToastAsync(message))">
-                            <span aria-hidden="true">X</span>
-                        </button>
+                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap" Class="shrink-0">
+                            @if (CanCopy(message))
+                            {
+                                <span @onclick:stopPropagation="true">
+                                    <CopyButton Value="@BuildCopyValue(message)"
+                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                Size="CopyButtonSize.Small"
+                                                AriaLabel="Copy notification details"
+                                                title="Copy notification details" />
+                                </span>
+                            }
+                            <button type="button"
+                                    class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-none hover:bg-black/5"
+                                    aria-label="@message.CloseAriaLabel"
+                                    title="@message.CloseAriaLabel"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="@(() => DismissToastAsync(message))">
+                                <Icon Name="close" />
+                            </button>
+                        </Cluster>
                     </Split>
                 </div>
             }
@@ -135,6 +147,20 @@
     private void HandleMessageClick(NotificationMessage message)
     {
         NotificationService.Click(message);
+    }
+
+    private static bool CanCopy(NotificationMessage message)
+    {
+        return message.Severity is NotificationSeverity.Warning or NotificationSeverity.Error &&
+               (!string.IsNullOrWhiteSpace(message.Summary) || !string.IsNullOrWhiteSpace(message.Detail));
+    }
+
+    private static string BuildCopyValue(NotificationMessage message)
+    {
+        return string.Join(
+            Environment.NewLine,
+            new[] { message.Summary, message.Detail }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
     }
 
     private IEnumerable<IGrouping<NotificationPosition, NotificationMessage>> GetMessageGroups()

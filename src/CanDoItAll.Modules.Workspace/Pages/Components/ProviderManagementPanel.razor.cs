@@ -1,3 +1,4 @@
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 
@@ -11,11 +12,13 @@ public partial class ProviderManagementPanel
     [Inject]
     public SecretService SecretService { get; set; } = default!;
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     private ProviderProfileEditorModel providerModel = NewProvider();
     private IReadOnlyList<ProviderProfileSummary> providers = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ConnectorPluginManifest> providerManifests = [];
-    private string? providerMessage;
     private string providerSearch = string.Empty;
 
     private ConnectorPluginManifest? SelectedProviderManifest => providerManifests.FirstOrDefault(manifest =>
@@ -49,17 +52,23 @@ public partial class ProviderManagementPanel
 
     private async Task SaveProviderAsync()
     {
-        var result = await WorkspaceService.SaveProviderAsync(providerModel);
-        providerMessage = result.IsSuccess
-            ? "Provider profile saved."
-            : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (!result.IsSuccess)
+        try
         {
-            return;
-        }
+            var result = await WorkspaceService.SaveProviderAsync(providerModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Provider profile was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
 
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        await ResetProviderAsync();
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+            await ResetProviderAsync();
+            NotificationService.Success("Provider profile saved", "Provider profile saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider save failed", exception.Message);
+        }
     }
 
     private async Task EditProviderAsync(
@@ -72,18 +81,40 @@ public partial class ProviderManagementPanel
     private async Task TestProviderAsync(
         Guid id)
     {
-        var result = await WorkspaceService.TestProviderAsync(id);
-        providerMessage = result.Message;
-        providers = await WorkspaceService.ListProviderProfilesAsync();
+        try
+        {
+            var result = await WorkspaceService.TestProviderAsync(id);
+            if (result.Success)
+            {
+                NotificationService.Success("Provider health check passed", result.Message);
+            }
+            else
+            {
+                NotificationService.Warning("Provider health check failed", result.Message);
+            }
+
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider health check failed", exception.Message);
+        }
     }
 
     private async Task DeleteProviderAsync(
         Guid id)
     {
-        await WorkspaceService.DeleteProviderAsync(id);
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        providerMessage = "Provider profile deleted.";
-        await ResetProviderAsync();
+        try
+        {
+            await WorkspaceService.DeleteProviderAsync(id);
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+            await ResetProviderAsync();
+            NotificationService.Success("Provider profile deleted", "Provider profile deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider delete failed", exception.Message);
+        }
     }
 
     private Task ResetProviderAsync()

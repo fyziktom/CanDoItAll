@@ -1,7 +1,9 @@
 @page "/crm-hr/recruiting"
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.SharedKernel
 @inject RecruitingService RecruitingService
 @inject NavigationManager Navigation
-@using CanDoItAll.SharedKernel
+@inject NotificationService NotificationService
 
 <PageTitle>CRM / HR Recruiting</PageTitle>
 
@@ -32,11 +34,6 @@
                 <SummaryTile Label="Offer or hired" Value="@(currentWorkspace?.Applications.Count(item => item.Stage is RecruitmentStage.Offer or RecruitmentStage.Hired).ToString() ?? "0")" HelperText="Applications close enough to require controlled handoff." Tone="success" />
                 <SummaryTile Label="Open tasks" Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")" HelperText="Selected candidate onboarding or offboarding actions." Tone="warning" />
             </SummaryTiles>
-
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <div class="@ResolveMessageClasses()" data-testid="crmhr-recruiting-message">@message</div>
-            }
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>
@@ -264,8 +261,6 @@
     private LifecycleTaskEditorModel taskEditor = new();
     private RecruitmentSupportAssignmentsEditorModel supportEditor = new();
     private RecruitmentConversionEditorModel conversionEditor = new();
-    private string message = string.Empty;
-    private bool isError;
     private string searchText = string.Empty;
     private string stageFilter = string.Empty;
 
@@ -346,8 +341,7 @@
             return;
         }
 
-        message = "Recruitment application saved.";
-        isError = false;
+        NotificationService.Success("Recruitment application saved", "Recruitment application saved.");
         if (ApplicationId != result.Value)
         {
             Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={result.Value:D}");
@@ -379,8 +373,7 @@
             return;
         }
 
-        message = "Interview saved.";
-        isError = false;
+        NotificationService.Success("Interview saved", "Interview saved.");
         await LoadAsync();
     }
 
@@ -395,8 +388,7 @@
     private async Task DeleteInterviewAsync(Guid interviewId)
     {
         await RecruitingService.DeleteRecruitmentInterviewAsync(interviewId);
-        message = "Interview deleted.";
-        isError = false;
+        NotificationService.Warning("Interview deleted", "Interview deleted.");
         await LoadAsync();
     }
 
@@ -416,8 +408,7 @@
             return;
         }
 
-        message = "Lifecycle task saved.";
-        isError = false;
+        NotificationService.Success("Lifecycle task saved", "Lifecycle task saved.");
         await LoadAsync();
     }
 
@@ -432,8 +423,7 @@
     private async Task DeleteTaskAsync(Guid taskId)
     {
         await RecruitingService.DeleteLifecycleTaskAsync(taskId);
-        message = "Lifecycle task deleted.";
-        isError = false;
+        NotificationService.Warning("Lifecycle task deleted", "Lifecycle task deleted.");
         await LoadAsync();
     }
 
@@ -453,8 +443,7 @@
             return;
         }
 
-        message = "Support assignments saved.";
-        isError = false;
+        NotificationService.Success("Support assignments saved", "Support assignments saved.");
         await LoadAsync();
     }
 
@@ -474,8 +463,7 @@
             return;
         }
 
-        message = "Candidate converted to workforce.";
-        isError = false;
+        NotificationService.Success("Candidate converted", "Candidate converted to workforce.");
         await LoadAsync();
     }
 
@@ -491,15 +479,9 @@
 
     private void SetError(IReadOnlyList<Error> errors)
     {
-        message = errors.Count == 0 ? "The operation failed." : string.Join(" ", errors.Select(item => item.Message));
-        isError = true;
-    }
-
-    private string ResolveMessageClasses()
-    {
-        return isError
-            ? "rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700"
-            : "rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700";
+        NotificationService.Error(
+            "Recruiting update failed",
+            errors.Count == 0 ? "The operation failed." : string.Join(" ", errors.Select(item => item.Message)));
     }
 
     private static RecruitmentApplicationEditorModel CloneApplication(RecruitmentApplicationEditorModel source)

@@ -84,15 +84,6 @@
             </Cluster>
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(statusMessage))
-        {
-            <SurfaceCard Soft="true"
-                         data-testid="agents-shell-message-card">
-                <p class="cda-eyebrow">Workspace status</p>
-                <p class="mt-2 text-sm leading-6 @(statusMessageIsError ? "text-rose-700" : "text-slate-700")">@statusMessage</p>
-            </SurfaceCard>
-        }
-
         <div data-testid="agents-shell-tabs">
             <SecondaryTabs Items="Tabs"
                            SelectedKey="@selectedTab"

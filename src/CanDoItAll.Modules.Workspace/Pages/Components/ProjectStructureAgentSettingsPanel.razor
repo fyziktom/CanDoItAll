@@ -2,6 +2,7 @@
 @using CanDoItAll.Components.Common
 @inject ProjectStructureAgentAdministrationService AdministrationService
 @inject ProjectManagementKnowledgeService KnowledgeService
+@inject NotificationService NotificationService
 
 <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge" data-testid="settings-project-structure-agent-panel">
     <EditForm Model="settingsModel" OnValidSubmit="SaveSettingsAsync">
@@ -42,7 +43,7 @@
                 </Grid>
             </FormSection>
 
-            <StickyActionFooter StatusLabel="Project-structure MCP settings" StatusMessage="@settingsMessage" StatusTone="success">
+            <StickyActionFooter StatusLabel="Project-structure MCP settings">
                 <PrimaryActions>
                     <Button Text="Save central settings" Type="submit" data-testid="project-structure-settings-save" />
                 </PrimaryActions>
@@ -320,7 +321,7 @@
                     </Grid>
                 </FormSection>
 
-                <StickyActionFooter StatusLabel="Project-structure MCP profiles" StatusMessage="@profileMessage" StatusTone="success">
+                <StickyActionFooter StatusLabel="Project-structure MCP profiles">
                     <SecondaryActions>
                         <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProfileAsync" />
                     </SecondaryActions>
@@ -355,8 +356,6 @@
     private IReadOnlyList<ProjectStructureProjectChoice> projectChoices = [];
     private IReadOnlyList<ProjectManagementKnowledgeEntry> knowledgeEntries = [];
     private ProjectStructureAgentSetupGuide? currentSetupGuide;
-    private string? settingsMessage;
-    private string? profileMessage;
     private string profileSearch = string.Empty;
 
     private IReadOnlyList<ProjectStructureAgentProfileSummary> FilteredProfiles => profiles
@@ -398,31 +397,40 @@
         try
         {
             await AdministrationService.SaveSettingsAsync(settingsModel);
-            settingsMessage = "Central project-structure MCP settings saved.";
             await RefreshSetupGuideAsync();
+            NotificationService.Success("Project-structure settings saved", "Central project-structure MCP settings saved.");
         }
         catch (InvalidOperationException ex)
         {
-            settingsMessage = ex.Message;
+            NotificationService.Warning("Project-structure settings were not saved", ex.Message);
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Project-structure settings save failed", exception.Message);
         }
     }
 
     private async Task SaveProfileAsync()
     {
-        var result = await AdministrationService.SaveProfileAsync(profileModel);
-        profileMessage = result.IsSuccess
-            ? "Project-structure MCP profile saved."
-            : string.Join(" ", result.Errors.Select(error => error.Message));
-
-        if (!result.IsSuccess)
+        try
         {
-            return;
-        }
+            var result = await AdministrationService.SaveProfileAsync(profileModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Project-structure profile was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
 
-        profiles = await AdministrationService.ListProfilesAsync();
-        projectChoices = await AdministrationService.ListProjectChoicesAsync();
-        profileModel = await AdministrationService.GetProfileAsync(result.Value);
-        await RefreshSetupGuideAsync();
+            profiles = await AdministrationService.ListProfilesAsync();
+            projectChoices = await AdministrationService.ListProjectChoicesAsync();
+            profileModel = await AdministrationService.GetProfileAsync(result.Value);
+            await RefreshSetupGuideAsync();
+            NotificationService.Success("Project-structure profile saved", "Project-structure MCP profile saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Project-structure profile save failed", exception.Message);
+        }
     }
 
     private async Task EditProfileAsync(Guid id)
@@ -434,7 +442,6 @@
     private async Task ResetProfileAsync()
     {
         profileModel = await AdministrationService.GetProfileAsync(null);
-        profileMessage = null;
         await RefreshSetupGuideAsync();
     }
 
@@ -445,10 +452,17 @@
             return;
         }
 
-        await AdministrationService.DeleteProfileAsync(profileModel.Id.Value);
-        profiles = await AdministrationService.ListProfilesAsync();
-        await ResetProfileAsync();
-        profileMessage = "Project-structure MCP profile deleted.";
+        try
+        {
+            await AdministrationService.DeleteProfileAsync(profileModel.Id.Value);
+            profiles = await AdministrationService.ListProfilesAsync();
+            await ResetProfileAsync();
+            NotificationService.Success("Project-structure profile deleted", "Project-structure MCP profile deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Project-structure profile delete failed", exception.Message);
+        }
     }
 
     private async Task RefreshSetupGuideAsync()
@@ -462,7 +476,7 @@
     {
         profileModel.GenerateNewToken = true;
         profileModel.TokenValue = string.Empty;
-        profileMessage = "A new token will be generated when you save the profile.";
+        NotificationService.Info("Token rotation staged", "A new token will be generated when you save the profile.");
     }
 
     private void AddOverride()

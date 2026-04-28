@@ -10,15 +10,15 @@ public partial class SettingsPage
     [SupplyParameterFromQuery(Name = "tab")]
     public string? RequestedTab { get; set; }
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     private WorkspaceSettingsModel settingsModel = new();
     private SecretEditorModel secretModel = NewSecret();
     private ProviderProfileEditorModel providerModel = NewProvider();
     private IReadOnlyList<ProviderProfileSummary> providers = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ConnectorPluginManifest> providerManifests = [];
-    private string? settingsMessage;
-    private string? secretMessage;
-    private string? providerMessage;
     private string settingsTab = "workspace";
     private string secretSearch = string.Empty;
     private string providerSearch = string.Empty;
@@ -79,22 +79,37 @@ public partial class SettingsPage
 
     private async Task SaveSettingsAsync()
     {
-        await WorkspaceService.SaveSettingsAsync(settingsModel);
-        settingsMessage = "Workspace defaults saved.";
-        providers = await WorkspaceService.ListProviderProfilesAsync();
+        try
+        {
+            await WorkspaceService.SaveSettingsAsync(settingsModel);
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+            NotificationService.Success("Workspace defaults saved", "Workspace defaults saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Workspace defaults save failed", exception.Message);
+        }
     }
 
     private async Task SaveSecretAsync()
     {
-        var result = await SecretService.SaveAsync(secretModel);
-        secretMessage = result.IsSuccess ? "Secret saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (!result.IsSuccess)
+        try
         {
-            return;
-        }
+            var result = await SecretService.SaveAsync(secretModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Secret was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
 
-        secrets = await WorkspaceService.ListSecretsAsync();
-        await ResetSecretAsync();
+            secrets = await WorkspaceService.ListSecretsAsync();
+            await ResetSecretAsync();
+            NotificationService.Success("Secret saved", "Secret saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Secret save failed", exception.Message);
+        }
     }
 
     private async Task EditSecretAsync(Guid id)
@@ -113,10 +128,17 @@ public partial class SettingsPage
             return;
         }
 
-        await SecretService.DeleteAsync(secretModel.Id.Value);
-        secrets = await WorkspaceService.ListSecretsAsync();
-        secretMessage = "Secret deleted.";
-        await ResetSecretAsync();
+        try
+        {
+            await SecretService.DeleteAsync(secretModel.Id.Value);
+            secrets = await WorkspaceService.ListSecretsAsync();
+            await ResetSecretAsync();
+            NotificationService.Success("Secret deleted", "Secret deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Secret delete failed", exception.Message);
+        }
     }
 
     private Task ResetSecretAsync()
@@ -127,15 +149,23 @@ public partial class SettingsPage
 
     private async Task SaveProviderAsync()
     {
-        var result = await WorkspaceService.SaveProviderAsync(providerModel);
-        providerMessage = result.IsSuccess ? "Provider profile saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (!result.IsSuccess)
+        try
         {
-            return;
-        }
+            var result = await WorkspaceService.SaveProviderAsync(providerModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Provider profile was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
 
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        await ResetProviderAsync();
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+            await ResetProviderAsync();
+            NotificationService.Success("Provider profile saved", "Provider profile saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider save failed", exception.Message);
+        }
     }
 
     private async Task EditProviderAsync(Guid id)
@@ -146,17 +176,39 @@ public partial class SettingsPage
 
     private async Task TestProviderAsync(Guid id)
     {
-        var result = await WorkspaceService.TestProviderAsync(id);
-        providerMessage = result.Message;
-        providers = await WorkspaceService.ListProviderProfilesAsync();
+        try
+        {
+            var result = await WorkspaceService.TestProviderAsync(id);
+            if (result.Success)
+            {
+                NotificationService.Success("Provider health check passed", result.Message);
+            }
+            else
+            {
+                NotificationService.Warning("Provider health check failed", result.Message);
+            }
+
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider health check failed", exception.Message);
+        }
     }
 
     private async Task DeleteProviderAsync(Guid id)
     {
-        await WorkspaceService.DeleteProviderAsync(id);
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        providerMessage = "Provider profile deleted.";
-        await ResetProviderAsync();
+        try
+        {
+            await WorkspaceService.DeleteProviderAsync(id);
+            providers = await WorkspaceService.ListProviderProfilesAsync();
+            await ResetProviderAsync();
+            NotificationService.Success("Provider profile deleted", "Provider profile deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider delete failed", exception.Message);
+        }
     }
 
     private Task ResetProviderAsync()

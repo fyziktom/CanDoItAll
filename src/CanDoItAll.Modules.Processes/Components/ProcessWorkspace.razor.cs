@@ -129,8 +129,6 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string exportJson = string.Empty;
     private string importJson = string.Empty;
     private string projectName = string.Empty;
-    private string message = string.Empty;
-    private bool isError;
     private bool isFeedingDefaults;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
@@ -231,14 +229,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private void SetMessage(string value)
     {
-        message = value;
-        isError = false;
+        NotificationService.Success("Processes updated", value);
     }
 
     private void SetError(string value)
     {
-        message = value;
-        isError = true;
+        NotificationService.Error("Processes update failed", value);
     }
 
     private void SetError(IEnumerable<Error> errors)
@@ -248,8 +244,6 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private void ClearMessage()
     {
-        message = string.Empty;
-        isError = false;
     }
 
     private async Task FeedDefaultsAsync()

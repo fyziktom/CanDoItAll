@@ -20,6 +20,9 @@ public partial class AgentChatPanel : IAsyncDisposable
     [Inject]
     public DialogService DialogService { get; set; } = default!;
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     private IReadOnlyList<AgentDefinition> agents = [];
     private ChatAgentWorkspaceSnapshot? workspace;
     private IReadOnlyList<ExecutionLogEntry> executionLog = [];
@@ -32,9 +35,6 @@ public partial class AgentChatPanel : IAsyncDisposable
     private IReadOnlyList<string> draftAttachmentPaths = [];
     private bool isBusy;
     private int composerKey;
-    private string message = string.Empty;
-    private string messageTone = "info";
-    private string messageLabel = "Info";
     private string runStateText = string.Empty;
     private string runStateTone = "neutral";
     private string threadSearchText = string.Empty;
@@ -522,9 +522,21 @@ Use these workspace artifacts as input:
 
     private void SetMessage(string label, string tone, string value)
     {
-        messageLabel = label;
-        messageTone = tone;
-        message = value;
+        switch (tone)
+        {
+            case "success":
+                NotificationService.Success(label, value);
+                break;
+            case "warning":
+                NotificationService.Warning(label, value);
+                break;
+            case "danger":
+                NotificationService.Error(label, value);
+                break;
+            default:
+                NotificationService.Info(label, value);
+                break;
+        }
     }
 
     private static string BuildSessionMeta(ChatSessionSummaryRecord session)

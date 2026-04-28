@@ -1,9 +1,11 @@
 @page "/crm-hr/assignments"
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @inject ProjectsService ProjectsService
 @inject ProjectPartyIntegrationService ProjectPartyIntegrationService
 @inject HrService HrService
 @inject NavigationManager Navigation
+@inject NotificationService NotificationService
 
 <PageTitle>CRM / HR Assignments</PageTitle>
 
@@ -35,14 +37,6 @@
                              Value="@staffingDashboard.OverallocatedCount.ToString()"
                              HelperText="Profiles already exceeding available capacity." Tone="danger" />
             </SummaryTiles>
-
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <SurfaceCard Soft="true"
-                             data-testid="crmhr-assignment-message">
-                    <p class="text-sm @(messageTone == "danger" ? "text-rose-700" : "text-slate-700")">@message</p>
-                </SurfaceCard>
-            }
 
             <ProjectPartyAssignmentPanel Projects="projectSummaries"
                                          SelectedProjectId="selectedProjectId"
@@ -98,8 +92,6 @@
     private StaffingDashboardModel staffingDashboard = new(0, 0m, 0, 0);
     private Guid? selectedProjectId;
     private Guid? handledProjectId;
-    private string? message;
-    private string messageTone = "neutral";
     private string candidateSearchText = string.Empty;
     private string candidateSkillFilter = string.Empty;
     private string candidateAvailabilityFilter = string.Empty;
@@ -196,8 +188,7 @@
     {
         if (!selectedProjectId.HasValue)
         {
-            message = "Choose a project before saving an assignment.";
-            messageTone = "danger";
+            NotificationService.Warning("Assignment not saved", "Choose a project before saving an assignment.");
             return;
         }
 
@@ -205,13 +196,11 @@
         var result = await ProjectPartyIntegrationService.SaveAssignmentAsync(draftAssignment);
         if (!result.IsSuccess)
         {
-            message = result.Errors.FirstOrDefault()?.Message ?? "Unable to save the assignment.";
-            messageTone = "danger";
+            NotificationService.Error("Assignment save failed", result.Errors.FirstOrDefault()?.Message ?? "Unable to save the assignment.");
             return;
         }
 
-        message = "Project assignment saved.";
-        messageTone = "success";
+        NotificationService.Success("Assignment saved", "Project assignment saved.");
         await ReloadSelectionAsync();
     }
 
@@ -219,8 +208,7 @@
     {
         if (!selectedProjectId.HasValue)
         {
-            message = "Choose a project before saving an allocation.";
-            messageTone = "danger";
+            NotificationService.Warning("Allocation not saved", "Choose a project before saving an allocation.");
             return;
         }
 
@@ -229,13 +217,11 @@
         var result = await ProjectPartyIntegrationService.SaveAssignmentAsync(allocationDraft);
         if (!result.IsSuccess)
         {
-            message = result.Errors.FirstOrDefault()?.Message ?? "Unable to save the allocation.";
-            messageTone = "danger";
+            NotificationService.Error("Allocation save failed", result.Errors.FirstOrDefault()?.Message ?? "Unable to save the allocation.");
             return;
         }
 
-        message = "Project allocation saved.";
-        messageTone = "success";
+        NotificationService.Success("Allocation saved", "Project allocation saved.");
         await ReloadSelectionAsync();
     }
 
@@ -245,13 +231,11 @@
         var result = await HrService.SaveStaffingRequestAsync(staffingRequestDraft);
         if (result.IsFailure)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Error("Staffing request save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
-        message = "Staffing request saved.";
-        messageTone = "success";
+        NotificationService.Success("Staffing request saved", "Staffing request saved.");
         await ReloadSelectionAsync();
     }
 
@@ -307,24 +291,21 @@
     private async Task DeleteAssignmentAsync(Guid assignmentId)
     {
         await ProjectPartyIntegrationService.DeleteAssignmentAsync(assignmentId);
-        message = "Project assignment deleted.";
-        messageTone = "warning";
+        NotificationService.Warning("Assignment deleted", "Project assignment deleted.");
         await ReloadSelectionAsync();
     }
 
     private async Task DeleteAllocationAsync(Guid assignmentId)
     {
         await ProjectPartyIntegrationService.DeleteAssignmentAsync(assignmentId);
-        message = "Project allocation deleted.";
-        messageTone = "warning";
+        NotificationService.Warning("Allocation deleted", "Project allocation deleted.");
         await ReloadSelectionAsync();
     }
 
     private async Task DeleteStaffingRequestAsync(Guid staffingRequestId)
     {
         await HrService.DeleteStaffingRequestAsync(staffingRequestId);
-        message = "Staffing request deleted.";
-        messageTone = "warning";
+        NotificationService.Warning("Staffing request deleted", "Staffing request deleted.");
         await ReloadSelectionAsync();
     }
 

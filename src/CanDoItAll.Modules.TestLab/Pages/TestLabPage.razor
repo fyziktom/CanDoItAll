@@ -4,6 +4,7 @@
 @inject TestLabService TestLabService
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
+@inject NotificationService NotificationService
 
 <PageTitle>Test Lab</PageTitle>
 
@@ -250,7 +251,7 @@
                             </FormSection>
                         }
 
-                        <StickyActionFooter StatusLabel="Plan save state" StatusMessage="@message" StatusTone="success">
+                        <StickyActionFooter StatusLabel="Plan save state">
                             <SecondaryActions>
                                 <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
@@ -276,7 +277,6 @@
     private IReadOnlyList<TestPlanSummary> plans = [];
     private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private TestPlanEditorModel editor = new();
-    private string? message;
     private string planSearch = string.Empty;
     private string projectFilter = string.Empty;
     private string phaseFilter = string.Empty;
@@ -328,7 +328,6 @@
     private async Task CreateNewAsync()
     {
         editor = new TestPlanEditorModel { ProjectId = ProjectIdQuery };
-        message = null;
         detailTab = "overview";
         await LoadResponsiblePartyOptionsAsync();
     }
@@ -337,7 +336,6 @@
     {
         editor = await TestLabService.GetAsync(id);
         await LoadResponsiblePartyOptionsAsync();
-        message = null;
         detailTab = "overview";
     }
 
@@ -361,12 +359,22 @@
 
     private async Task SaveAsync()
     {
-        var result = await TestLabService.SaveAsync(editor);
-        message = result.IsSuccess ? "Test plan saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        plans = await TestLabService.ListAsync();
-        if (result.IsSuccess)
+        try
         {
+            var result = await TestLabService.SaveAsync(editor);
+            plans = await TestLabService.ListAsync();
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Test plan was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+
             editor = await TestLabService.GetAsync(result.Value);
+            NotificationService.Success("Test plan saved", "Test plan saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Test plan save failed", exception.Message);
         }
     }
 

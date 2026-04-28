@@ -3,16 +3,6 @@
 <Stack GapScale="LayoutGap.Large"
        AlignItems="AlignItems.Stretch"
        Class="flex-1 min-h-0 w-full">
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <SurfaceCard Soft="true">
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="@messageTone" Text="@messageLabel" />
-                <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
-            </Cluster>
-        </SurfaceCard>
-    }
-
     <Grid Gap="LayoutGap.Large"
           Class="agents-chat-grid flex-1 min-h-0 overflow-hidden"
           ColumnTemplateXl="minmax(18rem,0.58fr) minmax(0,1.8fr)">

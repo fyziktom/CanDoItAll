@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
@@ -33,14 +34,16 @@ public partial class AgentCatalogPanel
     [Inject]
     public ProcessesService ProcessesService { get; set; } = default!;
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     private AgentEditorModel editorModel = new();
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
     private IReadOnlyList<ProcessDefinitionListItem> processDefinitions = [];
-    private string tagText = string.Empty;
+    private IReadOnlyList<string> tagValues = [];
     private string agentSearch = string.Empty;
-    private string? message;
     private Guid? linkedPartyId;
     private bool hasLoaded;
     private bool isLoading = true;
@@ -72,6 +75,13 @@ public partial class AgentCatalogPanel
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
+
+    private IReadOnlyList<string> VisibleTagSuggestions => agents
+        .SelectMany(agent => agent.Tags)
+        .Where(tag => !AgentSpecialTags.IsFavorite(tag))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,6 +170,7 @@ public partial class AgentCatalogPanel
         catch (Exception exception)
         {
             providerLoadErrorMessage = $"Failed to load providers. {exception.Message}";
+            NotificationService.Error("Providers failed to load", exception.Message);
         }
 
         await InvokeAsync(StateHasChanged);
@@ -207,6 +218,7 @@ public partial class AgentCatalogPanel
         catch (Exception exception)
         {
             projectStructureProjectsErrorMessage = $"Failed to load projects. {exception.Message}";
+            NotificationService.Error("Project list failed to load", exception.Message);
         }
         finally
         {
@@ -246,6 +258,7 @@ public partial class AgentCatalogPanel
         catch (Exception exception)
         {
             processDefinitionsErrorMessage = $"Failed to load processes. {exception.Message}";
+            NotificationService.Error("Process list failed to load", exception.Message);
         }
         finally
         {
@@ -257,13 +270,17 @@ public partial class AgentCatalogPanel
 
     private async Task SaveAgentAsync()
     {
-        editorModel.Tags = tagText
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        var agentId = await WorkspaceService.SaveAgentAsync(editorModel);
-        await ReloadAgentsAsync(agentId);
-        message = "Technical agent saved.";
+        try
+        {
+            editorModel.Tags = BuildAgentTagsForSave().ToList();
+            var agentId = await WorkspaceService.SaveAgentAsync(editorModel);
+            await ReloadAgentsAsync(agentId);
+            NotificationService.Success("Agent saved", "Technical agent saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Agent save failed", exception.Message);
+        }
     }
 
     private Task EditAgentAsync(
@@ -283,7 +300,6 @@ public partial class AgentCatalogPanel
     private Task ResetAgentAsync()
     {
         ResetEditorState();
-        message = null;
         return Task.CompletedTask;
     }
 
@@ -294,10 +310,17 @@ public partial class AgentCatalogPanel
             return;
         }
 
-        await WorkspaceService.DeleteAgentAsync(editorModel.Id.Value);
-        await ReloadAgentsAsync();
-        message = "Technical agent deleted.";
-        await ResetAgentAsync();
+        try
+        {
+            await WorkspaceService.DeleteAgentAsync(editorModel.Id.Value);
+            await ReloadAgentsAsync();
+            ResetEditorState();
+            NotificationService.Success("Agent deleted", "Technical agent deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Agent delete failed", exception.Message);
+        }
     }
 
     private void ResetAgentSearch()
@@ -540,6 +563,37 @@ public partial class AgentCatalogPanel
         editorModel.ProcessAccess.AllowedDefinitionIds = [];
     }
 
+    private Task HandleTagsChangedAsync(IReadOnlyList<string> value)
+    {
+        tagValues = NormalizeVisibleTags(value);
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<string> BuildAgentTagsForSave()
+    {
+        var nextTags = NormalizeVisibleTags(tagValues).ToList();
+        if (editorModel.Tags.Any(AgentSpecialTags.IsFavorite))
+        {
+            nextTags.Add(AgentSpecialTags.Favorite);
+        }
+
+        return nextTags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> NormalizeVisibleTags(IEnumerable<string> tags)
+    {
+        return tags
+            .Select(tag => tag.Trim())
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Where(tag => !AgentSpecialTags.IsFavorite(tag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static string ResolveStatusTone(
         AgentLifecycleStatus status)
     {
@@ -571,14 +625,14 @@ public partial class AgentCatalogPanel
     private void ApplySelectedAgent(AgentDefinition definition)
     {
         editorModel = AgentEditorModel.FromDefinition(definition);
-        tagText = string.Join(", ", editorModel.Tags);
+        tagValues = NormalizeVisibleTags(editorModel.Tags);
         linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
     }
 
     private void ResetEditorState()
     {
         editorModel = new AgentEditorModel();
-        tagText = string.Empty;
+        tagValues = [];
         linkedPartyId = null;
     }
 }

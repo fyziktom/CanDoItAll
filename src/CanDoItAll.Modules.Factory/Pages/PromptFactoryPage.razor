@@ -23,6 +23,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 @inject WorkspaceService WorkspaceService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject NotificationService NotificationService
 
 <PageTitle>Prompt Factory</PageTitle>
 
@@ -1775,14 +1776,6 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     }
                 }
 
-                @if (!string.IsNullOrWhiteSpace(message))
-                {
-                    <section class="cw-panel-card pf-wide-card">
-                        <p class="cw-panel-kicker">Latest action</p>
-                        <p class="@(isError ? "text-sm text-rose-700" : "text-sm text-emerald-700")">@message</p>
-                    </section>
-                }
-
             </div>
         }
     }
@@ -1837,8 +1830,6 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     private string selectedPromptNodeTitle = string.Empty;
     private string selectedPromptNodeNotes = string.Empty;
     private PromptRunNodeState selectedPromptNodeState = PromptRunNodeState.Prepared;
-    private string? message;
-    private bool isError;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
@@ -2988,14 +2979,12 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private void SetMessage(string value)
     {
-        message = value;
-        isError = false;
+        NotificationService.Success("Prompt Factory updated", value);
     }
 
     private void SetError(IEnumerable<Error> errors)
     {
-        message = string.Join(" ", errors.Select(error => error.Message));
-        isError = true;
+        NotificationService.Error("Prompt Factory update failed", string.Join(" ", errors.Select(error => error.Message)));
     }
 
     private static bool TryParsePromptCanvasNodeId(string? canvasNodeId, out Guid nodeId)

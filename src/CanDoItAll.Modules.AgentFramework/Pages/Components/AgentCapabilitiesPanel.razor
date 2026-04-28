@@ -44,16 +44,6 @@
 
     <DetailContent>
         <Stack GapScale="LayoutGap.Large">
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <SurfaceCard Soft="true">
-                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                        <StatusBadge Tone="@messageTone" Text="@messageLabel" />
-                        <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
-                    </Cluster>
-                </SurfaceCard>
-            }
-
             @if (selectedAgent is null || selectedAgentEditor is null)
             {
                 <EmptyState Eyebrow="Select an agent"

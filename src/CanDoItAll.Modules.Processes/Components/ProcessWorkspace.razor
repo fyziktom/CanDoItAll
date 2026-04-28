@@ -55,15 +55,6 @@
         <Stack GapScale="LayoutGap.Medium"
                Class="min-h-0 flex-1"
                data-testid="processes-workspace-shell">
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <SurfaceCard Soft="true"
-                             data-testid="processes-message-card">
-                    <p class="cda-eyebrow">Workspace status</p>
-                    <p class="mt-2 text-sm leading-6 @(isError ? "text-rose-700" : "text-slate-700")">@message</p>
-                </SurfaceCard>
-            }
-
             <ListDetailShell ListPaneWidth="28rem"
                              Dense="true"
                              ListPaneClass="h-full min-h-0"

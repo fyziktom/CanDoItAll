@@ -1,5 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
@@ -117,9 +118,10 @@ public sealed class AiAgentsPageTests
         cut.Find("[data-testid='agents-catalog-instructions']").Change("Review release scope and produce durable evidence.");
         cut.Find("[data-testid='agents-catalog-save']").Click();
 
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Technical agent saved.", cut.Markup);
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Agent saved");
             Assert.Contains("Release Copilot", cut.Markup);
         });
 

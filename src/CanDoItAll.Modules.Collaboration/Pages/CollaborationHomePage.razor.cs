@@ -1,3 +1,4 @@
+using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Collaboration.Pages;
@@ -7,6 +8,9 @@ public partial class CollaborationHomePage
     [SupplyParameterFromQuery(Name = "threadId")]
     public Guid? ThreadIdQuery { get; set; }
 
+    [Inject]
+    private NotificationService NotificationService { get; set; } = default!;
+
     private readonly CollaborationThreadEditorModel newThreadEditor = new();
     private readonly CollaborationReplyEditorModel replyEditor = new();
     private CollaborationWorkspaceModel workspace = new([], [], [], null, new CollaborationShellState(0, 0));
@@ -14,8 +18,6 @@ public partial class CollaborationHomePage
     private int selectedViewIndex;
     private bool showUnreadOnly;
     private bool hasLoaded;
-    private bool isError;
-    private string? message;
 
     private IReadOnlyList<CollaborationInboxItemSummary> VisibleInboxItems => showUnreadOnly
         ? workspace.InboxItems.Where(item => item.IsUnread).ToArray()
@@ -189,8 +191,13 @@ public partial class CollaborationHomePage
 
     private void SetMessage(string value, bool error)
     {
-        message = value;
-        isError = error;
+        if (error)
+        {
+            NotificationService.Error("Collaboration update failed", value);
+            return;
+        }
+
+        NotificationService.Success("Collaboration updated", value);
     }
 
     private void ReplaceCurrentRoute()
@@ -264,13 +271,6 @@ public partial class CollaborationHomePage
             1 => "All canonical conversation threads, regardless of unread state.",
             _ => "Unread and recently updated collaboration items."
         };
-    }
-
-    private string ResolveMessageClasses()
-    {
-        return isError
-            ? "rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700"
-            : "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-700";
     }
 
     private static string? ResolveBadgeText(int count)
