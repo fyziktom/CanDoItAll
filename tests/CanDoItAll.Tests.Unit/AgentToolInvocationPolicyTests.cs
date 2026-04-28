@@ -249,6 +249,7 @@ public sealed class AgentToolInvocationPolicyTests
         return new TheoryData<string>
         {
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,

@@ -31,11 +31,19 @@ public partial class ProcessWorkspace
 
         public CanvasWorkbenchWindowState CanvasEditorWindowState => workspace.canvasEditorWindowState;
 
+        public CanvasWorkbenchWindowState CanvasAgentWindowState => workspace.canvasAgentWindowState;
+
         public string CanvasToolboxWindowId => ProcessWorkspace.CanvasToolboxWindowId;
 
         public string CanvasSelectionWindowId => ProcessWorkspace.CanvasSelectionWindowId;
 
         public string CanvasEditorWindowId => ProcessWorkspace.CanvasEditorWindowId;
+
+        public string CanvasAgentWindowId => ProcessWorkspace.CanvasAgentWindowId;
+
+        public string CanvasAgentChatWindowId => ProcessWorkspace.CanvasAgentChatWindowId;
+
+        public Guid? SelectedProcessId => workspace.selectedProcessId;
 
         public IReadOnlyList<ProcessCanvasToolboxGroup> DefinitionToolboxGroups => workspace.DefinitionToolboxGroups;
 
@@ -133,6 +141,11 @@ public partial class ProcessWorkspace
             return workspace.ToggleCanvasToolboxWindowAsync();
         }
 
+        public Task ToggleCanvasAgentWindowAsync()
+        {
+            return workspace.ToggleCanvasAgentWindowAsync();
+        }
+
         public Task ResolveDefinitionCanvasCollisionsAsync()
         {
             return workspace.ResolveDefinitionCanvasCollisionsAsync();
@@ -161,6 +174,11 @@ public partial class ProcessWorkspace
         public Task HandleCanvasEditorWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         {
             return workspace.HandleCanvasEditorWindowStateChangedAsync(state);
+        }
+
+        public Task HandleCanvasAgentWindowStateChangedAsync(CanvasWorkbenchWindowState state)
+        {
+            return workspace.HandleCanvasAgentWindowStateChangedAsync(state);
         }
 
         public Task HandleCanvasToolboxSearchTextChangedAsync(string? value)

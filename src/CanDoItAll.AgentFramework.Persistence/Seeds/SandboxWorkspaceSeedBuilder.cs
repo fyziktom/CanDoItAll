@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-flexible-process-agents-v26";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-flexible-process-agents-v27";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -908,7 +908,7 @@ internal static class SandboxWorkspaceSeedBuilder
                     canWrite: false,
                     allowAllProjects: true),
                 canRead: true,
-                canWrite: false,
+                canWrite: true,
                 allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [

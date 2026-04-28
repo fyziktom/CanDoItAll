@@ -47,6 +47,64 @@
     justify-content: flex-end;
 }
 
+.processes-workspace-root ::deep .process-canvas-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: nowrap;
+    min-width: max-content;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-tools {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    padding-right: 0.3rem;
+    margin-right: 0.15rem;
+    border-right: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-tools > * {
+    flex: 0 0 auto;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-toggle {
+    width: 2.55rem !important;
+    min-width: 2.55rem;
+    max-width: 2.55rem;
+    flex: 0 0 auto;
+    padding-inline: 0 !important;
+    justify-content: center;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-toggle .rz-icon,
+.processes-workspace-root ::deep .process-canvas-toolbar-toggle .rz-icon-fallback {
+    font-size: 1rem;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-toggle .rz-button-text {
+    display: none;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-toggle.is-active {
+    border-color: rgba(16, 185, 129, 0.24);
+    background: rgba(236, 253, 245, 0.92);
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose {
+    flex: 0 0 auto;
+}
+
+.processes-workspace-root ::deep .process-canvas-stage-agent-toggle {
+    min-height: 2.35rem;
+    flex: 0 0 auto;
+    border-color: rgba(16, 185, 129, 0.24);
+    background: rgba(236, 253, 245, 0.92);
+    color: rgb(5 95 70);
+    font-weight: 700;
+}
+
 @media (min-width: 1280px) {
     .processes-workspace-root ::deep .processes-command-strip__actions {
         justify-content: flex-end;

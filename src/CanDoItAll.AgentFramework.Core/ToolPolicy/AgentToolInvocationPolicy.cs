@@ -194,6 +194,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 public static class AgentToolInvocationPolicyMetadata
 {
     public const string ProcessesDefinitionSave = "processes_definition_save";
+    public const string ProcessesDefinitionRoleAdd = "processes_definition_role_add";
     public const string ProcessesDefinitionPublish = "processes_definition_publish";
     public const string ProcessesDefinitionDelete = "processes_definition_delete";
     public const string ProcessesDefinitionImport = "processes_definition_import";
@@ -244,6 +245,7 @@ public static class AgentToolInvocationPolicyMetadata
             Validation("workspace_dotnet_test"),
             Validation("workspace_dotnet_run"),
             Mutation(ProcessesDefinitionSave),
+            Mutation(ProcessesDefinitionRoleAdd),
             Mutation(ProcessesDefinitionPublish),
             Mutation(ProcessesDefinitionDelete),
             Mutation(ProcessesDefinitionImport),

@@ -1,0 +1,126 @@
+.contextual-agent-window {
+    display: flex;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.contextual-agent-window__body {
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.contextual-agent-window__filters {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.contextual-agent-window__search {
+    width: 100%;
+}
+
+.contextual-agent-window__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.contextual-agent-window__list {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.55rem;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+    scrollbar-gutter: stable;
+}
+
+.contextual-agent-window__agent {
+    display: grid;
+    width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.36);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 0.75rem;
+    text-align: left;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07);
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.contextual-agent-window__agent:hover,
+.contextual-agent-window__agent:focus-visible,
+.contextual-agent-window__agent.is-selected {
+    border-color: rgba(14, 165, 233, 0.55);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.contextual-agent-window__agent-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+.contextual-agent-window__agent-title {
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 0.94rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+}
+
+.contextual-agent-window__agent-role,
+.contextual-agent-window__agent-summary {
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.76rem;
+    line-height: 1.1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.contextual-agent-window__agent-summary {
+    color: #475569;
+}
+
+.contextual-agent-window__tags,
+.contextual-agent-window__agent-access {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.contextual-agent-window__agent-access {
+    grid-column: 2;
+    margin-top: 0.25rem;
+}
+
+.contextual-agent-window__tag {
+    border-radius: 999px;
+    background: rgba(226, 232, 240, 0.82);
+    color: #334155;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1rem;
+    padding: 0.08rem 0.45rem;
+}
+
+.contextual-agent-chat-window,
+.contextual-agent-chat-window__body {
+    display: flex;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.contextual-agent-chat-window {
+    width: 100%;
+}
