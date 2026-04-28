@@ -1,0 +1,28 @@
+.agents-runtime-badges-shell ::deep .agents-runtime-badges {
+    align-items: stretch;
+}
+
+.agents-runtime-badges-shell ::deep .cda-summary-tile--badge {
+    flex: 0 1 14.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 0.95rem;
+}
+
+.agents-runtime-badges-shell ::deep .cda-summary-tile__row {
+    gap: 0.55rem;
+}
+
+.agents-runtime-badges-shell ::deep .cda-summary-tile__value {
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+.agents-runtime-badges-shell ::deep .cda-eyebrow {
+    letter-spacing: 0.14em;
+}
+
+@media (min-width: 1280px) {
+    .agents-runtime-badges-shell ::deep .cda-summary-tile--badge {
+        flex-basis: 13rem;
+    }
+}

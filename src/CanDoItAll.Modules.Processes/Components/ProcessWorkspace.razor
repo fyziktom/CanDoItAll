@@ -1,5 +1,7 @@
 ﻿@namespace CanDoItAll.Modules.Processes
 
+@using CanDoItAll.Components.Common
+
 <div class="processes-workspace-root">
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -8,62 +10,51 @@
               Class="processes-page-scaffold"
               data-testid="processes-page-scaffold">
     <Header>
-        <PageHeader Eyebrow="@PageEyebrow"
-                    Title=""
-                    Description=""
-                    Compact="true">
-            <Actions>
-                <Button Text="Feed defaults"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="FeedDefaultsAsync"
-                        Disabled="@isFeedingDefaults"
-                        IsBusy="@isFeedingDefaults"
-                        data-testid="processes-feed-defaults-button" />
-                <Button Text="New definition"
-                        Click="CreateNewAsync"
-                        data-testid="processes-new-definition-button" />
-                <Button Text="Templates"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenTemplateLibraryAsync"
-                        data-testid="processes-templates-button" />
-            </Actions>
-        </PageHeader>
+        <Toolbar Class="processes-command-strip"
+                 data-testid="processes-command-strip">
+            <ToolbarRow Class="processes-command-strip__row">
+                <Cluster Gap="LayoutGap.Small"
+                         Class="min-w-0">
+                    <p class="cda-eyebrow whitespace-nowrap">@PageEyebrow</p>
+                    <StatusBadge Tone="neutral"
+                                 Text="@DefinitionCountText" />
+                    <StatusBadge Tone="info"
+                                 Text="@VisibleDefinitionCountText" />
+                    <StatusBadge Tone="neutral"
+                                 Text="@ActiveRunCountText" />
+                    <StatusBadge Tone="warning"
+                                 Text="@ImprovementCountText" />
+                </Cluster>
+
+                <ToolbarActions Class="processes-command-strip__actions">
+                    <Button Text="Feed defaults"
+                            Icon="cloud_sync"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="FeedDefaultsAsync"
+                            Disabled="@isFeedingDefaults"
+                            IsBusy="@isFeedingDefaults"
+                            data-testid="processes-feed-defaults-button" />
+                    <Button Text="New definition"
+                            Icon="add"
+                            Size="ButtonSize.Small"
+                            Click="CreateNewAsync"
+                            data-testid="processes-new-definition-button" />
+                    <Button Text="Templates"
+                            Icon="category"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="OpenTemplateLibraryAsync"
+                            data-testid="processes-templates-button" />
+                </ToolbarActions>
+            </ToolbarRow>
+        </Toolbar>
     </Header>
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium"
                Class="min-h-0 flex-1"
                data-testid="processes-workspace-shell">
-            <SummaryTiles GapScale="LayoutGap.Small"
-                          ColumnsMd="4">
-                <SummaryTile Label="Definitions"
-                             Value="@definitions.Count.ToString()"
-                             HelperText="Persisted process definitions."
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Visible"
-                             Value="@FilteredDefinitions.Count.ToString()"
-                             HelperText="Definitions matching the current search."
-                             Badge="true"
-                             Compact="true"
-                             Tone="info"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Active runs"
-                             Value="@definitions.Sum(item => item.ActiveRunCount).ToString()"
-                             HelperText="Runs still active across the visible library."
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Improvements"
-                             Value="@analytics.ImprovementCandidateCount.ToString()"
-                             HelperText="Improvement signals linked to the current scope."
-                             Badge="true"
-                             Compact="true"
-                             Tone="warning"
-                             ShowHelperTextAsTooltip="true" />
-            </SummaryTiles>
-
             @if (!string.IsNullOrWhiteSpace(message))
             {
                 <SurfaceCard Soft="true"
@@ -151,24 +142,29 @@
 
             <DetailHeader>
                 <Stack GapScale="LayoutGap.Small">
-                    <SurfaceCard>
-                        <Split Gap="LayoutGap.Small">
-                            <Stack GapScale="LayoutGap.Tiny">
-                                <p class="cda-eyebrow">Process workspace</p>
-                                <div class="inline-flex min-w-0 items-center gap-2">
-                                    <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
-                                    <HelpPopover RootClass="@CompactHelpPopoverRootClass"
-                                                 ToggleClass="@CompactHelpPopoverToggleClass"
-                                                 OpenOnHover="true"
-                                                 AriaLabel="Show process workspace help"
-                                                 Title="Show process workspace help"
-                                                 Heading="Process workspace"
-                                                 Body="@(selectedProcessId.HasValue
-                                                     ? "Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence."
-                                                     : "Start with the definition contract first. Roles, steps, runtime runs, and governance artifacts attach to the saved process identity.")" />
-                                </div>
-                            </Stack>
-                            <Cluster Gap="LayoutGap.Small">
+                    <SurfaceCard Class="processes-workspace-identity">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               AlignItems="AlignItems.Center"
+                               Gap="LayoutGap.Small"
+                               Wrap="FlexWrap.Wrap">
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.NoWrap"
+                                     Class="processes-workspace-identity__copy">
+                                <p class="cda-eyebrow">Process</p>
+                                <h2 class="processes-workspace-identity__title">@EditorTitle</h2>
+                                <HelpPopover RootClass="@CompactHelpPopoverRootClass"
+                                             ToggleClass="@CompactHelpPopoverToggleClass"
+                                             OpenOnHover="true"
+                                             AriaLabel="Show process help"
+                                             Title="Show process help"
+                                             Heading="Process"
+                                             Body="@(selectedProcessId.HasValue
+                                                 ? "Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence."
+                                                 : "Start with the definition contract first. Roles, steps, runtime runs, and governance artifacts attach to the saved process identity.")" />
+                            </Cluster>
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.Wrap"
+                                     Class="processes-workspace-identity__badges">
                                 <StatusBadge Tone="@SelectedDefinitionTone" Text="@editor.Status.ToString()" />
                                 <StatusBadge Tone="neutral" Text="@($"{editor.Roles.Count} role(s)")" />
                                 <StatusBadge Tone="info" Text="@($"{editor.Steps.Count} step(s)")" />

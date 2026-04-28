@@ -1,3 +1,5 @@
+using CanDoItAll.Components.BaseLib;
+
 namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace
@@ -42,6 +44,35 @@ public partial class ProcessWorkspace
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
         UpdateRuntimeRefreshLoop();
+    }
+
+    private async Task OpenRunStepsDialogAsync(Guid runId)
+    {
+        await SelectRunAsync(runId);
+
+        var selectedRun = SelectedRun;
+        if (selectedRun is null)
+        {
+            SetError("Reload the process before opening this run.");
+            return;
+        }
+
+        _ = DialogService.OpenAsync<ProcessWorkspaceRunStepsDialog>(
+            selectedRun.Name,
+            new Dictionary<string, object?>
+            {
+                [nameof(ProcessWorkspaceRunStepsDialog.Presenter)] = RunsTabPresenter
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Process run",
+                Subtitle = BuildRunSummary(selectedRun),
+                Size = ModalSize.Full,
+                DenseChrome = true,
+                TestId = "processes-run-steps-dialog",
+                AriaLabel = $"Run steps for {selectedRun.Name}",
+                Style = "max-width:calc(100vw - 1.5rem);width:calc(100vw - 1.5rem);height:calc(100vh - 1.5rem);max-height:calc(100vh - 1.5rem);"
+            });
     }
 
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)

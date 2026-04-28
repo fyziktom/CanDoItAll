@@ -49,6 +49,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
 
     [Inject]
+    private DialogService DialogService { get; set; } = default!;
+
+    [Inject]
     private IProcessEscalationService EscalationService { get; set; } = default!;
 
     [Inject]
@@ -189,6 +192,14 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private int SelectedDetailTabIndex
         => ResolveDetailTabIndex(detailTab);
 
+    private string DefinitionCountText => FormatCount(definitions.Count, "definition", "definitions");
+
+    private string VisibleDefinitionCountText => $"{FilteredDefinitions.Count} visible";
+
+    private string ActiveRunCountText => FormatCount(definitions.Sum(item => item.ActiveRunCount), "active run", "active runs");
+
+    private string ImprovementCountText => FormatCount(analytics.ImprovementCandidateCount, "improvement", "improvements");
+
     private static int ResolveDetailTabIndex(string key)
     {
         for (var index = 0; index < DetailTabs.Count; index++)
@@ -210,6 +221,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         }
 
         return DetailTabs[0].Key;
+    }
+
+    private static string FormatCount(int count, string singularLabel, string pluralLabel)
+    {
+        var label = count == 1 ? singularLabel : pluralLabel;
+        return $"{count} {label}";
     }
 
     private void SetMessage(string value)

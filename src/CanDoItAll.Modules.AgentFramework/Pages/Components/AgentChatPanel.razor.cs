@@ -6,6 +6,9 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public partial class AgentChatPanel
 {
+    private const string AgentThreadsHelpText =
+        "Select a technical agent, then pick a thread or create a new one. The live runtime stays in the center, while the right rail keeps execution evidence visible.";
+
     [Parameter]
     public Guid? PreferredAgentId { get; set; }
 

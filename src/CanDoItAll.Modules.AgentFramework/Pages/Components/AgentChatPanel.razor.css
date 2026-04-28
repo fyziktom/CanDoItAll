@@ -1,0 +1,46 @@
+@media (min-width: 1280px) {
+    .agents-chat-panel-shell {
+        display: flex;
+        min-height: 0;
+        height: clamp(32rem, calc(100vh - 24rem), 46rem);
+        overflow: hidden;
+    }
+
+    .agents-chat-panel-shell ::deep .agents-chat-grid {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .agents-chat-panel-shell ::deep .agents-chat-left-rail {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .agents-chat-panel-shell ::deep .agents-chat-left-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .agents-chat-panel-shell ::deep .agents-chat-right-rail {
+        overflow-y: auto;
+        padding-right: 0.25rem;
+        scrollbar-gutter: stable;
+    }
+
+    .agents-chat-panel-shell ::deep .agents-chat-right-rail .cda-section-card {
+        height: auto;
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 1279.98px) {
+    .agents-chat-panel-shell,
+    .agents-chat-panel-shell ::deep .agents-chat-grid,
+    .agents-chat-panel-shell ::deep .agents-chat-left-rail,
+    .agents-chat-panel-shell ::deep .agents-chat-right-rail {
+        height: auto;
+        overflow: visible;
+    }
+}

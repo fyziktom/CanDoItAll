@@ -329,6 +329,11 @@ public partial class ProcessWorkspace
             return workspace.SelectRunAsync(runId);
         }
 
+        public Task OpenRunStepsDialogAsync(Guid runId)
+        {
+            return workspace.OpenRunStepsDialogAsync(runId);
+        }
+
         public string BuildLaunchPlanSummary(ProcessLaunchPlanListItem plan)
         {
             return ProcessWorkspace.BuildLaunchPlanSummary(plan);

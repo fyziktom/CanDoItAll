@@ -8,6 +8,7 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,7 @@ public sealed partial class AgentFrameworkAuditProofTests
             });
 
         TestApplicationBootstrap.ConfigureDefaultServices(services, configuration, environment);
+        services.AddScoped<NavigationManager, SeedNavigationManager>();
         return Task.FromResult(services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
@@ -67,6 +69,18 @@ public sealed partial class AgentFrameworkAuditProofTests
             fixture.DatabaseConnectionString,
             workspaceRoot,
             Path.Combine(profileRoot, "manager-artifacts"));
+    }
+
+    private sealed class SeedNavigationManager : NavigationManager
+    {
+        public SeedNavigationManager()
+        {
+            Initialize("http://localhost/", "http://localhost/");
+        }
+
+        protected override void NavigateToCore(string uri, NavigationOptions options)
+        {
+        }
     }
 
     private async Task<Guid> EnsureScenarioHarnessCatalogAsync()

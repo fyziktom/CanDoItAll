@@ -375,7 +375,9 @@
 
     private string ResolveFrameClass()
     {
-        return "cda-shell-frame";
+        return Mode == AppShellMode.FocusWorkbench
+            ? "cda-shell-frame cda-shell-frame--focus"
+            : "cda-shell-frame";
     }
 
     private string? ResolveRootStyle()

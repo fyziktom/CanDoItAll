@@ -1,6 +1,7 @@
+<div class="agents-chat-panel-shell"
+     data-testid="agents-chat-panel">
 <Stack GapScale="LayoutGap.Large"
-       Class="flex-1 min-h-0"
-       data-testid="agents-chat-panel">
+       Class="flex-1 min-h-0">
     @if (!string.IsNullOrWhiteSpace(message))
     {
         <SurfaceCard Soft="true">
@@ -12,14 +13,23 @@
     }
 
     <Grid Gap="LayoutGap.Large"
-          Class="flex-1 min-h-0 overflow-hidden"
+          Class="agents-chat-grid flex-1 min-h-0 overflow-hidden"
           ColumnTemplateXl="minmax(18rem,0.8fr) minmax(0,1.35fr) minmax(18rem,0.82fr)">
-        <WorkspacePanel Class="h-full min-h-0 overflow-hidden">
+        <WorkspacePanel Class="agents-chat-left-rail h-full min-h-0 overflow-hidden">
             <div class="border-b border-slate-200 pb-4">
                 <Split Gap="LayoutGap.Small">
                     <div>
-                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="Agent threads" />
-                        <TextBlock TextStyle="TextStyle.Body2" Value="Select a technical agent, then pick a thread or create a new one. The live runtime stays in the center, while the right rail keeps execution evidence visible." />
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.NoWrap">
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="Agent threads" />
+                            <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                                         ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                         OpenOnHover="true"
+                                         AriaLabel="Show agent thread help"
+                                         Title="Show agent thread help"
+                                         Heading="Agent threads"
+                                         Body="@AgentThreadsHelpText" />
+                        </Cluster>
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                         <Button Text="Refresh"
@@ -35,7 +45,7 @@
                 </Split>
             </div>
 
-            <div class="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+            <div class="agents-chat-left-scroll mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
                  style="scrollbar-gutter:stable;">
                 @if (agents.Count == 0)
                 {
@@ -130,7 +140,7 @@
                             AttachmentRequested="StageAttachmentsAsync" />
 
         <Stack GapScale="LayoutGap.Large"
-               Class="h-full min-h-0">
+               Class="agents-chat-right-rail h-full min-h-0">
             <WorkspacePanel Tone="WorkspacePanelTone.Ghost">
                 <Stack GapScale="LayoutGap.Small">
                     <TextBlock TextStyle="TextStyle.Subtitle2" Value="Selected execution" />
@@ -158,3 +168,4 @@
         </Stack>
     </Grid>
 </Stack>
+</div>

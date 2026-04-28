@@ -6,6 +6,53 @@
     overflow: hidden;
 }
 
+.processes-workspace-root ::deep .processes-command-strip {
+    border-radius: 1rem;
+    padding: 0.65rem 0.8rem;
+}
+
+.processes-workspace-root ::deep .processes-command-strip__row {
+    gap: 0.65rem;
+}
+
+.processes-workspace-root ::deep .processes-command-strip__actions {
+    justify-content: flex-start;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity {
+    padding: 0.75rem 1rem;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity__copy {
+    flex: 1 1 26rem;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity__copy .cda-eyebrow {
+    flex: 0 0 auto;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity__title {
+    min-width: 0;
+    overflow: hidden;
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity__badges {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+@media (min-width: 1280px) {
+    .processes-workspace-root ::deep .processes-command-strip__actions {
+        justify-content: flex-end;
+    }
+}
+
 @media (max-width: 767.98px) {
     .processes-workspace-root ::deep .cad-tabs--fill-height {
         display: block;

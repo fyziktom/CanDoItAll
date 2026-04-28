@@ -10,6 +10,9 @@ namespace CanDoItAll.Modules.AgentFramework.Pages;
 
 public partial class AgentsHomePage
 {
+    private const string AgentFrameworkShellHelpText =
+        "This shell owns the technical agent catalog, durable execution evidence, provider diagnostics, and scenario proof. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.";
+
     private static readonly HashSet<string> AllowedTabs =
     [
         "overview",

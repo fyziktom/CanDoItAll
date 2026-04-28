@@ -8,6 +8,10 @@
     <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Workspace\Artifacts\**\*.cs" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
