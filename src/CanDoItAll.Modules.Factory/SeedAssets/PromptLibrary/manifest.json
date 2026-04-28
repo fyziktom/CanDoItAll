@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "generatedBy": "tools/prompt_library/build_prompt_component_library.py",
+  "componentCount": 112,
+  "flowCount": 10,
+  "blueprintCount": 13,
+  "simulationCount": 5,
+  "recommendedComponentCount": 57,
+  "toolboxComponentCount": 10
+}

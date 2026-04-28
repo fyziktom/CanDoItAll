@@ -46,6 +46,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();
+        services.AddScoped<IDatabaseTransferHandler, AiAgentsDatabaseTransferHandler>();
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
 

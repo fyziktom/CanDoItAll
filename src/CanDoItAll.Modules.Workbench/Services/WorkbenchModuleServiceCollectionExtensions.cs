@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -37,6 +38,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
+        services.AddScoped<IDatabaseTransferHandler, ProjectsDatabaseTransferHandler>();
+        services.AddScoped<IProjectPackageService, ProjectPackageService>();
         return services;
     }
 }

@@ -17,6 +17,8 @@ public sealed class Space3DMouseControlSettings
 
     public double AccelDeadzoneG { get; set; } = 0.012d;
     public double GyroDeadzoneDps { get; set; } = 0.6d;
+    public double JoystickDeadzoneDeg { get; set; } = 1.8d;
+    public double JoystickFullScaleDeg { get; set; } = 24d;
     public double AccelSoftRangeG { get; set; } = 0.18d;
     public double GyroSoftRangeDps { get; set; } = 85d;
 
@@ -70,6 +72,8 @@ public sealed class Space3DMouseControlSettings
             PointerSmoothingTauMs = PointerSmoothingTauMs,
             AccelDeadzoneG = AccelDeadzoneG,
             GyroDeadzoneDps = GyroDeadzoneDps,
+            JoystickDeadzoneDeg = JoystickDeadzoneDeg,
+            JoystickFullScaleDeg = JoystickFullScaleDeg,
             AccelSoftRangeG = AccelSoftRangeG,
             GyroSoftRangeDps = GyroSoftRangeDps,
             PanPixelsPerSecondAtFullInput = PanPixelsPerSecondAtFullInput,
@@ -99,6 +103,8 @@ public sealed class Space3DMouseControlSettings
         PointerSmoothingTauMs = ClampFinite(PointerSmoothingTauMs, 0d, 300d, 42d);
         AccelDeadzoneG = ClampFinite(AccelDeadzoneG, 0d, 0.25d, 0.012d);
         GyroDeadzoneDps = ClampFinite(GyroDeadzoneDps, 0d, 30d, 0.6d);
+        JoystickDeadzoneDeg = ClampFinite(JoystickDeadzoneDeg, 0d, 30d, 1.8d);
+        JoystickFullScaleDeg = ClampFinite(JoystickFullScaleDeg, Math.Max(JoystickDeadzoneDeg + 1d, 6d), 90d, 24d);
         AccelSoftRangeG = ClampFinite(AccelSoftRangeG, Math.Max(AccelDeadzoneG + 0.001d, 0.02d), 2d, 0.18d);
         GyroSoftRangeDps = ClampFinite(GyroSoftRangeDps, Math.Max(GyroDeadzoneDps + 0.1d, 10d), 720d, 85d);
         PanPixelsPerSecondAtFullInput = ClampFinite(PanPixelsPerSecondAtFullInput, 20d, 3000d, 2200d);
@@ -158,6 +164,8 @@ public sealed class Space3DMouseControlSettings
                 GyroSmoothingTauMs = 12d;
                 AccelDeadzoneG = 0.025d;
                 GyroDeadzoneDps = 1.5d;
+                JoystickDeadzoneDeg = 3.0d;
+                JoystickFullScaleDeg = 42d;
                 AccelSoftRangeG = 0.30d;
                 GyroSoftRangeDps = 180d;
                 PanPixelsPerSecondAtFullInput = 700d;
@@ -174,6 +182,8 @@ public sealed class Space3DMouseControlSettings
                 GyroSmoothingTauMs = 28d;
                 AccelDeadzoneG = 0.018d;
                 GyroDeadzoneDps = 0.8d;
+                JoystickDeadzoneDeg = 2.4d;
+                JoystickFullScaleDeg = 34d;
                 AccelSoftRangeG = 0.22d;
                 GyroSoftRangeDps = 110d;
                 PanPixelsPerSecondAtFullInput = 1050d;
@@ -190,6 +200,8 @@ public sealed class Space3DMouseControlSettings
                 GyroSmoothingTauMs = 12d;
                 AccelDeadzoneG = 0.012d;
                 GyroDeadzoneDps = 0.5d;
+                JoystickDeadzoneDeg = 1.5d;
+                JoystickFullScaleDeg = 22d;
                 AccelSoftRangeG = 0.18d;
                 GyroSoftRangeDps = 70d;
                 PanPixelsPerSecondAtFullInput = 2100d;

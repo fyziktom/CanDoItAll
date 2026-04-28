@@ -1,0 +1,382 @@
+[
+  {
+    "key": "session-framing",
+    "name": "Session Framing and Role",
+    "summary": "Defines the agent role, authority, and problem-solving posture.",
+    "purpose": "Use these blocks first so the model knows whether it is architecting, reviewing, planning, implementing, or validating.",
+    "uiMode": "wizard-core",
+    "order": 1,
+    "componentCount": 8,
+    "componentNames": [
+      "Role: Architecture Lead",
+      "Role: Embedded and MIDI Engineer",
+      "Role: Implementation Lead",
+      "Role: Implementation Planner",
+      "Role: Refactor Specialist",
+      "Role: Senior Reviewer",
+      "Role: Test and Validation Lead",
+      "Role: UI and UX Engineer"
+    ],
+    "componentKeys": [
+      "role-architecture-lead",
+      "role-embedded-midi-engineer",
+      "role-implementation-lead",
+      "role-implementation-planner",
+      "role-refactor-specialist",
+      "role-senior-reviewer",
+      "role-test-validation-lead",
+      "role-ui-ux-engineer"
+    ]
+  },
+  {
+    "key": "mission-scope",
+    "name": "Mission, Scope, and Success",
+    "summary": "Pins down the actual goal, boundaries, and end-state.",
+    "purpose": "These blocks stop prompt drift and make the session outcome measurable.",
+    "uiMode": "wizard-core",
+    "order": 2,
+    "componentCount": 8,
+    "componentNames": [
+      "First Response Contract",
+      "Mission: Business Context",
+      "Mission: Exact Goal",
+      "Required Deliverables",
+      "Scope: In-Scope Items",
+      "Scope: Out-of-Scope Items",
+      "Stop Condition",
+      "Success Criteria"
+    ],
+    "componentKeys": [
+      "first-response-contract",
+      "mission-business-context",
+      "mission-exact-goal",
+      "required-deliverables",
+      "scope-in-scope-items",
+      "scope-out-of-scope-items",
+      "stop-condition",
+      "success-criteria"
+    ]
+  },
+  {
+    "key": "context-discovery",
+    "name": "Context Loading and Discovery",
+    "summary": "Tells the agent what to read, inspect, and confirm before taking action.",
+    "purpose": "Most strong packs force the agent to read the repo, current state, and artifacts before proposing or changing anything.",
+    "uiMode": "wizard-core",
+    "order": 3,
+    "componentCount": 8,
+    "componentNames": [
+      "Context: Assumptions and Open Questions",
+      "Context: Current State Audit",
+      "Context: Dependency Inventory",
+      "Context: Environment and Commands",
+      "Context: File Touch Plan",
+      "Context: Relevant Artifacts and Fixtures",
+      "Context: Repository Map Confirmation",
+      "Context: Required Reading List"
+    ],
+    "componentKeys": [
+      "assumptions-and-open-questions",
+      "current-state-audit",
+      "dependency-inventory",
+      "environment-and-commands",
+      "file-touch-plan",
+      "relevant-artifacts-and-fixtures",
+      "repo-map-confirmation",
+      "required-reading-list"
+    ]
+  },
+  {
+    "key": "guardrails",
+    "name": "Guardrails and Constraints",
+    "summary": "Defines non-negotiables, limits, and safety rules.",
+    "purpose": "These blocks are the difference between a useful coding agent and an over-eager one.",
+    "uiMode": "wizard-core",
+    "order": 4,
+    "componentCount": 10,
+    "componentNames": [
+      "Guardrail: Comments in English",
+      "Guardrail: Honest Blocker Reporting",
+      "Guardrail: No Destructive Changes",
+      "Guardrail: No Placeholder-Only UI",
+      "Guardrail: Non-Negotiable Rules",
+      "Guardrail: Preserve Architecture Boundaries",
+      "Guardrail: Preserve Backward Compatibility",
+      "Guardrail: Protect Secrets and Sensitive Data",
+      "Guardrail: Safe Ambiguity Handling",
+      "Guardrail: Small Verifiable Increments"
+    ],
+    "componentKeys": [
+      "comments-in-english",
+      "honest-blocker-reporting",
+      "no-destructive-changes",
+      "no-placeholder-ui",
+      "non-negotiable-rules",
+      "preserve-architecture-boundaries",
+      "preserve-backward-compatibility",
+      "protect-secrets-and-sensitive-data",
+      "safe-ambiguity-handling",
+      "small-verifiable-increments"
+    ]
+  },
+  {
+    "key": "workflow-orchestration",
+    "name": "Workflow Orchestration and Continuity",
+    "summary": "Enforces phases, gates, status updates, and handoff continuity.",
+    "purpose": "The prompt packs consistently treat workflows as sequential, test-gated, and stateful.",
+    "uiMode": "flow-core",
+    "order": 5,
+    "componentCount": 10,
+    "componentNames": [
+      "Workflow: Branch and Status Tracking",
+      "Workflow: Checklist Update Loop",
+      "Workflow: Decision Log Maintenance",
+      "Workflow: Known Gaps Log",
+      "Workflow: Multi-Agent Chain",
+      "Workflow: Next Prompt Pointer",
+      "Workflow: Persistent Progress Files",
+      "Workflow: Required Phase Output Format",
+      "Workflow: Sequential Phases",
+      "Workflow: Stop After Phase"
+    ],
+    "componentKeys": [
+      "branch-and-status-tracking",
+      "checklist-update-loop",
+      "decision-log-maintenance",
+      "known-gaps-log",
+      "multi-agent-chain",
+      "next-prompt-pointer",
+      "persistent-progress-files",
+      "required-phase-output-format",
+      "sequential-phases",
+      "stop-after-phase"
+    ]
+  },
+  {
+    "key": "architecture-analysis",
+    "name": "Architecture and Analysis",
+    "summary": "Reusable sections for architecture, audits, gap analysis, and design artifacts.",
+    "purpose": "These blocks are typically used by the first agent or by planning-focused sessions.",
+    "uiMode": "flow-core",
+    "order": 6,
+    "componentCount": 8,
+    "componentNames": [
+      "Architecture: API Contract Design",
+      "Architecture: Blueprint",
+      "Architecture: Data Model and Migration Design",
+      "Architecture: Domain Model and Entities",
+      "Architecture: Gap Analysis",
+      "Architecture: Parity Matrix",
+      "Architecture: Risk Register",
+      "Architecture: UX Surface Map"
+    ],
+    "componentKeys": [
+      "api-contract-design",
+      "architecture-blueprint",
+      "data-model-and-migration-design",
+      "domain-model-and-entities",
+      "gap-analysis",
+      "parity-matrix",
+      "risk-register",
+      "ux-surface-map"
+    ]
+  },
+  {
+    "key": "planning-checklists",
+    "name": "Planning and Checklists",
+    "summary": "Breaks work into milestones, files, tests, and acceptance gates.",
+    "purpose": "These blocks convert architecture into action without leaving the next agent to improvise.",
+    "uiMode": "flow-core",
+    "order": 7,
+    "componentCount": 8,
+    "componentNames": [
+      "Planning: Acceptance Checklist",
+      "Planning: Definition of Done",
+      "Planning: Dependency Ordering",
+      "Planning: Files and Modules Likely Involved",
+      "Planning: Milestone Breakdown",
+      "Planning: Rollback and Recovery Plan",
+      "Planning: Step-by-Step Implementation Plan",
+      "Planning: Test Plan Matrix"
+    ],
+    "componentKeys": [
+      "acceptance-checklist",
+      "definition-of-done",
+      "dependency-ordering",
+      "files-and-modules-likely-involved",
+      "milestone-breakdown",
+      "rollback-and-recovery-plan",
+      "implementation-plan-step-by-step",
+      "test-plan-matrix"
+    ]
+  },
+  {
+    "key": "implementation-execution",
+    "name": "Implementation Execution",
+    "summary": "Controls how code changes are made, sliced, and verified.",
+    "purpose": "The best packs force additive, low-risk implementation with continuous proof.",
+    "uiMode": "flow-core",
+    "order": 8,
+    "componentCount": 8,
+    "componentNames": [
+      "Implementation: Additive Refactor First",
+      "Implementation: Document Changed Files",
+      "Implementation: Feature Flag Rollout",
+      "Implementation: Keep Public Surface Minimal",
+      "Implementation: Manual Verification Steps",
+      "Implementation: Preserve Existing Contracts and Data",
+      "Implementation: Run Build After Each Slice",
+      "Implementation: Small Safe Slices"
+    ],
+    "componentKeys": [
+      "additive-refactor-first",
+      "document-changed-files",
+      "feature-flag-rollout",
+      "keep-public-surface-minimal",
+      "manual-verification-steps",
+      "preserve-existing-contracts-and-data",
+      "run-build-after-each-slice",
+      "implement-in-small-slices"
+    ]
+  },
+  {
+    "key": "validation-review",
+    "name": "Validation, Testing, and Review",
+    "summary": "Makes quality evidence mandatory rather than optional.",
+    "purpose": "This group turns prompts into engineering workflows instead of writing exercises.",
+    "uiMode": "validation-core",
+    "order": 9,
+    "componentCount": 12,
+    "componentNames": [
+      "Validation: Accessibility Validation Pass",
+      "Validation: Architecture Validation Pass",
+      "Validation: Evidence Output Required",
+      "Validation: Final Audit",
+      "Validation: Mandatory Integration Tests",
+      "Validation: Mandatory Playwright Tests",
+      "Validation: Mandatory Unit Tests",
+      "Validation: Observability Validation Pass",
+      "Validation: Performance Validation Pass",
+      "Validation: Regression Proof Required",
+      "Validation: Reviewer Findings First",
+      "Validation: Security Validation Pass"
+    ],
+    "componentKeys": [
+      "accessibility-validation-pass",
+      "architecture-validation-pass",
+      "evidence-output-required",
+      "final-audit",
+      "mandatory-integration-tests",
+      "mandatory-playwright-tests",
+      "mandatory-unit-tests",
+      "observability-validation-pass",
+      "performance-validation-pass",
+      "regression-proof-required",
+      "reviewer-findings-first",
+      "security-validation-pass"
+    ]
+  },
+  {
+    "key": "output-handoff",
+    "name": "Output, Delivery, and Handoff",
+    "summary": "Standardizes the final response, evidence, and next-step instructions.",
+    "purpose": "Strong packs require crisp handoff artifacts after each phase.",
+    "uiMode": "wizard-core",
+    "order": 10,
+    "componentCount": 8,
+    "componentNames": [
+      "Output: Artifact List and Links",
+      "Output: Commands Executed",
+      "Output: Completion Summary",
+      "Output: Files Changed",
+      "Output: Handoff to Next Agent",
+      "Output: Implementation Plan",
+      "Output: Remaining Risks and Next Steps",
+      "Output: Scope Summary"
+    ],
+    "componentKeys": [
+      "artifact-list-and-links",
+      "output-commands-executed",
+      "output-completion-summary",
+      "output-files-changed",
+      "handoff-to-next-agent",
+      "output-implementation-plan",
+      "output-remaining-risks-and-next-steps",
+      "output-scope-summary"
+    ]
+  },
+  {
+    "key": "stack-profiles",
+    "name": "Stack Profiles",
+    "summary": "Stack-specific constraints and guidance blocks for common technology areas.",
+    "purpose": "These are auto-applied or manually inserted based on the selected stack.",
+    "uiMode": "stack-auto",
+    "order": 11,
+    "componentCount": 14,
+    "componentNames": [
+      "Stack: .NET Solution",
+      "Stack: Arduino Firmware",
+      "Stack: Blazor",
+      "Stack: Canvas in HTML/JS",
+      "Stack: EF Core",
+      "Stack: HTML/JS/CSS",
+      "Stack: M5Stack",
+      "Stack: MIDI and Audio",
+      "Stack: Offline-First Sync",
+      "Stack: PHP Web App",
+      "Stack: Playwright MCP",
+      "Stack: PostgreSQL",
+      "Stack: SQLite",
+      "Stack: Tailwind CSS"
+    ],
+    "componentKeys": [
+      "stack-dotnet-solution",
+      "stack-arduino-firmware",
+      "stack-blazor-webapp",
+      "stack-canvas-html-js",
+      "stack-efcore",
+      "stack-html-js-css",
+      "stack-m5stack",
+      "stack-midi-audio",
+      "stack-offline-first-sync",
+      "stack-php-webapp",
+      "stack-playwright-mcp",
+      "stack-postgresql",
+      "stack-sqlite",
+      "stack-tailwind-css"
+    ]
+  },
+  {
+    "key": "toolbox-snippets",
+    "name": "Toolbox Snippets",
+    "summary": "Short optional inserts for concrete actions such as Docker tests or Playwright capture.",
+    "purpose": "These are the right-click or quick-add blocks that users can drop into a prompt.",
+    "uiMode": "toolbox",
+    "order": 12,
+    "componentCount": 10,
+    "componentNames": [
+      "Toolbox: Cache Downloads to Save Mobile Data",
+      "Toolbox: Capture Browser Artifacts",
+      "Toolbox: Create Manual QA Checklist",
+      "Toolbox: Cross-DB Compatibility Check",
+      "Toolbox: Database Migration Dry Run",
+      "Toolbox: Generate Fixtures and Seed Data",
+      "Toolbox: Run Integration Tests in Docker",
+      "Toolbox: Run UI Tests in Docker",
+      "Toolbox: Run Unit Tests in Docker",
+      "Toolbox: Use Playwright MCP Now"
+    ],
+    "componentKeys": [
+      "toolbox-cache-downloads-mobile-data",
+      "toolbox-capture-browser-artifacts",
+      "toolbox-create-manual-qa-checklist",
+      "toolbox-cross-db-compat-check",
+      "toolbox-db-migration-dry-run",
+      "toolbox-generate-fixtures-and-seed-data",
+      "toolbox-run-integration-tests-docker",
+      "toolbox-run-ui-tests-docker",
+      "toolbox-run-unit-tests-docker",
+      "toolbox-use-playwright-mcp-now"
+    ]
+  }
+]

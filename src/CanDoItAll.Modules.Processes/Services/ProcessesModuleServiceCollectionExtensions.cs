@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,7 @@ public static class ProcessesModuleServiceCollectionExtensions
             return new ProcessTemplatePackLoader(options.PackRoot);
         });
         services.AddScoped<ProcessTemplateCatalogService>();
+        services.AddScoped<IDatabaseTransferHandler, ProcessDefinitionsDatabaseTransferHandler>();
         services.AddScoped<ProcessTemplateLibraryService>();
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();

@@ -9,11 +9,13 @@ risks: route-driven-modal-state, modal-save-regressions
 tests: component:ProjectsPageTests, e2e:projects-smoke
 *@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
 @inject IProjectGanttPreviewService ProjectGanttPreviewService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
+@inject IProjectPackageService ProjectPackageService
 @inject NavigationManager Navigation
 
 <PageTitle>Projects</PageTitle>
@@ -55,7 +57,14 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        OpenProcesses="OpenProcesses"
                        OpenStructure="OpenStructure"
                        OpenCalendar="OpenCalendar"
-                       OpenGanttPreview="OpenGanttPreviewAsync" />
+                       OpenGanttPreview="OpenGanttPreviewAsync"
+                       ProjectPackagePath="@projectPackagePath"
+                       ProjectPackagePathChanged="@(value => { projectPackagePath = value; })"
+                       ProjectPackageMessage="@projectPackageMessage"
+                       IsProjectPackageMessageError="@projectPackageMessageIsError"
+                       IsProjectPackageBusy="@projectPackageBusy"
+                       ExportProjectsPackage="ExportProjectsPackageAsync"
+                       ImportProjectsPackage="ImportProjectsPackageAsync" />
     </ChildContent>
 </PageScaffold>
 
@@ -197,6 +206,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private ProjectGanttPreview? ganttPreviewDialog;
     private string? ganttPreviewError;
     private bool showGanttPreviewModal;
+    private string projectPackagePath = string.Empty;
+    private string? projectPackageMessage;
+    private bool projectPackageMessageIsError;
+    private bool projectPackageBusy;
 
     private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
         .Where(project =>
@@ -371,6 +384,81 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         catch (Exception ex)
         {
             ganttPreviewError = ex.Message;
+        }
+    }
+
+    private async Task ExportProjectsPackageAsync()
+    {
+        if (projectPackageBusy)
+        {
+            return;
+        }
+
+        projectPackageBusy = true;
+        projectPackageMessage = null;
+        projectPackageMessageIsError = false;
+
+        try
+        {
+            var result = await ProjectPackageService.ExportAllAsync(new ProjectPackageExportRequest
+            {
+                PackagePath = string.IsNullOrWhiteSpace(projectPackagePath) ? null : projectPackagePath
+            });
+
+            if (result.IsFailure)
+            {
+                projectPackageMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                projectPackageMessageIsError = true;
+                return;
+            }
+
+            projectPackagePath = result.Value!.PackagePath;
+            projectPackageMessage = $"Exported {result.Value.Manifest.TotalRecordCount} project record(s) to {result.Value.PackagePath}.";
+        }
+        finally
+        {
+            projectPackageBusy = false;
+        }
+    }
+
+    private async Task ImportProjectsPackageAsync()
+    {
+        if (projectPackageBusy)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(projectPackagePath))
+        {
+            projectPackageMessage = "Choose a project package path.";
+            projectPackageMessageIsError = true;
+            return;
+        }
+
+        projectPackageBusy = true;
+        projectPackageMessage = null;
+        projectPackageMessageIsError = false;
+
+        try
+        {
+            var result = await ProjectPackageService.ImportAllAsync(new ProjectPackageImportRequest
+            {
+                PackagePath = projectPackagePath
+            });
+
+            if (result.IsFailure)
+            {
+                projectPackageMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                projectPackageMessageIsError = true;
+                return;
+            }
+
+            await LoadProjectSummariesAsync();
+            projectPackageMessage = $"Imported {result.Value!.RecordsImported} project record(s) from {result.Value.Manifest.PackageId:N}.";
+        }
+        finally
+        {
+            projectPackageBusy = false;
         }
     }
 

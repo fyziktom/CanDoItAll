@@ -5,9 +5,10 @@
 
 <div class="space3d-global-connection" aria-label="3D mouse BLE connection">
     <span class="@ConnectionStatusClass">@SharedConnectionLabel</span>
+    <span class="space3d-connection-detail">@SharedConnectionDetail</span>
     <button class="space3d-connect-button space3d-connect-button--primary"
             @onclick="ConnectBleAsync"
-            disabled="@(!CanConnectBle)">
+            disabled="@(!CanUseTopConnect)">
         @(ConnectBusy ? "Connecting..." : "Connect BLE")
     </button>
     <button class="space3d-connect-button"
@@ -57,6 +58,10 @@
 
     private string SharedConnectionLabel => mouseLab?.SharedConnectionLabel ?? "BLE starting";
 
+    private string SharedConnectionDetail => mouseLab?.SharedConnectionDetail ?? "Loading browser BLE bridge.";
+
+    private bool CanUseTopConnect => mouseLab?.CanConnectBle == true;
+
     private string ConnectionStatusClass
         => mouseLab switch
         {
@@ -83,9 +88,23 @@
     private Task HandleMouseLabConnectionChangedAsync()
         => InvokeAsync(StateHasChanged);
 
-    private Task ConnectBleAsync()
-        => mouseLab?.ConnectAsync() ?? Task.CompletedTask;
+    private async Task ConnectBleAsync()
+    {
+        if (mouseLab is null)
+        {
+            return;
+        }
 
-    private Task DisconnectBleAsync()
-        => mouseLab?.DisconnectAsync() ?? Task.CompletedTask;
+        await mouseLab.ConnectAsync();
+    }
+
+    private async Task DisconnectBleAsync()
+    {
+        if (mouseLab is null)
+        {
+            return;
+        }
+
+        await mouseLab.DisconnectAsync();
+    }
 }

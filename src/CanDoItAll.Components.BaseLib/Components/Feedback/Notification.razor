@@ -2,80 +2,187 @@
 @implements IDisposable
 @inject NotificationService NotificationService
 
-<Stack GapScale="LayoutGap.Small"
-       Class="rz-notification fixed right-4 top-4 z-[90] max-w-sm"
-       Style="z-index:900;">
-    @foreach (var toast in toasts)
+<div class="rz-notification pointer-events-none fixed inset-0 z-[90]"
+     style="z-index:900;"
+     @attributes="@NotificationAttributes">
+    @foreach (var group in GetMessageGroups())
     {
-        <div class="rounded-2xl border px-4 py-3 shadow-lg @GetSeverityCss(toast.Message.Severity)">
-            <Split Breakpoint="LayoutBreakpoint.None"
-                   Gap="LayoutGap.Medium"
-                   AlignItems="AlignItems.Start"
-                   JustifyContent="JustifyContent.SpaceBetween"
-                   Wrap="FlexWrap.Wrap">
-                <div class="min-w-0 space-y-1">
-                    @if (!string.IsNullOrWhiteSpace(toast.Message.Summary))
-                    {
-                        <div class="text-sm font-semibold">@toast.Message.Summary</div>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(toast.Message.Detail))
-                    {
-                        <div class="text-sm leading-6">@toast.Message.Detail</div>
-                    }
+        <Stack GapScale="LayoutGap.Small"
+               Class="@ResolveStackCssClass(group.Key)"
+               data-notification-position="@group.Key">
+            @foreach (var message in group)
+            {
+                <div @key="message.Id"
+                     class="@ResolveNotificationCssClass(message)"
+                     style="@message.Style"
+                     data-testid="@message.TestId"
+                     @onclick="@(() => HandleMessageClick(message))">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.NoWrap">
+                        <div class="min-w-0 space-y-1">
+                            @if (message.SummaryContent is not null)
+                            {
+                                <div class="text-sm font-semibold">@message.SummaryContent(NotificationService)</div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(message.Summary))
+                            {
+                                <div class="text-sm font-semibold">@message.Summary</div>
+                            }
+
+                            @if (message.DetailContent is not null)
+                            {
+                                <div class="text-sm leading-6">@message.DetailContent(NotificationService)</div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(message.Detail))
+                            {
+                                <div class="text-sm leading-6">@message.Detail</div>
+                            }
+                        </div>
+                        <button type="button"
+                                class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-none hover:bg-black/5"
+                                aria-label="@message.CloseAriaLabel"
+                                title="@message.CloseAriaLabel"
+                                @onclick:stopPropagation="true"
+                                @onclick="@(() => DismissToastAsync(message))">
+                            <span aria-hidden="true">X</span>
+                        </button>
+                    </Split>
                 </div>
-                <button type="button"
-                        class="text-xs font-semibold uppercase tracking-[0.18em]"
-                        @onclick="@(() => DismissToastAsync(toast))">
-                    Close
-                </button>
-            </Split>
-        </div>
+            }
+        </Stack>
     }
-</Stack>
+</div>
 
 @code {
-    private readonly List<ToastEntry> toasts = [];
+    private readonly Dictionary<Guid, CancellationTokenSource> removalTimers = [];
+
+    [Parameter]
+    public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
+
+    private static readonly IReadOnlyDictionary<string, object> NotificationAttributes =
+        new Dictionary<string, object>
+        {
+            ["aria-live"] = "polite",
+            ["aria-atomic"] = "false"
+        };
 
     protected override void OnInitialized()
     {
-        NotificationService.Notification += HandleNotification;
-    }
+        NotificationService.Messages.CollectionChanged += HandleNotificationsChanged;
 
-    private void HandleNotification(NotificationMessage message)
-    {
-        var entry = new ToastEntry(Guid.NewGuid(), message);
-        toasts.Add(entry);
-        _ = InvokeAsync(StateHasChanged);
-        _ = RemoveToastLaterAsync(entry);
-    }
-
-    private async Task RemoveToastLaterAsync(ToastEntry entry)
-    {
-        var duration = entry.Message.Duration <= 0
-            ? 2500
-            : entry.Message.Duration;
-
-        try
+        foreach (var message in NotificationService.Messages)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(duration));
-            if (toasts.Remove(entry))
+            ScheduleRemoval(message);
+        }
+    }
+
+    private void HandleNotificationsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args)
+    {
+        if (args.NewItems is not null)
+        {
+            foreach (NotificationMessage message in args.NewItems)
             {
-                await InvokeAsync(StateHasChanged);
+                ScheduleRemoval(message);
             }
         }
-        catch (TaskCanceledException)
+
+        if (args.OldItems is not null)
+        {
+            foreach (NotificationMessage message in args.OldItems)
+            {
+                CancelRemoval(message.Id);
+            }
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ScheduleRemoval(NotificationMessage message)
+    {
+        if (message.IsPersistent)
+        {
+            return;
+        }
+
+        CancelRemoval(message.Id);
+
+        var timer = new CancellationTokenSource();
+        removalTimers[message.Id] = timer;
+        _ = RemoveLaterAsync(message, timer.Token);
+    }
+
+    private async Task RemoveLaterAsync(NotificationMessage message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(message.Duration!.Value), cancellationToken);
+            NotificationService.Dismiss(message);
+        }
+        catch (OperationCanceledException)
         {
         }
     }
 
-    private Task DismissToastAsync(ToastEntry entry)
+    private Task DismissToastAsync(NotificationMessage message)
     {
-        if (toasts.Remove(entry))
+        NotificationService.Dismiss(message);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageClick(NotificationMessage message)
+    {
+        NotificationService.Click(message);
+    }
+
+    private IEnumerable<IGrouping<NotificationPosition, NotificationMessage>> GetMessageGroups()
+    {
+        return NotificationService.Messages.GroupBy(ResolveMessagePosition);
+    }
+
+    private NotificationPosition ResolveMessagePosition(NotificationMessage message)
+    {
+        return message.Position ?? Position;
+    }
+
+    private void CancelRemoval(Guid id)
+    {
+        if (!removalTimers.Remove(id, out var timer))
         {
-            return InvokeAsync(StateHasChanged);
+            return;
         }
 
-        return Task.CompletedTask;
+        timer.Cancel();
+        timer.Dispose();
+    }
+
+    private static string ResolveNotificationCssClass(NotificationMessage message)
+    {
+        return CssClassBuilder.Join(
+            "rounded-2xl border px-4 py-3 shadow-lg",
+            GetSeverityCss(message.Severity),
+            message.CloseOnClick ? "cursor-pointer" : null,
+            message.Class);
+    }
+
+    private static string ResolveStackCssClass(NotificationPosition position)
+    {
+        return CssClassBuilder.Join(
+            "rz-notification-stack pointer-events-auto fixed w-[min(24rem,calc(100vw-2rem))] max-w-sm",
+            position switch
+            {
+                NotificationPosition.TopLeft => "left-4 top-4",
+                NotificationPosition.TopCenter => "left-1/2 top-4 -translate-x-1/2",
+                NotificationPosition.BottomRight => "bottom-4 right-4",
+                NotificationPosition.BottomLeft => "bottom-4 left-4",
+                NotificationPosition.BottomCenter => "bottom-4 left-1/2 -translate-x-1/2",
+                NotificationPosition.CenterLeft => "left-4 top-1/2 -translate-y-1/2",
+                NotificationPosition.CenterRight => "right-4 top-1/2 -translate-y-1/2",
+                NotificationPosition.Center => "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                _ => "right-4 top-4"
+            });
     }
 
     private static string GetSeverityCss(NotificationSeverity severity)
@@ -91,10 +198,15 @@
 
     public void Dispose()
     {
-        NotificationService.Notification -= HandleNotification;
-    }
+        NotificationService.Messages.CollectionChanged -= HandleNotificationsChanged;
+        foreach (var timer in removalTimers.Values)
+        {
+            timer.Cancel();
+            timer.Dispose();
+        }
 
-    private sealed record ToastEntry(Guid Id, NotificationMessage Message);
+        removalTimers.Clear();
+    }
 }
 
 
