@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class AgentChatPanel
+public partial class AgentChatPanel : IAsyncDisposable
 {
     private const string AgentThreadsHelpText =
         "Select a technical agent, then pick a thread or create a new one. The live runtime stays in the center, while the right rail keeps execution evidence visible.";
@@ -35,6 +35,7 @@ public partial class AgentChatPanel
 
     protected override async Task OnInitializedAsync()
     {
+        WorkspaceService.ExecutionUpdated += HandleExecutionUpdated;
         await LoadAsync();
     }
 
@@ -249,6 +250,53 @@ public partial class AgentChatPanel
         ResolveRunState();
     }
 
+    private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry)
+    {
+        if (!ShouldAcceptExecutionEntry(entry))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            if (!ShouldAcceptExecutionEntry(entry))
+            {
+                return;
+            }
+
+            executionLog = UpsertExecutionLogEntry(executionLog, entry);
+            if (workspace?.SelectedRun?.Id == entry.ExecutionRunId)
+            {
+                runStateText = entry.State.ToString();
+                runStateTone = ResolveExecutionTone(entry.State);
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private bool ShouldAcceptExecutionEntry(ExecutionLogEntry entry)
+    {
+        if (selectedAgentId != entry.AgentId)
+        {
+            return false;
+        }
+
+        return !selectedSessionId.HasValue ||
+               entry.ChatSessionId == selectedSessionId.Value;
+    }
+
+    private static IReadOnlyList<ExecutionLogEntry> UpsertExecutionLogEntry(
+        IReadOnlyList<ExecutionLogEntry> entries,
+        ExecutionLogEntry entry)
+    {
+        return entries
+            .Where(item => item.Id != entry.Id)
+            .Append(entry)
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToList();
+    }
+
     private string BuildPromptWithAttachments()
     {
         if (draftAttachmentPaths.Count == 0)
@@ -288,6 +336,17 @@ Use these workspace artifacts as input:
         };
     }
 
+    private static string ResolveExecutionTone(ExecutionState state)
+    {
+        return state switch
+        {
+            ExecutionState.Completed => "success",
+            ExecutionState.WaitingOnTool => "warning",
+            ExecutionState.Failed => "danger",
+            _ => "info"
+        };
+    }
+
     private void SetMessage(string label, string tone, string value)
     {
         messageLabel = label;
@@ -318,5 +377,11 @@ Use these workspace artifacts as input:
             AgentLifecycleStatus.Archived => "neutral",
             _ => "info"
         };
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        WorkspaceService.ExecutionUpdated -= HandleExecutionUpdated;
+        return ValueTask.CompletedTask;
     }
 }

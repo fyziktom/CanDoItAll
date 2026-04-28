@@ -37,6 +37,76 @@
     color: rgb(255 255 255 / 0.96);
 }
 
+.agent-execution-stream {
+    display: flex;
+    max-width: 44rem;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin: 0.25rem 0;
+}
+
+.agent-execution-stream__item,
+.agent-execution-stream__summary,
+.agent-execution-stream__history {
+    width: 100%;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.9rem;
+    background: rgb(248 250 252 / 0.92);
+    color: rgb(51 65 85);
+    cursor: pointer;
+    padding: 0.75rem 0.9rem;
+    text-align: left;
+    transition:
+        background-color 140ms ease,
+        border-color 140ms ease,
+        box-shadow 140ms ease;
+}
+
+.agent-execution-stream__item:hover,
+.agent-execution-stream__summary:hover,
+.agent-execution-stream__history:hover {
+    border-color: rgb(125 211 252);
+    background: rgb(240 249 255);
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
+}
+
+.agent-execution-stream__item:focus-visible,
+.agent-execution-stream__summary:focus-visible,
+.agent-execution-stream__history:focus-visible {
+    outline: 2px solid rgb(14 165 233);
+    outline-offset: 2px;
+}
+
+.agent-execution-stream__summary {
+    background: rgb(255 255 255 / 0.94);
+}
+
+.agent-execution-stream__phase {
+    color: rgb(15 23 42);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.agent-execution-stream__time {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+}
+
+.agent-execution-stream__preview {
+    display: block;
+    color: rgb(71 85 105);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    margin-top: 0.45rem;
+}
+
+.agent-execution-stream__history {
+    color: rgb(37 99 235);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding-block: 0.6rem;
+}
+
 .chat-markdown ::deep p,
 .chat-markdown ::deep ul,
 .chat-markdown ::deep ol,

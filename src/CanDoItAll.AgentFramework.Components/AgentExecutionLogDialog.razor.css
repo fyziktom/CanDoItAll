@@ -1,0 +1,34 @@
+.agent-execution-log-dialog-body {
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.agent-execution-log-dialog-entry {
+    border: 1px solid rgb(226 232 240);
+    border-radius: 1rem;
+    background: rgb(255 255 255);
+    padding: 1rem;
+}
+
+.agent-execution-log-dialog-entry--highlight {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 0 0 3px rgb(14 165 233 / 0.12);
+}
+
+.agent-execution-log-dialog-entry__message {
+    max-height: 22rem;
+    overflow: auto;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.85rem;
+    background: rgb(248 250 252);
+    color: rgb(15 23 42);
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0.85rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
