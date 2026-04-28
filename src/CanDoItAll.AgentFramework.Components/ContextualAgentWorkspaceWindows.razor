@@ -10,7 +10,7 @@
                           AriaLabel="@AriaLabel"
                           Kicker="@Kicker"
                           Title="@WindowTitle"
-                          Summary="@WindowSummary"
+                          Summary=""
                           BodyClass="contextual-agent-window__body"
                           DefaultPlacement="@DefaultPlacement"
                           DefaultWidth="@DefaultWidth"
@@ -30,18 +30,30 @@
                          Class="contextual-agent-window__search"
                          aria-label="Search contextual agents"
                          data-testid="@($"{TestId}-search")" />
-                <TagEditor Value="@tagFilters"
-                           ValueChanged="HandleTagFiltersChangedAsync"
-                           Suggestions="@AvailableTagSuggestions"
-                           Placeholder="Filter tags"
-                           TestId="@($"{TestId}-tag-editor")"
-                           InputTestId="@($"{TestId}-tag-input")"
-                           MaxTags="6" />
+                <div class="contextual-agent-window__tag-filter">
+                    <TagEditor Value="@tagFilters"
+                               ValueChanged="HandleTagFiltersChangedAsync"
+                               Suggestions="@AvailableTagSuggestions"
+                               Placeholder="Filter tags"
+                               TestId="@($"{TestId}-tag-editor")"
+                               InputTestId="@($"{TestId}-tag-input")"
+                               MaxTags="6" />
+                </div>
             </div>
 
             <div class="contextual-agent-window__meta">
                 <StatusBadge Tone="info" Text="@($"{FilteredAgents.Count} of {AccessibleAgents.Count}")" />
                 <StatusBadge Tone="neutral" Text="@ResolveScopeLabel()" />
+                <TooltipTarget Text="@WindowHelpText"
+                               Position="TooltipPosition.BottomRight"
+                               Duration="@((TimeSpan?)null)"
+                               TriggerClass="contextual-agent-window__help-trigger"
+                               TestId="@($"{TestId}-help-tooltip")">
+                    <span class="contextual-agent-window__help"
+                          aria-label="Show contextual agent window help">
+                        <Icon Name="circle_info" />
+                    </span>
+                </TooltipTarget>
             </div>
 
             @if (isLoadingAgents)
@@ -81,7 +93,7 @@
                         var isSelected = selectedAgentId == item.Agent.Id;
                         <button type="button"
                                 class="contextual-agent-window__agent @(isSelected ? "is-selected" : string.Empty)"
-                                title="Double-click to open a new contextual chat thread"
+                                aria-label="@($"Open a new contextual chat thread with {ResolveAgentName(item.Agent)}")"
                                 data-testid="@($"{TestId}-agent-{item.Agent.Id:N}")"
                                 @key="item.Agent.Id"
                                 @onclick="@(() => SelectAgent(item.Agent.Id))"
@@ -95,15 +107,21 @@
                                     Shape="AvatarShape.Rounded" />
 
                             <span class="contextual-agent-window__agent-main">
-                                <span class="contextual-agent-window__agent-title">@ResolveAgentName(item.Agent)</span>
-                                <span class="contextual-agent-window__agent-role">@ResolveAgentRole(item.Agent)</span>
-                                <span class="contextual-agent-window__agent-summary">@ResolveAgentSummary(item.Agent)</span>
+                                <TooltipTarget Text="@BuildAgentTooltip(item.Agent)"
+                                               Position="TooltipPosition.RightTop"
+                                               Duration="@((TimeSpan?)null)"
+                                               TriggerClass="contextual-agent-window__agent-title-trigger"
+                                               TabIndex="-1"
+                                               TestId="@($"{TestId}-agent-{item.Agent.Id:N}-details-tooltip")">
+                                    <span class="contextual-agent-window__agent-title">@ResolveAgentName(item.Agent)</span>
+                                </TooltipTarget>
                                 @if (VisibleTags(item.Agent).Count > 0)
                                 {
                                     <span class="contextual-agent-window__tags">
                                         @foreach (var tag in VisibleTags(item.Agent).Take(4))
                                         {
-                                            <span class="contextual-agent-window__tag">#@tag</span>
+                                            <span class="contextual-agent-window__tag"
+                                                  style="@ResolveTagStyle(tag)">#@tag</span>
                                         }
                                     </span>
                                 }
@@ -112,13 +130,13 @@
                             <span class="contextual-agent-window__agent-access">
                                 @if (item.CanRead)
                                 {
-                                    <StatusBadge Tone="info" Text="Read" />
+                                    <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--read">Read</span>
                                 }
                                 @if (item.CanWrite)
                                 {
-                                    <StatusBadge Tone="success" Text="Write" />
+                                    <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Write</span>
                                 }
-                                <StatusBadge Tone="neutral" Text="@item.ScopeLabel" />
+                                <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--scope">@item.ScopeLabel</span>
                             </span>
                         </button>
                     }
@@ -185,6 +203,19 @@
     private const string ProjectStructureSourceKind = "project-structure";
     private const string ProcessDefinitionSourceKind = "process-definition";
     private const string ContextualWindowRequester = "contextual-agent-window";
+    private static readonly TagPaletteEntry[] TagPalette =
+    [
+        new("#e0f2fe", "#7dd3fc", "#0c4a6e"),
+        new("#fce7f3", "#f9a8d4", "#831843"),
+        new("#d1fae5", "#6ee7b7", "#064e3b"),
+        new("#fef3c7", "#fcd34d", "#78350f"),
+        new("#ede9fe", "#c4b5fd", "#4c1d95"),
+        new("#ffedd5", "#fdba74", "#7c2d12"),
+        new("#e0e7ff", "#a5b4fc", "#312e81"),
+        new("#ccfbf1", "#5eead4", "#134e4a"),
+        new("#fce4ec", "#f48fb1", "#880e4f"),
+        new("#e8f5e9", "#81c784", "#1b5e20")
+    ];
 
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
@@ -256,7 +287,7 @@
     private string WindowTitle
         => string.IsNullOrWhiteSpace(Title) ? $"{ResolveWorkspaceLabel()} agents" : Title;
 
-    private string WindowSummary
+    private string WindowHelpText
         => string.IsNullOrWhiteSpace(Summary)
             ? "Search agents with contextual access, filter by tags, and double-click to open a new chat thread."
             : Summary;
@@ -905,6 +936,36 @@ User request:
     private static string ResolveAgentSummary(AgentDefinition agent)
         => string.IsNullOrWhiteSpace(agent.Summary) ? agent.Model : agent.Summary;
 
+    private static string BuildAgentTooltip(AgentDefinition agent)
+    {
+        var role = ResolveAgentRole(agent);
+        var summary = ResolveAgentSummary(agent);
+
+        return string.Equals(role, summary, StringComparison.Ordinal)
+            ? role
+            : $"{role} / {summary}";
+    }
+
+    private static string ResolveTagStyle(string tag)
+    {
+        var palette = TagPalette[ResolveTagColorIndex(tag)];
+        return $"background:{palette.BackgroundColor};border-color:{palette.BorderColor};color:{palette.ForegroundColor};";
+    }
+
+    private static int ResolveTagColorIndex(string tag)
+    {
+        unchecked
+        {
+            var hash = 17;
+            foreach (var character in tag.Trim())
+            {
+                hash = (hash * 31) + char.ToUpperInvariant(character);
+            }
+
+            return (int)((uint)hash % TagPalette.Length);
+        }
+    }
+
     private static string ResolveAgentSeed(AgentDefinition agent)
         => !string.IsNullOrWhiteSpace(agent.Name)
             ? agent.Name
@@ -932,4 +993,9 @@ User request:
         WorkspaceService.ExecutionUpdated -= HandleExecutionUpdated;
         return ValueTask.CompletedTask;
     }
+
+    private sealed record TagPaletteEntry(
+        string BackgroundColor,
+        string BorderColor,
+        string ForegroundColor);
 }
