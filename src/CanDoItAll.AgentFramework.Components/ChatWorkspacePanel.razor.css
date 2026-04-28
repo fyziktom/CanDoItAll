@@ -37,6 +37,22 @@
     color: rgb(255 255 255 / 0.96);
 }
 
+.chat-thread-title-edit ::deep .cda-editable__row {
+    align-items: center;
+}
+
+.chat-thread-title-edit ::deep .cda-editable__value {
+    color: rgb(15 23 42);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.chat-thread-title-edit ::deep .cda-editable__input {
+    width: min(28rem, 100%) !important;
+    font-weight: 700;
+}
+
 .agent-execution-stream {
     display: flex;
     max-width: 44rem;

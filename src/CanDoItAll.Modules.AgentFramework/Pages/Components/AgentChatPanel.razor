@@ -99,14 +99,27 @@
                                 {
                                     @foreach (var session in FilteredSessions)
                                     {
-                                        <SelectionListItem Title="@session.Title"
-                                                           Eyebrow="@session.UpdatedAtUtc.LocalDateTime.ToString("g")"
-                                                           Meta="@BuildSessionMeta(session)"
-                                                           Summary="@session.LastMessagePreview"
-                                                           IsSelected="@(selectedSessionId == session.Id)"
-                                                           OnSelect="@(() => SelectSessionAsync(session.Id))">
-                                            <Status>
-                                                <Cluster Gap="LayoutGap.Small">
+                                        <button type="button"
+                                                class="agents-chat-thread-card @(selectedSessionId == session.Id ? "agents-chat-thread-card--selected" : string.Empty)"
+                                                @onclick="@(() => SelectSessionAsync(session.Id))"
+                                                data-testid="agent-thread-card">
+                                            <span class="agents-chat-thread-card__header">
+                                                <span class="agents-chat-thread-card__title">@session.Title</span>
+                                                <span class="agents-chat-thread-card__date">@FormatThreadUpdatedAt(session)</span>
+                                            </span>
+
+                                            <span class="agents-chat-thread-card__meta">@BuildSessionMeta(session)</span>
+
+                                            <TooltipTarget Text="@BuildThreadTooltipText(session)"
+                                                           Position="TooltipPosition.RightTop"
+                                                           TriggerClass="agents-chat-thread-card__preview-trigger"
+                                                           TestId="agent-thread-preview-tooltip">
+                                                <span class="agents-chat-thread-card__preview">@BuildThreadCardPreview(session)</span>
+                                            </TooltipTarget>
+
+                                            @if (session.PendingApprovalCount > 0 || session.AutoApprovePendingToolCalls)
+                                            {
+                                                <span class="agents-chat-thread-card__badges">
                                                     @if (session.PendingApprovalCount > 0)
                                                     {
                                                         <StatusBadge Tone="warning"
@@ -116,9 +129,9 @@
                                                     {
                                                         <StatusBadge Tone="success" Text="Auto approve" />
                                                     }
-                                                </Cluster>
-                                            </Status>
-                                        </SelectionListItem>
+                                                </span>
+                                            }
+                                        </button>
                                     }
                                 }
                                 else
@@ -147,7 +160,8 @@
                             SendRequested="SendMessageAsync"
                             ApprovalDecisionRequested="HandleApprovalDecisionAsync"
                             ApprovalDecisionForConversationRequested="ApproveConversationAsync"
-                            AttachmentRequested="StageAttachmentsAsync">
+                            AttachmentRequested="StageAttachmentsAsync"
+                            SessionTitleChanged="HandleSessionTitleChangedAsync">
             <HeaderActions>
                 <Button Icon="runtime"
                         Text="Runtime details"

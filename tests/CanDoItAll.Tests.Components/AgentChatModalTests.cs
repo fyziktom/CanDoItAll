@@ -40,6 +40,74 @@ public sealed class AgentChatModalTests
     }
 
     [Fact]
+    public void Agent_switch_dialog_filters_by_search_and_tags_and_sorts_favorites_first()
+    {
+        using var context = CreateContext();
+        var implementation = CreateAgent("Alpha Developer", ".NET implementation specialist", "implementation");
+        var review = CreateAgent("Zulu Review Lead", ".NET QA specialist", "quality", AgentSpecialTags.Favorite);
+        var diagnostics = CreateAgent("Diagnostics Operator", "Runtime analyst", "diagnostics");
+
+        var cut = context.RenderComponent<AgentSwitchDialog>(parameters => parameters
+            .Add(component => component.Agents, new[] { implementation, diagnostics, review })
+            .Add(component => component.SelectedAgentId, implementation.Id)
+            .Add(component => component.FavoriteToggled, agent =>
+            {
+                var next = agent with
+                {
+                    Tags = agent.Tags
+                        .Append(AgentSpecialTags.Favorite)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                };
+                return Task.FromResult(next);
+            }));
+
+        var cards = cut.FindAll("[data-testid='agent-switch-card']");
+        Assert.Equal(3, cards.Count);
+        Assert.Contains("Zulu Review Lead", cards[0].TextContent);
+
+        cut.Find("[data-testid='agent-switch-search']").Input("alpha");
+        cards = cut.FindAll("[data-testid='agent-switch-card']");
+        Assert.Single(cards);
+        Assert.Contains("Alpha Developer", cards[0].TextContent);
+
+        cut.Find("[data-testid='agent-switch-search']").Input(string.Empty);
+        cut.Find("[data-testid='agent-switch-tag-filter-input']").Input("quality,");
+        cards = cut.FindAll("[data-testid='agent-switch-card']");
+        Assert.Single(cards);
+        Assert.Contains("Zulu Review Lead", cards[0].TextContent);
+    }
+
+    [Fact]
+    public void Agent_switch_dialog_toggles_favorite_and_promotes_agent()
+    {
+        using var context = CreateContext();
+        var implementation = CreateAgent("Alpha Developer", ".NET implementation specialist", "implementation");
+        var review = CreateAgent("Zulu Review Lead", ".NET QA specialist", AgentSpecialTags.Favorite);
+
+        var cut = context.RenderComponent<AgentSwitchDialog>(parameters => parameters
+            .Add(component => component.Agents, new[] { implementation, review })
+            .Add(component => component.FavoriteToggled, agent =>
+            {
+                var next = agent with
+                {
+                    Tags = agent.Tags
+                        .Append(AgentSpecialTags.Favorite)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                };
+                return Task.FromResult(next);
+            }));
+
+        Assert.Contains("Zulu Review Lead", cut.FindAll("[data-testid='agent-switch-card']")[0].TextContent);
+
+        cut.FindAll("[data-testid='agent-favorite-toggle']")[1].Click();
+
+        var cards = cut.FindAll("[data-testid='agent-switch-card']");
+        Assert.Contains("Alpha Developer", cards[0].TextContent);
+    }
+
+    [Fact]
     public void Runtime_details_dialog_projects_the_hidden_right_rail_content()
     {
         using var context = CreateContext();
@@ -76,7 +144,7 @@ public sealed class AgentChatModalTests
         return context;
     }
 
-    private static AgentDefinition CreateAgent(string name, string role)
+    private static AgentDefinition CreateAgent(string name, string role, params string[] tags)
     {
         return new AgentDefinition(
             Id: Guid.NewGuid(),
@@ -97,7 +165,7 @@ public sealed class AgentChatModalTests
             TemplateKey: string.Empty,
             Permissions: AgentPermissionsPolicy.Default,
             Capabilities: [],
-            Tags: [],
+            Tags: tags,
             CreatedAtUtc: DateTimeOffset.UtcNow,
             UpdatedAtUtc: DateTimeOffset.UtcNow);
     }

@@ -261,6 +261,33 @@ public partial class AgentChatPanel : IAsyncDisposable
         SetMessage("Ready", "success", $"Staged {artifactPaths.Count} artifact path(s) for the next prompt.");
     }
 
+    private async Task HandleSessionTitleChangedAsync(string title)
+    {
+        if (!selectedAgentId.HasValue || !selectedSessionId.HasValue)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var session = await WorkspaceService.RenameChatSessionAsync(
+                selectedAgentId.Value,
+                selectedSessionId.Value,
+                title);
+            await LoadWorkspaceAsync(selectedAgentId.Value, session.Id);
+            SetMessage("Ready", "success", "Thread title updated.");
+        }
+        catch (Exception exception)
+        {
+            SetMessage("Attention", "danger", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
     private async Task LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId)
     {
         selectedAgentId = agentId;
@@ -284,12 +311,15 @@ public partial class AgentChatPanel : IAsyncDisposable
     {
         try
         {
+            await RefreshAgentCatalogAsync();
             var result = await DialogService.OpenAsync<AgentSwitchDialog>(
                 "Switch Agent",
                 new Dictionary<string, object?>
                 {
                     [nameof(AgentSwitchDialog.Agents)] = agents,
-                    [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId
+                    [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId,
+                    [nameof(AgentSwitchDialog.FavoriteToggled)] =
+                        (Func<AgentDefinition, Task<AgentDefinition>>)ToggleAgentFavoriteAsync
                 },
                 new DialogOptions
                 {
@@ -301,6 +331,7 @@ public partial class AgentChatPanel : IAsyncDisposable
                     AriaLabel = "Switch chat agent"
                 });
 
+            await RefreshAgentCatalogAsync();
             if (result is not Guid agentId || agentId == selectedAgentId)
             {
                 return;
@@ -320,6 +351,44 @@ public partial class AgentChatPanel : IAsyncDisposable
                 StateHasChanged();
             });
         }
+    }
+
+    private async Task RefreshAgentCatalogAsync()
+    {
+        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        if (selectedAgentId is { } currentAgentId)
+        {
+            selectedAgent = agents.FirstOrDefault(item => item.Id == currentAgentId);
+        }
+    }
+
+    private async Task<AgentDefinition> ToggleAgentFavoriteAsync(AgentDefinition agent)
+    {
+        var editor = await WorkspaceService.GetAgentEditorAsync(agent.Id);
+        if (editor.Id is null)
+        {
+            throw new InvalidOperationException("Agent was not found.");
+        }
+
+        if (editor.Tags.Any(AgentSpecialTags.IsFavorite))
+        {
+            editor.Tags = editor.Tags
+                .Where(item => !AgentSpecialTags.IsFavorite(item))
+                .ToList();
+        }
+        else
+        {
+            editor.Tags = editor.Tags
+                .Append(AgentSpecialTags.Favorite)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        await WorkspaceService.SaveAgentAsync(editor);
+        await RefreshAgentCatalogAsync();
+        return agents.FirstOrDefault(item => item.Id == agent.Id)
+            ?? throw new InvalidOperationException("Agent was not found after saving favorite state.");
     }
 
     private Task OpenRuntimeDetailsDialogAsync()
@@ -463,6 +532,28 @@ Use these workspace artifacts as input:
         return session.MessageCount == 0
             ? "Empty thread"
             : $"{session.MessageCount} message(s)";
+    }
+
+    private static string FormatThreadUpdatedAt(ChatSessionSummaryRecord session)
+        => session.UpdatedAtUtc.LocalDateTime.ToString("dd.MM HH:mm");
+
+    private static string BuildThreadCardPreview(ChatSessionSummaryRecord session)
+    {
+        var preview = NormalizeInlineText(session.LastMessagePreview);
+        const int maxLength = 88;
+        return preview.Length <= maxLength
+            ? preview
+            : $"{preview[..maxLength].TrimEnd()}...";
+    }
+
+    private static string BuildThreadTooltipText(ChatSessionSummaryRecord session)
+        => NormalizeInlineText(session.LastMessagePreview);
+
+    private static string NormalizeInlineText(string value)
+    {
+        return string.Join(
+            ' ',
+            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
     private bool MatchesThreadSearch(ChatSessionSummaryRecord session)

@@ -84,6 +84,28 @@ public sealed class ChatWorkspacePanelTests
         });
     }
 
+    [Fact]
+    public void Thread_title_renders_as_editable_and_raises_title_change()
+    {
+        using var context = CreateContext();
+        var agentId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var createdAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
+        string? updatedTitle = null;
+
+        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+            .Add(item => item.Session, CreateSession(agentId, sessionId, runId, createdAtUtc))
+            .Add(item => item.DraftPrompt, string.Empty)
+            .Add(item => item.SessionTitleChanged, title => updatedTitle = title));
+
+        cut.Find("button[aria-label='Edit Title']").Click();
+        cut.Find("input[aria-label='Editing Title']").Change("Renamed runtime thread");
+        cut.Find("button[aria-label='Save Title']").Click();
+
+        Assert.Equal("Renamed runtime thread", updatedTitle);
+    }
+
     private static TestContext CreateContext()
     {
         var context = new TestContext();
