@@ -5,20 +5,36 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessWorkspaceRunDetailsLoader(
     ProcessesService processesService,
-    IAgentFrameworkWorkspaceService workspaceService)
+    IAgentFrameworkWorkspaceService workspaceService,
+    IProcessEscalationService escalationService)
 {
     private static readonly string RunLevelAutomationLabel = "Run-level automation";
 
     public async Task<ProcessWorkspaceRunDetails> LoadAsync(Guid runId, CancellationToken cancellationToken = default)
     {
         var runDetails = await processesService.GetRunDetailsAsync(runId, cancellationToken);
+        var journalEscalations = await escalationService.ListAsync(runId, cancellationToken);
+        var journalTimeline = await escalationService.ListJournalTimelineAsync(runId, cancellationToken);
         var executionRuns = await LoadExecutionRunsAsync(runId, runDetails.StepRuns, cancellationToken);
         var stepRuns = EnrichStepHealth(runDetails.StepRuns, executionRuns, runDetails.OutboxRecords);
+        var operatorApprovals = BuildOperatorApprovals(runId, executionRuns);
+        var escalations = MergeEscalations(
+            journalEscalations,
+            BuildOutboxEscalations(runId, runDetails.OutboxRecords, stepRuns));
         return runDetails with
         {
             StepRuns = stepRuns,
             ExecutionRuns = executionRuns,
-            Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords)
+            Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords),
+            Escalations = escalations,
+            OperatorApprovals = operatorApprovals,
+            AttemptTimeline = BuildAttemptTimeline(
+                stepRuns,
+                executionRuns,
+                runDetails.OutboxRecords,
+                escalations,
+                operatorApprovals,
+                journalTimeline)
         };
     }
 
@@ -249,6 +265,244 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
                         item.StartedAtUtc,
                         item.CompletedAtUtc))
                 .ToList()
+        };
+    }
+
+    private static IReadOnlyList<ProcessOperatorApprovalViewModel> BuildOperatorApprovals(
+        Guid runId,
+        IReadOnlyList<ProcessExecutionRunViewModel> executionRuns)
+    {
+        return executionRuns
+            .SelectMany(executionRun => executionRun.Approvals
+                .Select(approval => new ProcessOperatorApprovalViewModel(
+                    ProcessOperatorApprovalKind.ExecutionTool,
+                    runId,
+                    executionRun.StepRunId,
+                    executionRun.StepTitle,
+                    executionRun.Id,
+                    LaunchPlanId: null,
+                    approval.ApprovalId,
+                    string.IsNullOrWhiteSpace(approval.ToolName)
+                        ? "Tool approval required"
+                        : $"{approval.ToolName} approval required",
+                    approval.Details,
+                    string.IsNullOrWhiteSpace(executionRun.AgentName)
+                        ? executionRun.Title
+                        : $"{executionRun.AgentName} / {executionRun.Title}",
+                    MapOperatorApprovalStatus(approval.Status),
+                    approval.RequestedAtUtc,
+                    approval.DecidedAtUtc,
+                    approval.Status == ExecutionApprovalStatus.Pending)))
+            .OrderBy(item => item.Status != ProcessOperatorApprovalStatus.Pending)
+            .ThenByDescending(item => item.RequestedAtUtc)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProcessEscalationViewModel> BuildOutboxEscalations(
+        Guid runId,
+        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords,
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns)
+    {
+        var stepTitlesById = stepRuns.ToDictionary(item => item.Id, item => item.Title);
+        return outboxRecords
+            .Where(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered)
+            .Select(item => new ProcessEscalationViewModel(
+                item.Id,
+                runId,
+                item.StepRunId,
+                item.StepRunId.HasValue ? stepTitlesById.GetValueOrDefault(item.StepRunId.Value, string.Empty) : string.Empty,
+                ProcessEscalationKind.OutboxDeadLetter,
+                ProcessEscalationSeverity.High,
+                ProcessEscalationStatus.Open,
+                ProcessEscalationSourceKind.OutboxRecord,
+                "Dead-lettered automation dispatch",
+                string.IsNullOrWhiteSpace(item.LastError) ? item.Trigger : item.LastError,
+                Owner: string.Empty,
+                Resolution: string.Empty,
+                ReworkPacketId: null,
+                SourceExecutionRunId: string.Empty,
+                SourceApprovalId: string.Empty,
+                SourceToolName: item.CommandKey,
+                item.Id.ToString("N"),
+                item.UpdatedAtUtc,
+                item.UpdatedAtUtc,
+                item.UpdatedAtUtc.AddHours(4),
+                ResolvedAtUtc: null,
+                UpdatedBy: "automation-outbox"))
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProcessEscalationViewModel> MergeEscalations(
+        IReadOnlyList<ProcessEscalationViewModel> journalEscalations,
+        IReadOnlyList<ProcessEscalationViewModel> outboxEscalations)
+    {
+        return journalEscalations
+            .Concat(outboxEscalations)
+            .OrderBy(item => item.Status == ProcessEscalationStatus.Resolved)
+            .ThenByDescending(item => item.Severity)
+            .ThenBy(item => item.DueAtUtc ?? DateTimeOffset.MaxValue)
+            .ThenByDescending(item => item.UpdatedAtUtc)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProcessAttemptTimelineEntryViewModel> BuildAttemptTimeline(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        IReadOnlyList<ProcessExecutionRunViewModel> executionRuns,
+        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords,
+        IReadOnlyList<ProcessEscalationViewModel> escalations,
+        IReadOnlyList<ProcessOperatorApprovalViewModel> operatorApprovals,
+        IReadOnlyList<ProcessAttemptTimelineEntryViewModel> journalTimeline)
+    {
+        var stepTitlesById = stepRuns.ToDictionary(item => item.Id, item => item.Title);
+        var timeline = new List<ProcessAttemptTimelineEntryViewModel>(journalTimeline);
+        timeline.AddRange(executionRuns.Select(BuildExecutionTimelineEntry));
+        timeline.AddRange(operatorApprovals.Select(BuildApprovalTimelineEntry));
+        timeline.AddRange(outboxRecords.Select(item => BuildOutboxTimelineEntry(item, stepTitlesById)));
+        timeline.AddRange(escalations
+            .Where(item => item.SourceKind == ProcessEscalationSourceKind.OutboxRecord)
+            .Select(BuildEscalationTimelineEntry));
+
+        return timeline
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .ThenBy(item => item.Kind)
+            .ToList();
+    }
+
+    private static ProcessAttemptTimelineEntryViewModel BuildExecutionTimelineEntry(
+        ProcessExecutionRunViewModel executionRun)
+    {
+        return new ProcessAttemptTimelineEntryViewModel(
+            ProcessAttemptTimelineKind.ExecutionRun,
+            executionRun.StepRunId,
+            executionRun.StepTitle,
+            executionRun.Id,
+            OutboxRecordId: null,
+            EscalationId: null,
+            executionRun.Title,
+            executionRun.StatusBadgeText,
+            executionRun.StatusTone,
+            string.IsNullOrWhiteSpace(executionRun.ResultSummary)
+                ? executionRun.InputSummary
+                : executionRun.ResultSummary,
+            executionRun.ProviderName,
+            executionRun.Model,
+            $"{executionRun.ToolReceipts.Count} tool receipts / {executionRun.Artifacts.Count} artifacts / {executionRun.Checkpoints.Count} checkpoints",
+            executionRun.Id.ToString("N"),
+            executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc);
+    }
+
+    private static ProcessAttemptTimelineEntryViewModel BuildApprovalTimelineEntry(
+        ProcessOperatorApprovalViewModel approval)
+    {
+        return new ProcessAttemptTimelineEntryViewModel(
+            ProcessAttemptTimelineKind.Approval,
+            approval.StepRunId,
+            approval.StepTitle,
+            approval.ExecutionRunId,
+            OutboxRecordId: null,
+            EscalationId: null,
+            approval.Title,
+            approval.Status.ToString(),
+            ResolveOperatorApprovalTone(approval.Status),
+            string.IsNullOrWhiteSpace(approval.Details) ? approval.Source : approval.Details,
+            ProviderName: string.Empty,
+            Model: string.Empty,
+            ProofSummary: approval.ExternalApprovalId,
+            approval.ExecutionRunId?.ToString("N") ?? approval.ExternalApprovalId,
+            approval.DecidedAtUtc ?? approval.RequestedAtUtc);
+    }
+
+    private static ProcessAttemptTimelineEntryViewModel BuildOutboxTimelineEntry(
+        ProcessOutboxRecordViewModel outboxRecord,
+        IReadOnlyDictionary<Guid, string> stepTitlesById)
+    {
+        return new ProcessAttemptTimelineEntryViewModel(
+            ProcessAttemptTimelineKind.Outbox,
+            outboxRecord.StepRunId,
+            outboxRecord.StepRunId.HasValue ? stepTitlesById.GetValueOrDefault(outboxRecord.StepRunId.Value, string.Empty) : string.Empty,
+            ExecutionRunId: null,
+            outboxRecord.Id,
+            EscalationId: null,
+            outboxRecord.CommandKey,
+            outboxRecord.HealthStatus.ToString(),
+            ResolveOutboxTone(outboxRecord.HealthStatus),
+            string.IsNullOrWhiteSpace(outboxRecord.LastError) ? outboxRecord.Trigger : outboxRecord.LastError,
+            ProviderName: string.Empty,
+            Model: string.Empty,
+            ProofSummary: $"Attempts: {outboxRecord.AttemptCount}",
+            outboxRecord.Id.ToString("N"),
+            outboxRecord.LastAttemptAtUtc ?? outboxRecord.UpdatedAtUtc);
+    }
+
+    private static ProcessAttemptTimelineEntryViewModel BuildEscalationTimelineEntry(
+        ProcessEscalationViewModel escalation)
+    {
+        return new ProcessAttemptTimelineEntryViewModel(
+            ProcessAttemptTimelineKind.Escalation,
+            escalation.StepRunId,
+            escalation.StepTitle,
+            ExecutionRunId: null,
+            OutboxRecordId: escalation.SourceKind == ProcessEscalationSourceKind.OutboxRecord ? escalation.Id : null,
+            escalation.Id,
+            escalation.Title,
+            escalation.Status.ToString(),
+            ResolveEscalationStatusTone(escalation.Status, escalation.Severity),
+            escalation.Reason,
+            ProviderName: string.Empty,
+            Model: string.Empty,
+            ProofSummary: escalation.SourceKind.ToString(),
+            escalation.CorrelationId,
+            escalation.UpdatedAtUtc);
+    }
+
+    private static ProcessOperatorApprovalStatus MapOperatorApprovalStatus(ExecutionApprovalStatus status)
+    {
+        return status switch
+        {
+            ExecutionApprovalStatus.Approved => ProcessOperatorApprovalStatus.Approved,
+            ExecutionApprovalStatus.Rejected => ProcessOperatorApprovalStatus.Rejected,
+            _ => ProcessOperatorApprovalStatus.Pending
+        };
+    }
+
+    private static string ResolveOperatorApprovalTone(ProcessOperatorApprovalStatus status)
+    {
+        return status switch
+        {
+            ProcessOperatorApprovalStatus.Approved => "mint",
+            ProcessOperatorApprovalStatus.Rejected => "danger",
+            ProcessOperatorApprovalStatus.ChangesRequested => "warning",
+            _ => "warning"
+        };
+    }
+
+    private static string ResolveEscalationStatusTone(
+        ProcessEscalationStatus status,
+        ProcessEscalationSeverity severity)
+    {
+        if (status == ProcessEscalationStatus.Resolved)
+        {
+            return "mint";
+        }
+
+        return severity switch
+        {
+            ProcessEscalationSeverity.Critical => "danger",
+            ProcessEscalationSeverity.High => "danger",
+            ProcessEscalationSeverity.Moderate => "warning",
+            _ => "info"
+        };
+    }
+
+    private static string ResolveOutboxTone(ProcessOutboxHealthStatus status)
+    {
+        return status switch
+        {
+            ProcessOutboxHealthStatus.Completed => "mint",
+            ProcessOutboxHealthStatus.DeadLettered => "danger",
+            ProcessOutboxHealthStatus.Leased => "info",
+            ProcessOutboxHealthStatus.WaitingToRetry => "warning",
+            _ => "neutral"
         };
     }
 
@@ -533,4 +787,10 @@ public sealed record ProcessWorkspaceRunDetails(
     public IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns { get; init; } = [];
 
     public ProcessRunHealthSummaryViewModel Health { get; init; } = ProcessRunHealthSummaryViewModel.Empty;
+
+    public IReadOnlyList<ProcessEscalationViewModel> Escalations { get; init; } = [];
+
+    public IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals { get; init; } = [];
+
+    public IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline { get; init; } = [];
 }

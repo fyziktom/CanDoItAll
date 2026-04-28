@@ -34,6 +34,12 @@ Build/test proof is invalidated by `.cs`, project, solution, props, and targets 
 
 The recovery ledger records failure signatures, provider fallback counts, and next-attempt timestamps. The recovery worker skips active runs while a future backoff timestamp exists, and loop evaluation escalates repeated identical failures or exhausted provider fallback budgets.
 
+## Operator control plane
+
+Blocked, failed, refused, waiting-approval, and dead-lettered automation states are projected into the process operator control plane. Journal-backed escalations can be assigned, resolved, reopened, or converted into typed rework packets. Tool approvals are surfaced beside launch/process approvals as operator-facing approval work, and approval decisions are written to the process journal and decision ledger.
+
+The Process Workspace Control tab combines run health, escalation queue, approval console, rework console, and attempt timeline. The timeline is the primary audit view for execution runs, approvals, dispatch health, recovery decisions, rework packets, manual reruns, and escalation state transitions.
+
 ## Tool governance
 
 Process mutation tools are registered as mutation tools and require approval by default. Read-only process inspection tools remain read-only. Internal process mutation tools are wrapped with MAF `ApprovalRequiredAIFunction` unless approval requirements are explicitly suppressed for governed non-interactive automation.

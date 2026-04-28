@@ -26,6 +26,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessRunRecoveryService>();
+        services.AddScoped<IProcessEscalationService, ProcessEscalationService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
         services.AddScoped<ProcessCanvasChromeCatalogService>();

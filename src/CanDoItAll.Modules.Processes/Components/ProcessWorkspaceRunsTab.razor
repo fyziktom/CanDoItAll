@@ -90,6 +90,19 @@
                 </Stack>
             </TabsItem>
 
+            <TabsItem Text="Control">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run before using operator controls"
+                                Description="Escalations, approvals, rework requests, and the attempt timeline are attached to one durable runtime run." />
+                }
+                else
+                {
+                    <ProcessWorkspaceRunsOperatorConsoleSection Presenter="Presenter" />
+                }
+            </TabsItem>
+
             <TabsItem Text="Execution">
                 @if (Presenter.SelectedRun is null)
                 {

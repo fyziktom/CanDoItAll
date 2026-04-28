@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
@@ -48,6 +49,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
 
     [Inject]
+    private IProcessEscalationService EscalationService { get; set; } = default!;
+
+    [Inject]
+    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
     private ProcessCatalogWarmupService CatalogWarmupService { get; set; } = default!;
 
     [Parameter]
@@ -69,6 +76,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
     private IReadOnlyList<ProcessExecutionRunViewModel> executionRuns = [];
+    private IReadOnlyList<ProcessEscalationViewModel> processEscalations = [];
+    private IReadOnlyList<ProcessOperatorApprovalViewModel> operatorApprovals = [];
+    private IReadOnlyList<ProcessAttemptTimelineEntryViewModel> attemptTimeline = [];
     private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
@@ -106,6 +116,11 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? directMessageSourceRoleRequirementId;
     private Guid? directMessageTargetRoleRequirementId;
     private string directMessageBody = string.Empty;
+    private Guid? operatorReworkStepRunId;
+    private string operatorReworkDirective = string.Empty;
+    private string operatorEscalationOwner = "process-workspace";
+    private string operatorEscalationResolution = string.Empty;
+    private string operatorApprovalDecisionSummary = string.Empty;
     private Dictionary<Guid, Guid?> runtimeBranchOutcomeSelections = [];
     private IReadOnlyList<ProcessDirectMessageThreadViewModel> directMessageThreads = [];
     private string exportJson = string.Empty;

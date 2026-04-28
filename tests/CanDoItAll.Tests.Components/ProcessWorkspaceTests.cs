@@ -113,6 +113,78 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Runs_operator_console_surfaces_escalation_rework_and_timeline_controls()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Operator console component project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Operator console component run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test operator console."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var stepRun = (await processesService.ListStepRunsAsync(runResult.Value)).First();
+        var startResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.InProgress,
+                Reason = "Start work before blocking it for operator console proof.",
+                DecidedBy = "component-tests"
+            });
+
+        Assert.True(startResult.IsSuccess, string.Join(" | ", startResult.Errors.Select(error => error.Message)));
+
+        var inProgressStep = (await processesService.ListStepRunsAsync(runResult.Value)).First(item => item.Id == stepRun.Id);
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = inProgressStep.Id,
+                StepRunConcurrencyToken = inProgressStep.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Operator console needs an escalation to display.",
+                DecidedBy = "component-tests"
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        await ActivateRunsTabAsync(cut);
+        cut.WaitForAssertion(() => Assert.Contains("Operator console component run", cut.Markup));
+        await ActivateRunControlTabAsync(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-escalation-queue']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-approval-console']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-rework-console']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-attempt-timeline']"));
+            Assert.Contains("Blocked step needs operator review", cut.Markup);
+            Assert.Contains("Operator console needs an escalation to display.", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Steps_canvas_toolbar_switches_between_authoring_and_delete_modes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1314,6 +1386,39 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<CanvasWorkbench>()));
+    }
+
+    private static async Task ActivateRunsTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var method = typeof(ProcessWorkspace).GetMethod("HandleDetailTabChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(cut.Instance, [3]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-runs-tab-shell']")));
+    }
+
+    private static async Task ActivateRunControlTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var runsTab = cut.FindComponent<ProcessWorkspaceRunsTab>();
+        var method = typeof(ProcessWorkspaceRunsTab).GetMethod("HandleSelectedRunViewChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(runsTab.Instance, [2]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']")));
     }
 
     private static async Task SetTemplateLibraryCategoryAsync(IRenderedComponent<ProcessWorkspace> cut, string key)
