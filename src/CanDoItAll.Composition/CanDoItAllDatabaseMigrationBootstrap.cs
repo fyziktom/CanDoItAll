@@ -264,9 +264,15 @@ public static class CanDoItAllDatabaseMigrationBootstrap
         IEnumerable<string> migrationIds,
         SqliteSchemaSnapshot schemaSnapshot)
     {
+        var orderedMigrationIds = migrationIds.ToList();
+        if (HasCurrentManagedSqliteSchema(schemaSnapshot))
+        {
+            return orderedMigrationIds;
+        }
+
         var baselineMigrationIds = new List<string>();
 
-        foreach (var migrationId in migrationIds)
+        foreach (var migrationId in orderedMigrationIds)
         {
             if (!IsMigrationRepresentedBySchema(migrationId, schemaSnapshot))
             {
@@ -334,6 +340,16 @@ public static class CanDoItAllDatabaseMigrationBootstrap
                 && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "StorageObjectReferenceJson"),
             _ => false
         };
+    }
+
+    private static bool HasCurrentManagedSqliteSchema(SqliteSchemaSnapshot schemaSnapshot)
+    {
+        return HasTable(schemaSnapshot, "Automation_DeadLetters")
+               && HasTable(schemaSnapshot, "Processes_Definitions")
+               && HasTable(schemaSnapshot, "Processes_LaunchPlans")
+               && HasTable(schemaSnapshot, "Collaboration_Threads")
+               && HasTable(schemaSnapshot, "CrmHr_AiResourceBindings")
+               && HasColumn(schemaSnapshot, "Workbench_ProjectProjectionLayouts", "IsHidden");
     }
 
     private static bool HasTable(SqliteSchemaSnapshot schemaSnapshot, string tableName)

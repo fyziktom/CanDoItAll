@@ -4,26 +4,54 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class SecretScanningTests
 {
-    private static readonly Regex OpenAiKeyPattern = new(
-        "s" + "k-" + "[A-Za-z0-9_-]{20,}",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly SecretPattern[] SecretPatterns =
+    [
+        new(
+            "OpenAI API key",
+            new Regex("s" + "k-" + "[A-Za-z0-9_-]{20,}", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+            "s" + "k-proj-" + new string('A', 40)),
+        new(
+            "GitHub token",
+            new Regex("gh[pousr]_[A-Za-z0-9_]{30,}", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+            "ghp_" + new string('A', 36)),
+        new(
+            "GitHub fine-grained token",
+            new Regex("github_pat_[A-Za-z0-9_]{20,}", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+            "github_pat_" + new string('A', 80)),
+        new(
+            "Azure storage account key",
+            new Regex("AccountKey=[A-Za-z0-9+/]{60,}={0,2}", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+            "AccountKey=" + new string('A', 88))
+    ];
 
     [Fact]
-    public void Repository_contains_no_realistic_openai_api_keys()
+    public void Repository_contains_no_realistic_provider_keys()
     {
         var findings = ScanRepositoryFiles().ToList();
 
         Assert.True(
             findings.Count == 0,
-            "Realistic OpenAI API key pattern found in tracked text files: " + string.Join(", ", findings.Take(10)));
+            "Realistic provider key pattern found in tracked text files: " + string.Join(", ", findings.Take(10)));
     }
 
-    [Fact]
-    public void Secret_scanner_rejects_realistic_openai_key_pattern()
+    [Theory]
+    [MemberData(nameof(RealisticSecretSamples))]
+    public void Secret_scanner_rejects_realistic_provider_key_patterns(string provider, string simulatedSecret)
     {
-        var simulatedSecret = "s" + "k-proj-" + new string('A', 40);
+        Assert.True(
+            SecretPatterns.Any(pattern => pattern.Pattern.IsMatch(simulatedSecret)),
+            $"Scanner did not reject the {provider} sample.");
+    }
 
-        Assert.Matches(OpenAiKeyPattern, simulatedSecret);
+    public static TheoryData<string, string> RealisticSecretSamples()
+    {
+        var data = new TheoryData<string, string>();
+        foreach (var pattern in SecretPatterns)
+        {
+            data.Add(pattern.Provider, pattern.Sample);
+        }
+
+        return data;
     }
 
     private static IEnumerable<string> ScanRepositoryFiles()
@@ -50,9 +78,10 @@ public sealed class SecretScanningTests
                 continue;
             }
 
-            if (OpenAiKeyPattern.IsMatch(content))
+            var matchingPattern = SecretPatterns.FirstOrDefault(pattern => pattern.Pattern.IsMatch(content));
+            if (matchingPattern is not null)
             {
-                yield return Path.GetRelativePath(root, filePath);
+                yield return $"{Path.GetRelativePath(root, filePath)} ({matchingPattern.Provider})";
             }
         }
     }
@@ -92,4 +121,9 @@ public sealed class SecretScanningTests
 
         throw new InvalidOperationException("Could not locate the repository root.");
     }
+
+    private sealed record SecretPattern(
+        string Provider,
+        Regex Pattern,
+        string Sample);
 }

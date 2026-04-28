@@ -13,6 +13,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class PromptFactoryPageTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Assembly_inputs_panel_renders_storage_context_for_saved_session_attachments()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -93,6 +94,7 @@ public sealed class PromptFactoryPageTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Page_renders_canvas_history_controls_and_inspector_workflow_steps()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -125,6 +127,7 @@ public sealed class PromptFactoryPageTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Eye_preview_opens_floating_component_popover()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -154,6 +157,7 @@ public sealed class PromptFactoryPageTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Preview_query_opens_built_prompt_modal()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

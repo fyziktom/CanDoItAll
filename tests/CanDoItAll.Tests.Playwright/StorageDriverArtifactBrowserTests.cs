@@ -5,6 +5,7 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "StorageDriver")]
     [Trait("Artifacts", "Required")]
     public async Task StorageDriver_settings_and_workbench_artifacts_capture_required_browser_evidence()

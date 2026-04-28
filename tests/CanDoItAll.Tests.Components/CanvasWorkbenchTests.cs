@@ -49,7 +49,9 @@ public sealed class CanvasWorkbenchTests
 
         Assert.Contains("Interaction vocabulary", cut.Markup);
         Assert.Contains("Right-click menu", cut.Markup);
-        context.JSInterop.VerifyInvoke("CanDoItAll.canvasWorkbench.create");
+        Assert.Contains(
+            context.JSInterop.Invocations,
+            invocation => string.Equals(invocation.Identifier, "CanDoItAll.canvasWorkbench.create", StringComparison.Ordinal));
     }
 
     [Fact]

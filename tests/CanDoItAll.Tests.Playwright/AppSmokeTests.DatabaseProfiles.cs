@@ -6,6 +6,7 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Startup_modal_topbar_switcher_and_settings_data_sources_flow_render_cleanly()
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();

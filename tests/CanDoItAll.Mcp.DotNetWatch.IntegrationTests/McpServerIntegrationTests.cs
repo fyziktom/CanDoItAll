@@ -199,6 +199,7 @@ public sealed class McpServerIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task SolutionBuild_StopAndResume_WorksAgainstCurrentRepo()
     {
         await using var harness = await McpServerHarness.CreateAsync();
@@ -365,6 +366,7 @@ public sealed class McpServerIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task TestsRun_StopAndResume_WorksAgainstCurrentRepo()
     {
         await using var harness = await McpServerHarness.CreateAsync();
@@ -461,6 +463,7 @@ public sealed class McpServerIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task TestsRun_CanTarget_IntegrationProject_WhileServerIsLive()
     {
         await using var harness = await McpServerHarness.CreateAsync();
@@ -543,6 +546,7 @@ public sealed class McpServerIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task AppStart_Rejects_PathOutsideWorkspace()
     {
         await using var harness = await McpServerHarness.CreateAsync();

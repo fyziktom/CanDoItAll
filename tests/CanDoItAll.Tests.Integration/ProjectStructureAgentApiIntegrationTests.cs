@@ -119,7 +119,8 @@ public sealed class ProjectStructureAgentApiIntegrationTests
     public async Task ProjectStructureAgentApi_returns_actionable_lease_conflicts()
     {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
-        var scopeKey = "repo-branch:c:/repositories/candoitall:main";
+        var scopeKey = $"repo-branch:{IntegrationTestPaths.RepositoryRoot}:main";
+        var expectedScopeKey = scopeKey.Replace('\\', '/').ToLowerInvariant();
 
         await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
             host.Client,
@@ -146,7 +147,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         var details = payload.RootElement
             .GetProperty("error")
             .GetProperty("details");
-        Assert.Equal(scopeKey, details.GetProperty("scopeKey").GetString());
+        Assert.Equal(expectedScopeKey, details.GetProperty("scopeKey").GetString());
         Assert.Equal("api-test-agent", details.GetProperty("agentId").GetString());
         Assert.Equal("API Test Agent", details.GetProperty("agentName").GetString());
         Assert.Equal("api-test-machine", details.GetProperty("machineName").GetString());
@@ -354,12 +355,13 @@ public sealed class ProjectStructureAgentApiIntegrationTests
     {
         var client = new HttpClient
         {
-            BaseAddress = baseAddress
+            BaseAddress = baseAddress,
+            Timeout = TimeSpan.FromSeconds(30)
         };
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentId, agentId);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentName, agentName);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.MachineName, machineName);
-        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.RepositoryRoot, @"C:\repositories\CanDoItAll");
+        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.RepositoryRoot, IntegrationTestPaths.RepositoryRoot);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.BranchName, "tests/project-structure");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.SessionId, Guid.NewGuid().ToString("N"));
         return client;

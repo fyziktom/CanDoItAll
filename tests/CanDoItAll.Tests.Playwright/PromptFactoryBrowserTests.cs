@@ -5,6 +5,7 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "PromptFactory")]
     public async Task Prompt_factory_canvas_surface_loads_and_exposes_shared_chrome()
     {

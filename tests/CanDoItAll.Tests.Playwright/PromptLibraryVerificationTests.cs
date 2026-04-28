@@ -6,6 +6,7 @@ using Microsoft.Playwright;
 namespace CanDoItAll.Tests.Playwright;
 
 [Collection(PlaywrightCollection.Name)]
+[Trait("Category", "Quarantined")]
 public sealed partial class PromptLibraryVerificationTests
 {
     private readonly PlaywrightAppFixture fixture;

@@ -703,15 +703,18 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(repeatedSeedResult.IsSuccess, string.Join(" | ", repeatedSeedResult.Errors.Select(error => error.Message)));
 
         var definitions = await processesService.ListDefinitionsAsync(projectId);
-        Assert.Equal(5, definitions.Count);
-        Assert.Contains(definitions, item => item.Id == seedResult.Value.PrimaryDefinitionId);
-        Assert.Contains(definitions, item => item.Id == seedResult.Value.SecondaryDefinitionId);
+        var projectDefinitions = definitions.Where(item => item.ProjectId == projectId).ToList();
 
-        var softwareDeliveryDefinition = Assert.Single(definitions, item => item.Name == "Multi-team software delivery and release governance");
-        var branchingDefinition = Assert.Single(definitions, item => item.Name == "Branching code review and merge governance");
-        var hotfixDefinition = Assert.Single(definitions, item => item.Name == "Emergency hotfix rollout with shard-risk governance");
-        Assert.Single(definitions, item => item.Name == "Customer onboarding orchestration");
-        Assert.Single(definitions, item => item.Name == "Incident response and escalation");
+        Assert.True(projectDefinitions.Count >= seedResult.Value.SeededDefinitionIds.Count);
+        Assert.Equal(definitions.Count, definitions.Select(item => item.Id).Distinct().Count());
+        Assert.Contains(projectDefinitions, item => item.Id == seedResult.Value.PrimaryDefinitionId);
+        Assert.Contains(projectDefinitions, item => item.Id == seedResult.Value.SecondaryDefinitionId);
+
+        var softwareDeliveryDefinition = Assert.Single(projectDefinitions, item => item.Name == "Multi-team software delivery and release governance");
+        var branchingDefinition = Assert.Single(projectDefinitions, item => item.Name == "Branching code review and merge governance");
+        var hotfixDefinition = Assert.Single(projectDefinitions, item => item.Name == "Emergency hotfix rollout with shard-risk governance");
+        Assert.Single(projectDefinitions, item => item.Name == "Customer onboarding orchestration");
+        Assert.Single(projectDefinitions, item => item.Name == "Incident response and escalation");
 
         var softwareDeliveryRun = Assert.Single(
             await processesService.ListRunsAsync(softwareDeliveryDefinition.Id, projectId),
@@ -724,15 +727,16 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(softwareDeliveryStepRuns.Count >= 9);
         Assert.Contains(softwareDeliveryStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Blocked);
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Billing export architecture decision record");
+        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Project structure context brief");
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Billing export regression evidence pack");
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Open security exception assessment for tenant export capability");
         Assert.NotEmpty(softwareDeliveryConformance);
         var releaseApprovalStepRun = Assert.Single(softwareDeliveryStepRuns, item => item.Title == "Approve release readiness");
         Assert.True(releaseApprovalStepRun.Dependencies.Count >= 3);
-        Assert.Equal(3, releaseApprovalStepRun.ArtifactInputCount);
+        Assert.Equal(4, releaseApprovalStepRun.ArtifactInputCount);
         Assert.Contains(releaseApprovalStepRun.ResponsibilityPorts, item => item.ResponsibilityKind == ProcessResponsibilityKind.Approver);
         var releaseApprovalDefinitionStep = Assert.Single(softwareDeliveryEditor.Steps, item => item.Key == "release-approval");
-        Assert.Equal(3, releaseApprovalDefinitionStep.ArtifactInputs.Count);
+        Assert.Equal(4, releaseApprovalDefinitionStep.ArtifactInputs.Count);
 
         var hotfixRun = Assert.Single(
             await processesService.ListRunsAsync(hotfixDefinition.Id, projectId),

@@ -146,6 +146,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"Tool '{context.ToolName}' is not part of the composed capability set for agent '{context.AgentId:N}'."));
         }
 
+        if (context.Classification == ToolInvocationClassification.Unknown)
+        {
+            return ValueTask.FromResult(ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Tool '{context.ToolName}' has no registered invocation policy classification."));
+        }
+
         if (context.Classification is ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation)
         {
             var countedSignature = context.Classification == ToolInvocationClassification.Validation
@@ -272,6 +279,11 @@ public static class AgentToolInvocationPolicyMetadata
         if (RegisteredTools.TryGetValue(normalized, out var metadata))
         {
             return metadata.Classification;
+        }
+
+        if (normalized.StartsWith("processes_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToolInvocationClassification.Unknown;
         }
 
         if (normalized.StartsWith("provider_native_", StringComparison.OrdinalIgnoreCase) ||

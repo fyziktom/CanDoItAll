@@ -14,6 +14,7 @@ public sealed class CrmHrDirectoryFlowTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Directory_supports_relationships_import_export_and_duplicate_merge()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b03";

@@ -10,6 +10,7 @@
 output
 .codex-artifacts
 .playwright-mcp
+evidence
 
 # Build results
 [Dd]ebug/

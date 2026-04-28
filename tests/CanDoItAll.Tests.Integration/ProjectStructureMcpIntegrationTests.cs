@@ -73,16 +73,17 @@ public sealed class ProjectStructureMcpIntegrationTests
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
         var primaryTools = CreateTools(host, "Primary project-structure agent");
         var competingTools = CreateTools(host, "Competing project-structure agent");
+        var repositoryRoot = IntegrationTestPaths.RepositoryRoot;
 
         var lease = await AssertOkAsync(primaryTools.ProjectStructureRepoBranchLeaseAcquireAsync(
             "Mutate branch-owned work",
-            repositoryRoot: @"C:\repositories\CanDoItAll",
+            repositoryRoot: repositoryRoot,
             branchName: "feature/project-structure"));
 
         var currentLease = await AssertOkAsync(competingTools.ProjectStructureLeaseGetAsync(
             new ProjectStructureScopeInput(
                 ProjectStructureLeaseScopeKind.RepoBranch,
-                RepositoryRoot: @"C:\repositories\CanDoItAll",
+                RepositoryRoot: repositoryRoot,
                 BranchName: "feature/project-structure")));
 
         Assert.NotNull(currentLease);
@@ -91,7 +92,7 @@ public sealed class ProjectStructureMcpIntegrationTests
 
         var conflict = await competingTools.ProjectStructureRepoBranchLeaseAcquireAsync(
             "Compete for the same branch",
-            repositoryRoot: @"C:\repositories\CanDoItAll",
+            repositoryRoot: repositoryRoot,
             branchName: "feature/project-structure");
 
         Assert.False(conflict.Ok);
@@ -394,7 +395,7 @@ public sealed class ProjectStructureMcpIntegrationTests
                 BaseUrl = host.Client.BaseAddress!.ToString().TrimEnd('/'),
                 AgentToken = token,
                 AgentName = agentName,
-                RepositoryRoot = @"C:\repositories\CanDoItAll",
+                RepositoryRoot = IntegrationTestPaths.RepositoryRoot,
                 BranchName = "tests/project-structure",
                 TimeoutSeconds = 30
             }

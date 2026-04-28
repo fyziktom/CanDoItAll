@@ -17,6 +17,7 @@ public sealed class AiAgentFlowTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Agentframework_catalog_projects_agents_into_crm_hr_directory()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b09";

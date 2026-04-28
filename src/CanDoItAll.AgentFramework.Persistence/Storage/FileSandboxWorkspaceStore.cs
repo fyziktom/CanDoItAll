@@ -6,6 +6,8 @@ namespace CanDoItAll.AgentFramework.Persistence;
 
 public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceExecutionRunStore
 {
+    private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
+
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly FileSandboxWorkspaceStorageLayout layout;
     private readonly FileSandboxWorkspaceJsonStore jsonStore;
@@ -44,12 +46,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     {
         if (CanReadCatalogWithoutWorkspaceLock())
         {
-            var catalog = await LoadCatalogCoreAsync(cancellationToken);
-            var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-            if (EqualityComparer<SandboxWorkspaceCatalog>.Default.Equals(catalog, normalizedCatalog))
-            {
-                return normalizedCatalog;
-            }
+            return await LoadCatalogWithoutWorkspaceLockAsync(cancellationToken);
         }
 
         await gate.WaitAsync(cancellationToken);
@@ -525,6 +522,18 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             ?? SandboxWorkspaceCatalog.Empty;
     }
 
+    private async Task<SandboxWorkspaceCatalog> LoadCatalogWithoutWorkspaceLockAsync(CancellationToken cancellationToken)
+    {
+        var catalog = await LoadCatalogCoreAsync(cancellationToken);
+        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        if (EqualityComparer<SandboxWorkspaceCatalog>.Default.Equals(catalog, normalizedCatalog))
+        {
+            return normalizedCatalog;
+        }
+
+        return await TryPersistNormalizedCatalogReadAsync(cancellationToken) ?? normalizedCatalog;
+    }
+
     private async Task<SandboxWorkspaceCatalog> LoadNormalizedCatalogCoreAsync(CancellationToken cancellationToken)
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
@@ -535,6 +544,34 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         }
 
         return normalizedCatalog;
+    }
+
+    private async Task<SandboxWorkspaceCatalog?> TryPersistNormalizedCatalogReadAsync(CancellationToken cancellationToken)
+    {
+        using var timeout = new CancellationTokenSource(CatalogReadNormalizationLockTimeout);
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        var gateAcquired = false;
+
+        try
+        {
+            await gate.WaitAsync(linkedCancellation.Token);
+            gateAcquired = true;
+
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(linkedCancellation.Token);
+            await EnsureCatalogReadCoreAsync(cancellationToken);
+            return await LoadNormalizedCatalogCoreAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
+        {
+            return null;
+        }
+        finally
+        {
+            if (gateAcquired)
+            {
+                gate.Release();
+            }
+        }
     }
 
     private Task<SandboxWorkspaceExecutionState> LoadExecutionCoreAsync(CancellationToken cancellationToken)

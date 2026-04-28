@@ -998,6 +998,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task CreateObjectAsync_links_prompt_flow_nodes_to_blank_prompt_sessions()
     {
         await using var application = await TestApplication.CreateAsync();

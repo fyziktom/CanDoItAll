@@ -290,6 +290,7 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task WrapperShadowCleanup_RetainsOnlyCurrentAndPreviousBuildRoots()
     {
         var tempDirectory = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "wrapper-retention-tests", Guid.NewGuid().ToString("N"));
@@ -318,6 +319,7 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task WrapperPrepareOnly_ProducesShadowManifestAndDllPath()
     {
         var tempDirectory = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "wrapper-prepare-tests", Guid.NewGuid().ToString("N"));

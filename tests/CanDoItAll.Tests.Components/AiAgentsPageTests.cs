@@ -169,6 +169,7 @@ public sealed class AiAgentsPageTests
             Assert.Contains("Directed Runtime Reviewer", cut.Markup);
         });
 
+        cut.WaitForElement("[data-testid='crmhr-agent-open-technical-record']");
         cut.Find("[data-testid='crmhr-agent-open-technical-record']").Click();
         var agentsCut = harness.Context.RenderComponent<AgentsHomePage>();
 
@@ -332,7 +333,8 @@ public sealed class AiAgentsPageTests
 
         await workspaceService.SaveAgentAsync(editor);
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(
+            parameters => parameters.Add(component => component.SkipCatalogRepair, true));
         Assert.DoesNotContain("Create the first technical agent", cut.Markup);
 
         cut.WaitForAssertion(() =>

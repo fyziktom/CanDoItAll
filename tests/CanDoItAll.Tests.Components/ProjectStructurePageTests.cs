@@ -1828,9 +1828,9 @@ public sealed class ProjectStructurePageTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
 
-        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create")
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true)
             .SetResult(true);
-        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update")
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", _ => true)
             .SetResult(true);
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
@@ -1840,10 +1840,21 @@ public sealed class ProjectStructurePageTests
         {
             Assert.Contains("Edit", cut.Markup);
         });
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                harness.Context.JSInterop.Invocations,
+                invocation => string.Equals(invocation.Identifier, "CanDoItAll.canvasWorkbench.create", StringComparison.Ordinal));
+        });
 
         FindButtonByLabel(cut, "Edit", "[data-testid='project-structure-node-actions'] button").Click();
 
-        harness.Context.JSInterop.VerifyInvoke("CanDoItAll.canvasWorkbench.openCreateComposer");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                harness.Context.JSInterop.Invocations,
+                invocation => string.Equals(invocation.Identifier, "CanDoItAll.canvasWorkbench.openCreateComposer", StringComparison.Ordinal));
+        });
 
         var invocation = harness.Context.JSInterop.Invocations
             .Last(candidate => string.Equals(candidate.Identifier, "CanDoItAll.canvasWorkbench.openCreateComposer", StringComparison.Ordinal));

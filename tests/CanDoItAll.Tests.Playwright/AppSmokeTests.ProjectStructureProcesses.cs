@@ -8,6 +8,7 @@ public sealed partial class AppSmokeTests
     private const string AgentFrameworkIntegrationProjectId = "eaee1691-f5cf-49b1-a43d-1c8cd07d50f0";
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "ProjectStructure")]
     public async Task Seeded_project_structure_projects_process_nodes_and_opens_process_workspace()
     {

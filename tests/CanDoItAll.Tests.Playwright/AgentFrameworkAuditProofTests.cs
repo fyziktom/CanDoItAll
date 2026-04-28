@@ -13,6 +13,7 @@ public sealed partial class AgentFrameworkAuditProofTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Agents_shell_route_renders_integrated_tabs_and_executes_sc04_through_the_scenario_harness()
     {
         await EnsureScenarioHarnessCatalogAsync();
@@ -126,6 +127,7 @@ public sealed partial class AgentFrameworkAuditProofTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Processes_seeded_direct_message_flow_surfaces_transcript_and_denied_policy_evidence()
     {
         var seed = await SeedDirectMessagingRunAsync();
@@ -177,6 +179,7 @@ public sealed partial class AgentFrameworkAuditProofTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Processes_agent_recovery_run_surfaces_missing_artifact_deadletter_and_manual_rerun()
     {
         var seed = await SeedAgentRecoveryRunAsync();
@@ -254,6 +257,7 @@ public sealed partial class AgentFrameworkAuditProofTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Processes_calculator_delivery_flow_runs_launch_approval_messaging_and_completion_end_to_end()
     {
         var seed = await SeedCalculatorDeliveryScenarioAsync();

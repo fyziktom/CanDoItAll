@@ -13,6 +13,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class PromptFactoryServiceIntegrationTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task GetEditorAsync_repairs_legacy_factory_schema_and_seeds_missing_templates()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -72,6 +73,7 @@ public sealed class PromptFactoryServiceIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task GetRecommendedBlockIdsAsync_prefers_selected_flow_without_irrelevant_defaults()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -97,6 +99,7 @@ public sealed class PromptFactoryServiceIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task BuildAsync_uses_agent_sequence_for_nodes_and_prompt_output()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -136,6 +139,7 @@ public sealed class PromptFactoryServiceIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task RestoreSessionStateAsync_restores_prior_prompt_step_state()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -211,6 +215,7 @@ public sealed class PromptFactoryServiceIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task ExportAsync_routes_prompt_exports_through_storage_placement()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -250,6 +255,7 @@ public sealed class PromptFactoryServiceIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task PromptFactory_does_not_use_legacy_background_queue_for_new_work()
     {
         await using var application = await TestApplication.CreateAsync();

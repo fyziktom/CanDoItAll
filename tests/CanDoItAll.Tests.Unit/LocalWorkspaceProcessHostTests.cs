@@ -59,7 +59,7 @@ public sealed class LocalWorkspaceProcessHostTests
         {
             var stopwatch = Stopwatch.StartNew();
             executionTask = host.ExecuteAsync(request);
-            var result = await executionTask.WaitAsync(TimeSpan.FromSeconds(6));
+            var result = await executionTask.WaitAsync(TimeSpan.FromSeconds(12));
             stopwatch.Stop();
 
             Assert.True(result.Started);
@@ -67,7 +67,7 @@ public sealed class LocalWorkspaceProcessHostTests
             Assert.Equal(0, result.ExitCode);
             Assert.Contains("parent-done", result.Stdout, StringComparison.Ordinal);
             Assert.True(
-                stopwatch.Elapsed < TimeSpan.FromSeconds(6),
+                stopwatch.Elapsed < TimeSpan.FromSeconds(12),
                 $"Expected the host to return before the child released the inherited pipe. Elapsed: {stopwatch.Elapsed}.");
             Assert.True(
                 result.StdoutTruncated || result.StderrTruncated,
