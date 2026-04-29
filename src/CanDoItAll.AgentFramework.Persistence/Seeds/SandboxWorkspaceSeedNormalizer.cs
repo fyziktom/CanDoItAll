@@ -328,13 +328,6 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool ShouldRefreshManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)
     {
-        if (string.Equals(seededCapability.Key, "blazor-calculator-inline-skill", StringComparison.OrdinalIgnoreCase))
-        {
-            return !existingCapability.ConfigurationJson.Contains("do not pre-create a nested `SimpleCalculatorApp` project directory", StringComparison.OrdinalIgnoreCase)
-                   || !existingCapability.ConfigurationJson.Contains("The page must include an explicit clear or reset path", StringComparison.OrdinalIgnoreCase)
-                   || !existingCapability.ConfigurationJson.Contains("Add targeted validation for the calculator behavior", StringComparison.OrdinalIgnoreCase);
-        }
-
         if (string.Equals(seededCapability.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.ConfigurationJson.Contains("Use this skill only when the user explicitly asks for a Mermaid or class-diagram output.", StringComparison.OrdinalIgnoreCase);
@@ -355,7 +348,14 @@ internal static class SandboxWorkspaceSeedNormalizer
             return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If the project structure or attached step materials name a concrete output directory")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "external-target/<drive>/...")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "scaffold directly into it instead of adding an extra nested");
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "scaffold directly into it instead of adding an extra nested")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use a distinct concrete type such as `<Feature>Service`");
+        }
+
+        if (string.Equals(seededCapability.Key, "generated-app-summary-inline-skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "summarizing a generated Blazor Web App from concrete source files")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "query-backed form inputs by their actual names");
         }
 
         if (string.Equals(seededCapability.Key, "architecture-source-rag", StringComparison.OrdinalIgnoreCase))

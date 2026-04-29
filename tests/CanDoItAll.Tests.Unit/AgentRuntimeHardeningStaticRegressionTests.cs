@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentRuntimeHardeningStaticRegressionTests
@@ -141,7 +143,7 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
     }
 
     [Fact]
-    public void Dispatch_recovery_uses_domain_guidance_provider()
+    public void Dispatch_recovery_and_proof_stay_domain_neutral()
     {
         var directiveSource = ReadRepositoryFile(
             "src",
@@ -155,16 +157,24 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
             "Automation",
             "Dispatch",
             "ProcessRunAutomationDispatchService.DomainRecoveryGuidance.cs");
+        var proofSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ImplementationProof.cs");
 
         Assert.DoesNotContain("BuildCalculatorRecoveryFocusGuidance", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("BuildCalculatorRecoveryChecklist", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("BuildBlazorBuildRecoveryGuidance", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("CalculatorEngine", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Components/Pages/Home.razor", directiveSource, StringComparison.Ordinal);
-        Assert.Contains("IProcessAutomationRecoveryGuidanceProvider", providerSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessRecoveryGuidanceContext", providerSource, StringComparison.Ordinal);
-        Assert.Contains("CalculatorProcessAutomationRecoveryGuidanceProvider", providerSource, StringComparison.Ordinal);
-        Assert.Contains("BlazorProcessAutomationRecoveryGuidanceProvider", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Calculator", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Blazor", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Calculator", proofSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Blazor", proofSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet", proofSource, StringComparison.Ordinal);
     }
 
     private static string ReadRepositoryFile(params string[] pathParts)
@@ -173,17 +183,25 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
         return File.ReadAllText(Path.Combine([root, .. pathParts]));
     }
 
-    private static string FindRepositoryRoot()
+    private static string FindRepositoryRoot([CallerFilePath] string sourceFilePath = "")
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
+        foreach (var startPath in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory(), Path.GetDirectoryName(sourceFilePath) ?? string.Empty })
         {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            if (string.IsNullOrWhiteSpace(startPath))
             {
-                return directory.FullName;
+                continue;
             }
 
-            directory = directory.Parent;
+            var directory = new DirectoryInfo(startPath);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
         }
 
         throw new InvalidOperationException("Could not locate the repository root.");

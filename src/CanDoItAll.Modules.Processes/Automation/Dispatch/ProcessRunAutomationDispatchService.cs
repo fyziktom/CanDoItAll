@@ -65,26 +65,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static readonly Regex RequiredToolNameRegex = new(
         @"\b(?:workspace|browser|project_structure)_[a-z0-9_]+\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex ProjectPathInToolRequestRegex = new(
-        @"(?<path>[A-Za-z]:\\[^`""'\r\n]+?\.csproj|external-target/[^\s`""']+?\.csproj)",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex WorkspacePathInToolRequestRegex = new(
         @"(?<path>[A-Za-z]:\\[^`""'\r\n\s]+|external-target/[^\s`""']+)",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex RazorPageDirectiveRegex = new(
-        @"(?m)^\s*@page\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex CalculatorEngineInjectDirectiveRegex = new(
-        @"(?m)^\s*@inject\s+[^\r\n]*\bCalculatorEngine\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex CalculatorEngineServiceRegistrationRegex = new(
-        @"\bAdd(?:Scoped|Singleton|Transient)\s*<\s*[^>]*\bCalculatorEngine\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex MalformedDoubleQuotedRazorStringCallbackRegex = new(
-        @"@on\w+\s*=\s*""[^""\r\n]*=>[^""\r\n]*\(\s*""",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex RazorCharLiteralCallbackRegex = new(
-        @"@on\w+\s*=\s*""[^""\r\n]*=>[^""\r\n]*\b(?<handler>[A-Za-z_][A-Za-z0-9_]*)\s*\(\s*'[^'\r\n]+'",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly string[] NegatedRequiredToolPhrases =
     [
@@ -123,15 +105,12 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static readonly string[] ImplementationProofToolNames =
     [
         "workspace_stat_path",
-        "workspace_read_file",
-        "workspace_dotnet_build"
+        "workspace_read_file"
     ];
     private static readonly HashSet<string> CurrentAttemptOnlyImplementationProofToolNames =
     [
         "workspace_stat_path",
-        "workspace_read_file",
-        "workspace_dotnet_build",
-        "workspace_dotnet_test"
+        "workspace_read_file"
     ];
     private static readonly HashSet<string> CurrentAttemptOnlyBrowserProofToolNames =
     [
@@ -141,7 +120,6 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     ];
     private static readonly HashSet<string> ConcreteProductMutationToolNames =
     [
-        "workspace_dotnet_new",
         "workspace_write_file",
         "workspace_append_file",
         "workspace_move_path",

@@ -58,7 +58,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (ContainsStarterTemplateBrowserProof(snapshotText))
             {
-                return "browser proof captured the default Blazor starter page instead of the requested application";
+                return "browser proof captured starter-template content instead of the requested application";
             }
         }
 

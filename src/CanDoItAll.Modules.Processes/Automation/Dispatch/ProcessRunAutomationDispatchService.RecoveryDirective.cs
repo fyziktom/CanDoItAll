@@ -40,13 +40,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (missingRequiredTools.Count > 0)
         {
             builder.AppendLine($"Missing required step tools: {string.Join(", ", missingRequiredTools)}.");
-        }
-
-        if (missingRequiredTools.Contains("workspace_dotnet_build", StringComparer.Ordinal))
-        {
-            builder.AppendLine("The previous attempt failed because it never invoked `workspace_dotnet_build`.");
-            builder.AppendLine("On this retry, after you know the concrete solution or project path, call `workspace_dotnet_build` directly against that path before any final answer.");
-            builder.AppendLine("Do not poll `bin/`, `obj/`, DLL, PDB, or test-output paths as a replacement for `workspace_dotnet_build`; repeated successful stat results are not validation progress.");
+            builder.AppendLine("On this retry, call the missing required tools against the concrete deliverable or artifact paths before returning a final step outcome.");
+            builder.AppendLine("Do not substitute repeated path polling or summaries for a required validation, browser, inspection, or artifact-write tool.");
         }
 
         if (unresolvedCriticalToolFailures.Count > 0)
@@ -97,9 +92,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (RequiresConcreteImplementationProof(candidate))
         {
             builder.AppendLine("This retry is still the implementation step. Do not report that implementation or code artifacts are missing before you attempt the bootstrap or scaffold yourself.");
-            builder.AppendLine("Bootstrap or repair the runnable solution or project now, then validate the concrete files you created with workspace_stat_path, workspace_read_file, and workspace_dotnet_build before you conclude.");
-            builder.AppendLine("If the failed validation was workspace_dotnet_build, rerun workspace_dotnet_build against the exact failed project after every repair. A later test success does not recover that failed build by itself.");
-            builder.AppendLine("Call workspace_dotnet_test only against a test project, solution, or solution filter. A source file or plain directory is an invalid target.");
+            builder.AppendLine("Bootstrap or repair the concrete deliverable now, inspect the files or artifacts you created, and rerun every required validation tool after the latest mutation before you conclude.");
+            builder.AppendLine("If a required validation failed, rerun that exact validation against the same concrete target after every repair. A later unrelated validation does not recover the failed one by itself.");
             AppendDomainImplementationRecoveryGuidance(
                 builder,
                 candidate,
@@ -126,16 +120,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (HasProjectStructureContext(candidate))
             {
                 builder.AppendLine("Call project_structure_read now, resolve the exact target output directory from the project structure, and honor that path instead of improvising a different location.");
-                builder.AppendLine("If the resolved target directory is outside the managed workspace, map it to the workspace alias format `external-target/<drive>/...` for workspace file and dotnet tools.");
-                builder.AppendLine("Scaffold, inspect, and build the exact mapped external-target project now. Use workspace_pwsh_run_script only when you need a controlled helper command for the real external target.");
+                builder.AppendLine("If the resolved target directory is outside the managed workspace, map it to the workspace alias format `external-target/<drive>/...` for workspace tools.");
+                builder.AppendLine("Create or repair the exact mapped external-target deliverable now. Use workspace_pwsh_run_script only when you need a controlled helper command for the real external target.");
             }
         }
 
-        if (unresolvedCriticalToolFailures.Any(item =>
-                string.Equals(NormalizeToolToken(item.ToolName), "workspace_dotnet_build", StringComparison.Ordinal) ||
-                string.Equals(NormalizeToolToken(item.ToolName), "workspace_pwsh_run_script", StringComparison.Ordinal)))
+        if (unresolvedCriticalToolFailures.Count > 0)
         {
-            builder.AppendLine("If a prior runtime host, launch script, or locked output file is blocking the build or launch retry, stop the prior host before rerunning validation. Use any provided stop script or recorded PID file when the workspace includes one.");
+            builder.AppendLine("If a prior helper process, locked output file, or stale generated artifact is blocking the retry, stop or repair that concrete blocker before rerunning the failed required tool.");
         }
 
         if (!RequiresConcreteImplementationProof(candidate) &&
@@ -160,12 +152,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             builder.AppendLine("Do not assume the app must be reachable at `http://localhost:5000/`. Derive the real launch URL from the reviewed host project, `launchSettings.json`, prior run diagnostics, or the URL reported by the launch command.");
-            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. If `workspace_dotnet_run` is not available, write or repair a short PowerShell helper that starts `dotnet run --no-build --project <reviewed .csproj> --urls http://127.0.0.1:<free-port>` in the background, waits for a successful HTTP response, writes appProcessId/URL/stdout/stderr log-path evidence, and exits nonzero on 4xx/5xx or early process exit.");
-            builder.AppendLine("When repairing a launch helper for an external target, keep `external-target/<drive>/...` for workspace tools, but convert it to the native Windows path inside the helper before invoking `dotnet`, `Start-Process`, `Test-Path`, or `Resolve-Path`. For example, `external-target/C/programovani/app/App.csproj` must become `C:\\programovani\\app\\App.csproj`; a relative `external-target/...` string can resolve under the managed workspace path alias and fail even after a successful build.");
+            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. Use the launch tool or task-specific skill that matches the delivered technology, and record URL, process, stdout, and stderr evidence.");
+            builder.AppendLine("When repairing a launch helper for an external target, keep `external-target/<drive>/...` for workspace tools, but convert it to the native OS path inside helper content before invoking native commands. A relative `external-target/...` string can resolve under the managed workspace path alias and fail even after prior validation succeeded.");
             builder.AppendLine("Do not assign to `$PID` in the PowerShell helper; use `$appProcess` and `$appProcessId`. If a helper already exists, inspect and repair it instead of rewriting the same broken content.");
-            builder.AppendLine("Do not repeat a successful `workspace_dotnet_build` or `workspace_dotnet_test` receipt for the same unchanged project while browser proof is missing. Repeating build/test is not recovery; app launch plus Playwright evidence is the recovery path.");
+            builder.AppendLine("Do not repeat successful unchanged validations while browser proof is missing. Launch plus browser evidence is the recovery path.");
             builder.AppendLine("Capture fresh browser evidence with `browser_take_screenshot`, `browser_snapshot`, and `browser_console_messages` before you conclude this retry.");
-            builder.AppendLine("Inspect the saved `browser_snapshot` output before concluding. If it still contains starter template text such as `Hello, world!` or `Welcome to your new app.`, repair or block instead of returning Completed.");
+            builder.AppendLine("Inspect the saved `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, or irrelevant content instead of the requested product behavior, repair or block instead of returning Completed.");
             AppendDomainBrowserRecoveryGuidance(
                 builder,
                 candidate,

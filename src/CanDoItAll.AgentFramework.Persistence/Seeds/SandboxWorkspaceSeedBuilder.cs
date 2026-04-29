@@ -327,22 +327,22 @@ internal static class SandboxWorkspaceSeedBuilder
                 [
                     new InlineSkillResourceSeed(
                         "net10-program-scaffold",
-                        BuildCalculatorProgramExample(),
+                        BuildBlazorProgramExample(),
                         "Reference shape for the modern .NET 10 Blazor Web App Program.cs scaffold."),
                     new InlineSkillResourceSeed(
                         "net10-home-page-example",
-                        BuildCalculatorHomeExample(),
-                        "Reference shape for a static-SSR calculator page using query parameters and a GET form."),
+                        BuildBlazorHomeExample(),
+                        "Reference shape for a static-SSR page using query parameters and a GET form."),
                     new InlineSkillResourceSeed(
                         "dotnet-command-examples",
-                        BuildCalculatorCommandExamples(),
-                        "Concrete workspace_dotnet_new and workspace_dotnet_build examples for scaffolding and building the calculator app.")
+                        BuildBlazorCommandExamples(),
+                        "Concrete workspace_dotnet_new and workspace_dotnet_build examples for scaffolding and building a Blazor app.")
                 ]),
             CreateInlineSkillCapability(
                 appSummaryInlineSkillCapabilityId,
                 "generated-app-summary-inline-skill",
                 "Generated App Summary Skill",
-                "Task-specific workflow for summarizing the calculator app from its source files.",
+                "Workflow for summarizing a generated Blazor app from concrete source files.",
                 "generated-app-summary",
                 GetSeedText("skills/generated-app-summary.instructions"),
                 [
@@ -362,7 +362,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 architectureInlineSkillCapabilityId,
                 "architecture-map-inline-skill",
                 "Architecture Map Skill",
-                "Task-specific workflow for creating a Mermaid class diagram from the generated calculator app.",
+                "Workflow for creating a Mermaid class diagram from generated app source files.",
                 "architecture-map",
                 GetSeedText("skills/architecture-map.instructions")),
             CreateInlineSkillCapability(
@@ -1644,13 +1644,13 @@ internal static class SandboxWorkspaceSeedBuilder
             true);
     }
 
-    private static string BuildCalculatorProgramExample() => GetSeedText("resources/net10-program-scaffold");
+    private static string BuildBlazorProgramExample() => GetSeedText("resources/net10-program-scaffold");
 
     private static string BuildOfficeComparisonJsonExample() => GetSeedText("resources/office-comparison-example");
 
-    private static string BuildCalculatorHomeExample() => GetSeedText("resources/net10-home-page-example");
+    private static string BuildBlazorHomeExample() => GetSeedText("resources/net10-home-page-example");
 
-    private static string BuildCalculatorCommandExamples() => GetSeedText("resources/dotnet-command-examples");
+    private static string BuildBlazorCommandExamples() => GetSeedText("resources/dotnet-command-examples");
 
     private static string BuildGeneratedAppSummaryChecklist() => GetSeedText("resources/generated-app-summary-checklist");
 

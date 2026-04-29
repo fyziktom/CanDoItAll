@@ -73,10 +73,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> StatPaths,
         IReadOnlyList<string> ReadPaths);
 
-    private sealed record MisplacedTestProjectCleanupTarget(
-        string HostProjectPath,
-        string NestedTestDirectoryPath);
-
     private sealed record DispatchExecutionOutcome(
         ExecutionRunDetail Detail,
         string ResponseText,

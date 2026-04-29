@@ -3840,12 +3840,32 @@ Descendant requirement context from sibling planning nodes:
     }
 
     [Fact]
-    public void BuildRecoveryDirective_adds_framework_retarget_guidance_for_missing_dotnet_runtime_failures()
+    public void ResolveRequiredToolNames_does_not_add_dotnet_validation_from_test_word_alone()
     {
-        var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
-        var candidate = CreateDispatchCandidate("Implement the calculator and prove the build passes.");
+        var resolveRequiredToolNames = typeof(ProcessRunAutomationDispatchService).GetMethod("ResolveRequiredToolNames", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
+        var candidate = CreateDispatchCandidate("Implement the monthly workbook and include test notes.");
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.Contains("workspace_stat_path", requiredToolNames);
+        Assert.Contains("workspace_read_file", requiredToolNames);
+        Assert.DoesNotContain("workspace_dotnet_build", requiredToolNames);
+        Assert.DoesNotContain("workspace_dotnet_test", requiredToolNames);
+    }
+
+    [Fact]
+    public void ResolveMissingConcreteImplementationProofSummary_blocks_required_validation_before_latest_mutation()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidate("Implement the deliverable. Instructions: call workspace_quality_validate before you conclude.");
         var now = DateTimeOffset.UtcNow;
+        var validationTime = now.AddSeconds(1);
+        var mutationTime = now.AddSeconds(2);
+        var readTime = now.AddSeconds(3);
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -3860,19 +3880,20 @@ Descendant requirement context from sibling planning nodes:
                 "system",
                 "{}",
                 "Prompt",
-                "dotnet build failed because the generated project targeted net7.0.",
+                "Validation ran before the final deliverable mutation.",
                 "OpenAI chat completions",
                 "gpt-4.1",
                 ExecutionState.Completed,
-                RunOutcome.Failed,
+                RunOutcome.Succeeded,
                 now,
                 now,
                 now,
                 now,
                 string.Empty,
                 BuildSerializedSessionState(
-                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists.")),
-                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete."))),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete.")),
+                    ("workspace_quality_validate", CreateProviderNativeTextResult("Validation passed.")),
+                    ("workspace_write_file", CreateProviderNativeTextResult("File written."))),
                 []),
             null,
             [],
@@ -3883,51 +3904,70 @@ Descendant requirement context from sibling planning nodes:
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/work/monthly-report/report.md",
+                    ".",
+                    "Succeeded",
+                    readTime,
+                    readTime),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
-                    "workspace_dotnet_build",
+                    "workspace_quality_validate",
                     "LocalExecution",
-                    "NeverRequire",
+                    "Required",
                     "PolicyOnlyLocal",
-                    "dotnet build Calculator.sln",
-                    "external-target/C/programovani/dotnet/Calculator",
-                    "You must install or update .NET. The framework 'Microsoft.NETCore.App', version '7.0.0' was not found.",
-                    now,
-                    now)
+                    "external-target/C/work/monthly-report/report.md",
+                    ".",
+                    "Succeeded",
+                    validationTime,
+                    validationTime),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_write_file",
+                    "MutatingWorkspace",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    "external-target/C/work/monthly-report/report.md",
+                    ".",
+                    "Succeeded",
+                    mutationTime,
+                    mutationTime)
             ]
         };
 
-        var directive = buildRecoveryDirective.Invoke(
-            null,
-            [
-                candidate,
-                detail,
-                "dotnet build failed because net7.0 is not available in this workspace.",
-                new List<string> { "workspace_dotnet_build" },
-                detail.ToolReceipts,
-                1
-            ]) as string;
+        var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
 
-        Assert.NotNull(directive);
-        Assert.Contains("unsupported target frameworks such as `net7.0`", directive, StringComparison.Ordinal);
-        Assert.Contains("prefer `net10.0`", directive, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_new", directive, StringComparison.Ordinal);
+        Assert.NotNull(summary);
+        Assert.Contains("workspace_quality_validate", summary, StringComparison.Ordinal);
+        Assert.Contains("latest concrete product mutation", summary, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void BuildRecoveryDirective_adds_framework_retarget_guidance_for_missing_dotnet_runtime_test_failures_during_qa()
+    public void ResolveMissingConcreteImplementationProofSummary_allows_non_code_deliverable_validation_after_mutation()
     {
-        var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
-        var candidate = CreateDispatchCandidate(
-            "Run QA validation and browser proof for the calculator app.",
-            ProcessStepKind.Review);
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidate("Implement the monthly workbook. Instructions: call workspace_quality_validate before you conclude.");
         var now = DateTimeOffset.UtcNow;
+        var mutationTime = now.AddSeconds(1);
+        var readTime = now.AddSeconds(2);
+        var validationTime = now.AddSeconds(3);
+        var workbookPath = "external-target/C/work/monthly-report/forecast.xlsx";
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
-                "QA retry",
+                "Workbook implementation run",
                 "process-step",
                 "step-1",
                 "corr-1",
@@ -3936,19 +3976,20 @@ Descendant requirement context from sibling planning nodes:
                 "system",
                 "{}",
                 "Prompt",
-                "dotnet test failed because the generated project targeted net7.0.",
+                "Workbook was created and validated.",
                 "OpenAI chat completions",
                 "gpt-4.1",
                 ExecutionState.Completed,
-                RunOutcome.Failed,
+                RunOutcome.Succeeded,
                 now,
                 now,
                 now,
                 now,
                 string.Empty,
                 BuildSerializedSessionState(
-                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists.")),
-                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete."))),
+                    ("workspace_write_file", CreateProviderNativeTextResult("Workbook written.")),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Workbook reviewed.")),
+                    ("workspace_quality_validate", CreateProviderNativeTextResult("Validation passed."))),
                 []),
             null,
             [],
@@ -3959,175 +4000,48 @@ Descendant requirement context from sibling planning nodes:
                 new ToolExecutionReceiptRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_write_file",
+                    "MutatingWorkspace",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    workbookPath,
+                    ".",
+                    "Succeeded",
+                    mutationTime,
+                    mutationTime),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "workspace-file",
+                    "workspace_read_file",
+                    "WorkspaceRead",
+                    "Required",
+                    "Workspace-root-only file service.",
+                    workbookPath,
+                    ".",
+                    "Succeeded",
+                    readTime,
+                    readTime),
+                new ToolExecutionReceiptRecord(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
                     "workspace-process",
-                    "workspace_dotnet_test",
+                    "workspace_quality_validate",
                     "LocalExecution",
-                    "NeverRequire",
+                    "Required",
                     "PolicyOnlyLocal",
-                    "dotnet test Calculator.sln",
-                    "external-target/C/programovani/dotnet/Calculator",
-                    "Testhost process exited because Microsoft.NETCore.App 7.0.0 was not found.",
-                    now,
-                    now)
+                    workbookPath,
+                    ".",
+                    "Succeeded",
+                    validationTime,
+                    validationTime)
             ]
         };
 
-        var directive = buildRecoveryDirective.Invoke(
-            null,
-            [
-                candidate,
-                detail,
-                "dotnet test failed because target net7.0 is not available in this workspace.",
-                new List<string> { "workspace_dotnet_test" },
-                detail.ToolReceipts,
-                1
-            ]) as string;
+        var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
 
-        Assert.NotNull(directive);
-        Assert.Contains("unsupported target frameworks such as `net7.0`", directive, StringComparison.Ordinal);
-        Assert.Contains("repair the concrete solution or project configuration", directive, StringComparison.Ordinal);
-        Assert.Contains("rerun the originally required dotnet validation successfully", directive, StringComparison.Ordinal);
-        Assert.Contains("prefer `net10.0`", directive, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void BuildRecoveryDirective_adds_concrete_home_razor_char_to_string_repair_guidance()
-    {
-        var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
-        var candidate = CreateCalculatorImplementationDispatchCandidate();
-        var now = DateTimeOffset.UtcNow;
-        const string responseText = "Calculator/Components/Pages/Home.razor(42,33): error CS1503: Argument 1: cannot convert from 'char' to 'string'.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                null,
-                "Implementation retry",
-                "process-step",
-                "step-1",
-                "corr-1",
-                "run-start",
-                "process-automation-dispatch",
-                "system",
-                "{}",
-                "Prompt",
-                responseText,
-                "OpenAI chat completions",
-                "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Failed,
-                now,
-                now,
-                now,
-                now,
-                string.Empty,
-                BuildSerializedSessionState(
-                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists.")),
-                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete."))),
-                []),
-            null,
-            [],
-            []);
-
-        var directive = buildRecoveryDirective.Invoke(
-            null,
-            [
-                candidate,
-                detail,
-                responseText,
-                Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
-                2
-            ]) as string;
-
-        Assert.NotNull(directive);
-        Assert.Contains("handlers accept `char`", directive, StringComparison.Ordinal);
-        Assert.Contains("@onclick=\"() => AppendDigit('1')\"", directive, StringComparison.Ordinal);
-        Assert.Contains("@onclick='() => AppendDigit(\"1\")'", directive, StringComparison.Ordinal);
-        Assert.Contains("@onclick=\"() => AppendDigit(\"1\")\"", directive, StringComparison.Ordinal);
-        Assert.Contains("Do not leave `AppendToResult('1')`", directive, StringComparison.Ordinal);
-        Assert.Contains("methods that still accept `string`", directive, StringComparison.Ordinal);
-        Assert.Contains("do not rewrite the test project again", directive, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ContainsInjectedCalculatorEngine_detects_fully_qualified_razor_inject_directive()
-    {
-        var containsInjectedCalculatorEngine = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsInjectedCalculatorEngine", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("ContainsInjectedCalculatorEngine method was not found.");
-        const string content = """
-            @page "/"
-            @inject Calculator.Domain.CalculatorEngine CalculatorEngine
-            """;
-
-        var result = containsInjectedCalculatorEngine.Invoke(null, [content]);
-
-        Assert.True((bool)(result ?? false));
-    }
-
-    [Fact]
-    public void ContainsMalformedDoubleQuotedRazorStringCallback_detects_unescaped_string_literal_event_attribute()
-    {
-        var containsMalformedDoubleQuotedRazorStringCallback = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsMalformedDoubleQuotedRazorStringCallback", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("ContainsMalformedDoubleQuotedRazorStringCallback method was not found.");
-        const string malformed = """<button @onclick="() => AppendDigit("1")">1</button>""";
-        const string validChar = """<button @onclick="() => AppendDigit('1')">1</button>""";
-        const string validString = """<button @onclick='() => AppendDigit("1")'>1</button>""";
-
-        Assert.True((bool)(containsMalformedDoubleQuotedRazorStringCallback.Invoke(null, [malformed]) ?? false));
-        Assert.False((bool)(containsMalformedDoubleQuotedRazorStringCallback.Invoke(null, [validChar]) ?? true));
-        Assert.False((bool)(containsMalformedDoubleQuotedRazorStringCallback.Invoke(null, [validString]) ?? true));
-    }
-
-    [Fact]
-    public void ContainsCalculatorStringHandlerWithCharCallback_detects_type_inconsistent_event_callback()
-    {
-        var containsCalculatorStringHandlerWithCharCallback = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsCalculatorStringHandlerWithCharCallback", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("ContainsCalculatorStringHandlerWithCharCallback method was not found.");
-        const string invalid = """
-            <button @onclick="() => AppendToResult('1')">1</button>
-
-            @code {
-                private void AppendToResult(string value)
-                {
-                }
-            }
-            """;
-        const string validChar = """
-            <button @onclick="() => AppendDigit('1')">1</button>
-
-            @code {
-                private void AppendDigit(char digit)
-                {
-                }
-            }
-            """;
-        const string validString = """
-            <button @onclick='() => AppendToResult("1")'>1</button>
-
-            @code {
-                private void AppendToResult(string value)
-                {
-                }
-            }
-            """;
-
-        Assert.True((bool)(containsCalculatorStringHandlerWithCharCallback.Invoke(null, [invalid]) ?? false));
-        Assert.False((bool)(containsCalculatorStringHandlerWithCharCallback.Invoke(null, [validChar]) ?? true));
-        Assert.False((bool)(containsCalculatorStringHandlerWithCharCallback.Invoke(null, [validString]) ?? true));
-    }
-
-    [Fact]
-    public void ContainsCalculatorEngineServiceRegistration_detects_fully_qualified_service_registration()
-    {
-        var containsCalculatorEngineServiceRegistration = typeof(ProcessRunAutomationDispatchService).GetMethod("ContainsCalculatorEngineServiceRegistration", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("ContainsCalculatorEngineServiceRegistration method was not found.");
-        const string content = "builder.Services.AddScoped<Calculator.Domain.CalculatorEngine>();";
-
-        var result = containsCalculatorEngineServiceRegistration.Invoke(null, [content]);
-
-        Assert.True((bool)(result ?? false));
+        Assert.Equal(string.Empty, summary);
     }
 
     [Fact]

@@ -493,7 +493,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if ((!receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) &&
              !receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase)) ||
-            !string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_new", StringComparison.Ordinal))
+            !IsImplementationBootstrapToolName(NormalizeToolToken(receipt.ToolName)))
         {
             return false;
         }
@@ -1396,13 +1396,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedBranchOutcomeKey = branchOutcomeKey?.Trim().ToLowerInvariant() ?? string.Empty;
         (fileName, contentSignalText) = (normalizedRoleKey, normalizedBranchOutcomeKey) switch
         {
-            (ProcessMockProductOwnerRoleKey, _) => ("01-scope.md", "calculator scope acceptance criteria arithmetic divide zero"),
-            (ProcessMockArchitectRoleKey, _) => ("02-architecture.md", "calculator architecture boundary implementation qa expectations"),
-            (ProcessMockDeveloperRoleKey, _) => ("03-implementation.md", "calculator first implementation deliverable deterministic defect"),
-            (ProcessMockQaRoleKey, ProcessMockBranchRepairsRequired) => ("04-qa-finding.md", "calculator qa rejection finding repair branch reason"),
-            (ProcessMockRepairDeveloperRoleKey, _) => ("05-repair.md", "calculator repair implementation divide zero fix"),
-            (ProcessMockQaRoleKey, ProcessMockBranchApproved) => ("06-qa-approval.md", "calculator qa approval repaired implementation release"),
-            (ProcessMockReleaseManagerRoleKey, _) => ("07-release-notes.md", "calculator release notes qa approval repair evidence"),
+            (ProcessMockProductOwnerRoleKey, _) => ("01-scope.md", "scope acceptance criteria requirements"),
+            (ProcessMockArchitectRoleKey, _) => ("02-architecture.md", "architecture boundaries implementation qa expectations"),
+            (ProcessMockDeveloperRoleKey, _) => ("03-implementation.md", "implementation change set deliverable validation evidence"),
+            (ProcessMockQaRoleKey, ProcessMockBranchRepairsRequired) => ("04-qa-finding.md", "qa rejection finding repair branch reason"),
+            (ProcessMockRepairDeveloperRoleKey, _) => ("05-repair.md", "repair implementation validation evidence"),
+            (ProcessMockQaRoleKey, ProcessMockBranchApproved) => ("06-qa-approval.md", "qa approval implementation release evidence"),
+            (ProcessMockReleaseManagerRoleKey, _) => ("07-release-notes.md", "release notes qa approval rollout evidence"),
             _ => (string.Empty, string.Empty)
         };
 

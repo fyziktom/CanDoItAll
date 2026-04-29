@@ -371,7 +371,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return missingRequiredTools.Count > 0 ||
-               unresolvedCriticalToolFailures.Any(IsFrameworkRecoverableDotnetToolFailure) ||
+               unresolvedCriticalToolFailures.Count > 0 ||
                TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
                MentionsRepeatedToolInvocation(responseText) ||
                MentionsRepeatedToolInvocation(run.ResultSummary);

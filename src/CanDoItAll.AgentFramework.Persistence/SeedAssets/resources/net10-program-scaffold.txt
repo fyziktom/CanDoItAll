@@ -1,6 +1,6 @@
-using SimpleCalculatorApp.Components;
+using SampleBlazorApp.Components;
 
-namespace SimpleCalculatorApp;
+namespace SampleBlazorApp;
 
 public class Program
 {

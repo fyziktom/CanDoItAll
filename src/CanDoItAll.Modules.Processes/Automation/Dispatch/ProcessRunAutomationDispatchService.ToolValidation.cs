@@ -117,11 +117,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             satisfiedToolNames.AddRange(requiredToolNames
                 .Where(toolName => ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal)));
-            if (RequiresConcreteTestProof(candidate) &&
-                requiredToolNames.Contains("workspace_dotnet_test", StringComparer.Ordinal))
-            {
-                satisfiedToolNames.Add("workspace_dotnet_test");
-            }
         }
 
         return satisfiedToolNames
@@ -137,7 +132,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         if (RequiresConcreteImplementationProof(candidate) &&
-            CurrentAttemptOnlyImplementationProofToolNames.Contains(normalizedToolName))
+            IsCurrentAttemptOnlyImplementationToolName(normalizedToolName))
         {
             return false;
         }
@@ -149,6 +144,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return true;
+    }
+
+    private static bool IsCurrentAttemptOnlyImplementationToolName(string normalizedToolName)
+    {
+        return CurrentAttemptOnlyImplementationProofToolNames.Contains(normalizedToolName) ||
+               IsImplementationValidationToolName(normalizedToolName);
     }
 
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(

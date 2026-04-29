@@ -9,3 +9,5 @@
 | Improve mock agents to cover possible failures. | REQ-007 | ProcessMockAgentRuntime and test harness | Failure matrix integration tests | 04 | Covered |
 | Test first just one agent implementing application. | REQ-002, REQ-009 | AgentFramework/process dispatch | Focused single-agent implementation proof | 01 | Covered |
 | Use simpler three-agent process to test artifact outputs. | REQ-008 | Process template/test setup/UI if visible | Deterministic three-agent process proof | 05 | Covered |
+| Generated app builds/tests but fails at runtime with missing `/_Host` fallback endpoint. | REQ-010, REQ-011 | Generated app runtime proof and seeded implementation/QA guidance | Runtime smoke and browser proof in the generated-app delivery lane | 06 | Diagnostic history |
+| Core process must not contain calculator, Blazor, or .NET-specific hardcoded guidelines. | REQ-012, REQ-013, REQ-014 | Process dispatch, retry/proof code, reusable seed assets, agent/skill/tool boundaries | Source scans, static regression tests, focused integration tests, bundle validator | 07 | Covered |
