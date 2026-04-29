@@ -52,7 +52,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
         var agents = MergeAgents(catalog.Agents, seeded.Agents, providers.IdMap, capabilities.IdMap);
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
-        var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items);
+        var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
 
         return catalog with
@@ -412,10 +412,17 @@ internal static class SandboxWorkspaceSeedNormalizer
         return configurationJson.Contains(expectedPhrase, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static IReadOnlyList<CapabilityCatalogItem> RemoveRetiredCapabilities(IReadOnlyList<CapabilityCatalogItem> capabilities)
+    private static IReadOnlyList<CapabilityCatalogItem> RemoveRetiredCapabilities(
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<CapabilityCatalogItem> seededCapabilities)
     {
+        var seededCapabilityKeys = seededCapabilities
+            .Select(capability => capability.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         return capabilities
-            .Where(capability => !IsRetiredSandboxRegisteredSkillCapability(capability))
+            .Where(capability => !IsRetiredSandboxRegisteredSkillCapability(capability) &&
+                                 !IsRetiredBuiltInInlineSkillCapability(capability, seededCapabilityKeys))
             .OrderBy(item => item.Kind)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -476,6 +483,17 @@ internal static class SandboxWorkspaceSeedNormalizer
 
         return TryReadConfigurationString(capability.ConfigurationJson, "registeredSkillServiceType", out var serviceTypeName) &&
                IsRetiredSandboxRegisteredSkillServiceType(serviceTypeName);
+    }
+
+    private static bool IsRetiredBuiltInInlineSkillCapability(
+        CapabilityCatalogItem capability,
+        IReadOnlySet<string> seededCapabilityKeys)
+    {
+        return capability.Kind == CapabilityKind.Skill &&
+               capability.IsBuiltIn &&
+               !seededCapabilityKeys.Contains(capability.Key) &&
+               !string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
+               capability.EndpointOrPath.StartsWith("inline://", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsRetiredSandboxRegisteredSkillServiceType(string? serviceTypeName)

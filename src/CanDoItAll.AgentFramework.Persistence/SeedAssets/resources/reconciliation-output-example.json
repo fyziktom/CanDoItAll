@@ -1,0 +1,22 @@
+{
+  "matchingRecords": true,
+  "exceptions": [],
+  "rankedRecords": [
+    {
+      "recordId": "ITEM-001",
+      "metric": 1250.75,
+      "reason": "Highest requested metric after normalization."
+    },
+    {
+      "recordId": "ITEM-002",
+      "metric": 640.25,
+      "reason": "Second-highest requested metric after normalization."
+    },
+    {
+      "recordId": "ITEM-003",
+      "metric": 310.0,
+      "reason": "Third-highest requested metric after normalization."
+    }
+  ],
+  "notes": []
+}

@@ -34,7 +34,7 @@ Correct the earlier app-specific repair by making the process and agent-cooperat
 
 - Remove calculator, Blazor, and .NET-specific recovery/proof rules from universal process dispatch.
 - Replace domain-specific implementation proof with generic concrete-deliverable and validation-after-mutation proof.
-- Keep domain and technology guidance in seeded agents, reusable skills, task-specific skills, and tool capabilities.
+- Keep technology guidance in seeded agents, reusable skills, and tool capabilities when explicitly scoped.
 - Generalize reusable seed resources that used the calculator sample as default Blazor guidance.
 - Add regression tests and source scans that prove process-core neutrality.
 
@@ -50,7 +50,7 @@ Correct the earlier app-specific repair by making the process and agent-cooperat
 - Unit/static regression test that dispatch recovery and proof files stay domain-neutral.
 - Build proof for the touched test project.
 - Source scans proving process dispatch has no calculator/Blazor/.NET repair recipes.
-- Source scans proving reusable seed assets no longer contain calculator-specific examples except the explicitly task-specific calculator skill.
+- Source scans proving reusable seed assets no longer contain calculator-specific reusable examples. Subbundle 08 tightens this further by removing globally seeded sample-task skills.
 - Bundle validator rerun after documentation sync.
 
 ## Implementation Steps
@@ -58,7 +58,7 @@ Correct the earlier app-specific repair by making the process and agent-cooperat
 1. Audit dispatch, retry, artifact validation, prompt, seed asset, and bundle files for calculator, Blazor, and .NET hardcoding.
 2. Delete sample-specific recovery providers and replace them with neutral no-op domain extension points.
 3. Replace app-specific proof checks with generic concrete source/project read plus required validation after latest mutation.
-4. Generalize reusable seeded agent/skill resources and keep only explicitly task-specific calculator skill content.
+4. Generalize reusable seeded agent/skill resources and do not keep sample-specific app guidance in reusable examples.
 5. Update tests and static regression coverage for the corrected boundary.
 6. Run build, tests, prohibited-string scans, and bundle validation.
 
@@ -67,13 +67,13 @@ Correct the earlier app-specific repair by making the process and agent-cooperat
 - Do not repair the generated calculator app as part of this subbundle.
 - Do not add another sample-specific guard to process dispatch.
 - Do not remove valid specialized .NET or Blazor tool capabilities just because they are specialized.
-- Do not treat the task-specific calculator skill as a process-core rule.
+- Do not hide sample-specific task instructions in universal process-core rules.
 
 ## Acceptance Checklist
 
 - Process dispatch contains no calculator, CalcApp, CalculatorEngine, legacy Blazor hosting, or dotnet-specific recovery recipe.
 - Reusable Blazor seed guidance contains neutral examples rather than calculator defaults.
-- Domain-specific calculator guidance remains only in the explicitly named task skill.
+- No calculator-specific reusable seed guidance remains; subbundle 08 removes the stale globally seeded calculator skill.
 - Required validation is enforced generically after concrete mutations when validation tools are required.
 - Bundle documentation identifies subbundle 06 as superseded for process-core implementation.
 

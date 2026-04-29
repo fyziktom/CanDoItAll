@@ -177,6 +177,26 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
         Assert.DoesNotContain("workspace_dotnet", proofSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Seeded_inline_skills_do_not_embed_sample_specific_workloads()
+    {
+        var seedAssetRoot = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.AgentFramework.Persistence",
+            "SeedAssets");
+        var searchableText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(seedAssetRoot, "*", SearchOption.AllDirectories)
+                .Where(path => !path.EndsWith("manifest.json", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText));
+
+        Assert.DoesNotContain("calculator", searchableText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SimpleCalculatorApp", searchableText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("office-order", searchableText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Mouser", searchableText, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         var root = FindRepositoryRoot();

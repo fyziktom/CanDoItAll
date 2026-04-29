@@ -11,6 +11,62 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {
     [Fact]
+    public void Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_inline_skills()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var reconciliationCapability = Assert.Single(
+            seed.Capabilities,
+            item => string.Equals(item.Key, "document-spreadsheet-reconciliation-inline-skill", StringComparison.OrdinalIgnoreCase));
+        var retiredCapabilityId = Guid.NewGuid();
+        var retiredCapability = new CapabilityCatalogItem(
+            retiredCapabilityId,
+            CapabilityKind.Skill,
+            "retired-built-in-inline-skill",
+            "Retired Built-In Inline Skill",
+            "Previous built-in inline skill no longer present in the seed catalog.",
+            "inline://retired-built-in-inline-skill",
+            "{}",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+        var financialStrategist = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        var spreadsheetAnalyst = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Spreadsheet Analyst", StringComparison.Ordinal));
+        var catalog = seed.ToCatalog() with
+        {
+            Capabilities = seed.Capabilities.Concat([retiredCapability]).ToList(),
+            Agents = seed.Agents.Select(agent => agent.Id == financialStrategist.Id
+                ? agent with
+                {
+                    Capabilities = agent.Capabilities.Concat([
+                        new AgentCapabilityAssignment(
+                            retiredCapabilityId,
+                            retiredCapability.Key,
+                            retiredCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
+                            string.Empty)
+                    ]).ToList()
+                }
+                : agent).ToList()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var normalizedFinancialStrategist = Assert.Single(
+            normalized.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredCapabilityId);
+        Assert.Contains(spreadsheetAnalyst.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
+        Assert.Contains(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_playwright_mcp_for_ui_delivery_agents()
     {
         await using var application = await TestApplication.CreateAsync();

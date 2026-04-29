@@ -9,6 +9,7 @@
 5. `05-three-agent-simplified-process-proof`
 6. `06-blazor-runtime-hosting-proof`
 7. `07-universal-process-core-guidance-extraction`
+8. `08-generic-seeded-skills-boundary`
 
 ## Subbundle Dependency Map
 
@@ -21,6 +22,7 @@ flowchart TD
     SB05["05 Three-agent simplified process proof"]
     SB06["06 Blazor runtime hosting proof"]
     SB07["07 Universal process-core guidance extraction"]
+    SB08["08 Generic seeded skills boundary"]
 
     SB01 --> SB02
     SB01 --> SB03
@@ -29,6 +31,7 @@ flowchart TD
     SB04 --> SB05
     SB05 --> SB06
     SB06 --> SB07
+    SB07 --> SB08
 ```
 
 ## Critical Subbundles
@@ -38,6 +41,7 @@ flowchart TD
 - `03` is a critical foundation because retrying the wrong owner makes downstream process proof untrustworthy.
 - `06` is diagnostic history because later proof showed build/test-only implementation evidence can still leave a generated UI app unusable at runtime.
 - `07` is a critical correction because process orchestration must stay universal and must not carry sample-app or framework-specific repair recipes.
+- `08` is a critical correction because globally seeded skills must not carry one sample app or one-off workload as default behavior.
 
 ## Phase Gates
 
@@ -50,6 +54,7 @@ flowchart TD
 | 05 | Mock matrix is green. | Three-agent process proof passes and records artifact handoff. | Closes bundle without relying on the full rich process. |
 | 06 | Prior closure proof is contradicted by generated-app runtime failure. | Runtime/browser proof identifies the process gap. | Diagnostic history for runtime-proof requirements. |
 | 07 | User correction rejects sample-specific core process guards. | Process dispatch scans clean, reusable seeds are generalized, focused tests pass, and bundle validation passes. | Restores trust that the same process can govern documents, spreadsheets, applications, and other deliverables. |
+| 08 | User correction rejects sample-specific seeded skills. | Seeded skill/resource scans clean, stale built-in inline skills retire generically, focused tests pass, and bundle validation passes. | Restores trust that seeded agents can handle arbitrary app and non-app tasks without sample defaults. |
 
 ## Execution Policy
 

@@ -8,7 +8,7 @@
 
 Repair the real-agent process failure where a software-delivery run exhausted implementation attempts, failed on repeated identical tool calls and missing validation tools, then surfaced missing required artifacts or runtime proof gaps.
 
-The work must be isolated into small proof phases. Do not rerun the whole rich process as the primary validation loop. First prove one implementation agent can complete a narrow delivery step with all required artifacts, then harden artifact contracts, retry routing, mock coverage, a smaller three-agent process, and the universal process-core boundary.
+The work must be isolated into small proof phases. Do not rerun the whole rich process as the primary validation loop. First prove one implementation agent can complete a narrow delivery step with all required artifacts, then harden artifact contracts, retry routing, mock coverage, a smaller three-agent process, the universal process-core boundary, and the generic seeded-skill boundary.
 
 ## Immediate Finding
 
@@ -47,11 +47,12 @@ The run did not fail only because the checklist was semantically inappropriate. 
 5. `subbundles/05-05-three-agent-simplified-process-proof`
 6. `subbundles/06-06-blazor-runtime-hosting-proof`
 7. `subbundles/07-07-universal-process-core-guidance-extraction`
+8. `subbundles/08-08-generic-seeded-skills-boundary`
 
 ## Validation Summary
 
 - Bundle preparation status: `Passed`
-- Execution status: `Completed after 2026-04-29 universal process-core correction`
+- Execution status: `Completed after 2026-04-29 universal process-core and generic seeded-skills corrections`
 - Subbundle gate review: `Passed`
 - Final closure gate: `Passed by focused build/tests, source scans, and bundle validator`
 - Browser validation analytics: `Not required for subbundle 07; no rendered UI route changed`
@@ -73,4 +74,5 @@ The run did not fail only because the checklist was semantically inappropriate. 
 
 - User feedback rejected calculator and .NET-specific hardcoding in process orchestration.
 - Repair direction: process dispatch now stays domain-neutral; it enforces concrete deliverable proof, required tool receipts, validation after mutation, and explicit blockers without knowing about calculators or Blazor hosting.
-- Domain-specific guidance is kept in agent instructions, task skills, reusable Blazor/.NET skills, and tool capabilities.
+- Technology guidance is kept in explicitly scoped agent instructions, reusable skills, and tool capabilities.
+- Follow-up correction: globally seeded skills/resources no longer carry calculator-app or one-off office-order guidance. Task-specific details must come from the current request, bundle artifacts, selected per-task skills, or scoped technology guidance rather than universal seed defaults.

@@ -44,7 +44,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var mstestCapabilityId = CreateStableGuid("capabilities/writing-mstest-tests");
         var repositoryPlaybookCapabilityId = CreateStableGuid("capabilities/repository-playbook");
         var mailInlineSkillCapabilityId = CreateStableGuid("capabilities/mail-triage-inline-skill");
-        var officeInlineSkillCapabilityId = CreateStableGuid("capabilities/office-order-inline-skill");
+        var documentSpreadsheetReconciliationInlineSkillCapabilityId = CreateStableGuid("capabilities/document-spreadsheet-reconciliation-inline-skill");
         var blazorSsrDeliveryInlineSkillCapabilityId = CreateStableGuid("capabilities/blazor-ssr-delivery-inline-skill");
         var appSummaryInlineSkillCapabilityId = CreateStableGuid("capabilities/generated-app-summary-inline-skill");
         var architectureReviewInlineSkillCapabilityId = CreateStableGuid("capabilities/architecture-review-inline-skill");
@@ -305,17 +305,17 @@ internal static class SandboxWorkspaceSeedBuilder
                 null,
                 true),
             CreateInlineSkillCapability(
-                officeInlineSkillCapabilityId,
-                "office-order-inline-skill",
-                "Office Order Analysis Skill",
-                "Task-specific workflow for comparing the Mouser spreadsheet and receipt before reporting stock and price findings.",
-                "office-order-analysis",
-                GetSeedText("skills/office-order-analysis.instructions"),
+                documentSpreadsheetReconciliationInlineSkillCapabilityId,
+                "document-spreadsheet-reconciliation-inline-skill",
+                "Document and Spreadsheet Reconciliation Skill",
+                "Reusable workflow for reconciling records and facts across documents, spreadsheets, CSV files, and other structured artifacts.",
+                "document-spreadsheet-reconciliation",
+                GetSeedText("skills/document-spreadsheet-reconciliation.instructions"),
                 [
                     new InlineSkillResourceSeed(
-                        "office-json-example",
-                        BuildOfficeComparisonJsonExample(),
-                        "Reference JSON response shape for Mouser comparison tasks.")
+                        "reconciliation-output-example",
+                        BuildReconciliationOutputExample(),
+                        "Generic JSON response shape for reconciliation tasks.")
                 ]),
             CreateInlineSkillCapability(
                 blazorSsrDeliveryInlineSkillCapabilityId,
@@ -875,7 +875,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default,
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
-                CreateAssignment(officeInlineSkillCapabilityId, "office-order-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -1370,7 +1370,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
-                CreateAssignment(officeInlineSkillCapabilityId, "office-order-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
@@ -1646,7 +1646,7 @@ internal static class SandboxWorkspaceSeedBuilder
 
     private static string BuildBlazorProgramExample() => GetSeedText("resources/net10-program-scaffold");
 
-    private static string BuildOfficeComparisonJsonExample() => GetSeedText("resources/office-comparison-example");
+    private static string BuildReconciliationOutputExample() => GetSeedText("resources/reconciliation-output-example");
 
     private static string BuildBlazorHomeExample() => GetSeedText("resources/net10-home-page-example");
 
