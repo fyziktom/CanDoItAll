@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using Microsoft.AspNetCore.Components;
 
@@ -9,14 +10,15 @@ public partial class ScenarioHarnessPanel
     [Inject]
     private ScenarioHarnessService ScenarioService { get; set; } = default!;
 
+    [Inject]
+    private NotificationService NotificationService { get; set; } = default!;
+
     private IReadOnlyList<ScenarioHarnessDefinition> Definitions { get; set; } = [];
     private readonly Dictionary<string, ScenarioHarnessSnapshot> scenarioSnapshots = new(StringComparer.OrdinalIgnoreCase);
     private Guid scenarioAgentId;
     private string selectedScenarioId = "SC03";
     private bool isBusy;
     private int selectedTabIndex;
-    private string message = string.Empty;
-    private string messageTone = "info";
 
     private ScenarioHarnessDefinition? SelectedDefinition => Definitions.FirstOrDefault(item =>
         string.Equals(item.Id, selectedScenarioId, StringComparison.OrdinalIgnoreCase));
@@ -69,24 +71,20 @@ public partial class ScenarioHarnessPanel
             var snapshot = scenarioSnapshots[selectedScenarioId];
             if (snapshot.HasPendingApprovals)
             {
-                message = $"{selectedScenarioId} is waiting on approval before the evidence pack can finish.";
-                messageTone = "warning";
+                Notify("warning", $"{selectedScenarioId} is waiting on approval before the evidence pack can finish.");
             }
             else if (snapshot.LatestRun?.State == ExecutionState.Completed)
             {
-                message = $"{selectedScenarioId} finished and refreshed its evidence pack.";
-                messageTone = "success";
+                Notify("success", $"{selectedScenarioId} finished and refreshed its evidence pack.");
             }
             else
             {
-                message = $"{selectedScenarioId} refreshed its latest scenario state.";
-                messageTone = "info";
+                Notify("info", $"{selectedScenarioId} refreshed its latest scenario state.");
             }
         }
         catch (Exception exception)
         {
-            message = exception.Message;
-            messageTone = "danger";
+            Notify("danger", exception.Message);
             await RefreshScenarioAsync();
         }
         finally
@@ -121,15 +119,15 @@ public partial class ScenarioHarnessPanel
                 SelectedSnapshot.LatestRun.Id,
                 approved);
 
-            message = approved
-                ? $"{selectedScenarioId} resumed after approval."
-                : $"{selectedScenarioId} was rejected and refreshed its evidence state.";
-            messageTone = approved ? "success" : "warning";
+            Notify(
+                approved ? "success" : "warning",
+                approved
+                    ? $"{selectedScenarioId} resumed after approval."
+                    : $"{selectedScenarioId} was rejected and refreshed its evidence state.");
         }
         catch (Exception exception)
         {
-            message = exception.Message;
-            messageTone = "danger";
+            Notify("danger", exception.Message);
             await RefreshScenarioAsync();
         }
         finally
@@ -166,14 +164,22 @@ public partial class ScenarioHarnessPanel
         };
     }
 
-    private string ResolveMessageLabel()
+    private void Notify(string tone, string message)
     {
-        return messageTone switch
+        switch (tone)
         {
-            "danger" => "Attention",
-            "warning" => "Heads up",
-            "success" => "Ready",
-            _ => "Info"
-        };
+            case "success":
+                NotificationService.Success("Ready", message);
+                break;
+            case "warning":
+                NotificationService.Warning("Heads up", message);
+                break;
+            case "danger":
+                NotificationService.Error("Attention", message);
+                break;
+            default:
+                NotificationService.Info("Info", message);
+                break;
+        }
     }
 }

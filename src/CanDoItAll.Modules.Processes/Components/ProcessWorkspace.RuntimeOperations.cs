@@ -1,3 +1,5 @@
+using CanDoItAll.Components.BaseLib;
+
 namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace
@@ -44,6 +46,35 @@ public partial class ProcessWorkspace
         UpdateRuntimeRefreshLoop();
     }
 
+    private async Task OpenRunStepsDialogAsync(Guid runId)
+    {
+        await SelectRunAsync(runId);
+
+        var selectedRun = SelectedRun;
+        if (selectedRun is null)
+        {
+            SetError("Reload the process before opening this run.");
+            return;
+        }
+
+        _ = DialogService.OpenAsync<ProcessWorkspaceRunStepsDialog>(
+            selectedRun.Name,
+            new Dictionary<string, object?>
+            {
+                [nameof(ProcessWorkspaceRunStepsDialog.Presenter)] = RunsTabPresenter
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Process run",
+                Subtitle = BuildRunSummary(selectedRun),
+                Size = ModalSize.Full,
+                DenseChrome = true,
+                TestId = "processes-run-steps-dialog",
+                AriaLabel = $"Run steps for {selectedRun.Name}",
+                Style = "max-width:calc(100vw - 1.5rem);width:calc(100vw - 1.5rem);height:calc(100vh - 1.5rem);max-height:calc(100vh - 1.5rem);"
+            });
+    }
+
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)
     {
         var currentStepRun = stepRuns.FirstOrDefault(item => item.Id == stepRunId);
@@ -86,12 +117,39 @@ public partial class ProcessWorkspace
             return;
         }
 
+        var operatorReason = string.IsNullOrWhiteSpace(operatorReworkDirective)
+            ? "Operator requested a governed agent rerun from Process Workspace."
+            : operatorReworkDirective.Trim();
         var result = await ProcessesService.RerunAgentStepAsync(
             new ProcessAgentStepRerunRequest
             {
                 StepRunId = stepRunId,
                 StepRunConcurrencyToken = currentStepRun.StepRunConcurrencyToken,
-                OperatorReason = "Operator requested a governed agent rerun from Process Workspace."
+                OperatorReason = operatorReason
+            });
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        operatorReworkStepRunId = null;
+        operatorReworkDirective = string.Empty;
+        await LoadWorkspaceAsync();
+        detailTab = "runs";
+        SetMessage("Agent step rerun requested with a recovery directive.");
+    }
+
+    private async Task AssignEscalationAsync(Guid escalationId)
+    {
+        var result = await EscalationService.AssignAsync(
+            new ProcessEscalationAssignmentRequest
+            {
+                EscalationId = escalationId,
+                Owner = string.IsNullOrWhiteSpace(operatorEscalationOwner)
+                    ? "process-workspace"
+                    : operatorEscalationOwner,
+                AssignedBy = "process-workspace"
             });
         if (result.IsFailure)
         {
@@ -101,7 +159,157 @@ public partial class ProcessWorkspace
 
         await LoadWorkspaceAsync();
         detailTab = "runs";
-        SetMessage("Agent step rerun requested with a recovery directive.");
+        SetMessage("Escalation assigned.");
+    }
+
+    private async Task ResolveEscalationAsync(Guid escalationId)
+    {
+        var result = await EscalationService.ResolveAsync(
+            new ProcessEscalationResolutionRequest
+            {
+                EscalationId = escalationId,
+                Resolution = string.IsNullOrWhiteSpace(operatorEscalationResolution)
+                    ? "Operator resolved this escalation from Process Workspace."
+                    : operatorEscalationResolution,
+                ResolvedBy = "process-workspace"
+            });
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        operatorEscalationResolution = string.Empty;
+        await LoadWorkspaceAsync();
+        detailTab = "runs";
+        SetMessage("Escalation resolved.");
+    }
+
+    private async Task ReopenEscalationAsync(Guid escalationId)
+    {
+        var result = await EscalationService.ReopenAsync(
+            new ProcessEscalationReopenRequest
+            {
+                EscalationId = escalationId,
+                Reason = string.IsNullOrWhiteSpace(operatorEscalationResolution)
+                    ? "Operator reopened this escalation from Process Workspace."
+                    : operatorEscalationResolution,
+                ReopenedBy = "process-workspace"
+            });
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        operatorEscalationResolution = string.Empty;
+        await LoadWorkspaceAsync();
+        detailTab = "runs";
+        SetMessage("Escalation reopened.");
+    }
+
+    private async Task RequestEscalationReworkAsync(Guid escalationId)
+    {
+        var escalation = processEscalations.FirstOrDefault(item => item.Id == escalationId);
+        if (escalation is null || !escalation.StepRunId.HasValue)
+        {
+            SetError("Select a step-scoped escalation before requesting rework.");
+            return;
+        }
+
+        var currentStepRun = stepRuns.FirstOrDefault(item => item.Id == escalation.StepRunId.Value);
+        if (currentStepRun is null)
+        {
+            SetError("Reload the run before requesting rework for this escalation.");
+            return;
+        }
+
+        var result = await EscalationService.RequestReworkAsync(
+            new ProcessEscalationReworkRequest
+            {
+                EscalationId = escalationId,
+                StepRunConcurrencyToken = currentStepRun.StepRunConcurrencyToken,
+                Directive = string.IsNullOrWhiteSpace(operatorReworkDirective)
+                    ? escalation.Reason
+                    : operatorReworkDirective,
+                RequestedBy = "process-workspace"
+            });
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        operatorReworkStepRunId = null;
+        operatorReworkDirective = string.Empty;
+        await LoadWorkspaceAsync();
+        detailTab = "runs";
+        SetMessage("Escalation rework requested.");
+    }
+
+    private async Task RequestManualReworkAsync()
+    {
+        if (!operatorReworkStepRunId.HasValue)
+        {
+            SetError("Select a blocked or failed agent step before requesting rework.");
+            return;
+        }
+
+        await RerunAgentStepAsync(operatorReworkStepRunId.Value);
+    }
+
+    private async Task DecideOperatorApprovalAsync(
+        ProcessOperatorApprovalViewModel approval,
+        ProcessOperatorApprovalStatus status)
+    {
+        if (!approval.ExecutionRunId.HasValue)
+        {
+            SetError("Only execution-run approvals can be continued from this console.");
+            return;
+        }
+
+        if (!selectedRunId.HasValue)
+        {
+            SetError("Select a run before deciding an approval.");
+            return;
+        }
+
+        try
+        {
+            await AgentWorkspaceService.ContinueExecutionRunAsync(
+                approval.ExecutionRunId.Value,
+                approved: status == ProcessOperatorApprovalStatus.Approved,
+                autoApprovePendingToolCalls: false);
+        }
+        catch (InvalidOperationException exception)
+        {
+            SetError(exception.Message);
+            return;
+        }
+
+        var recordResult = await EscalationService.RecordApprovalDecisionAsync(
+            new ProcessOperatorApprovalDecisionRequest
+            {
+                ProcessRunId = selectedRunId.Value,
+                StepRunId = approval.StepRunId,
+                ExecutionRunId = approval.ExecutionRunId,
+                ExternalApprovalId = approval.ExternalApprovalId,
+                Status = status,
+                Summary = string.IsNullOrWhiteSpace(operatorApprovalDecisionSummary)
+                    ? $"{status} from Process Workspace."
+                    : operatorApprovalDecisionSummary,
+                DecidedBy = "process-workspace"
+            });
+        if (recordResult.IsFailure)
+        {
+            SetError(recordResult.Errors);
+            return;
+        }
+
+        operatorApprovalDecisionSummary = string.Empty;
+        await LoadWorkspaceAsync();
+        detailTab = "runs";
+        SetMessage($"Approval {status}.");
     }
 
     private void SelectAssignment(Guid assignmentId)
@@ -445,6 +653,38 @@ public partial class ProcessWorkspace
             ProcessConformanceSeverity.High => "warning",
             ProcessConformanceSeverity.Moderate => "info",
             _ => "neutral"
+        };
+    }
+
+    private static string ResolveEscalationStatusTone(ProcessEscalationViewModel escalation)
+    {
+        if (escalation.Status == ProcessEscalationStatus.Resolved)
+        {
+            return "mint";
+        }
+
+        return ResolveEscalationSeverityTone(escalation.Severity);
+    }
+
+    private static string ResolveEscalationSeverityTone(ProcessEscalationSeverity severity)
+    {
+        return severity switch
+        {
+            ProcessEscalationSeverity.Critical => "danger",
+            ProcessEscalationSeverity.High => "danger",
+            ProcessEscalationSeverity.Moderate => "warning",
+            _ => "info"
+        };
+    }
+
+    private static string ResolveOperatorApprovalTone(ProcessOperatorApprovalStatus status)
+    {
+        return status switch
+        {
+            ProcessOperatorApprovalStatus.Approved => "mint",
+            ProcessOperatorApprovalStatus.Rejected => "danger",
+            ProcessOperatorApprovalStatus.ChangesRequested => "warning",
+            _ => "warning"
         };
     }
 }

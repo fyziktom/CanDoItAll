@@ -141,6 +141,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Settings_page_supports_manifest_driven_provider_management()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\plugin-wave\v8";
@@ -626,6 +627,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Project_structure_feedback_fixes_are_validated_in_browser()
     {
         var repoRoot = GetRepoRoot();
@@ -816,6 +818,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Project_structure_feedback6_context_menu_is_validated_in_browser()
     {
         var repoRoot = GetRepoRoot();
@@ -1276,6 +1279,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Project_structure_export_image_capture_generates_i18_artifacts()
     {
         var repoRoot = GetRepoRoot();

@@ -1,15 +1,5 @@
 <Stack GapScale="LayoutGap.Large"
        data-testid="agents-diagnostics-panel">
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <SurfaceCard Soft="true">
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="@messageTone" Text="@messageLabel" />
-                <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
-            </Cluster>
-        </SurfaceCard>
-    }
-
     <Split Gap="LayoutGap.Small">
         <div>
             <TextBlock TextStyle="TextStyle.Subtitle2" Value="Runtime diagnostics" />

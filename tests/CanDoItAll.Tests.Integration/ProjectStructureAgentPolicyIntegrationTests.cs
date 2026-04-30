@@ -123,4 +123,16 @@ public sealed class ProjectStructureAgentPolicyIntegrationTests
         var allowedResponse = await host.Client.SendAsync(allowedRequest);
         Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task Project_structure_api_test_host_can_start_and_dispose_repeatedly()
+    {
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+            var response = await host.Client.GetAsync("/api/project-structure-mcp/projects");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+    }
 }

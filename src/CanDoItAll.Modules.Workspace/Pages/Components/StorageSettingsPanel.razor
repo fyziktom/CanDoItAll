@@ -4,6 +4,7 @@
 @using CanDoItAll.Modules.Security
 @using Microsoft.AspNetCore.Components
 @inject WorkspaceService WorkspaceService
+@inject NotificationService NotificationService
 
 <ListDetailShell ListPaneWidth="27rem">
     <ListHeader>
@@ -294,8 +295,7 @@
                 </Steps>
 
                 <StickyActionFooter StatusLabel="Storage catalog"
-                                    StatusMessage="@storageMessage"
-                                    StatusTone="@storageMessageTone">
+                                    StatusTone="success">
                     <SecondaryActions>
                         <Button Text="Clear"
                                 ButtonStyle="ButtonStyle.Light"
@@ -337,8 +337,6 @@
     private IReadOnlyList<StorageRoutingPreferenceSummary> routingDefaults = [];
     private StorageCatalogEditorModel storageModel = new();
     private string storageSearch = string.Empty;
-    private string? storageMessage;
-    private string storageMessageTone = "neutral";
     private int storageEditorStep;
 
     private IReadOnlyList<StorageCatalogSummary> FilteredStorages => storages
@@ -367,8 +365,6 @@
     private async Task ResetStorageAsync(StorageProviderKind providerKind)
     {
         storageModel = WorkspaceService.CreateStorageDraft(providerKind);
-        storageMessage = null;
-        storageMessageTone = "neutral";
         storageEditorStep = 0;
         await InvokeAsync(StateHasChanged);
     }
@@ -376,37 +372,54 @@
     private async Task EditStorageAsync(Guid id)
     {
         storageModel = await WorkspaceService.GetStorageAsync(id);
-        storageMessage = null;
-        storageMessageTone = "neutral";
         storageEditorStep = 0;
     }
 
     private async Task SaveStorageAsync()
     {
-        var result = await WorkspaceService.SaveStorageAsync(storageModel);
-        if (!result.IsSuccess)
+        try
         {
-            storageMessage = string.Join(" ", result.Errors.Select(error => error.Message));
-            storageMessageTone = "danger";
-            return;
-        }
+            var result = await WorkspaceService.SaveStorageAsync(storageModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Storage target was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
 
-        storageMessage = "Storage target saved.";
-        storageMessageTone = "success";
-        await RefreshStorageDataAsync();
-        storageModel = await WorkspaceService.GetStorageAsync(result.Value);
+            await RefreshStorageDataAsync();
+            storageModel = await WorkspaceService.GetStorageAsync(result.Value);
+            NotificationService.Success("Storage target saved", "Storage target saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Storage save failed", exception.Message);
+        }
     }
 
     private async Task TestStorageAsync()
     {
-        var result = await WorkspaceService.TestStorageAsync(storageModel);
-        storageMessage = result.Message;
-        storageMessageTone = result.Success
-            ? "success"
-            : result.HealthStatus == StorageHealthStatus.Degraded
-                ? "warning"
-                : "danger";
-        await RefreshStorageDataAsync();
+        try
+        {
+            var result = await WorkspaceService.TestStorageAsync(storageModel);
+            if (result.Success)
+            {
+                NotificationService.Success("Storage health check passed", result.Message);
+            }
+            else if (result.HealthStatus == StorageHealthStatus.Degraded)
+            {
+                NotificationService.Warning("Storage health is degraded", result.Message);
+            }
+            else
+            {
+                NotificationService.Error("Storage health check failed", result.Message);
+            }
+
+            await RefreshStorageDataAsync();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Storage health check failed", exception.Message);
+        }
     }
 
     private async Task DeleteStorageAsync()
@@ -416,12 +429,18 @@
             return;
         }
 
-        await WorkspaceService.DeleteStorageAsync(storageModel.Id.Value);
-        storageMessage = "Storage target deleted.";
-        storageMessageTone = "success";
-        await RefreshStorageDataAsync();
-        storageModel = WorkspaceService.CreateStorageDraft(StorageProviderKind.FileSystem);
-        storageEditorStep = 0;
+        try
+        {
+            await WorkspaceService.DeleteStorageAsync(storageModel.Id.Value);
+            await RefreshStorageDataAsync();
+            storageModel = WorkspaceService.CreateStorageDraft(StorageProviderKind.FileSystem);
+            storageEditorStep = 0;
+            NotificationService.Success("Storage target deleted", "Storage target deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Storage delete failed", exception.Message);
+        }
     }
 
     private Task HandleProviderKindChangedAsync(StorageProviderKind providerKind)

@@ -1,3 +1,5 @@
+@inject DialogService DialogService
+
 <WorkspacePanel Class="flex h-full min-h-0 flex-col overflow-hidden"
                 data-testid="chat-workspace-panel">
     <div class="border-b border-slate-200 pb-4">
@@ -32,9 +34,21 @@
                     </Cluster>
 
                     <Stack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
-                        
-                        <p class="mt-3 text-lg font-semibold text-slate-950">@(Session?.Title ?? "Select or create a thread")</p>
-                        @*<p class="mt-1 text-sm leading-6 text-slate-600">@ResolveHeaderSummary()</p>*@
+                        @if (Session is null)
+                        {
+                            <p class="mt-3 text-lg font-semibold text-slate-950">Select or create a thread</p>
+                        }
+                        else
+                        {
+                            <Editable TItem="EditableThreadTitleModel"
+                                      Item="@titleEditor"
+                                      ItemChanged="HandleSessionTitleChangedAsync"
+                                      ParameterName="@nameof(EditableThreadTitleModel.Title)"
+                                      Placeholder="Thread title"
+                                      EmptyText="Untitled thread"
+                                      Class="chat-thread-title-edit mt-3" />
+                        }
+
                         @if (Session is not null)
                         {
                             <StatusBadge Class="mt-3" Tone="primary" Text="@Session.UpdatedAtUtc.LocalDateTime.ToString("g")"/>
@@ -43,7 +57,12 @@
                 </div>
             </div>
 
-            
+            @if (HeaderActions is not null)
+            {
+                <div class="flex flex-shrink-0 items-center gap-2">
+                    @HeaderActions
+                </div>
+            }
         </div>
     </div>
 
@@ -52,6 +71,12 @@
             var hasMessages = Session?.Messages.Count > 0;
             var hasPendingApprovals = HasPendingApprovals;
             var hasPendingPrompt = !string.IsNullOrWhiteSpace(PendingUserPrompt);
+            var executionEntries = ResolveActiveExecutionEntries();
+            var hasExecutionStream = executionEntries.Count > 0;
+            var shouldCollapseExecutionStream = hasExecutionStream && ShouldCollapseExecutionStream(executionEntries);
+            var visibleExecutionEntries = shouldCollapseExecutionStream
+                ? Array.Empty<ExecutionLogEntry>()
+                : ResolveVisibleExecutionEntries(executionEntries);
         }
 
         @if (Session is null && !hasPendingPrompt)
@@ -60,7 +85,7 @@
                         Title="Nothing is open in the center panel"
                         Description="Choose a thread from the left rail or create a new one to keep the active transcript in view." />
         }
-        else if (!hasMessages && !hasPendingApprovals && !hasPendingPrompt)
+        else if (!hasMessages && !hasPendingApprovals && !hasPendingPrompt && !hasExecutionStream)
         {
             <EmptyState Eyebrow="Conversation"
                         Title="This thread is ready for the first prompt"
@@ -117,6 +142,54 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                }
+
+                @if (hasExecutionStream)
+                {
+                    <div class="agent-execution-stream" data-testid="chat-execution-stream">
+                        @if (shouldCollapseExecutionStream)
+                        {
+                            <button type="button"
+                                    class="agent-execution-stream__summary"
+                                    @onclick="@(() => OpenExecutionHistoryDialogAsync(executionEntries))"
+                                    data-testid="chat-execution-summary">
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="@ResolveExecutionTone(ResolveLatestExecutionState(executionEntries))"
+                                                 Text="@BuildWorkedForLabel(executionEntries)" />
+                                    <StatusBadge Tone="neutral" Text="@($"{executionEntries.Count} steps")" />
+                                    <TextBlock TextStyle="TextStyle.Caption"
+                                               Value="@BuildEntryPreview(executionEntries[^1])" />
+                                </Cluster>
+                            </button>
+                        }
+                        else
+                        {
+                            @foreach (var entry in visibleExecutionEntries)
+                            {
+                                <button type="button"
+                                        class="agent-execution-stream__item"
+                                        @onclick="@(() => OpenExecutionEntryDialogAsync(entry))"
+                                        data-testid="chat-execution-entry">
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="@ResolveExecutionTone(entry.State)" Text="@entry.State.ToString()" />
+                                        <span class="agent-execution-stream__phase">@entry.Phase</span>
+                                        <span class="agent-execution-stream__time">@entry.CreatedAtUtc.LocalDateTime.ToString("t")</span>
+                                    </Cluster>
+                                    <span class="agent-execution-stream__preview">@BuildEntryPreview(entry)</span>
+                                </button>
+                            }
+
+                            @if (executionEntries.Count > visibleExecutionEntries.Count)
+                            {
+                                <button type="button"
+                                        class="agent-execution-stream__history"
+                                        @onclick="@(() => OpenExecutionHistoryDialogAsync(executionEntries))"
+                                        data-testid="chat-execution-history">
+                                    View @executionEntries.Count work steps...
+                                </button>
+                            }
+                        }
                     </div>
                 }
 
@@ -273,6 +346,9 @@
     public ExecutionRunRecord? ActiveRun { get; set; }
 
     [Parameter]
+    public IReadOnlyList<ExecutionLogEntry> ExecutionLog { get; set; } = [];
+
+    [Parameter]
     public required string DraftPrompt { get; set; }
 
     [Parameter]
@@ -294,6 +370,9 @@
     public IReadOnlyList<string> DraftAttachmentPaths { get; set; } = [];
 
     [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
     public EventCallback<string> DraftPromptChanged { get; set; }
 
     [Parameter]
@@ -308,13 +387,244 @@
     [Parameter]
     public EventCallback AttachmentRequested { get; set; }
 
+    [Parameter]
+    public EventCallback<string> SessionTitleChanged { get; set; }
+
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
         => ActiveRun?.PendingApprovals ?? [];
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
+    private readonly EditableThreadTitleModel titleEditor = new();
+    private Guid? titleEditorSessionId;
+    private string titleEditorSessionTitle = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (Session is null)
+        {
+            titleEditorSessionId = null;
+            titleEditorSessionTitle = string.Empty;
+            titleEditor.Title = string.Empty;
+            return;
+        }
+
+        if (titleEditorSessionId == Session.Id &&
+            string.Equals(titleEditorSessionTitle, Session.Title, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        titleEditorSessionId = Session.Id;
+        titleEditorSessionTitle = Session.Title;
+        titleEditor.Title = Session.Title;
+    }
 
     private Task HandleDraftChanged(string? value)
         => DraftPromptChanged.InvokeAsync(value ?? string.Empty);
+
+    private async Task HandleSessionTitleChangedAsync(EditableThreadTitleModel editor)
+    {
+        if (Session is null)
+        {
+            return;
+        }
+
+        var nextTitle = editor.Title.Trim();
+        if (string.Equals(Session.Title, nextTitle, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await SessionTitleChanged.InvokeAsync(nextTitle);
+    }
+
+    private IReadOnlyList<ExecutionLogEntry> ResolveActiveExecutionEntries()
+    {
+        if (ActiveRun is not null)
+        {
+            return ExecutionLog
+                .Where(item => item.ExecutionRunId == ActiveRun.Id)
+                .OrderBy(item => item.CreatedAtUtc)
+                .ToList();
+        }
+
+        var latestRunId = ExecutionLog
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .Select(item => item.ExecutionRunId)
+            .FirstOrDefault();
+
+        if (latestRunId == Guid.Empty)
+        {
+            return [];
+        }
+
+        return ExecutionLog
+            .Where(item => item.ExecutionRunId == latestRunId)
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ExecutionLogEntry> ResolveVisibleExecutionEntries(
+        IReadOnlyList<ExecutionLogEntry> entries)
+    {
+        const int visibleEntryCount = 6;
+
+        return entries
+            .TakeLast(visibleEntryCount)
+            .ToList();
+    }
+
+    private bool ShouldCollapseExecutionStream(IReadOnlyList<ExecutionLogEntry> entries)
+    {
+        var latestState = ResolveLatestExecutionState(entries);
+
+        return ActiveRun?.State is ExecutionState.Completed or ExecutionState.Failed ||
+               latestState is ExecutionState.Completed or ExecutionState.Failed;
+    }
+
+    private static ExecutionState ResolveLatestExecutionState(IReadOnlyList<ExecutionLogEntry> entries)
+        => entries.Count == 0 ? ExecutionState.Idle : entries[^1].State;
+
+    private string BuildWorkedForLabel(IReadOnlyList<ExecutionLogEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "Worked";
+        }
+
+        var startedAtUtc = ActiveRun?.StartedAtUtc ?? ActiveRun?.CreatedAtUtc ?? entries[0].CreatedAtUtc;
+        var completedAtUtc = ActiveRun?.CompletedAtUtc ?? entries[^1].CreatedAtUtc;
+        var duration = completedAtUtc - startedAtUtc;
+        if (duration < TimeSpan.Zero)
+        {
+            duration = TimeSpan.Zero;
+        }
+
+        return $"Worked for {FormatDuration(duration)}";
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}h {duration.Minutes:D2}m";
+        }
+
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s";
+        }
+
+        return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds))}s";
+    }
+
+    private static string BuildEntryPreview(ExecutionLogEntry entry)
+    {
+        var summary = NormalizeInlineText($"{entry.Phase}. {entry.Message}");
+        var preview = TakeFirstSentences(summary, maxSentences: 2);
+        const int maxLength = 190;
+
+        if (preview.Length > maxLength)
+        {
+            preview = preview[..maxLength].TrimEnd();
+        }
+
+        preview = preview.TrimEnd('.', ',', ';', ':', '!', '?', ' ');
+        return string.IsNullOrWhiteSpace(preview)
+            ? $"{entry.State}..."
+            : $"{preview}...";
+    }
+
+    private static string NormalizeInlineText(string value)
+    {
+        return string.Join(
+            ' ',
+            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    private static string TakeFirstSentences(string value, int maxSentences)
+    {
+        var sentenceCount = 0;
+        for (var index = 0; index < value.Length; index++)
+        {
+            if (value[index] is not ('.' or '!' or '?'))
+            {
+                continue;
+            }
+
+            sentenceCount++;
+            if (sentenceCount >= maxSentences)
+            {
+                return value[..(index + 1)];
+            }
+        }
+
+        return value;
+    }
+
+    private Task OpenExecutionEntryDialogAsync(ExecutionLogEntry entry)
+    {
+        var entries = ResolveActiveExecutionEntries();
+        if (entries.Count == 0)
+        {
+            entries = [entry];
+        }
+
+        OpenExecutionDialog(
+            title: entry.Phase,
+            entries,
+            highlightEntryId: entry.Id,
+            size: ModalSize.Wide);
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenExecutionHistoryDialogAsync(IReadOnlyList<ExecutionLogEntry> entries)
+    {
+        OpenExecutionDialog(
+            title: "Agent work history",
+            entries,
+            highlightEntryId: null,
+            size: ModalSize.Full);
+
+        return Task.CompletedTask;
+    }
+
+    private void OpenExecutionDialog(
+        string title,
+        IReadOnlyList<ExecutionLogEntry> entries,
+        Guid? highlightEntryId,
+        ModalSize size)
+    {
+        _ = DialogService.OpenAsync<AgentExecutionLogDialog>(
+            title,
+            new Dictionary<string, object?>
+            {
+                [nameof(AgentExecutionLogDialog.Run)] = ActiveRun,
+                [nameof(AgentExecutionLogDialog.Entries)] = entries,
+                [nameof(AgentExecutionLogDialog.HighlightEntryId)] = highlightEntryId
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Agent work",
+                Subtitle = BuildExecutionDialogSubtitle(entries),
+                Size = size,
+                DenseChrome = true,
+                TestId = "agent-execution-log-dialog",
+                AriaLabel = title,
+                Style = "max-height:calc(100vh - 2rem);"
+            });
+    }
+
+    private string BuildExecutionDialogSubtitle(IReadOnlyList<ExecutionLogEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return "No execution steps are available for the selected run.";
+        }
+
+        return $"{entries.Count} step(s) captured from {entries[0].CreatedAtUtc.LocalDateTime:g} to {entries[^1].CreatedAtUtc.LocalDateTime:g}.";
+    }
 
     private string ResolveHeaderSummary()
     {
@@ -415,6 +725,18 @@
         };
     }
 
+    private static string ResolveExecutionTone(ExecutionState state)
+    {
+        return state switch
+        {
+            ExecutionState.Completed => "success",
+            ExecutionState.WaitingOnTool => "warning",
+            ExecutionState.Failed => "danger",
+            ExecutionState.Running or ExecutionState.Preparing or ExecutionState.Persisting => "info",
+            _ => "neutral"
+        };
+    }
+
     private static string ResolveBubbleClass(bool isUserMessage)
         => isUserMessage
             ? "border-slate-900 bg-slate-900 text-white"
@@ -433,5 +755,10 @@
         }
 
         return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
+    }
+
+    private sealed class EditableThreadTitleModel
+    {
+        public string Title { get; set; } = string.Empty;
     }
 }

@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web;
 using Microsoft.AspNetCore.Builder;
@@ -51,12 +52,14 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
         builder.Configuration.AddInMemoryCollection(activeProfile.CreateConfigurationValues(new Dictionary<string, string?>
         {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         }));
 
         TestApplicationBootstrap.ConfigureDefaultServices(
             builder.Services,
             builder.Configuration,
-            builder.Environment);
+            builder.Environment,
+            registerTestHostApplicationLifetime: false);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
@@ -101,12 +104,13 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
             ?? throw new InvalidOperationException("The API test host did not expose any server addresses.");
         var client = new HttpClient
         {
-            BaseAddress = new Uri(addresses.Single())
+            BaseAddress = new Uri(addresses.Single()),
+            Timeout = TimeSpan.FromSeconds(30)
         };
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentId, "api-test-agent");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentName, "API Test Agent");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.MachineName, "api-test-machine");
-        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.RepositoryRoot, "C:/repositories/CanDoItAll");
+        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.RepositoryRoot, IntegrationTestPaths.RepositoryRoot);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.BranchName, "tests/project-structure");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.SessionId, Guid.NewGuid().ToString("N"));
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentToken, clientToken);

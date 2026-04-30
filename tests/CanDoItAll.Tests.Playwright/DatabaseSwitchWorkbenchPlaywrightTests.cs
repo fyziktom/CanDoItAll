@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Sockets;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Playwright;
 
@@ -123,11 +124,13 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
 
     public static async Task<DatabaseSwitchPlaywrightHost> CreateAsync(bool enableIpfs = false)
     {
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var repoRoot = PlaywrightTestHostPaths.RepositoryRoot;
         var baseUrl = ResolveBaseUrl();
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-playwright-switch");
         var fakeIpfsServer = enableIpfs ? await FakeIpfsTestServer.StartAsync() : null;
-        var processStartInfo = new ProcessStartInfo("dotnet", $"run --no-build --no-launch-profile --project src/CanDoItAll.Web --urls {baseUrl}")
+        var processStartInfo = new ProcessStartInfo(
+            "dotnet",
+            PlaywrightTestHostPaths.BuildDotnetRunArguments("src/CanDoItAll.Web", baseUrl))
         {
             WorkingDirectory = repoRoot,
             RedirectStandardOutput = true,
@@ -145,6 +148,7 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         processStartInfo.Environment["Storage__ManagerArtifactsFolder"] = Path.Combine(testEnvironment.RootPath, "manager-artifacts");
         processStartInfo.Environment["Workbench__BrowserStorageKey"] = "candoitall.workbench.session";
         processStartInfo.Environment["DevelopmentManager__TuningModeEnabled"] = "false";
+        processStartInfo.Environment[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind;
         if (fakeIpfsServer is not null)
         {
             processStartInfo.Environment["ControlPlane__IpfsApiBaseUrl"] = fakeIpfsServer.ApiBaseUri.ToString();

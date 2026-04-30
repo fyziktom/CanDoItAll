@@ -40,9 +40,9 @@ public sealed class WebGlSandboxPlaywrightFixture : IAsyncLifetime
 
         var processStartInfo = new ProcessStartInfo(
             "dotnet",
-            $"run --configuration Release --no-build --no-launch-profile --project src/CanDoItAll.Components.WebGlSandbox --urls {BaseUrl}")
+            PlaywrightTestHostPaths.BuildDotnetRunArguments("src/CanDoItAll.Components.WebGlSandbox", BaseUrl))
         {
-            WorkingDirectory = GetRepoRoot(),
+            WorkingDirectory = PlaywrightTestHostPaths.RepositoryRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -144,11 +144,6 @@ public sealed class WebGlSandboxPlaywrightFixture : IAsyncLifetime
         {
             return false;
         }
-    }
-
-    private static string GetRepoRoot()
-    {
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
     }
 
     private static string ResolveBaseUrl()

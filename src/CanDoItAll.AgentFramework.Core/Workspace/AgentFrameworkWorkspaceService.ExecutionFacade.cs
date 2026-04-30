@@ -29,6 +29,13 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => executionService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken);
 
+    public Task<ChatSessionRecord> RenameChatSessionAsync(
+        Guid agentId,
+        Guid chatSessionId,
+        string title,
+        CancellationToken cancellationToken = default)
+        => executionService.RenameChatSessionAsync(agentId, chatSessionId, title, cancellationToken);
+
     public Task<ExecutionRunResult> ExecuteRunAsync(
         ExecutionRunRequest request,
         CancellationToken cancellationToken = default)

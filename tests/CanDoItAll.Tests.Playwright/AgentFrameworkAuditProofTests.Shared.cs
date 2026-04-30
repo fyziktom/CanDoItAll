@@ -52,6 +52,39 @@ public sealed partial class AgentFrameworkAuditProofTests
         }
     }
 
+    private static async Task OpenRunStepsDialogAsync(IPage page, Guid runId)
+    {
+        await page.GetByTestId("processes-runs-tabs").GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
+        {
+            Name = "Activity",
+            Exact = true
+        }).ClickAsync();
+
+        var runHistoryItem = page.GetByTestId($"processes-run-history-item-{runId:D}");
+        await runHistoryItem.WaitForAsync();
+        await runHistoryItem.ClickAsync();
+        await page.GetByTestId("processes-run-steps-dialog-step-list").WaitForAsync();
+    }
+
+    private static async Task CloseRunStepsDialogAsync(IPage page)
+    {
+        var dialog = page.GetByTestId("processes-run-steps-dialog");
+        if (await dialog.CountAsync() == 0)
+        {
+            return;
+        }
+
+        await dialog.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
+        {
+            Name = "Close",
+            Exact = true
+        }).ClickAsync();
+        await dialog.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Detached
+        });
+    }
+
     private static async Task ConfigureDirectMessageComposerAsync(
         IPage page,
         Guid sourceRoleRequirementId,

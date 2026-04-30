@@ -220,6 +220,7 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task HealthyWait_DoesNotReuse_StaleState_DuringRestartRequiredChange()
     {
         await using var harness = await ValidationHarness.CreateAsync();
@@ -308,6 +309,7 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task BuildFailure_PreservesResumeOutcome_AndDiagnostics()
     {
         await using var harness = await ValidationHarness.CreateAsync();

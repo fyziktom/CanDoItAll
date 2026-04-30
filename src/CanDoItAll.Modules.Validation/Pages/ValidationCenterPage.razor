@@ -5,6 +5,7 @@
 @inject ValidationService ValidationService
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
+@inject NotificationService NotificationService
 
 <PageTitle>Validation Center</PageTitle>
 
@@ -237,7 +238,7 @@
                             </FormSection>
                         }
 
-                        <StickyActionFooter StatusLabel="Validation status" StatusMessage="@message" StatusTone="success">
+                        <StickyActionFooter StatusLabel="Validation status">
                             <SecondaryActions>
                                 <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
@@ -264,7 +265,6 @@
     private IReadOnlyList<ValidationRunSummary> runs = [];
     private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private ValidationRunEditorModel editor = new();
-    private string? message;
     private string runSearch = string.Empty;
     private string typeFilter = string.Empty;
     private string decisionFilter = string.Empty;
@@ -310,7 +310,6 @@
         editor = await ValidationService.GetRunAsync(null);
         editor.ProjectId ??= ProjectIdQuery;
         await LoadResponsiblePartyOptionsAsync();
-        message = null;
         detailTab = "overview";
     }
 
@@ -318,19 +317,28 @@
     {
         editor = await ValidationService.GetRunAsync(id);
         await LoadResponsiblePartyOptionsAsync();
-        message = null;
         detailTab = editor.Findings.Count > 0 ? "findings" : "overview";
     }
 
     private async Task RunAsync()
     {
-        var result = await ValidationService.RunAsync(editor);
-        message = result.IsSuccess ? "Validation completed." : string.Join(" ", result.Errors.Select(error => error.Message));
-        runs = await ValidationService.ListRunsAsync();
-        if (result.IsSuccess)
+        try
         {
+            var result = await ValidationService.RunAsync(editor);
+            runs = await ValidationService.ListRunsAsync();
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Validation did not complete", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+
             editor = await ValidationService.GetRunAsync(result.Value);
             detailTab = "findings";
+            NotificationService.Success("Validation completed", "Validation completed.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Validation failed", exception.Message);
         }
     }
 
@@ -341,9 +349,16 @@
             return;
         }
 
-        await ValidationService.SetDecisionAsync(editor.Id.Value, editor.Decision);
-        runs = await ValidationService.ListRunsAsync();
-        message = $"Decision updated to {editor.Decision}.";
+        try
+        {
+            await ValidationService.SetDecisionAsync(editor.Id.Value, editor.Decision);
+            runs = await ValidationService.ListRunsAsync();
+            NotificationService.Success("Decision updated", $"Decision updated to {editor.Decision}.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Decision update failed", exception.Message);
+        }
     }
 
     private Task HandleDetailTabChanged(string key)

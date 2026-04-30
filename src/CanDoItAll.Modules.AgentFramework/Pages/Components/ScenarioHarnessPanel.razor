@@ -1,16 +1,6 @@
 @using CanDoItAll.Modules.AgentFramework.Hosting
 
 <Stack GapScale="LayoutGap.Large" Class="flex-1 min-h-0">
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <SurfaceCard Soft="true">
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="@messageTone" Text="@ResolveMessageLabel()" />
-                <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
-            </Cluster>
-        </SurfaceCard>
-    }
-
     <Grid Gap="LayoutGap.Large"
           Class="flex-1 min-h-0 overflow-hidden"
           ColumnTemplateXl="minmax(19rem,0.8fr) minmax(0,1.4fr)">

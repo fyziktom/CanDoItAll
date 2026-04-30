@@ -52,7 +52,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
         var agents = MergeAgents(catalog.Agents, seeded.Agents, providers.IdMap, capabilities.IdMap);
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
-        var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items);
+        var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
 
         return catalog with
@@ -328,13 +328,6 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool ShouldRefreshManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)
     {
-        if (string.Equals(seededCapability.Key, "blazor-calculator-inline-skill", StringComparison.OrdinalIgnoreCase))
-        {
-            return !existingCapability.ConfigurationJson.Contains("do not pre-create a nested `SimpleCalculatorApp` project directory", StringComparison.OrdinalIgnoreCase)
-                   || !existingCapability.ConfigurationJson.Contains("The page must include an explicit clear or reset path", StringComparison.OrdinalIgnoreCase)
-                   || !existingCapability.ConfigurationJson.Contains("Add targeted validation for the calculator behavior", StringComparison.OrdinalIgnoreCase);
-        }
-
         if (string.Equals(seededCapability.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.ConfigurationJson.Contains("Use this skill only when the user explicitly asks for a Mermaid or class-diagram output.", StringComparison.OrdinalIgnoreCase);
@@ -355,7 +348,14 @@ internal static class SandboxWorkspaceSeedNormalizer
             return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If the project structure or attached step materials name a concrete output directory")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "external-target/<drive>/...")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "scaffold directly into it instead of adding an extra nested");
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "scaffold directly into it instead of adding an extra nested")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use a distinct concrete type such as `<Feature>Service`");
+        }
+
+        if (string.Equals(seededCapability.Key, "generated-app-summary-inline-skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "summarizing a generated Blazor Web App from concrete source files")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "query-backed form inputs by their actual names");
         }
 
         if (string.Equals(seededCapability.Key, "architecture-source-rag", StringComparison.OrdinalIgnoreCase))
@@ -412,10 +412,17 @@ internal static class SandboxWorkspaceSeedNormalizer
         return configurationJson.Contains(expectedPhrase, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static IReadOnlyList<CapabilityCatalogItem> RemoveRetiredCapabilities(IReadOnlyList<CapabilityCatalogItem> capabilities)
+    private static IReadOnlyList<CapabilityCatalogItem> RemoveRetiredCapabilities(
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<CapabilityCatalogItem> seededCapabilities)
     {
+        var seededCapabilityKeys = seededCapabilities
+            .Select(capability => capability.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         return capabilities
-            .Where(capability => !IsRetiredSandboxRegisteredSkillCapability(capability))
+            .Where(capability => !IsRetiredSandboxRegisteredSkillCapability(capability) &&
+                                 !IsRetiredBuiltInInlineSkillCapability(capability, seededCapabilityKeys))
             .OrderBy(item => item.Kind)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -476,6 +483,17 @@ internal static class SandboxWorkspaceSeedNormalizer
 
         return TryReadConfigurationString(capability.ConfigurationJson, "registeredSkillServiceType", out var serviceTypeName) &&
                IsRetiredSandboxRegisteredSkillServiceType(serviceTypeName);
+    }
+
+    private static bool IsRetiredBuiltInInlineSkillCapability(
+        CapabilityCatalogItem capability,
+        IReadOnlySet<string> seededCapabilityKeys)
+    {
+        return capability.Kind == CapabilityKind.Skill &&
+               capability.IsBuiltIn &&
+               !seededCapabilityKeys.Contains(capability.Key) &&
+               !string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
+               capability.EndpointOrPath.StartsWith("inline://", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsRetiredSandboxRegisteredSkillServiceType(string? serviceTypeName)

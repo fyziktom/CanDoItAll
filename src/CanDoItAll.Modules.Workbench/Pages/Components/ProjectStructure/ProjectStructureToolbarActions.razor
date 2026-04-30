@@ -77,6 +77,16 @@
             data-testid="project-structure-signals-toggle"
             Click="ToggleSignalsWindow" />
 
+    <Button Icon="smart_toy"
+            aria-label="Agents"
+            title="Agents: show or hide contextual agents with project access"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
+            Class="@ResolveToolbarButtonCssClass(AgentWindowVisible)"
+            data-testid="project-structure-agents-toggle"
+            Click="ToggleAgentWindow" />
+
     <Button Text="Recompose"
             aria-label="Recompose"
             title="@(IsSubtreeRecompositionInProgress ? "Recompose: redistributing the selected branch" : "Recompose: redistribute descendants under the selected node")"
@@ -106,6 +116,9 @@
     public bool SignalsWindowVisible { get; set; }
 
     [Parameter]
+    public bool AgentWindowVisible { get; set; }
+
+    [Parameter]
     public string ActiveTool { get; set; } = SelectTool;
 
     [Parameter]
@@ -128,6 +141,9 @@
 
     [Parameter]
     public EventCallback ToggleSignalsWindow { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleAgentWindow { get; set; }
 
     [Parameter]
     public EventCallback SelectToolClicked { get; set; }

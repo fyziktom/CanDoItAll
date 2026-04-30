@@ -238,14 +238,14 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
-    public void Process_definition_nodes_expose_execute_process_without_add_process()
+    public void Process_definition_nodes_expose_start_process_without_add_process()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
         var node = CreateNode("process-definition:11111111-1111-1111-1111-111111111111", ProjectObjectType.ProcessDefinition, "Delivery process", 0, 0);
 
         var actions = adapter.BuildNodeContextActions(node);
 
-        Assert.Contains(actions, action => action.ActionId == "execute-process");
+        Assert.Contains(actions, action => action.ActionId == "start-process");
         Assert.DoesNotContain(actions, action => action.ActionId == "add-process");
     }
 

@@ -1,47 +1,49 @@
 @page "/"
 @using System.Globalization
 
-<h1>Simple Calculator</h1>
+<h1>Sample Request</h1>
 
 <form method="get">
-    <input type="number" step="any" name="left" value="@LeftText" />
-    <select name="operation" value="@SelectedOperation">
-        <option value="add">Add</option>
-        <option value="subtract">Subtract</option>
-        <option value="multiply">Multiply</option>
-        <option value="divide">Divide</option>
+    <input type="text" name="name" value="@NameText" />
+    <select name="category" value="@SelectedCategory">
+        <option value="standard">Standard</option>
+        <option value="priority">Priority</option>
+        <option value="deferred">Deferred</option>
     </select>
-    <input type="number" step="any" name="right" value="@RightText" />
-    <button type="submit">Calculate</button>
+    <input type="number" step="1" min="1" name="quantity" value="@QuantityText" />
+    <button type="submit">Preview</button>
     <a href="/">Clear</a>
 </form>
 
-@if (!string.IsNullOrWhiteSpace(ResultMessage))
+@if (!string.IsNullOrWhiteSpace(SummaryMessage))
 {
-    <p>@ResultMessage</p>
+    <p>@SummaryMessage</p>
 }
 
 @code {
-    [SupplyParameterFromQuery(Name = "left")]
-    public decimal? Left { get; set; }
+    [SupplyParameterFromQuery(Name = "name")]
+    public string? Name { get; set; }
 
-    [SupplyParameterFromQuery(Name = "right")]
-    public decimal? Right { get; set; }
+    [SupplyParameterFromQuery(Name = "category")]
+    public string? Category { get; set; }
 
-    [SupplyParameterFromQuery(Name = "operation")]
-    public string? Operation { get; set; }
+    [SupplyParameterFromQuery(Name = "quantity")]
+    public int? Quantity { get; set; }
 
-    private string SelectedOperation => Operation is "subtract" or "multiply" or "divide" ? Operation : "add";
-    private string LeftText => Left?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-    private string RightText => Right?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+    private string SelectedCategory => Category is "priority" or "deferred" ? Category : "standard";
+    private string NameText => Name ?? string.Empty;
+    private string QuantityText => Quantity?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
-    private string ResultMessage => SelectedOperation switch
+    private string SummaryMessage
     {
-        "divide" when Right == 0 => "Division by zero is not allowed.",
-        "add" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value + Right.Value).ToString(CultureInfo.InvariantCulture)}",
-        "subtract" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value - Right.Value).ToString(CultureInfo.InvariantCulture)}",
-        "multiply" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value * Right.Value).ToString(CultureInfo.InvariantCulture)}",
-        "divide" when Left.HasValue && Right.HasValue => $"Result: {(Left.Value / Right.Value).ToString(CultureInfo.InvariantCulture)}",
-        _ => string.Empty
-    };
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Name) || !Quantity.HasValue)
+            {
+                return string.Empty;
+            }
+
+            return $"Request summary: {Quantity.Value.ToString(CultureInfo.InvariantCulture)} {SelectedCategory} item(s) for {Name}.";
+        }
+    }
 }

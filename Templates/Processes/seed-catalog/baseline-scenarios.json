@@ -121,6 +121,16 @@
       },
       {
         "StepKey": "architecture-review",
+        "ArtifactKind": "Brief",
+        "Title": "Project structure context brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded from repository structure review and touched-module analysis for the billing export capability.",
+        "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, and release decisions tied to the same project node.",
+        "ReviewSummary": "Originating project node, working directory, touched modules, and downstream artifact expectations are explicit."
+      },
+      {
+        "StepKey": "architecture-review",
         "ArtifactKind": "Decision",
         "Title": "Billing export architecture decision record",
         "TrustStatus": "HumanApproved",

@@ -10,6 +10,9 @@ namespace CanDoItAll.Modules.AgentFramework.Pages;
 
 public partial class AgentsHomePage
 {
+    private const string AgentFrameworkShellHelpText =
+        "This shell owns the technical agent catalog, durable execution evidence, provider diagnostics, and scenario proof. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.";
+
     private static readonly HashSet<string> AllowedTabs =
     [
         "overview",
@@ -34,6 +37,9 @@ public partial class AgentsHomePage
     [Inject]
     public IDbContextFactory<AppDbContext> DbContextFactory { get; set; } = default!;
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     [SupplyParameterFromQuery(Name = "tab")]
     public string? RequestedTab { get; set; }
 
@@ -50,8 +56,6 @@ public partial class AgentsHomePage
     private Guid? effectiveRequestedAgentId;
     private bool isLoaded;
     private bool isFeedingDefaults;
-    private string statusMessage = string.Empty;
-    private bool statusMessageIsError;
     private SandboxDashboardSnapshot dashboard = new(
         0,
         0,
@@ -265,20 +269,16 @@ public partial class AgentsHomePage
 
     private void SetStatusMessage(string value)
     {
-        statusMessage = value;
-        statusMessageIsError = false;
+        NotificationService.Success("AgentFramework updated", value);
     }
 
     private void SetStatusError(string value)
     {
-        statusMessage = value;
-        statusMessageIsError = true;
+        NotificationService.Error("AgentFramework update failed", value);
     }
 
     private void ClearStatusMessage()
     {
-        statusMessage = string.Empty;
-        statusMessageIsError = false;
     }
 
     private void OpenCrmHrAgents()

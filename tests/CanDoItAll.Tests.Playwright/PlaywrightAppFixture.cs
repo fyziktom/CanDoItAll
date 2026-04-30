@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Playwright;
 
@@ -48,10 +49,11 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         _testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-playwright");
         _activeProfile = _testEnvironment.CreateManagedSqliteProfile("primary");
 
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var processStartInfo = new ProcessStartInfo("dotnet", $"run --no-build --no-launch-profile --project src/CanDoItAll.Web --urls {BaseUrl}")
+        var processStartInfo = new ProcessStartInfo(
+            "dotnet",
+            PlaywrightTestHostPaths.BuildDotnetRunArguments("src/CanDoItAll.Web", BaseUrl))
         {
-            WorkingDirectory = repoRoot,
+            WorkingDirectory = PlaywrightTestHostPaths.RepositoryRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -62,7 +64,8 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
         foreach (var pair in _activeProfile.CreateEnvironmentVariables(new Dictionary<string, string?>
         {
-            ["DevelopmentManager:TuningModeEnabled"] = "false"
+            ["DevelopmentManager:TuningModeEnabled"] = "false",
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         }))
         {
             processStartInfo.Environment[pair.Key] = pair.Value;

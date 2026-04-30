@@ -1,7 +1,9 @@
 @page "/crm-hr/workforce"
+@using CanDoItAll.Components.BaseLib
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
 @inject NavigationManager Navigation
+@inject NotificationService NotificationService
 
 <PageTitle>CRM / HR Workforce</PageTitle>
 
@@ -39,14 +41,6 @@
                              Value="@workforceItems.Count(item => !item.HasProfile && item.PartyType == PartyType.Person).ToString()"
                              HelperText="People already in the directory who still need workforce metadata." Tone="info" />
             </SummaryTiles>
-
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <div class="@ResolveMessageClasses()"
-                     data-testid="crmhr-workforce-message">
-                    @message
-                </div>
-            }
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>
@@ -502,8 +496,6 @@
     private string skillFilter = string.Empty;
     private string availabilityFilter = string.Empty;
     private string? handledPartyKey;
-    private string? message;
-    private string messageTone = "success";
 
     private IReadOnlyList<WorkforceKind> AvailableWorkforceKinds
         => selectedWorkspace is null
@@ -560,7 +552,6 @@
         skillEditor = CreatePartySkillEditor(Guid.Empty);
         capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
         handledPartyKey = "none";
-        message = null;
     }
 
     private async Task LoadItemsAsync()
@@ -598,11 +589,6 @@
         skillEditor = CreatePartySkillEditor(workspace.PartyId);
         capacityBlockEditor = CreateCapacityBlockEditor(workspace.PartyId);
 
-        if (clearMessage)
-        {
-            message = null;
-            messageTone = "success";
-        }
     }
 
     private async Task ReloadSelectedPartyAsync(bool clearMessage)
@@ -649,14 +635,12 @@
         var result = await HrService.SaveWorkforceProfileAsync(profileEditor);
         if (result.IsFailure)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Error("Workforce profile save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
         await ReloadSelectedPartyAsync(clearMessage: false);
-        message = "Workforce profile saved.";
-        messageTone = "success";
+        NotificationService.Success("Workforce profile saved", "Workforce profile saved.");
     }
 
     private async Task SaveSkillDefinitionAsync()
@@ -664,8 +648,7 @@
         var result = await HrService.SaveSkillDefinitionAsync(skillDefinitionEditor);
         if (result.IsFailure)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Error("Skill definition save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
@@ -675,8 +658,7 @@
         skillDefinitionEditor.IsActive = true;
 
         await ReloadSelectedPartyAsync(clearMessage: false);
-        message = "Skill definition saved.";
-        messageTone = "success";
+        NotificationService.Success("Skill definition saved", "Skill definition saved.");
     }
 
     private async Task SavePartySkillAsync()
@@ -690,23 +672,20 @@
         var result = await HrService.SavePartySkillAsync(skillEditor);
         if (result.IsFailure)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Error("Skill save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
         skillEditor = CreatePartySkillEditor(selectedWorkspace.PartyId);
         await ReloadSelectedPartyAsync(clearMessage: false);
-        message = "Skill saved.";
-        messageTone = "success";
+        NotificationService.Success("Skill saved", "Skill saved.");
     }
 
     private async Task DeletePartySkillAsync(Guid partySkillId)
     {
         await HrService.DeletePartySkillAsync(partySkillId);
         await ReloadSelectedPartyAsync(clearMessage: false);
-        message = "Skill removed.";
-        messageTone = "success";
+        NotificationService.Success("Skill removed", "Skill removed.");
     }
 
     private async Task SaveCapacityBlockAsync()
@@ -720,31 +699,27 @@
         var result = await HrService.SaveCapacityBlockAsync(capacityBlockEditor);
         if (result.IsFailure)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Error("Capacity block save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
         capacityBlockEditor = CreateCapacityBlockEditor(selectedWorkspace.PartyId);
         await ReloadSelectedPartyAsync(clearMessage: false);
-        message = "Capacity block saved.";
-        messageTone = "success";
+        NotificationService.Success("Capacity block saved", "Capacity block saved.");
     }
 
     private async Task DeleteCapacityBlockAsync(Guid capacityBlockId)
     {
         await HrService.DeleteCapacityBlockAsync(capacityBlockId);
         await ReloadSelectedPartyAsync(clearMessage: false);
-        message = "Capacity block removed.";
-        messageTone = "success";
+        NotificationService.Success("Capacity block removed", "Capacity block removed.");
     }
 
     private async Task CreateDeliveryUnitAsync()
     {
         if (string.IsNullOrWhiteSpace(deliveryUnitEditor.Name))
         {
-            message = "Delivery unit name is required.";
-            messageTone = "danger";
+            NotificationService.Warning("Delivery unit not created", "Delivery unit name is required.");
             return;
         }
 
@@ -768,8 +743,7 @@
         });
         if (saveResult.IsFailure)
         {
-            message = string.Join(" ", saveResult.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
             return;
         }
 
@@ -785,8 +759,7 @@
             handledPartyKey = workspace.PartyId.ToString("N");
         }
 
-        message = "Delivery unit created.";
-        messageTone = "success";
+        NotificationService.Success("Delivery unit created", "Delivery unit created.");
     }
 
     private void ResetFilters()
@@ -964,13 +937,6 @@
     private static string ResolveAvailabilityText(WorkforceAvailabilityState? availabilityState)
     {
         return availabilityState?.ToString() ?? string.Empty;
-    }
-
-    private string ResolveMessageClasses()
-    {
-        return messageTone == "danger"
-            ? "rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700"
-            : "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-700";
     }
 
     private static string FormatValue(string value)

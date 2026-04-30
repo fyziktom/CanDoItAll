@@ -1,27 +1,48 @@
+<div class="agents-chat-panel-shell"
+     data-testid="agents-chat-panel">
 <Stack GapScale="LayoutGap.Large"
-       Class="flex-1 min-h-0"
-       data-testid="agents-chat-panel">
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <SurfaceCard Soft="true">
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="@messageTone" Text="@messageLabel" />
-                <TextBlock TextStyle="TextStyle.Body2" Value="@message" />
-            </Cluster>
-        </SurfaceCard>
-    }
-
+       AlignItems="AlignItems.Stretch"
+       Class="flex-1 min-h-0 w-full">
     <Grid Gap="LayoutGap.Large"
-          Class="flex-1 min-h-0 overflow-hidden"
-          ColumnTemplateXl="minmax(18rem,0.8fr) minmax(0,1.35fr) minmax(18rem,0.82fr)">
-        <WorkspacePanel Class="h-full min-h-0 overflow-hidden">
+          Class="agents-chat-grid flex-1 min-h-0 overflow-hidden"
+          ColumnTemplateXl="minmax(18rem,0.58fr) minmax(0,1.8fr)">
+        <WorkspacePanel Class="agents-chat-left-rail h-full min-h-0 overflow-hidden">
             <div class="border-b border-slate-200 pb-4">
                 <Split Gap="LayoutGap.Small">
                     <div>
-                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="Agent threads" />
-                        <TextBlock TextStyle="TextStyle.Body2" Value="Select a technical agent, then pick a thread or create a new one. The live runtime stays in the center, while the right rail keeps execution evidence visible." />
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.NoWrap">
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="Agent threads" />
+                            <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                                         ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                         OpenOnHover="true"
+                                         AriaLabel="Show agent thread help"
+                                         Title="Show agent thread help"
+                                         Heading="Agent threads"
+                                         Body="@AgentThreadsHelpText" />
+                        </Cluster>
+                        @if (selectedAgent is not null)
+                        {
+                            <div class="agents-chat-agent-context mt-2"
+                                 data-testid="agent-thread-selected-agent">
+                                <Avatar Alt="@selectedAgent.Name"
+                                        ImageUrl="@selectedAgent.AvatarImageUrl"
+                                        FallbackText="@ResolveAgentInitials(selectedAgent)"
+                                        DefaultImageSeed="@selectedAgent.Name"
+                                        Size="AvatarSize.Small"
+                                        Shape="AvatarShape.Rounded" />
+                                <span class="min-w-0 truncate text-xs font-semibold text-slate-700">Selected agent: @selectedAgent.Name</span>
+                            </div>
+                        }
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <Button Icon="cloud_sync"
+                                Text="Switch Agent"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@(isBusy || agents.Count == 0)"
+                                Click="OpenAgentSwitchDialogAsync"
+                                data-testid="agent-switch-button" />
                         <Button Text="Refresh"
                                 ButtonStyle="ButtonStyle.Light"
                                 Size="ButtonSize.Small"
@@ -35,7 +56,7 @@
                 </Split>
             </div>
 
-            <div class="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+            <div class="agents-chat-left-scroll mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
                  style="scrollbar-gutter:stable;">
                 @if (agents.Count == 0)
                 {
@@ -46,25 +67,13 @@
                 else
                 {
                     <Stack GapScale="LayoutGap.Medium">
-                        <SurfaceCard Soft="true">
-                            <Stack GapScale="LayoutGap.Small">
-                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Agents" />
-                                @foreach (var agent in agents)
-                                {
-                                    <SelectionListItem Title="@agent.Name"
-                                                       Eyebrow="@agent.RoleTitle"
-                                                       Meta="@ResolveAgentMeta(agent)"
-                                                       Summary="@agent.Summary"
-                                                       IsSelected="@(selectedAgentId == agent.Id)"
-                                                       OnSelect="@(() => SelectAgentAsync(agent.Id))">
-                                        <Status>
-                                            <StatusBadge Tone="@ResolveAgentTone(agent.Status)"
-                                                         Text="@agent.Status.ToString()" />
-                                        </Status>
-                                    </SelectionListItem>
-                                }
-                            </Stack>
-                        </SurfaceCard>
+                        <TextBox Value="@threadSearchText"
+                                 ValueChanged="HandleThreadSearchChangedAsync"
+                                 Placeholder="Search threads"
+                                 Immediate="true"
+                                 Class="agents-chat-thread-search"
+                                 aria-label="Search agent threads"
+                                 data-testid="agent-thread-search" />
 
                         <SurfaceCard Soft="true">
                             <Stack GapScale="LayoutGap.Small">
@@ -72,22 +81,35 @@
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Threads" />
                                     @if (workspace is not null)
                                     {
-                                        <StatusBadge Tone="info" Text="@($"{workspace.Sessions.Count} thread(s)")" />
+                                        <StatusBadge Tone="info" Text="@($"{FilteredSessions.Count} of {workspace.Sessions.Count}")" />
                                     }
                                 </Split>
 
-                                @if (workspace?.Sessions.Count > 0)
+                                @if (FilteredSessions.Count > 0)
                                 {
-                                    @foreach (var session in workspace.Sessions.OrderByDescending(item => item.UpdatedAtUtc))
+                                    @foreach (var session in FilteredSessions)
                                     {
-                                        <SelectionListItem Title="@session.Title"
-                                                           Eyebrow="@session.UpdatedAtUtc.LocalDateTime.ToString("g")"
-                                                           Meta="@BuildSessionMeta(session)"
-                                                           Summary="@session.LastMessagePreview"
-                                                           IsSelected="@(selectedSessionId == session.Id)"
-                                                           OnSelect="@(() => SelectSessionAsync(session.Id))">
-                                            <Status>
-                                                <Cluster Gap="LayoutGap.Small">
+                                        <button type="button"
+                                                class="agents-chat-thread-card @(selectedSessionId == session.Id ? "agents-chat-thread-card--selected" : string.Empty)"
+                                                @onclick="@(() => SelectSessionAsync(session.Id))"
+                                                data-testid="agent-thread-card">
+                                            <span class="agents-chat-thread-card__header">
+                                                <span class="agents-chat-thread-card__title">@session.Title</span>
+                                                <span class="agents-chat-thread-card__date">@FormatThreadUpdatedAt(session)</span>
+                                            </span>
+
+                                            <span class="agents-chat-thread-card__meta">@BuildSessionMeta(session)</span>
+
+                                            <TooltipTarget Text="@BuildThreadTooltipText(session)"
+                                                           Position="TooltipPosition.RightTop"
+                                                           TriggerClass="agents-chat-thread-card__preview-trigger"
+                                                           TestId="agent-thread-preview-tooltip">
+                                                <span class="agents-chat-thread-card__preview">@BuildThreadCardPreview(session)</span>
+                                            </TooltipTarget>
+
+                                            @if (session.PendingApprovalCount > 0 || session.AutoApprovePendingToolCalls)
+                                            {
+                                                <span class="agents-chat-thread-card__badges">
                                                     @if (session.PendingApprovalCount > 0)
                                                     {
                                                         <StatusBadge Tone="warning"
@@ -97,14 +119,14 @@
                                                     {
                                                         <StatusBadge Tone="success" Text="Auto approve" />
                                                     }
-                                                </Cluster>
-                                            </Status>
-                                        </SelectionListItem>
+                                                </span>
+                                            }
+                                        </button>
                                     }
                                 }
                                 else
                                 {
-                                    <TextBlock TextStyle="TextStyle.Body2" Value="The selected agent does not have a thread yet." />
+                                    <TextBlock TextStyle="TextStyle.Body2" Value="@ResolveEmptyThreadText()" />
                                 }
                             </Stack>
                         </SurfaceCard>
@@ -116,6 +138,7 @@
         <ChatWorkspacePanel Agent="@selectedAgent"
                             Session="@workspace?.SelectedSession"
                             ActiveRun="@workspace?.SelectedRun"
+                            ExecutionLog="@executionLog"
                             DraftPrompt="@draftPrompt"
                             DraftPromptChanged="HandleDraftPromptChangedAsync"
                             IsBusy="@isBusy"
@@ -127,34 +150,18 @@
                             SendRequested="SendMessageAsync"
                             ApprovalDecisionRequested="HandleApprovalDecisionAsync"
                             ApprovalDecisionForConversationRequested="ApproveConversationAsync"
-                            AttachmentRequested="StageAttachmentsAsync" />
-
-        <Stack GapScale="LayoutGap.Large"
-               Class="h-full min-h-0">
-            <WorkspacePanel Tone="WorkspacePanelTone.Ghost">
-                <Stack GapScale="LayoutGap.Small">
-                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="Selected execution" />
-                    @if (workspace?.SelectedRun is null)
-                    {
-                        <TextBlock TextStyle="TextStyle.Body2" Value="No execution run is selected yet. Sending a prompt creates or reuses the thread runtime." />
-                    }
-                    else
-                    {
-                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                            <StatusBadge Tone="@runStateTone" Text="@runStateText" />
-                            @if (workspace.SelectedRun.Outcome.HasValue)
-                            {
-                                <StatusBadge Tone="info" Text="@workspace.SelectedRun.Outcome.Value.ToString()" />
-                            }
-                        </Cluster>
-                        <TextBlock TextStyle="TextStyle.Body2" Value="@workspace.SelectedRun.Title" />
-                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Provider {workspace.SelectedRun.ProviderName} / {workspace.SelectedRun.Model}")" />
-                    }
-                </Stack>
-            </WorkspacePanel>
-
-            <ExecutionTimelinePanel Entries="@executionLog" />
-            <MetricSummaryPanel Metrics="@metrics" />
-        </Stack>
+                            AttachmentRequested="StageAttachmentsAsync"
+                            SessionTitleChanged="HandleSessionTitleChangedAsync">
+            <HeaderActions>
+                <Button Icon="runtime"
+                        Text="Runtime details"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!CanOpenRuntimeDetails)"
+                        Click="OpenRuntimeDetailsDialogAsync"
+                        data-testid="agents-chat-open-runtime-details" />
+            </HeaderActions>
+        </ChatWorkspacePanel>
     </Grid>
 </Stack>
+</div>

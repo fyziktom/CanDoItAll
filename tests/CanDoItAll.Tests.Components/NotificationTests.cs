@@ -53,6 +53,24 @@ public sealed class NotificationTests
     }
 
     [Fact]
+    public void NotificationService_uses_longer_default_duration_for_warnings_and_errors()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+        var service = context.Services.GetRequiredService<NotificationService>();
+
+        var success = service.Success("Saved");
+        var warning = service.Warning("Needs review");
+        var error = service.Error("Failed");
+
+        Assert.Equal(NotificationDurations.ConfirmationMilliseconds, success.Duration);
+        Assert.Equal(NotificationDurations.WarningMilliseconds, warning.Duration);
+        Assert.Equal(NotificationDurations.ErrorMilliseconds, error.Duration);
+        Assert.True(error.Duration > success.Duration);
+        Assert.True(warning.Duration > success.Duration);
+    }
+
+    [Fact]
     public void NotificationHost_renders_and_dismisses_service_messages()
     {
         using var context = new TestContext();
@@ -76,13 +94,34 @@ public sealed class NotificationTests
             var toast = cut.Find("[data-testid='review-toast']");
             Assert.Contains("Needs review", toast.TextContent, StringComparison.Ordinal);
             Assert.Contains("The dialog proof is still pending.", toast.TextContent, StringComparison.Ordinal);
-            Assert.Equal("X", toast.QuerySelector("button")?.TextContent.Trim());
+            Assert.NotNull(toast.QuerySelector("button[aria-label='Copy notification details']"));
+            Assert.NotNull(toast.QuerySelector("button[aria-label='Dismiss notification']"));
         });
 
-        cut.Find("[data-testid='review-toast'] button").Click();
+        cut.Find("[data-testid='review-toast'] button[aria-label='Dismiss notification']").Click();
 
         Assert.True(closed);
         Assert.Empty(service.Messages);
+    }
+
+    [Fact]
+    public void NotificationHost_places_default_messages_at_bottom_center()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+        var service = context.Services.GetRequiredService<NotificationService>();
+        var cut = context.RenderComponent<Notification>();
+
+        service.Success("Saved", "The operation completed.", duration: 0);
+
+        cut.WaitForAssertion(() =>
+        {
+            var stack = cut.Find("[data-notification-position='BottomCenter']");
+            Assert.Contains("bottom-4", stack.ClassList);
+            Assert.Contains("left-1/2", stack.ClassList);
+            Assert.Contains("-translate-x-1/2", stack.ClassList);
+            Assert.Contains("Saved", stack.TextContent, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

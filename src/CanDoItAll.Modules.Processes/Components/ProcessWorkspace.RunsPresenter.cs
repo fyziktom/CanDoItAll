@@ -58,6 +58,12 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns => workspace.executionRuns;
 
+        public IReadOnlyList<ProcessEscalationViewModel> ProcessEscalations => workspace.processEscalations;
+
+        public IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals => workspace.operatorApprovals;
+
+        public IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline => workspace.attemptTimeline;
+
         public IReadOnlyList<ProcessActiveRunSummaryViewModel> ActiveRunSummaries => workspace.activeRunSummaries;
 
         public IReadOnlyList<ProjectPartyOption> PartyOptions => workspace.partyOptions;
@@ -156,6 +162,36 @@ public partial class ProcessWorkspace
         {
             get => workspace.directMessageBody;
             set => workspace.directMessageBody = value ?? string.Empty;
+        }
+
+        public Guid? OperatorReworkStepRunId
+        {
+            get => workspace.operatorReworkStepRunId;
+            set => workspace.operatorReworkStepRunId = value;
+        }
+
+        public string OperatorReworkDirective
+        {
+            get => workspace.operatorReworkDirective;
+            set => workspace.operatorReworkDirective = value ?? string.Empty;
+        }
+
+        public string OperatorEscalationOwner
+        {
+            get => workspace.operatorEscalationOwner;
+            set => workspace.operatorEscalationOwner = value ?? string.Empty;
+        }
+
+        public string OperatorEscalationResolution
+        {
+            get => workspace.operatorEscalationResolution;
+            set => workspace.operatorEscalationResolution = value ?? string.Empty;
+        }
+
+        public string OperatorApprovalDecisionSummary
+        {
+            get => workspace.operatorApprovalDecisionSummary;
+            set => workspace.operatorApprovalDecisionSummary = value ?? string.Empty;
         }
 
         public IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments => workspace.DirectMessageAssignments;
@@ -293,6 +329,11 @@ public partial class ProcessWorkspace
             return workspace.SelectRunAsync(runId);
         }
 
+        public Task OpenRunStepsDialogAsync(Guid runId)
+        {
+            return workspace.OpenRunStepsDialogAsync(runId);
+        }
+
         public string BuildLaunchPlanSummary(ProcessLaunchPlanListItem plan)
         {
             return ProcessWorkspace.BuildLaunchPlanSummary(plan);
@@ -353,6 +394,38 @@ public partial class ProcessWorkspace
             return workspace.RerunAgentStepAsync(stepRunId);
         }
 
+        public Task AssignEscalationAsync(Guid escalationId)
+        {
+            return workspace.AssignEscalationAsync(escalationId);
+        }
+
+        public Task ResolveEscalationAsync(Guid escalationId)
+        {
+            return workspace.ResolveEscalationAsync(escalationId);
+        }
+
+        public Task ReopenEscalationAsync(Guid escalationId)
+        {
+            return workspace.ReopenEscalationAsync(escalationId);
+        }
+
+        public Task RequestEscalationReworkAsync(Guid escalationId)
+        {
+            return workspace.RequestEscalationReworkAsync(escalationId);
+        }
+
+        public Task RequestManualReworkAsync()
+        {
+            return workspace.RequestManualReworkAsync();
+        }
+
+        public Task DecideOperatorApprovalAsync(
+            ProcessOperatorApprovalViewModel approval,
+            ProcessOperatorApprovalStatus status)
+        {
+            return workspace.DecideOperatorApprovalAsync(approval, status);
+        }
+
         public void SelectAssignment(Guid assignmentId)
         {
             workspace.SelectAssignment(assignmentId);
@@ -391,6 +464,21 @@ public partial class ProcessWorkspace
         public string ResolveConformanceTone(ProcessConformanceSeverity severity)
         {
             return ProcessWorkspace.ResolveConformanceTone(severity);
+        }
+
+        public string ResolveEscalationStatusTone(ProcessEscalationViewModel escalation)
+        {
+            return ProcessWorkspace.ResolveEscalationStatusTone(escalation);
+        }
+
+        public string ResolveEscalationSeverityTone(ProcessEscalationSeverity severity)
+        {
+            return ProcessWorkspace.ResolveEscalationSeverityTone(severity);
+        }
+
+        public string ResolveOperatorApprovalTone(ProcessOperatorApprovalStatus status)
+        {
+            return ProcessWorkspace.ResolveOperatorApprovalTone(status);
         }
     }
 }

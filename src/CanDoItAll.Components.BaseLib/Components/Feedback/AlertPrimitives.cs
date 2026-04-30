@@ -43,6 +43,14 @@ public enum NotificationPosition
     RightBottom = BottomRight
 }
 
+public static class NotificationDurations
+{
+    public const double ConfirmationMilliseconds = 3000;
+    public const double InformationMilliseconds = 5000;
+    public const double WarningMilliseconds = 9000;
+    public const double ErrorMilliseconds = 14000;
+}
+
 public enum CalloutTone
 {
     Default,
@@ -128,7 +136,7 @@ public sealed class NotificationService
         NotificationSeverity severity = NotificationSeverity.Info,
         string summary = "",
         string detail = "",
-        double duration = 3000,
+        double? duration = null,
         Action<NotificationMessage>? click = null,
         bool closeOnClick = false,
         object? payload = null,
@@ -140,7 +148,7 @@ public sealed class NotificationService
             Severity = severity,
             Summary = summary,
             Detail = detail,
-            Duration = duration,
+            Duration = duration ?? ResolveDefaultDuration(severity),
             Click = click,
             Close = close,
             CloseOnClick = closeOnClick,
@@ -161,6 +169,42 @@ public sealed class NotificationService
         NotificationPosition? position = null)
     {
         return Notify(severity, summary, detail, duration.TotalMilliseconds, click, position: position);
+    }
+
+    public NotificationMessage Success(
+        string summary,
+        string detail = "",
+        double? duration = null,
+        NotificationPosition? position = null)
+    {
+        return Notify(NotificationSeverity.Success, summary, detail, duration, position: position);
+    }
+
+    public NotificationMessage Info(
+        string summary,
+        string detail = "",
+        double? duration = null,
+        NotificationPosition? position = null)
+    {
+        return Notify(NotificationSeverity.Info, summary, detail, duration, position: position);
+    }
+
+    public NotificationMessage Warning(
+        string summary,
+        string detail = "",
+        double? duration = null,
+        NotificationPosition? position = null)
+    {
+        return Notify(NotificationSeverity.Warning, summary, detail, duration, position: position);
+    }
+
+    public NotificationMessage Error(
+        string summary,
+        string detail = "",
+        double? duration = null,
+        NotificationPosition? position = null)
+    {
+        return Notify(NotificationSeverity.Error, summary, detail, duration, position: position);
     }
 
     public bool Dismiss(NotificationMessage message)
@@ -198,5 +242,16 @@ public sealed class NotificationService
         {
             Dismiss(message);
         }
+    }
+
+    private static double ResolveDefaultDuration(NotificationSeverity severity)
+    {
+        return severity switch
+        {
+            NotificationSeverity.Success => NotificationDurations.ConfirmationMilliseconds,
+            NotificationSeverity.Warning => NotificationDurations.WarningMilliseconds,
+            NotificationSeverity.Error => NotificationDurations.ErrorMilliseconds,
+            _ => NotificationDurations.InformationMilliseconds
+        };
     }
 }

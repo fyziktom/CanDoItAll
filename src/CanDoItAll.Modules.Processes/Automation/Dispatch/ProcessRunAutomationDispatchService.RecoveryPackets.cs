@@ -159,13 +159,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         if (unresolvedCriticalToolFailures.Any(receipt =>
-                string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_test", StringComparison.Ordinal)))
+                NormalizeToolToken(receipt.ToolName).EndsWith("_test", StringComparison.Ordinal)))
         {
             return AgentFailureCategory.TestFailure;
         }
 
         if (unresolvedCriticalToolFailures.Any(receipt =>
-                string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_build", StringComparison.Ordinal)))
+                NormalizeToolToken(receipt.ToolName).EndsWith("_build", StringComparison.Ordinal)))
         {
             return AgentFailureCategory.BuildFailure;
         }

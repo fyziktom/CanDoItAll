@@ -2,6 +2,7 @@
 @inject PartyDirectoryService PartyDirectoryService
 @inject PartyDirectoryManagementService ManagementService
 @inject NavigationManager Navigation
+@inject NotificationService NotificationService
 
 <PageTitle>CRM / HR Directory</PageTitle>
 
@@ -592,8 +593,7 @@
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Party save state"
-                                                StatusMessage="@message"
-                                                StatusTone="@messageTone">
+                                                StatusTone="success">
                                 <SecondaryActions>
                                     <Button Text="New party"
                                             ButtonStyle="ButtonStyle.Light"
@@ -634,8 +634,6 @@
     private PartyDuplicateCandidateModel? mergeCandidate;
     private bool isMergeDialogOpen;
     private string? handledPartyKey;
-    private string? message;
-    private string messageTone = "success";
     private string searchText = string.Empty;
     private string typeFilter = string.Empty;
     private string statusFilter = string.Empty;
@@ -676,11 +674,6 @@
 
         editor = PartyEditorViewModel.CreateNew();
         ResetDirectoryDetailState();
-        if (clearMessage)
-        {
-            message = null;
-            messageTone = "success";
-        }
     }
 
     private async Task SelectPartyAsync(Guid partyId)
@@ -703,19 +696,12 @@
             await LoadDirectoryDetailStateAsync(partyId);
         }
 
-        if (clearMessage)
-        {
-            message = null;
-            messageTone = "success";
-        }
     }
 
     private Task CreateNewAsync()
     {
         editor = PartyEditorViewModel.CreateNew();
         ResetDirectoryDetailState();
-        message = null;
-        messageTone = "success";
         handledPartyKey = "new";
         Navigation.NavigateTo("/crm-hr/directory", replace: true);
         return Task.CompletedTask;
@@ -726,8 +712,7 @@
         var result = await PartyDirectoryService.SavePartyAsync(editor.ToEditorModel());
         if (result.IsFailure)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Warning("Party was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
@@ -744,14 +729,14 @@
         {
             directoryItems = await PartyDirectoryService.ListDirectoryAsync();
             duplicateCandidates = await ManagementService.FindPotentialDuplicatesAsync(savedPartyId);
-            message = $"Party saved, but relationships were not updated. {string.Join(" ", relationshipSaveResult.Errors.Select(error => error.Message))}";
-            messageTone = "danger";
+            NotificationService.Warning(
+                "Party saved with relationship issue",
+                $"Relationships were not updated. {string.Join(" ", relationshipSaveResult.Errors.Select(error => error.Message))}");
             Navigation.NavigateTo($"/crm-hr/directory?partyId={savedPartyId}", replace: true);
             return;
         }
 
-        message = "Party saved.";
-        messageTone = "success";
+        NotificationService.Success("Party saved", "Party saved.");
         await LoadAsync(savedPartyId, clearMessage: false);
         Navigation.NavigateTo($"/crm-hr/directory?partyId={savedPartyId}", replace: true);
     }
@@ -819,14 +804,12 @@
 
         if (result.IsFailure || result.Value is not PartyMergeSummaryModel summary)
         {
-            message = string.Join(" ", result.Errors.Select(error => error.Message));
-            messageTone = "danger";
+            NotificationService.Warning("Party merge failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
         await HandleMergeCloseAsync();
-        message = summary.Summary;
-        messageTone = "success";
+        NotificationService.Success("Party merged", summary.Summary);
         handledPartyKey = retainedPartyId.ToString("N");
         await LoadAsync(retainedPartyId, clearMessage: false);
         Navigation.NavigateTo($"/crm-hr/directory?partyId={retainedPartyId}", replace: true);

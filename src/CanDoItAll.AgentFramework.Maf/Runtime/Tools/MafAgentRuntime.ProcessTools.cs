@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
@@ -64,6 +65,10 @@ public sealed partial class MafAgentRuntime
                     (ProcessDefinitionEditorModel model, CancellationToken cancellationToken = default) => ProcessesDefinitionSaveAsync(accessState, model, cancellationToken),
                     "processes_definition_save",
                     "Creates or updates a process definition from the editor model and returns the definition id."),
+                AIFunctionFactory.Create(
+                    (ProcessDefinitionRoleAddRequest request, CancellationToken cancellationToken = default) => ProcessesDefinitionRoleAddAsync(accessState, request, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
+                    "Adds one role requirement to an existing process definition without loading or rewriting the full editor model. Optionally attempts publish and returns publish errors explicitly."),
                 AIFunctionFactory.Create(
                     (Guid definitionId, CancellationToken cancellationToken = default) => ProcessesDefinitionPublishAsync(accessState, definitionId, cancellationToken),
                     "processes_definition_publish",
@@ -197,6 +202,79 @@ public sealed partial class MafAgentRuntime
             var definitionId = EnsureSuccess(await processesService.SaveAsync(model, cancellationToken));
             GrantDefinitionAccess(accessState, definitionId);
             return definitionId;
+        }
+
+        private async Task<ProcessDefinitionRoleAddResult> ProcessesDefinitionRoleAddAsync(
+            ProcessAccessState accessState,
+            ProcessDefinitionRoleAddRequest request,
+            CancellationToken cancellationToken) {
+            ArgumentNullException.ThrowIfNull(request);
+            if (request.DefinitionId == Guid.Empty) {
+                throw new ProcessToolException(
+                    "ProcessDefinitionIdRequired",
+                    "A process definition id is required to add a role.");
+            }
+
+            EnsureDefinitionWriteAllowed(accessState, request.DefinitionId);
+            await EnsureDefinitionExistsAsync(accessState, request.DefinitionId, cancellationToken);
+
+            var roleName = ResolveRequiredRoleName(request);
+            var editor = await processesService.GetEditorAsync(request.DefinitionId, projectId: null, cancellationToken);
+            if (!editor.Id.HasValue) {
+                throw new ProcessToolException(
+                    "ProcessDefinitionNotFound",
+                    $"Process definition '{request.DefinitionId:D}' was not found.");
+            }
+
+            if (editor.Roles.Any(role => string.Equals(role.DisplayName.Trim(), roleName, StringComparison.OrdinalIgnoreCase))) {
+                throw new ProcessToolException(
+                    "ProcessRoleDuplicate",
+                    $"Process definition '{request.DefinitionId:D}' already contains a role named '{roleName}'.");
+            }
+
+            var roleId = Guid.NewGuid();
+            editor.Roles.Add(new ProcessRoleEditorModel {
+                Id = roleId,
+                DisplayName = roleName,
+                Purpose = ResolveRolePurpose(request, roleName),
+                StaffingIntent = ResolveRoleStaffingIntent(request, roleName),
+                PreferredExecutorKind = request.PreferredExecutorKind.Trim(),
+                PreferredProjectAssignmentRole = request.PreferredProjectAssignmentRole,
+                IsRequired = request.IsRequired,
+                AllowsFallback = request.AllowsFallback,
+                RequiresExplicitApproval = request.RequiresExplicitApproval,
+                DefaultAllocationPercent = request.DefaultAllocationPercent,
+                SnapshotSummary = ResolveFirstNonBlank(request.SnapshotSummary, request.Responsibilities),
+                CanvasX = request.CanvasX ?? ResolveNextRoleCanvasX(editor),
+                CanvasY = request.CanvasY ?? ResolveNextRoleCanvasY(editor)
+            });
+
+            var definitionId = EnsureSuccess(await processesService.SaveAsync(editor, cancellationToken));
+            var publishAttempted = request.PublishIfValid;
+            var published = false;
+            var publishErrorCode = string.Empty;
+            var publishErrorMessage = string.Empty;
+
+            if (request.PublishIfValid) {
+                var publishResult = await processesService.PublishAsync(definitionId, cancellationToken);
+                if (publishResult.IsSuccess) {
+                    published = true;
+                }
+                else {
+                    var publishError = publishResult.Errors.FirstOrDefault();
+                    publishErrorCode = publishError?.Code ?? "processes.publish-failed";
+                    publishErrorMessage = publishError?.Message ?? "The process definition could not be published.";
+                }
+            }
+
+            return new ProcessDefinitionRoleAddResult(
+                definitionId,
+                roleId,
+                roleName,
+                publishAttempted,
+                published,
+                publishErrorCode,
+                publishErrorMessage);
         }
 
         private async Task<Guid> ProcessesDefinitionPublishAsync(
@@ -596,6 +674,52 @@ public sealed partial class MafAgentRuntime
             return new ProcessToolException(firstError.Code, firstError.Message);
         }
 
+        private static string ResolveRequiredRoleName(ProcessDefinitionRoleAddRequest request) {
+            var roleName = request.RoleName.Trim();
+            if (!string.IsNullOrWhiteSpace(roleName)) {
+                return roleName;
+            }
+
+            throw new ProcessToolException(
+                "ProcessRoleNameRequired",
+                "A non-empty roleName is required to add a process role.");
+        }
+
+        private static string ResolveRolePurpose(ProcessDefinitionRoleAddRequest request, string roleName) {
+            var value = ResolveFirstNonBlank(request.Purpose, request.Responsibilities);
+            return string.IsNullOrWhiteSpace(value)
+                ? $"Owns {roleName} responsibilities for the process."
+                : value;
+        }
+
+        private static string ResolveRoleStaffingIntent(ProcessDefinitionRoleAddRequest request, string roleName) {
+            var value = ResolveFirstNonBlank(request.StaffingIntent, request.Responsibilities);
+            return string.IsNullOrWhiteSpace(value)
+                ? $"Staff a contributor accountable for {roleName}."
+                : value;
+        }
+
+        private static string ResolveFirstNonBlank(params string?[] values) {
+            return values
+                .Select(value => value?.Trim() ?? string.Empty)
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+        }
+
+        private static double ResolveNextRoleCanvasX(ProcessDefinitionEditorModel editor) {
+            return editor.Roles.Count == 0
+                ? 80
+                : editor.Roles.Max(role => role.CanvasX) + 220;
+        }
+
+        private static double ResolveNextRoleCanvasY(ProcessDefinitionEditorModel editor) {
+            return editor.Roles.Count == 0
+                ? 80
+                : editor.Roles
+                    .OrderBy(role => role.CanvasX)
+                    .Last()
+                    .CanvasY;
+        }
+
         private static void EnsureReadAllowed(ProcessAccessState accessState)
         {
             if (accessState.CanRead)
@@ -703,6 +827,48 @@ public sealed class InternalProcessTemplateImportRequest
 
     public bool AutoPublish { get; set; } = true;
 }
+
+public sealed class ProcessDefinitionRoleAddRequest
+{
+    public Guid DefinitionId { get; set; }
+
+    public string RoleName { get; set; } = string.Empty;
+
+    public string Purpose { get; set; } = string.Empty;
+
+    public string Responsibilities { get; set; } = string.Empty;
+
+    public string StaffingIntent { get; set; } = string.Empty;
+
+    public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public ProjectPartyAssignmentRole? PreferredProjectAssignmentRole { get; set; }
+
+    public bool IsRequired { get; set; } = true;
+
+    public bool AllowsFallback { get; set; } = true;
+
+    public bool RequiresExplicitApproval { get; set; }
+
+    public int DefaultAllocationPercent { get; set; } = 100;
+
+    public string SnapshotSummary { get; set; } = string.Empty;
+
+    public double? CanvasX { get; set; }
+
+    public double? CanvasY { get; set; }
+
+    public bool PublishIfValid { get; set; }
+}
+
+public sealed record ProcessDefinitionRoleAddResult(
+    Guid DefinitionId,
+    Guid RoleRequirementId,
+    string RoleName,
+    bool PublishAttempted,
+    bool Published,
+    string PublishErrorCode,
+    string PublishErrorMessage);
 
 public sealed record InternalProcessRunDetailToolData(
     ProcessRunListItem Run,

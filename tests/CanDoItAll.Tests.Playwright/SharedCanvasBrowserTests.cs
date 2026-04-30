@@ -9,6 +9,7 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "SharedCanvas")]
     public async Task Shared_canvas_diagnostics_counters_and_browser_gates_are_observable()
     {

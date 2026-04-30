@@ -313,11 +313,17 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             port.AccentColor == "#db2777");
 
         var reviewerRoleNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[0]));
-        Assert.Equal(ProcessCanvasCatalog.OrderedResponsibilities.Count + 1, reviewerRoleNode.OutputPorts.Count);
+        Assert.Equal(ProcessCanvasCatalog.OrderedResponsibilities.Count + 2, reviewerRoleNode.OutputPorts.Count);
         Assert.Contains(reviewerRoleNode.OutputPorts, port =>
             port.Id == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Reviewer) &&
             port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.ResponsibilityReviewer &&
             port.AccentColor == "#6366f1");
+        Assert.Contains(reviewerRoleNode.OutputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.RoleMessagingOutput &&
+            port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.Messaging);
+        Assert.Contains(reviewerRoleNode.OutputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput &&
+            port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.DecisionAuthority);
 
         Assert.Contains(surface.Links, link =>
             link.SourceId == ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[1]) &&

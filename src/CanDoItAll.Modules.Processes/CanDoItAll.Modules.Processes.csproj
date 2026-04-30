@@ -14,10 +14,11 @@
     <PackageReference Include="JsonViewer.Blazor" Version="0.0.6" />
     <PackageReference Include="Markdig" Version="1.1.2" />
     <PackageReference Include="MermaidJS.Blazor" Version="2.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />

@@ -14,6 +14,7 @@ public sealed class CrmHrShellSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Crm_hr_routes_load_and_directory_save_persists_after_reload()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b02";

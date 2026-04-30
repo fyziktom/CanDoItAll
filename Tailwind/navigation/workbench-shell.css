@@ -7,6 +7,10 @@
     @apply mx-auto flex min-h-screen w-full max-w-[1940px] gap-3 px-3 py-3 sm:px-4 xl:px-5;
   }
 
+  .cda-shell-frame--focus {
+    max-width: none;
+  }
+
   .cda-shell-sidebar {
     @apply hidden shrink-0 overflow-y-auto rounded-[2rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 xl:block;
   }

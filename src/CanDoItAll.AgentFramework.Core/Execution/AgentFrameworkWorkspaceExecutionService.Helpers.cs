@@ -286,6 +286,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : $"{cleaned[..45]}...";
     }
 
+    private static string NormalizeChatSessionTitle(string title)
+    {
+        var normalized = string.Join(
+            ' ',
+            title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Thread title is required.");
+        }
+
+        const int maxLength = 96;
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength].TrimEnd();
+    }
+
     private ExecutionRunRecord CreatePreparingRun(
         AgentDefinition agent,
         ProviderProfile provider,

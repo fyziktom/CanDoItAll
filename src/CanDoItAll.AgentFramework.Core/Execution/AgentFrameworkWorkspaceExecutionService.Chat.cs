@@ -59,6 +59,38 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return createdSession ?? throw new InvalidOperationException("Chat session could not be created.");
     }
 
+    public async Task<ChatSessionRecord> RenameChatSessionAsync(
+        Guid agentId,
+        Guid chatSessionId,
+        string title,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedTitle = NormalizeChatSessionTitle(title);
+        ChatSessionRecord? renamedSession = null;
+        await store.UpdateWorkspaceAsync(document =>
+        {
+            var catalog = document.ToCatalog();
+            var executionState = document.ToExecutionState();
+            EnsureAgentExists(catalog, agentId);
+
+            var session = EnsureAgentOwnsSession(executionState, agentId, chatSessionId);
+            renamedSession = session with
+            {
+                Title = normalizedTitle,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+
+            return SandboxWorkspaceDocument.Combine(
+                catalog,
+                executionState with
+                {
+                    ChatSessions = ReplaceChatSession(executionState.ChatSessions, renamedSession)
+                });
+        }, cancellationToken);
+
+        return renamedSession ?? throw new InvalidOperationException("Chat session could not be renamed.");
+    }
+
     public async Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,
         Guid? chatSessionId,

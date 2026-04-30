@@ -71,7 +71,7 @@
                           OpenDatabaseDialog="OpenDatabaseDialogAsync" />
     </TopBar>
     <Body>
-        <Notification />
+        <Notification Position="NotificationPosition.BottomCenter" />
         @if (databaseDialogStartupMode && databaseDialogOpen)
         {
             <EmptyState Eyebrow="Database startup"
@@ -124,6 +124,9 @@
         </Stack>
     </RightRail>
 </AppShell>
+
+<DialogHost />
+<Tooltip />
 
 <MainLayoutDatabaseDialog IsOpen="@databaseDialogOpen"
                           IsStartupMode="@databaseDialogStartupMode"

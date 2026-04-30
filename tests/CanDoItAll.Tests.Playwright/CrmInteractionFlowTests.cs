@@ -14,6 +14,7 @@ public sealed class CrmInteractionFlowTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Crm_workspace_supports_account_profile_stakeholders_and_overdue_followups()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b04";

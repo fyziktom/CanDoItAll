@@ -10,9 +10,11 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessesMcpStdioIntegrationTests
 {
-    private const string RepositoryRoot = @"C:\repositories\CanDoItAll";
-    private static readonly string ServerAssemblyPath = Path.GetFullPath(Path.Combine(RepositoryRoot, @"src\CanDoItAll.Mcp.Processes\bin\Debug\net10.0\CanDoItAll.Mcp.Processes.dll"));
+    private static readonly string ServerAssemblyPath = IntegrationTestPaths.ResolveProjectOutputAssembly(
+        "CanDoItAll.Mcp.Processes",
+        "CanDoItAll.Mcp.Processes.dll");
 
+    [Trait("Category", "LiveProcess")]
     [Fact]
     public async Task ProcessesMcp_stdio_call_lists_seeded_process_definitions()
     {
@@ -21,7 +23,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
         var seedService = scope.ServiceProvider.GetRequiredService<ProcessDevelopmentSeedService>();
         var seedResult = await seedService.SeedBaselineAsync();
 
-        Assert.True(seedResult.IsSuccess);
+        Assert.True(seedResult.IsSuccess, string.Join(" | ", seedResult.Errors.Select(error => error.Message)));
         Assert.NotNull(seedResult.Value);
 
         var settingsPath = Path.Combine(Path.GetTempPath(), $"candoitall-processes-mcp-{Guid.NewGuid():N}.json");
@@ -32,7 +34,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
                 Server = new
                 {
                     Name = "CanDoItAll.Mcp.Processes",
-                    RepositoryRoot = Path.GetFullPath(RepositoryRoot),
+                    RepositoryRoot = IntegrationTestPaths.RepositoryRoot,
                     EnsureCurrentProfileReadyOnStartup = true
                 },
                 Database = new
@@ -79,7 +81,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
                     "--settings",
                     settingsPath
                 ],
-                WorkingDirectory = Path.GetFullPath(RepositoryRoot),
+                WorkingDirectory = IntegrationTestPaths.RepositoryRoot,
                 ShutdownTimeout = TimeSpan.FromSeconds(15)
             });
 
@@ -100,6 +102,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
         }
     }
 
+    [Trait("Category", "LiveProcess")]
     [Fact]
     public async Task ProcessesMcp_stdio_call_transitions_a_seeded_step_run()
     {
@@ -118,7 +121,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
                 Server = new
                 {
                     Name = "CanDoItAll.Mcp.Processes",
-                    RepositoryRoot = Path.GetFullPath(RepositoryRoot),
+                    RepositoryRoot = IntegrationTestPaths.RepositoryRoot,
                     EnsureCurrentProfileReadyOnStartup = true
                 },
                 Database = new
@@ -165,7 +168,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
                     "--settings",
                     settingsPath
                 ],
-                WorkingDirectory = Path.GetFullPath(RepositoryRoot),
+                WorkingDirectory = IntegrationTestPaths.RepositoryRoot,
                 ShutdownTimeout = TimeSpan.FromSeconds(15)
             });
 
@@ -256,6 +259,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
         }
     }
 
+    [Trait("Category", "LiveProcess")]
     [Fact]
     public async Task ProcessesMcp_stdio_run_detail_keeps_improvements_scoped_to_the_selected_run()
     {
@@ -295,7 +299,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
                 Server = new
                 {
                     Name = "CanDoItAll.Mcp.Processes",
-                    RepositoryRoot = Path.GetFullPath(RepositoryRoot),
+                    RepositoryRoot = IntegrationTestPaths.RepositoryRoot,
                     EnsureCurrentProfileReadyOnStartup = true
                 },
                 Database = new
@@ -342,7 +346,7 @@ public sealed class ProcessesMcpStdioIntegrationTests
                     "--settings",
                     settingsPath
                 ],
-                WorkingDirectory = Path.GetFullPath(RepositoryRoot),
+                WorkingDirectory = IntegrationTestPaths.RepositoryRoot,
                 ShutdownTimeout = TimeSpan.FromSeconds(15)
             });
 

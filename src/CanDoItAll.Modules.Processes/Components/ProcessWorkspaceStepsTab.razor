@@ -4,6 +4,17 @@
                       Title="Process definition map"
                       Description=""
                       HelpText="Review the structural shape of the definition, right-click into templates, and keep the selection inspector plus authoring windows aligned with the shared canvas workflow.">
+    <HeaderActions>
+        <Button Icon="smart_toy"
+                Text="Agents"
+                aria-label="Agents"
+                title="Agents: show or hide contextual agents with process access"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Class="process-canvas-stage-agent-toggle"
+                data-testid="processes-canvas-header-toggle-agents"
+                Click="Presenter.ToggleCanvasAgentWindowAsync" />
+    </HeaderActions>
     <Canvas>
         @if (Presenter.CanvasSurface is null)
         {
@@ -26,17 +37,30 @@
                     <ProcessCanvasToolbarActions SelectionWindowVisible="@Presenter.CanvasSelectionWindowState.IsVisible"
                                                  ActiveTool="@Presenter.DefinitionCanvasTool"
                                                  ToolboxWindowVisible="@Presenter.CanvasToolboxWindowState.IsVisible"
+                                                 AgentWindowVisible="@Presenter.CanvasAgentWindowState.IsVisible"
                                                  CanRecomposeCanvas="@Presenter.CanRecomposeCanvas"
                                                  IsRecompositionInProgress="@Presenter.IsDefinitionCanvasRecompositionInProgress"
                                                  SelectToolClicked="Presenter.SelectDefinitionCanvasToolAsync"
                                                  DeleteToolClicked="Presenter.DeleteDefinitionCanvasToolAsync"
                                                  ToggleSelectionWindow="Presenter.ToggleCanvasSelectionWindowAsync"
                                                  ToggleToolboxWindow="Presenter.ToggleCanvasToolboxWindowAsync"
+                                                 ToggleAgentWindow="Presenter.ToggleCanvasAgentWindowAsync"
                                                  ResolveCollisionsClicked="Presenter.ResolveDefinitionCanvasCollisionsAsync"
                                                  AddSpaceAroundClicked="Presenter.AddDefinitionCanvasSpaceAroundAsync"
                                                  RecomposeCanvasClicked="Presenter.RecomposeDefinitionCanvasAsync" />
                 </ToolbarLeftContent>
                 <OverlayContent>
+                    <ContextualAgentWorkspaceWindows WindowId="@Presenter.CanvasAgentWindowId"
+                                                     ChatWindowId="@Presenter.CanvasAgentChatWindowId"
+                                                     TestId="processes-canvas-agents-window"
+                                                     AriaLabel="Process agents"
+                                                     Kicker="Process agents"
+                                                     Title="Process agents"
+                                                     Summary="Search agents with access to this process, filter by tags, and double-click to open a new thread."
+                                                     WindowState="@Presenter.CanvasAgentWindowState"
+                                                     WindowStateChanged="Presenter.HandleCanvasAgentWindowStateChangedAsync"
+                                                     WorkspaceKind="@ContextualAgentWorkspaceKind.Processes"
+                                                     ProcessDefinitionId="@Presenter.SelectedProcessId" />
                     @if (Presenter.CanvasToolboxWindowState.IsVisible)
                     {
                         <ProcessCanvasToolboxWindow WindowId="@Presenter.CanvasToolboxWindowId"

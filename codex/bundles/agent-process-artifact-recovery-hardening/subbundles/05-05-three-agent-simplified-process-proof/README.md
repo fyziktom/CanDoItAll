@@ -21,7 +21,8 @@ Prove artifact output and handoff behavior with a smaller three-agent process be
 ## Exact Source References
 
 - `C:\repositories\CanDoItAll\Templates\Processes\processes\software-delivery\definition.json`
-- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRunAutomationDispatchService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs`
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs`
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\AgentFrameworkAuditProofTests.cs`

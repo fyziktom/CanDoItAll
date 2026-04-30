@@ -249,6 +249,9 @@
   .pointer-events-none {
     pointer-events: none;
   }
+  .visible {
+    visibility: visible;
+  }
   .sr-only {
     position: absolute;
     width: 1px;
@@ -367,6 +370,9 @@
   }
   .hidden {
     display: none;
+  }
+  .inline {
+    display: inline;
   }
   .inline-block {
     display: inline-block;
@@ -4656,6 +4662,9 @@
     @media (width >= 80rem) {
       padding-inline: calc(var(--spacing) * 5);
     }
+  }
+  .cda-shell-frame--focus {
+    max-width: none;
   }
   .cda-shell-sidebar {
     display: none;

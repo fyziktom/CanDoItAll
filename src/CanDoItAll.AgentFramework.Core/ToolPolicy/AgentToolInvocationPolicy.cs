@@ -146,6 +146,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"Tool '{context.ToolName}' is not part of the composed capability set for agent '{context.AgentId:N}'."));
         }
 
+        if (context.Classification == ToolInvocationClassification.Unknown)
+        {
+            return ValueTask.FromResult(ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Tool '{context.ToolName}' has no registered invocation policy classification."));
+        }
+
         if (context.Classification is ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation)
         {
             var countedSignature = context.Classification == ToolInvocationClassification.Validation
@@ -187,6 +194,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 public static class AgentToolInvocationPolicyMetadata
 {
     public const string ProcessesDefinitionSave = "processes_definition_save";
+    public const string ProcessesDefinitionRoleAdd = "processes_definition_role_add";
     public const string ProcessesDefinitionPublish = "processes_definition_publish";
     public const string ProcessesDefinitionDelete = "processes_definition_delete";
     public const string ProcessesDefinitionImport = "processes_definition_import";
@@ -237,6 +245,7 @@ public static class AgentToolInvocationPolicyMetadata
             Validation("workspace_dotnet_test"),
             Validation("workspace_dotnet_run"),
             Mutation(ProcessesDefinitionSave),
+            Mutation(ProcessesDefinitionRoleAdd),
             Mutation(ProcessesDefinitionPublish),
             Mutation(ProcessesDefinitionDelete),
             Mutation(ProcessesDefinitionImport),
@@ -272,6 +281,11 @@ public static class AgentToolInvocationPolicyMetadata
         if (RegisteredTools.TryGetValue(normalized, out var metadata))
         {
             return metadata.Classification;
+        }
+
+        if (normalized.StartsWith("processes_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToolInvocationClassification.Unknown;
         }
 
         if (normalized.StartsWith("provider_native_", StringComparison.OrdinalIgnoreCase) ||

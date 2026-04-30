@@ -1,5 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
@@ -117,9 +118,10 @@ public sealed class AiAgentsPageTests
         cut.Find("[data-testid='agents-catalog-instructions']").Change("Review release scope and produce durable evidence.");
         cut.Find("[data-testid='agents-catalog-save']").Click();
 
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Technical agent saved.", cut.Markup);
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Agent saved");
             Assert.Contains("Release Copilot", cut.Markup);
         });
 
@@ -169,6 +171,7 @@ public sealed class AiAgentsPageTests
             Assert.Contains("Directed Runtime Reviewer", cut.Markup);
         });
 
+        cut.WaitForElement("[data-testid='crmhr-agent-open-technical-record']");
         cut.Find("[data-testid='crmhr-agent-open-technical-record']").Click();
         var agentsCut = harness.Context.RenderComponent<AgentsHomePage>();
 
@@ -332,7 +335,8 @@ public sealed class AiAgentsPageTests
 
         await workspaceService.SaveAgentAsync(editor);
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(
+            parameters => parameters.Add(component => component.SkipCatalogRepair, true));
         Assert.DoesNotContain("Create the first technical agent", cut.Markup);
 
         cut.WaitForAssertion(() =>

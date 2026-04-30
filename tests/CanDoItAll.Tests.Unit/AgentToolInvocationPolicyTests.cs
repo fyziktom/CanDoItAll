@@ -75,6 +75,23 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_known_tool_when_policy_classification_is_missing()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "processes_unregistered_mutation",
+            ToolInvocationClassification.Unknown,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("no registered invocation policy classification", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_fourth_identical_mutation_invocation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -178,6 +195,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_read_file", ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolInvocationClassification.Mutation)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolInvocationClassification.Read)]
+    [InlineData("processes_unregistered_mutation", ToolInvocationClassification.Unknown)]
     public void Classify_returns_expected_tool_classification(string toolName, ToolInvocationClassification expected)
     {
         var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
@@ -231,6 +249,7 @@ public sealed class AgentToolInvocationPolicyTests
         return new TheoryData<string>
         {
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,

@@ -121,6 +121,21 @@ public sealed partial class ProcessesService
                     trimmedReason),
                 cancellationToken);
 
+            if (request.TargetStatus is ProcessStepRunStatus.Blocked or
+                ProcessStepRunStatus.Refused or
+                ProcessStepRunStatus.Failed or
+                ProcessStepRunStatus.WaitingApproval)
+            {
+                await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                    ProcessEscalationJournal.BuildTransitionCreatedEntry(
+                        transitionContext.Run,
+                        transitionContext.StepRun,
+                        request.TargetStatus,
+                        trimmedReason,
+                        now),
+                    cancellationToken);
+            }
+
             if (request.TargetStatus is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed)
             {
                 await dbContext.Set<ProcessConformanceObservation>().AddAsync(

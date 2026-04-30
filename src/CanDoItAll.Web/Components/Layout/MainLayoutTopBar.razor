@@ -12,65 +12,44 @@
     </div>
 }
 
-<Split Breakpoint="LayoutBreakpoint.None"
-       Gap="LayoutGap.Medium"
-       AlignItems="AlignItems.Center"
-       JustifyContent="JustifyContent.SpaceBetween"
-       Wrap="FlexWrap.Wrap">
+<Cluster Wrap="FlexWrap.Wrap"
+         Gap="LayoutGap.Small"
+         Class="justify-end"
+         data-testid="layout-compact-status-bar">
     <Cluster Wrap="FlexWrap.NoWrap"
-             Gap="LayoutGap.Small"
-             Class="min-w-0">
-        <span class="cda-shell-pill cda-shell-pill--neutral">@ActiveWorkspaceTitle</span>
-        <h2 class="text-sm font-semibold tracking-tight text-slate-950">@ActiveNavigationTitle</h2>
-        @if (ShellMode == AppShellMode.FocusWorkbench && !string.IsNullOrWhiteSpace(ActiveProjectTitle))
-        {
-            <span class="cda-shell-pill cda-shell-pill--info">@ActiveProjectTitle</span>
-        }
-        <span class="hidden truncate text-xs text-slate-400 lg:inline">@CurrentRouteDisplay</span>
-        @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
-        {
-            <span class="hidden text-xs text-slate-400 lg:inline">/ phase: @ActivePhaseTitle</span>
-        }
-    </Cluster>
-
-    <Cluster Wrap="FlexWrap.Wrap"
-             Gap="LayoutGap.Small"
-             Class="flex-shrink-0 justify-end">
-        <div class="min-w-[16rem] rounded-[1.35rem] border border-slate-200 bg-slate-50/90 px-4 py-3"
+             Gap="LayoutGap.XSmall"
+             Class="min-w-0 rounded-full border border-slate-200 bg-white/85 px-2.5 py-1 shadow-sm"
              data-testid="active-database-indicator">
-            <p class="cda-eyebrow">Active database</p>
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-2">
-                <p class="text-sm font-semibold text-slate-950">@(DatabaseSelection?.DisplayName ?? "Loading runtime profile")</p>
-                @if (DatabaseSelection is not null)
-                {
-                    <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(DatabaseSelection.ProviderKind)" />
-                    @if (DatabaseSelection.IsRuntimeLocked)
-                    {
-                        <StatusBadge Tone="warning" Text="Config lock" />
-                    }
-                }
-                @if (!string.IsNullOrWhiteSpace(DatabaseSelection?.Descriptor))
-                {
-                    <HelpPopover RootClass="pf-help-popover flex items-center"
-                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                                 AriaLabel="Show db details"
-                                 Title="Show db details"
-                                 Heading="Description"
-                                 Body="@DatabaseSelection.Descriptor" />
-                }
-            </Cluster>
-        </div>
-        <Button Text="Switch database"
-                ButtonStyle="ButtonStyle.Light"
-                Size="ButtonSize.Small"
-                Disabled="@DatabaseDialogBusy"
-                Click="OpenDatabaseDialog"
-                data-testid="database-topbar-switcher" />
-        <StatusBadge Tone="info" Text="Interactive Server" />
-        <StatusBadge Tone="success" Text="@($"Live items {OpenedItemCount}")" />
-        <StatusBadge Tone="neutral" Text="@($"Tabs {TabCount}")" />
+        <span class="cda-eyebrow cda-eyebrow--tight whitespace-nowrap text-[0.62rem]">Active database</span>
+        <span class="max-w-[13rem] truncate text-xs font-semibold text-slate-950">@(DatabaseSelection?.DisplayName ?? "Loading runtime profile")</span>
+        @if (DatabaseSelection is not null)
+        {
+            <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(DatabaseSelection.ProviderKind)" />
+            @if (DatabaseSelection.IsRuntimeLocked)
+            {
+                <StatusBadge Tone="warning" Text="Config lock" />
+            }
+        }
+        @if (!string.IsNullOrWhiteSpace(DatabaseSelection?.Descriptor))
+        {
+            <HelpPopover RootClass="pf-help-popover flex items-center"
+                         ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                         AriaLabel="Show db details"
+                         Title="Show db details"
+                         Heading="Description"
+                         Body="@DatabaseSelection.Descriptor" />
+        }
     </Cluster>
-</Split>
+    <Button Text="Switch database"
+            ButtonStyle="ButtonStyle.Light"
+            Size="ButtonSize.Small"
+            Disabled="@DatabaseDialogBusy"
+            Click="OpenDatabaseDialog"
+            data-testid="database-topbar-switcher" />
+    <StatusBadge Tone="info" Text="Interactive Server" />
+    <StatusBadge Tone="success" Text="@($"Live items {OpenedItemCount}")" />
+    <StatusBadge Tone="neutral" Text="@($"Tabs {TabCount}")" />
+</Cluster>
 
 @code {
     [Parameter]

@@ -4,6 +4,7 @@
 @using CanDoItAll.Components.Common
 @using CanDoItAll.SharedKernel
 @inject PromptsService PromptsService
+@inject NotificationService NotificationService
 
 <PageTitle>Prompt Gallery</PageTitle>
 
@@ -207,7 +208,7 @@
                             </FormSection>
                         }
 
-                        <StickyActionFooter StatusLabel="Prompt library" StatusMessage="@message" StatusTone="success">
+                        <StickyActionFooter StatusLabel="Prompt library">
                             <SecondaryActions>
                                 <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
@@ -304,7 +305,6 @@
     private IReadOnlyList<PromptCollectionSummary> collections = [];
     private PromptLibraryPageCatalog libraryCatalog = new();
     private PromptEditorModel editor = new();
-    private string? message;
     private string promptSearch = string.Empty;
     private string collectionFilter = string.Empty;
     private string phaseFilter = string.Empty;
@@ -351,45 +351,70 @@
     private Task CreateNewAsync()
     {
         editor = new PromptEditorModel();
-        message = null;
         detailTab = "overview";
         return Task.CompletedTask;
     }
 
     private async Task CreateCollectionAsync()
     {
-        await PromptsService.EnsureCollectionAsync($"Collection {collections.Count + 1}");
-        collections = await PromptsService.ListCollectionsAsync();
-        message = "Collection created.";
+        try
+        {
+            await PromptsService.EnsureCollectionAsync($"Collection {collections.Count + 1}");
+            collections = await PromptsService.ListCollectionsAsync();
+            NotificationService.Success("Collection created", "Prompt collection created.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Collection create failed", exception.Message);
+        }
     }
 
     private async Task EditAsync(Guid id)
     {
         editor = await PromptsService.GetAsync(id);
-        message = null;
         detailTab = "overview";
     }
 
     private async Task SaveDraftAsync()
     {
-        var result = await PromptsService.SaveDraftAsync(editor);
-        message = result.IsSuccess ? "Draft saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        prompts = await PromptsService.ListAsync();
-        if (result.IsSuccess)
+        try
         {
+            var result = await PromptsService.SaveDraftAsync(editor);
+            prompts = await PromptsService.ListAsync();
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Draft was not saved", DescribeErrors(result.Errors));
+                return;
+            }
+
             editor = await PromptsService.GetAsync(result.Value);
+            NotificationService.Success("Draft saved", "Prompt draft saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Draft save failed", exception.Message);
         }
     }
 
     private async Task FinalizeAsync()
     {
-        var result = await PromptsService.FinalizeAsync(editor);
-        message = result.IsSuccess ? "Final version created." : string.Join(" ", result.Errors.Select(error => error.Message));
-        prompts = await PromptsService.ListAsync();
-        if (result.IsSuccess)
+        try
         {
+            var result = await PromptsService.FinalizeAsync(editor);
+            prompts = await PromptsService.ListAsync();
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Final version was not created", DescribeErrors(result.Errors));
+                return;
+            }
+
             editor = await PromptsService.GetAsync(result.Value);
             detailTab = "versions";
+            NotificationService.Success("Final version created", "Prompt final version created.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Finalization failed", exception.Message);
         }
     }
 
@@ -405,10 +430,13 @@
         if (cloneId.HasValue)
         {
             editor = await PromptsService.GetAsync(cloneId.Value);
-            message = "Prompt cloned into a new draft.";
             detailTab = "overview";
+            NotificationService.Success("Prompt cloned", "Prompt cloned into a new draft.");
         }
     }
+
+    private static string DescribeErrors(IEnumerable<Error> errors)
+        => string.Join(" ", errors.Select(error => error.Message));
 
     private Task HandleDetailTabChanged(string key)
     {

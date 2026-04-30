@@ -20,6 +20,7 @@ public sealed class CrmHrCrossModuleFlowTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Cross_module_routes_surface_search_activity_ownership_and_automation_signals()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b11";

@@ -61,7 +61,7 @@
                         </div>
                     </FormSection>
 
-                    <StickyActionFooter StatusLabel="Workspace defaults" StatusMessage="@settingsMessage" StatusTone="success">
+                    <StickyActionFooter StatusLabel="Workspace defaults">
                         <PrimaryActions>
                             <Button Text="Save defaults" Type="submit" />
                         </PrimaryActions>
@@ -169,7 +169,7 @@
                                 </div>
                             </FormSection>
 
-                            <StickyActionFooter StatusLabel="Secret vault" StatusMessage="@secretMessage" StatusTone="success">
+                            <StickyActionFooter StatusLabel="Secret vault">
                                 <SecondaryActions>
                                     <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetSecretAsync" />
                                 </SecondaryActions>
@@ -302,7 +302,7 @@
                                 </Grid>
                             </FormSection>
 
-                            <StickyActionFooter StatusLabel="Provider profiles" StatusMessage="@providerMessage" StatusTone="success">
+                            <StickyActionFooter StatusLabel="Provider profiles">
                                 <SecondaryActions>
                                     <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
                                     @if (providerModel.Id.HasValue)

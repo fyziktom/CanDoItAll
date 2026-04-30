@@ -1,7 +1,14 @@
 namespace CanDoItAll.Modules.Processes;
 
-internal static class ProcessRuntimeEventTypes {
+internal static class ProcessRuntimeEventTypes
+{
     public const string ManualAgentStepRerun = "agent-step-rerun";
     public const string AgentReworkPacketCreated = "agent-rework-packet-created";
     public const string AgentRecoveryAttemptRecorded = "agent-recovery-attempt-recorded";
+    public const string ProcessEscalationCreated = "process-escalation-created";
+    public const string ProcessEscalationAssigned = "process-escalation-assigned";
+    public const string ProcessEscalationResolved = "process-escalation-resolved";
+    public const string ProcessEscalationReopened = "process-escalation-reopened";
+    public const string ProcessEscalationReworkRequested = "process-escalation-rework-requested";
+    public const string ProcessOperatorApprovalDecided = "process-operator-approval-decided";
 }

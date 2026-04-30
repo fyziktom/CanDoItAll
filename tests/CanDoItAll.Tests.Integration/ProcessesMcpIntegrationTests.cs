@@ -15,7 +15,7 @@ public sealed class ProcessesMcpIntegrationTests
         var seedService = scope.ServiceProvider.GetRequiredService<ProcessDevelopmentSeedService>();
         var seedResult = await seedService.SeedBaselineAsync();
 
-        Assert.True(seedResult.IsSuccess);
+        Assert.True(seedResult.IsSuccess, string.Join(" | ", seedResult.Errors.Select(error => error.Message)));
         Assert.NotNull(seedResult.Value);
 
         var tools = new ProcessesTools(

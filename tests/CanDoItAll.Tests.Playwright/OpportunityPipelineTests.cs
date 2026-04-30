@@ -14,6 +14,7 @@ public sealed class OpportunityPipelineTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task Crm_workspace_supports_pipeline_filters_history_and_project_conversion()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b05";

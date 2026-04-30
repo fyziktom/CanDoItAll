@@ -119,10 +119,17 @@ public partial class ProcessWorkspace
             workBriefs = [];
             conformanceObservations = [];
             executionRuns = [];
+            processEscalations = [];
+            operatorApprovals = [];
+            attemptTimeline = [];
             selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
             directMessageThreads = [];
             selectedAssignmentId = null;
             artifactStepRunId = null;
+            operatorReworkStepRunId = null;
+            operatorReworkDirective = string.Empty;
+            operatorEscalationResolution = string.Empty;
+            operatorApprovalDecisionSummary = string.Empty;
             assignmentAllowsDirectMessaging = true;
             directMessageSourceRoleRequirementId = null;
             directMessageTargetRoleRequirementId = null;
@@ -139,6 +146,9 @@ public partial class ProcessWorkspace
         workBriefs = runDetails.WorkBriefs;
         conformanceObservations = runDetails.ConformanceObservations;
         executionRuns = runDetails.ExecutionRuns;
+        processEscalations = runDetails.Escalations;
+        operatorApprovals = runDetails.OperatorApprovals;
+        attemptTimeline = runDetails.AttemptTimeline;
         selectedRunHealth = runDetails.Health;
         directMessageThreads = runDetails.DirectMessageThreads;
         var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
@@ -167,6 +177,11 @@ public partial class ProcessWorkspace
         if (!artifactStepRunId.HasValue || stepRuns.All(item => item.Id != artifactStepRunId.Value))
         {
             artifactStepRunId = stepRuns.FirstOrDefault()?.Id;
+        }
+
+        if (!operatorReworkStepRunId.HasValue || stepRuns.All(item => item.Id != operatorReworkStepRunId.Value))
+        {
+            operatorReworkStepRunId = stepRuns.FirstOrDefault(item => item.Health.CanManualRerun)?.Id;
         }
     }
 

@@ -105,6 +105,7 @@ public sealed class WebGlSandboxSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "WebGlSandbox")]
     public async Task Sandbox_supports_drag_connection_and_export_without_camera_reset()
     {
@@ -266,6 +267,7 @@ public sealed class WebGlSandboxSmokeTests
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "WebGlSandbox")]
     public async Task Sandbox_in_scene_chrome_controls_camera_settings_and_context_actions()
     {

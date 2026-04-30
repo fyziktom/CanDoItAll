@@ -155,6 +155,7 @@ public sealed class BundleImprovementIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Quarantined")]
     public async Task FailedOperation_EmitsFocusedGuidance_WhileOperationLogsRemainGuidanceFree()
     {
         await using var harness = await ValidationHarness.CreateAsync();

@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-flexible-process-agents-v26";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-04-flexible-process-agents-v27";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -44,7 +44,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var mstestCapabilityId = CreateStableGuid("capabilities/writing-mstest-tests");
         var repositoryPlaybookCapabilityId = CreateStableGuid("capabilities/repository-playbook");
         var mailInlineSkillCapabilityId = CreateStableGuid("capabilities/mail-triage-inline-skill");
-        var officeInlineSkillCapabilityId = CreateStableGuid("capabilities/office-order-inline-skill");
+        var documentSpreadsheetReconciliationInlineSkillCapabilityId = CreateStableGuid("capabilities/document-spreadsheet-reconciliation-inline-skill");
         var blazorSsrDeliveryInlineSkillCapabilityId = CreateStableGuid("capabilities/blazor-ssr-delivery-inline-skill");
         var appSummaryInlineSkillCapabilityId = CreateStableGuid("capabilities/generated-app-summary-inline-skill");
         var architectureReviewInlineSkillCapabilityId = CreateStableGuid("capabilities/architecture-review-inline-skill");
@@ -305,17 +305,17 @@ internal static class SandboxWorkspaceSeedBuilder
                 null,
                 true),
             CreateInlineSkillCapability(
-                officeInlineSkillCapabilityId,
-                "office-order-inline-skill",
-                "Office Order Analysis Skill",
-                "Task-specific workflow for comparing the Mouser spreadsheet and receipt before reporting stock and price findings.",
-                "office-order-analysis",
-                GetSeedText("skills/office-order-analysis.instructions"),
+                documentSpreadsheetReconciliationInlineSkillCapabilityId,
+                "document-spreadsheet-reconciliation-inline-skill",
+                "Document and Spreadsheet Reconciliation Skill",
+                "Reusable workflow for reconciling records and facts across documents, spreadsheets, CSV files, and other structured artifacts.",
+                "document-spreadsheet-reconciliation",
+                GetSeedText("skills/document-spreadsheet-reconciliation.instructions"),
                 [
                     new InlineSkillResourceSeed(
-                        "office-json-example",
-                        BuildOfficeComparisonJsonExample(),
-                        "Reference JSON response shape for Mouser comparison tasks.")
+                        "reconciliation-output-example",
+                        BuildReconciliationOutputExample(),
+                        "Generic JSON response shape for reconciliation tasks.")
                 ]),
             CreateInlineSkillCapability(
                 blazorSsrDeliveryInlineSkillCapabilityId,
@@ -327,22 +327,22 @@ internal static class SandboxWorkspaceSeedBuilder
                 [
                     new InlineSkillResourceSeed(
                         "net10-program-scaffold",
-                        BuildCalculatorProgramExample(),
+                        BuildBlazorProgramExample(),
                         "Reference shape for the modern .NET 10 Blazor Web App Program.cs scaffold."),
                     new InlineSkillResourceSeed(
                         "net10-home-page-example",
-                        BuildCalculatorHomeExample(),
-                        "Reference shape for a static-SSR calculator page using query parameters and a GET form."),
+                        BuildBlazorHomeExample(),
+                        "Reference shape for a static-SSR page using query parameters and a GET form."),
                     new InlineSkillResourceSeed(
                         "dotnet-command-examples",
-                        BuildCalculatorCommandExamples(),
-                        "Concrete workspace_dotnet_new and workspace_dotnet_build examples for scaffolding and building the calculator app.")
+                        BuildBlazorCommandExamples(),
+                        "Concrete workspace_dotnet_new and workspace_dotnet_build examples for scaffolding and building a Blazor app.")
                 ]),
             CreateInlineSkillCapability(
                 appSummaryInlineSkillCapabilityId,
                 "generated-app-summary-inline-skill",
                 "Generated App Summary Skill",
-                "Task-specific workflow for summarizing the calculator app from its source files.",
+                "Workflow for summarizing a generated Blazor app from concrete source files.",
                 "generated-app-summary",
                 GetSeedText("skills/generated-app-summary.instructions"),
                 [
@@ -362,7 +362,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 architectureInlineSkillCapabilityId,
                 "architecture-map-inline-skill",
                 "Architecture Map Skill",
-                "Task-specific workflow for creating a Mermaid class diagram from the generated calculator app.",
+                "Workflow for creating a Mermaid class diagram from generated app source files.",
                 "architecture-map",
                 GetSeedText("skills/architecture-map.instructions")),
             CreateInlineSkillCapability(
@@ -875,7 +875,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default,
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
-                CreateAssignment(officeInlineSkillCapabilityId, "office-order-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -908,7 +908,7 @@ internal static class SandboxWorkspaceSeedBuilder
                     canWrite: false,
                     allowAllProjects: true),
                 canRead: true,
-                canWrite: false,
+                canWrite: true,
                 allowAllDefinitions: true),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
@@ -1370,7 +1370,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
-                CreateAssignment(officeInlineSkillCapabilityId, "office-order-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
@@ -1644,13 +1644,13 @@ internal static class SandboxWorkspaceSeedBuilder
             true);
     }
 
-    private static string BuildCalculatorProgramExample() => GetSeedText("resources/net10-program-scaffold");
+    private static string BuildBlazorProgramExample() => GetSeedText("resources/net10-program-scaffold");
 
-    private static string BuildOfficeComparisonJsonExample() => GetSeedText("resources/office-comparison-example");
+    private static string BuildReconciliationOutputExample() => GetSeedText("resources/reconciliation-output-example");
 
-    private static string BuildCalculatorHomeExample() => GetSeedText("resources/net10-home-page-example");
+    private static string BuildBlazorHomeExample() => GetSeedText("resources/net10-home-page-example");
 
-    private static string BuildCalculatorCommandExamples() => GetSeedText("resources/dotnet-command-examples");
+    private static string BuildBlazorCommandExamples() => GetSeedText("resources/dotnet-command-examples");
 
     private static string BuildGeneratedAppSummaryChecklist() => GetSeedText("resources/generated-app-summary-checklist");
 

@@ -414,13 +414,17 @@
                 </FormSection>
 
                 <FormSection Title="Tags" Description="Tags keep ownership and routing visible without introducing a second registry.">
-                    <div>
-                        <label class="cda-field-label">Comma-separated tags</label>
-                        <InputTextArea @bind-Value="tagText" class="cda-input cda-input--textarea min-h-20" />
-                    </div>
+                    <TagEditor Value="@tagValues"
+                               ValueChanged="HandleTagsChangedAsync"
+                               Suggestions="@VisibleTagSuggestions"
+                               Placeholder="Add agent tag"
+                               Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
+                               MaxTags="12"
+                               TestId="agents-catalog-tags"
+                               InputTestId="agents-catalog-tags-input" />
                 </FormSection>
 
-                <StickyActionFooter StatusLabel="Technical agents" StatusMessage="@message" StatusTone="success">
+                <StickyActionFooter StatusLabel="Technical agents">
                     <SecondaryActions>
                         <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
                     </SecondaryActions>

@@ -63,11 +63,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requiredToolNames.AddRange(ImplementationProofToolNames);
         }
 
-        if (RequiresConcreteTestProof(candidate))
-        {
-            requiredToolNames.Add("workspace_dotnet_test");
-        }
-
         if (RequiresConcreteBrowserProof(candidate))
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
@@ -171,15 +166,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate.ExpectedArtifacts.Any(item =>
                     item.ArtifactKind == ProcessArtifactKind.Deliverable &&
                     item.Title.Contains("change set", StringComparison.OrdinalIgnoreCase)));
-    }
-
-    private static bool RequiresConcreteTestProof(DispatchCandidate candidate)
-    {
-        return RequiresConcreteImplementationProof(candidate) &&
-               (candidate.StepRun.Title.Contains("test", StringComparison.OrdinalIgnoreCase) ||
-                (candidate.WorkBrief?.WorkBriefText?.Contains("test", StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (candidate.WorkBrief?.ExpectedOutcome?.Contains("test", StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (candidate.WorkBrief?.EvidenceExpectationSummary?.Contains("test", StringComparison.OrdinalIgnoreCase) ?? false));
     }
 
     private static bool RequiresConcreteImplementationReview(DispatchCandidate candidate)

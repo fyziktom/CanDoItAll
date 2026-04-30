@@ -8,9 +8,11 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectStructureMcpStdioIntegrationTests
 {
-    private const string RepositoryRoot = @"C:\repositories\CanDoItAll";
-    private static readonly string ServerAssemblyPath = Path.GetFullPath(Path.Combine(RepositoryRoot, @"src\CanDoItAll.Mcp.ProjectStructure\bin\Debug\net10.0\CanDoItAll.Mcp.ProjectStructure.dll"));
+    private static readonly string ServerAssemblyPath = IntegrationTestPaths.ResolveProjectOutputAssembly(
+        "CanDoItAll.Mcp.ProjectStructure",
+        "CanDoItAll.Mcp.ProjectStructure.dll");
 
+    [Trait("Category", "LiveProcess")]
     [Fact]
     public async Task ProjectStructureMcp_stdio_call_lists_projects_when_branch_name_is_resolved_from_git()
     {
@@ -32,7 +34,7 @@ public sealed class ProjectStructureMcpStdioIntegrationTests
                     "BaseUrl": "{{host.Client.BaseAddress!.ToString().TrimEnd('/')}}",
                     "AgentToken": "{{host.Client.DefaultRequestHeaders.GetValues(ProjectStructureAgentHttpHeaders.AgentToken).Single()}}",
                     "AgentName": "STDIO regression agent",
-                    "RepositoryRoot": "{{Path.GetFullPath(RepositoryRoot).Replace(@"\", @"\\")}}",
+                    "RepositoryRoot": "{{IntegrationTestPaths.RepositoryRoot.Replace(@"\", @"\\")}}",
                     "TimeoutSeconds": 30
                   }
                 }
@@ -48,7 +50,7 @@ public sealed class ProjectStructureMcpStdioIntegrationTests
                     "--settings",
                     settingsPath
                 ],
-                WorkingDirectory = Path.GetFullPath(RepositoryRoot),
+                WorkingDirectory = IntegrationTestPaths.RepositoryRoot,
                 ShutdownTimeout = TimeSpan.FromSeconds(15)
             });
 
@@ -72,8 +74,6 @@ public sealed class ProjectStructureMcpStdioIntegrationTests
 
 internal static class ProjectStructureMcpIntegrationTestsAccessor
 {
-    private const string RepositoryRoot = @"C:\repositories\CanDoItAll";
-
     public static async Task<T> AssertOkAsync<T>(Task<CanDoItAll.Mcp.Core.Contracts.McpToolEnvelope<T>> task)
     {
         var envelope = await task;
@@ -91,7 +91,7 @@ internal static class ProjectStructureMcpIntegrationTestsAccessor
                 BaseUrl = host.Client.BaseAddress!.ToString().TrimEnd('/'),
                 AgentToken = token,
                 AgentName = agentName,
-                RepositoryRoot = RepositoryRoot,
+                RepositoryRoot = IntegrationTestPaths.RepositoryRoot,
                 BranchName = "tests/project-structure",
                 TimeoutSeconds = 30
             }

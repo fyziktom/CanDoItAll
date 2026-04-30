@@ -9,6 +9,8 @@ public partial class ProcessWorkspace
     private const string CanvasToolboxWindowId = "processes.canvas.toolbox";
     private const string CanvasSelectionWindowId = "processes.canvas.selection";
     private const string CanvasEditorWindowId = "processes.canvas.editor";
+    private const string CanvasAgentWindowId = "processes.canvas.agents";
+    private const string CanvasAgentChatWindowId = "processes.canvas.agents.chat";
     private const string CanvasToolSelectActionId = "tool-mode:select";
     private const string CanvasDeleteActionId = "delete";
     private const string CanvasDeleteLinkActionId = "delete-link";
@@ -21,6 +23,7 @@ public partial class ProcessWorkspace
     private CanvasWorkbenchWindowState canvasToolboxWindowState = new() { IsVisible = false };
     private CanvasWorkbenchWindowState canvasSelectionWindowState = new();
     private CanvasWorkbenchWindowState canvasEditorWindowState = new() { IsVisible = false };
+    private CanvasWorkbenchWindowState canvasAgentWindowState = new() { IsVisible = false };
     private ProcessRoleEditorModel? canvasRoleDraft;
     private ProcessStepEditorModel? canvasStepDraft;
     private ProcessRoleEditorModel? canvasEditedRoleTarget;
@@ -163,6 +166,12 @@ public partial class ProcessWorkspace
         return Task.CompletedTask;
     }
 
+    private Task HandleCanvasAgentWindowStateChangedAsync(CanvasWorkbenchWindowState state)
+    {
+        canvasAgentWindowState = CanvasWorkbenchWindowState.Normalize(state);
+        return Task.CompletedTask;
+    }
+
     private Task ToggleCanvasToolboxWindowAsync()
     {
         canvasToolboxWindowState.IsVisible = !canvasToolboxWindowState.IsVisible;
@@ -187,6 +196,17 @@ public partial class ProcessWorkspace
         if (canvasSelectionWindowState.IsVisible)
         {
             canvasSelectionWindowState.IsMinimized = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleCanvasAgentWindowAsync()
+    {
+        canvasAgentWindowState.IsVisible = !canvasAgentWindowState.IsVisible;
+        if (canvasAgentWindowState.IsVisible)
+        {
+            canvasAgentWindowState.IsMinimized = false;
         }
 
         return Task.CompletedTask;

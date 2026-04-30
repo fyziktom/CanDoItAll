@@ -12,10 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

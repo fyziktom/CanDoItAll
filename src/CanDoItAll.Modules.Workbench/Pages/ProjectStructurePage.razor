@@ -91,6 +91,7 @@ else
                                                        HealthWindowVisible="@HealthWindowState.IsVisible"
                                                        ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
+                                                       AgentWindowVisible="@AgentWindowState.IsVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"
                                                        CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
@@ -102,9 +103,21 @@ else
                                                        ToggleHealthWindow="ToggleHealthWindowAsync"
                                                        ToggleToolboxWindow="ToggleToolboxWindowAsync"
                                                        ToggleSignalsWindow="ToggleSignalsWindowAsync"
+                                                       ToggleAgentWindow="ToggleAgentWindowAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
+                        <ContextualAgentWorkspaceWindows WindowId="@AgentWindowKey"
+                                                         ChatWindowId="@AgentChatWindowKey"
+                                                         TestId="project-structure-agents-window"
+                                                         AriaLabel="Project structure agents"
+                                                         Kicker="Project agents"
+                                                         Title="Project agents"
+                                                         Summary="Search agents with access to this structure, filter by tags, and double-click to open a new thread."
+                                                         WindowState="@AgentWindowState"
+                                                         WindowStateChanged="HandleAgentWindowStateChangedAsync"
+                                                         WorkspaceKind="@ContextualAgentWorkspaceKind.ProjectStructure"
+                                                         ProjectId="@ProjectId" />
                         @if (ToolboxWindowState.IsVisible)
                         {
                             <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"

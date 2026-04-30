@@ -1,0 +1,278 @@
+@namespace CanDoItAll.Modules.Processes
+
+<Stack GapScale="LayoutGap.Large"
+       data-testid="processes-operator-control-section">
+    <SectionCard Title="Process Control Center"
+                 Description=""
+                 HelpText="Operator controls are fed by process journal entries, execution approvals, and automation outbox health so stuck runs can be triaged without reading raw agent chat.">
+        <SummaryTiles GapScale="LayoutGap.Small">
+            <SummaryTile Label="Open escalations"
+                         Value="@Presenter.ProcessEscalations.Count(item => item.IsOpen).ToString()"
+                         HelperText="Escalations that still need operator action."
+                         Compact="true"
+                         Tone="warning"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Approvals"
+                         Value="@Presenter.OperatorApprovals.Count(item => item.Status == ProcessOperatorApprovalStatus.Pending).ToString()"
+                         HelperText="Execution tool approvals waiting for a decision."
+                         Compact="true"
+                         Tone="info"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Dead-lettered"
+                         Value="@Presenter.OutboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered).ToString()"
+                         HelperText="Automation dispatch records that exhausted their retry path."
+                         Compact="true"
+                         Tone="danger"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Timeline"
+                         Value="@Presenter.AttemptTimeline.Count.ToString()"
+                         HelperText="Recorded execution, approval, escalation, recovery, and dispatch events."
+                         Compact="true"
+                         Tone="neutral"
+                         ShowHelperTextAsTooltip="true" />
+        </SummaryTiles>
+    </SectionCard>
+
+    <Grid Gap="LayoutGap.Large"
+          ColumnsLg="2">
+        <div data-testid="processes-escalation-queue">
+            <SectionCard Title="Escalation Queue"
+                         Description=""
+                         HelpText="Escalations are durable operator tasks. Journal-backed escalations can be assigned, resolved, reopened, or converted into targeted rework. Outbox dead letters are shown here as read-only escalations until a safe replay action exists.">
+                @if (Presenter.ProcessEscalations.Count == 0)
+                {
+                    <EmptyState Eyebrow="No escalations"
+                                Title="No operator escalations for this run"
+                                Description="Blocked, failed, refused, waiting-approval, and dead-letter states appear here when they need human action." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        <FormField Text="Owner">
+                            <InputText @bind-Value="Presenter.OperatorEscalationOwner"
+                                       class="cda-input"
+                                       data-testid="processes-escalation-owner-input" />
+                        </FormField>
+                        <FormField Text="Resolution or reopen note">
+                            <InputTextArea @bind-Value="Presenter.OperatorEscalationResolution"
+                                           class="cda-input cda-input--textarea min-h-24"
+                                           data-testid="processes-escalation-resolution-input" />
+                        </FormField>
+
+                        @foreach (var escalation in Presenter.ProcessEscalations)
+                        {
+                            <SurfaceCard Soft="true">
+                                <Split Gap="LayoutGap.Medium">
+                                    <Stack GapScale="LayoutGap.Tiny">
+                                        <p class="cda-eyebrow">@(string.IsNullOrWhiteSpace(escalation.StepTitle) ? escalation.SourceKind : escalation.StepTitle)</p>
+                                        <h3 class="text-base font-semibold text-slate-950">@escalation.Title</h3>
+                                        @if (!string.IsNullOrWhiteSpace(escalation.Reason))
+                                        {
+                                            <p class="text-sm leading-6 text-slate-600">@escalation.Reason</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(escalation.Owner))
+                                        {
+                                            <p class="text-sm leading-6 text-slate-500">Owner: @escalation.Owner</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(escalation.Resolution))
+                                        {
+                                            <p class="text-sm leading-6 text-slate-500">Resolution: @escalation.Resolution</p>
+                                        }
+                                    </Stack>
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="@Presenter.ResolveEscalationStatusTone(escalation)"
+                                                     Text="@escalation.Status.ToString()" />
+                                        <StatusBadge Tone="@Presenter.ResolveEscalationSeverityTone(escalation.Severity)"
+                                                     Text="@escalation.Severity.ToString()" />
+                                        <StatusBadge Tone="neutral"
+                                                     Text="@escalation.SourceKind.ToString()" />
+                                        @if (escalation.DueAtUtc.HasValue)
+                                        {
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@($"due {escalation.DueAtUtc.Value.ToLocalTime():g}")" />
+                                        }
+                                    </Cluster>
+                                </Split>
+                                <Cluster Gap="LayoutGap.Small"
+                                         Class="mt-4">
+                                    <Button Text="Assign"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@(!escalation.IsJournalBacked || !escalation.IsOpen)"
+                                            Click="@(() => Presenter.AssignEscalationAsync(escalation.Id))" />
+                                    <Button Text="Resolve"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@(!escalation.IsJournalBacked || !escalation.IsOpen)"
+                                            Click="@(() => Presenter.ResolveEscalationAsync(escalation.Id))" />
+                                    <Button Text="Reopen"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@(!escalation.IsJournalBacked || escalation.Status != ProcessEscalationStatus.Resolved)"
+                                            Click="@(() => Presenter.ReopenEscalationAsync(escalation.Id))" />
+                                    <Button Text="Request rework"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@(!CanRequestRework(escalation))"
+                                            Click="@(() => Presenter.RequestEscalationReworkAsync(escalation.Id))"
+                                            data-testid="processes-escalation-request-rework-button" />
+                                </Cluster>
+                            </SurfaceCard>
+                        }
+                    </Stack>
+                }
+            </SectionCard>
+        </div>
+
+        <Stack GapScale="LayoutGap.Large">
+            <div data-testid="processes-approval-console">
+                <SectionCard Title="Approval Console"
+                             Description=""
+                             HelpText="Pending execution approvals continue the paused AgentFramework run. Changes requested is recorded as an explicit rejection with the operator note.">
+                    <FormField Text="Decision summary">
+                        <InputTextArea @bind-Value="Presenter.OperatorApprovalDecisionSummary"
+                                       class="cda-input cda-input--textarea min-h-24"
+                                       data-testid="processes-operator-approval-summary-input" />
+                    </FormField>
+
+                    @if (Presenter.OperatorApprovals.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No approvals"
+                                    Title="No execution approvals are waiting"
+                                    Description="Tool approvals appear here when an agent run pauses before a governed action." />
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="mt-4">
+                            @foreach (var approval in Presenter.OperatorApprovals)
+                            {
+                                <SurfaceCard Soft="true">
+                                    <Split Gap="LayoutGap.Small">
+                                        <Stack GapScale="LayoutGap.Tiny">
+                                            <p class="cda-eyebrow">@(string.IsNullOrWhiteSpace(approval.StepTitle) ? approval.Kind : approval.StepTitle)</p>
+                                            <h3 class="text-base font-semibold text-slate-950">@approval.Title</h3>
+                                            @if (!string.IsNullOrWhiteSpace(approval.Details))
+                                            {
+                                                <p class="text-sm leading-6 text-slate-600">@approval.Details</p>
+                                            }
+                                            <p class="text-sm leading-6 text-slate-500">@approval.Source</p>
+                                        </Stack>
+                                        <StatusBadge Tone="@Presenter.ResolveOperatorApprovalTone(approval.Status)"
+                                                     Text="@approval.Status.ToString()" />
+                                    </Split>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Class="mt-4">
+                                        <Button Text="Approve"
+                                                ButtonStyle="ButtonStyle.Success"
+                                                Disabled="@(!approval.CanDecide)"
+                                                Click="@(() => Presenter.DecideOperatorApprovalAsync(approval, ProcessOperatorApprovalStatus.Approved))"
+                                                data-testid="processes-approval-approve-button" />
+                                        <Button Text="Reject"
+                                                ButtonStyle="ButtonStyle.Danger"
+                                                Disabled="@(!approval.CanDecide)"
+                                                Click="@(() => Presenter.DecideOperatorApprovalAsync(approval, ProcessOperatorApprovalStatus.Rejected))" />
+                                        <Button Text="Changes requested"
+                                                ButtonStyle="ButtonStyle.Warning"
+                                                Disabled="@(!approval.CanDecide)"
+                                                Click="@(() => Presenter.DecideOperatorApprovalAsync(approval, ProcessOperatorApprovalStatus.ChangesRequested))" />
+                                    </Cluster>
+                                </SurfaceCard>
+                            }
+                        </Stack>
+                    }
+                </SectionCard>
+            </div>
+
+            <div data-testid="processes-rework-console">
+                <SectionCard Title="Rework Console"
+                             Description=""
+                             HelpText="Manual rework creates a typed rework packet and queues a governed rerun. Only blocked or failed agent-owned steps are eligible.">
+                    <Stack GapScale="LayoutGap.Medium">
+                        <FormField Text="Agent step">
+                            <InputSelect TValue="Guid?"
+                                         @bind-Value="Presenter.OperatorReworkStepRunId"
+                                         class="cda-input"
+                                         data-testid="processes-operator-rework-step-select">
+                                <option value="">Select blocked or failed step</option>
+                                @foreach (var stepRun in Presenter.StepRuns.Where(item => item.Health.CanManualRerun))
+                                {
+                                    <option value="@stepRun.Id">@stepRun.Title</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <FormField Text="Rework directive">
+                            <InputTextArea @bind-Value="Presenter.OperatorReworkDirective"
+                                           class="cda-input cda-input--textarea min-h-28"
+                                           data-testid="processes-operator-rework-directive-input" />
+                        </FormField>
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Request rework"
+                                    Disabled="@(!Presenter.OperatorReworkStepRunId.HasValue)"
+                                    Click="Presenter.RequestManualReworkAsync"
+                                    data-testid="processes-operator-rework-button" />
+                        </Cluster>
+                    </Stack>
+                </SectionCard>
+            </div>
+        </Stack>
+    </Grid>
+
+    <div data-testid="processes-attempt-timeline">
+        <SectionCard Title="Attempt Timeline"
+                     Description=""
+                     HelpText="The timeline combines execution attempts, approvals, automation dispatch, escalations, recovery decisions, and rework packets into a reconstructable operational history.">
+            @if (Presenter.AttemptTimeline.Count == 0)
+            {
+                <EmptyState Eyebrow="No attempts"
+                            Title="No operator timeline entries yet"
+                            Description="Execution attempts, approvals, dispatch records, escalations, and recovery events appear here as the run progresses." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Small">
+                    @foreach (var entry in Presenter.AttemptTimeline)
+                    {
+                        <SurfaceCard Soft="true">
+                            <Split Gap="LayoutGap.Small">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <p class="cda-eyebrow">@(string.IsNullOrWhiteSpace(entry.StepTitle) ? entry.Kind : entry.StepTitle)</p>
+                                    <h3 class="text-base font-semibold text-slate-950">@entry.Title</h3>
+                                    @if (!string.IsNullOrWhiteSpace(entry.Summary))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-600">@entry.Summary</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(entry.ProofSummary))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-500">@entry.ProofSummary</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(entry.ProviderName) || !string.IsNullOrWhiteSpace(entry.Model))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-500">@entry.ProviderName @entry.Model</p>
+                                    }
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@entry.StatusTone"
+                                                 Text="@entry.Status" />
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@entry.Kind.ToString()" />
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@entry.OccurredAtUtc.ToLocalTime().ToString("g")" />
+                                </Cluster>
+                            </Split>
+                        </SurfaceCard>
+                    }
+                </Stack>
+            }
+        </SectionCard>
+    </div>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+
+    private bool CanRequestRework(ProcessEscalationViewModel escalation)
+    {
+        return escalation.IsJournalBacked &&
+            escalation.IsOpen &&
+            escalation.StepRunId.HasValue &&
+            Presenter.StepRuns.Any(stepRun => stepRun.Id == escalation.StepRunId.Value && stepRun.Health.CanManualRerun);
+    }
+}

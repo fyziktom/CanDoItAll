@@ -6,8 +6,16 @@
     <Header>
         <PageHeader Eyebrow="AgentFramework"
                     Title="Integrated technical agent runtime"
-                    Description="This shell owns the technical agent catalog, durable execution evidence, provider diagnostics, and scenario proof. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.">
+                    Description="@AgentFrameworkShellHelpText"
+                    Compact="true">
             <Actions>
+                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                             OpenOnHover="true"
+                             AriaLabel="Show AgentFramework shell help"
+                             Title="Show AgentFramework shell help"
+                             Heading="AgentFramework shell"
+                             Body="@AgentFrameworkShellHelpText" />
                 <Button Text="Feed defaults"
                         ButtonStyle="ButtonStyle.Light"
                         Click="FeedDefaultsAsync"
@@ -26,41 +34,55 @@
     </Header>
 
     <Lead>
-        <SummaryTiles>
-            <SummaryTile Label="Technical agents"
-                         Value="@ResolveSummaryValue(technicalAgentCount)"
-                         HelperText="Organization-scoped technical runtime records."
-                         Tone="info" />
-            <SummaryTile Label="Providers"
-                         Value="@ResolveSummaryValue(providerCount)"
-                         HelperText="Workspace-owned providers executed through AgentFramework."
-                         Tone="success" />
-            <SummaryTile Label="Bound resources"
-                         Value="@ResolveSummaryValue(boundResourceCount)"
-                         HelperText="CRM-HR AI resources already bound to a technical agent."
-                         Tone="warning" />
-            <SummaryTile Label="Capabilities"
-                         Value="@ResolveSummaryValue(capabilityCount)"
-                         HelperText="Reusable skills, MCP servers, and other runtime capabilities."
-                         Tone="mint" />
-            <SummaryTile Label="Active runs"
-                         Value="@ResolveSummaryValue(activeRunCount)"
-                         HelperText="Durable technical executions still in progress."
-                         Tone="info" />
-            <SummaryTile Label="Failed runs"
-                         Value="@ResolveSummaryValue(failedRunCount)"
-                         HelperText="Recent execution failures that still need governance attention."
-                         Tone="danger" />
-        </SummaryTiles>
-
-        @if (!string.IsNullOrWhiteSpace(statusMessage))
-        {
-            <SurfaceCard Soft="true"
-                         data-testid="agents-shell-message-card">
-                <p class="cda-eyebrow">Workspace status</p>
-                <p class="mt-2 text-sm leading-6 @(statusMessageIsError ? "text-rose-700" : "text-slate-700")">@statusMessage</p>
-            </SurfaceCard>
-        }
+        <div class="agents-runtime-badges-shell">
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.Wrap"
+                     Class="agents-runtime-badges"
+                     data-testid="agents-shell-summary-badges">
+                <SummaryTile Label="Technical agents"
+                             Value="@ResolveSummaryValue(technicalAgentCount)"
+                             HelperText="Organization-scoped technical runtime records."
+                             Tone="info"
+                             Badge="true"
+                             Compact="true"
+                             ShowHelperTextAsTooltip="true" />
+                <SummaryTile Label="Providers"
+                             Value="@ResolveSummaryValue(providerCount)"
+                             HelperText="Workspace-owned providers executed through AgentFramework."
+                             Tone="success"
+                             Badge="true"
+                             Compact="true"
+                             ShowHelperTextAsTooltip="true" />
+                <SummaryTile Label="Bound resources"
+                             Value="@ResolveSummaryValue(boundResourceCount)"
+                             HelperText="CRM-HR AI resources already bound to a technical agent."
+                             Tone="warning"
+                             Badge="true"
+                             Compact="true"
+                             ShowHelperTextAsTooltip="true" />
+                <SummaryTile Label="Capabilities"
+                             Value="@ResolveSummaryValue(capabilityCount)"
+                             HelperText="Reusable skills, MCP servers, and other runtime capabilities."
+                             Tone="secondary"
+                             Badge="true"
+                             Compact="true"
+                             ShowHelperTextAsTooltip="true" />
+                <SummaryTile Label="Active runs"
+                             Value="@ResolveSummaryValue(activeRunCount)"
+                             HelperText="Durable technical executions still in progress."
+                             Tone="info"
+                             Badge="true"
+                             Compact="true"
+                             ShowHelperTextAsTooltip="true" />
+                <SummaryTile Label="Failed runs"
+                             Value="@ResolveSummaryValue(failedRunCount)"
+                             HelperText="Recent execution failures that still need governance attention."
+                             Tone="danger"
+                             Badge="true"
+                             Compact="true"
+                             ShowHelperTextAsTooltip="true" />
+            </Cluster>
+        </div>
 
         <div data-testid="agents-shell-tabs">
             <SecondaryTabs Items="Tabs"

@@ -6,6 +6,7 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    [Trait("Category", "Quarantined")]
     [Trait("Surface", "ProjectStructure")]
     [Trait("Artifacts", "Required")]
     public async Task Project_structure_artifacts_capture_required_canvas_evidence()

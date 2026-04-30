@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Builder;
@@ -221,6 +222,9 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
     public static async Task<ManagedFilesTestHost> CreateAsync()
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("managed-files-host");
+        Quartz.Logging.LogProvider.IsDisabled = false;
+        Quartz.Logging.LogProvider.SetCurrentLogProvider(new NoOpQuartzLogProvider());
+
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             ContentRootPath = testEnvironment.RootPath,
@@ -232,7 +236,8 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
         TestApplicationBootstrap.ConfigureDefaultServices(
             builder.Services,
             builder.Configuration,
-            builder.Environment);
+            builder.Environment,
+            registerTestHostApplicationLifetime: false);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
@@ -274,7 +279,35 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",
             ["DevelopmentManager:TuningModeEnabled"] = "true",
             ["DevelopmentManager:ReviewBeforeSend"] = "true",
-            ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407"
+            ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407",
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         };
+    }
+
+    private sealed class NoOpQuartzLogProvider : Quartz.Logging.ILogProvider
+    {
+        public Quartz.Logging.Logger GetLogger(string name)
+        {
+            return static (_, _, _, _) => false;
+        }
+
+        public IDisposable OpenNestedContext(string message)
+        {
+            return NoOpDisposable.Instance;
+        }
+
+        public IDisposable OpenMappedContext(string key, object value, bool destructure = false)
+        {
+            return NoOpDisposable.Instance;
+        }
+    }
+
+    private sealed class NoOpDisposable : IDisposable
+    {
+        public static readonly IDisposable Instance = new NoOpDisposable();
+
+        public void Dispose()
+        {
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
@@ -48,6 +49,15 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
 
     [Inject]
+    private DialogService DialogService { get; set; } = default!;
+
+    [Inject]
+    private IProcessEscalationService EscalationService { get; set; } = default!;
+
+    [Inject]
+    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
     private ProcessCatalogWarmupService CatalogWarmupService { get; set; } = default!;
 
     [Parameter]
@@ -69,6 +79,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
     private IReadOnlyList<ProcessExecutionRunViewModel> executionRuns = [];
+    private IReadOnlyList<ProcessEscalationViewModel> processEscalations = [];
+    private IReadOnlyList<ProcessOperatorApprovalViewModel> operatorApprovals = [];
+    private IReadOnlyList<ProcessAttemptTimelineEntryViewModel> attemptTimeline = [];
     private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
@@ -106,13 +119,16 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? directMessageSourceRoleRequirementId;
     private Guid? directMessageTargetRoleRequirementId;
     private string directMessageBody = string.Empty;
+    private Guid? operatorReworkStepRunId;
+    private string operatorReworkDirective = string.Empty;
+    private string operatorEscalationOwner = "process-workspace";
+    private string operatorEscalationResolution = string.Empty;
+    private string operatorApprovalDecisionSummary = string.Empty;
     private Dictionary<Guid, Guid?> runtimeBranchOutcomeSelections = [];
     private IReadOnlyList<ProcessDirectMessageThreadViewModel> directMessageThreads = [];
     private string exportJson = string.Empty;
     private string importJson = string.Empty;
     private string projectName = string.Empty;
-    private string message = string.Empty;
-    private bool isError;
     private bool isFeedingDefaults;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
@@ -174,6 +190,14 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private int SelectedDetailTabIndex
         => ResolveDetailTabIndex(detailTab);
 
+    private string DefinitionCountText => FormatCount(definitions.Count, "definition", "definitions");
+
+    private string VisibleDefinitionCountText => $"{FilteredDefinitions.Count} visible";
+
+    private string ActiveRunCountText => FormatCount(definitions.Sum(item => item.ActiveRunCount), "active run", "active runs");
+
+    private string ImprovementCountText => FormatCount(analytics.ImprovementCandidateCount, "improvement", "improvements");
+
     private static int ResolveDetailTabIndex(string key)
     {
         for (var index = 0; index < DetailTabs.Count; index++)
@@ -197,16 +221,20 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         return DetailTabs[0].Key;
     }
 
+    private static string FormatCount(int count, string singularLabel, string pluralLabel)
+    {
+        var label = count == 1 ? singularLabel : pluralLabel;
+        return $"{count} {label}";
+    }
+
     private void SetMessage(string value)
     {
-        message = value;
-        isError = false;
+        NotificationService.Success("Processes updated", value);
     }
 
     private void SetError(string value)
     {
-        message = value;
-        isError = true;
+        NotificationService.Error("Processes update failed", value);
     }
 
     private void SetError(IEnumerable<Error> errors)
@@ -216,8 +244,6 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private void ClearMessage()
     {
-        message = string.Empty;
-        isError = false;
     }
 
     private async Task FeedDefaultsAsync()

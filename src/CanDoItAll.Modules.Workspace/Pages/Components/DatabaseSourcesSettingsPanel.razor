@@ -3,6 +3,7 @@
 @using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.SharedKernel
 @inject DatabaseProfileWorkspaceService DatabaseProfileWorkspaceService
+@inject NotificationService NotificationService
 
 <ListDetailShell ListPaneWidth="27rem">
     <ListHeader>
@@ -442,8 +443,7 @@
                     }
 
                     <StickyActionFooter StatusLabel="Data sources"
-                                        StatusMessage="@databaseMessage"
-                                        StatusTone="@databaseMessageTone">
+                                        StatusTone="success">
                         <SecondaryActions>
                             <Button Text="Reset draft"
                                     ButtonStyle="ButtonStyle.Light"
@@ -1395,6 +1395,24 @@
     {
         databaseMessage = message;
         databaseMessageTone = tone;
+        switch (tone)
+        {
+            case "success":
+                NotificationService.Success("Data source updated", message);
+                break;
+            case "warning":
+                NotificationService.Warning("Data source needs attention", message);
+                break;
+            case "danger":
+                NotificationService.Error("Data source operation failed", message);
+                break;
+            case "info":
+                NotificationService.Info("Data source update", message);
+                break;
+            default:
+                NotificationService.Info("Data source update", message);
+                break;
+        }
     }
 
     private Task RefreshSelectedSchemaHealthAsync()

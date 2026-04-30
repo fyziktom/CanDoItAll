@@ -14,7 +14,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         "integration-agent",
         "Integration Agent",
         "integration-machine",
-        @"C:\repositories\CanDoItAll",
+        IntegrationTestPaths.RepositoryRoot,
         "tests/project-structure",
         Guid.NewGuid().ToString("N"));
 

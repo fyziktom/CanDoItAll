@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -12,15 +13,15 @@ public partial class AgentCapabilitiesPanel
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<CapabilityCatalogItem> capabilities = [];
     private AgentDefinition? selectedAgent;
     private AgentEditorModel? selectedAgentEditor;
     private Guid? selectedAgentId;
     private bool isBusy;
-    private string message = string.Empty;
-    private string messageTone = "info";
-    private string messageLabel = "Info";
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,9 +130,21 @@ public partial class AgentCapabilitiesPanel
 
     private void SetMessage(string label, string tone, string value)
     {
-        messageLabel = label;
-        messageTone = tone;
-        message = value;
+        switch (tone)
+        {
+            case "success":
+                NotificationService.Success(label, value);
+                break;
+            case "warning":
+                NotificationService.Warning(label, value);
+                break;
+            case "danger":
+                NotificationService.Error(label, value);
+                break;
+            default:
+                NotificationService.Info(label, value);
+                break;
+        }
     }
 
     private static string ResolveAgentMeta(AgentDefinition agent)

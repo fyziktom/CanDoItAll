@@ -41,14 +41,6 @@
                              Tone="success" />
             </SummaryTiles>
 
-            @if (!string.IsNullOrWhiteSpace(message))
-            {
-                <div class="@ResolveMessageClasses()"
-                     data-testid="collaboration-status-card">
-                    @message
-                </div>
-            }
-
             <Tabs SelectedIndex="@selectedViewIndex"
                   SelectedIndexChanged="HandleSelectedViewChangedAsync"
                   Variant="TabsVariant.WorkspaceSecondary"

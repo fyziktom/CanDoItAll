@@ -10,6 +10,101 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessRuntimeOperatorReadModelTests {
     [Fact]
+    public async Task Blocked_transition_creates_operator_escalation_and_rework_actions_are_journaled()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, "Escalation lifecycle read model");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var escalationService = scope.ServiceProvider.GetRequiredService<IProcessEscalationService>();
+        var runDetailsLoader = scope.ServiceProvider.GetRequiredService<ProcessWorkspaceRunDetailsLoader>();
+        var stepRun = await StartStepAsync(processesService, fixture);
+
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Required artifacts still missing: implementation-report.md.",
+                DecidedBy = "integration-tests"
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        var escalation = Assert.Single(await escalationService.ListAsync(fixture.RunId));
+
+        Assert.Equal(ProcessEscalationKind.BlockedStep, escalation.Kind);
+        Assert.Equal(ProcessEscalationStatus.Open, escalation.Status);
+        Assert.Equal(ProcessEscalationSourceKind.Journal, escalation.SourceKind);
+        Assert.Equal(stepRun.Id, escalation.StepRunId);
+
+        var assignResult = await escalationService.AssignAsync(
+            new ProcessEscalationAssignmentRequest
+            {
+                EscalationId = escalation.Id,
+                Owner = "integration-operator",
+                AssignedBy = "integration-tests"
+            });
+
+        Assert.True(assignResult.IsSuccess, string.Join(" | ", assignResult.Errors.Select(error => error.Message)));
+        var assignedEscalation = Assert.Single(await escalationService.ListAsync(fixture.RunId));
+
+        Assert.Equal(ProcessEscalationStatus.Assigned, assignedEscalation.Status);
+        Assert.Equal("integration-operator", assignedEscalation.Owner);
+
+        var resolveResult = await escalationService.ResolveAsync(
+            new ProcessEscalationResolutionRequest
+            {
+                EscalationId = escalation.Id,
+                Resolution = "Operator confirmed the rework path is required.",
+                ResolvedBy = "integration-tests"
+            });
+
+        Assert.True(resolveResult.IsSuccess, string.Join(" | ", resolveResult.Errors.Select(error => error.Message)));
+        var resolvedEscalation = Assert.Single(await escalationService.ListAsync(fixture.RunId));
+
+        Assert.Equal(ProcessEscalationStatus.Resolved, resolvedEscalation.Status);
+        Assert.Contains("rework path", resolvedEscalation.Resolution, StringComparison.OrdinalIgnoreCase);
+
+        var reopenResult = await escalationService.ReopenAsync(
+            new ProcessEscalationReopenRequest
+            {
+                EscalationId = escalation.Id,
+                Reason = "Reopen for targeted agent rework.",
+                ReopenedBy = "integration-tests"
+            });
+
+        Assert.True(reopenResult.IsSuccess, string.Join(" | ", reopenResult.Errors.Select(error => error.Message)));
+
+        var blockedStep = Assert.Single(await processesService.ListStepRunsAsync(fixture.RunId));
+        var reworkResult = await escalationService.RequestReworkAsync(
+            new ProcessEscalationReworkRequest
+            {
+                EscalationId = escalation.Id,
+                StepRunConcurrencyToken = blockedStep.StepRunConcurrencyToken,
+                Directive = "Repair only the missing implementation-report.md evidence projection.",
+                RequestedBy = "integration-tests"
+            });
+
+        Assert.True(reworkResult.IsSuccess, string.Join(" | ", reworkResult.Errors.Select(error => error.Message)));
+
+        var details = await runDetailsLoader.LoadAsync(fixture.RunId);
+        var reworkEscalation = Assert.Single(details.Escalations, item => item.Id == escalation.Id);
+        var rerunStep = Assert.Single(details.StepRuns);
+
+        Assert.Equal(ProcessEscalationStatus.ReworkRequested, reworkEscalation.Status);
+        Assert.NotNull(reworkEscalation.ReworkPacketId);
+        Assert.Equal(ProcessStepRunStatus.InProgress, rerunStep.Status);
+        Assert.Equal(ProcessRecoveryClassification.ManualRerun, rerunStep.Health.RecoveryClassification);
+        Assert.Contains(details.AttemptTimeline, item => item.Kind == ProcessAttemptTimelineKind.ReworkPacket);
+        Assert.Contains(details.AttemptTimeline, item => item.Kind == ProcessAttemptTimelineKind.ManualRerun);
+        Assert.Contains(details.AttemptTimeline, item =>
+            item.Kind == ProcessAttemptTimelineKind.Escalation &&
+            item.Status == ProcessRuntimeEventTypes.ProcessEscalationReworkRequested);
+    }
+
+    [Fact]
     public async Task Runtime_read_model_exposes_missing_artifact_obligations_for_blocked_agent_steps()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -129,6 +224,13 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
         Assert.Equal(ProcessOutboxHealthStatus.DeadLettered, outboxRecord.HealthStatus);
         Assert.Equal(ProcessRecoveryClassification.OutboxDeadLetter, details.Health.RecoveryClassification);
         Assert.Contains("dead-lettered", details.Health.ActionableReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(details.Escalations, item =>
+            item.Id == outboxRecord.Id &&
+            item.Kind == ProcessEscalationKind.OutboxDeadLetter &&
+            item.SourceKind == ProcessEscalationSourceKind.OutboxRecord);
+        Assert.Contains(details.AttemptTimeline, item =>
+            item.Kind == ProcessAttemptTimelineKind.Outbox &&
+            item.OutboxRecordId == outboxRecord.Id);
     }
 
     private static async Task<AgentRunFixture> CreateAgentRunFixtureAsync(IServiceProvider services, string name)

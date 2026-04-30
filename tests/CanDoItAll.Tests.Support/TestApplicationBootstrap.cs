@@ -51,12 +51,17 @@ public static class TestApplicationBootstrap
     public static void ConfigureDefaultServices(
         IServiceCollection services,
         IConfiguration configuration,
-        IHostEnvironment environment)
+        IHostEnvironment environment,
+        bool registerTestHostApplicationLifetime = true)
     {
         services.AddLogging();
         services.AddSingleton(configuration);
-        services.AddSingleton<TestHostApplicationLifetime>();
-        services.AddSingleton<IHostApplicationLifetime>(serviceProvider => serviceProvider.GetRequiredService<TestHostApplicationLifetime>());
+        if (registerTestHostApplicationLifetime)
+        {
+            services.TryAddSingleton<TestHostApplicationLifetime>();
+            services.TryAddSingleton<IHostApplicationLifetime>(serviceProvider => serviceProvider.GetRequiredService<TestHostApplicationLifetime>());
+        }
+
         services.TryAddSingleton<IJSRuntime, UnsupportedJsRuntime>();
         services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);

@@ -1,7 +1,9 @@
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Resources.Pages;
@@ -14,13 +16,15 @@ public partial class ResourcesPage
     [SupplyParameterFromQuery(Name = "projectId")]
     public Guid? ProjectIdQuery { get; set; }
 
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
     private IReadOnlyList<ResourceSummary> resources = [];
     private IReadOnlyList<ProjectSummary> projects = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private IReadOnlyList<ConnectorPluginManifest> resourceManifests = [];
     private ResourceEditorModel editor = new();
-    private string? message;
     private string resourceSearch = string.Empty;
     private string projectFilter = string.Empty;
     private string connectorFilter = string.Empty;
@@ -75,7 +79,6 @@ public partial class ResourcesPage
     private async Task CreateNewAsync()
     {
         editor = NewEditor(ProjectIdQuery);
-        message = null;
         await LoadResponsiblePartyOptionsAsync();
     }
 
@@ -84,22 +87,29 @@ public partial class ResourcesPage
         editor = await ResourcesService.GetAsync(id);
         NormalizeResourceEditorForCurrentPlugin();
         await LoadResponsiblePartyOptionsAsync();
-        message = null;
     }
 
     private async Task SaveAsync()
     {
-        var result = await ResourcesService.SaveAsync(editor);
-        message = result.IsSuccess ? "Resource saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        resources = await ResourcesService.ListAsync();
-        if (!result.IsSuccess)
+        try
         {
-            return;
-        }
+            var result = await ResourcesService.SaveAsync(editor);
+            resources = await ResourcesService.ListAsync();
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Resource was not saved", DescribeErrors(result.Errors));
+                return;
+            }
 
-        editor = await ResourcesService.GetAsync(result.Value);
-        NormalizeResourceEditorForCurrentPlugin();
-        await LoadResponsiblePartyOptionsAsync();
+            editor = await ResourcesService.GetAsync(result.Value);
+            NormalizeResourceEditorForCurrentPlugin();
+            await LoadResponsiblePartyOptionsAsync();
+            NotificationService.Success("Resource saved", "Resource saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Resource save failed", exception.Message);
+        }
     }
 
     private async Task DeleteAsync()
@@ -109,10 +119,20 @@ public partial class ResourcesPage
             return;
         }
 
-        await ResourcesService.DeleteAsync(editor.Id.Value);
-        await LoadAsync(null, ProjectIdQuery);
-        message = "Resource deleted.";
+        try
+        {
+            await ResourcesService.DeleteAsync(editor.Id.Value);
+            await LoadAsync(null, ProjectIdQuery);
+            NotificationService.Success("Resource deleted", "Resource deleted.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Resource delete failed", exception.Message);
+        }
     }
+
+    private static string DescribeErrors(IEnumerable<Error> errors)
+        => string.Join(" ", errors.Select(error => error.Message));
 
     private void ResetFilters()
     {
