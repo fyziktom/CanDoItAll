@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>CanDoItAll.Components.Charts</AssemblyName>
+    <RootNamespace>CanDoItAll.Components.Charts</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazor-ApexCharts" Version="6.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+  </ItemGroup>
+
+</Project>

@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj" />
   </ItemGroup>
 

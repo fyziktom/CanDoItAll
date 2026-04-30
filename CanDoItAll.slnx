@@ -3,6 +3,7 @@
     <Project Path="src/CanDoItAll.Components/CanDoItAll.Components.csproj" />
     <Project Path="src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj" />
     <Project Path="src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj" />
+    <Project Path="src/CanDoItAll.Components.Charts/CanDoItAll.Components.Charts.csproj" />
     <Project Path="src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj" />
     <Project Path="src/CanDoItAll.Components.OverlayLib/CanDoItAll.Components.OverlayLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj" />

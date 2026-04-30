@@ -11,6 +11,7 @@ public enum SandboxGroupKey
     Feedback,
     Layout,
     DataDisplay,
+    Charts,
     Overlays,
     Canvas
 }
@@ -104,6 +105,13 @@ public static class SandboxCatalogRegistry
             ["cards", "lists", "fact and meta summaries", "chips and pills"],
             ["Long labels cannot destroy hierarchy.", "Dense displays still need calm grouping.", "Empty views should reuse shared empty surfaces."]),
         new(
+            SandboxGroupKey.Charts,
+            "Charts",
+            "/groups/charts",
+            "Apex-backed chart wrappers for operational trends, shares, fills, labels, and color tuning.",
+            ["pie", "line", "area", "multi-series", "labels"],
+            ["Charts must render nonblank browser output.", "Legends, labels, and toolbars cannot crowd the plot.", "Consumers should use CanDoItAll chart models instead of Apex component markup."]),
+        new(
             SandboxGroupKey.Overlays,
             "Overlays",
             "/groups/overlays",
@@ -145,6 +153,9 @@ public static class SandboxCatalogRegistry
         CreateExample("data-display-happy", SandboxGroupKey.DataDisplay, "Summary and list views", SandboxScenarioKey.HappyPath, "Cards, summaries, and list rows for stable data display.", ["lists"], "Card", "SelectionListItem", "SummaryTiles"),
         CreateExample("data-display-dense", SandboxGroupKey.DataDisplay, "Dense data review", SandboxScenarioKey.DenseContent, "Metadata-heavy summaries and compact item rows.", ["dense", "metadata"], "SelectionListItem", "StatusBadge"),
         CreateExample("data-display-empty", SandboxGroupKey.DataDisplay, "No results", SandboxScenarioKey.EmptyState, "Shared empty display state for list-style data.", ["empty"], "EmptyState"),
+        CreateExample("charts-happy", SandboxGroupKey.Charts, "Trend and share charts", SandboxScenarioKey.HappyPath, "Area, line, multi-line, and pie examples using the CanDoItAll chart wrapper.", ["charts", "apex", "wrapper"], "CdaChart"),
+        CreateExample("charts-dense", SandboxGroupKey.Charts, "Dense operational charts", SandboxScenarioKey.DenseContent, "Higher-density multi-series charts with legends, labels, and color tuning.", ["dense", "multi-series"], "CdaChart"),
+        CreateExample("charts-empty", SandboxGroupKey.Charts, "No chart data", SandboxScenarioKey.EmptyState, "Wrapper empty-state behavior before any chart series is available.", ["empty"], "CdaChart", "EmptyState"),
         CreateExample("overlays-happy", SandboxGroupKey.Overlays, "Overlay services", SandboxScenarioKey.HappyPath, "DialogService, TooltipService, and NotificationService around contextual help and sticky actions.", ["overlay", "services"], "DialogService", "DialogHost", "TooltipService", "Tooltip", "NotificationService", "HelpPopover", "StickyActionFooter"),
         CreateExample("overlays-dense", SandboxGroupKey.Overlays, "Dense approval flow", SandboxScenarioKey.DenseContent, "Inline approval surface with secondary actions, modal affordance, and service-hosted overlays.", ["dense", "approval"], "DialogService", "TooltipService", "NotificationService", "StickyActionFooter", "Alert"),
         CreateExample("overlays-empty", SandboxGroupKey.Overlays, "No modal context", SandboxScenarioKey.EmptyState, "Overlay surface before the user selects a record.", ["empty"], "EmptyState", "HelpPopover", "DialogHost"),
