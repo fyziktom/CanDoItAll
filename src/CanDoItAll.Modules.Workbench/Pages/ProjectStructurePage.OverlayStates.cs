@@ -211,7 +211,11 @@ public sealed record ProjectStructureQuickActionDialogState(
     string NodeLabel,
     string Copy,
     ProjectStructureQuickActionButton EditAction,
-    ProjectStructureQuickActionButton PrimaryAction);
+    ProjectStructureQuickActionButton PrimaryAction,
+    IReadOnlyList<ProjectStructureQuickActionButton> SecondaryActions)
+{
+    public IReadOnlyList<ProjectStructureQuickActionButton> Actions => [EditAction, PrimaryAction, .. SecondaryActions];
+}
 
 public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,

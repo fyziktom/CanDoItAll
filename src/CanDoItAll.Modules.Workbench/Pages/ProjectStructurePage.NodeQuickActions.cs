@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -26,7 +27,8 @@ public partial class ProjectStructurePage
             nodeLabel,
             $"Choose the next step for this {nodeLabel.ToLowerInvariant()} without leaving the canvas.",
             BuildEditQuickAction(node),
-            ResolvePrimaryQuickAction(node));
+            ResolvePrimaryQuickAction(node),
+            ResolveSecondaryQuickActions(node));
     }
 
     private ProjectStructureQuickActionButton BuildEditQuickAction(ProjectStructureNode node)
@@ -61,11 +63,31 @@ public partial class ProjectStructurePage
         if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
         {
             return BuildInspectorQuickAction(
-                "Run PowerShell",
+                "Run normally",
                 "Launch the resolved workspace command in PowerShell.",
                 "powershell",
                 "accent",
                 "runtime:open");
+        }
+
+        if (CanShowLocalOpen(node))
+        {
+            return BuildInspectorQuickAction(
+                "Open in File Explorer",
+                "Open the trusted managed file or folder in the system File Explorer.",
+                "folder_open",
+                "primary",
+                "open-local");
+        }
+
+        if (CanOpenIpfsNodeInNewTab(node))
+        {
+            return BuildInspectorQuickAction(
+                "Open in New Tab",
+                "Open the IPFS-backed file in a separate browser tab.",
+                "open",
+                "accent",
+                "open-new-tab");
         }
 
         return node.ObjectType switch
@@ -127,6 +149,25 @@ public partial class ProjectStructurePage
         };
     }
 
+    private IReadOnlyList<ProjectStructureQuickActionButton> ResolveSecondaryQuickActions(ProjectStructureNode node)
+    {
+        var runtimeLaunch = RuntimeLauncher.Resolve(node);
+        if (!RuntimeLauncher.IsAvailable || !runtimeLaunch.IsSuccess)
+        {
+            return [];
+        }
+
+        return
+        [
+            BuildInspectorQuickAction(
+                "Run as administrator",
+                "Launch the resolved workspace command in an elevated PowerShell window.",
+                "admin_panel_settings",
+                "warn",
+                "runtime:admin")
+        ];
+    }
+
     private static bool CanOpenRelatedProjectStructure(ProjectStructureNode node)
         => node.ProjectRole is ProjectStructureProjectRole.Subproject or
            ProjectStructureProjectRole.ParentProject or
@@ -135,6 +176,26 @@ public partial class ProjectStructurePage
     private static bool CanOpenNodeInNewTab(ProjectStructureNode node)
         => !string.IsNullOrWhiteSpace(node.Route) &&
            !node.Route.EndsWith("/structure", StringComparison.OrdinalIgnoreCase);
+
+    private static bool CanOpenIpfsNodeInNewTab(ProjectStructureNode node)
+        => IsIpfsBackedNode(node) && CanOpenNodeInNewTab(node);
+
+    private bool CanOfferFileQuickActions(ProjectStructureNode node)
+        => CanShowLocalOpen(node) || CanOpenIpfsNodeInNewTab(node);
+
+    private static bool IsIpfsBackedNode(ProjectStructureNode node)
+    {
+        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var storageReference) &&
+            storageReference is not null &&
+            storageReference.ProviderKind == StorageProviderKind.Ipfs)
+        {
+            return true;
+        }
+
+        return node.Route.Contains("/ipfs/", StringComparison.OrdinalIgnoreCase) ||
+               (Uri.TryCreate(node.Route, UriKind.Absolute, out var routeUri) &&
+                routeUri.Host.Contains("ipfs", StringComparison.OrdinalIgnoreCase));
+    }
 
     private static ProjectStructureQuickActionButton BuildInspectorQuickAction(
         string label,

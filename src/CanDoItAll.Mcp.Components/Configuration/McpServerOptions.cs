@@ -30,6 +30,9 @@ public sealed class CatalogOptions
     public string CanvasLibRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.CanvasLib");
 
     [Required]
+    public string ChartsRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.Charts");
+
+    [Required]
     public string SandboxRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.Sandbox");
 }
 
@@ -71,6 +74,7 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
 
         ValidateRoot(workspaceRoot, options.Catalog.BaseLibRoot, "Catalog.BaseLibRoot", failures);
         ValidateRoot(workspaceRoot, options.Catalog.CanvasLibRoot, "Catalog.CanvasLibRoot", failures);
+        ValidateRoot(workspaceRoot, options.Catalog.ChartsRoot, "Catalog.ChartsRoot", failures);
         ValidateRoot(workspaceRoot, options.Catalog.SandboxRoot, "Catalog.SandboxRoot", failures);
 
         return failures.Count == 0

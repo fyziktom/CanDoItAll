@@ -250,6 +250,68 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
+    public void Runtime_capable_nodes_expose_normal_and_admin_run_actions_when_requested()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("script", ProjectObjectType.Script, "Run setup", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node, canLaunchRuntime: true);
+
+        Assert.Contains(actions, action => action.ActionId == "runtime:open" && action.Label == "Run normally");
+        Assert.Contains(actions, action => action.ActionId == "runtime:admin" && action.Label == "Run as administrator");
+        Assert.Equal("runtime:open", actions.Skip(5).First().ActionId);
+        AssertDistinctShortcuts(actions);
+    }
+
+    [Fact]
+    public void Runtime_actions_stay_hidden_when_runtime_launch_does_not_resolve()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("script", ProjectObjectType.Script, "Run setup", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node, canLaunchRuntime: false);
+
+        Assert.DoesNotContain(actions, action => action.ActionId == "runtime:open");
+        Assert.DoesNotContain(actions, action => action.ActionId == "runtime:admin");
+    }
+
+    [Fact]
+    public void Local_file_nodes_expose_file_explorer_context_action_when_requested()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("file", ProjectObjectType.File, "Specs.pdf", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(
+            node,
+            canLaunchRuntime: false,
+            canOpenInFileExplorer: true,
+            canOpenInNewTab: false);
+
+        Assert.Contains(actions, action => action.ActionId == "open-local" && action.Label == "Open in File Explorer");
+        Assert.DoesNotContain(actions, action => action.ActionId == "open-new-tab");
+        AssertOrderedBefore(actions, "open-local", "open");
+        AssertDistinctShortcuts(actions);
+    }
+
+    [Fact]
+    public void Ipfs_file_nodes_expose_new_tab_context_action_when_requested()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("ipfs-file", ProjectObjectType.File, "IPFS asset", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(
+            node,
+            canLaunchRuntime: false,
+            canOpenInFileExplorer: false,
+            canOpenInNewTab: true);
+
+        Assert.Contains(actions, action => action.ActionId == "open-new-tab" && action.Label == "Open in New Tab");
+        Assert.DoesNotContain(actions, action => action.ActionId == "open-local");
+        AssertOrderedBefore(actions, "open-new-tab", "open");
+        AssertDistinctShortcuts(actions);
+    }
+
+    [Fact]
     public void Non_process_nodes_expose_add_process_action()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
@@ -304,6 +366,29 @@ public sealed class ProjectStructureActionCatalogAdapterTests
 
     private static CanvasWorkbenchAction FindAction(IEnumerable<CanvasWorkbenchAction> actions, string actionId)
         => actions.Single(action => string.Equals(action.ActionId, actionId, StringComparison.Ordinal));
+
+    private static void AssertOrderedBefore(IReadOnlyList<CanvasWorkbenchAction> actions, string actionId, string laterActionId)
+    {
+        var actionIndex = IndexOf(actions, actionId);
+        var laterActionIndex = IndexOf(actions, laterActionId);
+
+        Assert.True(
+            actionIndex >= 0 && laterActionIndex >= 0 && actionIndex < laterActionIndex,
+            $"Expected '{actionId}' to be ordered before '{laterActionId}', but the action order was: {string.Join(", ", actions.Select(action => action.ActionId))}");
+    }
+
+    private static int IndexOf(IReadOnlyList<CanvasWorkbenchAction> actions, string actionId)
+    {
+        for (var index = 0; index < actions.Count; index++)
+        {
+            if (string.Equals(actions[index].ActionId, actionId, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
 
     private static void AssertDistinctShortcuts(IEnumerable<CanvasWorkbenchAction> actions)
     {

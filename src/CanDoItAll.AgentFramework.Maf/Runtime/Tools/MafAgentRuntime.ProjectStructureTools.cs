@@ -81,7 +81,7 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure with compact node payloads by default."),
+                    "Reads a filtered project structure with compact node payloads by default. Inspect node.actionCapabilities for runtime run actions (runtime:open/runtime:admin), local File Explorer actions (open-local), and IPFS new-tab actions (open-new-tab)."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureChecklistRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureChecklistAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_checklist",
@@ -1150,7 +1150,8 @@ public sealed partial class MafAgentRuntime
                 node.MediaContentType,
                 node.X,
                 node.Y,
-                node.DurationSeconds);
+                node.DurationSeconds,
+                node.ActionCapabilities);
         }
     }
 
@@ -1210,7 +1211,8 @@ public sealed record ProjectStructureCompactNode(
     string? MediaContentType = null,
     double? X = null,
     double? Y = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
 
 public sealed record ProjectStructureReadToolData(
     Guid ProjectId,

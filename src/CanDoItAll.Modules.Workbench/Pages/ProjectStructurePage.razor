@@ -802,9 +802,18 @@ else
                 QuickCreateActions = BuildQuickCreateActions().ToList(),
                 GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },
-            actionCatalog);
+            actionCatalog,
+            CanLaunchRuntimeFromCanvas,
+            CanShowLocalOpen,
+            CanOpenIpfsNodeInNewTab);
         canvasSurface.Mode = canvasToolMode;
         canvasSurface.DependencySourceId = linkModeSourceId ?? string.Empty;
+    }
+
+    private bool CanLaunchRuntimeFromCanvas(ProjectStructureNode node)
+    {
+        var runtimeLaunch = RuntimeLauncher.Resolve(node);
+        return RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess;
     }
 
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
@@ -931,6 +940,13 @@ else
         {
             CloseQuickActionDialog();
             await OpenProjectStructureInNewTabAsync(node);
+            return;
+        }
+
+        if (CanOfferFileQuickActions(node))
+        {
+            OpenQuickActionDialog(node);
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
@@ -1084,6 +1100,30 @@ else
                 if (ResolveNode(nodeId) is { } projectNodeForReconnect)
                 {
                     await OpenReconnectSubprojectDialogAsync(projectNodeForReconnect);
+                }
+                break;
+            case "runtime:open":
+                if (ResolveNode(nodeId) is { } runtimeNode)
+                {
+                    await LaunchRuntimeAsync(runtimeNode, false);
+                }
+                break;
+            case "runtime:admin":
+                if (ResolveNode(nodeId) is { } elevatedRuntimeNode)
+                {
+                    await LaunchRuntimeAsync(elevatedRuntimeNode, true);
+                }
+                break;
+            case "open-local":
+                if (ResolveNode(nodeId) is { } localFileNode)
+                {
+                    await OpenAttachmentLocallyAsync(localFileNode);
+                }
+                break;
+            case "open-new-tab":
+                if (ResolveNode(nodeId) is { } newTabNode)
+                {
+                    await OpenArtifactInNewTabAsync(newTabNode.Route);
                 }
                 break;
             case "connect":

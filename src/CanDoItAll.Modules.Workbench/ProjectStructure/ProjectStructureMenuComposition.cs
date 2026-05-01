@@ -82,6 +82,9 @@ internal static class ProjectStructureMenuComposition
 
         preferredActions.AddRange(
         [
+            "runtime:open",
+            "open-local",
+            "open-new-tab",
             "open",
             "summary",
             "add-process",

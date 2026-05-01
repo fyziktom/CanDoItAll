@@ -47,7 +47,7 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
     }
 
     [McpServerTool(Name = "project_structure_read", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Reads a filtered project structure with compact node payloads by default so agent context stays small unless notes, metadata, assets, links, or layout are explicitly requested.")]
+    [Description("Reads a filtered project structure with compact node payloads by default. Nodes can include actionCapabilities describing runtime run actions (runtime:open/runtime:admin), local drive File Explorer actions (open-local), and IPFS new-tab actions (open-new-tab).")]
     public Task<McpToolEnvelope<ProjectStructureReadToolData>> ProjectStructureReadAsync(Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_read", () => coordinator.ReadAsync(projectId, request ?? new ProjectStructureReadRequest(), cancellationToken));

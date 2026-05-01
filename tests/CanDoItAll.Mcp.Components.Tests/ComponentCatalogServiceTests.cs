@@ -91,9 +91,35 @@ public sealed class ComponentCatalogServiceTests
 
         var groups = service.GetGroups();
 
-        Assert.Equal(9, groups.Count);
+        Assert.Equal(10, groups.Count);
+        Assert.Contains(groups, group => string.Equals(group.Key, "charts", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(groups, group => string.Equals(group.Key, "canvas", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(groups, group => string.Equals(group.Key, "foundations", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Component_Get_Returns_Charts_Metadata_Examples_And_Css()
+    {
+        var service = CreateService();
+
+        var component = service.GetComponent("CdaChart");
+        var examples = service.GetExamples("CdaChart");
+        var css = service.GetCssTokens("CdaChart");
+
+        Assert.Equal("Charts", component.Library);
+        Assert.Equal("CanDoItAll.Components.Charts", component.Namespace);
+        Assert.EndsWith(Path.Combine("Components", "CdaChart.razor"), component.SourcePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(component.Tags, tag => string.Equals(tag, "chart-wrapper", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.GroupKeys, key => string.Equals(key, "charts", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.CssNotes, note => note.Contains("raw Apex component markup", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.Guidance.CompositionRules, rule => rule.Contains("AddCanDoItAllCharts", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.Guidance.CompositionRules, rule => rule.Contains("browser assertions", StringComparison.OrdinalIgnoreCase));
+
+        var seriesParameter = Assert.Single(component.Parameters, parameter => string.Equals(parameter.Name, "Series", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("CdaChartSeries", seriesParameter.Summary ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(examples.Examples, example => string.Equals(example.GroupKey, "charts", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(css.Stylesheets, stylesheet => stylesheet.Contains("Blazor-ApexCharts", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -217,6 +243,7 @@ public sealed class ComponentCatalogServiceTests
             {
                 BaseLibRoot = Path.Combine("src", "CanDoItAll.Components.BaseLib"),
                 CanvasLibRoot = Path.Combine("src", "CanDoItAll.Components.CanvasLib"),
+                ChartsRoot = Path.Combine("src", "CanDoItAll.Components.Charts"),
                 SandboxRoot = Path.Combine("src", "CanDoItAll.Components.Sandbox")
             }
         });

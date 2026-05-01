@@ -44,6 +44,11 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("open-local", "Open in File Explorer", "folder_open", "primary"));
         }
 
+        if (CanOpenIpfsNodeInNewTab(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction("open-new-tab", "Open in New Tab", "open", "accent"));
+        }
+
         actions.AddRange(ResolveInspectorCommands(node).Select(MapCommandAction));
         actions.Add(new ProjectStructureInspectorAction("summary", "Summary", "summary", "sky"));
 
@@ -169,6 +174,9 @@ public partial class ProjectStructurePage
                 break;
             case "open-local":
                 await OpenAttachmentLocallyAsync(node);
+                break;
+            case "open-new-tab":
+                await OpenArtifactInNewTabAsync(node.Route);
                 break;
             case "command:open":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Open, node.Id);

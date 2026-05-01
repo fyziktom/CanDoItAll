@@ -36,7 +36,8 @@ public sealed record ProjectStructureCompactNode(
     string? MediaContentType = null,
     double? X = null,
     double? Y = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
 
 public sealed record ProjectStructureReadToolData(
     Guid ProjectId,

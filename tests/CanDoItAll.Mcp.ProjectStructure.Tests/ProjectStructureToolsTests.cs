@@ -87,6 +87,65 @@ public sealed class ProjectStructureToolsTests
     }
 
     [Fact]
+    public async Task ProjectStructureReadAsync_returns_node_action_capabilities()
+    {
+        var projectId = Guid.NewGuid();
+        var tools = new ProjectStructureTools(new StubCoordinator
+        {
+            OnRead = (_, _, _) => Task.FromResult(new ProjectStructureReadToolData(
+                projectId,
+                "Node actions",
+                [
+                    new ProjectStructureCompactNode(
+                        "file-1",
+                        null,
+                        ProjectObjectType.File,
+                        "pdf",
+                        "Specs.pdf",
+                        string.Empty,
+                        "Draft",
+                        "/ipfs/specs",
+                        0,
+                        "percent",
+                        0,
+                        ActionCapabilities: new ProjectStructureNodeActionCapabilities(
+                            CanRunNormally: false,
+                            CanRunAsAdministrator: false,
+                            CanOpenInFileExplorer: false,
+                            CanOpenInNewTab: true,
+                            RuntimeDisplayName: string.Empty,
+                            RuntimeDisplayCommand: string.Empty,
+                            RuntimeWorkingDirectory: string.Empty,
+                            OpenInNewTabRoute: "/ipfs/specs",
+                            StorageProvider: "Ipfs",
+                            StorageLocatorKind: "ContentAddress",
+                            StorageLocator: "bafy-test",
+                            Actions:
+                            [
+                                new ProjectStructureNodeActionDescriptor(
+                                    "open-new-tab",
+                                    "Open in New Tab",
+                                    "Double-click quick-action dialog and node context menu",
+                                    "Opens the IPFS-backed file route in a separate browser tab.")
+                            ],
+                            Guidance:
+                            [
+                                "IPFS-backed file nodes open in a browser tab instead of system File Explorer."
+                            ]))
+                ],
+                [],
+                []))
+        }, NullLogger<ProjectStructureTools>.Instance);
+
+        var result = await tools.ProjectStructureReadAsync(projectId);
+
+        Assert.True(result.Ok);
+        var capabilities = Assert.IsType<ProjectStructureNodeActionCapabilities>(result.Data!.Nodes[0].ActionCapabilities);
+        Assert.True(capabilities.CanOpenInNewTab);
+        Assert.Contains(capabilities.Actions, action => action.ActionId == "open-new-tab");
+    }
+
+    [Fact]
     public async Task ProjectStructureNodeReparentAsync_returns_successful_structured_content()
     {
         var projectId = Guid.NewGuid();
@@ -252,7 +311,8 @@ public sealed class ProjectStructureToolsTests
 
         public Task<ProjectStructureReadToolData> ReadAsync(Guid projectId, ProjectStructureReadRequest request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return OnRead?.Invoke(projectId, request, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureReadToolData(projectId, "Test project", [], [], []));
         }
 
         public Task<ProjectStructureChecklistResponse> GetChecklistAsync(Guid projectId, ProjectStructureChecklistRequest request, CancellationToken cancellationToken = default)

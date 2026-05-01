@@ -20,6 +20,7 @@ Project references:
 
 - `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
 - `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
+- `../CanDoItAll.Components.Charts/CanDoItAll.Components.Charts.csproj`
 - `../CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj`
 - `../CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj`
 - `../CanDoItAll.Mcp.Core/CanDoItAll.Mcp.Core.csproj`

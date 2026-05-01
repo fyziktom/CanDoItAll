@@ -91,6 +91,11 @@ public sealed partial class ComponentCatalogService
         [
             "CanvasLib components render against the shared workbench stylesheets exposed by `<CanvasLibHeadAssets />`.",
             "Canvas surfaces also use the typed `CanvasThemeTokenPack` so runtime and preview assets stay aligned."
+        ],
+        ["Charts"] =
+        [
+            "Charts components render ApexCharts through the wrapper assets exposed by `<ChartsHeadAssets />`.",
+            "Consumers should use CanDoItAll chart models and `CdaChart` instead of raw Apex component markup."
         ]
     };
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> BaseLibCssSourceFilesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
@@ -344,7 +349,9 @@ public sealed partial class ComponentCatalogService
         ["CanvasWorkbench"] = "Shared CanvasLib workbench surface for graph-based authoring, tool windows, and dense desktop-first runtime composition.",
         ["CanvasCalendar"] = "Shared CanvasLib calendar surface for schedule navigation, selection, and event-oriented workspace views.",
         ["CanvasFloatingWindow"] = "Shared CanvasLib floating window surface for movable auxiliary panels inside the workbench runtime.",
-        ["EmptyStateOverlay"] = "Shared CanvasLib empty-state overlay for graph and canvas surfaces with no active content."
+        ["EmptyStateOverlay"] = "Shared CanvasLib empty-state overlay for graph and canvas surfaces with no active content.",
+        ["CdaChart"] = "Shared Charts wrapper for Apex-backed line, area, bar, pie, and donut charts using CanDoItAll-owned series, point, option, and palette models.",
+        ["ChartsHeadAssets"] = "Shared Charts asset component that adds the ApexCharts stylesheet required by the CanDoItAll chart wrapper."
     };
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> TagsByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
     {
@@ -426,6 +433,26 @@ public sealed partial class ComponentCatalogService
             "master-detail",
             "detail-pane",
             "split-view"
+        ],
+        ["CdaChart"] =
+        [
+            "apex",
+            "area",
+            "bar",
+            "chart-wrapper",
+            "datetime-axis",
+            "donut",
+            "line",
+            "multi-series",
+            "pie",
+            "visualization"
+        ],
+        ["ChartsHeadAssets"] =
+        [
+            "assets",
+            "apex",
+            "chart-wrapper",
+            "stylesheet"
         ]
     };
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> AdditionalDependenciesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
@@ -480,6 +507,22 @@ public sealed partial class ComponentCatalogService
             ["Header"] = "Top page header region for orientation and primary actions.",
             ["Lead"] = "Optional lead content that introduces the workspace before the main body.",
             ["SecondaryRail"] = "Optional side rail for supporting context, shortcuts, or meta information."
+        },
+        ["CdaChart"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["AdditionalAttributes"] = "Passes stable selectors such as `data-testid` to the chart wrapper root for browser validation.",
+            ["Class"] = "Adds extra classes to the wrapper shell without replacing the chart-library boundary.",
+            ["Description"] = "Optional supporting text rendered above the chart to explain the data shape or operational context.",
+            ["EmptyText"] = "Message shown when every supplied series has no points.",
+            ["Height"] = "Chart height forwarded to the underlying renderer; use stable dimensions so labels and toolbars do not resize the layout.",
+            ["Options"] = "CanDoItAll-owned chart options that map chart type, axes, fill, legend, toolbar, labels, colors, and formatting to the current renderer.",
+            ["Series"] = "CanDoItAll-owned series collection built from `CdaChartSeries` and `CdaChartPoint`; do not pass raw Apex series markup.",
+            ["Style"] = "Adds inline style to the wrapper root for host-level sizing only.",
+            ["Title"] = "Optional chart title rendered by the wrapper before the plot."
+        },
+        ["ChartsHeadAssets"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Href"] = "Stylesheet path for ApexCharts CSS; keep the default unless the external chart asset path changes."
         },
         ["Notification"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -768,6 +811,18 @@ public sealed partial class ComponentCatalogService
             ],
             [
                 "Keep runtime and preview surfaces aligned with the shared canvas contracts and token pack."
+            ]),
+        ["Charts"] = new(
+            [
+                "Operational charts that should stay behind the CanDoItAll wrapper while currently rendering through ApexCharts."
+            ],
+            [
+                "Decorative chart chrome or direct use of raw Apex component markup in consuming pages."
+            ],
+            [
+                "Use `AddCanDoItAllCharts()` and `<ChartsHeadAssets />` in the host before rendering charts.",
+                "Build data with `CdaChartSeries`, `CdaChartPoint`, and `CdaChartOptions` so future renderer swaps stay localized.",
+                "Validate chart routes with browser assertions and screenshots because build success cannot prove nonblank Apex SVG output."
             ])
     };
     private static readonly IReadOnlySet<string> ConsumerProjectExclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -775,6 +830,7 @@ public sealed partial class ComponentCatalogService
         "CanDoItAll.ComponentKit",
         "CanDoItAll.Components.BaseLib",
         "CanDoItAll.Components.CanvasLib",
+        "CanDoItAll.Components.Charts",
         "CanDoItAll.Components.Common",
         "CanDoItAll.Mcp.Components",
         "CanDoItAll.Mcp.Core",

@@ -105,6 +105,27 @@ public sealed record ProjectStructureReadRequest(
     bool IncludeAssets = false,
     int? Take = null);
 
+public sealed record ProjectStructureNodeActionDescriptor(
+    string ActionId,
+    string Label,
+    string Surface,
+    string Description);
+
+public sealed record ProjectStructureNodeActionCapabilities(
+    bool CanRunNormally,
+    bool CanRunAsAdministrator,
+    bool CanOpenInFileExplorer,
+    bool CanOpenInNewTab,
+    string RuntimeDisplayName,
+    string RuntimeDisplayCommand,
+    string RuntimeWorkingDirectory,
+    string OpenInNewTabRoute,
+    string StorageProvider,
+    string StorageLocatorKind,
+    string StorageLocator,
+    IReadOnlyList<ProjectStructureNodeActionDescriptor> Actions,
+    IReadOnlyList<string> Guidance);
+
 public sealed record ProjectStructureNodeSummary(
     string Id,
     string? ParentId,
@@ -136,7 +157,8 @@ public sealed record ProjectStructureNodeSummary(
     int ParentProjectCount,
     double? X,
     double? Y,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
 
 public sealed record ProjectStructureLinkSummary(
     string SourceId,

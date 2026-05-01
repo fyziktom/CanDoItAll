@@ -299,6 +299,7 @@ public sealed class ProjectStructureCoordinator(
             node.MediaContentType,
             node.X,
             node.Y,
-            node.DurationSeconds);
+            node.DurationSeconds,
+            node.ActionCapabilities);
     }
 }
