@@ -1,0 +1,639 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/mermaid"
+@inherits CatalogPageBase
+
+<PageTitle>Mermaid</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@GalleryExamples.Count"
+                  HeroTitle="Mermaid.js diagrams behind a CanDoItAll-owned wrapper."
+                  HeroSummary="The Mermaid page proves the vendored official Mermaid asset with every bundled diagram family, Blazor node-click events, pan and zoom, architecture-beta, and parser diagnostics."
+                  DemoTitle="Mermaid graph gallery"
+                  DemoSummary="Every sample below is rendered through MermaidDiagram, not a direct Mermaid call."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Every graph card should display a nonblank SVG produced by the wrapper.</p>
+            <p>Click a flowchart or architecture node and confirm the .NET event panel updates with node context.</p>
+            <p>The intentional error example should show line and column details rather than a blank diagram.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Mermaid" Title="Preparing diagram module" Description="The wrapper keeps a stable viewport while the Mermaid ESM bundle is imported and queued for rendering." />
+        }
+        else if (CurrentScenario == SandboxScenarioKey.EmptyState)
+        {
+            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                <EmptyState Eyebrow="Mermaid" Title="No diagram source" Description="An empty source renders as an oriented empty viewport instead of a parser failure." />
+                <MermaidDiagram Title="Empty Mermaid source"
+                                Description="The wrapper reports a successful empty render while leaving the diagram viewport calm."
+                                Source=""
+                                PanZoomEnabled="false"
+                                ShowControls="false"
+                                data-testid="mermaid-empty" />
+            </div>
+
+            <SectionCard Title="Parser diagnostics" Description="The sample below intentionally has invalid flowchart syntax.">
+                <MermaidDiagram Title="Invalid flowchart"
+                                Description="Mermaid parser errors are normalized into line, column, excerpt, token, and expected-token fields when available."
+                                Source="@InvalidSource"
+                                Options="@ErrorOptions"
+                                PanZoomEnabled="false"
+                                ShowControls="false"
+                                Error="HandleError"
+                                data-testid="mermaid-error-example" />
+            </SectionCard>
+        }
+        else
+        {
+            <SummaryTiles>
+                <SummaryTile Label="Renderer" Value="Mermaid 11.14" HelperText="The wrapper imports the downloaded official ESM bundle from package static assets." Tone="info" />
+                <SummaryTile Label="Graph Types" Value="@GalleryExamples.Count.ToString()" HelperText="Bundled Mermaid graph families represented as live wrapper examples." Tone="success" />
+                <SummaryTile Label="Interaction" Value="@ClickedNodeLabel" HelperText="Click a clickable node to prove the Blazor callback path." Tone="warning" />
+                <SummaryTile Label="Scenario" Value="@CurrentScenario.ToLabel()" HelperText="@CurrentScenario.ToSummary()" />
+            </SummaryTiles>
+
+            <Grid ColumnsLg="2" Gap="@(LayoutGap.Large)" Class="sandbox-mermaid-workspace">
+                <SectionCard Title="Clickable flowchart" Description="Flowchart nodes raise EventCallback payloads from the JavaScript wrapper back into Blazor.">
+                    <div class="sandbox-mermaid-stack">
+                        <MermaidDiagram Title="Change-delivery flow"
+                                        Description="Click nodes, use the toolbar buttons, scroll to zoom, or drag the SVG to pan."
+                                        Source="@FlowchartSource"
+                                        Options="@DefaultOptions"
+                                        NodeClicked="HandleNodeClicked"
+                                        Rendered="HandlePrimaryRendered"
+                                        Error="HandleError"
+                                        data-testid="mermaid-flowchart" />
+
+                        <div class="sandbox-mermaid-event" data-testid="mermaid-click-result">
+                            <div>
+                                <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="Last node event" />
+                                <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="@ClickedNodeLabel" />
+                            </div>
+                            <div class="sandbox-mermaid-event__meta">
+                                <span>Id: @(_lastClick?.NodeId ?? "none")</span>
+                                <span>SVG: @(_lastClick?.SvgElementId ?? "none")</span>
+                                <span>Nodes: @(_primaryRender?.NodeCount.ToString() ?? "pending")</span>
+                            </div>
+                        </div>
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="architecture-beta" Description="Newer Mermaid diagram types render through the same wrapper and share node events plus pan/zoom support.">
+                    <div class="sandbox-mermaid-stack">
+                        <MermaidDiagram Title="Sandbox architecture"
+                                        Description="Groups, services, icons, junctions, and directional ports from architecture-beta."
+                                        Source="@ArchitectureSource"
+                                        Options="@ArchitectureOptions"
+                                        NodeClicked="HandleNodeClicked"
+                                        Rendered="HandleArchitectureRendered"
+                                        Error="HandleError"
+                                        data-testid="mermaid-architecture" />
+
+                        <div class="sandbox-mermaid-event sandbox-mermaid-event--info" data-testid="mermaid-architecture-result">
+                            <div>
+                                <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="Architecture render" />
+                                <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="@(_architectureRender is null ? "Pending" : "Rendered")" />
+                            </div>
+                            <div class="sandbox-mermaid-event__meta">
+                                <span>Nodes: @(_architectureRender?.NodeCount.ToString() ?? "pending")</span>
+                                <span>SVG: @(_architectureRender?.SvgElementId ?? "pending")</span>
+                            </div>
+                        </div>
+                    </div>
+                </SectionCard>
+            </Grid>
+
+            <SectionCard Title="All bundled Mermaid graph types" Description="Each graph type is drawn by the wrapper from a compact, valid source sample.">
+                <Grid ColumnsLg="2" Columns2Xl="3" Gap="@(LayoutGap.Medium)" Class="sandbox-mermaid-gallery" data-testid="mermaid-gallery">
+                    @foreach (var example in GalleryExamples)
+                    {
+                        <div class="sandbox-mermaid-gallery__item" data-testid="@($"mermaid-example-{example.Key}")">
+                            <MermaidDiagram Title="@example.Title"
+                                            Description="@example.Description"
+                                            Source="@example.Source"
+                                            Options="@DefaultOptions"
+                                            PanZoomEnabled="true"
+                                            ShowControls="false"
+                                            Class="sandbox-mermaid-diagram--gallery"
+                                            Style="@($"--cda-mermaid-min-height: {example.Height};")"
+                                            NodeClicked="HandleNodeClicked"
+                                            Rendered="@(result => HandleGalleryRendered(example.Key, result))"
+                                            Error="@(error => HandleGalleryError(example.Key, error))" />
+
+                            <div class="sandbox-mermaid-gallery__status">
+                                <span>@example.Key</span>
+                                <span>@GetGalleryStatus(example.Key)</span>
+                            </div>
+                        </div>
+                    }
+                </Grid>
+            </SectionCard>
+
+            @if (_lastError is not null)
+            {
+                <Alert AlertStyle="@(AlertStyle.Warning)" data-testid="mermaid-last-error">
+                    @_lastError.LocationText @_lastError.Message
+                </Alert>
+            }
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Mermaid);
+
+    private static readonly MermaidDiagramOptions DefaultOptions = new()
+    {
+        Theme = "default",
+        SecurityLevel = "loose"
+    };
+
+    private static readonly MermaidDiagramOptions ArchitectureOptions = new()
+    {
+        Theme = "default",
+        SecurityLevel = "loose",
+        ArchitectureRandomize = false
+    };
+
+    private static readonly MermaidDiagramOptions ErrorOptions = new()
+    {
+        Theme = "default",
+        SecurityLevel = "loose"
+    };
+
+    private static readonly string FlowchartSource = """
+        flowchart LR
+            intake([Request])
+            normalize[Normalize requirements]
+            bundle{Bundle needed?}
+            package[Mermaid wrapper package]
+            sandbox[Sandbox proof]
+            mcp[MCP syntax guidance]
+            done([Ready for consumers])
+
+            intake --> normalize --> bundle
+            bundle -- yes --> package
+            bundle -- also --> sandbox
+            bundle -- document --> mcp
+            package --> done
+            sandbox --> done
+            mcp --> done
+        """;
+
+    private static readonly string ArchitectureSource = """
+        architecture-beta
+            group browser(cloud)[Browser]
+            group app(cloud)[Blazor host]
+            group package(server)[Mermaid package] in app
+            group docs(database)[Syntax guidance]
+
+            service user(internet)[User] in browser
+            service sandbox(server)[Components sandbox] in app
+            service wrapper(server)[MermaidDiagram] in package
+            service mermaidjs(server)["Official mermaid.js"] in package
+            service rules(database)[MCP rules] in docs
+            junction renderPath in package
+
+            user:R --> L:sandbox
+            sandbox:R --> L:wrapper
+            wrapper:R --> L:renderPath
+            renderPath:R --> L:mermaidjs
+            wrapper:B --> T:rules
+        """;
+
+    private static readonly string InvalidSource = """
+        flowchart LR
+            start[Start]
+            start --> ??? bad target
+        """;
+
+    private static readonly IReadOnlyList<MermaidGalleryExample> GalleryExamples =
+    [
+        new(
+            "flowchart",
+            "Flowchart",
+            "Directional process graph with a decision node.",
+            """
+            flowchart LR
+                A[Source] --> B{Valid?}
+                B -- yes --> C[Render SVG]
+                B -- no --> D[Show error]
+            """),
+        new(
+            "sequence",
+            "Sequence diagram",
+            "Participants, messages, and response ordering.",
+            """
+            sequenceDiagram
+                actor User
+                participant Sandbox
+                participant MermaidDiagram
+                User->>Sandbox: Edit source
+                Sandbox->>MermaidDiagram: Render
+                MermaidDiagram-->>User: SVG and events
+            """),
+        new(
+            "class",
+            "Class diagram",
+            "Component model and render result relationship.",
+            """
+            classDiagram
+                class MermaidDiagram {
+                    +string Source
+                    +bool PanZoomEnabled
+                    +EventCallback NodeClicked
+                }
+                class MermaidRenderResult {
+                    +bool Succeeded
+                    +int NodeCount
+                }
+                MermaidDiagram --> MermaidRenderResult
+            """),
+        new(
+            "state",
+            "State diagram",
+            "Wrapper render lifecycle.",
+            """
+            stateDiagram-v2
+                [*] --> Idle
+                Idle --> Rendering: source changed
+                Rendering --> Ready: success
+                Rendering --> Error: parse failure
+                Error --> Idle: edit source
+            """),
+        new(
+            "er",
+            "Entity relationship",
+            "Diagram, node, and edge relationships.",
+            """
+            erDiagram
+                DIAGRAM ||--o{ NODE : contains
+                NODE ||--o{ EDGE : connects
+                DIAGRAM {
+                    string id
+                    string source
+                }
+                NODE {
+                    string label
+                }
+            """),
+        new(
+            "journey",
+            "User journey",
+            "Authoring and proof steps with scores.",
+            """
+            journey
+                title Mermaid wrapper adoption
+                section Author
+                    Write diagram: 5: User
+                    Preview render: 4: User
+                section Runtime
+                    Click node: 5: Browser
+                    Handle event: 5: Blazor
+            """),
+        new(
+            "gantt",
+            "Gantt",
+            "Schedule-style task chart.",
+            """
+            gantt
+                title Mermaid package rollout
+                dateFormat  YYYY-MM-DD
+                section Wrapper
+                    Package API       :done,    api, 2026-04-20, 2d
+                    Sandbox examples  :active,  demo, after api, 3d
+                section Proof
+                    Screenshots       :proof, after demo, 2d
+            """),
+        new(
+            "pie",
+            "Pie",
+            "Share-of-effort chart.",
+            """
+            pie title Mermaid proof mix
+                "Wrapper" : 35
+                "Sandbox" : 35
+                "MCP" : 20
+                "Validation" : 10
+            """),
+        new(
+            "quadrant",
+            "Quadrant chart",
+            "Graph types plotted by value and syntax risk.",
+            """
+            quadrantChart
+                title Diagram readiness
+                x-axis Low syntax risk --> High syntax risk
+                y-axis Low value --> High value
+                quadrant-1 Teach carefully
+                quadrant-2 Good defaults
+                quadrant-3 Optional
+                quadrant-4 Validate first
+                Flowchart: [0.25, 0.80]
+                Architecture-beta: [0.78, 0.92]
+                Pie: [0.16, 0.45]
+                Wardley: [0.72, 0.70]
+            """),
+        new(
+            "requirement",
+            "Requirement diagram",
+            "SysML-style requirement and element link.",
+            """
+            requirementDiagram
+                requirement wrapper {
+                    id: R1
+                    text: First party Mermaid wrapper
+                    risk: medium
+                    verifymethod: test
+                }
+                element sandbox {
+                    type: ui proof
+                }
+                sandbox - satisfies -> wrapper
+            """),
+        new(
+            "gitgraph",
+            "Git graph",
+            "Branching and merge sequence.",
+            """
+            gitGraph
+                commit id: "start"
+                branch mermaid
+                checkout mermaid
+                commit id: "wrapper"
+                commit id: "gallery"
+                checkout main
+                merge mermaid
+                commit id: "proof"
+            """),
+        new(
+            "mindmap",
+            "Mindmap",
+            "Nested concept map.",
+            """
+            mindmap
+              root((Mermaid wrapper))
+                Render
+                  SVG
+                  Errors
+                Interact
+                  Clicks
+                  Pan and zoom
+                Guide
+                  MCP rules
+            """),
+        new(
+            "timeline",
+            "Timeline",
+            "Milestones for the wrapper work.",
+            """
+            timeline
+                title Mermaid wrapper path
+                Package : Official asset : JS interop
+                Sandbox : Graph gallery : Click proof
+                MCP : Syntax rules : Forbidden symbols
+            """),
+        new(
+            "sankey",
+            "Sankey",
+            "Flow weights between work areas.",
+            """
+            sankey-beta
+                Source,Target,Value
+                Wrapper,SVG,8
+                Sandbox,Proof,6
+                MCP,Guidance,4
+                Proof,Confidence,6
+            """),
+        new(
+            "xychart",
+            "XY chart",
+            "Bar and line chart in Mermaid syntax.",
+            """
+            xychart
+                title "Validation runs"
+                x-axis [build, test, browser, bundle]
+                y-axis "Checks" 0 --> 10
+                bar [3, 9, 6, 1]
+                line [3, 9, 6, 1]
+            """),
+        new(
+            "block",
+            "Block diagram",
+            "Explicitly positioned system blocks.",
+            """
+            block
+                columns 3
+                source["Source"] wrapper["Wrapper"] svg["SVG"]
+                source --> wrapper
+                wrapper --> svg
+            """),
+        new(
+            "packet",
+            "Packet",
+            "Network packet field layout.",
+            """
+            packet
+                title Wrapper event packet
+                +16: "Diagram id"
+                +16: "Node id"
+                +32: "SVG element"
+                +32: "Node label"
+            """),
+        new(
+            "kanban",
+            "Kanban",
+            "Task columns and cards.",
+            """
+            kanban
+                todo[Todo]
+                    source[Write source]
+                rendering[Rendering]
+                    svg[Render SVG]
+                done[Done]
+                    proof[Screenshot proof]
+            """),
+        new(
+            "architecture",
+            "Architecture beta",
+            "Groups, services, icons, and directional ports.",
+            ArchitectureSource,
+            "20rem",
+            true),
+        new(
+            "radar",
+            "Radar beta",
+            "Multi-axis comparison chart.",
+            """
+            radar-beta
+                title Wrapper readiness
+                axis render["Render"], events["Events"], errors["Errors"], docs["Docs"]
+                curve current["Current"]{90, 80, 85, 75}
+                curve target["Target"]{95, 90, 90, 90}
+                max 100
+                min 0
+            """),
+        new(
+            "treemap",
+            "Treemap beta",
+            "Nested rectangles sized by value.",
+            """
+            treemap-beta
+            "Mermaid"
+                "Wrapper": 35
+                "Sandbox": 30
+                "MCP": 20
+                "Proof": 15
+            """),
+        new(
+            "venn",
+            "Venn beta",
+            "Overlapping capability sets.",
+            """
+            venn-beta
+                title "Wrapper overlap"
+                set Render["Render"]:20
+                set Interact["Interact"]:12
+                union Render,Interact["Clickable SVG"]:5
+            """),
+        new(
+            "ishikawa",
+            "Ishikawa beta",
+            "Cause-and-effect fishbone.",
+            """
+            ishikawa-beta
+                Blank diagram
+                Source
+                    Unsupported syntax
+                    Forbidden symbol
+                Runtime
+                    Concurrent render
+                    Missing asset
+                Proof
+                    No screenshot
+            """),
+        new(
+            "wardley",
+            "Wardley beta",
+            "Value-chain map with evolution axis.",
+            """
+            wardley-beta
+            title Diagram Capability Map
+            component User [0.95, 0.70]
+            component Sandbox [0.72, 0.55]
+            component Wrapper [0.55, 0.68]
+            component Mermaid [0.35, 0.88]
+            User -> Sandbox
+            Sandbox -> Wrapper
+            Wrapper -> Mermaid
+            evolve Wrapper 0.78
+            """,
+            "20rem"),
+        new(
+            "treeview",
+            "TreeView beta",
+            "Directory-style hierarchy.",
+            """
+            treeView-beta
+                "src"
+                    "CanDoItAll.Components.Mermaid"
+                        "MermaidDiagram.razor"
+                        "mermaidDiagram.js"
+                    "CanDoItAll.Mcp.Mermaid"
+            """),
+        new(
+            "info",
+            "Info",
+            "Built-in Mermaid information diagram from the vendored package.",
+            """
+            info
+            """,
+            "12rem"),
+        new(
+            "c4",
+            "C4 context",
+            "System context notation compatible with C4-PlantUML style.",
+            """
+            C4Context
+                title Mermaid wrapper context
+                Person(user, "Diagram author")
+                System(sandbox, "Components sandbox")
+                System(wrapper, "MermaidDiagram")
+                System_Ext(mermaid, "Official Mermaid.js")
+                Rel(user, sandbox, "Previews")
+                Rel(sandbox, wrapper, "Uses")
+                Rel(wrapper, mermaid, "Imports")
+            """,
+            "20rem")
+    ];
+
+    private readonly Dictionary<string, MermaidRenderResult> _galleryRenders = [];
+    private readonly Dictionary<string, MermaidRenderError> _galleryErrors = [];
+    private MermaidNodeClickEventArgs? _lastClick;
+    private MermaidRenderResult? _primaryRender;
+    private MermaidRenderResult? _architectureRender;
+    private MermaidRenderError? _lastError;
+
+    private string ClickedNodeLabel => _lastClick?.Text ?? _lastClick?.NodeId ?? "No node selected";
+
+    private string GetGalleryStatus(string key)
+    {
+        if (_galleryErrors.ContainsKey(key))
+        {
+            return "Error";
+        }
+
+        return _galleryRenders.TryGetValue(key, out var result)
+            ? $"Rendered ({result.NodeCount} nodes)"
+            : "Pending";
+    }
+
+    private void HandleNodeClicked(MermaidNodeClickEventArgs args)
+    {
+        _lastClick = args;
+        _lastError = null;
+    }
+
+    private void HandlePrimaryRendered(MermaidRenderResult result)
+    {
+        _primaryRender = result;
+    }
+
+    private void HandleArchitectureRendered(MermaidRenderResult result)
+    {
+        _architectureRender = result;
+    }
+
+    private void HandleGalleryRendered(string key, MermaidRenderResult result)
+    {
+        _galleryErrors.Remove(key);
+        _galleryRenders[key] = result;
+    }
+
+    private void HandleGalleryError(string key, MermaidRenderError error)
+    {
+        _galleryRenders.Remove(key);
+        _galleryErrors[key] = error;
+        _lastError = error;
+    }
+
+    private void HandleError(MermaidRenderError error)
+    {
+        _lastError = error;
+    }
+
+    private sealed record MermaidGalleryExample(
+        string Key,
+        string Title,
+        string Description,
+        string Source,
+        string Height = "18rem",
+        bool IsClickable = false);
+}

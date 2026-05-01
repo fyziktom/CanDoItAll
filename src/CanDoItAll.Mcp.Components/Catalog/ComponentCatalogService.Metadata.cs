@@ -96,6 +96,11 @@ public sealed partial class ComponentCatalogService
         [
             "Charts components render ApexCharts through the wrapper assets exposed by `<ChartsHeadAssets />`.",
             "Consumers should use CanDoItAll chart models and `CdaChart` instead of raw Apex component markup."
+        ],
+        ["Mermaid"] =
+        [
+            "Mermaid components render through the vendored official Mermaid ESM bundle under `_content/CanDoItAll.Components.Mermaid/js/vendor/`.",
+            "Consumers should use `MermaidDiagram` and its typed options/events instead of directly importing Mermaid.js in pages."
         ]
     };
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> BaseLibCssSourceFilesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
@@ -351,7 +356,8 @@ public sealed partial class ComponentCatalogService
         ["CanvasFloatingWindow"] = "Shared CanvasLib floating window surface for movable auxiliary panels inside the workbench runtime.",
         ["EmptyStateOverlay"] = "Shared CanvasLib empty-state overlay for graph and canvas surfaces with no active content.",
         ["CdaChart"] = "Shared Charts wrapper for Apex-backed line, area, bar, pie, and donut charts using CanDoItAll-owned series, point, option, and palette models.",
-        ["ChartsHeadAssets"] = "Shared Charts asset component that adds the ApexCharts stylesheet required by the CanDoItAll chart wrapper."
+        ["ChartsHeadAssets"] = "Shared Charts asset component that adds the ApexCharts stylesheet required by the CanDoItAll chart wrapper.",
+        ["MermaidDiagram"] = "CanDoItAll Mermaid.js wrapper that renders official Mermaid diagrams with Blazor callbacks for node clicks, pan/zoom controls, and normalized syntax diagnostics."
     };
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> TagsByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
     {
@@ -453,6 +459,16 @@ public sealed partial class ComponentCatalogService
             "apex",
             "chart-wrapper",
             "stylesheet"
+        ],
+        ["MermaidDiagram"] =
+        [
+            "mermaid",
+            "diagram",
+            "flowchart",
+            "architecture-beta",
+            "pan-zoom",
+            "node-click",
+            "syntax-diagnostics"
         ]
     };
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> AdditionalDependenciesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
@@ -523,6 +539,18 @@ public sealed partial class ComponentCatalogService
         ["ChartsHeadAssets"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Href"] = "Stylesheet path for ApexCharts CSS; keep the default unless the external chart asset path changes."
+        },
+        ["MermaidDiagram"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Description"] = "Optional supporting copy shown above the rendered Mermaid diagram.",
+            ["Error"] = "Callback raised when Mermaid parsing or rendering fails; the payload includes normalized line, column, excerpt, token, and expected-token details when available.",
+            ["NodeClicked"] = "Callback raised when the wrapper detects a click or keyboard activation on a rendered diagram node.",
+            ["Options"] = "Typed Mermaid initialization options, including theme, security level, flowchart settings, and architecture randomization.",
+            ["PanZoomEnabled"] = "Enables the wrapper viewBox pan and zoom behavior on the rendered SVG.",
+            ["Rendered"] = "Callback raised after Mermaid renders successfully with diagram id, SVG id, and node count.",
+            ["ShowControls"] = "Shows the wrapper zoom-out, reset, and zoom-in toolbar when pan/zoom is enabled.",
+            ["Source"] = "Mermaid source text passed to the official Mermaid parser and renderer.",
+            ["Title"] = "Optional diagram title shown above the rendered SVG."
         },
         ["Notification"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -823,6 +851,20 @@ public sealed partial class ComponentCatalogService
                 "Use `AddCanDoItAllCharts()` and `<ChartsHeadAssets />` in the host before rendering charts.",
                 "Build data with `CdaChartSeries`, `CdaChartPoint`, and `CdaChartOptions` so future renderer swaps stay localized.",
                 "Validate chart routes with browser assertions and screenshots because build success cannot prove nonblank Apex SVG output."
+            ]),
+        ["Mermaid"] = new(
+            [
+                "Mermaid diagrams that need official Mermaid.js rendering behind a CanDoItAll-owned Blazor wrapper.",
+                "Flowcharts, architecture-beta diagrams, and documentation diagrams that need pan/zoom or node-click events."
+            ],
+            [
+                "Direct page-level Mermaid.js imports or ad-hoc SVG injection in consuming pages.",
+                "Diagram grammars that need custom layout semantics beyond Mermaid's parser and renderer."
+            ],
+            [
+                "Use `AddCanDoItAllMermaid()` in hosts and render diagrams with `<MermaidDiagram Source=\"...\" />`.",
+                "Use `NodeClicked`, `Rendered`, and `Error` callbacks for interaction and diagnostics rather than DOM-specific page scripts.",
+                "Validate diagram routes in a browser because build success cannot prove Mermaid parsing, SVG output, pan/zoom, or node-click wiring."
             ])
     };
     private static readonly IReadOnlySet<string> ConsumerProjectExclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -832,6 +874,7 @@ public sealed partial class ComponentCatalogService
         "CanDoItAll.Components.CanvasLib",
         "CanDoItAll.Components.Charts",
         "CanDoItAll.Components.Common",
+        "CanDoItAll.Components.Mermaid",
         "CanDoItAll.Mcp.Components",
         "CanDoItAll.Mcp.Core",
         "CanDoItAll.Mcp.DotNetWatch",

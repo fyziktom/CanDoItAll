@@ -4,6 +4,7 @@ using System.Globalization;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.Charts;
+using CanDoItAll.Components.Mermaid;
 using CanDoItAll.Components.Sandbox;
 using CanDoItAll.Mcp.Components.Configuration;
 using CanDoItAll.Mcp.Core.Contracts;
@@ -122,6 +123,7 @@ public sealed partial class ComponentCatalogService
         {
             "CanvasLib" => CanvasLibStylesheets,
             "Charts" => ["_content/Blazor-ApexCharts/css/apexcharts.css"],
+            "Mermaid" => ["_content/CanDoItAll.Components.Mermaid/js/mermaidDiagram.js"],
             _ => new[] { "_content/CanDoItAll.Components.BaseLib/css/output.css" }
         };
         var sourceFiles = ResolveCssSourceFiles(resolvedComponent);
@@ -204,6 +206,7 @@ public sealed partial class ComponentCatalogService
         var baseLibRoot = Path.GetFullPath(Path.Combine(workspaceRoot, options.Catalog.BaseLibRoot));
         var canvasLibRoot = Path.GetFullPath(Path.Combine(workspaceRoot, options.Catalog.CanvasLibRoot));
         var chartsRoot = Path.GetFullPath(Path.Combine(workspaceRoot, options.Catalog.ChartsRoot));
+        var mermaidRoot = Path.GetFullPath(Path.Combine(workspaceRoot, options.Catalog.MermaidRoot));
         var sandboxRoot = Path.GetFullPath(Path.Combine(workspaceRoot, options.Catalog.SandboxRoot));
 
         var groups = BuildGroups();
@@ -214,7 +217,8 @@ public sealed partial class ComponentCatalogService
         {
             new LibraryDescriptor("BaseLib", typeof(Button).Assembly, baseLibRoot, "CanDoItAll.Components.BaseLib"),
             new LibraryDescriptor("CanvasLib", typeof(CanvasWorkbench).Assembly, canvasLibRoot, "CanDoItAll.Components.CanvasLib"),
-            new LibraryDescriptor("Charts", typeof(CdaChart).Assembly, chartsRoot, "CanDoItAll.Components.Charts")
+            new LibraryDescriptor("Charts", typeof(CdaChart).Assembly, chartsRoot, "CanDoItAll.Components.Charts"),
+            new LibraryDescriptor("Mermaid", typeof(MermaidDiagram).Assembly, mermaidRoot, "CanDoItAll.Components.Mermaid")
         };
 
         var componentTypes = libraries
@@ -1019,6 +1023,11 @@ public sealed partial class ComponentCatalogService
         if (string.Equals(library, "Charts", StringComparison.OrdinalIgnoreCase))
         {
             return [];
+        }
+
+        if (string.Equals(library, "Mermaid", StringComparison.OrdinalIgnoreCase))
+        {
+            return [@"src\CanDoItAll.Components.Mermaid\Components\MermaidDiagram.razor.css"];
         }
 
         if (!string.Equals(library, "BaseLib", StringComparison.OrdinalIgnoreCase))

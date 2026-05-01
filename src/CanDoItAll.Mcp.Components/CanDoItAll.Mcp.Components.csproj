@@ -17,6 +17,7 @@
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Sandbox\CanDoItAll.Components.Sandbox.csproj" />
     <ProjectReference Include="..\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
   </ItemGroup>

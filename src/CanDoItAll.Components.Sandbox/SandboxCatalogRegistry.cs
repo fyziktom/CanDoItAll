@@ -12,6 +12,7 @@ public enum SandboxGroupKey
     Layout,
     DataDisplay,
     Charts,
+    Mermaid,
     Overlays,
     Canvas
 }
@@ -112,6 +113,13 @@ public static class SandboxCatalogRegistry
             ["pie", "line", "area", "multi-series", "labels"],
             ["Charts must render nonblank browser output.", "Legends, labels, and toolbars cannot crowd the plot.", "Consumers should use CanDoItAll chart models instead of Apex component markup."]),
         new(
+            SandboxGroupKey.Mermaid,
+            "Mermaid",
+            "/groups/mermaid",
+            "First-party Mermaid.js wrapper for diagrams, syntax diagnostics, click events, and pan/zoom inspection.",
+            ["flowchart", "architecture-beta", "node clicks", "pan zoom", "syntax errors"],
+            ["Diagrams must render from the vendored official Mermaid resource.", "Clickable nodes should raise .NET events with useful node text and id context.", "Syntax failures must show line, column, excerpt, and expected-token hints when Mermaid provides them."]),
+        new(
             SandboxGroupKey.Overlays,
             "Overlays",
             "/groups/overlays",
@@ -156,6 +164,9 @@ public static class SandboxCatalogRegistry
         CreateExample("charts-happy", SandboxGroupKey.Charts, "Trend and share charts", SandboxScenarioKey.HappyPath, "Area, line, multi-line, and pie examples using the CanDoItAll chart wrapper.", ["charts", "apex", "wrapper"], "CdaChart"),
         CreateExample("charts-dense", SandboxGroupKey.Charts, "Dense operational charts", SandboxScenarioKey.DenseContent, "Higher-density multi-series charts with legends, labels, and color tuning.", ["dense", "multi-series"], "CdaChart"),
         CreateExample("charts-empty", SandboxGroupKey.Charts, "No chart data", SandboxScenarioKey.EmptyState, "Wrapper empty-state behavior before any chart series is available.", ["empty"], "CdaChart", "EmptyState"),
+        CreateExample("mermaid-flowchart", SandboxGroupKey.Mermaid, "Interactive flowchart", SandboxScenarioKey.HappyPath, "Flowchart proof with .NET node-click events and pan/zoom controls.", ["mermaid", "flowchart", "click", "pan-zoom"], "MermaidDiagram"),
+        CreateExample("mermaid-architecture", SandboxGroupKey.Mermaid, "Architecture beta", SandboxScenarioKey.DenseContent, "architecture-beta sample using groups, services, junctions, icons, labels, and directional ports.", ["mermaid", "architecture-beta", "services"], "MermaidDiagram"),
+        CreateExample("mermaid-error", SandboxGroupKey.Mermaid, "Syntax diagnostics", SandboxScenarioKey.EmptyState, "Intentional Mermaid syntax failure proving line, column, excerpt, and expected-token rendering.", ["mermaid", "syntax-error", "diagnostics"], "MermaidDiagram", "Alert"),
         CreateExample("overlays-happy", SandboxGroupKey.Overlays, "Overlay services", SandboxScenarioKey.HappyPath, "DialogService, TooltipService, and NotificationService around contextual help and sticky actions.", ["overlay", "services"], "DialogService", "DialogHost", "TooltipService", "Tooltip", "NotificationService", "HelpPopover", "StickyActionFooter"),
         CreateExample("overlays-dense", SandboxGroupKey.Overlays, "Dense approval flow", SandboxScenarioKey.DenseContent, "Inline approval surface with secondary actions, modal affordance, and service-hosted overlays.", ["dense", "approval"], "DialogService", "TooltipService", "NotificationService", "StickyActionFooter", "Alert"),
         CreateExample("overlays-empty", SandboxGroupKey.Overlays, "No modal context", SandboxScenarioKey.EmptyState, "Overlay surface before the user selects a record.", ["empty"], "EmptyState", "HelpPopover", "DialogHost"),

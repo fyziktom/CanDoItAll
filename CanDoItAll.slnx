@@ -5,6 +5,7 @@
     <Project Path="src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Charts/CanDoItAll.Components.Charts.csproj" />
     <Project Path="src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj" />
+    <Project Path="src/CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.csproj" />
     <Project Path="src/CanDoItAll.Components.OverlayLib/CanDoItAll.Components.OverlayLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj" />
     <Project Path="src/CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj" />
@@ -22,6 +23,7 @@
     <Project Path="src/CanDoItAll.Mcp.CodeAnalytics/CanDoItAll.Mcp.CodeAnalytics.csproj" />
     <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
     <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.Mermaid/CanDoItAll.Mcp.Mermaid.csproj" />
     <Project Path="src/CanDoItAll.Mcp.Processes/CanDoItAll.Mcp.Processes.csproj" />
     <Project Path="src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
@@ -52,6 +54,7 @@
     <Project Path="tests/CanDoItAll.Mcp.Components.Tests/CanDoItAll.Mcp.Components.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj" />
+    <Project Path="tests/CanDoItAll.Mcp.Mermaid.Tests/CanDoItAll.Mcp.Mermaid.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.ProjectStructure.Tests/CanDoItAll.Mcp.ProjectStructure.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
