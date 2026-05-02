@@ -1,67 +1,28 @@
 @namespace CanDoItAll.Modules.Processes
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
-@using MermaidJS.Blazor
-@using Microsoft.AspNetCore.Components.Web
+@using CanDoItAll.Components.Mermaid
 
 <SurfaceCard Class="min-w-0"
              data-testid="@TestId">
-    <Split Gap="LayoutGap.Small"
-           AlignItems="AlignItems.Start"
-           JustifyContent="JustifyContent.SpaceBetween"
-           Wrap="FlexWrap.Wrap">
-        <div class="min-w-0">
-            <p class="cda-eyebrow">Mermaid</p>
-            <h4 class="mt-1 text-lg font-semibold text-slate-950">@Title</h4>
-            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@SourcePath</p>
-        </div>
-
-        <Cluster Gap="LayoutGap.Small">
-            <Button ButtonStyle="ButtonStyle.Light"
-                    Size="ButtonSize.Small"
-                    Text="Reset"
-                    Click="ResetView" />
-            <Button ButtonStyle="ButtonStyle.Light"
-                    Size="ButtonSize.Small"
-                    Text="-"
-                    Click="ZoomOut" />
-            <StatusBadge Tone="info" Text="@($"{scale:P0}")" />
-            <Button ButtonStyle="ButtonStyle.Light"
-                    Size="ButtonSize.Small"
-                    Text="+"
-                    Click="ZoomIn" />
-        </Cluster>
-    </Split>
-
-    <div class="relative mt-3 min-w-0 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50/70"
-         style="contain:layout paint;"
-         data-testid="@($"{TestId}-frame")">
-        <div class="relative min-h-[20rem] min-w-0 overflow-hidden"
-             style="contain:layout paint;"
-             data-testid="@($"{TestId}-clip")"
-             @onmousedown="HandleMouseDown"
-             @onmousemove="HandleMouseMove"
-             @onmouseup="HandleMouseUp"
-             @onmouseleave="HandleMouseUp"
-             @onwheel="HandleWheel"
-             @onwheel:preventDefault="true"
-             @onmousedown:preventDefault="true">
-            <div class="flex min-h-[20rem] min-w-0 items-center justify-center overflow-hidden"
-                 style="touch-action:none;">
-                <div class="@ViewportCss"
-                     style="@ViewportStyle"
-                     data-testid="@($"{TestId}-viewport")">
-                    <MermaidDiagram Definition="@Definition" />
-                </div>
-            </div>
-        </div>
-    </div>
+    <MermaidDiagram Title="@Title"
+                    Description="@Description"
+                    Source="@Definition"
+                    Options="@PreviewOptions"
+                    PanZoomEnabled="true"
+                    ShowControls="true"
+                    Style="--cda-mermaid-min-height:20rem;"
+                    data-testid="@($"{TestId}-diagram")" />
 </SurfaceCard>
 
 @code {
-    private const double MinScale = 0.45;
-    private const double MaxScale = 2.8;
-    private const double ZoomStep = 0.15;
+    private static readonly MermaidDiagramOptions PreviewOptions = new()
+    {
+        SecurityLevel = "loose",
+        FlowchartUseMaxWidth = true,
+        HtmlLabels = true,
+        ArchitectureRandomize = false
+    };
 
     [Parameter, EditorRequired]
     public string Title { get; set; } = string.Empty;
@@ -75,72 +36,5 @@
     [Parameter]
     public string TestId { get; set; } = string.Empty;
 
-    private double scale = 1;
-    private double offsetX;
-    private double offsetY;
-    private bool isDragging;
-    private double dragOriginX;
-    private double dragOriginY;
-
-    private string ViewportCss
-        => isDragging
-            ? "inline-flex shrink-0 origin-center cursor-grabbing select-none"
-            : "inline-flex shrink-0 origin-center cursor-grab select-none";
-
-    private string ViewportStyle
-        => $"transform: translate({offsetX}px, {offsetY}px) scale({scale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}); transform-origin: center center; will-change:transform;";
-
-    private Task ResetView()
-    {
-        scale = 1;
-        offsetX = 0;
-        offsetY = 0;
-        isDragging = false;
-        return Task.CompletedTask;
-    }
-
-    private Task ZoomIn()
-    {
-        scale = Math.Min(MaxScale, scale + ZoomStep);
-        return Task.CompletedTask;
-    }
-
-    private Task ZoomOut()
-    {
-        scale = Math.Max(MinScale, scale - ZoomStep);
-        return Task.CompletedTask;
-    }
-
-    private Task HandleWheel(WheelEventArgs args)
-    {
-        var nextScale = scale + (args.DeltaY < 0 ? ZoomStep : -ZoomStep);
-        scale = Math.Clamp(nextScale, MinScale, MaxScale);
-        return Task.CompletedTask;
-    }
-
-    private Task HandleMouseDown(MouseEventArgs args)
-    {
-        isDragging = true;
-        dragOriginX = args.ClientX - offsetX;
-        dragOriginY = args.ClientY - offsetY;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleMouseMove(MouseEventArgs args)
-    {
-        if (!isDragging)
-        {
-            return Task.CompletedTask;
-        }
-
-        offsetX = args.ClientX - dragOriginX;
-        offsetY = args.ClientY - dragOriginY;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleMouseUp(MouseEventArgs _)
-    {
-        isDragging = false;
-        return Task.CompletedTask;
-    }
+    private string? Description => string.IsNullOrWhiteSpace(SourcePath) ? null : SourcePath;
 }

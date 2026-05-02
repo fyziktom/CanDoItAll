@@ -28,6 +28,11 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("edit", "Edit", "draw", "accent"));
         }
 
+        if (HasMermaidViewer(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction("mermaid:view", "View Mermaid", "schema", "accent"));
+        }
+
         actions.Add(new ProjectStructureInspectorAction("copy-id", "Copy id", "copy", "ghost"));
         actions.Add(new ProjectStructureInspectorAction("copy-info", "Copy info", "copy", "primary"));
         actions.Add(new ProjectStructureInspectorAction("copy-subtree-ids", "Copy tree ids", "copy", "sky"));
@@ -165,6 +170,10 @@ public partial class ProjectStructurePage
         {
             case "edit":
                 await OpenEditDialogAsync(node);
+                break;
+            case "mermaid:view":
+                OpenMermaidViewer(node);
+                await InvokeAsync(StateHasChanged);
                 break;
             case "runtime:open":
                 await LaunchRuntimeAsync(node, false);

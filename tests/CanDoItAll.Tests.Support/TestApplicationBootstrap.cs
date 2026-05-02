@@ -1,5 +1,6 @@
 using System.Reflection;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
@@ -67,7 +68,7 @@ public static class TestApplicationBootstrap
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddCanDoItAllRuntimeModules(configuration);
-        services.AddMermaidJS();
+        services.AddCanDoItAllMermaid();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
     }
 

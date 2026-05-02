@@ -152,7 +152,8 @@ public enum MermaidDiagramKind
     Pie,
     Mindmap,
     Timeline,
-    C4
+    C4,
+    ArchitectureBeta
 }
 
 public enum ProjectLlmActionKind
@@ -697,6 +698,11 @@ public static class ProjectObjectMetadataSerializer
         if (content.Contains("timeline", StringComparison.OrdinalIgnoreCase))
         {
             return MermaidDiagramKind.Timeline;
+        }
+
+        if (content.Contains("architecture-beta", StringComparison.OrdinalIgnoreCase))
+        {
+            return MermaidDiagramKind.ArchitectureBeta;
         }
 
         if (content.Contains("C4Context", StringComparison.OrdinalIgnoreCase) ||

@@ -478,6 +478,8 @@ else
                                     HandleTranscriptProviderChanged="HandleTranscriptProviderChanged"
                                     MermaidPreviewNode="@mermaidPreviewNode"
                                     CloseMermaidViewer="CloseMermaidViewer"
+                                    EditMermaidNode="EditMermaidPreviewNodeAsync"
+                                    CanEditMermaidNode="CanEditNode"
                                     ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
 </ProjectStructureDeferredSurface>
 
@@ -933,6 +935,14 @@ else
         var node = ResolveNode(nodeId);
         if (node is null)
         {
+            return;
+        }
+
+        if (HasMermaidViewer(node))
+        {
+            CloseQuickActionDialog();
+            OpenMermaidViewer(node);
+            await InvokeAsync(StateHasChanged);
             return;
         }
 

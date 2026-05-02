@@ -59,6 +59,16 @@ public partial class ProjectStructurePage
                 "project:open-structure");
         }
 
+        if (HasMermaidViewer(node))
+        {
+            return BuildInspectorQuickAction(
+                "View Mermaid",
+                "Open the diagram viewer with the current Mermaid source.",
+                "schema",
+                "accent",
+                "mermaid:view");
+        }
+
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
         if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
         {

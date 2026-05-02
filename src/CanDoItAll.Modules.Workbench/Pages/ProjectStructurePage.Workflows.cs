@@ -44,9 +44,36 @@ public partial class ProjectStructurePage
         => node?.ObjectType == ProjectObjectType.Transcript;
 
     private static bool HasMermaidViewer(ProjectStructureNode? node)
-        => node is not null &&
-           node.ObjectType == ProjectObjectType.File &&
-           string.Equals(node.ObjectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase);
+    {
+        if (node is null || node.ObjectType != ProjectObjectType.File)
+        {
+            return false;
+        }
+
+        if (string.Equals(node.ObjectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(node.ObjectSubtype, "mmd", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        ProjectObjectMetadataEnvelope metadata;
+        try
+        {
+            metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+        }
+        catch (InvalidOperationException)
+        {
+            metadata = new ProjectObjectMetadataEnvelope();
+        }
+
+        if (metadata.File?.FileSubtype == ProjectFileSubtype.Mermaid ||
+            metadata.File?.MermaidDiagramKind is not MermaidDiagramKind.Unknown)
+        {
+            return true;
+        }
+
+        return ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(node.Notes) is not MermaidDiagramKind.Unknown;
+    }
 
     private async Task BeginReconnectAsync(string? nodeId = null)
     {
@@ -538,6 +565,12 @@ public partial class ProjectStructurePage
 
     private void CloseMermaidViewer()
         => mermaidPreviewNode = null;
+
+    private async Task EditMermaidPreviewNodeAsync(ProjectStructureNode node)
+    {
+        CloseMermaidViewer();
+        await OpenEditDialogAsync(node);
+    }
 
     private async Task HandleReconnectSelectionAsync(string? nodeId)
     {

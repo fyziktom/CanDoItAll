@@ -22,6 +22,7 @@ Project references:
 - `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
 - `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
 - `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
+- `../CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.csproj`
 - `../CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj`
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj`
@@ -38,8 +39,7 @@ Direct package references:
 
 - `JsonViewer.Blazor (0.0.6)`
 - `Markdig (1.1.2)`
-- `MermaidJS.Blazor (2.0.1)`
-- `Microsoft.AspNetCore.Components.Web (10.0.4)`
+- `Microsoft.AspNetCore.Components.Web (10.0.5)`
 
 ## Architecture Notes
 
