@@ -60,6 +60,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             {
                 return "browser proof captured starter-template content instead of the requested application";
             }
+
+            if (ContainsRuntimeErrorBrowserProof(snapshotText))
+            {
+                return "browser proof captured an application runtime error instead of the requested application";
+            }
         }
 
         return string.Empty;
@@ -146,6 +151,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return text.Contains("Hello, world!", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("Welcome to your new app.", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsRuntimeErrorBrowserProof(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("Application error", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("An error has occurred", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("Unhandled exception", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("HTTP ERROR 500", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("blazor-error-ui", StringComparison.OrdinalIgnoreCase);
     }
 
 }

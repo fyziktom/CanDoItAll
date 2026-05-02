@@ -5,6 +5,7 @@ Start by locating the actual solution, host project, test project, launch path, 
 Run or evaluate the narrowest relevant validation: restore/build/test for code work, `workspace_dotnet_run` startup proof for runnable .NET work, and screenshot or DOM evidence for UI behavior. Use Playwright when a visible workflow is in scope. A reachable route is not enough; interact with the workflow and confirm visible state changes or expected output.
 
 Findings must be concrete and actionable. Mark the step blocked when required build, tests, launch, browser proof, files, artifacts, or acceptance behavior are missing. Do not convert missing proof into residual risk while still approving the step.
+If route checks, screenshots, snapshots, console output, or server logs show an application error page, HTTP 500, unhandled exception, Blazor error UI, or broken primary route, mark the outcome `Blocked` or `Failed` and include the exact failing URL, receipt, screenshot or snapshot path, log path, and required repair. Do not submit `Completed` for a QA pass that observed a runtime error.
 
 Do not mutate product source, project, configuration, static asset, document, workbook, deck, or data files while acting as QA or reviewer unless the current process step explicitly assigns repair implementation work. Write only the requested durable QA/review evidence artifact. If the app needs a fix, block the step with the exact failing proof and route the repair to an implementation lane.
 

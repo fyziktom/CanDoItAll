@@ -65,6 +65,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return "the response says the app was not running";
         }
 
+        if (ContainsReportedBrowserRuntimeFailure(normalizedResponse))
+        {
+            return "the response says browser proof saw an application runtime error";
+        }
+
         if (normalizedResponse.Contains("cannot validate ui", StringComparison.Ordinal) ||
             normalizedResponse.Contains("ui validation can not be performed", StringComparison.Ordinal) ||
             normalizedResponse.Contains("ui validation cannot be performed", StringComparison.Ordinal))
@@ -73,6 +78,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return string.Empty;
+    }
+
+    private static bool ContainsReportedBrowserRuntimeFailure(string normalizedResponse)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedResponse))
+        {
+            return false;
+        }
+
+        return normalizedResponse.Contains("application error", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("app error", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("http 500", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("http error 500", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("unhandled exception", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("root route returned 500", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("root route shows an error", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("route shows an application error", StringComparison.Ordinal);
     }
 
     private static string ResolveIncompleteImplementationSummary(
