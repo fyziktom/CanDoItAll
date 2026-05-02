@@ -1,0 +1,123 @@
+@inject DialogService DialogService
+
+<div class="agent-thread-history-dialog" data-testid="agent-thread-history-dialog-body">
+    @if (VisibleSessions.Count == 0)
+    {
+        <EmptyState Eyebrow="Threads"
+                    Title="No recent threads"
+                    Description="This agent does not have saved chat threads yet." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="info" Text="@($"{VisibleSessions.Count} recent threads")" />
+                @if (Agent is not null)
+                {
+                    <StatusBadge Tone="neutral" Text="@ResolveAgentName(Agent)" />
+                }
+            </Cluster>
+
+            <div class="agent-thread-history-dialog__list"
+                 data-testid="agent-thread-history-list">
+                @foreach (var session in VisibleSessions)
+                {
+                    var isSelected = session.Id == SelectedSessionId;
+                    <button type="button"
+                            class="agent-thread-history-dialog__row @(isSelected ? "is-selected" : string.Empty)"
+                            aria-label="@($"Open thread {ResolveThreadTitle(session)}")"
+                            @ondblclick="@(() => SelectSessionAsync(session.Id))"
+                            @onkeydown="@((KeyboardEventArgs args) => HandleThreadKeyDownAsync(args, session.Id))"
+                            data-testid="agent-thread-history-row">
+                        <span class="agent-thread-history-dialog__row-main">
+                            <span class="agent-thread-history-dialog__title">@ResolveThreadTitle(session)</span>
+                            <span class="agent-thread-history-dialog__preview">@ResolvePreview(session)</span>
+                        </span>
+                        <span class="agent-thread-history-dialog__row-meta">
+                            @if (isSelected)
+                            {
+                                <StatusBadge Tone="primary" Text="Open" />
+                            }
+                            @if (session.LatestExecutionRunId.HasValue)
+                            {
+                                <StatusBadge Tone="info" Text="Run evidence" />
+                            }
+                            @if (session.Compatibility?.PendingApprovals.Count > 0)
+                            {
+                                <StatusBadge Tone="warning" Text="@($"{session.Compatibility.PendingApprovals.Count} approvals")" />
+                            }
+                            <StatusBadge Tone="neutral" Text="@($"{session.Messages.Count} messages")" />
+                            <span class="agent-thread-history-dialog__time">@session.UpdatedAtUtc.LocalDateTime.ToString("g")</span>
+                        </span>
+                    </button>
+                }
+            </div>
+        </Stack>
+    }
+</div>
+
+@code {
+    public const int MaxThreadCount = 25;
+
+    [Parameter]
+    public AgentDefinition? Agent { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ChatSessionRecord> Sessions { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedSessionId { get; set; }
+
+    private IReadOnlyList<ChatSessionRecord> VisibleSessions
+        => Sessions
+            .OrderByDescending(session => session.UpdatedAtUtc)
+            .Take(MaxThreadCount)
+            .ToList();
+
+    private Task SelectSessionAsync(Guid sessionId)
+    {
+        return DialogService.CloseAsync(sessionId);
+    }
+
+    private async Task HandleThreadKeyDownAsync(KeyboardEventArgs args, Guid sessionId)
+    {
+        if (args.Key is not ("Enter" or " "))
+        {
+            return;
+        }
+
+        await SelectSessionAsync(sessionId);
+    }
+
+    private static string ResolveAgentName(AgentDefinition agent)
+        => string.IsNullOrWhiteSpace(agent.Name) ? ResolveAgentRole(agent) : agent.Name;
+
+    private static string ResolveAgentRole(AgentDefinition agent)
+        => string.IsNullOrWhiteSpace(agent.RoleTitle) ? "Technical agent" : agent.RoleTitle;
+
+    private static string ResolveThreadTitle(ChatSessionRecord session)
+        => string.IsNullOrWhiteSpace(session.Title)
+            ? $"Thread {session.UpdatedAtUtc.LocalDateTime:g}"
+            : session.Title;
+
+    private static string ResolvePreview(ChatSessionRecord session)
+    {
+        var latestMessage = session.Messages
+            .OrderByDescending(message => message.CreatedAtUtc)
+            .FirstOrDefault();
+
+        if (latestMessage is null || string.IsNullOrWhiteSpace(latestMessage.Content))
+        {
+            return "No messages captured yet.";
+        }
+
+        var preview = string.Join(
+            ' ',
+            latestMessage.Content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+        const int maxLength = 170;
+        return preview.Length <= maxLength
+            ? preview
+            : $"{preview[..maxLength].TrimEnd()}...";
+    }
+}

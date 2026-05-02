@@ -59,6 +59,7 @@
                                                      Summary="Search agents with access to this process, filter by tags, and double-click to open a new thread."
                                                      WindowState="@Presenter.CanvasAgentWindowState"
                                                      WindowStateChanged="Presenter.HandleCanvasAgentWindowStateChangedAsync"
+                                                     WorkspaceRefreshRequested="Presenter.HandleAgentWorkspaceRefreshRequestedAsync"
                                                      WorkspaceKind="@ContextualAgentWorkspaceKind.Processes"
                                                      ProcessDefinitionId="@Presenter.SelectedProcessId" />
                     @if (Presenter.CanvasToolboxWindowState.IsVisible)

@@ -116,6 +116,7 @@ else
                                                          Summary="Search agents with access to this structure, filter by tags, and double-click to open a new thread."
                                                          WindowState="@AgentWindowState"
                                                          WindowStateChanged="HandleAgentWindowStateChangedAsync"
+                                                         WorkspaceRefreshRequested="HandleAgentWorkspaceRefreshRequestedAsync"
                                                          WorkspaceKind="@ContextualAgentWorkspaceKind.ProjectStructure"
                                                          ProjectId="@ProjectId" />
                         @if (ToolboxWindowState.IsVisible)

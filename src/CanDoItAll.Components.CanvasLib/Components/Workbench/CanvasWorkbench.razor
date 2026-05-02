@@ -896,6 +896,16 @@
         return CanvasWorkbenchUiState.Parse(stateJson).SelectedNodeIds;
     }
 
+    public async Task<string> GetStateJsonAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return Surface.UiState.ToJson();
+        }
+
+        return await JsRuntime.InvokeAsync<string>("CanDoItAll.canvasWorkbench.getState", host);
+    }
+
     public async Task<string?> CaptureImageAsync()
     {
         if (!sceneHost.IsInitialized)

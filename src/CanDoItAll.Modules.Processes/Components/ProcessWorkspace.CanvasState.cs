@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Processes;
@@ -58,6 +59,35 @@ public partial class ProcessWorkspace
         else
         {
             definitionCanvasUiState = storedState;
+        }
+    }
+
+    private async Task HandleAgentWorkspaceRefreshRequestedAsync(ContextualAgentWorkspaceRefreshRequest request)
+    {
+        if (request.WorkspaceKind != ContextualAgentWorkspaceKind.Processes ||
+            request.ProcessDefinitionId != selectedProcessId)
+        {
+            return;
+        }
+
+        await CaptureCurrentProcessCanvasStateAsync();
+        await LoadWorkspaceAsync();
+    }
+
+    private async Task CaptureCurrentProcessCanvasStateAsync()
+    {
+        if (workbenchRef is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StoreCanvasUiState(CanvasWorkbenchUiState.Parse(await workbenchRef.GetStateJsonAsync()));
+        }
+        catch
+        {
+            // If the browser surface is not available, the stored UI state is still the best reload source.
         }
     }
 

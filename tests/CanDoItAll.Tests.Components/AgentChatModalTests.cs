@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -137,6 +138,57 @@ public sealed class AgentChatModalTests
         Assert.Contains("Metrics", cut.Markup);
     }
 
+    [Fact]
+    public void Agent_thread_history_dialog_caps_recent_threads_and_sorts_newest_first()
+    {
+        using var context = CreateContext();
+        var agent = CreateAgent("History Agent", "Thread archivist");
+        var now = new DateTimeOffset(2026, 4, 29, 10, 0, 0, TimeSpan.Zero);
+        var sessions = Enumerable.Range(0, 30)
+            .Select(index => CreateSession(agent.Id, $"Thread {index:D2}", now.AddMinutes(-index)))
+            .Reverse()
+            .ToList();
+
+        var cut = context.RenderComponent<AgentThreadHistoryDialog>(parameters => parameters
+            .Add(component => component.Agent, agent)
+            .Add(component => component.Sessions, sessions));
+
+        var rows = cut.FindAll("[data-testid='agent-thread-history-row']");
+
+        Assert.Equal(AgentThreadHistoryDialog.MaxThreadCount, rows.Count);
+        Assert.Contains("Thread 00", rows[0].TextContent);
+        Assert.Contains("Thread 24", rows[^1].TextContent);
+        Assert.DoesNotContain("Thread 25", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Agent_thread_history_dialog_returns_double_clicked_thread()
+    {
+        using var context = CreateContext();
+        var host = context.RenderComponent<DialogHost>();
+        var agent = CreateAgent("History Agent", "Thread archivist");
+        var first = CreateSession(agent.Id, "Older thread", DateTimeOffset.UtcNow.AddHours(-2));
+        var second = CreateSession(agent.Id, "Current thread", DateTimeOffset.UtcNow);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+
+        var resultTask = dialogService.OpenAsync<AgentThreadHistoryDialog>(
+            "Agent thread history",
+            new Dictionary<string, object?>
+            {
+                [nameof(AgentThreadHistoryDialog.Agent)] = agent,
+                [nameof(AgentThreadHistoryDialog.Sessions)] = new[] { first, second },
+                [nameof(AgentThreadHistoryDialog.SelectedSessionId)] = first.Id
+            });
+
+        host.WaitForElement("[data-testid='agent-thread-history-row']");
+        var rows = host.FindAll("[data-testid='agent-thread-history-row']");
+
+        rows[0].TriggerEvent("ondblclick", new MouseEventArgs());
+
+        var result = await resultTask.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Equal(second.Id, Assert.IsType<Guid>(result));
+    }
+
     private static TestContext CreateContext()
     {
         var context = new TestContext();
@@ -246,5 +298,28 @@ public sealed class AgentChatModalTests
         {
             ExecutionRunId = runId
         };
+    }
+
+    private static ChatSessionRecord CreateSession(
+        Guid agentId,
+        string title,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new ChatSessionRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agentId,
+            Title: title,
+            CreatedAtUtc: updatedAtUtc.AddMinutes(-5),
+            UpdatedAtUtc: updatedAtUtc,
+            Messages:
+            [
+                new ChatMessageRecord(
+                    Id: Guid.NewGuid(),
+                    Role: ChatMessageRole.User,
+                    Content: $"{title} test message",
+                    CreatedAtUtc: updatedAtUtc.AddMinutes(-4),
+                    TokenEstimate: 4)
+            ],
+            LatestExecutionRunId: Guid.NewGuid());
     }
 }

@@ -1,7 +1,11 @@
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
 @inject DialogService DialogService
 @inject NotificationService NotificationService
+@inject Microsoft.JSInterop.IJSRuntime JsRuntime
 
 @if (WindowState.IsVisible)
 {
@@ -91,54 +95,66 @@
                     @foreach (var item in FilteredAgents)
                     {
                         var isSelected = selectedAgentId == item.Agent.Id;
-                        <button type="button"
-                                class="contextual-agent-window__agent @(isSelected ? "is-selected" : string.Empty)"
-                                aria-label="@($"Open a new contextual chat thread with {ResolveAgentName(item.Agent)}")"
-                                data-testid="@($"{TestId}-agent-{item.Agent.Id:N}")"
-                                @key="item.Agent.Id"
-                                @onclick="@(() => SelectAgent(item.Agent.Id))"
-                                @ondblclick="@(() => OpenAgentChatAsync(item))"
-                                @onkeydown="@((KeyboardEventArgs args) => HandleAgentKeyDownAsync(args, item))">
-                            <Avatar Alt="@item.Agent.Name"
-                                    ImageUrl="@item.Agent.AvatarImageUrl"
-                                    FallbackText="@ResolveAgentInitials(item.Agent)"
-                                    DefaultImageSeed="@ResolveAgentSeed(item.Agent)"
-                                    Size="AvatarSize.Medium"
-                                    Shape="AvatarShape.Rounded" />
+                        <article class="contextual-agent-window__agent @(isSelected ? "is-selected" : string.Empty)"
+                                 data-testid="@($"{TestId}-agent-{item.Agent.Id:N}")"
+                                 @key="item.Agent.Id">
+                            <button type="button"
+                                    class="contextual-agent-window__agent-open"
+                                    aria-label="@($"Open a new contextual chat thread with {ResolveAgentName(item.Agent)}")"
+                                    @onclick="@(() => SelectAgent(item.Agent.Id))"
+                                    @ondblclick="@(() => OpenAgentChatAsync(item))"
+                                    @onkeydown="@((KeyboardEventArgs args) => HandleAgentKeyDownAsync(args, item))"
+                                    data-testid="@($"{TestId}-agent-{item.Agent.Id:N}-open")">
+                                <Avatar Alt="@item.Agent.Name"
+                                        ImageUrl="@item.Agent.AvatarImageUrl"
+                                        FallbackText="@ResolveAgentInitials(item.Agent)"
+                                        DefaultImageSeed="@ResolveAgentSeed(item.Agent)"
+                                        Size="AvatarSize.Medium"
+                                        Shape="AvatarShape.Rounded" />
 
-                            <span class="contextual-agent-window__agent-main">
-                                <TooltipTarget Text="@BuildAgentTooltip(item.Agent)"
-                                               Position="TooltipPosition.RightTop"
-                                               Duration="@((TimeSpan?)null)"
-                                               TriggerClass="contextual-agent-window__agent-title-trigger"
-                                               TabIndex="-1"
-                                               TestId="@($"{TestId}-agent-{item.Agent.Id:N}-details-tooltip")">
-                                    <span class="contextual-agent-window__agent-title">@ResolveAgentName(item.Agent)</span>
-                                </TooltipTarget>
-                                @if (VisibleTags(item.Agent).Count > 0)
-                                {
-                                    <span class="contextual-agent-window__tags">
-                                        @foreach (var tag in VisibleTags(item.Agent).Take(4))
-                                        {
-                                            <span class="contextual-agent-window__tag"
-                                                  style="@ResolveTagStyle(tag)">#@tag</span>
-                                        }
-                                    </span>
-                                }
-                            </span>
+                                <span class="contextual-agent-window__agent-main">
+                                    <TooltipTarget Text="@BuildAgentTooltip(item.Agent)"
+                                                   Position="TooltipPosition.RightTop"
+                                                   Duration="@((TimeSpan?)null)"
+                                                   TriggerClass="contextual-agent-window__agent-title-trigger"
+                                                   TabIndex="-1"
+                                                   TestId="@($"{TestId}-agent-{item.Agent.Id:N}-details-tooltip")">
+                                        <span class="contextual-agent-window__agent-title">@ResolveAgentName(item.Agent)</span>
+                                    </TooltipTarget>
+                                    @if (VisibleTags(item.Agent).Count > 0)
+                                    {
+                                        <span class="contextual-agent-window__tags">
+                                            @foreach (var tag in VisibleTags(item.Agent).Take(4))
+                                            {
+                                                <span class="contextual-agent-window__tag"
+                                                      style="@ResolveTagStyle(tag)">#@tag</span>
+                                            }
+                                        </span>
+                                    }
+                                </span>
 
-                            <span class="contextual-agent-window__agent-access">
-                                @if (item.CanRead)
-                                {
-                                    <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--read">Read</span>
-                                }
-                                @if (item.CanWrite)
-                                {
-                                    <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Write</span>
-                                }
-                                <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--scope">@item.ScopeLabel</span>
-                            </span>
-                        </button>
+                                <span class="contextual-agent-window__agent-access">
+                                    @if (item.CanRead)
+                                    {
+                                        <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--read">Read</span>
+                                    }
+                                    @if (item.CanWrite)
+                                    {
+                                        <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Write</span>
+                                    }
+                                    <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--scope">@item.ScopeLabel</span>
+                                </span>
+                            </button>
+
+                            <button type="button"
+                                    class="contextual-agent-window__agent-history"
+                                    aria-label="@($"Open recent threads with {ResolveAgentName(item.Agent)}")"
+                                    title="Open recent threads"
+                                    @onclick="@(() => OpenAgentThreadHistoryDialogAsync(item))"
+                                    data-testid="@($"{TestId}-agent-{item.Agent.Id:N}-history")">
+                                <Icon Name="history" />
+                            </button>
+                        </article>
                     }
                 </div>
             }
@@ -183,6 +199,16 @@
                                 AttachmentRequested="StageAttachmentsAsync"
                                 SessionTitleChanged="HandleSessionTitleChangedAsync">
                 <HeaderActions>
+                    <Button Icon="file_download"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Variant="Variant.Text"
+                            Disabled="@(!CanDownloadThreadHistory)"
+                            IsBusy="@isDownloadingThreadHistory"
+                            Click="DownloadThreadHistoryAsync"
+                            aria-label="Download agent thread history JSON"
+                            title="Download agent thread history JSON"
+                            data-testid="@($"{TestId}-download-thread-history-json")" />
                     <Button Icon="runtime"
                             Text="Runtime details"
                             ButtonStyle="ButtonStyle.Light"
@@ -262,6 +288,9 @@
     [Parameter]
     public Guid? ProcessDefinitionId { get; set; }
 
+    [Parameter]
+    public EventCallback<ContextualAgentWorkspaceRefreshRequest> WorkspaceRefreshRequested { get; set; }
+
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ContextualAgentAccessSummary> accessibleAgents = [];
     private CanvasWorkbenchWindowState chatWindowState = new() { IsVisible = false };
@@ -281,6 +310,7 @@
     private IReadOnlyList<string> tagFilters = [];
     private bool isLoadingAgents;
     private bool isChatBusy;
+    private bool isDownloadingThreadHistory;
     private int composerKey;
     private string lastContextKey = string.Empty;
 
@@ -312,6 +342,9 @@
         => workspace?.SelectedRun is not null ||
            executionLog.Count > 0 ||
            metrics.Count > 0;
+
+    private bool CanDownloadThreadHistory
+        => selectedAgentId.HasValue && selectedAgent is not null && !isDownloadingThreadHistory;
 
     protected override async Task OnInitializedAsync()
     {
@@ -432,6 +465,70 @@
         }
     }
 
+    private async Task OpenAgentThreadHistoryDialogAsync(ContextualAgentAccessSummary item)
+    {
+        selectedAgentId = item.Agent.Id;
+        selectedAgent = item.Agent;
+        IReadOnlyList<ChatSessionRecord> sessions;
+
+        isChatBusy = true;
+        try
+        {
+            sessions = (await WorkspaceService.ListChatSessionsAsync(item.Agent.Id))
+                .OrderByDescending(session => session.UpdatedAtUtc)
+                .Take(AgentThreadHistoryDialog.MaxThreadCount)
+                .ToList();
+        }
+        catch (Exception exception)
+        {
+            Notify("Unable to load thread history", "danger", exception.Message);
+            return;
+        }
+        finally
+        {
+            isChatBusy = false;
+        }
+
+        var result = await DialogService.OpenAsync<AgentThreadHistoryDialog>(
+            "Agent thread history",
+            new Dictionary<string, object?>
+            {
+                [nameof(AgentThreadHistoryDialog.Agent)] = item.Agent,
+                [nameof(AgentThreadHistoryDialog.Sessions)] = sessions,
+                [nameof(AgentThreadHistoryDialog.SelectedSessionId)] = selectedSessionId
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Contextual agent",
+                Subtitle = $"{ResolveAgentName(item.Agent)} / latest {sessions.Count} thread(s)",
+                Size = ModalSize.Wide,
+                DenseChrome = true,
+                TestId = $"{TestId}-agent-thread-history-dialog",
+                AriaLabel = "Agent thread history"
+            });
+
+        if (result is not Guid sessionId)
+        {
+            return;
+        }
+
+        isChatBusy = true;
+        try
+        {
+            await LoadWorkspaceAsync(item.Agent.Id, sessionId);
+            OpenChatWindow();
+            Notify("Thread opened", "success", $"Opened {ResolveChatSummary()} with {ResolveAgentName(item.Agent)}.");
+        }
+        catch (Exception exception)
+        {
+            Notify("Unable to open thread", "danger", exception.Message);
+        }
+        finally
+        {
+            isChatBusy = false;
+        }
+    }
+
     private void OpenChatWindow()
     {
         var state = chatWindowState.HasCustomGeometry
@@ -491,6 +588,7 @@
                     AutoApprovePendingToolCalls: false));
             draftAttachmentPaths = [];
             await LoadWorkspaceAsync(selectedAgentId.Value, result.ChatSessionId ?? selectedSessionId);
+            await NotifyWorkspaceRefreshRequestedAsync(result.ExecutionRunId);
             Notify("Prompt sent", "success", "The contextual thread was updated.");
         }
         catch (Exception exception)
@@ -526,12 +624,13 @@
         isChatBusy = true;
         try
         {
-            await WorkspaceService.RespondToPendingApprovalsAsync(
+            var result = await WorkspaceService.RespondToPendingApprovalsAsync(
                 selectedAgentId.Value,
                 selectedSessionId.Value,
                 approved,
                 autoApprovePendingToolCalls);
             await LoadWorkspaceAsync(selectedAgentId.Value, selectedSessionId.Value);
+            await NotifyWorkspaceRefreshRequestedAsync(result.ExecutionRunId);
             Notify(
                 approved ? "Approval applied" : "Approval rejected",
                 approved ? "success" : "warning",
@@ -612,6 +711,23 @@
         ResolveRunState();
     }
 
+    private Task NotifyWorkspaceRefreshRequestedAsync(Guid? executionRunId)
+    {
+        if (!WorkspaceRefreshRequested.HasDelegate || !selectedAgentId.HasValue)
+        {
+            return Task.CompletedTask;
+        }
+
+        return WorkspaceRefreshRequested.InvokeAsync(
+            new ContextualAgentWorkspaceRefreshRequest(
+                WorkspaceKind,
+                selectedAgentId.Value,
+                selectedSessionId,
+                executionRunId,
+                ProjectId,
+                ProcessDefinitionId));
+    }
+
     private Task OpenRuntimeDetailsDialogAsync()
     {
         if (!CanOpenRuntimeDetails)
@@ -642,6 +758,117 @@
             });
 
         return Task.CompletedTask;
+    }
+
+    private async Task DownloadThreadHistoryAsync()
+    {
+        if (!selectedAgentId.HasValue || selectedAgent is null)
+        {
+            Notify("Select an agent", "warning", "Open a contextual agent before exporting thread history.");
+            return;
+        }
+
+        isDownloadingThreadHistory = true;
+        try
+        {
+            var json = await BuildThreadHistoryExportJsonAsync(selectedAgent);
+            await JsRuntime.InvokeVoidAsync(
+                "CanDoItAll.agentFramework.downloadJson",
+                BuildThreadHistoryExportFileName(selectedAgent),
+                json);
+            Notify("Thread history exported", "success", "Downloaded the agent thread history JSON for debugging.");
+        }
+        catch (Exception exception)
+        {
+            Notify("Export failed", "danger", exception.Message);
+        }
+        finally
+        {
+            isDownloadingThreadHistory = false;
+        }
+    }
+
+    private async Task<string> BuildThreadHistoryExportJsonAsync(AgentDefinition agent)
+    {
+        var sessions = (await WorkspaceService.ListChatSessionsAsync(agent.Id))
+            .OrderByDescending(session => session.UpdatedAtUtc)
+            .ToList();
+        var exportSessions = new List<AgentThreadHistoryExportSession>(sessions.Count);
+
+        foreach (var session in sessions)
+        {
+            var runs = await WorkspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    AgentId: agent.Id,
+                    ChatSessionId: session.Id,
+                    Take: int.MaxValue));
+            var exportRuns = new List<AgentThreadHistoryExportRun>(runs.Count);
+
+            foreach (var run in runs.OrderByDescending(item => item.UpdatedAtUtc))
+            {
+                try
+                {
+                    exportRuns.Add(new AgentThreadHistoryExportRun(
+                        run,
+                        await WorkspaceService.GetExecutionRunDetailAsync(run.Id),
+                        string.Empty));
+                }
+                catch (Exception exception)
+                {
+                    exportRuns.Add(new AgentThreadHistoryExportRun(
+                        run,
+                        Detail: null,
+                        LoadError: exception.Message));
+                }
+            }
+
+            exportSessions.Add(new AgentThreadHistoryExportSession(session, exportRuns));
+        }
+
+        var payload = new AgentThreadHistoryExportPayload(
+            Schema: "candoitall.contextual-agent-thread-history.v1",
+            ExportedAtUtc: DateTimeOffset.UtcNow,
+            WorkspaceKind,
+            ProjectId,
+            ProcessDefinitionId,
+            WindowId,
+            ChatWindowId,
+            agent,
+            selectedSessionId,
+            exportSessions);
+
+        return JsonSerializer.Serialize(payload, ThreadHistoryJsonOptions);
+    }
+
+    private static string BuildThreadHistoryExportFileName(AgentDefinition agent)
+    {
+        var slug = string.Join(
+            '-',
+            ResolveAgentName(agent)
+                .ToLowerInvariant()
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(NormalizeFileNameSegment)
+                .Where(segment => !string.IsNullOrWhiteSpace(segment)));
+
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            slug = "agent";
+        }
+
+        return $"agent-thread-history-{slug}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.json";
+    }
+
+    private static string NormalizeFileNameSegment(string value)
+    {
+        var characters = value
+            .Select(static character =>
+                (character is >= 'a' and <= 'z') ||
+                (character is >= '0' and <= '9')
+                    ? character
+                    : '-')
+            .ToArray();
+
+        return new string(characters).Trim('-');
     }
 
     private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry)
@@ -998,4 +1225,35 @@ User request:
         string BackgroundColor,
         string BorderColor,
         string ForegroundColor);
+
+    private static readonly JsonSerializerOptions ThreadHistoryJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true
+    };
+
+    static ContextualAgentWorkspaceWindows()
+    {
+        ThreadHistoryJsonOptions.Converters.Add(new JsonStringEnumConverter());
+    }
+
+    private sealed record AgentThreadHistoryExportPayload(
+        string Schema,
+        DateTimeOffset ExportedAtUtc,
+        ContextualAgentWorkspaceKind WorkspaceKind,
+        Guid? ProjectId,
+        Guid? ProcessDefinitionId,
+        string WindowId,
+        string ChatWindowId,
+        AgentDefinition Agent,
+        Guid? SelectedSessionId,
+        IReadOnlyList<AgentThreadHistoryExportSession> Sessions);
+
+    private sealed record AgentThreadHistoryExportSession(
+        ChatSessionRecord Session,
+        IReadOnlyList<AgentThreadHistoryExportRun> Runs);
+
+    private sealed record AgentThreadHistoryExportRun(
+        ExecutionRunRecord Run,
+        ExecutionRunDetail? Detail,
+        string LoadError);
 }

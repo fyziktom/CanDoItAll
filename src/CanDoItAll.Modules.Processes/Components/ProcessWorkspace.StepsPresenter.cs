@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.Components.CanvasLib;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -179,6 +180,11 @@ public partial class ProcessWorkspace
         public Task HandleCanvasAgentWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         {
             return workspace.HandleCanvasAgentWindowStateChangedAsync(state);
+        }
+
+        public Task HandleAgentWorkspaceRefreshRequestedAsync(ContextualAgentWorkspaceRefreshRequest request)
+        {
+            return workspace.HandleAgentWorkspaceRefreshRequestedAsync(request);
         }
 
         public Task HandleCanvasToolboxSearchTextChangedAsync(string? value)
