@@ -49,8 +49,8 @@ public sealed class ProjectStructureRuntimeLauncher(
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
         return node.ObjectType switch
         {
-            ProjectObjectType.Script => ResolveScriptPlan(metadata.Script),
-            ProjectObjectType.Environment => ResolveEnvironmentPlan(metadata.Environment),
+            ProjectObjectType.Script => ResolveScriptPlan(node.ObjectSubtype, metadata.Script),
+            ProjectObjectType.Environment => ResolveEnvironmentPlan(node.ObjectSubtype, metadata.Environment),
             _ => Fail("PowerShell launch is only available for runtime-capable nodes.")
         };
     }
@@ -112,22 +112,10 @@ public sealed class ProjectStructureRuntimeLauncher(
     private static Process? StartPowerShell(ProjectStructureRuntimeLaunchPlan plan, bool runAsAdministrator)
         => Process.Start(BuildStartInfo(plan, runAsAdministrator));
 
-    private ProjectStructureRuntimeLaunchResolution ResolveScriptPlan(ProjectScriptMetadata? metadata)
+    private ProjectStructureRuntimeLaunchResolution ResolveScriptPlan(string objectSubtype, ProjectScriptMetadata? metadata)
     {
-        if (metadata is null)
-        {
-            return Fail("Script metadata is missing.");
-        }
-
-        if (string.IsNullOrWhiteSpace(metadata.WorkingDirectory))
-        {
-            return Fail("Script launch requires a working directory.");
-        }
-
-        if (TryResolveWorkspacePath(metadata.WorkingDirectory, "Script working directory", out var workingDirectory) is { } workingDirectoryFailure)
-        {
-            return workingDirectoryFailure;
-        }
+        metadata ??= new ProjectScriptMetadata();
+        var scriptKind = ResolveScriptKind(objectSubtype, metadata);
 
         ProjectStructureRuntimeLaunchTarget? target = null;
         string? displayCommand = null;
@@ -135,18 +123,26 @@ public sealed class ProjectStructureRuntimeLauncher(
 
         if (!string.IsNullOrWhiteSpace(metadata.Command))
         {
+            if (TryResolveScriptWorkingDirectory(metadata, out var workingDirectory) is { } workingDirectoryFailure)
+            {
+                return workingDirectoryFailure;
+            }
+
             displayCommand = JoinCommand(metadata.Command, metadata.Arguments);
-            displayName = metadata.ScriptKind switch
+            displayName = scriptKind switch
             {
                 ProjectScriptKind.EfMigration => "EF migration",
                 ProjectScriptKind.TailwindWatch => "Tailwind watch",
                 ProjectScriptKind.PowerShell => "PowerShell script",
                 _ => "script command"
             };
+
+            return Success(CreatePlan(workingDirectory, displayCommand, displayName, target));
         }
-        else if (metadata.ScriptKind == ProjectScriptKind.PowerShell && !string.IsNullOrWhiteSpace(metadata.ScriptPath))
+
+        if (scriptKind == ProjectScriptKind.PowerShell && !string.IsNullOrWhiteSpace(metadata.ScriptPath))
         {
-            if (TryResolveWorkspacePath(metadata.ScriptPath, "Script path", out var scriptPath, workingDirectory) is { } scriptPathFailure)
+            if (TryResolvePowerShellScriptPath(metadata, out var scriptPath, out var workingDirectory) is { } scriptPathFailure)
             {
                 return scriptPathFailure;
             }
@@ -154,23 +150,19 @@ public sealed class ProjectStructureRuntimeLauncher(
             displayCommand = JoinCommand($"& {QuotePowerShell(scriptPath)}", metadata.Arguments);
             displayName = "PowerShell script";
             target = new ProjectStructureRuntimeLaunchTarget("script path", scriptPath, false);
-        }
-        else
-        {
-            return Fail("Script launch requires a command or PowerShell script path.");
+
+            return Success(CreatePlan(workingDirectory, displayCommand, displayName, target));
         }
 
-        return Success(CreatePlan(workingDirectory, displayCommand, displayName, target));
+        return Fail("Script launch requires a command or PowerShell script path.");
     }
 
-    private ProjectStructureRuntimeLaunchResolution ResolveEnvironmentPlan(ProjectEnvironmentMetadata? metadata)
+    private ProjectStructureRuntimeLaunchResolution ResolveEnvironmentPlan(string objectSubtype, ProjectEnvironmentMetadata? metadata)
     {
-        if (metadata is null)
-        {
-            return Fail("Environment metadata is missing.");
-        }
+        metadata ??= new ProjectEnvironmentMetadata();
+        var environmentKind = ResolveEnvironmentKind(objectSubtype, metadata);
 
-        return metadata.EnvironmentKind switch
+        return environmentKind switch
         {
             ProjectEnvironmentKind.DotNetWatch => ResolveDotNetPlan(metadata, "dotnet watch", isRelease: false, isWatch: true),
             ProjectEnvironmentKind.DotNetRuntime => ResolveDotNetPlan(metadata, ".NET runtime", isRelease: false, isWatch: false),
@@ -178,6 +170,42 @@ public sealed class ProjectStructureRuntimeLauncher(
             ProjectEnvironmentKind.PythonEnvironment => ResolvePythonPlan(metadata),
             _ => Fail("PowerShell launch is not supported for this environment type.")
         };
+    }
+
+    private ProjectStructureRuntimeLaunchResolution? TryResolveScriptWorkingDirectory(
+        ProjectScriptMetadata metadata,
+        out string workingDirectory)
+    {
+        var workingDirectoryValue = string.IsNullOrWhiteSpace(metadata.WorkingDirectory)
+            ? "."
+            : metadata.WorkingDirectory;
+        return TryResolveWorkspacePath(workingDirectoryValue, "Script working directory", out workingDirectory);
+    }
+
+    private ProjectStructureRuntimeLaunchResolution? TryResolvePowerShellScriptPath(
+        ProjectScriptMetadata metadata,
+        out string scriptPath,
+        out string workingDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(metadata.WorkingDirectory))
+        {
+            if (TryResolveWorkspacePath(metadata.WorkingDirectory, "Script working directory", out workingDirectory) is { } workingDirectoryFailure)
+            {
+                scriptPath = string.Empty;
+                return workingDirectoryFailure;
+            }
+
+            return TryResolveWorkspacePath(metadata.ScriptPath, "Script path", out scriptPath, workingDirectory);
+        }
+
+        if (TryResolveWorkspacePath(metadata.ScriptPath, "Script path", out scriptPath) is { } scriptPathFailure)
+        {
+            workingDirectory = string.Empty;
+            return scriptPathFailure;
+        }
+
+        workingDirectory = Path.GetDirectoryName(scriptPath) ?? scriptPath;
+        return null;
     }
 
     private ProjectStructureRuntimeLaunchResolution ResolveDotNetPlan(ProjectEnvironmentMetadata metadata, string displayName, bool isRelease, bool isWatch)
@@ -297,6 +325,16 @@ public sealed class ProjectStructureRuntimeLauncher(
                 "Python environment",
                 new ProjectStructureRuntimeLaunchTarget("Python environment path", activationPath, false)));
     }
+
+    private static ProjectScriptKind ResolveScriptKind(string objectSubtype, ProjectScriptMetadata metadata)
+        => metadata.ScriptKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
+            ? ProjectNodeKindRegistry.ResolveScriptKind(objectSubtype)
+            : metadata.ScriptKind;
+
+    private static ProjectEnvironmentKind ResolveEnvironmentKind(string objectSubtype, ProjectEnvironmentMetadata metadata)
+        => metadata.EnvironmentKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
+            ? ProjectNodeKindRegistry.ResolveEnvironmentKind(objectSubtype)
+            : metadata.EnvironmentKind;
 
     [SupportedOSPlatform("windows")]
     private static ProcessStartInfo BuildStartInfo(ProjectStructureRuntimeLaunchPlan plan, bool runAsAdministrator)
