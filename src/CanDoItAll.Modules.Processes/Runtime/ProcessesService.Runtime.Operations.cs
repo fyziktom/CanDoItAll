@@ -1,11 +1,16 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService
 {
+    private const int MaxProcessArtifactTitleLength = 200;
+    private const int MaxProcessArtifactExternalReferenceKeyLength = 200;
+
     public async Task<Result> ResolveAssignmentAsync(ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken = default)
     {
         if (request.ProcessRunId == Guid.Empty || request.RoleRequirementId == Guid.Empty)
@@ -182,7 +187,9 @@ public sealed partial class ProcessesService
             return Result<Guid>.Failure(Error.Validation("Process run was not found.", "processes.artifact.run-not-found"));
         }
 
-        var externalReferenceKey = request.ExternalReferenceKey.Trim();
+        var externalReferenceKey = BoundProcessArtifactText(
+            request.ExternalReferenceKey.Trim(),
+            MaxProcessArtifactExternalReferenceKeyLength);
         if (!string.IsNullOrWhiteSpace(externalReferenceKey))
         {
             var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
@@ -251,7 +258,7 @@ public sealed partial class ProcessesService
             StepRunId = request.StepRunId,
             ArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId,
             ArtifactKind = request.ArtifactKind,
-            Title = request.Title.Trim(),
+            Title = BoundProcessArtifactText(request.Title.Trim(), MaxProcessArtifactTitleLength),
             TrustStatus = request.TrustStatus,
             SensitivityLevel = request.SensitivityLevel,
             ProvenanceSummary = request.ProvenanceSummary.Trim(),
@@ -275,6 +282,19 @@ public sealed partial class ProcessesService
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Success(artifact.Id);
+    }
+
+    private static string BoundProcessArtifactText(string value, int maxLength)
+    {
+        var normalized = value.Trim();
+        if (normalized.Length <= maxLength)
+        {
+            return normalized;
+        }
+
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)).AsSpan(0, 12)).ToLowerInvariant();
+        var prefixLength = Math.Max(0, maxLength - hash.Length - 1);
+        return $"{normalized[..prefixLength]}#{hash}";
     }
 
     private static ProcessArtifactExpectation? ResolveArtifactExpectation(

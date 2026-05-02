@@ -23,7 +23,7 @@ public sealed class ProcessTemplateProjectionServiceTests
 
         var releaseApproval = envelope.Definition.Steps.Single(step => step.Key == "release-approval");
         var releaseApprovalTemplate = process.Steps.Single(step => step.Key == "release-approval");
-        Assert.Equal("Approve release readiness", releaseApproval.Title);
+        Assert.Equal(releaseApprovalTemplate.Title, releaseApproval.Title);
         Assert.Equal(releaseApprovalTemplate.Dependencies.Count, releaseApproval.Dependencies.Count);
         Assert.Equal(releaseApprovalTemplate.ArtifactInputs.Count, releaseApproval.ArtifactInputs.Count);
 

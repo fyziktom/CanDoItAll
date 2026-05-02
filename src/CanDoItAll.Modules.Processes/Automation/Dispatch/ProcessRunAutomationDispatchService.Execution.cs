@@ -100,7 +100,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         FinalizerMode: AgentFinalizerMode.Required,
                         MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
                         RequireStructuredOutputValidation: true);
-                    var processInvocationMetadataJson = ExecutionInvocationMetadata.Build(null, processInvocationPolicy);
+                    var processInvocationMetadataJson = BuildProcessInvocationMetadataJson(
+                        candidate,
+                        processInvocationPolicy,
+                        prefetchedProjectStructureGrounding.HasPromptSummary
+                            ? prefetchedProjectStructureGrounding.PromptSummary
+                            : null,
+                        prefetchedArtifactInspectionGrounding.HasPromptSummary
+                            ? prefetchedArtifactInspectionGrounding.PromptSummary
+                            : null);
 
                     try
                     {
@@ -331,11 +339,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 return finalOutcome;
             }
 
+            var retryReasons = ResolveIncompleteSuccessfulRunRetryReasons(
+                candidate,
+                detail,
+                responseText,
+                missingRequiredTools);
+
             logger.LogWarning(
-                "AgentFramework run {ExecutionRunId} ended with unresolved execution work for process run {RunId}, step {StepRunId}. Missing tools: {MissingTools}. Critical failures: {CriticalFailures}. Retrying attempt {NextAttempt}/{MaxAttempts}.",
+                "AgentFramework run {ExecutionRunId} ended with unresolved execution work for process run {RunId}, step {StepRunId}. Retry reasons: {RetryReasons}. Missing tools: {MissingTools}. Critical failures: {CriticalFailures}. Retrying attempt {NextAttempt}/{MaxAttempts}.",
                 executionRunId,
                 candidate.Run.Id,
                 candidate.StepRun.Id,
+                retryReasons.Count == 0
+                    ? "unspecified recoverable failure"
+                    : string.Join(" | ", retryReasons),
                 missingRequiredTools.Count == 0
                     ? "none"
                     : string.Join(", ", missingRequiredTools),
@@ -523,7 +540,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProviderHealthResult healthResult;
             try
             {
-                healthResult = await workspaceService.TestProviderAsync(provider.Id, cancellationToken);
+                using var probeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                probeCancellation.CancelAfter(ProviderFallbackHealthProbeTimeout);
+                healthResult = await workspaceService.TestProviderAsync(provider.Id, probeCancellation.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation(
+                    "Skipping fallback provider '{ProviderName}' because its health probe exceeded {TimeoutSeconds} seconds.",
+                    provider.Name,
+                    ProviderFallbackHealthProbeTimeout.TotalSeconds);
+                continue;
             }
             catch (Exception exception)
             {

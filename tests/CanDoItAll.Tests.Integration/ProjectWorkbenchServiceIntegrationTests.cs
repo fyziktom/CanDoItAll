@@ -227,7 +227,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             projectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.WorkItem,
-                "Calculator feature",
+                "Workflow feature",
                 "Feature / process visibility validation",
                 "Validate that unlinking the projected process node hides it from the structure canvas.",
                 ParentNodeKey: null,
@@ -311,7 +311,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             projectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.ProjectBlock,
-                "Blazor SSR calculator delivery",
+                "Blazor SSR workflow delivery",
                 "Delivery block / process rollup validation",
                 "Contains the feature node that is bound to the process run.",
                 phaseNode.Id,
@@ -320,7 +320,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             projectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.WorkItem,
-                "Simple calculator feature",
+                "Simple workflow feature",
                 "Feature / process-bound work item",
                 "Track the process run from the workbench feature lane.",
                 deliveryNode.Id,

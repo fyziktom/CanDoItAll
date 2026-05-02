@@ -1,0 +1,47 @@
+- main [ref=e232] [box=16,12,885,2522]:
+  - group [ref=e233] [box=16,12,885,46]:
+    - generic "Workspace navigation" [ref=e234] [cursor=pointer] [box=33,25,851,20]
+  - generic [ref=e235] [box=16,66,885,268]:
+    - generic [ref=e238] [box=20,66,76,264]:
+      - generic [ref=e239] [box=20,66,76,190]:
+        - button "Dashboard" [ref=e241] [box=29,71,85,20]
+        - button "Projects" [ref=e246] [box=29,107,43,16]
+        - button "Bike Commute Weather Scout · Structure" [ref=e249] [box=29,139,222,16]
+        - button "Projects" [ref=e252] [box=29,171,43,16]
+        - button "Herb Garden Watering Planner · Structure" [ref=e255] [box=29,203,227,16]
+        - button "Projects" [ref=e258] [box=29,235,43,16]
+      - generic [ref=e260] [box=20,264,76,66]:
+        - textbox "Search tabs" [ref=e261] [box=20,264,144,34]
+        - group [ref=e262] [box=20,304,38,26]
+    - generic [ref=e265] [box=108,179,793,42]:
+      - generic [ref=e266] [box=108,182,356,36]:
+        - generic [ref=e267] [box=109,193,110,13]: Active database
+        - generic [ref=e268] [box=225,192,124,16]: PostgreSQL workspace
+        - generic [ref=e269] [box=355,187,85,26]: PostgreSQL
+        - button "Show db details" [ref=e271] [cursor=pointer] [box=445,192,17,17]
+      - button "Switch database" [ref=e273] [box=471,179,140,42]:
+        - generic [ref=e274] [box=484,188,114,24]: Switch database
+      - generic [ref=e275] [box=619,187,117,26]: Interactive Server
+      - generic [ref=e276] [box=744,187,86,26]: Live items 9
+      - generic [ref=e277] [box=838,187,63,26]: Tabs 20
+  - generic [ref=e281] [box=33,359,851,2104]:
+    - generic [ref=e284] [box=47,370,823,78]:
+      - generic [ref=e285] [box=47,370,823,26]:
+        - paragraph [ref=e286] [box=47,375,156,16]: Project processes
+        - generic [ref=e287] [box=211,370,90,26]: 5 definitions
+        - generic [ref=e288] [box=308,370,66,26]: 5 visible
+        - generic [ref=e289] [box=383,370,95,26]: 17 active runs
+        - generic [ref=e290] [box=486,370,117,26]: 22 improvements
+      - generic [ref=e291] [box=47,407,823,42]:
+        - button "Feed defaults" [ref=e292] [box=47,407,148,42]
+        - button "New definition" [ref=e295] [box=203,407,158,42]
+        - button "Templates" [ref=e298] [box=369,407,125,42]
+    - generic [ref=e303] [box=33,474,851,1988]:
+      - generic [ref=e304] [box=33,474,851,865]:
+        - generic [ref=e306] [box=46,485,825,110]
+        - generic [ref=e328] [box=46,616,810,712]
+      - generic [ref=e404] [box=33,1351,851,1111]:
+        - generic [ref=e408] [box=63,1375,791,56]
+        - generic [ref=e421] [box=46,1465,825,987]
+  - group [ref=e485] [box=16,2488,885,46]:
+    - generic "Workspace context" [ref=e486] [cursor=pointer] [box=33,2501,851,20]

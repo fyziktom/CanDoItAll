@@ -152,10 +152,11 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.MutatesWorkspace,
             message,
             effectiveProcessResult);
+        var resultMessage = AppendFailureDiagnosticHint(message, receipt, succeeded);
 
         return new WorkspaceCommandExecutionResult(
             Succeeded: succeeded,
-            Message: message,
+            Message: resultMessage,
             Receipt: receipt,
             ToolName: plan.Decision.ToolName,
             RecipeId: plan.Decision.RecipeId,
@@ -169,6 +170,28 @@ internal sealed class WorkspaceCommandProcessRunner
             StderrPreview: effectiveProcessResult.Stderr,
             StdoutTruncated: effectiveProcessResult.StdoutTruncated,
             StderrTruncated: effectiveProcessResult.StderrTruncated);
+    }
+
+    private static string AppendFailureDiagnosticHint(
+        string message,
+        WorkspaceToolReceipt receipt,
+        bool succeeded)
+    {
+        if (succeeded)
+        {
+            return message;
+        }
+
+        var stdoutPath = receipt.ArtifactReferences.FirstOrDefault(item =>
+            item.DisplayName.Contains("stdout", StringComparison.OrdinalIgnoreCase))?.RelativePath;
+        var stderrPath = receipt.ArtifactReferences.FirstOrDefault(item =>
+            item.DisplayName.Contains("stderr", StringComparison.OrdinalIgnoreCase))?.RelativePath;
+        if (string.IsNullOrWhiteSpace(stdoutPath) && string.IsNullOrWhiteSpace(stderrPath))
+        {
+            return message;
+        }
+
+        return $"{message} Inspect captured diagnostics before editing or retrying. stdout: {stdoutPath ?? "(none)"}; stderr: {stderrPath ?? "(none)"}.";
     }
 
     private static WorkspaceProcessExecutionResult NormalizeProcessResult(

@@ -24,12 +24,6 @@ internal static class Program
             ? await ExecuteActionAsync(scope.ServiceProvider, options)
             : options.ScenarioName switch
         {
-            ScenarioSeederOptions.AgentShowcaseCalculatorScenario => await scope.ServiceProvider
-                .GetRequiredService<AgentShowcaseCalculatorSeeder>()
-                .SeedAsync(),
-            ScenarioSeederOptions.UnitsConverterDeliveryScenario => await scope.ServiceProvider
-                .GetRequiredService<UnitsConverterDeliveryProvisioningSeeder>()
-                .SeedAsync(),
             _ => await scope.ServiceProvider
                 .GetRequiredService<AgentFrameworkIntegrationSimulationSeeder>()
                 .SeedAsync()
@@ -50,12 +44,7 @@ internal static class Program
         IServiceProvider serviceProvider,
         ScenarioSeederOptions options)
     {
-        return options.ActionName switch
-        {
-            ScenarioSeederOptions.CompleteUnitsConverterHumanStepAction => await serviceProvider
-                .GetRequiredService<UnitsConverterDeliveryProvisioningSeeder>()
-                .CompleteHumanStepAsync(options.RunId!.Value, options.StepSequence!.Value),
-            _ => throw new InvalidOperationException($"Unknown scenario-seeder action '{options.ActionName}'.")
-        };
+        await Task.CompletedTask;
+        throw new InvalidOperationException($"Unknown scenario-seeder action '{options.ActionName}'.");
     }
 }

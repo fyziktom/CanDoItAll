@@ -46,10 +46,10 @@ internal sealed class ProcessCatalogWarmupService(
                 continue;
             }
 
-            var definition = existingGlobalDefinitions.FirstOrDefault(item =>
-                string.Equals(item.Name, template.DisplayName, StringComparison.OrdinalIgnoreCase));
-            var synchronized = false;
-            if (definition is null)
+            var definitions = existingGlobalDefinitions
+                .Where(item => string.Equals(item.Name, template.DisplayName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (definitions.Count == 0)
             {
                 var importResult = await processesService.ImportAsync(
                     projectionService.GetProjectedEnvelope(processKey, projectId: null),
@@ -63,51 +63,57 @@ internal sealed class ProcessCatalogWarmupService(
                     continue;
                 }
 
-                definition = (await processesService.ListDefinitionsAsync(null, cancellationToken))
+                var importedDefinition = (await processesService.ListDefinitionsAsync(null, cancellationToken))
                     .Single(item => item.Id == importResult.Value);
-                existingGlobalDefinitions.Add(definition);
+                existingGlobalDefinitions.Add(importedDefinition);
+                definitions.Add(importedDefinition);
                 importedCount++;
             }
-            else if (synchronizeExistingDefinitions)
+
+            foreach (var definition in definitions)
             {
-                var synchronizeResult = await processesService.SynchronizeImportedDefinitionAsync(
-                    definition.Id,
-                    projectionService.GetProjectedEnvelope(processKey, projectId: null),
-                    cancellationToken);
-                if (synchronizeResult.IsFailure)
+                var synchronized = false;
+                if (synchronizeExistingDefinitions)
                 {
-                    logger.LogWarning(
-                        "Failed to synchronize default process template '{ProcessKey}' into definition '{DefinitionId}': {Errors}",
-                        processKey,
+                    var synchronizeResult = await processesService.SynchronizeImportedDefinitionAsync(
                         definition.Id,
-                        string.Join(" | ", synchronizeResult.Errors.Select(item => item.Message)));
+                        projectionService.GetProjectedEnvelope(processKey, projectId: null),
+                        cancellationToken);
+                    if (synchronizeResult.IsFailure)
+                    {
+                        logger.LogWarning(
+                            "Failed to synchronize default process template '{ProcessKey}' into definition '{DefinitionId}': {Errors}",
+                            processKey,
+                            definition.Id,
+                            string.Join(" | ", synchronizeResult.Errors.Select(item => item.Message)));
+                        continue;
+                    }
+
+                    synchronized = synchronizeResult.Value;
+                    if (synchronized)
+                    {
+                        synchronizedCount++;
+                    }
+                }
+
+                if (definition.HasPublishedVersion && !synchronized)
+                {
                     continue;
                 }
 
-                synchronized = synchronizeResult.Value;
-                if (synchronized)
+                var publishResult = await processesService.PublishAsync(definition.Id, cancellationToken);
+                if (publishResult.IsFailure)
                 {
-                    synchronizedCount++;
+                    logger.LogWarning(
+                        "Failed to publish warmed process definition '{DefinitionId}' from template '{ProcessKey}': {Errors}",
+                        definition.Id,
+                        processKey,
+                        string.Join(" | ", publishResult.Errors.Select(item => item.Message)));
+                    continue;
                 }
-            }
 
-            if (definition.HasPublishedVersion && !synchronized)
-            {
-                continue;
+                publishedCount++;
             }
-
-            var publishResult = await processesService.PublishAsync(definition.Id, cancellationToken);
-            if (publishResult.IsFailure)
-            {
-                logger.LogWarning(
-                    "Failed to publish warmed process definition '{DefinitionId}' from template '{ProcessKey}': {Errors}",
-                    definition.Id,
-                    processKey,
-                    string.Join(" | ", publishResult.Errors.Select(item => item.Message)));
-                continue;
-            }
-
-            publishedCount++;
         }
 
         stopwatch.Stop();

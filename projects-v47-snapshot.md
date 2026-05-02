@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - main [ref=e1512]:
+    - group [ref=e1513]:
+      - generic "Workspace navigation" [ref=e1514] [cursor=pointer]
+    - generic [ref=e1515]:
+      - generic [ref=e1518]:
+        - generic [ref=e1519]
+        - generic [ref=e1540]
+      - generic [ref=e1545]:
+        - generic [ref=e1546]
+        - button "Switch database" [ref=e1553]
+        - generic [ref=e1555]: Interactive Server
+        - generic [ref=e1556]: Live items 4
+        - generic [ref=e1557]: Tabs 11
+    - generic [ref=e1560]:
+      - paragraph [ref=e1561]: Database startup
+      - heading "Continue with the active database to load the workspace" [level=3] [ref=e1562]
+      - paragraph [ref=e1563]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+    - group [ref=e1564]:
+      - generic "Workspace context" [ref=e1565] [cursor=pointer]
+  - dialog "Database profiles" [ref=e1568]:
+    - banner [ref=e1569]:
+      - generic [ref=e1570]:
+        - generic [ref=e1571]
+        - button "Close" [ref=e1577]
+    - generic [ref=e1581]:
+      - generic [ref=e1582]:
+        - generic [ref=e1583]
+        - generic [ref=e1590]
+        - paragraph [ref=e1607]: "Selection source: Last active profile"
+      - generic [ref=e1608]:
+        - generic [ref=e1610]
+        - generic [ref=e1626]
+        - generic [ref=e1642]
+        - generic [ref=e1658]
+        - generic [ref=e1674]
+        - generic [ref=e1690]
+    - contentinfo [ref=e1708]:
+      - generic [ref=e1709]:
+        - generic [ref=e1710]
+        - generic [ref=e1715]

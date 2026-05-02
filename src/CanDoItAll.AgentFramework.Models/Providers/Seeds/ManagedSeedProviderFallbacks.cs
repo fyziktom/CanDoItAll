@@ -27,6 +27,7 @@ public static class ManagedSeedProviderFallbacks
         "research-deep-dive-analyst",
         "dotnet-solution-architect",
         "dotnet-application-developer",
+        "blazor-application-developer",
         "dotnet-qa-review-lead",
         "javascript-solution-architect",
         "javascript-application-developer",

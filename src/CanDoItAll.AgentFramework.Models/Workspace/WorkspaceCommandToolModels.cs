@@ -44,7 +44,18 @@ public sealed record WorkspaceCommandExecutionResult(
     string StdoutPreview,
     string StderrPreview,
     bool StdoutTruncated,
-    bool StderrTruncated);
+    bool StderrTruncated)
+{
+    public IReadOnlyList<WorkspaceArtifactReference> ArtifactReferences => Receipt.ArtifactReferences;
+
+    public string DiagnosticArtifactSummary => string.Join(
+        "; ",
+        Receipt.ArtifactReferences
+            .Where(item =>
+                item.DisplayName.Contains("stdout", StringComparison.OrdinalIgnoreCase) ||
+                item.DisplayName.Contains("stderr", StringComparison.OrdinalIgnoreCase))
+            .Select(item => $"{item.DisplayName}: {item.RelativePath}"));
+}
 
 public sealed record WorkspaceLocalMcpLaunchDescriptor(
     string CapabilityName,

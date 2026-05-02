@@ -246,9 +246,9 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
 
         var outcome = definition.Id switch
         {
-            "SC03" => await ExecuteBlazorCalculatorAsync(state, progressCallback),
+            "SC03" => await ExecuteGeneratedBlazorAppAsync(state, progressCallback),
             "SC04" => await ExecuteApprovalScenarioAsync(state, progressCallback),
-            "SC10" => await ExecuteCalculatorReviewAsync(state, progressCallback),
+            "SC10" => await ExecuteGeneratedAppReviewAsync(state, progressCallback),
             _ => throw new InvalidOperationException($"Unsupported automated scenario '{definition.Id}'.")
         };
 
@@ -346,15 +346,15 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         ];
     }
 
-    private async Task<ScenarioExecutionOutcome> ExecuteBlazorCalculatorAsync(
+    private async Task<ScenarioExecutionOutcome> ExecuteGeneratedBlazorAppAsync(
         ScenarioRuntimeState state,
         Func<ExecutionState, string, string, Task> progressCallback)
     {
         var specPath = $"{state.InputRoot}/spec.md";
-        var projectRoot = $"{state.OutputRoot}/ScenarioCalculator";
-        var projectPath = $"{projectRoot}/ScenarioCalculator.csproj";
+        var projectRoot = $"{state.OutputRoot}/GeneratedBlazorApp";
+        var projectPath = $"{projectRoot}/GeneratedBlazorApp.csproj";
 
-        fileService.WriteTextFile(specPath, CalculatorSpecMarkdown, overwrite: true);
+        fileService.WriteTextFile(specPath, GeneratedBlazorAppSpecMarkdown, overwrite: true);
 
         await progressCallback(
             ExecutionState.Running,
@@ -362,18 +362,18 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             "Creating a fresh Blazor Web App with the controlled dotnet template recipe.");
         var dotnetNewResult = await commandExecutionService.DotnetNew(
             "blazor",
-            "ScenarioCalculator",
+            "GeneratedBlazorApp",
             parentDirectory: state.OutputRoot,
             timeoutSeconds: 300);
         EnsureSucceeded(dotnetNewResult.Succeeded, dotnetNewResult.Message + Environment.NewLine + dotnetNewResult.StderrPreview);
 
-        fileService.WriteTextFile($"{projectRoot}/Components/Pages/Home.razor", CalculatorHomeRazor, overwrite: true);
-        fileService.WriteTextFile($"{projectRoot}/README.md", CalculatorReadme, overwrite: true);
+        fileService.WriteTextFile($"{projectRoot}/Components/Pages/Home.razor", GeneratedBlazorAppHomeRazor, overwrite: true);
+        fileService.WriteTextFile($"{projectRoot}/README.md", GeneratedBlazorAppReadme, overwrite: true);
 
         await progressCallback(
             ExecutionState.Running,
             "Project build",
-            "Building the generated calculator app through the controlled command surface.");
+            "Building the generated Blazor app through the controlled command surface.");
         var buildResult = await commandExecutionService.DotnetBuild(
             projectPath,
             configuration: "Debug",
@@ -384,13 +384,13 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
 
         var reportMarkdown =
             $"""
-            # SC03 Blazor Calculator Generation
+            # SC03 Generated Blazor App Delivery
 
-            The scenario generated a Blazor Web App under `{projectRoot}` and replaced the home page with a four-operation calculator.
+            The scenario generated a Blazor Web App under `{projectRoot}` and replaced the home page with a small interactive work-item surface.
 
             ## Included outputs
             - Spec: `{specPath}`
-            - Calculator page: `{projectRoot}/Components/Pages/Home.razor`
+            - App page: `{projectRoot}/Components/Pages/Home.razor`
             - Run guide: `{projectRoot}/README.md`
             - Build target: `{projectPath}`
 
@@ -401,7 +401,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         fileService.WriteTextFile($"{state.ArtifactRoot}/generation-report.md", reportMarkdown, overwrite: true);
 
         return new ScenarioExecutionOutcome(
-            ResponseText: "SC03 completed with a generated Blazor calculator project and a successful controlled build receipt.",
+            ResponseText: "SC03 completed with a generated Blazor app project and a successful controlled build receipt.",
             ResponseMarkdown: reportMarkdown,
             ToolCalls: 6);
     }
@@ -460,39 +460,39 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             ToolCalls: 6);
     }
 
-    private async Task<ScenarioExecutionOutcome> ExecuteCalculatorReviewAsync(
+    private async Task<ScenarioExecutionOutcome> ExecuteGeneratedAppReviewAsync(
         ScenarioRuntimeState state,
         Func<ExecutionState, string, string, Task> progressCallback)
     {
         await progressCallback(
             ExecutionState.Running,
-            "Calculator review",
-            "Inspecting the generated calculator delivery to produce a durable review report.");
+            "Generated app review",
+            "Inspecting the generated app delivery to produce a durable review report.");
 
-        var projectRoot = ResolveCalculatorProjectRoot(state);
+        var projectRoot = ResolveGeneratedAppProjectRoot(state);
         var relativeProjectRoot = Path.GetRelativePath(workspaceRoot, projectRoot).Replace('\\', '/');
         var homePath = Path.Combine(projectRoot, "Components", "Pages", "Home.razor");
         var readmePath = Path.Combine(projectRoot, "README.md");
-        var projectPath = Path.Combine(projectRoot, "ScenarioCalculator.csproj");
+        var projectPath = Path.Combine(projectRoot, "GeneratedBlazorApp.csproj");
 
         if (!File.Exists(homePath) || !File.Exists(readmePath) || !File.Exists(projectPath))
         {
-            throw new InvalidOperationException("SC10 could not find the generated calculator project to review.");
+            throw new InvalidOperationException("SC10 could not find the generated app project to review.");
         }
 
         var homeContent = await File.ReadAllTextAsync(homePath);
         var readmeContent = await File.ReadAllTextAsync(readmePath);
-        var findings = BuildCalculatorFindings(homeContent, readmeContent);
+        var findings = BuildGeneratedAppFindings(homeContent, readmeContent);
         var reportMarkdown =
             $"""
-            # SC10 Calculator Delivery Review
+            # SC10 App Delivery Review
 
-            The generated calculator delivery was inspected successfully.
+            The generated app delivery was inspected successfully.
 
             ## Project
             - Root: `{relativeProjectRoot}`
             - Project file: `{NormalizeRelativeWorkspacePath(projectPath)}`
-            - Calculator page: `{NormalizeRelativeWorkspacePath(homePath)}`
+            - App page: `{NormalizeRelativeWorkspacePath(homePath)}`
             - README: `{NormalizeRelativeWorkspacePath(readmePath)}`
 
             ## Review findings
@@ -502,18 +502,18 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         fileService.WriteTextFile($"{state.ArtifactRoot}/review-report.md", reportMarkdown, overwrite: true);
 
         return new ScenarioExecutionOutcome(
-            ResponseText: "SC10 completed with a durable calculator delivery review report.",
+            ResponseText: "SC10 completed with a durable app delivery review report.",
             ResponseMarkdown: reportMarkdown,
             ToolCalls: 3);
     }
 
-    private string ResolveCalculatorProjectRoot(ScenarioRuntimeState state)
+    private string ResolveGeneratedAppProjectRoot(ScenarioRuntimeState state)
     {
         if (!string.IsNullOrWhiteSpace(state.ProcessRunId))
         {
             var processScopedRoot = ToAbsoluteWorkspacePath(
-                $"{ProcessScenarioOutputRoot}/{CreateProcessStorageKey(state.ProcessRunId)}/sc03/w/ScenarioCalculator");
-            if (File.Exists(Path.Combine(processScopedRoot, "ScenarioCalculator.csproj")))
+                $"{ProcessScenarioOutputRoot}/{CreateProcessStorageKey(state.ProcessRunId)}/sc03/w/GeneratedBlazorApp");
+            if (File.Exists(Path.Combine(processScopedRoot, "GeneratedBlazorApp.csproj")))
             {
                 return processScopedRoot;
             }
@@ -522,7 +522,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         var standaloneRoot = ToAbsoluteWorkspacePath($"{StandaloneScenarioOutputRoot}/sc03");
         if (Directory.Exists(standaloneRoot))
         {
-            var latestProject = Directory.EnumerateFiles(standaloneRoot, "ScenarioCalculator.csproj", SearchOption.AllDirectories)
+            var latestProject = Directory.EnumerateFiles(standaloneRoot, "GeneratedBlazorApp.csproj", SearchOption.AllDirectories)
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(latestProject))
@@ -531,40 +531,35 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             }
         }
 
-        throw new InvalidOperationException("No generated calculator project is available for SC10.");
+        throw new InvalidOperationException("No generated app project is available for SC10.");
     }
 
-    private static IReadOnlyList<string> BuildCalculatorFindings(string homeContent, string readmeContent)
+    private static IReadOnlyList<string> BuildGeneratedAppFindings(string homeContent, string readmeContent)
     {
         var findings = new List<string>();
-        if (homeContent.Contains("Add", StringComparison.OrdinalIgnoreCase))
+        if (homeContent.Contains("Add item", StringComparison.OrdinalIgnoreCase))
         {
-            findings.Add("The calculator page includes an addition action.");
+            findings.Add("The app page includes an action that adds a work item.");
         }
 
-        if (homeContent.Contains("Subtract", StringComparison.OrdinalIgnoreCase))
+        if (homeContent.Contains("Mark first done", StringComparison.OrdinalIgnoreCase))
         {
-            findings.Add("The calculator page includes a subtraction action.");
+            findings.Add("The app page includes a state-changing completion action.");
         }
 
-        if (homeContent.Contains("Multiply", StringComparison.OrdinalIgnoreCase))
+        if (homeContent.Contains("items.Count", StringComparison.OrdinalIgnoreCase))
         {
-            findings.Add("The calculator page includes a multiplication action.");
-        }
-
-        if (homeContent.Contains("Divide", StringComparison.OrdinalIgnoreCase))
-        {
-            findings.Add("The calculator page includes a division action.");
+            findings.Add("The app page includes dynamic list state.");
         }
 
         if (readmeContent.Contains("dotnet run", StringComparison.OrdinalIgnoreCase))
         {
-            findings.Add("The README explains how to run the generated calculator.");
+            findings.Add("The README explains how to run the generated app.");
         }
 
         if (findings.Count == 0)
         {
-            findings.Add("The calculator delivery exists, but the review did not find the expected operator markers.");
+            findings.Add("The app delivery exists, but the review did not find the expected interaction markers.");
         }
 
         return findings;

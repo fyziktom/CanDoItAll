@@ -293,6 +293,32 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("external-target/<drive>/...", instructions, StringComparison.Ordinal);
         Assert.Contains("do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder", instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scaffold directly into it instead of adding an extra nested", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Before any scaffold call", instructions, StringComparison.Ordinal);
+        Assert.Contains("Workspace command timeout arguments are seconds", instructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Organization_workspace_seeds_concrete_deliverable_delivery_skill_as_generic_contract()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var capability = Assert.Single(
+            await workspaceService.ListCapabilitiesAsync(),
+            item => item.Kind == CapabilityKind.Skill &&
+                    string.Equals(item.Key, "concrete-deliverable-delivery-inline-skill", StringComparison.OrdinalIgnoreCase));
+        var instructions = ReadInlineSkillInstructions(capability.ConfigurationJson);
+
+        Assert.Contains("any process step that creates, repairs, validates, or summarizes a concrete deliverable", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("A deliverable can be an app, service, API", instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not reuse sample topics, older generated apps", instructions, StringComparison.Ordinal);
+        Assert.Contains("Use technology-specific skills and tools only after the current files or step contract justify them", instructions, StringComparison.Ordinal);
+        Assert.Contains("For documents, render/export/open the produced file", instructions, StringComparison.Ordinal);
+        Assert.Contains("For spreadsheets, inspect workbook structure", instructions, StringComparison.Ordinal);
+        Assert.Contains("Final delivery order is strict", instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not claim completion with chat-only evidence", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -322,12 +348,15 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var spreadsheetCapabilityId = capabilityIdsByKey["spreadsheet-skill"];
         var runTestsCapabilityId = capabilityIdsByKey["run-tests"];
         var mstestCapabilityId = capabilityIdsByKey["writing-mstest-tests"];
+        var concreteDeliverableDeliveryCapabilityId = capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"];
+        var dotnetAppDeliveryCapabilityId = capabilityIdsByKey["dotnet-app-delivery-inline-skill"];
         var blazorSsrDeliveryCapabilityId = capabilityIdsByKey["blazor-ssr-delivery-inline-skill"];
         var workspaceSourceRagCapabilityId = capabilityIdsByKey["workspace-source-rag"];
         var architectureSourceRagCapabilityId = capabilityIdsByKey["architecture-source-rag"];
         var createDirectoryCapabilityId = capabilityIdsByKey["workspace-create-directory"];
         var writeFileCapabilityId = capabilityIdsByKey["workspace-write-file"];
         var appendFileCapabilityId = capabilityIdsByKey["workspace-append-file"];
+        var workspaceDotnetRunCapabilityId = capabilityIdsByKey["workspace-dotnet-run"];
         var pwshRunScriptCapabilityId = capabilityIdsByKey["workspace-pwsh-run-script"];
         var convertDocumentCapabilityId = capabilityIdsByKey["workspace-convert-document"];
         var inspectSpreadsheetCapabilityId = capabilityIdsByKey["workspace-inspect-spreadsheet"];
@@ -341,6 +370,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
         var dotnetArchitectAgent = Assert.Single(agents, item => string.Equals(item.Name, ".NET Solution Architect", StringComparison.Ordinal));
         var dotnetDeveloperAgent = Assert.Single(agents, item => string.Equals(item.Name, ".NET Application Developer", StringComparison.Ordinal));
+        var blazorDeveloperAgent = Assert.Single(agents, item => string.Equals(item.Name, "Blazor Application Developer", StringComparison.Ordinal));
         var dotnetQaAgent = Assert.Single(agents, item => string.Equals(item.Name, ".NET QA Review Lead", StringComparison.Ordinal));
         var javascriptArchitectAgent = Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Solution Architect", StringComparison.Ordinal));
         var javascriptDeveloperAgent = Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Application Developer", StringComparison.Ordinal));
@@ -358,6 +388,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptArchitectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
@@ -367,21 +398,22 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(marketingSpecialistAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(codeReviewAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(securityReviewerAgent, codeanalyticsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(releaseManagerAgent, playwrightCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(dotnetArchitectAgent, bundleWorkflowCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(javascriptArchitectAgent, bundleWorkflowCapabilityId, frontendSkillCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(javascriptDeveloperAgent, playwrightCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(businessStrategistAgent, bundleWorkflowCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(marketingSpecialistAgent, bundleWorkflowCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(releaseManagerAgent, playwrightCapabilityId, playwrightWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(dotnetArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(blazorDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(javascriptArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(javascriptDeveloperAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(businessStrategistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(marketingSpecialistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         Assert.DoesNotContain(architectAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(programmingAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
@@ -390,6 +422,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.DoesNotContain(securityReviewerAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(releaseManagerAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(dotnetDeveloperAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(blazorDeveloperAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(javascriptDeveloperAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(businessStrategistAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
@@ -423,7 +456,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("expected pre-bootstrap state rather than a blocker", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Run the provided bootstrap or init script first", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a required build, test, or browser validation fails", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not create Razor components whose type names collide with domain services, converters, or enums", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not create Razor components whose type names collide with domain services, value types, or enums", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("default Bootstrap-looking page structure", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("keep the on-disk solution, project, and folder names short", editor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", editor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -497,21 +530,21 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("frontend-theme", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("When Playwright or screenshot review exposes a defect", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not assume legacy route names such as `/length` or `/temperature`", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not assume legacy route names from earlier sample runs", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stale evidence", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Treat untouched scaffold styling, flat stacked forms, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("filled input state and visible computed result", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("convert that alias to a native Windows path", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not pass a relative `external-target/...` string to `dotnet run` from inside the helper", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("use `workspace_dotnet_run` for a bounded loopback startup smoke", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("missing generic run capability", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Back every claim with visible proof", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("mark conflicting prior screenshots or notes as stale evidence", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Call out flat Bootstrap-default composition, bare stacked converter sections, or template navigation chrome", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Call out flat Bootstrap-default composition, bare stacked form sections, or template navigation chrome", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stock scaffold", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -545,6 +578,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         var dotnetDeveloper = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, ".NET Application Developer", StringComparison.Ordinal)).Id);
+        var blazorDeveloper = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Blazor Application Developer", StringComparison.Ordinal)).Id);
         var javascriptDeveloper = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Application Developer", StringComparison.Ordinal)).Id);
         var businessStrategist = await workspaceService.GetAgentEditorAsync(
@@ -555,7 +590,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Single(agents, item => string.Equals(item.Name, "Marketing Specialist", StringComparison.Ordinal)).Id);
 
         Assert.Contains("workspace_dotnet_new", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_run", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("checking that the grounded product root is missing or safe to scaffold", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Workspace command timeout arguments are seconds", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("host and tests as siblings", dotnetDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("BaseLib", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("component-library", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Before scaffolding, check the mapped product root", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_run", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Workspace command timeout arguments are seconds", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("artifacts/business/<project-slug>/", businessStrategist.Instructions, StringComparison.Ordinal);
@@ -617,12 +661,12 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
-        AssertHasCapabilities(programmingAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["blazor-ssr-delivery-inline-skill"], capabilityIdsByKey["workspace-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
-        AssertHasCapabilities(qaAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
+        AssertHasCapabilities(programmingAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"], capabilityIdsByKey["dotnet-app-delivery-inline-skill"], capabilityIdsByKey["blazor-ssr-delivery-inline-skill"], capabilityIdsByKey["workspace-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-dotnet-run"], capabilityIdsByKey["workspace-pwsh-run-script"]);
+        AssertHasCapabilities(qaAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"], capabilityIdsByKey["dotnet-app-delivery-inline-skill"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-dotnet-run"], capabilityIdsByKey["workspace-pwsh-run-script"]);
         AssertHasCapabilities(codeReviewAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
         AssertHasCapabilities(uiReviewAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
         AssertHasCapabilities(securityReviewAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
-        AssertHasCapabilities(releaseManagerAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["candoitall-bundle-workflow"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
+        AssertHasCapabilities(releaseManagerAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["candoitall-bundle-workflow"], capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(codeReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(uiReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
@@ -696,6 +740,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             "Release Readiness Manager",
             ".NET Solution Architect",
             ".NET Application Developer",
+            "Blazor Application Developer",
             ".NET QA Review Lead",
             "JavaScript Solution Architect",
             "JavaScript Application Developer",
@@ -754,6 +799,84 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("external-target/<drive>/...", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scaffold directly into it instead of adding an extra nested", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Before any scaffold call", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("Workspace command timeout arguments are seconds", refreshedInstructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Loading_a_stale_managed_catalog_refreshes_versioned_inline_skill_metadata()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        _ = await workspaceService.ListCapabilitiesAsync();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var catalogPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            workspaceScope.DataRootRelativePath.Replace('/', Path.DirectorySeparatorChar),
+            "workspace.json");
+        var staleConfigurationJson = JsonSerializer.Serialize(new
+        {
+            skillSource = "inline",
+            inlineSkill = new
+            {
+                name = "architecture-map",
+                description = "Outdated task-specific workflow.",
+                instructions = "Use this skill only when the user explicitly asks for a Mermaid or class-diagram output."
+            }
+        });
+
+        MutateCapabilitySnapshotInCatalog(
+            catalogPath,
+            "architecture-map-inline-skill",
+            "Outdated task-specific workflow.",
+            staleConfigurationJson);
+
+        var freshStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        _ = await freshStore.LoadCatalogAsync();
+
+        var refreshedSnapshot = ReadCapabilitySnapshotFromCatalog(catalogPath, "architecture-map-inline-skill");
+        var seededSnapshot = Assert.Single(
+            SandboxWorkspaceSeedFactory.Create().Capabilities,
+            item => string.Equals(item.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal(seededSnapshot.Description, refreshedSnapshot.Description);
+        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Loading_a_stale_managed_catalog_refreshes_versioned_dotnet_tool_metadata()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        _ = await workspaceService.ListCapabilitiesAsync();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var catalogPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            workspaceScope.DataRootRelativePath.Replace('/', Path.DirectorySeparatorChar),
+            "workspace.json");
+        var staleConfigurationJson = JsonSerializer.Serialize(new
+        {
+            tool = "workspace_dotnet_test",
+            approvalRequired = false
+        });
+
+        MutateCapabilitySnapshotInCatalog(
+            catalogPath,
+            "workspace-dotnet-test",
+            "Runs a bounded dotnet test recipe.",
+            staleConfigurationJson);
+
+        var freshStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        _ = await freshStore.LoadCatalogAsync();
+
+        var refreshedSnapshot = ReadCapabilitySnapshotFromCatalog(catalogPath, "workspace-dotnet-test");
+
+        Assert.Contains("stdout/stderr diagnostics", refreshedSnapshot.Description, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
     private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId, string expectedModel)
@@ -805,7 +928,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                          id != capabilityIdsByKey["candoitall-watch-playwright-loop"] &&
                          id != capabilityIdsByKey["run-tests"] &&
                          id != capabilityIdsByKey["writing-mstest-tests"] &&
-                         id != capabilityIdsByKey["candoitall-components-mcp"])
+                         id != capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"] &&
+                         id != capabilityIdsByKey["dotnet-app-delivery-inline-skill"] &&
+                         id != capabilityIdsByKey["candoitall-components-mcp"] &&
+                         id != capabilityIdsByKey["workspace-dotnet-run"])
             .ToList();
         await workspaceService.SaveAgentAsync(editor);
     }
@@ -819,7 +945,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             await workspaceService.ListAgentsAsync(includeTemplates: false),
             item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
         var editor = await workspaceService.GetAgentEditorAsync(programmingAgent.Id);
-        editor.Summary = "Uses skills, RAG, approval-aware tools, and workspace execution helpers to inspect and improve the current repository or build sample applications.";
+        editor.Summary = "Uses skills, RAG, approval-aware tools, and workspace execution helpers to inspect and improve repositories or build applications.";
         editor.ProviderProfileId = openAiChatProviderId;
         editor.Model = "gpt-4o-mini";
         editor.ConfigurationJson = "{}";
@@ -830,8 +956,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                          id != capabilityIdsByKey["run-tests"] &&
                          id != capabilityIdsByKey["candoitall-watch-playwright-loop"] &&
                          id != capabilityIdsByKey["writing-mstest-tests"] &&
+                         id != capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"] &&
+                         id != capabilityIdsByKey["dotnet-app-delivery-inline-skill"] &&
                          id != capabilityIdsByKey["candoitall-components-mcp"] &&
-                         id != capabilityIdsByKey["blazor-ssr-delivery-inline-skill"])
+                         id != capabilityIdsByKey["blazor-ssr-delivery-inline-skill"] &&
+                         id != capabilityIdsByKey["workspace-dotnet-run"])
             .ToList();
         await workspaceService.SaveAgentAsync(editor);
     }
@@ -870,7 +999,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var editor = await workspaceService.GetAgentEditorAsync(agent.Id);
         editor.ConfigurationJson = "{}";
         editor.SelectedCapabilityIds = editor.SelectedCapabilityIds
-            .Where(id => id != capabilityIdsByKey["workspace-create-directory"] &&
+            .Where(id => id != capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"] &&
+                         id != capabilityIdsByKey["workspace-create-directory"] &&
                          id != capabilityIdsByKey["workspace-write-file"] &&
                          id != capabilityIdsByKey["workspace-append-file"])
             .ToList();
@@ -946,12 +1076,19 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
     private static string ReadCapabilityConfigurationJsonFromCatalog(string catalogPath, string capabilityKey)
     {
+        return ReadCapabilitySnapshotFromCatalog(catalogPath, capabilityKey).ConfigurationJson;
+    }
+
+    private static (string Description, string ConfigurationJson) ReadCapabilitySnapshotFromCatalog(string catalogPath, string capabilityKey)
+    {
         using var document = JsonDocument.Parse(File.ReadAllText(catalogPath));
         var capability = document.RootElement.GetProperty("capabilities")
             .EnumerateArray()
             .Single(item => string.Equals(item.GetProperty("key").GetString(), capabilityKey, StringComparison.OrdinalIgnoreCase));
 
-        return capability.GetProperty("configurationJson").GetString() ?? string.Empty;
+        return (
+            capability.GetProperty("description").GetString() ?? string.Empty,
+            capability.GetProperty("configurationJson").GetString() ?? string.Empty);
     }
 
     private static string ReadInlineSkillInstructions(string configurationJson)
@@ -984,6 +1121,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
     private static void MutateCapabilityConfigurationJsonInCatalog(string catalogPath, string capabilityKey, string configurationJson)
     {
+        MutateCapabilitySnapshotInCatalog(catalogPath, capabilityKey, description: null, configurationJson);
+    }
+
+    private static void MutateCapabilitySnapshotInCatalog(string catalogPath, string capabilityKey, string? description, string configurationJson)
+    {
         var root = JsonNode.Parse(File.ReadAllText(catalogPath))?.AsObject()
             ?? throw new InvalidOperationException("Catalog JSON could not be parsed.");
         var capabilities = root["capabilities"]?.AsArray()
@@ -991,6 +1133,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var capability = capabilities
             .OfType<JsonObject>()
             .Single(item => string.Equals(item["key"]?.GetValue<string>(), capabilityKey, StringComparison.OrdinalIgnoreCase));
+
+        if (description is not null)
+        {
+            capability["description"] = description;
+        }
 
         capability["configurationJson"] = configurationJson;
         File.WriteAllText(catalogPath, root.ToJsonString(new JsonSerializerOptions

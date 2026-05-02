@@ -1,0 +1,41 @@
+- main [ref=e4]:
+  - group [ref=e5]:
+    - generic "Workspace navigation" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e10]:
+      - generic [ref=e106]:
+        - button "Dashboard" [ref=e108]:
+          - generic [ref=e109]: Dashboard
+          - generic [ref=e111]: push_pin
+        - button "Projects" [ref=e113]:
+          - generic [ref=e114]: Projects
+        - button "Projects" [ref=e116]:
+          - generic [ref=e117]: Projects
+        - button "Projects" [ref=e119]:
+          - generic [ref=e120]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e122]:
+          - generic [ref=e123]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e125]:
+          - generic [ref=e126]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e127]:
+        - textbox "Search tabs" [ref=e128]
+        - group [ref=e129]:
+          - generic "+20" [ref=e130] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Active database
+        - generic [ref=e15]: PostgreSQL workspace
+        - generic [ref=e131]: PostgreSQL
+        - button "Show db details" [ref=e133] [cursor=pointer]:
+          - generic [ref=e134]: "?"
+      - button "Switch database" [ref=e16]:
+        - generic [ref=e17]: Switch database
+      - generic [ref=e18]: Interactive Server
+      - generic [ref=e19]: Live items 12
+      - generic [ref=e20]: Tabs 26
+  - generic [ref=e135]:
+    - paragraph [ref=e136]: Database startup
+    - heading "Continue with the active database to load the workspace" [level=3] [ref=e137]
+    - paragraph [ref=e138]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+  - group [ref=e104]:
+    - generic "Workspace context" [ref=e105] [cursor=pointer]

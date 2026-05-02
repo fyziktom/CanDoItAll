@@ -35,7 +35,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, responseText);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, responseText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
+        var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(
+            detail,
+            ResolveOutputInspectionText(responseText));
+        var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(
+            detail,
+            ResolveOutputInspectionText(responseText));
+        var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText);
+        var recoverableExecutionInterruption = TryResolveRecoverableExecutionInterruption(
+            detail,
+            responseText,
+            out var executionInterruptionSummary);
 
         if (missingRequiredTools.Count > 0)
         {
@@ -65,9 +77,52 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine($"Current-attempt implementation proof is invalid: {missingConcreteImplementationProofSummary}.");
         }
 
+        if (!string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary))
+        {
+            builder.AppendLine($"Runnable application proof is incomplete: {missingRunnableApplicationProofSummary}.");
+        }
+
         if (!string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
         {
             builder.AppendLine($"Browser proof is invalid: {invalidBrowserProofSummary}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary))
+        {
+            builder.AppendLine("Generated evidence referenced stale or ungrounded product paths outside the current grounded product root. Exact stale paths are omitted from this retry prompt to prevent reuse.");
+            var allowedExternalTargetAliases = PruneAllowedExternalTargetAliasesForCurrentRun(
+                ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run));
+            if (allowedExternalTargetAliases.Count > 0)
+            {
+                builder.AppendLine($"Current grounded external-target root(s): {FormatPromptPathList(allowedExternalTargetAliases)}.");
+            }
+
+            builder.AppendLine("On this retry, ignore those stale or ungrounded paths unless the current project structure explicitly grounds them.");
+            builder.AppendLine("Use only the current grounded product root and current-run artifacts; do not cite sibling external-target applications as evidence.");
+            if (HasProjectStructureContext(candidate))
+            {
+                builder.AppendLine("Call project_structure_read now and restate the current grounded target before inspecting, writing, validating, or finalizing evidence.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
+        {
+            var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
+            builder.AppendLine($"Generated evidence used shared managed artifact paths that can be overwritten by concurrent runs: {shallowSharedManagedArtifactReferenceSummary}.");
+            builder.AppendLine($"On this retry, write new evidence under `{currentRunManagedArtifactRoot}` unless a required artifact input or output gives an exact deeper managed path.");
+            builder.AppendLine("Do not read, rewrite, or cite shallow files directly under a shared `artifacts/scopes/<scope>/<id>/`, `output/scopes/<scope>/<id>/`, `integration-map/scopes/<scope>/<id>/`, or `data/scopes/<scope>/<id>/` root as current-run truth.");
+        }
+
+        if (recoverableGovernedOutcomeGap &&
+            missingRequiredTools.Count == 0 &&
+            unresolvedCriticalToolFailures.Count == 0)
+        {
+            builder.AppendLine("The previous attempt did not provide a valid governed step outcome. Inspect the existing concrete outputs and validation evidence, then return the required governed outcome instead of regenerating unrelated work.");
+        }
+
+        if (recoverableExecutionInterruption)
+        {
+            builder.AppendLine($"{executionInterruptionSummary} Continue the same process step from durable project structure, artifact, and workspace evidence instead of treating the interruption as a product failure.");
         }
 
         var domainRecoveryFocusGuidance = BuildDomainRecoveryFocusGuidance(
@@ -85,6 +140,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("Do not stop after inspection, planning, bootstrap confirmation, or a next-steps summary on this retry.");
         builder.AppendLine("Finish the concrete work, rerun every failed or missing required validation successfully, and then write every required durable artifact.");
         builder.AppendLine("Do not repeat the same failed validation command or rewrite the same file with the same content in a loop. Before rerunning validation, inspect the diagnostic source or change/delete files that directly address that diagnostic.");
+        builder.AppendLine("Do not recover by writing fake package, framework, runtime, browser, or test-tool shim types. Fix the real dependency or project reference, or return Blocked with a concrete environment/dependency blocker.");
 
         var governedInspectionPaths = ResolveGovernedInspectionPaths(candidate.ExpectedArtifacts);
         var artifactInputInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
@@ -93,7 +149,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine("This retry is still the implementation step. Do not report that implementation or code artifacts are missing before you attempt the bootstrap or scaffold yourself.");
             builder.AppendLine("Bootstrap or repair the concrete deliverable now, inspect the files or artifacts you created, and rerun every required validation tool after the latest mutation before you conclude.");
+            builder.AppendLine("After the final concrete product mutation in this retry, read at least one representative changed source, project, document, workbook, deck, or deliverable file before writing final evidence artifacts or submitting the governed outcome. If you mutate another product file after that read, repeat the read and rerun required validation.");
+            builder.AppendLine("When the requested deliverable is an application or service, produce a runnable host/project, not only libraries, loose files, or static fragments.");
+            if (!string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary))
+            {
+                builder.AppendLine("This retry must start the concrete runnable host after the latest implementation changes. For .NET hosts, use workspace_dotnet_run against the host project so startup URL, process id, stdout log, stderr log, and receipt evidence are recorded; for other stacks, use the matching launch tool with equivalent evidence.");
+            }
+
             builder.AppendLine("If a required validation failed, rerun that exact validation against the same concrete target after every repair. A later unrelated validation does not recover the failed one by itself.");
+            if (HasScaffoldOverwriteConflict(detail, responseText))
+            {
+                builder.AppendLine("The scaffold command appears to have stopped because files already existed. Reuse the existing scaffold: inspect it, repair it in place, and validate that concrete project instead of rerunning the same scaffold command.");
+            }
+
             AppendDomainImplementationRecoveryGuidance(
                 builder,
                 candidate,
@@ -152,12 +220,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             builder.AppendLine("Do not assume the app must be reachable at `http://localhost:5000/`. Derive the real launch URL from the reviewed host project, `launchSettings.json`, prior run diagnostics, or the URL reported by the launch command.");
-            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. Use the launch tool or task-specific skill that matches the delivered technology, and record URL, process, stdout, and stderr evidence.");
-            builder.AppendLine("When repairing a launch helper for an external target, keep `external-target/<drive>/...` for workspace tools, but convert it to the native OS path inside helper content before invoking native commands. A relative `external-target/...` string can resolve under the managed workspace path alias and fail even after prior validation succeeded.");
-            builder.AppendLine("Do not assign to `$PID` in the PowerShell helper; use `$appProcess` and `$appProcessId`. If a helper already exists, inspect and repair it instead of rewriting the same broken content.");
+            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. For .NET hosts, prefer `workspace_dotnet_run` so the retry records URL, process id, stdout log, stderr log, and startup receipt evidence. For other technologies, use the launch tool or task-specific skill that matches the delivered stack and records equivalent evidence.");
+            builder.AppendLine("For external targets, keep `external-target/<drive>/...` with workspace file and run tools. Do not write a one-off path-translation launch helper when a reviewed generic launch tool is available; missing launch-tool access is a platform blocker to report explicitly.");
             builder.AppendLine("Do not repeat successful unchanged validations while browser proof is missing. Launch plus browser evidence is the recovery path.");
+            builder.AppendLine("Use the UI as an end user would: navigate to the delivered entry point, fill or change representative controls, trigger representative actions, and verify the visible result changes.");
             builder.AppendLine("Capture fresh browser evidence with `browser_take_screenshot`, `browser_snapshot`, and `browser_console_messages` before you conclude this retry.");
-            builder.AppendLine("Inspect the saved `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, or irrelevant content instead of the requested product behavior, repair or block instead of returning Completed.");
+            builder.AppendLine("Inspect the saved `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, irrelevant content, or non-interactive behavior instead of the requested product behavior, treat it as a routing, rendering, static-content, or client-interaction defect and repair or block instead of returning Completed.");
             AppendDomainBrowserRecoveryGuidance(
                 builder,
                 candidate,
@@ -215,11 +283,84 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : responseText;
         if (!string.IsNullOrWhiteSpace(priorSummary))
         {
+            var promptSafePriorSummary = RedactUnallowedExternalTargetReferencesForPrompt(
+                priorSummary,
+                ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run));
             builder.Append("Previous run summary: ");
-            builder.AppendLine(TruncateForPrompt(priorSummary, 400));
+            builder.AppendLine(TruncateForPrompt(promptSafePriorSummary, 400));
         }
 
         return builder.ToString().Trim();
+    }
+
+    private static string RedactUnallowedExternalTargetReferencesForPrompt(
+        string text,
+        IReadOnlyList<string> allowedAliases)
+    {
+        if (string.IsNullOrWhiteSpace(text) || allowedAliases.Count == 0)
+        {
+            return text;
+        }
+
+        var normalizedAllowedAliases = PruneAllowedExternalTargetAliasesForCurrentRun(allowedAliases);
+        if (normalizedAllowedAliases.Count == 0)
+        {
+            return text;
+        }
+
+        return WorkspacePathInToolRequestRegex.Replace(
+            text,
+            match =>
+            {
+                var rawPath = match.Groups["path"].Value;
+                if (string.IsNullOrWhiteSpace(rawPath))
+                {
+                    return rawPath;
+                }
+
+                var referencedAlias = rawPath.StartsWith(ExternalTargetAliasRoot + "/", StringComparison.OrdinalIgnoreCase) ||
+                                      rawPath.StartsWith(ExternalTargetAliasRoot + "\\", StringComparison.OrdinalIgnoreCase)
+                    ? NormalizeExternalTargetAlias(rawPath)
+                    : TryMapAbsoluteExternalPathToAlias(rawPath, out var mappedAlias)
+                        ? mappedAlias
+                        : string.Empty;
+                if (string.IsNullOrWhiteSpace(referencedAlias) ||
+                    IsAllowedExternalTargetReference(referencedAlias, normalizedAllowedAliases) ||
+                    IsDocumentedScaffoldParentReference(text, match.Index, referencedAlias, normalizedAllowedAliases))
+                {
+                    return rawPath;
+                }
+
+                return "[stale external-target path omitted]";
+            });
+    }
+
+    private static bool HasScaffoldOverwriteConflict(
+        ExecutionRunDetail detail,
+        string? responseText)
+    {
+        if (ContainsScaffoldOverwriteConflictSignal(responseText))
+        {
+            return true;
+        }
+
+        return detail.ToolReceipts.Any(receipt =>
+            string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_dotnet_new", StringComparison.Ordinal) &&
+            (ContainsScaffoldOverwriteConflictSignal(receipt.ExitSummary) ||
+             ContainsScaffoldOverwriteConflictSignal(receipt.RequestSummary)));
+    }
+
+    private static bool ContainsScaffoldOverwriteConflictSignal(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("overwrite conflict", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("files already exist", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("files already existed", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("would overwrite", StringComparison.OrdinalIgnoreCase);
     }
 
 }

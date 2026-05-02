@@ -65,6 +65,9 @@ public sealed partial class MafAgentRuntime
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 1200)
             => commandExecutionService.DotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds);
 
+        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120)
+            => commandExecutionService.DotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds);
+
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
             => commandExecutionService.DotnetNew(template, name, parentDirectory, force, timeoutSeconds);
 

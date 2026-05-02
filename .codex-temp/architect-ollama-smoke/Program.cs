@@ -96,7 +96,7 @@ try
     var settingsPath = Path.Combine(repoRoot, ".codex-temp", "architect-ollama-smoke", "CanDoItAll.Mcp.ProjectStructure.smoke.json");
     Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
     await File.WriteAllTextAsync(settingsPath, setupGuide.SettingsJson);
-    Guid calculatorProjectId;
+    Guid deliveryProjectId;
     ProjectStructureNode deliveryBlock;
     ProjectStructureNode architectureDecision;
     ProjectStructureNode buildFeature;
@@ -109,26 +109,26 @@ try
         var workbench = seedScope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var projectSave = await projectsService.SaveAsync(new ProjectEditorModel
         {
-            Name = "Calculator",
+            Name = "Release Readiness Portal",
             Description = "Temporary smoke-test project for the architecture steward.",
-            Objective = "Summarize the important structure, milestones, work items, and risks for a calculator delivery.",
+            Objective = "Summarize the important structure, milestones, work items, and risks for a generic delivery.",
             CurrentPhase = "Architecture",
             Status = ProjectStatus.Active
         });
 
         if (!projectSave.IsSuccess)
         {
-            throw new InvalidOperationException(projectSave.Errors.FirstOrDefault()?.Message ?? "Calculator project seed failed.");
+            throw new InvalidOperationException(projectSave.Errors.FirstOrDefault()?.Message ?? "Delivery project seed failed.");
         }
 
-        calculatorProjectId = projectSave.Value;
+        deliveryProjectId = projectSave.Value;
         deliveryBlock = await workbench.CreateObjectAsync(
-            calculatorProjectId,
+            deliveryProjectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.ProjectBlock,
-                "Calculator delivery lane",
+                "Delivery lane",
                 "Delivery branch",
-                "Owns calculator implementation, validation, and release evidence.",
+                "Owns implementation, validation, and release evidence.",
                 null,
                 420,
                 220,
@@ -136,12 +136,12 @@ try
                 null,
                 "delivery"));
         architectureDecision = await workbench.CreateObjectAsync(
-            calculatorProjectId,
+            deliveryProjectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.Decision,
-                "Canonical math engine boundary",
+                "Canonical workflow boundary",
                 "Architecture decision",
-                "Decide whether arithmetic stays server-side and how validation rules are shared.",
+                "Decide how state, validation rules, and release evidence are shared.",
                 deliveryBlock.Id,
                 620,
                 180,
@@ -151,12 +151,12 @@ try
                 null,
                 """{"owners":["Architecture"],"risk":"medium"}"""));
         buildFeature = await workbench.CreateObjectAsync(
-            calculatorProjectId,
+            deliveryProjectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.WorkItem,
-                "Build calculator interaction flow",
+                "Build primary interaction flow",
                 "Implementation",
-                "Implement add, subtract, multiply, and divide workflows with validation.",
+                "Implement the requested user workflow with validation.",
                 deliveryBlock.Id,
                 640,
                 320,
@@ -167,12 +167,12 @@ try
                 """{"owners":["Engineering"],"surface":"Blazor"}""",
                 7200));
         releaseValidation = await workbench.CreateObjectAsync(
-            calculatorProjectId,
+            deliveryProjectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.ValidationRun,
-                "Calculator regression sweep",
+                "Release validation sweep",
                 "QA gate",
-                "Verify arithmetic correctness, divide-by-zero handling, and release evidence.",
+                "Verify core behavior, error handling, and release evidence.",
                 deliveryBlock.Id,
                 840,
                 320,
@@ -183,12 +183,12 @@ try
                 """{"owners":["QA"],"evidence":"required"}""",
                 3600));
         releaseMilestone = await workbench.CreateObjectAsync(
-            calculatorProjectId,
+            deliveryProjectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.Milestone,
-                "Calculator v1 sign-off",
+                "Delivery v1 sign-off",
                 "Release milestone",
-                "Ship only after architecture decision, feature work, and regression sweep are finished.",
+                "Ship only after architecture decision, feature work, and validation are finished.",
                 deliveryBlock.Id,
                 1040,
                 260,
@@ -198,9 +198,9 @@ try
                 null,
                 """{"owners":["Release"]}"""));
 
-        await workbench.LinkObjectsAsync(calculatorProjectId, buildFeature.Id, architectureDecision.Id, ProjectObjectLinkKind.DependsOn);
-        await workbench.LinkObjectsAsync(calculatorProjectId, releaseValidation.Id, buildFeature.Id, ProjectObjectLinkKind.DependsOn);
-        await workbench.LinkObjectsAsync(calculatorProjectId, releaseMilestone.Id, releaseValidation.Id, ProjectObjectLinkKind.DependsOn);
+        await workbench.LinkObjectsAsync(deliveryProjectId, buildFeature.Id, architectureDecision.Id, ProjectObjectLinkKind.DependsOn);
+        await workbench.LinkObjectsAsync(deliveryProjectId, releaseValidation.Id, buildFeature.Id, ProjectObjectLinkKind.DependsOn);
+        await workbench.LinkObjectsAsync(deliveryProjectId, releaseMilestone.Id, releaseValidation.Id, ProjectObjectLinkKind.DependsOn);
     }
 
     await app.StartAsync();
@@ -249,7 +249,7 @@ try
         session,
         capabilities,
         [],
-        $"The Calculator project structure is stored under project id {calculatorProjectId}. Do not use workspace search. Use the project-structure MCP, preferably project_structure_read for that exact project id, then summarize the important architecture and delivery points. Mention the delivery lane, the architecture decision, the implementation work item, the validation gate, the release milestone, and the dependency chain. Keep the answer concise and factual.",
+        $"The delivery project structure is stored under project id {deliveryProjectId}. Do not use workspace search. Use the project-structure MCP, preferably project_structure_read for that exact project id, then summarize the important architecture and delivery points. Mention the delivery lane, the architecture decision, the implementation work item, the validation gate, the release milestone, and the dependency chain. Keep the answer concise and factual.",
         runtimeSessionKey: null,
         progressCallback: (_, phase, message) =>
         {

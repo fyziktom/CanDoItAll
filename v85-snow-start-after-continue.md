@@ -1,0 +1,23 @@
+- dialog "Start Multi-team software delivery and release governance" [ref=e6797]:
+  - generic [ref=e6798]:
+    - generic [ref=e6799]:
+      - generic [ref=e6800]:
+        - paragraph [ref=e6801]: Process start
+        - heading "Start Multi-team software delivery and release governance" [level=5] [ref=e6802]
+        - paragraph [ref=e6803]: This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing.
+      - generic [ref=e6804]:
+        - button "Cancel" [disabled] [ref=e6805]:
+          - generic [ref=e6806]: Cancel
+        - button "Continue" [disabled] [ref=e6807]:
+          - generic [ref=e6827]: Continue
+    - generic [ref=e6810]:
+      - generic [ref=e6812]:
+        - paragraph [ref=e6813]: Execution target
+        - paragraph [ref=e6814]: NeighborhoodSnowShovelRoster product root
+        - paragraph [ref=e6815]: "Target node id: custom:110d8a7105e14d88a7a343e7caef0404"
+        - paragraph [ref=e6816]: "Resolved parent node id: custom:110d8a7105e14d88a7a343e7caef0404"
+        - paragraph [ref=e6817]: "Selected process node id: process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0"
+        - paragraph [ref=e6818]: "Project id: 1193ed4a-3432-4567-b73f-dc2bb8c9cf6c"
+      - generic [ref=e6820]:
+        - paragraph [ref=e6821]: What happens next
+        - paragraph [ref=e6822]: The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context.

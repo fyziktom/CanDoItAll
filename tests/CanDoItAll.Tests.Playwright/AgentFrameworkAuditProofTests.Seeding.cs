@@ -395,7 +395,7 @@ public sealed partial class AgentFrameworkAuditProofTests
             definitionFixture.ArtifactTitle);
     }
 
-    private async Task<CalculatorScenarioSeed> SeedCalculatorDeliveryScenarioAsync()
+    private async Task<WorkflowScenarioSeed> SeedWorkflowDeliveryScenarioAsync()
     {
         var providerId = await EnsureScenarioHarnessCatalogAsync();
         await using var serviceProvider = await BuildSeedServiceProviderAsync();
@@ -406,10 +406,10 @@ public sealed partial class AgentFrameworkAuditProofTests
         var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
-        var projectId = await CreateProjectAsync(projectsService, $"SC11 Calculator Delivery {suffix}");
+        var projectId = await CreateProjectAsync(projectsService, $"SC11 Workflow Delivery {suffix}");
         var managerName = $"SC11 Manager {suffix}";
-        var builderAgentName = $"SC11 Calculator Builder {suffix}";
-        var reviewerAgentName = $"SC11 Calculator Reviewer {suffix}";
+        var builderAgentName = $"SC11 Workflow Builder {suffix}";
+        var reviewerAgentName = $"SC11 Workflow Reviewer {suffix}";
 
         var managerPartyId = await CreatePartyAsync(
             partyDirectoryService,
@@ -446,14 +446,14 @@ public sealed partial class AgentFrameworkAuditProofTests
                 ExecutionMode = AiExecutionMode.ThirdParty,
                 OwnerPartyId = managerPartyId,
                 ValidationStatus = AiValidationStatus.Approved,
-                Notes = "Runs SC03 through the scenario harness for calculator generation.",
+                Notes = "Runs SC03 through the scenario harness for workflow generation.",
                 LastChangedBy = "playwright-tests",
                 Capabilities =
                 [
                     new AiCapabilityEditorModel
                     {
-                        Name = "SC03 Calculator generation",
-                        Scope = "Generate and build a Blazor calculator through the controlled scenario harness.",
+                        Name = "SC03 Workflow generation",
+                        Scope = "Generate and build a Blazor workflow through the controlled scenario harness.",
                         ToolAccess = "Scenario harness provider",
                         Limitations = "Use only deterministic scenario prompts.",
                         Notes = "Bound for integrated SC11 proof."
@@ -471,14 +471,14 @@ public sealed partial class AgentFrameworkAuditProofTests
                 ExecutionMode = AiExecutionMode.ThirdParty,
                 OwnerPartyId = managerPartyId,
                 ValidationStatus = AiValidationStatus.Approved,
-                Notes = "Runs SC10 through the scenario harness for calculator review.",
+                Notes = "Runs SC10 through the scenario harness for workflow review.",
                 LastChangedBy = "playwright-tests",
                 Capabilities =
                 [
                     new AiCapabilityEditorModel
                     {
-                        Name = "SC10 Calculator review",
-                        Scope = "Review a generated Blazor calculator delivery and produce evidence.",
+                        Name = "SC10 Workflow review",
+                        Scope = "Review a generated Blazor workflow delivery and produce evidence.",
                         ToolAccess = "Scenario harness provider",
                         Limitations = "Use only deterministic scenario prompts.",
                         Notes = "Bound for integrated SC11 proof."
@@ -487,14 +487,14 @@ public sealed partial class AgentFrameworkAuditProofTests
             });
         Assert.True(reviewerProfileResult.IsSuccess, string.Join(" | ", reviewerProfileResult.Errors.Select(error => error.Message)));
 
-        var definitionFixture = BuildCalculatorDeliveryDefinitionEditor(projectId);
+        var definitionFixture = BuildWorkflowDeliveryDefinitionEditor(projectId);
         var saveResult = await processesService.SaveAsync(definitionFixture.Editor);
         Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
 
         var publishResult = await processesService.PublishAsync(saveResult.Value);
         Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
 
-        return new CalculatorScenarioSeed(
+        return new WorkflowScenarioSeed(
             projectId,
             saveResult.Value,
             managerName,

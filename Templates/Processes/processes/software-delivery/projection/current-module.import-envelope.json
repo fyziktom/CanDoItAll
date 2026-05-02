@@ -1,199 +1,228 @@
+C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262 [C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj]
+C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\.artifacts\temp\ProcessEnvelopeGenerator\ProcessEnvelopeGenerator.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j
+C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1904: Balíček „Microsoft.AspNetCore.DataProtection“ 10.0.6 má známé kritické ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-9mv3-2cwr-p262
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj : warning NU1902: Balíček „OpenTelemetry.Api“ 1.13.1 má známé střední ohrožení zabezpečení závažnosti, https://github.com/advisories/GHSA-g94r-2vxg-569j
 {
   "Definition": {
     "Id": null,
     "ProjectId": null,
     "WorkingVersionId": null,
+    "DefinitionConcurrencyToken": null,
+    "WorkingVersionConcurrencyToken": null,
     "WorkingVersionNumber": 1,
     "Name": "Multi-team software delivery and release governance",
     "Summary": "Universal delivery template for planned software change with explicit intake, architecture, implementation, QA, security, release, deployment, and retrospective governance aligned to the current process-module graph model.",
     "ValueStatement": "Delivers customer-visible or internal software change through a controllable sequence that keeps scope, evidence, dependencies, artifact inputs, and release authority explicit.",
-    "CustomerName": "Enterprise Billing Platform",
-    "OwnerName": "Digital delivery governance board",
-    "InterfaceContractSummary": "Feature delivery crosses process authoring, workspace, billing, and release-management boundaries and therefore needs explicit design, validation, and release gates.",
+    "CustomerName": "Delivery requester",
+    "OwnerName": "Delivery governance board",
+    "InterfaceContractSummary": "Planned delivery can cross application, data, integration, operations, and release-management boundaries, so the process keeps boundary decisions, validation, and release gates explicit.",
     "GovernanceNotes": "No role or approval decision may be collapsed into an implicit chat or tribal handoff; every trust-sensitive transition needs explicit accountability, evidence, dependency mapping, and artifact-input traceability.",
-    "ChangeSummary": "Refreshed for the current process architecture so multi-parent joins, artifact inputs, and decision-role semantics are first-class instead of simulated through legacy fields only.",
+    "ChangeSummary": "Refreshed for the current process architecture with explicit quality-disposition routing so validation findings move to governed repair work instead of stranding the run.",
     "GovernancePolicySummary": "Release readiness requires architecture proof, QA evidence, security posture, rollback readiness, and explicit residual-risk ownership.",
     "ConstitutionRuleSummary": "Role contracts, decision rights, and source-of-truth ownership outlive the specific person or agent assigned at runtime.",
-    "OperatingModeSummary": "Governed live execution is allowed only after explicit quality, security, and release gates succeed.",
-    "SimulationReadinessSummary": "This scenario is intentionally rich enough for simulation, canvas authoring, analytics, and large-screen browser walkthroughs.",
-    "Criticality": "High",
-    "AutonomyLevel": "Guarded",
-    "Status": "Draft",
+    "OperatingModeSummary": "Governed live execution is allowed only after explicit quality acceptance, security review, and release gates succeed.",
+    "SimulationReadinessSummary": "This template is intentionally rich enough for simulation, canvas authoring, analytics, and large-screen browser walkthroughs.",
+    "Criticality": 2,
+    "AutonomyLevel": 2,
+    "Status": 0,
     "Roles": [
       {
-        "Id": "8c36c754-5490-536b-b62d-188b976d2801",
+        "Id": "44823471-225b-42f2-b08b-9e027810707d",
         "Key": "product-owner",
         "DisplayName": "Product owner",
         "Purpose": "Convert business intent into an explicit delivery contract with clear acceptance boundaries and prioritized value trade-offs.",
         "StaffingIntent": "One accountable human decision-maker who can clarify scope, decide priority, accept delivered outcomes, and absorb stakeholder escalation without routing every decision through engineering.",
-        "PreferredExecutorKind": "person",
-        "PreferredProjectAssignmentRole": "CustomerContact",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": 1,
         "IsRequired": true,
         "AllowsFallback": false,
         "RequiresExplicitApproval": true,
         "DefaultAllocationPercent": 35,
         "RoleTemplateSourceKey": "process-role-template/product-owner",
         "RoleTemplateSnapshotName": "Product owner / template-pack v1",
-        "SnapshotSummary": "Outcome and acceptance owner for value, scope, sequencing, and release acceptance.",
+        "SnapshotSummary": "Outcome and acceptance owner for value, scope, sequencing, and release acceptance. | Seniority: Staff or principal product leadership | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: product-strategy, backlog-governance, acceptance-management",
         "RequiredSkillIds": [],
         "CanvasX": 120,
         "CanvasY": 40
       },
       {
-        "Id": "4f44be94-42ae-53a4-944f-780de900aea1",
+        "Id": "2baf169d-2384-4790-9cfb-bc4636d80947",
         "Key": "delivery-manager",
         "DisplayName": "Delivery manager",
         "Purpose": "Keep the process executable by turning desired outcomes into a feasible, staffed, time-aware delivery path with explicit escalation triggers.",
         "StaffingIntent": "A senior delivery-side coordinator with enough authority to challenge unrealistic dates, surface hidden dependencies, and keep multiple roles synchronized.",
-        "PreferredExecutorKind": "person",
-        "PreferredProjectAssignmentRole": "Manager",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": 4,
         "IsRequired": true,
         "AllowsFallback": true,
         "RequiresExplicitApproval": false,
         "DefaultAllocationPercent": 50,
         "RoleTemplateSourceKey": "process-role-template/delivery-manager",
         "RoleTemplateSnapshotName": "Delivery manager / template-pack v1",
-        "SnapshotSummary": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation.",
+        "SnapshotSummary": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation. | Seniority: Senior delivery management | Min years primary discipline: 7 | Min years software delivery: 10 | Domain tags: delivery-governance, program-coordination, execution-risk",
         "RequiredSkillIds": [],
         "CanvasX": 390,
         "CanvasY": 40
       },
       {
-        "Id": "22954322-4f67-543f-ac1f-464722b9c3f4",
+        "Id": "acd065e2-bcd1-40ac-94f8-6127824a8974",
         "Key": "solution-architect",
         "DisplayName": "Solution architect",
         "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
         "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
-        "PreferredExecutorKind": "person",
-        "PreferredProjectAssignmentRole": "Reviewer",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": 10,
         "IsRequired": true,
         "AllowsFallback": true,
         "RequiresExplicitApproval": true,
         "DefaultAllocationPercent": 30,
         "RoleTemplateSourceKey": "process-role-template/solution-architect",
         "RoleTemplateSnapshotName": "Solution architect / template-pack v1",
-        "SnapshotSummary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence.",
+        "SnapshotSummary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence. | Seniority: Principal or staff architecture | Min years primary discipline: 8 | Min years software delivery: 10 | Domain tags: architecture, integration, data-boundaries, operability",
         "RequiredSkillIds": [],
         "CanvasX": 660,
         "CanvasY": 40
       },
       {
-        "Id": "d6cefaed-e424-573a-87a7-69d3cf68e39b",
+        "Id": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
         "Key": "lead-engineer",
         "DisplayName": "Lead engineer",
         "Purpose": "Own the change set and keep implementation evidence aligned with the approved architecture and release boundary.",
         "StaffingIntent": "Build-capable engineering owner for the working change set and adjacent test evidence.",
         "PreferredExecutorKind": "person-or-agent",
-        "PreferredProjectAssignmentRole": "TeamMember",
+        "PreferredProjectAssignmentRole": 3,
         "IsRequired": true,
         "AllowsFallback": true,
         "RequiresExplicitApproval": false,
         "DefaultAllocationPercent": 100,
         "RoleTemplateSourceKey": "process-role-template/software-engineer",
         "RoleTemplateSnapshotName": "Software engineer / template-pack v1",
-        "SnapshotSummary": "Implementation owner for code, tests, migration notes, and executable delivery proof.",
+        "SnapshotSummary": "Implementation owner for code, tests, migration notes, and executable delivery proof. | Seniority: Senior software engineer or technical lead | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: software-delivery, implementation, migrations, reviewability",
         "RequiredSkillIds": [],
         "CanvasX": 930,
         "CanvasY": 40
       },
       {
-        "Id": "69b7376c-caf6-5f66-8d33-5f51d27f242a",
+        "Id": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
         "Key": "qa-lead",
         "DisplayName": "QA lead",
         "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
         "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
-        "PreferredExecutorKind": "person",
-        "PreferredProjectAssignmentRole": "Reviewer",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": 10,
         "IsRequired": true,
         "AllowsFallback": true,
         "RequiresExplicitApproval": true,
         "DefaultAllocationPercent": 40,
         "RoleTemplateSourceKey": "process-role-template/qa-lead",
         "RoleTemplateSnapshotName": "QA lead / template-pack v1",
-        "SnapshotSummary": "Quality owner for coverage depth, evidence quality, and release confidence.",
+        "SnapshotSummary": "Quality owner for coverage depth, evidence quality, and release confidence. | Seniority: Senior QA or test leadership | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: quality-assurance, test-strategy, risk-based-testing",
         "RequiredSkillIds": [],
         "CanvasX": 1200,
         "CanvasY": 40
       },
       {
-        "Id": "6412ecb1-f022-5d18-8e4d-2a7ed9e67174",
+        "Id": "cf41543b-32d7-4495-a986-5594ca2f5dcd",
         "Key": "security-reviewer",
         "DisplayName": "Security reviewer",
         "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
         "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
-        "PreferredExecutorKind": "person",
-        "PreferredProjectAssignmentRole": "Reviewer",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": 10,
         "IsRequired": true,
         "AllowsFallback": true,
         "RequiresExplicitApproval": true,
         "DefaultAllocationPercent": 25,
         "RoleTemplateSourceKey": "process-role-template/security-reviewer",
         "RoleTemplateSnapshotName": "Security reviewer / template-pack v1",
-        "SnapshotSummary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions.",
+        "SnapshotSummary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions. | Seniority: Senior application or product security | Min years primary discipline: 7 | Min years software delivery: 9 | Domain tags: security, threat-modeling, dependency-risk, exception-governance",
         "RequiredSkillIds": [],
         "CanvasX": 1470,
         "CanvasY": 40
       },
       {
-        "Id": "d7947661-d07c-5379-a323-1de31db326dd",
+        "Id": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
         "Key": "release-manager",
         "DisplayName": "Release manager",
         "Purpose": "Coordinate go-live preparation and keep rollback and telemetry watch ownership explicit before and during release execution.",
         "StaffingIntent": "Operational owner for production execution, release windows, and rollback decisions.",
-        "PreferredExecutorKind": "person",
-        "PreferredProjectAssignmentRole": "Manager",
+        "PreferredExecutorKind": "person-or-agent",
+        "PreferredProjectAssignmentRole": 4,
         "IsRequired": true,
         "AllowsFallback": true,
         "RequiresExplicitApproval": true,
         "DefaultAllocationPercent": 45,
         "RoleTemplateSourceKey": "process-role-template/release-approver",
         "RoleTemplateSnapshotName": "Release approver / template-pack v1",
-        "SnapshotSummary": "Operational owner for rollout control, rollback readiness, and telemetry review.",
+        "SnapshotSummary": "Operational owner for rollout control, rollback readiness, and telemetry review. | Seniority: Senior release or operations manager | Min years primary discipline: 6 | Min years software delivery: 9 | Domain tags: release, rollback, deployment-control, telemetry",
         "RequiredSkillIds": [],
         "CanvasX": 1740,
         "CanvasY": 40
       }
     ],
+    "MessagingPolicies": [],
     "Steps": [
       {
-        "Id": "779b492c-8775-5078-9dde-eca03e81f5ef",
+        "Id": "a66b3220-05aa-492d-ab5c-f1c65c9a9024",
         "Key": "feature-intake",
         "Title": "Clarify scope and release boundary",
         "Subtitle": "Value framing and no-go constraints",
-        "Notes": "Capture the commercial ask, tenant impact, release deadline, known dependencies, and explicit exclusions before engineering commits.",
-        "StepKind": "Start",
+      "Notes": "Capture the requested outcome, user or operational impact, target delivery window, known dependencies, and explicit exclusions before delivery commits. If the request, project structure, or selected work node already identifies a concrete deliverable and target boundary, do not block this first step only because optional governance details are missing; record assumptions, exclusions, not-applicable entries, unresolved follow-up questions, and validation hooks for later modeled steps.",
+        "StepKind": 0,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
         "RequiresDecisionRecord": false,
-        "InputContractSummary": "Feature request, tenant-impact notes, target release window, and customer-facing constraints.",
-        "OutputContractSummary": "Decision-ready scope packet with acceptance boundary and dependency map.",
-        "EvidenceContractSummary": "Intake notes, acceptance criteria, known exclusions, and unresolved dependency register.",
+        "InputContractSummary": "Requested change, impact notes, target delivery window, and stakeholder-facing constraints.",
+      "OutputContractSummary": "Decision-ready scope packet with acceptance boundary, dependency map, assumptions, exclusions, and non-blocking follow-up questions.",
+      "EvidenceContractSummary": "Intake notes, acceptance criteria, known exclusions, assumptions, and unresolved dependency register.",
         "DecisionRightsSummary": "Product owner can refine the ask but cannot waive architecture, data, or release-governance requirements.",
         "ExceptionPolicySummary": "Escalate immediately when timeline pressure conflicts with data-safety or release constraints.",
         "TargetLeadHours": 8,
-        "DependsOnStepId": null,
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
         "CanvasX": 120,
         "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [],
         "RoleAssignments": [
           {
-            "Id": "b8803717-1fd4-50ab-a809-13523ff674a7",
-            "RoleRequirementId": "8c36c754-5490-536b-b62d-188b976d2801",
-            "ResponsibilityKind": "Responsible",
+            "Id": "d8712d79-225e-4f6a-ab42-14f4a4cb1756",
+            "RoleRequirementId": "44823471-225b-42f2-b08b-9e027810707d",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "If the original product owner changes, ownership transfers to the next accountable value owner without changing the process contract."
           },
           {
-            "Id": "74252b8f-9b66-5f36-bcd2-eaf8105e279e",
-            "RoleRequirementId": "4f44be94-42ae-53a4-944f-780de900aea1",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "68b8167b-b8a2-481c-ac7b-31ba2434b8e9",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Delivery review remains explicit even if staffing changes mid-stream."
@@ -201,26 +230,26 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "b9f284ed-ecd6-5521-aec2-2909f62f9aa8",
-            "ArtifactKind": "Brief",
+            "Id": "f555ee27-bed6-4c6d-82f7-8bec498c3762",
+            "ArtifactKind": 0,
             "Title": "Scope boundary packet",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 365,
             "AllowedFutureUsageSummary": "Reusable during architecture review, implementation planning, and future scope-drift analysis.",
-            "ValidationRequirementSummary": "Must capture no-go constraints, tenant impact, and acceptance boundary in typed form."
+            "ValidationRequirementSummary": "Must capture no-go constraints, user or operational impact, and acceptance boundary in typed form."
           }
         ],
         "ArtifactInputs": []
       },
       {
-        "Id": "f18f8aea-ebc1-5a9b-9561-adaf4045329c",
+        "Id": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
         "Key": "architecture-review",
         "Title": "Review architecture and canonical-model impact",
         "Subtitle": "Cross-module and source-of-truth decision",
-        "Notes": "Validate process/workspace/billing seams, canonical model implications, migration ownership, and integration boundaries before implementation starts.",
-        "StepKind": "Review",
+        "Notes": "Validate application, workspace, data, integration, and operational boundaries before implementation starts.",
+        "StepKind": 4,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
@@ -231,34 +260,32 @@
         "DecisionRightsSummary": "Architecture authority recommends the path; delivery manager remains accountable for choosing the approved option.",
         "ExceptionPolicySummary": "Do not continue while source-of-truth ownership or migration responsibility remains ambiguous.",
         "TargetLeadHours": 12,
-        "DependsOnStepId": "779b492c-8775-5078-9dde-eca03e81f5ef",
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
         "CanvasX": 430,
         "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "d644a7c1-ea6b-5014-afd1-b4cffae98b78",
-            "DependsOnStepId": "779b492c-8775-5078-9dde-eca03e81f5ef",
+            "Id": "ffb80587-191d-4000-9671-b390648b39a1",
+            "DependsOnStepId": "a66b3220-05aa-492d-ab5c-f1c65c9a9024",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "09122e0c-7a85-5f79-a668-b007cfdf6596",
-            "RoleRequirementId": "22954322-4f67-543f-ac1f-464722b9c3f4",
-            "ResponsibilityKind": "Responsible",
+            "Id": "63bc7b2c-a1cc-4ff1-adce-fb1272299d54",
+            "RoleRequirementId": "acd065e2-bcd1-40ac-94f8-6127824a8974",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Architecture authority may be reassigned between vetted humans or approved architecture agents."
           },
           {
-            "Id": "bc94daf3-2702-57b3-8352-6e1bffe8db7e",
-            "RoleRequirementId": "d6cefaed-e424-573a-87a7-69d3cf68e39b",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "28c1fd5b-7a4c-4110-96b0-d68a55a16a13",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Implementation owner must confirm the design is buildable before approval."
@@ -266,26 +293,42 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "4d76233c-a13d-55e1-a8ee-1cc923f507e1",
-            "ArtifactKind": "Decision",
+            "Id": "f67e05d3-ca3c-48c3-a408-fbc79c43903a",
+            "ArtifactKind": 0,
+            "Title": "Project structure context brief",
+            "IsRequired": true,
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, and release decisions that must stay aligned to the same project node and working directory.",
+            "ValidationRequirementSummary": "Must capture the originating project-structure node, resolved working directory, touched modules or routes, dependency boundaries, and downstream artifact expectations."
+          },
+          {
+            "Id": "7a30897d-b75a-41fd-bef3-5bf17dd5e061",
+            "ArtifactKind": 2,
             "Title": "Architecture decision record",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 730,
             "AllowedFutureUsageSummary": "Reusable for implementation, review, and later forensic replay.",
             "ValidationRequirementSummary": "Must capture selected option, rejected options, source-of-truth choice, and migration ownership."
           }
         ],
-        "ArtifactInputs": []
+        "ArtifactInputs": [
+          {
+            "Id": "c2b5aee3-1b2e-4d62-a7e1-2dde72c114eb",
+            "ArtifactExpectationId": "f555ee27-bed6-4c6d-82f7-8bec498c3762"
+          }
+        ]
       },
       {
-        "Id": "540f9743-79d1-5f85-9860-f172b81312fb",
+        "Id": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
         "Key": "implementation",
         "Title": "Implement feature, tests, and migration notes",
         "Subtitle": "Code, tests, and reviewable proof",
         "Notes": "Produce the change set, migration guidance, and targeted validation without losing traceability to the approved design.",
-        "StepKind": "Work",
+        "StepKind": 1,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
@@ -296,34 +339,37 @@
         "DecisionRightsSummary": "Lead engineer can implement but cannot silently alter the approved architecture or reduce proof depth.",
         "ExceptionPolicySummary": "Pause when migration impact, performance risk, or dependency scope grows beyond the approved path.",
         "TargetLeadHours": 36,
-        "DependsOnStepId": "f18f8aea-ebc1-5a9b-9561-adaf4045329c",
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
         "CanvasX": 740,
         "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "8c80c56b-fcdd-5c85-b962-ea57e72fe538",
-            "DependsOnStepId": "f18f8aea-ebc1-5a9b-9561-adaf4045329c",
+            "Id": "56643bfb-2332-40e6-9278-75042df56067",
+            "DependsOnStepId": "a66b3220-05aa-492d-ab5c-f1c65c9a9024",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "439c2819-0785-426f-8ed4-d650023807a5",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "43b372d9-cc6b-597c-b38d-6e178fe619ef",
-            "RoleRequirementId": "d6cefaed-e424-573a-87a7-69d3cf68e39b",
-            "ResponsibilityKind": "Responsible",
+            "Id": "289a897e-d56d-439c-bc81-2cab11cf23d3",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Engineering ownership moves between qualified engineers without changing the role contract."
           },
           {
-            "Id": "749014bf-7b80-5eb7-9fbb-f2c79f858bd9",
-            "RoleRequirementId": "8c36c754-5490-536b-b62d-188b976d2801",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "7c27cd51-d9c5-4ab9-83bb-943d670fff38",
+            "RoleRequirementId": "44823471-225b-42f2-b08b-9e027810707d",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Value owner reviews only acceptance drift, not technical implementation details."
@@ -331,37 +377,50 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "e3a75beb-4a4d-5b4c-b7f4-185f2970e03d",
-            "ArtifactKind": "Deliverable",
+            "Id": "220d136f-aa87-427c-9aea-d7f60d6a9ff7",
+            "ArtifactKind": 3,
             "Title": "Implementation change set",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 365,
             "AllowedFutureUsageSummary": "Reusable for peer review, release approval, and later defect forensics.",
             "ValidationRequirementSummary": "Must be linked to tests, migration notes, and touched-surface inventory."
           },
           {
-            "Id": "fcb99250-b566-5e3f-8bad-ab5e8d45ffea",
-            "ArtifactKind": "Checklist",
+            "Id": "65e6f311-7dd3-433c-a0d1-4643e137ef13",
+            "ArtifactKind": 5,
             "Title": "Migration and rollout preparation checklist",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 365,
             "AllowedFutureUsageSummary": "Reusable for release rehearsal and rollback planning.",
             "ValidationRequirementSummary": "Must name data changes, operational preconditions, and rollback steps."
           }
         ],
-        "ArtifactInputs": []
+        "ArtifactInputs": [
+          {
+            "Id": "fb88ae30-7698-4829-8e0b-d049a653a923",
+            "ArtifactExpectationId": "f555ee27-bed6-4c6d-82f7-8bec498c3762"
+          },
+          {
+            "Id": "ff98da51-201f-4b1b-9f1e-1b1d08417318",
+            "ArtifactExpectationId": "7a30897d-b75a-41fd-bef3-5bf17dd5e061"
+          },
+          {
+            "Id": "487939ec-fee1-4310-b0e5-0fea9f1ca991",
+            "ArtifactExpectationId": "f67e05d3-ca3c-48c3-a408-fbc79c43903a"
+          }
+        ]
       },
       {
-        "Id": "62aff814-d5f5-5001-8b7d-aa271f340e4d",
+        "Id": "05531d76-44ef-4614-9b75-3e1e144ca5c1",
         "Key": "peer-review",
         "Title": "Complete peer review and integration readiness",
         "Subtitle": "Design and implementation challenge",
         "Notes": "Review the change set against the approved design, integration consequences, and release assumptions.",
-        "StepKind": "Review",
+        "StepKind": 4,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
@@ -372,42 +431,45 @@
         "DecisionRightsSummary": "Reviewers may block unsafe merge or release progression until the change set satisfies design and evidence expectations.",
         "ExceptionPolicySummary": "Do not downgrade architecture, data, or migration concerns to cosmetic comments.",
         "TargetLeadHours": 8,
-        "DependsOnStepId": "540f9743-79d1-5f85-9860-f172b81312fb",
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
         "CanvasX": 1050,
         "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "fe281b05-1a55-5744-baee-67e8d2f4d5c1",
-            "DependsOnStepId": "540f9743-79d1-5f85-9860-f172b81312fb",
+            "Id": "4728c0e4-3fb9-4ea1-b925-f6e6f028f72a",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "d4c1f674-473f-427a-971a-943fb7b3b016",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "ad00f5c2-4c8b-53e2-9e0d-7697a68cd0a4",
-            "RoleRequirementId": "d6cefaed-e424-573a-87a7-69d3cf68e39b",
-            "ResponsibilityKind": "Responsible",
+            "Id": "2da70080-a654-4858-aba8-7cd0e934c855",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Implementation owner remains attached until review comments are addressed."
           },
           {
-            "Id": "92db2c4e-85b3-5156-9806-cd333aa4a502",
-            "RoleRequirementId": "22954322-4f67-543f-ac1f-464722b9c3f4",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "2d20dadf-f4fd-431f-845e-c2ad30db7e8a",
+            "RoleRequirementId": "acd065e2-bcd1-40ac-94f8-6127824a8974",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Architectural review remains explicit when cross-module consequences exist."
           },
           {
-            "Id": "6560bc3b-fb49-5fea-baf4-86366a01aea5",
-            "RoleRequirementId": "69b7376c-caf6-5f66-8d33-5f51d27f242a",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "6d456622-0e53-40f7-8a52-1240fe695172",
+            "RoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
+            "ResponsibilityKind": 1,
             "IsRequired": false,
             "FallbackOrder": 0,
             "RebindPolicySummary": "QA participates when changed surface suggests regression risk."
@@ -415,12 +477,12 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "619ecfe1-d5b3-56bf-82d9-92d3e56fa3cd",
-            "ArtifactKind": "Evidence",
+            "Id": "e20588c3-504e-4835-853a-06ab45d29edb",
+            "ArtifactKind": 1,
             "Title": "Peer review note",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 365,
             "AllowedFutureUsageSummary": "Reusable for QA, security, and release governance.",
             "ValidationRequirementSummary": "Must capture accepted issues, rejected concerns, and explicit residual risk."
@@ -428,56 +490,81 @@
         ],
         "ArtifactInputs": [
           {
-            "Id": "e63ddd97-ea81-5bbd-b3a0-b9ff8bdfc6f3",
-            "ArtifactExpectationId": "e3a75beb-4a4d-5b4c-b7f4-185f2970e03d"
+            "Id": "bf5ead26-4e2e-4f86-815c-61e3336840b6",
+            "ArtifactExpectationId": "220d136f-aa87-427c-9aea-d7f60d6a9ff7"
+          },
+          {
+            "Id": "122ada75-ad57-418a-a9ee-11217af3e741",
+            "ArtifactExpectationId": "7a30897d-b75a-41fd-bef3-5bf17dd5e061"
           }
         ]
       },
       {
-        "Id": "78e0e4ec-a755-5e28-80c9-f6d576d68483",
+        "Id": "ee17d3a2-bbe0-4940-9eca-b18d2f522e96",
         "Key": "qa-validation",
         "Title": "Run QA validation and browser proof",
         "Subtitle": "Regression, UX, and quality evidence",
         "Notes": "Execute targeted regression, browser proof, and defect triage against the reviewed implementation package.",
-        "StepKind": "Review",
+        "StepKind": 4,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
         "RequiresDecisionRecord": false,
         "InputContractSummary": "Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.",
-        "OutputContractSummary": "Targeted QA result with screenshots, regressions, and explicit residual quality risk.",
+        "OutputContractSummary": "Targeted QA result with screenshots, regressions, residual quality risk, and an explicit accepted or repair-required branch.",
         "EvidenceContractSummary": "Regression logs, browser proof, screenshots, and defect notes.",
-        "DecisionRightsSummary": "QA lead may block release progression when evidence is too thin for the risk profile.",
+        "DecisionRightsSummary": "QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.",
         "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence.",
         "TargetLeadHours": 10,
-        "DependsOnStepId": "62aff814-d5f5-5001-8b7d-aa271f340e4d",
-        "DependsOnBranchOutcomeId": null,
-        "DecisionRoleRequirementId": null,
+        "DecisionRoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
         "CanvasX": 1360,
         "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
-        "BranchOutcomes": [],
+        "BranchCanvasX": 1560,
+        "BranchCanvasY": 250,
+        "BranchOutcomes": [
+          {
+            "Id": "e9f55749-f5bc-4cf2-b40b-a0af5fb458ce",
+            "Key": "quality-accepted",
+            "Title": "Quality accepted",
+            "Description": "QA evidence is sufficient for downstream security and release governance."
+          },
+          {
+            "Id": "fb21e72e-7619-4214-b392-b48a3ada431a",
+            "Key": "repair-required",
+            "Title": "Repair required",
+            "Description": "QA found reproducible defects, missing workflows, failed validation, or proof gaps that the implementation role must repair before release governance."
+          }
+        ],
         "Dependencies": [
           {
-            "Id": "49a9a3e9-a7ed-5b20-bd69-ff36ef3648a0",
-            "DependsOnStepId": "62aff814-d5f5-5001-8b7d-aa271f340e4d",
+            "Id": "601e444e-feaf-426f-89f2-662f5c927383",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "fe655b12-fb80-443f-8fb7-5d24f5328eae",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "86099c03-8bda-48c1-92eb-a6b45e7dc318",
+            "DependsOnStepId": "05531d76-44ef-4614-9b75-3e1e144ca5c1",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "7e506056-9a13-5978-bb92-71c8b87502ca",
-            "RoleRequirementId": "69b7376c-caf6-5f66-8d33-5f51d27f242a",
-            "ResponsibilityKind": "Responsible",
+            "Id": "cb07098d-56fd-4121-9913-c0247c7594a7",
+            "RoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "QA ownership may move across qualified reviewers without collapsing the gate."
           },
           {
-            "Id": "beb6638b-d7d1-558b-bc2b-13d02e9b1e72",
-            "RoleRequirementId": "d6cefaed-e424-573a-87a7-69d3cf68e39b",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "9bd4e26d-5b61-41c6-b76a-ffdfcdc5ada5",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Implementation owner reviews failures and fixes before release approval."
@@ -485,56 +572,272 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "ee0cd09a-c83a-5544-8be2-83d1879841ee",
-            "ArtifactKind": "Evidence",
+            "Id": "9c8e7968-6027-4b1d-a939-f771fec6dbc1",
+            "ArtifactKind": 1,
             "Title": "Regression evidence pack",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 365,
             "AllowedFutureUsageSummary": "Reusable for release approval, incident review, and later regression comparison.",
             "ValidationRequirementSummary": "Must name changed flows, assertion depth, screenshots, and unresolved risks."
           }
         ],
-        "ArtifactInputs": []
+        "ArtifactInputs": [
+          {
+            "Id": "ca6b8a21-121e-4416-b1a8-0e291e5027d5",
+            "ArtifactExpectationId": "220d136f-aa87-427c-9aea-d7f60d6a9ff7"
+          },
+          {
+            "Id": "1cb8b310-ec59-4396-8835-d4c2cebe18b3",
+            "ArtifactExpectationId": "e20588c3-504e-4835-853a-06ab45d29edb"
+          },
+          {
+            "Id": "05504f9f-8412-48fe-87a5-35e7a2006555",
+            "ArtifactExpectationId": "f67e05d3-ca3c-48c3-a408-fbc79c43903a"
+          }
+        ]
       },
       {
-        "Id": "13aa627e-1aeb-52bf-afbb-061c990d2efd",
-        "Key": "security-review",
-        "Title": "Perform security and data-handling review",
-        "Subtitle": "Tenant data, secrets, and exception posture",
-        "Notes": "Review tenant-data handling, secrets, boundary changes, and policy exceptions before release approval.",
-        "StepKind": "Approval",
+        "Id": "c3700b42-d113-42aa-a4ee-2292c5655eff",
+        "Key": "quality-repair",
+        "Title": "Repair validation findings",
+        "Subtitle": "Focused rework from QA evidence",
+        "Notes": "Repair concrete defects, missing workflows, failed validation, or proof gaps identified by QA without expanding beyond the approved delivery scope.",
+        "StepKind": 1,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
-        "RequiresApproval": true,
-        "RequiresDecisionRecord": false,
-        "InputContractSummary": "Peer-reviewed package, changed-surface inventory, and data-handling notes.",
-        "OutputContractSummary": "Security outcome with explicit approval, block, or exception rationale.",
-        "EvidenceContractSummary": "Security review notes, exception rationale, and approved controls.",
-        "DecisionRightsSummary": "Security reviewer owns the sign-off for tenant-data and policy exceptions.",
-        "ExceptionPolicySummary": "Block release when data-handling review capacity is missing or exception rationale is incomplete.",
-        "TargetLeadHours": 6,
-        "DependsOnStepId": "62aff814-d5f5-5001-8b7d-aa271f340e4d",
-        "DependsOnBranchOutcomeId": null,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "QA repair-required disposition, reviewed implementation package, and failing proof details.",
+        "OutputContractSummary": "Repaired change set and validation notes ready for QA recheck.",
+        "EvidenceContractSummary": "Changed files or deliverables, repair rationale, rerun validation, and remaining risks.",
+        "DecisionRightsSummary": "Lead engineer owns repair execution inside the approved scope and must escalate scope expansion instead of hiding it.",
+        "ExceptionPolicySummary": "Do not mark repair complete until the defect cause is addressed and required validation has been rerun.",
+        "TargetLeadHours": 12,
         "DecisionRoleRequirementId": null,
-        "CanvasX": 1670,
-        "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "CanvasX": 1700,
+        "CanvasY": 300,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "969ab3bf-d2d5-55c1-84e7-330547f1c8c3",
-            "DependsOnStepId": "62aff814-d5f5-5001-8b7d-aa271f340e4d",
+            "Id": "4d3d75d9-5b19-4324-a91e-d2c52fc427eb",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "8556dc43-697d-4147-82df-87e4bdcde07d",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "54696536-58c8-4ef4-bda8-814000928b84",
+            "DependsOnStepId": "05531d76-44ef-4614-9b75-3e1e144ca5c1",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "f8b0a593-0572-4d5c-bb03-d87640fbd55a",
+            "DependsOnStepId": "ee17d3a2-bbe0-4940-9eca-b18d2f522e96",
+            "DependsOnBranchOutcomeId": "fb21e72e-7619-4214-b392-b48a3ada431a"
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "b48d0679-feed-4fbb-8631-36a34a369ebf",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 0,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Repair ownership remains with the implementation role so QA findings result in concrete fixes."
+          },
+          {
+            "Id": "a15f7993-031a-4a7a-a5c4-150e4d1d1f35",
+            "RoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "QA remains available to clarify failing evidence without taking ownership of implementation."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "356eb0e2-c3cb-4b0b-bcc2-bd3c1e9c199e",
+            "ArtifactKind": 3,
+            "Title": "Quality repair change set",
+            "IsRequired": true,
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for QA recheck, security review, release approval, and later defect analysis.",
+            "ValidationRequirementSummary": "Must name repaired defects, changed files or deliverables, rerun validation, and unresolved risk."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "be0fc867-37a6-494f-9087-178d498960ed",
+            "ArtifactExpectationId": "220d136f-aa87-427c-9aea-d7f60d6a9ff7"
+          },
+          {
+            "Id": "1b8e7e66-19e8-4824-b866-90fd8d2d0eda",
+            "ArtifactExpectationId": "e20588c3-504e-4835-853a-06ab45d29edb"
+          },
+          {
+            "Id": "5abe336b-6505-4262-b3f5-84e8d3d86de5",
+            "ArtifactExpectationId": "9c8e7968-6027-4b1d-a939-f771fec6dbc1"
+          }
+        ]
+      },
+      {
+        "Id": "efb18b3a-54cd-437f-a69c-6f0a9afd6057",
+        "Key": "qa-recheck",
+        "Title": "Re-run QA validation and browser proof after repair",
+        "Subtitle": "Repair verification",
+        "Notes": "Re-run targeted validation against the repaired package and select an explicit accepted or unresolved-repair branch.",
+        "StepKind": 4,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Repair change set, original QA findings, and reviewed implementation package.",
+        "OutputContractSummary": "Recheck result with screenshots, regression evidence, and explicit quality disposition.",
+        "EvidenceContractSummary": "Regression logs, browser proof, screenshots, repair verification, and unresolved defects if any.",
+        "DecisionRightsSummary": "QA lead may accept the repaired evidence or escalate when repair remains insufficient.",
+        "ExceptionPolicySummary": "Do not approve repaired work when the same failing flow, launch, or proof gap remains unresolved.",
+        "TargetLeadHours": 8,
+        "DecisionRoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
+        "CanvasX": 2040,
+        "CanvasY": 300,
+        "BranchCanvasX": 2240,
+        "BranchCanvasY": 430,
+        "BranchOutcomes": [
+          {
+            "Id": "2e2b5339-310d-4566-9ad3-4e0056dab52d",
+            "Key": "quality-accepted",
+            "Title": "Quality accepted",
+            "Description": "Repaired evidence is sufficient for downstream security and release governance."
+          },
+          {
+            "Id": "0249e833-3520-497d-9b22-2d55584706e0",
+            "Key": "repair-escalation",
+            "Title": "Repair escalation",
+            "Description": "The same or new release-blocking quality issue remains after repair and needs explicit delivery escalation."
+          }
+        ],
+        "Dependencies": [
+          {
+            "Id": "a635d632-b4c9-47fe-989c-e1860cef8df5",
+            "DependsOnStepId": "c3700b42-d113-42aa-a4ee-2292c5655eff",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "e082f940-d384-4922-aab1-47b227b3c336",
+            "DependsOnStepId": "ee17d3a2-bbe0-4940-9eca-b18d2f522e96",
+            "DependsOnBranchOutcomeId": "fb21e72e-7619-4214-b392-b48a3ada431a"
+          },
+          {
+            "Id": "36ac2f0d-35a9-4f3d-8671-c11822b6694e",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "4c716c2a-e13f-513f-bdcb-b769aa71040c",
-            "RoleRequirementId": "6412ecb1-f022-5d18-8e4d-2a7ed9e67174",
-            "ResponsibilityKind": "Approver",
+            "Id": "a37422a0-b658-43d1-b74a-1262be541108",
+            "RoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
+            "ResponsibilityKind": 0,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "QA owns the repaired quality disposition."
+          },
+          {
+            "Id": "b10160fc-30f5-413b-99b2-804725aa1dcc",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Implementation owner reviews remaining findings before release governance continues."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "c01b53f4-77dd-4a97-a8b3-4526740f25c6",
+            "ArtifactKind": 1,
+            "Title": "Repaired regression evidence pack",
+            "IsRequired": true,
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for post-repair security review, release approval, and later regression comparison.",
+            "ValidationRequirementSummary": "Must name repaired flows, assertion depth, screenshots, and unresolved risks after the repair pass."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "49295918-e87a-49c4-a682-fcadd7c02a4f",
+            "ArtifactExpectationId": "9c8e7968-6027-4b1d-a939-f771fec6dbc1"
+          },
+          {
+            "Id": "7aa3f33f-7a58-458b-bf91-62e1c5592996",
+            "ArtifactExpectationId": "356eb0e2-c3cb-4b0b-bcc2-bd3c1e9c199e"
+          },
+          {
+            "Id": "856b0f07-6c30-48fa-885e-0f60494ff0f4",
+            "ArtifactExpectationId": "220d136f-aa87-427c-9aea-d7f60d6a9ff7"
+          }
+        ]
+      },
+      {
+        "Id": "c17b8886-2263-49d4-9d1d-0a25d4b3d320",
+        "Key": "security-review",
+        "Title": "Perform security and data-handling review",
+        "Subtitle": "Sensitive data, secrets, and exception posture",
+        "Notes": "Review sensitive-data handling, secrets, boundary changes, and policy exceptions only after first-pass QA accepts the quality evidence.",
+        "StepKind": 3,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "QA-accepted package, changed-surface inventory, and data-handling notes.",
+        "OutputContractSummary": "Security outcome with explicit approval, block, or exception rationale.",
+        "EvidenceContractSummary": "Security review notes, exception rationale, and approved controls.",
+        "DecisionRightsSummary": "Security reviewer owns the sign-off for sensitive-data and policy exceptions.",
+        "ExceptionPolicySummary": "Block release when data-handling review capacity is missing or exception rationale is incomplete.",
+        "TargetLeadHours": 6,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 1920,
+        "CanvasY": 80,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "4fd875a0-13a0-47eb-9810-be8fe51d1e09",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "1f587e67-43b1-4759-95bd-7d13adfb5ea9",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "f070c816-516a-43a0-a98a-84c32d9c423e",
+            "DependsOnStepId": "05531d76-44ef-4614-9b75-3e1e144ca5c1",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "a0261add-acf8-4f04-afcc-abfae2e3eca1",
+            "DependsOnStepId": "ee17d3a2-bbe0-4940-9eca-b18d2f522e96",
+            "DependsOnBranchOutcomeId": "e9f55749-f5bc-4cf2-b40b-a0af5fb458ce"
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "59843c10-44a3-4b77-8359-32b116d28cd2",
+            "RoleRequirementId": "cf41543b-32d7-4495-a986-5594ca2f5dcd",
+            "ResponsibilityKind": 2,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Security approval remains attached to the role even if the reviewer changes."
@@ -542,26 +845,126 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "4a4ef7e6-6e9a-5cb0-b063-e5fe759dab58",
-            "ArtifactKind": "Decision",
+            "Id": "b318c83d-ee3c-4ccf-b5e0-70262bd4ac3d",
+            "ArtifactKind": 2,
             "Title": "Security exception assessment",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Confidential",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 2,
             "RetentionDays": 1095,
             "AllowedFutureUsageSummary": "Reusable for release governance, audit, and post-incident review.",
             "ValidationRequirementSummary": "Must capture controls, residual risk owner, and approval or block rationale."
           }
         ],
-        "ArtifactInputs": []
+        "ArtifactInputs": [
+          {
+            "Id": "99c50af3-9a85-43c0-bde5-c276808e581a",
+            "ArtifactExpectationId": "220d136f-aa87-427c-9aea-d7f60d6a9ff7"
+          },
+          {
+            "Id": "e2497297-52af-4601-a3fb-88327f96bad6",
+            "ArtifactExpectationId": "e20588c3-504e-4835-853a-06ab45d29edb"
+          },
+          {
+            "Id": "968641c0-ccf3-43b5-98b7-c95ccee450d9",
+            "ArtifactExpectationId": "f67e05d3-ca3c-48c3-a408-fbc79c43903a"
+          },
+          {
+            "Id": "a0128592-37cf-4891-887c-f3367504ea6a",
+            "ArtifactExpectationId": "9c8e7968-6027-4b1d-a939-f771fec6dbc1"
+          }
+        ]
       },
       {
-        "Id": "529d0875-c7b0-560f-aa9a-7fbf7a4d5b57",
+        "Id": "3fb1dadb-07cc-4ed8-84d1-dcd1ea4a19e6",
+        "Key": "security-review-after-repair",
+        "Title": "Perform security review after repair",
+        "Subtitle": "Sensitive data, secrets, and exception posture",
+        "Notes": "Review trust-boundary, dependency, secrets, and data-handling impact after the repaired QA path is accepted.",
+        "StepKind": 3,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "QA-accepted repaired package, changed-surface inventory, repair notes, and data-handling notes.",
+        "OutputContractSummary": "Security outcome with explicit approval, block, or exception rationale.",
+        "EvidenceContractSummary": "Security review notes, exception rationale, and approved controls.",
+        "DecisionRightsSummary": "Security reviewer owns the sign-off for sensitive-data and policy exceptions.",
+        "ExceptionPolicySummary": "Block release when data-handling review capacity is missing or exception rationale is incomplete.",
+        "TargetLeadHours": 6,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 2380,
+        "CanvasY": 300,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "698586c8-f24f-43d9-a132-3e4a92fe82e1",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "5dd94f1b-c236-4829-8969-ee6bc5ff8358",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "12db0de0-7662-417d-97e9-5c98f7018669",
+            "DependsOnStepId": "c3700b42-d113-42aa-a4ee-2292c5655eff",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "dcfe4687-6f1b-4d92-8bb7-70715bc2e6d5",
+            "DependsOnStepId": "efb18b3a-54cd-437f-a69c-6f0a9afd6057",
+            "DependsOnBranchOutcomeId": "2e2b5339-310d-4566-9ad3-4e0056dab52d"
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "8bdae7ae-e1d8-4b03-a997-e2577ac81a5d",
+            "RoleRequirementId": "cf41543b-32d7-4495-a986-5594ca2f5dcd",
+            "ResponsibilityKind": 2,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Security approval remains attached to the role even if the reviewer changes."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "d140fc64-72ac-4ea6-88bd-3e016affcc11",
+            "ArtifactKind": 2,
+            "Title": "Security exception assessment",
+            "IsRequired": true,
+            "TrustRequirement": 1,
+            "SensitivityLevel": 2,
+            "RetentionDays": 1095,
+            "AllowedFutureUsageSummary": "Reusable for release governance, audit, and post-incident review.",
+            "ValidationRequirementSummary": "Must capture controls, residual risk owner, and approval or block rationale."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "bd53a65a-61d1-46e2-adf7-40cb383bafcc",
+            "ArtifactExpectationId": "356eb0e2-c3cb-4b0b-bcc2-bd3c1e9c199e"
+          },
+          {
+            "Id": "f878ca14-138c-468f-913a-4ddcb4b23c98",
+            "ArtifactExpectationId": "c01b53f4-77dd-4a97-a8b3-4526740f25c6"
+          },
+          {
+            "Id": "33b0200e-0079-4055-9724-ae2824fdade1",
+            "ArtifactExpectationId": "f67e05d3-ca3c-48c3-a408-fbc79c43903a"
+          }
+        ]
+      },
+      {
+        "Id": "e6afd8f5-7a32-4999-876b-ccc84786f558",
         "Key": "release-approval",
-        "Title": "Approve release readiness",
+        "Title": "Approve first-pass release readiness",
         "Subtitle": "Go / no-go board decision",
-        "Notes": "Approve or reject release using QA proof, security posture, rollback readiness, and support coverage.",
-        "StepKind": "Approval",
+        "Notes": "Approve or reject release using first-pass QA proof, security posture, rollback readiness, and support coverage.",
+        "StepKind": 3,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": true,
@@ -572,44 +975,47 @@
         "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
         "ExceptionPolicySummary": "Reject release when security review, rollback ownership, or support readiness remains incomplete.",
         "TargetLeadHours": 3,
-        "DependsOnStepId": "540f9743-79d1-5f85-9860-f172b81312fb",
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
-        "CanvasX": 1980,
-        "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "CanvasX": 2260,
+        "CanvasY": 80,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "1067a344-6697-5f7d-bcf6-c30c0838a09b",
-            "DependsOnStepId": "540f9743-79d1-5f85-9860-f172b81312fb",
+            "Id": "3b27b502-54d7-4616-b2ee-385dd0cf4ef4",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
             "DependsOnBranchOutcomeId": null
           },
           {
-            "Id": "a0ca676f-ed81-563c-8b71-d164e2c2866b",
-            "DependsOnStepId": "78e0e4ec-a755-5e28-80c9-f6d576d68483",
+            "Id": "f86d6cea-595d-4e43-8f47-2e24628d760f",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
             "DependsOnBranchOutcomeId": null
           },
           {
-            "Id": "b207ce24-5235-58b9-9c2b-e3b7681e3171",
-            "DependsOnStepId": "13aa627e-1aeb-52bf-afbb-061c990d2efd",
+            "Id": "2d5489f3-a3cc-446b-9771-941bc71b7292",
+            "DependsOnStepId": "ee17d3a2-bbe0-4940-9eca-b18d2f522e96",
+            "DependsOnBranchOutcomeId": "e9f55749-f5bc-4cf2-b40b-a0af5fb458ce"
+          },
+          {
+            "Id": "8c5bbcdd-87fd-416a-b1ee-dc70930bf470",
+            "DependsOnStepId": "c17b8886-2263-49d4-9d1d-0a25d4b3d320",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "64f79852-7c1e-5811-9a2d-0e50791f4322",
-            "RoleRequirementId": "4f44be94-42ae-53a4-944f-780de900aea1",
-            "ResponsibilityKind": "Approver",
+            "Id": "821ac04b-05af-48d6-8c10-04c7704a0061",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 2,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Release approval belongs to the accountable delivery manager role, not to whichever person attended a meeting."
           },
           {
-            "Id": "8500c989-4264-5f4a-a977-bcfb62828775",
-            "RoleRequirementId": "d7947661-d07c-5379-a323-1de31db326dd",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "8ae41234-94a9-4783-befb-0d6079fe7a79",
+            "RoleRequirementId": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Operational release owner reviews rollback and support readiness before the board decision."
@@ -617,12 +1023,12 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "113d5828-c65d-5ca1-9c90-71e7550c46a6",
-            "ArtifactKind": "Decision",
+            "Id": "82df7394-ef44-4c36-a69d-ca95f00945dc",
+            "ArtifactKind": 2,
             "Title": "Release approval record",
             "IsRequired": true,
-            "TrustRequirement": "HumanApproved",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 2,
+            "SensitivityLevel": 1,
             "RetentionDays": 1095,
             "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
             "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback trigger, and release timing conditions."
@@ -630,26 +1036,30 @@
         ],
         "ArtifactInputs": [
           {
-            "Id": "e16a4f7a-ce5c-5949-858d-1fc50be49082",
-            "ArtifactExpectationId": "fcb99250-b566-5e3f-8bad-ab5e8d45ffea"
+            "Id": "3ed53876-a0ec-4f99-b674-89a998cc8d1b",
+            "ArtifactExpectationId": "65e6f311-7dd3-433c-a0d1-4643e137ef13"
           },
           {
-            "Id": "c0ece3df-c687-56a2-ad27-11629a9a092d",
-            "ArtifactExpectationId": "ee0cd09a-c83a-5544-8be2-83d1879841ee"
+            "Id": "37ef33b0-318a-4438-9674-1a2b19f6044a",
+            "ArtifactExpectationId": "9c8e7968-6027-4b1d-a939-f771fec6dbc1"
           },
           {
-            "Id": "93a05b47-4691-55b2-a078-eb3f98dd73e0",
-            "ArtifactExpectationId": "4a4ef7e6-6e9a-5cb0-b063-e5fe759dab58"
+            "Id": "9ad870dc-a5da-4b2a-9cba-f5553f1e71dd",
+            "ArtifactExpectationId": "b318c83d-ee3c-4ccf-b5e0-70262bd4ac3d"
+          },
+          {
+            "Id": "df13861d-3437-4afb-a1d8-bf185849cde9",
+            "ArtifactExpectationId": "f67e05d3-ca3c-48c3-a408-fbc79c43903a"
           }
         ]
       },
       {
-        "Id": "a91dc251-4412-55c2-bfc7-391442396648",
+        "Id": "7675f6bf-b67b-4745-9ae5-073b8da750a2",
         "Key": "execute-release-rollout",
-        "Title": "Execute controlled release rollout",
+        "Title": "Execute first-pass controlled release rollout",
         "Subtitle": "Live execution and first-hour telemetry watch",
         "Notes": "Deploy the approved change inside the controlled release window while telemetry and rollback readiness remain actively managed.",
-        "StepKind": "Delivery",
+        "StepKind": 5,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
@@ -658,44 +1068,42 @@
         "OutputContractSummary": "Executed rollout with explicit telemetry outcome, rollback status, and live-watch notes.",
         "EvidenceContractSummary": "Operator notes, telemetry checkpoints, and any rollback invocation or release halt.",
         "DecisionRightsSummary": "Release manager may execute only inside the approved window and rollback-trigger boundaries.",
-        "ExceptionPolicySummary": "Trigger halt or rollback immediately when telemetry, tenant impact, or operational constraints breach the approved threshold.",
+        "ExceptionPolicySummary": "Trigger halt or rollback immediately when telemetry, user impact, data impact, or operational constraints breach the approved threshold.",
         "TargetLeadHours": 4,
-        "DependsOnStepId": "529d0875-c7b0-560f-aa9a-7fbf7a4d5b57",
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
-        "CanvasX": 2290,
-        "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "CanvasX": 2600,
+        "CanvasY": 80,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "25b1002c-a910-5054-9eee-dae0ecdc1998",
-            "DependsOnStepId": "529d0875-c7b0-560f-aa9a-7fbf7a4d5b57",
+            "Id": "990805e3-451d-4c38-9b49-f4da338bb244",
+            "DependsOnStepId": "e6afd8f5-7a32-4999-876b-ccc84786f558",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "6a1bc049-0b30-54bd-ae76-192f46e72573",
-            "RoleRequirementId": "d7947661-d07c-5379-a323-1de31db326dd",
-            "ResponsibilityKind": "Responsible",
+            "Id": "62d7fdf7-0e9e-4713-af7c-e958dad480d0",
+            "RoleRequirementId": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Execution ownership remains with the release-manager role until rollout completes or fails."
           },
           {
-            "Id": "8296ffcb-11f3-57a7-8d6a-1c021db458e9",
-            "RoleRequirementId": "d6cefaed-e424-573a-87a7-69d3cf68e39b",
-            "ResponsibilityKind": "Backup",
+            "Id": "afc0177e-6066-4131-92f0-4bc8b5424c63",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 3,
             "IsRequired": false,
             "FallbackOrder": 1,
             "RebindPolicySummary": "Implementation owner stays available for rapid corrective interpretation during rollout."
           },
           {
-            "Id": "34efd10e-f600-5808-9bfa-d1ce7aa39f82",
-            "RoleRequirementId": "4f44be94-42ae-53a4-944f-780de900aea1",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "b82d6606-9825-448f-984e-2a7381a87a82",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Governance owner reviews telemetry and escalation timing during the release window."
@@ -703,12 +1111,12 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "a3b952bf-8960-5095-9da3-1262f1709687",
-            "ArtifactKind": "Transcript",
+            "Id": "30a95c03-b8b5-42b6-81b3-692edbf6ac90",
+            "ArtifactKind": 4,
             "Title": "Deployment and telemetry watch log",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 365,
             "AllowedFutureUsageSummary": "Reusable for incident replay and release retrospectives.",
             "ValidationRequirementSummary": "Must capture release timing, telemetry checkpoints, and any halt or rollback decision."
@@ -716,18 +1124,18 @@
         ],
         "ArtifactInputs": [
           {
-            "Id": "738feed4-36b6-5d9c-9f79-7508a2eda6cb",
-            "ArtifactExpectationId": "113d5828-c65d-5ca1-9c90-71e7550c46a6"
+            "Id": "b0c3473b-6d29-421a-8099-69c1cb77fff2",
+            "ArtifactExpectationId": "82df7394-ef44-4c36-a69d-ca95f00945dc"
           }
         ]
       },
       {
-        "Id": "3192cf31-a7ae-53a0-aa20-1a8ced3e8439",
+        "Id": "e81a5cee-7bcd-48de-adad-1fdbc8eed4ca",
         "Key": "post-release-learning",
-        "Title": "Capture post-release learning and corrective actions",
+        "Title": "Capture first-pass post-release learning",
         "Subtitle": "Forensic replay and systemic follow-up",
         "Notes": "Turn the release outcome into explicit learning about design, QA, operations, and process behavior.",
-        "StepKind": "End",
+        "StepKind": 6,
         "AllowsManualSkip": false,
         "AllowsSafeRefusal": false,
         "RequiresApproval": false,
@@ -738,42 +1146,40 @@
         "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
         "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
         "TargetLeadHours": 6,
-        "DependsOnStepId": "a91dc251-4412-55c2-bfc7-391442396648",
-        "DependsOnBranchOutcomeId": null,
         "DecisionRoleRequirementId": null,
-        "CanvasX": 2600,
-        "CanvasY": 120,
-        "BranchCanvasX": 0.0,
-        "BranchCanvasY": 0.0,
+        "CanvasX": 2940,
+        "CanvasY": 80,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
         "BranchOutcomes": [],
         "Dependencies": [
           {
-            "Id": "800840e9-1605-5cde-94bc-182359f261ec",
-            "DependsOnStepId": "a91dc251-4412-55c2-bfc7-391442396648",
+            "Id": "b429a187-7b0d-4316-b4cb-a16cb1853203",
+            "DependsOnStepId": "7675f6bf-b67b-4745-9ae5-073b8da750a2",
             "DependsOnBranchOutcomeId": null
           }
         ],
         "RoleAssignments": [
           {
-            "Id": "2ad991a6-fe48-5c0e-94da-005a6eb4da67",
-            "RoleRequirementId": "4f44be94-42ae-53a4-944f-780de900aea1",
-            "ResponsibilityKind": "Responsible",
+            "Id": "08548335-4a1b-4838-b8e2-846a1898afd7",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 0,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Follow-up ownership remains explicit until corrective actions have accountable owners."
           },
           {
-            "Id": "8b79bd5b-733e-5e69-b8c0-59060ebae871",
-            "RoleRequirementId": "22954322-4f67-543f-ac1f-464722b9c3f4",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "db65daee-e8c4-46db-88cb-1337c91c0361",
+            "RoleRequirementId": "acd065e2-bcd1-40ac-94f8-6127824a8974",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Architecture role reviews systemic design findings rather than only local defects."
           },
           {
-            "Id": "e0a39376-cd94-52c5-8a66-889d170af636",
-            "RoleRequirementId": "d7947661-d07c-5379-a323-1de31db326dd",
-            "ResponsibilityKind": "Reviewer",
+            "Id": "56cf83b9-740b-4807-b497-541f1f550636",
+            "RoleRequirementId": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
+            "ResponsibilityKind": 1,
             "IsRequired": true,
             "FallbackOrder": 0,
             "RebindPolicySummary": "Release role reviews telemetry and rollback-control lessons."
@@ -781,12 +1187,339 @@
         ],
         "ArtifactExpectations": [
           {
-            "Id": "7434ce25-66e6-5a9e-9788-d92f1a9a5a9a",
-            "ArtifactKind": "Decision",
+            "Id": "31939210-8854-44f1-9f16-e22d7bd4ea74",
+            "ArtifactKind": 2,
             "Title": "Post-release learning review",
             "IsRequired": true,
-            "TrustRequirement": "ReviewRequired",
-            "SensitivityLevel": "Internal",
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
+            "RetentionDays": 730,
+            "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
+            "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
+          }
+        ],
+        "ArtifactInputs": []
+      },
+      {
+        "Id": "85b0a4bd-fdbb-4ca1-808c-702a3f978c72",
+        "Key": "repair-escalation",
+        "Title": "Escalate unresolved repair findings",
+        "Subtitle": "No-go quality escalation",
+        "Notes": "Capture unresolved post-repair findings and make the delivery no-go decision explicit instead of silently closing the process.",
+        "StepKind": 3,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Post-repair QA escalation, repair notes, and remaining release-blocking evidence.",
+        "OutputContractSummary": "Explicit no-go, scope reset, or replan decision with accountable owner.",
+        "EvidenceContractSummary": "Escalation decision, unresolved defect list, required next repair scope, and owner.",
+        "DecisionRightsSummary": "Delivery manager owns escalation and cannot treat unresolved repair evidence as release-ready.",
+        "ExceptionPolicySummary": "Do not continue to security or release approval while quality remains unresolved.",
+        "TargetLeadHours": 2,
+        "DecisionRoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+        "CanvasX": 2380,
+        "CanvasY": 520,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "48ba9072-b586-406f-b5e6-662b83d5a33b",
+            "DependsOnStepId": "efb18b3a-54cd-437f-a69c-6f0a9afd6057",
+            "DependsOnBranchOutcomeId": "0249e833-3520-497d-9b22-2d55584706e0"
+          },
+          {
+            "Id": "e78fa0f2-f49b-47f9-8a46-6941239765ca",
+            "DependsOnStepId": "c3700b42-d113-42aa-a4ee-2292c5655eff",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "5ddafa02-2b0d-4839-bb60-f750082d680c",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 2,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Delivery escalation stays accountable to the process owner."
+          },
+          {
+            "Id": "3789e6db-fe2d-4187-b2dc-41648db6c88e",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Implementation owner provides concrete repair implications."
+          },
+          {
+            "Id": "ed5a1256-f68a-485e-94a7-0c7c81f9d242",
+            "RoleRequirementId": "780c2cdd-2f91-49ed-b0e4-d3b5b777746a",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "QA provides failing evidence and proof gaps for the replan."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "3ee92c12-5f12-4e1f-a69a-4f27f4205a43",
+            "ArtifactKind": 2,
+            "Title": "Repair escalation record",
+            "IsRequired": true,
+            "TrustRequirement": 2,
+            "SensitivityLevel": 1,
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for replan, future repair runs, and delivery governance audit.",
+            "ValidationRequirementSummary": "Must name unresolved findings, no-go rationale, accountable owner, and required next repair scope."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "ec78c08e-c17f-4e86-a453-03e793a528f8",
+            "ArtifactExpectationId": "c01b53f4-77dd-4a97-a8b3-4526740f25c6"
+          },
+          {
+            "Id": "37d11260-8b45-498a-8896-fd5b0ce07c03",
+            "ArtifactExpectationId": "356eb0e2-c3cb-4b0b-bcc2-bd3c1e9c199e"
+          }
+        ]
+      },
+      {
+        "Id": "5aeb017f-91b6-4fd6-9be9-bda6e5aeef94",
+        "Key": "release-approval-after-repair",
+        "Title": "Approve repaired release readiness",
+        "Subtitle": "Go / no-go board decision",
+        "Notes": "Approve or reject release using repaired QA proof, post-repair security posture, rollback readiness, and support coverage.",
+        "StepKind": 3,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": true,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "QA evidence, security outcome, rollback plan, and support ownership.",
+        "OutputContractSummary": "Approved or rejected release readiness with accountable rationale.",
+        "EvidenceContractSummary": "Approval note, residual risk register, and rollback ownership record.",
+        "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
+        "ExceptionPolicySummary": "Reject release when security review, rollback ownership, or support readiness remains incomplete.",
+        "TargetLeadHours": 3,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 2720,
+        "CanvasY": 300,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "ebbfa6fb-3997-48ea-b5a9-4b15732d099a",
+            "DependsOnStepId": "9d48f88d-54f1-4724-9fe4-8d92d923faba",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "9fe4c39b-a38c-4bdb-83de-f49cda96bc73",
+            "DependsOnStepId": "49b010e2-8025-404e-93f0-dfd3a984c7d2",
+            "DependsOnBranchOutcomeId": null
+          },
+          {
+            "Id": "8b6b955b-95c5-4ff9-972c-a5d8a58a2d12",
+            "DependsOnStepId": "efb18b3a-54cd-437f-a69c-6f0a9afd6057",
+            "DependsOnBranchOutcomeId": "2e2b5339-310d-4566-9ad3-4e0056dab52d"
+          },
+          {
+            "Id": "3651617d-465e-4eab-9be9-ed63a4255abd",
+            "DependsOnStepId": "3fb1dadb-07cc-4ed8-84d1-dcd1ea4a19e6",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "cdf8d8c3-e6b6-4f9b-9986-ef2d1c40beb9",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 2,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Release approval belongs to the accountable delivery manager role, not to whichever person attended a meeting."
+          },
+          {
+            "Id": "c38fef75-4b1d-41b4-bdd1-71b5b7086168",
+            "RoleRequirementId": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Operational release owner reviews rollback and support readiness before the board decision."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "7d8942f2-7ffe-4393-9240-d78b1a423f15",
+            "ArtifactKind": 2,
+            "Title": "Release approval record",
+            "IsRequired": true,
+            "TrustRequirement": 2,
+            "SensitivityLevel": 1,
+            "RetentionDays": 1095,
+            "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
+            "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback trigger, and release timing conditions."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "c501a7ab-43d9-43c6-a2e5-98c28c8f9ac9",
+            "ArtifactExpectationId": "65e6f311-7dd3-433c-a0d1-4643e137ef13"
+          },
+          {
+            "Id": "a86e1eb2-7f32-4a92-96d7-9e2484bf3072",
+            "ArtifactExpectationId": "c01b53f4-77dd-4a97-a8b3-4526740f25c6"
+          },
+          {
+            "Id": "f237c8f0-0e3a-462d-8769-1cff1bf4201d",
+            "ArtifactExpectationId": "d140fc64-72ac-4ea6-88bd-3e016affcc11"
+          },
+          {
+            "Id": "81340be0-c416-47fb-97f7-39958ae634cc",
+            "ArtifactExpectationId": "f67e05d3-ca3c-48c3-a408-fbc79c43903a"
+          }
+        ]
+      },
+      {
+        "Id": "b23f94c5-abd6-4751-9094-58f703add1b8",
+        "Key": "execute-release-rollout-after-repair",
+        "Title": "Execute repaired controlled release rollout",
+        "Subtitle": "Live execution and first-hour telemetry watch",
+        "Notes": "Deploy the approved change inside the controlled release window while telemetry and rollback readiness remain actively managed.",
+        "StepKind": 5,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": false,
+        "InputContractSummary": "Approved release record, deployment package, rollback plan, and telemetry watch points.",
+        "OutputContractSummary": "Executed rollout with explicit telemetry outcome, rollback status, and live-watch notes.",
+        "EvidenceContractSummary": "Operator notes, telemetry checkpoints, and any rollback invocation or release halt.",
+        "DecisionRightsSummary": "Release manager may execute only inside the approved window and rollback-trigger boundaries.",
+        "ExceptionPolicySummary": "Trigger halt or rollback immediately when telemetry, user impact, data impact, or operational constraints breach the approved threshold.",
+        "TargetLeadHours": 4,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 3060,
+        "CanvasY": 300,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "58ca856f-a3b4-44d7-bfbd-5d06bb5f67eb",
+            "DependsOnStepId": "5aeb017f-91b6-4fd6-9be9-bda6e5aeef94",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "72190fef-0171-42da-b27a-afb920efc67a",
+            "RoleRequirementId": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
+            "ResponsibilityKind": 0,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Execution ownership remains with the release-manager role until rollout completes or fails."
+          },
+          {
+            "Id": "0cc820fb-c4ec-486b-9d74-e70fdd8704e7",
+            "RoleRequirementId": "4a26f89a-0f40-49fe-9e01-fb5d6ff61807",
+            "ResponsibilityKind": 3,
+            "IsRequired": false,
+            "FallbackOrder": 1,
+            "RebindPolicySummary": "Implementation owner stays available for rapid corrective interpretation during rollout."
+          },
+          {
+            "Id": "c6f24a3d-8dee-42c8-b6a8-0e76ca16418d",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Governance owner reviews telemetry and escalation timing during the release window."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "c5723256-ca6b-4c72-9846-3fd3759fe978",
+            "ArtifactKind": 4,
+            "Title": "Deployment and telemetry watch log",
+            "IsRequired": true,
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
+            "RetentionDays": 365,
+            "AllowedFutureUsageSummary": "Reusable for incident replay and release retrospectives.",
+            "ValidationRequirementSummary": "Must capture release timing, telemetry checkpoints, and any halt or rollback decision."
+          }
+        ],
+        "ArtifactInputs": [
+          {
+            "Id": "50dcf90f-3658-4bf1-bda4-74a1b7fac849",
+            "ArtifactExpectationId": "7d8942f2-7ffe-4393-9240-d78b1a423f15"
+          }
+        ]
+      },
+      {
+        "Id": "ede48991-55fd-4b89-852b-5b5a14c92a91",
+        "Key": "post-release-learning-after-repair",
+        "Title": "Capture repaired-release learning",
+        "Subtitle": "Forensic replay and systemic follow-up",
+        "Notes": "Turn the release outcome into explicit learning about design, QA, operations, and process behavior.",
+        "StepKind": 6,
+        "AllowsManualSkip": false,
+        "AllowsSafeRefusal": false,
+        "RequiresApproval": false,
+        "RequiresDecisionRecord": true,
+        "InputContractSummary": "Rollout outcome, telemetry record, support observations, and any release incident notes.",
+        "OutputContractSummary": "Post-release learning review with corrective actions and simulation updates.",
+        "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
+        "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
+        "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
+        "TargetLeadHours": 6,
+        "DecisionRoleRequirementId": null,
+        "CanvasX": 3400,
+        "CanvasY": 300,
+        "BranchCanvasX": 0,
+        "BranchCanvasY": 0,
+        "BranchOutcomes": [],
+        "Dependencies": [
+          {
+            "Id": "d3f979f3-a66c-4ec8-9f55-0ab4638a40f3",
+            "DependsOnStepId": "b23f94c5-abd6-4751-9094-58f703add1b8",
+            "DependsOnBranchOutcomeId": null
+          }
+        ],
+        "RoleAssignments": [
+          {
+            "Id": "03d7ff84-2449-40b1-a640-f8402ca9cce4",
+            "RoleRequirementId": "2baf169d-2384-4790-9cfb-bc4636d80947",
+            "ResponsibilityKind": 0,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Follow-up ownership remains explicit until corrective actions have accountable owners."
+          },
+          {
+            "Id": "c7036eea-21d5-4d1e-9b98-cc82d5582080",
+            "RoleRequirementId": "acd065e2-bcd1-40ac-94f8-6127824a8974",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Architecture role reviews systemic design findings rather than only local defects."
+          },
+          {
+            "Id": "4bde9207-3b97-4ce9-be1c-ec1154e2d0be",
+            "RoleRequirementId": "9d20cfed-3373-46d3-afaf-36efec3e0f40",
+            "ResponsibilityKind": 1,
+            "IsRequired": true,
+            "FallbackOrder": 0,
+            "RebindPolicySummary": "Release role reviews telemetry and rollback-control lessons."
+          }
+        ],
+        "ArtifactExpectations": [
+          {
+            "Id": "a2acf571-0391-45e4-b7d2-f1c8fb47c131",
+            "ArtifactKind": 2,
+            "Title": "Post-release learning review",
+            "IsRequired": true,
+            "TrustRequirement": 1,
+            "SensitivityLevel": 1,
             "RetentionDays": 730,
             "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
             "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
@@ -797,7 +1530,7 @@
     ]
   },
   "Warnings": [
-    "Projected from template pack process 'software-delivery'.",
+    "Projected from template pack process \u0027software-delivery\u0027.",
     "Detailed sidecar metadata remains in the process-template pack files."
   ],
   "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection"

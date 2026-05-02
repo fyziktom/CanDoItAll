@@ -4,7 +4,7 @@
 **Criticality:** MissionCritical  
 **Autonomy level:** Guarded  
 **Operating mode:** Emergency  
-**Customer name:** Enterprise Billing Platform  
+**Customer name:** Affected service or product
 **Owner name:** Production response command
 
 ## Summary
@@ -25,7 +25,7 @@ Time pressure never removes the need for explicit rollback ownership, communicat
 
 ## Operating and simulation notes
 - Operating mode summary: Emergency execution is allowed only inside a bounded release window with explicit rollback and communication obligations.
-- Simulation readiness: This scenario is intentionally rich enough for emergency simulation, incident replay, and canvas authoring validation.
+- Simulation readiness: This template is intentionally rich enough for emergency simulation, incident replay, and canvas authoring validation.
 
 ## Source frameworks
 - nist-ssdf

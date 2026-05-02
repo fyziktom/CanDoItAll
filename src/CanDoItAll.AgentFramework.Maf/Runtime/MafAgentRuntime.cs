@@ -17,6 +17,7 @@ public sealed partial class MafAgentRuntime(
     private const int MaxRepeatedToolInvocationCount = 3;
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
     private static readonly HttpClient HttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(20)
@@ -149,6 +150,7 @@ public sealed partial class MafAgentRuntime(
             progressCallback,
             cancellationToken,
             runtimeOptions.StructuredOutput,
+            runtimeOptions.FinalizerMode,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces);
@@ -275,6 +277,7 @@ public sealed partial class MafAgentRuntime(
             progressCallback,
             cancellationToken,
             runtimeOptions.StructuredOutput,
+            runtimeOptions.FinalizerMode,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces);
@@ -293,6 +296,7 @@ public sealed partial class MafAgentRuntime(
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode,
         bool forceOmitTemperature,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
@@ -351,12 +355,78 @@ public sealed partial class MafAgentRuntime(
 
                             await progressCallback(ExecutionState.WaitingOnTool, "Tool", DescribeToolInvocation(toolCall));
                         }
+
+                        var finalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                            structuredOutput,
+                            finalizerMode,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotFinalizerInvocations,
+                            snapshotToolInvocationTraces);
+                        if (finalizerResponse is not null)
+                        {
+                            return finalizerResponse;
+                        }
                     }
+
+                    var postStreamingFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                        structuredOutput,
+                        finalizerMode,
+                        runtimeAgent,
+                        runtimeSession,
+                        runtimeSessionKey,
+                        progressCallback,
+                        cancellationToken,
+                        snapshotFinalizerInvocations,
+                        snapshotToolInvocationTraces);
+                    if (postStreamingFinalizerResponse is not null)
+                    {
+                        return postStreamingFinalizerResponse;
+                    }
+                }
+                catch (RequiredFinalizerCapturedException exception)
+                {
+                    providerActivity?.SetTag("agentframework.required_finalizer_tool_name", exception.ToolName);
+                    var finalizerResponse = await TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+                        structuredOutput,
+                        finalizerMode,
+                        runtimeAgent,
+                        runtimeSession,
+                        runtimeSessionKey,
+                        progressCallback,
+                        cancellationToken,
+                        snapshotFinalizerInvocations,
+                        snapshotToolInvocationTraces);
+                    if (finalizerResponse is not null)
+                    {
+                        return finalizerResponse;
+                    }
+
+                    throw;
                 }
                 catch (Exception exception)
                 {
                     AgentFrameworkTelemetry.RecordProviderError(provider, resolvedModel);
                     providerActivity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+                    var finalizerResponse = await TryCreateFinalizerResponseAfterProviderFailureAsync(
+                        structuredOutput,
+                        runtimeAgent,
+                        runtimeSession,
+                        runtimeSessionKey,
+                        finalizerMode,
+                        exception,
+                        progressCallback,
+                        cancellationToken,
+                        snapshotFinalizerInvocations,
+                        snapshotToolInvocationTraces);
+                    if (finalizerResponse is not null)
+                    {
+                        return finalizerResponse;
+                    }
+
                     throw;
                 }
             }
@@ -413,6 +483,217 @@ public sealed partial class MafAgentRuntime(
                 forceOmitTemperature: forceOmitTemperature,
                 structuredOutput: structuredOutput);
             inputMessages = [];
+        }
+    }
+
+    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode,
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        string? runtimeSessionKey,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+    {
+        var finalizerInvocations = snapshotFinalizerInvocations();
+        var toolInvocationTraces = snapshotToolInvocationTraces();
+        var serializedResponse = TryBuildRequiredFinalizerRuntimeResponse(
+            structuredOutput,
+            finalizerMode,
+            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            serializedSessionStateJson: null,
+            finalizerInvocations,
+            toolInvocationTraces);
+        if (serializedResponse is null)
+        {
+            return null;
+        }
+
+        await progressCallback(
+            ExecutionState.Persisting,
+            "Finalizer short-circuit",
+            "Required finalizer tool produced a valid governed result. Persisting the typed result immediately without waiting for redundant post-finalizer assistant prose.");
+
+        var serializedSessionStateJson = await TrySerializeRuntimeSessionAsync(
+            runtimeAgent,
+            runtimeSession,
+            cancellationToken);
+        return serializedResponse with
+        {
+            SerializedSessionStateJson = serializedSessionStateJson
+        };
+    }
+
+    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterProviderFailureAsync(
+        AgentStructuredOutputContract? structuredOutput,
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        string? runtimeSessionKey,
+        AgentFinalizerMode finalizerMode,
+        Exception exception,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+    {
+        if (finalizerMode != AgentFinalizerMode.Required ||
+            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
+        {
+            return null;
+        }
+
+        var finalizerInvocations = snapshotFinalizerInvocations();
+        var finalizerValidation = new DefaultAgentFinalizerValidator().Validate(policy, finalizerInvocations);
+        if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
+        {
+            return null;
+        }
+
+        var toolInvocationTraces = snapshotToolInvocationTraces();
+        var sequenceValidation = AgentFinalizerSequenceValidator.Validate(policy, toolInvocationTraces);
+        if (!sequenceValidation.Succeeded)
+        {
+            return null;
+        }
+
+        await progressCallback(
+            ExecutionState.Persisting,
+            "Finalizer recovery",
+            $"Provider streaming failed after required finalizer '{policy.ToolName}' was captured. Persisting the governed finalizer outcome and preserving the provider error for diagnostics: {exception.Message}");
+
+        var serializedSessionStateJson = await TrySerializeRuntimeSessionAsync(
+            runtimeAgent,
+            runtimeSession,
+            cancellationToken);
+        return new AgentRuntimeResponse(
+            JsonSerializer.Serialize(finalizerValidation.Output, policy.OutputType, AgentOutputJson.SerializerOptions),
+            InputTokens: 0,
+            OutputTokens: 0,
+            ToolCalls: toolInvocationTraces
+                .Where(trace => !string.IsNullOrWhiteSpace(trace.ToolName))
+                .Select(trace => $"{trace.ToolName}|{trace.Sequence}")
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
+            RuntimeSessionKey: ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            SerializedSessionStateJson: serializedSessionStateJson,
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = finalizerInvocations,
+            ToolInvocationTraces = toolInvocationTraces
+        };
+    }
+
+    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode,
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        string? runtimeSessionKey,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+    {
+        var finalizerInvocations = snapshotFinalizerInvocations();
+        var toolInvocationTraces = snapshotToolInvocationTraces();
+        var serializedResponse = TryBuildRequiredFinalizerRuntimeResponse(
+            structuredOutput,
+            finalizerMode,
+            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            serializedSessionStateJson: null,
+            finalizerInvocations,
+            toolInvocationTraces);
+        if (serializedResponse is null)
+        {
+            return null;
+        }
+
+        await progressCallback(
+            ExecutionState.Persisting,
+            "Finalizer short-circuit",
+            "Required finalizer tool produced a valid governed result. Persisting the typed result without waiting for redundant post-finalizer assistant prose.");
+
+        var serializedSessionStateJson = await TrySerializeRuntimeSessionAsync(
+            runtimeAgent,
+            runtimeSession,
+            cancellationToken);
+        return serializedResponse with
+        {
+            SerializedSessionStateJson = serializedSessionStateJson
+        };
+    }
+
+    private static AgentRuntimeResponse? TryBuildRequiredFinalizerRuntimeResponse(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode,
+        string runtimeSessionKey,
+        string? serializedSessionStateJson,
+        IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations,
+        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces)
+    {
+        if (finalizerMode != AgentFinalizerMode.Required ||
+            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
+        {
+            return null;
+        }
+
+        var finalizerValidation = new DefaultAgentFinalizerValidator().Validate(policy, finalizerInvocations);
+        if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
+        {
+            return null;
+        }
+
+        var sequenceValidation = AgentFinalizerSequenceValidator.Validate(policy, toolInvocationTraces);
+        if (!sequenceValidation.Succeeded)
+        {
+            return null;
+        }
+
+        return new AgentRuntimeResponse(
+            JsonSerializer.Serialize(finalizerValidation.Output, policy.OutputType, AgentOutputJson.SerializerOptions),
+            InputTokens: 0,
+            OutputTokens: 0,
+            ToolCalls: toolInvocationTraces
+                .Where(trace => !string.IsNullOrWhiteSpace(trace.ToolName))
+                .Select(trace => $"{trace.ToolName}|{trace.Sequence}")
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
+            RuntimeSessionKey: runtimeSessionKey,
+            SerializedSessionStateJson: serializedSessionStateJson,
+            PendingApprovals: [])
+        {
+            FinalizerInvocations = finalizerInvocations,
+            ToolInvocationTraces = toolInvocationTraces
+        };
+    }
+
+    private static async Task<string?> TrySerializeRuntimeSessionAsync(
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var serializedSession = await runtimeAgent.SerializeSessionAsync(
+                runtimeSession,
+                cancellationToken: cancellationToken).AsTask().WaitAsync(
+                    FinalizerSessionSerializationTimeout,
+                    cancellationToken);
+            return JsonSerializer.Serialize(serializedSession, SerializerOptions);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -564,6 +845,24 @@ public sealed partial class MafAgentRuntime(
             ?? response.ContinuationToken?.ToString()
             ?? fallbackValue
             ?? string.Empty;
+    }
+
+    private static string ResolveRuntimeSessionKey(
+        AgentSession runtimeSession,
+        string? fallbackValue)
+    {
+        if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
+        {
+            return chatSession.ConversationId;
+        }
+
+        return fallbackValue ?? string.Empty;
+    }
+
+    private sealed class RequiredFinalizerCapturedException(string toolName) : Exception(
+        $"Required finalizer tool '{toolName}' was captured.")
+    {
+        public string ToolName { get; } = toolName;
     }
 
     private static string ResolveToolName(ToolCallContent toolCall)

@@ -9,7 +9,7 @@
 Cross-module and source-of-truth decision
 
 ## Notes
-Validate process/workspace/billing seams, canonical model implications, migration ownership, and integration boundaries before implementation starts.
+Validate application, workspace, data, integration, and operational boundaries before implementation starts.
 
 ## Contracts
 - Input contract: Scope packet, touched modules, data-flow map, and integration concerns.

@@ -10,7 +10,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     public void TryResolveWorkspacePath_maps_external_target_alias_to_real_external_path()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Calculator.sln");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Workflow.sln");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
         var policy = new WorkspacePathPolicy(workspaceRoot);
 
@@ -28,26 +28,26 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     public void WriteTextFile_writes_to_real_external_target_for_alias_path()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Calculator.App");
-        var externalFilePath = Path.Combine(externalDirectory, "CalculatorService.cs");
+        var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Workflow.App");
+        var externalFilePath = Path.Combine(externalDirectory, "WorkflowService.cs");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
         var policy = new WorkspacePathPolicy(workspaceRoot);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
 
-        var result = service.WriteTextFile(aliasPath, "public static class CalculatorService {}");
+        var result = service.WriteTextFile(aliasPath, "public static class WorkflowService {}");
 
         Assert.True(result.Succeeded);
         Assert.Equal(aliasPath, result.Path);
         Assert.True(File.Exists(externalFilePath));
-        Assert.Contains("CalculatorService", File.ReadAllText(externalFilePath), StringComparison.Ordinal);
+        Assert.Contains("WorkflowService", File.ReadAllText(externalFilePath), StringComparison.Ordinal);
     }
 
     [Fact]
     public void WriteTextFile_rejects_razor_char_callbacks_to_string_handlers()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Components", "Pages", "Home.razor");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
         var policy = new WorkspacePathPolicy(workspaceRoot);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
@@ -79,7 +79,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     public void WriteTextFile_allows_razor_char_callbacks_to_char_handlers()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Components", "Pages", "Home.razor");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
         var policy = new WorkspacePathPolicy(workspaceRoot);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
@@ -101,10 +101,33 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     }
 
     [Fact]
+    public void WriteTextFile_rejects_local_test_framework_shims()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "InventoryApp", "tests", "InventoryApp.Tests", "TestingFallback.cs");
+        var aliasPath = BuildExternalTargetAlias(externalFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+namespace Microsoft.VisualStudio.TestTools.UnitTesting;
+
+public sealed class TestClassAttribute : Attribute;
+public sealed class TestMethodAttribute : Attribute;
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Do not fake package, runtime, or test APIs", result.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(externalFilePath));
+    }
+
+    [Fact]
     public void WriteTextFile_rejects_razor_double_quoted_string_callback_inside_double_quoted_attribute()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Components", "Pages", "Home.razor");
+        var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
         var policy = new WorkspacePathPolicy(workspaceRoot);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
@@ -127,13 +150,97 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     }
 
     [Fact]
+    public void WriteTextFile_rejects_legacy_blazor_host_file_in_current_blazor_web_app()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
+        var hostFilePath = Path.Combine(projectDirectory, "Pages", "_Host.cshtml");
+        var aliasPath = BuildExternalTargetAlias(hostFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+@page "/_Host"
+@namespace FerryKiosk.Pages
+<component type="typeof(App)" render-mode="ServerPrerendered" />
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("current Blazor Web App surface", result.Message, StringComparison.Ordinal);
+        Assert.Contains("_Host.cshtml", result.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(hostFilePath));
+    }
+
+    [Fact]
+    public void WriteTextFile_rejects_legacy_blazor_host_apis_in_current_blazor_web_app()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
+        var programFilePath = Path.Combine(projectDirectory, "Program.cs");
+        var aliasPath = BuildExternalTargetAlias(programFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
+
+var app = builder.Build();
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
+app.Run();
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("legacy Blazor Server hosting API", result.Message, StringComparison.Ordinal);
+        Assert.Contains("AddServerSideBlazor", result.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(programFilePath));
+    }
+
+    [Fact]
+    public void WriteTextFile_allows_current_blazor_host_apis_in_current_blazor_web_app()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
+        var programFilePath = Path.Combine(projectDirectory, "Program.cs");
+        var aliasPath = BuildExternalTargetAlias(programFilePath);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
+        var service = new WorkspaceFileMutationService(policy, receiptWriter);
+        var content = """
+using FerryKiosk.Components;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+var app = builder.Build();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+app.Run();
+""";
+
+        var result = service.WriteTextFile(aliasPath, content);
+
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(programFilePath));
+    }
+
+    [Fact]
     public void ReadTextFile_reads_from_real_external_target_for_alias_path()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Calculator", "Calculator.App");
+        var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Workflow.App");
         Directory.CreateDirectory(externalDirectory);
-        var externalFilePath = Path.Combine(externalDirectory, "CalculatorService.cs");
-        File.WriteAllText(externalFilePath, "public static class CalculatorService { public static int Add(int left, int right) => left + right; }");
+        var externalFilePath = Path.Combine(externalDirectory, "WorkflowService.cs");
+        File.WriteAllText(externalFilePath, "public static class WorkflowService { public static int Add(int left, int right) => left + right; }");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
         var policy = new WorkspacePathPolicy(workspaceRoot);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
@@ -150,9 +257,9 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     public void BuildDotnetBuild_uses_absolute_target_argument_for_external_target_alias()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Calculator");
+        var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Workflow");
         Directory.CreateDirectory(externalDirectory);
-        var externalSolutionPath = Path.Combine(externalDirectory, "Calculator.sln");
+        var externalSolutionPath = Path.Combine(externalDirectory, "Workflow.sln");
         File.WriteAllText(externalSolutionPath, string.Empty);
         var aliasPath = BuildExternalTargetAlias(externalSolutionPath);
         var builder = new WorkspaceCommandPlanBuilder(new WorkspacePathPolicy(workspaceRoot));
@@ -171,7 +278,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         var workspaceRoot = CreateDirectory("workspace");
         var builder = new WorkspaceCommandPlanBuilder(new WorkspacePathPolicy(workspaceRoot));
 
-        var plan = builder.BuildDotnetNew("blazor", "CalculatorApp", force: true);
+        var plan = builder.BuildDotnetNew("blazor", "WorkflowApp", force: true);
 
         Assert.Contains("--force", plan.Arguments, StringComparer.Ordinal);
     }
@@ -195,6 +302,25 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         var path = Path.Combine(rootPath, name);
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private string CreateCurrentBlazorWebAppProject(string projectName)
+    {
+        var projectDirectory = Path.Combine(CreateDirectory("external-target-root"), projectName);
+        var componentsDirectory = Path.Combine(projectDirectory, "Components");
+        Directory.CreateDirectory(componentsDirectory);
+        File.WriteAllText(
+            Path.Combine(projectDirectory, $"{projectName}.csproj"),
+            """
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+""");
+        File.WriteAllText(Path.Combine(componentsDirectory, "App.razor"), "<Routes />");
+        File.WriteAllText(Path.Combine(componentsDirectory, "Routes.razor"), "<Router AppAssembly=\"typeof(Program).Assembly\" />");
+        return projectDirectory;
     }
 
     private static string BuildExternalTargetAlias(string fullPath)

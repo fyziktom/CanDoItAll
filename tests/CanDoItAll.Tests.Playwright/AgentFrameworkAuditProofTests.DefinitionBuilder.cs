@@ -117,7 +117,7 @@ public sealed partial class AgentFrameworkAuditProofTests
             targetRoleId);
     }
 
-    private static CalculatorDefinitionFixture BuildCalculatorDeliveryDefinitionEditor(Guid projectId)
+    private static WorkflowDefinitionFixture BuildWorkflowDeliveryDefinitionEditor(Guid projectId)
     {
         var managerRoleId = Guid.NewGuid();
         var builderRoleId = Guid.NewGuid();
@@ -126,25 +126,25 @@ public sealed partial class AgentFrameworkAuditProofTests
         var handoffStepId = Guid.NewGuid();
         var generationArtifactId = Guid.NewGuid();
 
-        const string builderRoleName = "Calculator builder agent";
-        const string reviewerRoleName = "Calculator reviewer agent";
-        const string generationStepTitle = "SC03 Generate Blazor calculator delivery";
-        const string handoffStepTitle = "Approve generated calculator delivery";
-        const string reviewStepTitle = "SC10 Review generated calculator delivery";
+        const string builderRoleName = "Workflow builder agent";
+        const string reviewerRoleName = "Workflow reviewer agent";
+        const string generationStepTitle = "SC03 Generate Blazor workflow delivery";
+        const string handoffStepTitle = "Approve generated workflow delivery";
+        const string reviewStepTitle = "SC10 Review generated workflow delivery";
 
-        return new CalculatorDefinitionFixture(
+        return new WorkflowDefinitionFixture(
             new ProcessDefinitionEditorModel
             {
                 ProjectId = projectId,
-                Name = "SC11 calculator delivery process",
-                Summary = "Launch, staff, execute, message, and close a simple Blazor calculator delivery through the integrated process runtime.",
+                Name = "SC11 workflow delivery process",
+                Summary = "Launch, staff, execute, message, and close a simple Blazor workflow delivery through the integrated process runtime.",
                 ValueStatement = "Prove that CanDoItAll can define and complete a multi-agent software delivery workflow end to end.",
                 CustomerName = "Integrated proof customer",
                 OwnerName = "Playwright process owner",
                 GovernancePolicySummary = "AI delivery steps must stay bound to explicit launch approval, projected evidence, and process-owned messaging.",
                 ChangeSummary = "Full AgentFramework integration closure proof for SC11.",
                 ConstitutionRuleSummary = "All execution, messaging, approvals, and evidence must remain inside the process runtime.",
-                OperatingModeSummary = "Assisted execution with human handoff between automated calculator generation and review.",
+                OperatingModeSummary = "Assisted execution with human handoff between automated workflow generation and review.",
                 SimulationReadinessSummary = "Safe for deterministic browser and service validation.",
                 Roles =
                 [
@@ -162,10 +162,10 @@ public sealed partial class AgentFrameworkAuditProofTests
                     new ProcessRoleEditorModel
                     {
                         Id = builderRoleId,
-                        Key = "calculator-builder-ai",
+                        Key = "workflow-builder-ai",
                         DisplayName = builderRoleName,
-                        Purpose = "Generate and build the calculator delivery through SC03.",
-                        StaffingIntent = "Technical AI resource for deterministic calculator generation.",
+                        Purpose = "Generate and build the workflow delivery through SC03.",
+                        StaffingIntent = "Technical AI resource for deterministic workflow generation.",
                         PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
                         PreferredExecutorKind = "AI agent",
                         DefaultAllocationPercent = 100
@@ -173,9 +173,9 @@ public sealed partial class AgentFrameworkAuditProofTests
                     new ProcessRoleEditorModel
                     {
                         Id = reviewerRoleId,
-                        Key = "calculator-reviewer-ai",
+                        Key = "workflow-reviewer-ai",
                         DisplayName = reviewerRoleName,
-                        Purpose = "Inspect the generated calculator delivery through SC10.",
+                        Purpose = "Inspect the generated workflow delivery through SC10.",
                         StaffingIntent = "Technical AI resource for deterministic delivery review.",
                         PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
                         PreferredExecutorKind = "AI agent",
@@ -195,14 +195,14 @@ public sealed partial class AgentFrameworkAuditProofTests
                     new ProcessStepEditorModel
                     {
                         Id = generationStepId,
-                        Key = "sc03-generate-calculator",
+                        Key = "sc03-generate-workflow",
                         Title = generationStepTitle,
                         StepKind = ProcessStepKind.Start,
-                        InputContractSummary = "A simple calculator specification and a ready AI builder role.",
-                        OutputContractSummary = "A generated Blazor calculator project with a successful build receipt.",
+                        InputContractSummary = "A simple workflow specification and a ready AI builder role.",
+                        OutputContractSummary = "A generated Blazor workflow project with a successful build receipt.",
                         EvidenceContractSummary = "SC03 must persist generation-report.md and the generated project files.",
-                        DecisionRightsSummary = "The calculator builder agent completes the deterministic generation flow.",
-                        ExceptionPolicySummary = "Fail the run when the calculator project or build receipt is missing.",
+                        DecisionRightsSummary = "The workflow builder agent completes the deterministic generation flow.",
+                        ExceptionPolicySummary = "Fail the run when the workflow project or build receipt is missing.",
                         TargetLeadHours = 1,
                         CanvasX = 180,
                         CanvasY = 180,
@@ -221,7 +221,7 @@ public sealed partial class AgentFrameworkAuditProofTests
                                 Id = generationArtifactId,
                                 ArtifactKind = ProcessArtifactKind.Deliverable,
                                 Title = "generation-report.md",
-                                ValidationRequirementSummary = "SC03 must project the calculator generation evidence into the process run."
+                                ValidationRequirementSummary = "SC03 must project the workflow generation evidence into the process run."
                             }
                         ]
                     },
@@ -231,10 +231,10 @@ public sealed partial class AgentFrameworkAuditProofTests
                         Key = "approve-review-handoff",
                         Title = handoffStepTitle,
                         StepKind = ProcessStepKind.Work,
-                        InputContractSummary = "The generated calculator delivery and builder evidence.",
+                        InputContractSummary = "The generated workflow delivery and builder evidence.",
                         OutputContractSummary = "A human-approved handoff that keeps the run active for direct builder-to-reviewer messaging.",
                         EvidenceContractSummary = "The manager confirms the delivery is ready for review and preserves the handoff trail.",
-                        DecisionRightsSummary = "The delivery manager decides when the generated calculator is ready for reviewer pickup.",
+                        DecisionRightsSummary = "The delivery manager decides when the generated workflow is ready for reviewer pickup.",
                         ExceptionPolicySummary = "Do not release review until the generation evidence exists and messaging is captured.",
                         TargetLeadHours = 1,
                         Dependencies =
@@ -258,14 +258,14 @@ public sealed partial class AgentFrameworkAuditProofTests
                     },
                     new ProcessStepEditorModel
                     {
-                        Key = "sc10-review-calculator",
+                        Key = "sc10-review-workflow",
                         Title = reviewStepTitle,
                         StepKind = ProcessStepKind.Review,
-                        InputContractSummary = "The approved calculator delivery plus the direct message from builder to reviewer.",
-                        OutputContractSummary = "A deterministic review report that confirms the calculator assets exist.",
+                        InputContractSummary = "The approved workflow delivery plus the direct message from builder to reviewer.",
+                        OutputContractSummary = "A deterministic review report that confirms the workflow assets exist.",
                         EvidenceContractSummary = "SC10 must persist review-report.md and close the run with durable evidence.",
-                        DecisionRightsSummary = "The calculator reviewer agent closes the delivery after the human handoff is complete.",
-                        ExceptionPolicySummary = "Fail the run when the generated calculator is missing or the review cannot verify it.",
+                        DecisionRightsSummary = "The workflow reviewer agent closes the delivery after the human handoff is complete.",
+                        ExceptionPolicySummary = "Fail the run when the generated workflow is missing or the review cannot verify it.",
                         TargetLeadHours = 1,
                         Dependencies =
                         [
@@ -296,7 +296,7 @@ public sealed partial class AgentFrameworkAuditProofTests
                             {
                                 ArtifactKind = ProcessArtifactKind.Evidence,
                                 Title = "review-report.md",
-                                ValidationRequirementSummary = "SC10 must project the calculator review evidence into the process run."
+                                ValidationRequirementSummary = "SC10 must project the workflow review evidence into the process run."
                             }
                         ],
                         ArtifactInputs =
@@ -398,7 +398,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         Guid SourceRoleRequirementId,
         Guid TargetRoleRequirementId);
 
-    private sealed record CalculatorDefinitionFixture(
+    private sealed record WorkflowDefinitionFixture(
         ProcessDefinitionEditorModel Editor,
         Guid BuilderRoleRequirementId,
         Guid ReviewerRoleRequirementId,

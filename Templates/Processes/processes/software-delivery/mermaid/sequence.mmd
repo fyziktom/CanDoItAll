@@ -17,12 +17,34 @@ sequenceDiagram
     role_lead_engineer->>system: Complete peer review and integration readiness
     system-->>role_lead_engineer: evidence -> Peer review note
     role_qa_lead->>system: Run QA validation and browser proof
-    system-->>role_qa_lead: evidence -> Regression evidence pack
-    role_product_owner->>system: Perform security and data-handling review
-    system-->>role_product_owner: evidence -> Security exception assessment
-    role_product_owner->>system: Approve release readiness
-    system-->>role_product_owner: evidence -> Release approval record
-    role_release_manager->>system: Execute controlled release rollout
-    system-->>role_release_manager: evidence -> Deployment and telemetry watch log
-    role_delivery_manager->>system: Capture post-release learning and corrective actions
-    system-->>role_delivery_manager: evidence -> Post-release learning review
+    alt quality accepted
+        system-->>role_qa_lead: branch -> quality-accepted
+        role_security_reviewer->>system: Perform security and data-handling review
+        system-->>role_security_reviewer: evidence -> Security exception assessment
+        role_delivery_manager->>system: Approve first-pass release readiness
+        system-->>role_delivery_manager: evidence -> Release approval record
+        role_release_manager->>system: Execute first-pass controlled release rollout
+        system-->>role_release_manager: evidence -> Deployment and telemetry watch log
+        role_delivery_manager->>system: Capture first-pass post-release learning
+        system-->>role_delivery_manager: evidence -> Post-release learning review
+    else repair required
+        system-->>role_qa_lead: branch -> repair-required
+        role_lead_engineer->>system: Repair validation findings
+        system-->>role_lead_engineer: evidence -> Quality repair change set
+        role_qa_lead->>system: Re-run QA validation and browser proof after repair
+        alt repaired quality accepted
+            system-->>role_qa_lead: branch -> quality-accepted
+            role_security_reviewer->>system: Perform security review after repair
+            system-->>role_security_reviewer: evidence -> Security exception assessment
+            role_delivery_manager->>system: Approve repaired release readiness
+            system-->>role_delivery_manager: evidence -> Release approval record
+            role_release_manager->>system: Execute repaired controlled release rollout
+            system-->>role_release_manager: evidence -> Deployment and telemetry watch log
+            role_delivery_manager->>system: Capture repaired-release learning
+            system-->>role_delivery_manager: evidence -> Post-release learning review
+        else repair escalation
+            system-->>role_qa_lead: branch -> repair-escalation
+            role_delivery_manager->>system: Escalate unresolved repair findings
+            system-->>role_delivery_manager: evidence -> Repair escalation record
+        end
+    end

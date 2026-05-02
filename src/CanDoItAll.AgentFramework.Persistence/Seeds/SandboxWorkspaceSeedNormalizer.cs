@@ -29,6 +29,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         "research-deep-dive-analyst",
         "dotnet-solution-architect",
         "dotnet-application-developer",
+        "blazor-application-developer",
         "dotnet-qa-review-lead",
         "javascript-solution-architect",
         "javascript-application-developer",
@@ -303,15 +304,20 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool TryGetManagedSeedVersion(AgentDefinition agent, out string version)
     {
+        return TryGetManagedSeedVersion(agent.ConfigurationJson, out version);
+    }
+
+    private static bool TryGetManagedSeedVersion(string configurationJson, out string version)
+    {
         version = string.Empty;
-        if (string.IsNullOrWhiteSpace(agent.ConfigurationJson))
+        if (string.IsNullOrWhiteSpace(configurationJson))
         {
             return false;
         }
 
         try
         {
-            using var document = JsonDocument.Parse(agent.ConfigurationJson);
+            using var document = JsonDocument.Parse(configurationJson);
             if (!document.RootElement.TryGetProperty("managedSeedVersion", out var versionElement))
             {
                 return false;
@@ -328,6 +334,11 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool ShouldRefreshManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)
     {
+        if (ShouldRefreshVersionedManagedCapabilityFromSeed(existingCapability, seededCapability))
+        {
+            return true;
+        }
+
         if (string.Equals(seededCapability.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.ConfigurationJson.Contains("Use this skill only when the user explicitly asks for a Mermaid or class-diagram output.", StringComparison.OrdinalIgnoreCase);
@@ -345,17 +356,109 @@ internal static class SandboxWorkspaceSeedNormalizer
 
         if (string.Equals(seededCapability.Key, "blazor-ssr-delivery-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
-            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If the project structure or attached step materials name a concrete output directory")
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use this skill only for Blazor app delivery")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "generic across app domains")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If the project structure or attached step materials name a concrete output directory")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "external-target/<drive>/...")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "do not scaffold a parallel copy under `artifacts/...`, `output/...`, or another generated implementation folder")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "scaffold directly into it instead of adding an extra nested")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use a distinct concrete type such as `<Feature>Service`");
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Before any scaffold call")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use a distinct concrete type such as `<Feature>Service`")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "service, model, value object, or enum")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "inside the grounded product root")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "do not reuse the host scaffold parent directory with `name: <Host>.Tests`")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not scaffold `<ProductParent>/<Host>.Domain` as a sibling")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If policy denies an external-target path")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "current Blazor Web App")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "never authorize the obsolete `blazorserver` template")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Before final evidence artifacts or a governed outcome")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Final product-validation order")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never make validation pass by writing fake package")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds");
+        }
+
+        if (string.Equals(seededCapability.Key, "concrete-deliverable-delivery-inline-skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "any process step that creates, repairs, validates, or summarizes a concrete deliverable")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "A deliverable can be an app, service, API")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not reuse sample topics, older generated apps")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use technology-specific skills and tools only after the current files or step contract justify them")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Final delivery order is strict")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not cite files, paths, examples, source artifacts, or tool results as evidence")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For documents, render/export/open the produced file")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For spreadsheets, inspect workbook structure")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim completion with chat-only evidence");
+        }
+
+        if (string.Equals(seededCapability.Key, "dotnet-app-delivery-inline-skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For greenfield work with an explicit output root")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "parentDirectory: external-target/C/work/apps")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Before any scaffold call")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Keep the requested product domain authoritative")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "keep every generated app project, support library, test project")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "<product-root>/src/<AppName>.Domain")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "managed workspace roots such as `src/`, `tests/`, `tools/`")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If policy denies an external-target path")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Preserve the template-selected `TargetFramework`")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use one test framework per test project")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "If a scaffold command returns an unsuccessful result")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For ASP.NET Core, web API, or Blazor apps")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Final product-validation order")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Before final evidence artifacts or a governed outcome")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never make validation pass by writing fake package")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "waitForHttp: false")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds");
+        }
+
+        if (string.Equals(seededCapability.Key, "workspace-list-files", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-read-file", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-stat-path", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-create-directory", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-write-file", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-append-file", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-dotnet-restore", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-dotnet-build", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-dotnet-test", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(seededCapability.Key, "workspace-dotnet-run", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.Description.Contains("grounded external-target alias", StringComparison.OrdinalIgnoreCase)
+                   || (string.Equals(seededCapability.Key, "workspace-list-files", StringComparison.OrdinalIgnoreCase) &&
+                       (!existingCapability.Description.Contains("broad managed-root browsing is denied", StringComparison.OrdinalIgnoreCase) ||
+                        !existingCapability.Description.Contains("recursive globstar patterns", StringComparison.OrdinalIgnoreCase)))
+                   || (string.Equals(seededCapability.Key, "workspace-read-file", StringComparison.OrdinalIgnoreCase) &&
+                       !existingCapability.Description.Contains("unmanaged source or helper roots", StringComparison.OrdinalIgnoreCase))
+                   || ((string.Equals(seededCapability.Key, "workspace-create-directory", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(seededCapability.Key, "workspace-write-file", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(seededCapability.Key, "workspace-append-file", StringComparison.OrdinalIgnoreCase)) &&
+                       !existingCapability.Description.Contains("managed src/tests/tools roots", StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (string.Equals(seededCapability.Key, "workspace-search", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.Description.Contains("external-target paths require explicit current-run grounding", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("broad managed-root search is denied", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (string.Equals(seededCapability.Key, "workspace-dotnet-new", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.Description.Contains("grounded external-target alias", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("parentDirectory", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("parentDirectory under the grounded product root", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("never reuse the product parent", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("inspect an unsuccessful result before retrying", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("managed src/tests/tools roots", StringComparison.OrdinalIgnoreCase);
         }
 
         if (string.Equals(seededCapability.Key, "generated-app-summary-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
-            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "summarizing a generated Blazor Web App from concrete source files")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "query-backed form inputs by their actual names");
+            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "summarizing a generated application or runnable deliverable")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not read or cite artifacts/baseline")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "explicit distinction between proven facts, inferences, and gaps");
         }
 
         if (string.Equals(seededCapability.Key, "architecture-source-rag", StringComparison.OrdinalIgnoreCase))
@@ -372,6 +475,35 @@ internal static class SandboxWorkspaceSeedNormalizer
         }
 
         return false;
+    }
+
+    private static bool ShouldRefreshVersionedManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)
+    {
+        if (!seededCapability.IsBuiltIn)
+        {
+            return false;
+        }
+
+        if (!TryGetManagedSeedVersion(seededCapability.ConfigurationJson, out var seededVersion))
+        {
+            return false;
+        }
+
+        if (!TryGetManagedSeedVersion(existingCapability.ConfigurationJson, out var existingVersion))
+        {
+            return true;
+        }
+
+        if (!string.Equals(existingVersion, seededVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return !string.Equals(existingCapability.Name, seededCapability.Name, StringComparison.Ordinal) ||
+               !string.Equals(existingCapability.Description, seededCapability.Description, StringComparison.Ordinal) ||
+               !string.Equals(existingCapability.EndpointOrPath, seededCapability.EndpointOrPath, StringComparison.Ordinal) ||
+               !string.Equals(existingCapability.ProofNotes, seededCapability.ProofNotes, StringComparison.Ordinal) ||
+               existingCapability.IsBuiltIn != seededCapability.IsBuiltIn;
     }
 
     private static CapabilityCatalogItem RefreshManagedCapabilityFromSeed(CapabilityCatalogItem existingCapability, CapabilityCatalogItem seededCapability)

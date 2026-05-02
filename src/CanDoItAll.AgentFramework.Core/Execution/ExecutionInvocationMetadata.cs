@@ -8,6 +8,8 @@ public static class ExecutionInvocationMetadata
 {
     public const string MaxStructuredOutputRepairAttemptsMetadataKey = "agentMaxStructuredOutputRepairAttempts";
     public const string RequireStructuredOutputValidationMetadataKey = "agentRequireStructuredOutputValidation";
+    public const string AllowedExternalTargetAliasesMetadataKey = "agentAllowedExternalTargetAliases";
+    public const string ReadOnlyExternalTargetAliasesMetadataKey = "agentReadOnlyExternalTargetAliases";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
 
@@ -57,6 +59,22 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return TryReadBoolean(run.MetadataJson, RequireStructuredOutputValidationMetadataKey) ?? true;
+    }
+
+    public static IReadOnlyList<string> ResolveAllowedExternalTargetAliases(
+        ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return ResolveExternalTargetAliases(run, AllowedExternalTargetAliasesMetadataKey);
+    }
+
+    public static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases(
+        ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return ResolveExternalTargetAliases(run, ReadOnlyExternalTargetAliasesMetadataKey);
     }
 
     private static JsonObject ParseObject(string? metadataJson)
@@ -133,6 +151,41 @@ public static class ExecutionInvocationMetadata
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    private static IReadOnlyList<string> ResolveExternalTargetAliases(
+        ExecutionRunRecord run,
+        string metadataKey)
+    {
+        if (string.IsNullOrWhiteSpace(run.MetadataJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(run.MetadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty(metadataKey, out var value) ||
+                value.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return value
+                .EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item!.Replace('\\', '/').Trim().TrimEnd('/', '.', ',', ';', ':', ')', ']', '}'))
+                .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+        catch (JsonException)
+        {
+            return [];
         }
     }
 

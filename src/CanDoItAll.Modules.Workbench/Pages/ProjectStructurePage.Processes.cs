@@ -209,15 +209,16 @@ public partial class ProjectStructurePage
                     }
                     else
                     {
-                        ObserveTimedOutLaunchPlanCreation(createTask, ProjectId, dialog.ProcessDefinitionId);
+                        ObserveTimedOutLaunchPlanCreation(createTask, dialog);
                         processStartDialog = dialog with
                         {
-                            IsBusy = false,
-                            Error = "The launch plan request did not complete within the bounded staffing window. Close the dialog, reload the structure, and try again."
+                            IsBusy = true,
+                            StatusMessage = "Launch plan creation is still running. Staffing review will open here when it is ready.",
+                            Error = string.Empty
                         };
                         Logger.LogWarning(
                             exception,
-                            "Project-structure process start launch plan creation exceeded the bounded staffing window. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
+                            "Project-structure process start launch plan creation exceeded the interactive wait. The dialog remains pending and will recover when the launch plan is ready. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
                             ProjectId,
                             dialog.ProcessDefinitionId);
                         await InvokeAsync(StateHasChanged);
@@ -316,47 +317,125 @@ public partial class ProjectStructurePage
         }
     }
 
-    private void ObserveTimedOutLaunchPlanCreation(Task<Result<Guid>> createTask, Guid projectId, Guid processDefinitionId)
+    private void ObserveTimedOutLaunchPlanCreation(
+        Task<Result<Guid>> createTask,
+        ProjectStructureProcessStartDialogState originalDialog)
     {
-        _ = createTask.ContinueWith(
-            task =>
+        _ = RecoverTimedOutLaunchPlanCreationAsync(createTask, originalDialog);
+    }
+
+    private async Task RecoverTimedOutLaunchPlanCreationAsync(
+        Task<Result<Guid>> createTask,
+        ProjectStructureProcessStartDialogState originalDialog)
+    {
+        Result<Guid> result;
+        try
+        {
+            result = await createTask;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Timed-out project-structure launch plan creation later faulted. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
+                originalDialog.ProjectId,
+                originalDialog.ProcessDefinitionId);
+            await ApplyTimedOutLaunchPlanCreationFailureAsync(
+                originalDialog,
+                "Launch plan creation failed after the initial wait. Review the logs and try again.");
+            return;
+        }
+
+        if (result.IsFailure)
+        {
+            var message = result.Errors.FirstOrDefault()?.Message ?? "Unknown launch-plan creation error.";
+            Logger.LogWarning(
+                "Timed-out project-structure launch plan creation later failed. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} Error={Error}",
+                originalDialog.ProjectId,
+                originalDialog.ProcessDefinitionId,
+                message);
+            await ApplyTimedOutLaunchPlanCreationFailureAsync(originalDialog, message);
+            return;
+        }
+
+        Logger.LogWarning(
+            "Timed-out project-structure launch plan creation recovered after the initial UI wait. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId}",
+            originalDialog.ProjectId,
+            originalDialog.ProcessDefinitionId,
+            result.Value);
+
+        try
+        {
+            await InvokeAsync(async () =>
             {
-                if (task.IsFaulted)
+                if (!IsCurrentPendingLaunchPlanDialog(originalDialog))
                 {
-                    Logger.LogWarning(
-                        task.Exception,
-                        "Timed-out project-structure launch plan creation later faulted. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
-                        projectId,
-                        processDefinitionId);
                     return;
                 }
 
-                if (task.IsCanceled)
+                var launchPlan = await ProcessesService.GetLaunchPlanAsync(result.Value);
+                if (launchPlan is null)
                 {
-                    Logger.LogWarning(
-                        "Timed-out project-structure launch plan creation was later canceled. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId}",
-                        projectId,
-                        processDefinitionId);
+                    processStartDialog = originalDialog with
+                    {
+                        LaunchPlanId = result.Value,
+                        IsBusy = false,
+                        Error = "The launch plan was created but could not be loaded for staffing."
+                    };
+                    StateHasChanged();
                     return;
                 }
 
-                if (task.Result.IsFailure)
-                {
-                    Logger.LogWarning(
-                        "Timed-out project-structure launch plan creation later failed. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} Error={Error}",
-                        projectId,
-                        processDefinitionId,
-                        task.Result.Errors.FirstOrDefault()?.Message ?? "Unknown launch-plan creation error.");
-                    return;
-                }
+                processStartDialog = MapProcessStartDialogState(
+                    originalDialog,
+                    launchPlan,
+                    HasRequiredRoleGaps(launchPlan)
+                        ? "Assign the required roles before the process can start."
+                        : "Review the planned assignments before starting the process.");
+                StateHasChanged();
+            });
+        }
+        catch (InvalidOperationException exception)
+        {
+            Logger.LogDebug(
+                exception,
+                "Skipped timed-out project-structure launch plan UI recovery because the component was no longer available. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId}",
+                originalDialog.ProjectId,
+                originalDialog.ProcessDefinitionId,
+                result.Value);
+        }
+    }
 
-                Logger.LogWarning(
-                    "Timed-out project-structure launch plan creation later completed after the UI had given up. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId}",
-                    projectId,
-                    processDefinitionId,
-                    task.Result.Value);
-            },
-            TaskScheduler.Default);
+    private Task ApplyTimedOutLaunchPlanCreationFailureAsync(
+        ProjectStructureProcessStartDialogState originalDialog,
+        string message)
+    {
+        return InvokeAsync(() =>
+        {
+            if (!IsCurrentPendingLaunchPlanDialog(originalDialog))
+            {
+                return;
+            }
+
+            processStartDialog = originalDialog with
+            {
+                IsBusy = false,
+                Error = message
+            };
+            StateHasChanged();
+        });
+    }
+
+    private bool IsCurrentPendingLaunchPlanDialog(ProjectStructureProcessStartDialogState originalDialog)
+    {
+        return processStartDialog is
+        {
+            LaunchPlanId: null,
+            Stage: ProjectStructureProcessStartStage.Confirm
+        } current &&
+        current.ProjectId == originalDialog.ProjectId &&
+        current.ProcessDefinitionId == originalDialog.ProcessDefinitionId &&
+        string.Equals(current.NodeId, originalDialog.NodeId, StringComparison.Ordinal);
     }
 
     private async Task SelectProcessStartCandidateAsync(ProjectStructureProcessStartCandidateSelection selection)

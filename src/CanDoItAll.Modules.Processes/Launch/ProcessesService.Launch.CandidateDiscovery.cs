@@ -18,6 +18,11 @@ public sealed partial class ProcessesService
         var projectAssignments = projectId.HasValue
             ? await projectPartyIntegrationBridge.ListAssignmentsDetailedAsync(projectId.Value, cancellationToken)
             : [];
+        var project = projectId.HasValue
+            ? await dbContext.Set<Project>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == projectId.Value, cancellationToken)
+            : null;
         var projectAssignmentsByRole = projectAssignments
             .GroupBy(item => item.Role)
             .ToDictionary(
@@ -32,6 +37,7 @@ public sealed partial class ProcessesService
                 aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
                 cancellationToken))
             .ToDictionary(item => item.PartyId);
+        ProcessProjectStructureContextFormatter.TryParse(plan.TriggerReason, out var projectStructureContext);
         var roleSkillIds = publishedContext.RoleSkillsByRoleId.Values
             .SelectMany(item => item)
             .Select(item => item.SkillId)
@@ -42,6 +48,12 @@ public sealed partial class ProcessesService
             : await dbContext.Set<SkillDefinition>()
                 .Where(item => roleSkillIds.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+        var launchContext = await BuildLaunchRoleContextAsync(
+            dbContext,
+            plan,
+            project,
+            projectStructureContext,
+            cancellationToken);
         var roleRecommendations = new List<ProcessLaunchRoleRecommendation>(publishedContext.Roles.Count);
 
         foreach (var role in publishedContext.Roles)
@@ -65,6 +77,7 @@ public sealed partial class ProcessesService
                 requiredSkillIdValues,
                 skillNamesById,
                 aiStaffingFactsByPartyId,
+                launchContext,
                 candidateList);
             var selectedCandidate = candidateList
                 .OrderByDescending(item => item.IsRecommended)
@@ -384,6 +397,7 @@ public sealed partial class ProcessesService
         IReadOnlyList<Guid> requiredSkillIds,
         IReadOnlyDictionary<Guid, string> skillNames,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId,
+        IReadOnlyList<string?> launchContext,
         List<ProcessLaunchCandidate> candidates)
     {
         if (candidates.Count == 0)
@@ -398,7 +412,8 @@ public sealed partial class ProcessesService
                 candidate,
                 requiredSkillIds,
                 skillNames,
-                aiFactsByPartyId);
+                aiFactsByPartyId,
+                launchContext);
             candidate.IsRecommended = false;
         }
 

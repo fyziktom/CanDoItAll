@@ -18,7 +18,7 @@ Deploy the approved change inside the controlled release window while telemetry 
 
 ## Governance
 - Decision rights: Release manager may execute only inside the approved window and rollback-trigger boundaries.
-- Exception policy: Trigger halt or rollback immediately when telemetry, tenant impact, or operational constraints breach the approved threshold.
+- Exception policy: Trigger halt or rollback immediately when telemetry, user impact, data impact, or operational constraints breach the approved threshold.
 - Requires approval: False
 - Requires decision record: False
 

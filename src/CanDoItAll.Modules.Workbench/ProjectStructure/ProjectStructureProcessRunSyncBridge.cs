@@ -8,6 +8,10 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureProcessRunSyncBridge(IClock clock) : IProcessProjectStructureBridge
 {
+    private const int LaunchContextNodeLimit = 18;
+    private const int LaunchContextTextLimit = 360;
+    private const string ProcessDefinitionNodePrefix = "process-definition:";
+
     public async Task SyncRunAsync(
         AppDbContext dbContext,
         ProcessRun run,
@@ -107,6 +111,108 @@ internal sealed class ProjectStructureProcessRunSyncBridge(IClock clock) : IProc
         }
     }
 
+    public async Task<IReadOnlyList<string>> ListLaunchContextAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProcessProjectStructureContext? projectStructureContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        if (projectId == Guid.Empty)
+        {
+            return [];
+        }
+
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var nodes = await dbContext.Set<ProjectObjectRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
+            .ToListAsync(cancellationToken);
+        if (nodes.Count == 0)
+        {
+            return [];
+        }
+
+        nodes = nodes
+            .OrderBy(item => item.CreatedAtUtc)
+            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var relevantNodeKeys = ResolveLaunchContextNodeKeys(nodes, projectStructureContext);
+        return nodes
+            .Where(item => HasLaunchContextSignal(item) || relevantNodeKeys.Contains(item.NodeKey))
+            .OrderByDescending(item => relevantNodeKeys.Contains(item.NodeKey))
+            .ThenBy(item => item.ObjectType == ProjectObjectType.ProcessDefinition)
+            .ThenBy(item => item.CreatedAtUtc)
+            .Take(LaunchContextNodeLimit)
+            .Select(BuildLaunchContextLine)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList();
+    }
+
+    public async Task<ProcessProjectStructureContext?> TryResolveLaunchContextAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        Guid processDefinitionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        if (projectId == Guid.Empty || processDefinitionId == Guid.Empty)
+        {
+            return null;
+        }
+
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var processNodeKey = BuildProcessDefinitionNodeKey(processDefinitionId);
+        var userLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProjectId == projectId &&
+                item.TargetNodeKey == processNodeKey &&
+                item.LinkKind == ProjectObjectLinkKind.Uses &&
+                !item.IsSystemManaged)
+            .ToListAsync(cancellationToken);
+        if (userLinks.Count == 0)
+        {
+            return null;
+        }
+
+        var sourceNodeKeys = userLinks
+            .Select(item => item.SourceNodeKey)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var sourceNodes = await dbContext.Set<ProjectObjectRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProjectId == projectId && sourceNodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        var candidates = sourceNodes
+            .Where(item => !item.IsSystemManaged)
+            .OrderBy(item => IsProjectRootNode(item.NodeKey, projectId))
+            .ThenByDescending(item => item.UpdatedAtUtc)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .ToList();
+        if (candidates.Count != 1)
+        {
+            return null;
+        }
+
+        var processDefinition = await dbContext.Set<ProcessDefinition>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == processDefinitionId, cancellationToken);
+        var targetNode = candidates[0];
+        return new ProcessProjectStructureContext
+        {
+            ProjectId = projectId,
+            NodeId = processNodeKey,
+            NodeTitle = processDefinition?.Name ?? "Process definition",
+            ParentNodeId = targetNode.NodeKey,
+            ParentNodeTitle = targetNode.Title
+        };
+    }
+
     private static bool IsBoundToRun(ProjectNodeBindingState binding, Guid runId)
     {
         if (!binding.ExternalArtifactId.HasValue || binding.ExternalArtifactId.Value != runId)
@@ -116,6 +222,116 @@ internal sealed class ProjectStructureProcessRunSyncBridge(IClock clock) : IProc
 
         return string.Equals(binding.ExternalArtifactKind, ProjectObjectType.ProcessRun.ToString(), StringComparison.OrdinalIgnoreCase) ||
                string.Equals(binding.ExternalArtifactKind, "process-run", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static HashSet<string> ResolveLaunchContextNodeKeys(
+        IReadOnlyList<ProjectObjectRecord> nodes,
+        ProcessProjectStructureContext? projectStructureContext)
+    {
+        var selectedNodeKeys = new HashSet<string>(StringComparer.Ordinal);
+        if (projectStructureContext is null)
+        {
+            return selectedNodeKeys;
+        }
+
+        var nodesByKey = nodes.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
+        AddNodeWithAncestors(projectStructureContext.NodeId);
+        AddNodeWithAncestors(projectStructureContext.ResolveTargetNodeId());
+
+        var targetNodeId = projectStructureContext.ResolveTargetNodeId();
+        foreach (var child in nodes.Where(item => string.Equals(item.ParentNodeKey, targetNodeId, StringComparison.Ordinal)))
+        {
+            selectedNodeKeys.Add(child.NodeKey);
+        }
+
+        return selectedNodeKeys;
+
+        void AddNodeWithAncestors(string? nodeKey)
+        {
+            var currentKey = nodeKey;
+            while (!string.IsNullOrWhiteSpace(currentKey) &&
+                   nodesByKey.TryGetValue(currentKey, out var node) &&
+                   selectedNodeKeys.Add(node.NodeKey))
+            {
+                currentKey = node.ParentNodeKey;
+            }
+        }
+    }
+
+    private static bool HasLaunchContextSignal(ProjectObjectRecord node)
+    {
+        return node.ObjectType != ProjectObjectType.ProjectRoot &&
+               (!string.IsNullOrWhiteSpace(node.Title) ||
+                !string.IsNullOrWhiteSpace(node.Subtitle) ||
+                !string.IsNullOrWhiteSpace(node.Notes) ||
+                HasMeaningfulJson(node.MetadataJson));
+    }
+
+    private static string BuildLaunchContextLine(ProjectObjectRecord node)
+    {
+        var parts = new List<string>
+        {
+            $"Project node: {TrimLaunchContextText(node.Title, 120)}",
+            $"type: {node.ObjectType}/{TrimLaunchContextText(node.ObjectSubtype, 60)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(node.Subtitle))
+        {
+            parts.Add($"subtitle: {TrimLaunchContextText(node.Subtitle, 160)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Status))
+        {
+            parts.Add($"status: {TrimLaunchContextText(node.Status, 80)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Notes))
+        {
+            parts.Add($"notes: {TrimLaunchContextText(node.Notes, LaunchContextTextLimit)}");
+        }
+
+        if (HasMeaningfulJson(node.MetadataJson))
+        {
+            parts.Add($"metadata: {TrimLaunchContextText(node.MetadataJson, LaunchContextTextLimit)}");
+        }
+
+        return string.Join("; ", parts.Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static bool HasMeaningfulJson(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        return !string.Equals(trimmed, "{}", StringComparison.Ordinal) &&
+               !string.Equals(trimmed, "[]", StringComparison.Ordinal);
+    }
+
+    private static string TrimLaunchContextText(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string BuildProcessDefinitionNodeKey(Guid definitionId)
+    {
+        return $"{ProcessDefinitionNodePrefix}{definitionId:D}";
+    }
+
+    private static bool IsProjectRootNode(string nodeKey, Guid projectId)
+    {
+        return string.Equals(
+            nodeKey,
+            ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
+            StringComparison.Ordinal);
     }
 
     private static void ApplyRunState(

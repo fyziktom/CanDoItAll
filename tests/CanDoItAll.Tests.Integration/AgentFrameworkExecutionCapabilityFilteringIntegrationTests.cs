@@ -161,6 +161,34 @@ public sealed class AgentFrameworkExecutionCapabilityFilteringIntegrationTests
         Assert.Equal(retainedCapability.Id, attachedCapability.Id);
     }
 
+    [Fact]
+    public void ResolveAgentMemoryForRun_suppresses_unscoped_memory_for_governed_process_steps()
+    {
+        var agentId = Guid.NewGuid();
+        var memory = new AgentMemoryRecord(
+            Guid.NewGuid(),
+            agentId,
+            MemoryKind.Context,
+            "Prior app target",
+            "Use external-target/C/old/sample-app.",
+            "manual",
+            10,
+            "{}",
+            DateTimeOffset.UtcNow);
+        var catalog = new SandboxWorkspaceCatalog(
+            Version: "1.0",
+            Agents: [],
+            Providers: [],
+            Capabilities: [],
+            Memory: [memory]);
+
+        var manualRun = CreateExecutionRun(agentId, "manual", processRunId: string.Empty, processStepId: string.Empty);
+        var governedRun = CreateExecutionRun(agentId, "process-step", processRunId: "run-001", processStepId: "step-001");
+
+        Assert.Single(InvokeResolveAgentMemoryForRun(catalog, agentId, manualRun));
+        Assert.Empty(InvokeResolveAgentMemoryForRun(catalog, agentId, governedRun));
+    }
+
     private static IReadOnlyList<CapabilityCatalogItem> InvokeResolveAttachedCapabilities(
         SandboxWorkspaceCatalog catalog,
         AgentDefinition agent)
@@ -175,5 +203,58 @@ public sealed class AgentFrameworkExecutionCapabilityFilteringIntegrationTests
 
         return Assert.IsAssignableFrom<IReadOnlyList<CapabilityCatalogItem>>(
             method.Invoke(null, [catalog, agent]));
+    }
+
+    private static IReadOnlyList<AgentMemoryRecord> InvokeResolveAgentMemoryForRun(
+        SandboxWorkspaceCatalog catalog,
+        Guid agentId,
+        ExecutionRunRecord run)
+    {
+        var executionServiceType = Type.GetType(
+            "CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService, CanDoItAll.AgentFramework.Core",
+            throwOnError: true)
+            ?? throw new InvalidOperationException("Could not resolve AgentFrameworkWorkspaceExecutionService.");
+        var method = executionServiceType
+            .GetMethod("ResolveAgentMemoryForRun", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Could not find ResolveAgentMemoryForRun.");
+
+        return Assert.IsAssignableFrom<IReadOnlyList<AgentMemoryRecord>>(
+            method.Invoke(null, [catalog, agentId, run]));
+    }
+
+    private static ExecutionRunRecord CreateExecutionRun(
+        Guid agentId,
+        string sourceKind,
+        string processRunId,
+        string processStepId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agentId,
+            ChatSessionId: null,
+            Title: "Test run",
+            SourceKind: sourceKind,
+            SourceId: "source-001",
+            CorrelationId: string.Empty,
+            CausationId: string.Empty,
+            RequestedBy: "test",
+            RequestedByKind: "test",
+            MetadataJson: "{}",
+            InputSummary: string.Empty,
+            ResultSummary: string.Empty,
+            ProviderName: "test",
+            Model: "test-model",
+            State: ExecutionState.Preparing,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            ProcessRunId: processRunId,
+            ProcessStepId: processStepId);
     }
 }

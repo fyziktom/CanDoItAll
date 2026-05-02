@@ -1,0 +1,152 @@
+- main [ref=e2146]:
+  - generic [ref=e2147]:
+    - generic [ref=e2150]:
+      - generic [ref=e2151]:
+        - button "Dashboard" [ref=e2153]:
+          - generic [ref=e2154]: Dashboard
+          - generic [ref=e2156]: push_pin
+        - button "Projects" [ref=e2158]:
+          - generic [ref=e2159]: Projects
+        - button "Projects" [ref=e2161]:
+          - generic [ref=e2162]: Projects
+        - button "Projects" [ref=e2164]:
+          - generic [ref=e2165]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e2167]:
+          - generic [ref=e2168]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e2170]:
+          - generic [ref=e2171]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e2172]:
+        - textbox "Search tabs" [ref=e2173]
+        - group [ref=e2174]:
+          - generic "+19" [ref=e4145] [cursor=pointer]
+    - generic [ref=e2177]:
+      - generic [ref=e2178]:
+        - generic [ref=e2179]: Active database
+        - generic [ref=e2180]: PostgreSQL workspace
+        - generic [ref=e2181]: PostgreSQL
+        - button "Show db details" [ref=e2183] [cursor=pointer]:
+          - generic [ref=e2184]: "?"
+      - button "Switch database" [ref=e2185]:
+        - generic [ref=e2186]: Switch database
+      - generic [ref=e2187]: Interactive Server
+      - generic [ref=e2188]: Live items 12
+      - generic [ref=e2189]: Tabs 25
+  - generic [ref=e4147]:
+    - button "tune" [ref=e4148]
+    - generic [ref=e4149]:
+      - generic [ref=e4151]:
+        - paragraph [ref=e4152]: Workbench
+        - heading "Validation v59 - Community Potluck Allergen Board structure" [level=1] [ref=e4153]
+      - generic [ref=e4154]:
+        - generic [ref=e4156]:
+          - generic [ref=e4157]:
+            - paragraph [ref=e4158]: Structure canvas
+            - generic [ref=e4159]:
+              - generic [ref=e4160]:
+                - heading "Validation v59 - Community Potluck Allergen Board workbench" [level=2] [ref=e4162]
+                - paragraph [ref=e4163]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e4164]:
+                - generic [ref=e4165]:
+                  - generic [ref=e4166]: Nodes
+                  - strong [ref=e4167]: "1"
+                - generic [ref=e4168]:
+                  - generic [ref=e4169]: Links
+                  - strong [ref=e4170]: "0"
+                - generic [ref=e4171]:
+                  - generic [ref=e4172]: Selection
+                  - strong [ref=e4173]: "1"
+          - generic [ref=e4175]:
+            - generic [ref=e4176]:
+              - generic [ref=e4177]:
+                - button "Open quick create actions" [ref=e4178] [cursor=pointer]:
+                  - generic [ref=e4179]: add
+                  - generic [ref=e4180]: Open quick create actions
+                - button "Focus root" [ref=e4181] [cursor=pointer]:
+                  - generic [ref=e4182]: center_focus_strong
+                  - generic [ref=e4183]: Focus root
+                - generic [ref=e4184]:
+                  - generic [ref=e4185]
+                  - button "Inspector" [ref=e4195] [cursor=pointer]
+                  - button "Health" [ref=e4198] [cursor=pointer]
+                  - button "Blocks" [ref=e4201] [cursor=pointer]
+                  - button "Signals" [ref=e4204] [cursor=pointer]
+                  - button "Agents" [ref=e4207] [cursor=pointer]
+                  - button "Recompose" [disabled] [ref=e4210]
+              - generic [ref=e4212]:
+                - button "Fit canvas" [ref=e4213] [cursor=pointer]:
+                  - generic [ref=e4214]: fit_screen
+                  - generic [ref=e4215]: Fit canvas
+                - button "Toggle maximize" [ref=e4216] [cursor=pointer]:
+                  - generic [ref=e4217]: open_in_full
+                  - generic [ref=e4218]: Maximize canvas
+                - button "Toggle minimap" [ref=e4219] [cursor=pointer]:
+                  - generic [ref=e4220]: map
+                  - generic [ref=e4221]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e4222] [cursor=pointer]:
+                  - generic [ref=e4223]: monitor_heart
+                  - generic [ref=e4224]: Toggle diagnostics
+                - button "Toggle help" [ref=e4225] [cursor=pointer]:
+                  - generic [ref=e4226]: help
+                  - generic [ref=e4227]: Canvas help
+                - button "Toggle settings" [ref=e4228] [cursor=pointer]:
+                  - generic [ref=e4229]: settings
+                  - generic [ref=e4230]: Canvas settings
+                - generic [ref=e4231]:
+                  - button "Zoom out" [ref=e4232] [cursor=pointer]
+                  - slider "Canvas zoom" [ref=e4235]: "100"
+                  - button "Zoom in" [ref=e4236] [cursor=pointer]
+                  - generic [ref=e4239]: 100%
+            - generic [ref=e4240]:
+              - generic "Canvas workbench" [ref=e4241]:
+                - generic [ref=e4242]:
+                  - generic
+                - generic [ref=e4768]:
+                  - paragraph [ref=e4769]: Local folder
+                  - heading "Create Local folder" [level=3] [ref=e4770]
+                  - generic [ref=e4771]
+                  - generic [ref=e4827]
+              - generic [ref=e4248]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents":
+                - generic:
+                  - generic
+                  - generic
+                - generic:
+                  - generic
+              - region "Project structure selection panel":
+                - generic:
+                  - generic
+                  - generic
+                - generic:
+                  - generic
+              - generic:
+                - generic: Validation v59 - Community Potluck Allergen Board is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 1 canvas nodes
+                  - list
+        - generic [ref=e4597]:
+          - generic [ref=e4599]:
+            - paragraph [ref=e4600]: Outline
+            - heading "Project object index" [level=5] [ref=e4601]
+            - tree "Project object index" [ref=e4603]:
+              - treeitem "Validation v59 - Community Potluck Allergen Board Draft" [selected] [ref=e4604]:
+                - button "Validation v59 - Community Potluck Allergen Board Draft" [ref=e4607]:
+                  - generic [ref=e4609]: folder
+                  - generic [ref=e4610]: Validation v59 - Community Potluck Allergen Board
+                  - generic [ref=e4611]: Draft
+          - generic [ref=e4613]:
+            - paragraph [ref=e4614]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e4615]
+            - generic [ref=e4616]:
+              - generic [ref=e4617]:
+                - paragraph [ref=e4618]: Total nodes
+                - paragraph [ref=e4619]: "1"
+              - generic [ref=e4620]:
+                - paragraph [ref=e4621]: Total links
+                - paragraph [ref=e4622]: "0"
+              - generic [ref=e4623]:
+                - paragraph [ref=e4624]: Selected
+                - paragraph [ref=e4625]: "1"
+            - paragraph [ref=e4626]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e4048]:
+    - generic "Workbench utilities" [ref=e4627] [cursor=pointer]

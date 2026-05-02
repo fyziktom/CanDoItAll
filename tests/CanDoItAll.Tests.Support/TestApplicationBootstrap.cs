@@ -21,6 +21,7 @@ using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +65,7 @@ public static class TestApplicationBootstrap
         }
 
         services.TryAddSingleton<IJSRuntime, UnsupportedJsRuntime>();
+        services.TryAddScoped<NavigationManager, TestNavigationManager>();
         services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
@@ -114,6 +116,18 @@ public static class TestApplicationBootstrap
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+        }
+    }
+
+    private sealed class TestNavigationManager : NavigationManager
+    {
+        public TestNavigationManager()
+        {
+            Initialize("http://localhost/", "http://localhost/");
+        }
+
+        protected override void NavigateToCore(string uri, NavigationOptions options)
+        {
         }
     }
 }

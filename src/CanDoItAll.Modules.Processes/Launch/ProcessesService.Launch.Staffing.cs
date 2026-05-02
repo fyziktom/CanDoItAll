@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,9 +12,11 @@ public sealed partial class ProcessesService
     private const string WorkspaceDotnetBuildCapability = "workspace-dotnet-build";
     private const string WorkspaceDotnetNewCapability = "workspace-dotnet-new";
     private const string WorkspaceDotnetTestCapability = "workspace-dotnet-test";
+    private const string WorkspaceDotnetRunCapability = "workspace-dotnet-run";
     private const string RunTestsCapability = "run-tests";
     private const string PlaywrightLocalMcpCapability = "playwright-local-mcp";
     private const string ArchitectureSourceRagCapability = "architecture-source-rag";
+    private const int RoleSpecificContextItemCount = 4;
     private static readonly HashSet<string> RoleKeywordStopWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "and",
@@ -32,7 +35,22 @@ public sealed partial class ProcessesService
         "current",
         "must",
         "keep",
-        "actual"
+        "actual",
+        "process",
+        "workflow",
+        "launch",
+        "proof",
+        "validation",
+        "integration",
+        "deterministic",
+        "sample",
+        "role",
+        "agent",
+        "resource",
+        "delivery",
+        "request",
+        "requested",
+        "implementation"
     };
 
     public async Task<Result> MatchLaunchPlanWithHrManagerAsync(
@@ -84,6 +102,26 @@ public sealed partial class ProcessesService
                 .ToDictionary(group => group.Key, group => group.ToList());
             var changedRoleIds = new HashSet<Guid>();
             var skillNames = await LoadSkillNamesAsync(dbContext, roles, cancellationToken);
+            var roleRequirementIds = roles
+                .Select(item => item.RoleRequirementId)
+                .ToList();
+            var roleRequirementsById = await dbContext.Set<ProcessRoleRequirement>()
+                .AsNoTracking()
+                .Where(item => item.ProcessDefinitionVersionId == plan.ProcessDefinitionVersionId &&
+                               roleRequirementIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
+            var project = plan.ProjectId.HasValue
+                ? await dbContext.Set<Project>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == plan.ProjectId.Value, cancellationToken)
+                : null;
+            ProcessProjectStructureContextFormatter.TryParse(plan.TriggerReason, out var projectStructureContext);
+            var launchContext = await BuildLaunchRoleContextAsync(
+                dbContext,
+                plan,
+                project,
+                projectStructureContext,
+                cancellationToken);
             var aiFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
                     candidates
                         .Where(item => item.PartyId.HasValue)
@@ -96,6 +134,7 @@ public sealed partial class ProcessesService
             foreach (var role in roles)
             {
                 var requiredSkillIds = DeserializeGuidList(role.RequiredSkillIdsJson);
+                roleRequirementsById.TryGetValue(role.RoleRequirementId, out var roleRequirement);
                 if (!candidatesByRoleId.TryGetValue(role.Id, out var roleCandidates))
                 {
                     roleCandidates = [];
@@ -123,7 +162,7 @@ public sealed partial class ProcessesService
 
                 var selectedCandidate = roleCandidates
                     .Where(item => item.CandidateKind != ProcessLaunchCandidateKind.Gap)
-                    .OrderByDescending(item => ScoreCandidateForHrManager(role, item, requiredSkillIds, skillNames, aiFactsByPartyId))
+                    .OrderByDescending(item => ScoreCandidateForHrManager(role, roleRequirement, item, requiredSkillIds, skillNames, aiFactsByPartyId, launchContext))
                     .ThenByDescending(item => item.IsRecommended)
                     .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                     .FirstOrDefault();
@@ -324,16 +363,28 @@ public sealed partial class ProcessesService
 
     private static decimal ScoreCandidateForHrManager(
         ProcessLaunchPlanRole role,
+        ProcessRoleRequirement? roleRequirement,
         ProcessLaunchCandidate candidate,
         IReadOnlyList<Guid> requiredSkillIds,
         IReadOnlyDictionary<Guid, string> skillNames,
-        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId)
+        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId,
+        IReadOnlyList<string?> launchContext)
     {
+        var roleContext = roleRequirement is null
+            ? launchContext
+            : [
+                roleRequirement.Purpose,
+                roleRequirement.StaffingIntent,
+                roleRequirement.SnapshotSummary,
+                roleRequirement.RoleTemplateSourceKey,
+                .. launchContext
+            ];
+
         return ScoreCandidateForRole(
             role.DisplayName,
             role.RoleKey,
             role.PreferredExecutorKind,
-            [],
+            roleContext,
             IsAiRoleFromLaunchRole(role),
             candidate,
             requiredSkillIds,
@@ -346,13 +397,14 @@ public sealed partial class ProcessesService
         ProcessLaunchCandidate candidate,
         IReadOnlyList<Guid> requiredSkillIds,
         IReadOnlyDictionary<Guid, string> skillNames,
-        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId)
+        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId,
+        IReadOnlyList<string?> launchContext)
     {
         return ScoreCandidateForRole(
             role.DisplayName,
             role.Key,
             role.PreferredExecutorKind,
-            [role.Purpose, role.StaffingIntent, role.SnapshotSummary, role.RoleTemplateSourceKey, role.RoleTemplateSnapshotName],
+            [role.Purpose, role.StaffingIntent, role.SnapshotSummary, role.RoleTemplateSourceKey, .. launchContext],
             IsAiRole(role),
             candidate,
             requiredSkillIds,
@@ -377,6 +429,7 @@ public sealed partial class ProcessesService
             roleKey,
             preferredExecutorKind,
             additionalRoleContext);
+        var identityKeywords = BuildRoleIdentityKeywords(displayName, roleKey);
 
         var candidateText = string.Join(
             ' ',
@@ -388,6 +441,11 @@ public sealed partial class ProcessesService
                 candidate.AvailabilitySummary,
                 candidate.SourceRegistryKey
             }.Where(item => !string.IsNullOrWhiteSpace(item)));
+        if (candidate.CandidateKind is not ProcessLaunchCandidateKind.NewAiAgentProposal and not ProcessLaunchCandidateKind.Gap)
+        {
+            score += CountRoleKeywordMatches(candidate.DisplayName, identityKeywords) * 28m;
+        }
+
         score += CountRoleKeywordMatches(candidateText, keywords) * 2m;
 
         if (candidate.PartyId.HasValue &&
@@ -470,7 +528,11 @@ public sealed partial class ProcessesService
         AiAgentStaffingFactListItemModel aiFact)
     {
         var primaryRoleText = BuildRoleFitText(displayName, roleKey, []);
-        var roleText = BuildRoleFitText(displayName, roleKey, additionalRoleContext);
+        var roleSpecificText = BuildRoleFitText(
+            displayName,
+            roleKey,
+            TakeRoleSpecificContext(additionalRoleContext));
+        var workText = BuildRoleFitText(displayName, roleKey, additionalRoleContext);
         var agentText = BuildAgentFitText(aiFact);
         var capabilityNames = aiFact.Capabilities
             .Select(item => item.Name)
@@ -482,13 +544,47 @@ public sealed partial class ProcessesService
                                  RoleMentions(primaryRoleText, "architect");
         var isQaRole = RoleMentions(primaryRoleText, "qa") ||
                        RoleMentions(primaryRoleText, "quality");
+        var isProductOwnerRole = RoleMentions(primaryRoleText, "product-owner") ||
+                                 (RoleMentions(primaryRoleText, "product") &&
+                                  RoleMentions(primaryRoleText, "owner"));
+        var isDeliveryManagerRole = RoleMentions(primaryRoleText, "delivery-manager") ||
+                                    (RoleMentions(primaryRoleText, "delivery") &&
+                                     RoleMentions(primaryRoleText, "manager"));
         var isImplementationRole = !isArchitectureRole &&
                                    !isQaRole &&
+                                   !isProductOwnerRole &&
+                                   !isDeliveryManagerRole &&
                                    (RoleMentions(primaryRoleText, "lead-engineer") ||
                                     RoleMentions(primaryRoleText, "engineer") ||
-                                    RoleMentions(roleText, "software-engineer") ||
-                                    RoleMentions(roleText, "implementation") ||
-                                    RoleMentions(roleText, "build-capable"));
+                                    RoleMentions(roleSpecificText, "software-engineer") ||
+                                    RoleMentions(roleSpecificText, "implementation") ||
+                                    RoleMentions(roleSpecificText, "build-capable"));
+        var workMentionsBlazor = RoleMentions(workText, "blazor") ||
+                                 RoleMentions(workText, "razor");
+        var workMentionsDotNet = RoleMentions(workText, ".net") ||
+                                 RoleMentions(workText, "dotnet") ||
+                                 RoleMentions(workText, "c#") ||
+                                 RoleMentions(workText, "csharp");
+        var workMentionsJavaScript = RoleMentions(workText, "javascript") ||
+                                     RoleMentions(workText, "typescript");
+        var agentMentionsBlazor = RoleMentions(aiFact.DisplayName, "blazor") ||
+                                  RoleMentions(aiFact.RoleTitle, "blazor") ||
+                                  RoleMentions(aiFact.TemplateKey, "blazor") ||
+                                  RoleMentions(agentText, "blazor");
+        var agentMentionsDotNet = RoleMentions(aiFact.DisplayName, ".net") ||
+                                  RoleMentions(aiFact.DisplayName, "dotnet") ||
+                                  RoleMentions(aiFact.RoleTitle, ".net") ||
+                                  RoleMentions(aiFact.RoleTitle, "dotnet") ||
+                                  RoleMentions(aiFact.TemplateKey, "dotnet") ||
+                                  RoleMentions(agentText, ".net") ||
+                                  RoleMentions(agentText, "dotnet") ||
+                                  RoleMentions(agentText, "c#") ||
+                                  RoleMentions(agentText, "csharp");
+        var agentMentionsJavaScript = RoleMentions(aiFact.DisplayName, "javascript") ||
+                                      RoleMentions(aiFact.RoleTitle, "javascript") ||
+                                      RoleMentions(aiFact.TemplateKey, "javascript") ||
+                                      RoleMentions(agentText, "javascript") ||
+                                      RoleMentions(agentText, "typescript");
 
         if (TextEqualsNormalized(aiFact.DisplayName, displayName) ||
             TextEqualsNormalized(aiFact.RoleTitle, displayName))
@@ -508,6 +604,11 @@ public sealed partial class ProcessesService
                 score += 16m;
             }
 
+            if (HasCapability(capabilityNames, WorkspaceDotnetRunCapability))
+            {
+                score += 12m;
+            }
+
             if (HasCapability(capabilityNames, WorkspaceDotnetNewCapability))
             {
                 score += 14m;
@@ -519,10 +620,44 @@ public sealed partial class ProcessesService
                 score += 30m;
             }
 
-            if (RoleMentions(agentText, "review") &&
-                !HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+            if (workMentionsBlazor)
             {
-                score -= 20m;
+                if (RoleMentions(aiFact.DisplayName, "blazor") ||
+                    RoleMentions(aiFact.RoleTitle, "blazor") ||
+                    RoleMentions(aiFact.TemplateKey, "blazor"))
+                {
+                    score += 220m;
+                }
+                else if (agentMentionsBlazor)
+                {
+                    score += 110m;
+                }
+                else if (HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+                {
+                    score += 8m;
+                }
+            }
+
+            if (workMentionsDotNet)
+            {
+                if (RoleMentions(aiFact.DisplayName, ".net") ||
+                    RoleMentions(aiFact.DisplayName, "dotnet") ||
+                    RoleMentions(aiFact.RoleTitle, ".net") ||
+                    RoleMentions(aiFact.TemplateKey, "dotnet"))
+                {
+                    score += 45m;
+                }
+                else if (agentMentionsDotNet)
+                {
+                    score += 24m;
+                }
+            }
+
+            if (RoleMentions(agentText, "qa") ||
+                RoleMentions(agentText, "quality") ||
+                RoleMentions(agentText, "review"))
+            {
+                score -= 90m;
             }
         }
 
@@ -574,18 +709,40 @@ public sealed partial class ProcessesService
             }
         }
 
-        if (RoleMentions(primaryRoleText, "delivery-manager"))
+        if (isProductOwnerRole)
+        {
+            if (RoleMentions(agentText, "product") ||
+                RoleMentions(agentText, "business") ||
+                RoleMentions(agentText, "requirements") ||
+                RoleMentions(agentText, "strategy") ||
+                RoleMentions(agentText, "stakeholder") ||
+                RoleMentions(agentText, "scope"))
+            {
+                score += 70m;
+            }
+
+            if (MentionsTechnicalImplementationIdentity(agentText))
+            {
+                score -= 100m;
+            }
+        }
+
+        if (isDeliveryManagerRole)
         {
             if (RoleMentions(agentText, "portfolio") ||
                 RoleMentions(agentText, "governance") ||
-                RoleMentions(agentText, "delivery"))
+                RoleMentions(agentText, "delivery") ||
+                RoleMentions(agentText, "readiness") ||
+                RoleMentions(agentText, "release") ||
+                RoleMentions(agentText, "coordination") ||
+                RoleMentions(agentText, "manager"))
             {
-                score += 18m;
+                score += 70m;
             }
 
-            if (RoleMentions(agentText, "programming"))
+            if (MentionsTechnicalImplementationIdentity(agentText))
             {
-                score -= 14m;
+                score -= 90m;
             }
         }
 
@@ -607,9 +764,114 @@ public sealed partial class ProcessesService
             {
                 score -= 40m;
             }
+
+            if (workMentionsBlazor)
+            {
+                if (agentMentionsBlazor)
+                {
+                    score += 180m;
+                }
+
+                if (agentMentionsDotNet ||
+                    HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+                {
+                    score += 90m;
+                }
+
+                if (agentMentionsJavaScript &&
+                    !agentMentionsBlazor &&
+                    !agentMentionsDotNet)
+                {
+                    score -= 100m;
+                }
+            }
+
+            if (workMentionsDotNet)
+            {
+                if (agentMentionsDotNet ||
+                    HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+                {
+                    score += 80m;
+                }
+
+                if (agentMentionsJavaScript &&
+                    !agentMentionsBlazor &&
+                    !agentMentionsDotNet)
+                {
+                    score -= 70m;
+                }
+            }
+
+            if (workMentionsJavaScript &&
+                !workMentionsBlazor &&
+                !workMentionsDotNet &&
+                agentMentionsJavaScript)
+            {
+                score += 65m;
+            }
         }
 
         return score;
+    }
+
+    private static IReadOnlyList<string?> TakeRoleSpecificContext(IReadOnlyList<string?> additionalRoleContext)
+    {
+        if (additionalRoleContext.Count <= RoleSpecificContextItemCount)
+        {
+            return additionalRoleContext;
+        }
+
+        return additionalRoleContext
+            .Take(RoleSpecificContextItemCount)
+            .ToList();
+    }
+
+    private static bool MentionsTechnicalImplementationIdentity(string agentText)
+    {
+        return RoleMentions(agentText, "programming") ||
+               RoleMentions(agentText, "developer") ||
+               RoleMentions(agentText, "engineer") ||
+               RoleMentions(agentText, "implements") ||
+               RoleMentions(agentText, "blazor") ||
+               RoleMentions(agentText, "dotnet") ||
+               RoleMentions(agentText, ".net") ||
+               RoleMentions(agentText, "javascript");
+    }
+
+    private async Task<IReadOnlyList<string?>> BuildLaunchRoleContextAsync(
+        AppDbContext dbContext,
+        ProcessLaunchPlan plan,
+        Project? project,
+        ProcessProjectStructureContext? projectStructureContext,
+        CancellationToken cancellationToken)
+    {
+        var context = new List<string?>
+        {
+            plan.Name,
+            ProcessProjectStructureContextFormatter.RemoveSerializedContext(plan.TriggerReason),
+            project?.Name,
+            project?.Description,
+            project?.Objective,
+            project?.CurrentPhase
+        };
+
+        if (projectStructureContext is not null)
+        {
+            context.Add(projectStructureContext.NodeTitle);
+            context.Add(projectStructureContext.ParentNodeTitle);
+            context.Add(projectStructureContext.ResolveTargetNodeTitle());
+        }
+
+        if (plan.ProjectId.HasValue)
+        {
+            context.AddRange(await projectStructureBridge.ListLaunchContextAsync(
+                dbContext,
+                plan.ProjectId.Value,
+                projectStructureContext,
+                cancellationToken));
+        }
+
+        return context;
     }
 
     private static decimal ScorePreferredExecutorFit(string preferredExecutorKind, ProcessLaunchCandidate candidate)
@@ -647,6 +909,16 @@ public sealed partial class ProcessesService
     {
         return new[] { displayName, roleKey, preferredExecutorKind }
             .Concat(additionalRoleContext)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .SelectMany(item => item!.Split([' ', '-', '/', '_', ',', '.'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(IsMeaningfulRoleKeyword)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> BuildRoleIdentityKeywords(string displayName, string roleKey)
+    {
+        return new[] { displayName, roleKey }
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .SelectMany(item => item!.Split([' ', '-', '/', '_', ',', '.'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Where(IsMeaningfulRoleKeyword)

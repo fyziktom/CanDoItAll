@@ -1,0 +1,57 @@
+- generic [ref=e6255]:
+  - button "Copy id" [ref=e6778]:
+    - generic [ref=e6257]:
+      - generic [ref=e6259]: copy
+      - text: Copy id
+  - button "Copy info" [ref=e6779]:
+    - generic [ref=e6261]:
+      - generic [ref=e6263]: copy
+      - text: Copy info
+  - button "Copy tree ids" [ref=e6780]:
+    - generic [ref=e6265]:
+      - generic [ref=e6267]: copy
+      - text: Copy tree ids
+  - button "Open" [ref=e6781]:
+    - generic [ref=e6269]:
+      - generic [ref=e6271]: open_in_new
+      - text: Open
+  - button "Validate" [ref=e6782]:
+    - generic [ref=e6273]:
+      - generic [ref=e6275]: fact_check
+      - text: Validate
+  - button "Test" [ref=e6783]:
+    - generic [ref=e6277]:
+      - generic [ref=e6279]: science
+      - text: Test
+  - button "Summary" [ref=e6784]:
+    - generic [ref=e6281]:
+      - generic [ref=e6283]: pie_chart
+      - text: Summary
+  - button "Start" [ref=e6785]:
+    - generic [ref=e6285]:
+      - generic [ref=e6287]: play_arrow
+      - text: Start
+  - button "Connect selected" [ref=e6786]:
+    - generic [ref=e6575]:
+      - generic [ref=e6577]: link
+      - text: Connect selected
+  - button "Reconnect" [ref=e6787]:
+    - generic [ref=e6579]:
+      - generic [ref=e6581]: sync_alt
+      - text: Reconnect
+  - button "Disconnect" [ref=e6788]:
+    - generic [ref=e6583]:
+      - generic [ref=e6585]: link_off
+      - text: Disconnect
+  - button "To subproject" [ref=e6789]:
+    - generic [ref=e6587]:
+      - generic [ref=e6589]: call_split
+      - text: To subproject
+  - button "Export image" [ref=e6790]:
+    - generic [ref=e6591]:
+      - generic [ref=e6593]: image
+      - text: Export image
+  - button "Delete" [ref=e6791]:
+    - generic [ref=e6595]:
+      - generic [ref=e6597]: delete
+      - text: Delete

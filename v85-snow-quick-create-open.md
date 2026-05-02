@@ -1,0 +1,276 @@
+- main [ref=e2875]:
+  - group [ref=e2876]:
+    - generic "Workspace navigation" [ref=e2877] [cursor=pointer]
+  - generic [ref=e2878]:
+    - generic [ref=e2881]:
+      - generic [ref=e2882]:
+        - button "Dashboard" [ref=e2884]:
+          - generic [ref=e2885]: Dashboard
+          - generic [ref=e2887]: push_pin
+        - button "Validation v80 - Trail Cleanup Volunteer Scheduler · Structure" [ref=e2889]:
+          - generic [ref=e2890]: Validation v80 - Trail Cleanup Volunteer Scheduler · Structure
+        - button "Projects" [ref=e2892]:
+          - generic [ref=e2893]: Projects
+        - button "Validation v80 - Art Studio Kiln Firing Board · Structure" [ref=e2895]:
+          - generic [ref=e2896]: Validation v80 - Art Studio Kiln Firing Board · Structure
+        - button "Projects" [ref=e2898]:
+          - generic [ref=e2899]: Projects
+        - button "Projects" [ref=e2901]:
+          - generic [ref=e2902]: Projects
+      - generic [ref=e2903]:
+        - textbox "Search tabs" [ref=e2904]
+        - group [ref=e2905]:
+          - generic "+14" [ref=e5861] [cursor=pointer]
+    - generic [ref=e2908]:
+      - generic [ref=e2909]:
+        - generic [ref=e2910]: Active database
+        - generic [ref=e2911]: PostgreSQL workspace
+        - generic [ref=e2912]: PostgreSQL
+        - button "Show db details" [ref=e2914] [cursor=pointer]:
+          - generic [ref=e2915]: "?"
+      - button "Switch database" [ref=e2916]:
+        - generic [ref=e2917]: Switch database
+      - generic [ref=e2918]: Interactive Server
+      - generic [ref=e2919]: Live items 9
+      - generic [ref=e2920]: Tabs 20
+  - generic [ref=e5863]:
+    - button "tune" [ref=e5864]
+    - generic [ref=e5865]:
+      - generic [ref=e5867]:
+        - paragraph [ref=e5868]: Workbench
+        - heading "Validation v85 - Neighborhood Snow Shovel Roster structure" [level=1] [ref=e5869]
+      - generic [ref=e5870]:
+        - generic [ref=e5872]:
+          - generic [ref=e5873]:
+            - paragraph [ref=e5874]: Structure canvas
+            - generic [ref=e5875]:
+              - generic [ref=e5876]:
+                - heading "Validation v85 - Neighborhood Snow Shovel Roster workbench" [level=2] [ref=e5878]
+                - paragraph [ref=e5879]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e5880]:
+                - generic [ref=e5881]:
+                  - generic [ref=e5882]: Nodes
+                  - strong [ref=e5883]: "1"
+                - generic [ref=e5884]:
+                  - generic [ref=e5885]: Links
+                  - strong [ref=e5886]: "0"
+                - generic [ref=e5887]:
+                  - generic [ref=e5888]: Selection
+                  - strong [ref=e5889]: "1"
+          - generic [ref=e5891]:
+            - generic [ref=e5892]:
+              - generic [ref=e5893]:
+                - button "Open quick create actions" [ref=e5894] [cursor=pointer]:
+                  - generic [ref=e5895]: add
+                  - generic [ref=e5896]: Open quick create actions
+                - button "Focus root" [ref=e5897] [cursor=pointer]:
+                  - generic [ref=e5898]: center_focus_strong
+                  - generic [ref=e5899]: Focus root
+                - generic [ref=e5900]:
+                  - generic [ref=e5901]:
+                    - button "Select" [ref=e5902] [cursor=pointer]
+                    - button "Dependency" [ref=e5905] [cursor=pointer]
+                    - button "Delete" [ref=e5908] [cursor=pointer]
+                  - button "Inspector" [ref=e5911] [cursor=pointer]:
+                    - generic [ref=e5912]: visibility
+                    - generic [ref=e5913]: visibility
+                  - button "Health" [ref=e5914] [cursor=pointer]:
+                    - generic [ref=e5915]: assessment
+                    - generic [ref=e5916]: assessment
+                  - button "Blocks" [ref=e5917] [cursor=pointer]:
+                    - generic [ref=e5918]: dashboard
+                    - generic [ref=e5919]: dashboard
+                  - button "Signals" [ref=e5920] [cursor=pointer]:
+                    - generic [ref=e5921]: notifications_active
+                    - generic [ref=e5922]: notifications active
+                  - button "Agents" [ref=e5923] [cursor=pointer]:
+                    - generic [ref=e5924]: smart_toy
+                    - generic [ref=e5925]: smart toy
+                  - button "Recompose" [disabled] [ref=e5926]:
+                    - generic [ref=e5927]: Recompose
+              - generic [ref=e5928]:
+                - button "Fit canvas" [ref=e5929] [cursor=pointer]:
+                  - generic [ref=e5930]: fit_screen
+                  - generic [ref=e5931]: Fit canvas
+                - button "Toggle maximize" [ref=e5932] [cursor=pointer]:
+                  - generic [ref=e5933]: open_in_full
+                  - generic [ref=e5934]: Maximize canvas
+                - button "Toggle minimap" [ref=e5935] [cursor=pointer]:
+                  - generic [ref=e5936]: map
+                  - generic [ref=e5937]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e5938] [cursor=pointer]:
+                  - generic [ref=e5939]: monitor_heart
+                  - generic [ref=e5940]: Toggle diagnostics
+                - button "Toggle help" [ref=e5941] [cursor=pointer]:
+                  - generic [ref=e5942]: help
+                  - generic [ref=e5943]: Canvas help
+                - button "Toggle settings" [ref=e5944] [cursor=pointer]:
+                  - generic [ref=e5945]: settings
+                  - generic [ref=e5946]: Canvas settings
+                - generic [ref=e5947]:
+                  - button "Zoom out" [ref=e5948] [cursor=pointer]:
+                    - generic [ref=e5949]: remove
+                    - generic [ref=e5950]: Zoom out
+                  - slider "Canvas zoom" [ref=e5951]: "100"
+                  - button "Zoom in" [ref=e5952] [cursor=pointer]:
+                    - generic [ref=e5953]: add
+                    - generic [ref=e5954]: Zoom in
+                  - generic [ref=e5955]: 100%
+            - generic [ref=e5956]:
+              - generic "Canvas workbench" [active] [ref=e5957]:
+                - generic [ref=e5958]:
+                  - generic:
+                    - generic "Validation v85 - Neighborhood Snow Shovel Roster Input" [ref=e5960]
+                    - generic "Validation v85 - Neighborhood Snow Shovel Roster Output" [ref=e5961]
+                    - generic "Validation v85 - Neighborhood Snow Shovel Roster Input" [ref=e5962]
+                    - generic "Validation v85 - Neighborhood Snow Shovel Roster Output" [ref=e5963]
+                - generic [ref=e6344]:
+                  - generic [ref=e6347]: Validation v85 - Neighborhood Snow Shovel Roster
+                  - button "Note, shortcut N" [ref=e6348] [cursor=pointer]:
+                    - generic [ref=e6350]: ✎
+                    - strong [ref=e6351]
+                  - button "Decision, shortcut D" [ref=e6353] [cursor=pointer]:
+                    - generic [ref=e6355]: ◆
+                    - strong [ref=e6356]
+                  - button "Milestone, shortcut M" [ref=e6358] [cursor=pointer]:
+                    - generic [ref=e6360]: ◷
+                    - strong [ref=e6361]
+                  - button "Phase, shortcut H" [ref=e6363] [cursor=pointer]:
+                    - generic [ref=e6365]: ◭
+                    - strong [ref=e6366]
+                  - button "Blocks, shortcut B, opens submenu" [ref=e6368] [cursor=pointer]:
+                    - generic [ref=e6370]: B
+                    - strong [ref=e6371]
+                    - generic [ref=e6373]: ›
+                  - button "Meetings, shortcut Q, opens submenu" [ref=e6374] [cursor=pointer]:
+                    - generic [ref=e6376]: M
+                    - strong [ref=e6377]
+                    - generic [ref=e6381]: ›
+                  - button "People, shortcut P, opens submenu" [ref=e6382] [cursor=pointer]:
+                    - generic [ref=e6384]: P
+                    - strong [ref=e6385]
+                    - generic [ref=e6387]: ›
+                  - button "Work, shortcut W, opens submenu" [ref=e6388] [cursor=pointer]:
+                    - generic [ref=e6390]: T
+                    - strong [ref=e6391]
+                    - generic [ref=e6393]: ›
+                  - button "Prompts, shortcut R, opens submenu" [ref=e6394] [cursor=pointer]:
+                    - generic [ref=e6396]: ✶
+                    - strong [ref=e6397]
+                    - generic [ref=e6399]: ›
+                  - button "Runtime, shortcut U, opens submenu" [ref=e6400] [cursor=pointer]:
+                    - generic [ref=e6402]: R
+                    - strong [ref=e6403]
+                    - generic [ref=e6405]: ›
+                  - button "Assets, shortcut A, opens submenu" [ref=e6406] [cursor=pointer]:
+                    - generic [ref=e6408]: A
+                    - strong [ref=e6409]
+                    - generic [ref=e6411]: ›
+                  - button "Infrastructure, shortcut I, opens submenu" [ref=e6412] [cursor=pointer]:
+                    - generic [ref=e6414]: I
+                    - strong [ref=e6415]
+                    - generic [ref=e6417]: ›
+                  - button "Assurance, shortcut S, opens submenu" [ref=e6418] [cursor=pointer]:
+                    - generic [ref=e6420]: A
+                    - strong [ref=e6421]
+                    - generic [ref=e6423]: ›
+              - generic [ref=e5964]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e5965]:
+                - generic [ref=e5966]:
+                  - generic [ref=e5967]:
+                    - paragraph [ref=e5968]: Project agents
+                    - heading "Project agents" [level=3] [ref=e5969]
+                  - generic [ref=e5970]:
+                    - button "Minimize window" [ref=e5971]
+                    - button "Restart window position and size" [disabled] [ref=e5973]
+                    - button "Hide window" [ref=e5975]
+                - generic [ref=e5978]:
+                  - generic [ref=e5979]:
+                    - textbox "Search contextual agents" [ref=e5980]:
+                      - /placeholder: Search agents
+                    - textbox "Filter tags" [ref=e5984]
+                  - generic [ref=e5985]:
+                    - generic [ref=e5986]: 19 of 19
+                    - generic [ref=e5987]: This project
+                    - generic "Show contextual agent window help" [ref=e5989]
+                  - generic [ref=e5991]:
+                    - button "Open a new contextual chat thread with .NET Application Developer" [ref=e5992]
+                    - button "Open a new contextual chat thread with .NET QA Review Lead" [ref=e6004]
+                    - button "Open a new contextual chat thread with .NET Solution Architect" [ref=e6016]
+                    - button "Open a new contextual chat thread with Blazor Application Developer" [ref=e6028]
+                    - button "Open a new contextual chat thread with Business Strategist" [ref=e6041]
+                    - button "Open a new contextual chat thread with Code Review Lead" [ref=e6053]
+                    - button "Open a new contextual chat thread with Delivery QA Observer" [ref=e6065]
+                    - button "Open a new contextual chat thread with Financial Strategist" [ref=e6077]
+                    - button "Open a new contextual chat thread with HR Staffing Manager" [ref=e6089]
+                    - button "Open a new contextual chat thread with JavaScript Application Developer" [ref=e6101]
+                    - button "Open a new contextual chat thread with JavaScript QA Review Lead" [ref=e6113]
+                    - button "Open a new contextual chat thread with JavaScript Solution Architect" [ref=e6125]
+                    - button "Open a new contextual chat thread with Marketing Specialist" [ref=e6137]
+                    - button "Open a new contextual chat thread with Portfolio Architect" [ref=e6149]
+                    - button "Open a new contextual chat thread with Programming Workspace Analyst" [ref=e6162]
+                    - button "Open a new contextual chat thread with Release Readiness Manager" [ref=e6174]
+                    - button "Open a new contextual chat thread with Research Deep Dive Analyst" [ref=e6186]
+                    - button "Open a new contextual chat thread with Security Reviewer" [ref=e6198]
+                    - button "Open a new contextual chat thread with UI Review Lead" [ref=e6210]
+              - region "Project structure selection panel" [ref=e6222]:
+                - generic [ref=e6223]:
+                  - generic [ref=e6224]:
+                    - paragraph [ref=e6225]: Selection panel
+                    - heading "Validation v85 - Neighborhood Snow Shovel Roster" [level=3] [ref=e6226]
+                    - paragraph [ref=e6227]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e6228]:
+                    - button "Minimize window" [ref=e6229]
+                    - button "Restart window position and size" [disabled] [ref=e6231]
+                    - button "Hide window" [ref=e6233]
+                - generic [ref=e6236]:
+                  - generic [ref=e6237]:
+                    - paragraph [ref=e6238]: Project
+                    - heading "Validation v85 - Neighborhood Snow Shovel Roster" [level=3] [ref=e6239]
+                    - paragraph [ref=e6240]: Create a small Blazor app for coordinating neighborhood snow shovel turns. The generated app must be placed under C:\programovani\dotnet\NeighborhoodSnowShovelRoster. Agents must build it, run it, and prove the local UI works using their assigned process and tools.
+                    - generic [ref=e6241]
+                    - generic [ref=e6246]
+                  - generic [ref=e6253]:
+                    - paragraph [ref=e6254]: Node actions
+                    - generic [ref=e6255]
+                  - generic [ref=e6288]:
+                    - paragraph [ref=e6289]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e6290]
+                    - paragraph [ref=e6291]
+                    - generic [ref=e6293]
+                    - button "Open standard blocks" [ref=e6299]
+                  - group [ref=e6301]:
+                    - generic "Advanced details Show advanced details help" [ref=e6302]
+              - generic:
+                - generic: Validation v85 - Neighborhood Snow Shovel Roster is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 1 canvas nodes
+                  - list:
+                    - listitem: Validation v85 - Neighborhood Snow Shovel RosterCreate a small Blazor app for coordinating neighborhood snow shovel turns. The generated app must be placed under C:\programovani\dotnet\NeighborhoodSnowShovelRoster. Agents must build it, run it, and prove the local UI works using their assigned process and tools. • Status Draft • 3 annotations
+        - generic [ref=e6313]:
+          - generic [ref=e6315]:
+            - paragraph [ref=e6316]: Outline
+            - heading "Project object index" [level=5] [ref=e6317]
+            - tree "Project object index" [ref=e6319]:
+              - treeitem "Validation v85 - Neighborhood Snow Shovel Roster Draft" [selected] [ref=e6320]:
+                - button "Validation v85 - Neighborhood Snow Shovel Roster Draft" [ref=e6323]:
+                  - generic [ref=e6325]: folder
+                  - generic [ref=e6326]: Validation v85 - Neighborhood Snow Shovel Roster
+                  - generic [ref=e6327]: Draft
+          - generic [ref=e6329]:
+            - paragraph [ref=e6330]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e6331]
+            - generic [ref=e6332]:
+              - generic [ref=e6333]:
+                - paragraph [ref=e6334]: Total nodes
+                - paragraph [ref=e6335]: "1"
+              - generic [ref=e6336]:
+                - paragraph [ref=e6337]: Total links
+                - paragraph [ref=e6338]: "0"
+              - generic [ref=e6339]:
+                - paragraph [ref=e6340]: Selected
+                - paragraph [ref=e6341]: "1"
+            - paragraph [ref=e6342]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e5771]:
+    - generic "Workbench utilities" [ref=e6343] [cursor=pointer]

@@ -79,7 +79,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var agent = prepared.Agent;
         var provider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
-        var memory = ResolveAgentMemory(catalog, agent.Id);
+        var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         var structuredOutput = ResolveContinuationStructuredOutputContract(run);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run.resume", prepared.OriginalRun);
         AgentFrameworkTelemetry.RecordRunResume(prepared.OriginalRun);
@@ -555,7 +555,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         var prompt = request.Prompt.Trim();
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
-        var memory = ResolveAgentMemory(catalog, agent.Id);
+        var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
 
         PrimeProviderCredentialEnvironment(provider);

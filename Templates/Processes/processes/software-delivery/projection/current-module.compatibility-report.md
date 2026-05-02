@@ -7,6 +7,7 @@
 - Explicit multi-dependency modeling is used where needed.
 - Explicit artifact-input modeling is used where needed.
 - Decision-role requirements are modeled on decision and approval steps where applicable.
+- QA disposition now uses explicit quality-accepted and repair-required branches so repair work can be scheduled before security and release governance.
 - Canvas coordinates and branch coordinates are preserved in sidecars and projected envelopes.
 
 ## Sidecar-only fields

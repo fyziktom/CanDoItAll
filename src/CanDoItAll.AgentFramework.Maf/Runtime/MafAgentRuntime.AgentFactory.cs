@@ -124,7 +124,9 @@ public sealed partial class MafAgentRuntime
             agent,
             capabilityState,
             suppressApprovalRequirements,
-            toolInvocationTraceRecorder);
+            toolInvocationTraceRecorder,
+            finalizerCapture?.Policy,
+            runtimeOptions.FinalizerMode);
         return new RuntimeBuildResult(
             runtimeAgent,
             effectiveProvider,
@@ -308,7 +310,9 @@ public sealed partial class MafAgentRuntime
         AgentDefinition agentDefinition,
         RuntimeCapabilityState capabilityState,
         bool suppressApprovalRequirements,
-        ToolInvocationTraceRecorder toolInvocationTraceRecorder)
+        ToolInvocationTraceRecorder toolInvocationTraceRecorder,
+        AgentFinalizerPolicy? finalizerPolicy,
+        AgentFinalizerMode finalizerMode)
     {
         var builder = agent.AsBuilder();
         var toolPolicy = new DefaultAgentToolInvocationPolicy();
@@ -316,6 +320,11 @@ public sealed partial class MafAgentRuntime
             .Select(tool => tool.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var toolName in capabilityState.FrameworkToolNames)
+        {
+            knownToolNames.Add(toolName);
+        }
+
         var approvalWrappedToolNames = capabilityState.Tools
             .Where(tool => tool is ApprovalRequiredAIFunction)
             .Select(tool => tool.Name)
@@ -345,6 +354,8 @@ public sealed partial class MafAgentRuntime
                 SourceKind: auditScope?.SourceKind ?? string.Empty,
                 ProcessRunId: auditScope?.ProcessRunId ?? string.Empty,
                 ProcessStepId: auditScope?.ProcessStepId ?? string.Empty,
+                AllowedExternalTargetAliases: auditScope?.AllowedExternalTargetAliases ?? [],
+                ReadOnlyExternalTargetAliases: auditScope?.ReadOnlyExternalTargetAliases ?? [],
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
                 ApplicationApprovalAvailable: false);
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
@@ -383,8 +394,30 @@ public sealed partial class MafAgentRuntime
                     policyContext.HasEffectiveApprovalPath);
 
                 var result = await next(context, cancellationToken);
-                succeeded = true;
+                succeeded = IsSuccessfulToolInvocationResult(result);
+                if (succeeded)
+                {
+                    toolPolicy.RecordSuccessfulInvocation(policyContext);
+                    if (IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode))
+                    {
+                        logger?.LogInformation(
+                            "Required finalizer tool {ToolName} was captured for agent {AgentId}. Ending the Microsoft Agent Framework turn without waiting for post-finalizer prose.",
+                            functionName,
+                            agentDefinition.Id);
+                        throw new RequiredFinalizerCapturedException(functionName);
+                    }
+                }
+                else
+                {
+                    failureMessage = ResolveToolInvocationFailureMessage(result);
+                    activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
+                }
+
                 return result;
+            }
+            catch (RequiredFinalizerCapturedException)
+            {
+                throw;
             }
             catch (Exception exception)
             {
@@ -401,6 +434,48 @@ public sealed partial class MafAgentRuntime
             $"{AgentFrameworkTelemetry.SourceName}.Maf.{provider.Kind}",
             telemetry => telemetry.EnableSensitiveData = false);
         return builder.Build(services);
+    }
+
+    private static bool IsRequiredFinalizerTool(
+        string functionName,
+        AgentFinalizerPolicy? finalizerPolicy,
+        AgentFinalizerMode finalizerMode)
+    {
+        return finalizerMode == AgentFinalizerMode.Required &&
+               finalizerPolicy is { IsRequired: true } &&
+               string.Equals(functionName, finalizerPolicy.ToolName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSuccessfulToolInvocationResult(object? result)
+    {
+        if (result is null)
+        {
+            return true;
+        }
+
+        var succeededProperty = result.GetType().GetProperty("Succeeded");
+        return succeededProperty?.PropertyType == typeof(bool) &&
+               succeededProperty.GetValue(result) is bool succeeded
+            ? succeeded
+            : true;
+    }
+
+    private static string ResolveToolInvocationFailureMessage(object? result)
+    {
+        if (result is null)
+        {
+            return "Tool invocation returned an unsuccessful result.";
+        }
+
+        var messageProperty = result.GetType().GetProperty("Message");
+        if (messageProperty?.PropertyType == typeof(string) &&
+            messageProperty.GetValue(result) is string message &&
+            !string.IsNullOrWhiteSpace(message))
+        {
+            return message;
+        }
+
+        return "Tool invocation returned an unsuccessful result.";
     }
 
     private static void EnsureStructuredOutputCapability(
@@ -885,6 +960,8 @@ public sealed partial class MafAgentRuntime
         public List<AITool> Tools { get; } = [];
 
         public List<AIContextProvider> ContextProviders { get; } = [];
+
+        public HashSet<string> FrameworkToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public List<IAsyncDisposable> AsyncDisposables { get; } = [];
 

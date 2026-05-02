@@ -59,6 +59,68 @@ public sealed class CurrentArchitectureTemplateParityTests
     }
 
     [Fact]
+    public void Software_delivery_routes_quality_findings_to_generic_repair_before_release_governance()
+    {
+        var pack = new ProcessTemplatePackLoader().Load();
+        var software = pack.Processes["software-delivery"];
+
+        var qaValidation = software.Steps.Single(step => step.Key == "qa-validation");
+        Assert.Equal("qa-lead", qaValidation.DecisionRoleKey);
+        Assert.Contains(qaValidation.BranchOutcomes, outcome => outcome.Key == "quality-accepted");
+        Assert.Contains(qaValidation.BranchOutcomes, outcome => outcome.Key == "repair-required");
+
+        var qualityRepair = software.Steps.Single(step => step.Key == "quality-repair");
+        Assert.Contains(
+            qualityRepair.Dependencies,
+            dependency => dependency.DependsOnStepKey == "qa-validation" &&
+                dependency.DependsOnBranchOutcomeKey == "repair-required");
+        Assert.Contains(
+            qualityRepair.ArtifactInputs,
+            input => input.SourceStepKey == "qa-validation" &&
+                input.ArtifactExpectationKey == "regression-evidence-pack");
+
+        var qaRecheck = software.Steps.Single(step => step.Key == "qa-recheck");
+        Assert.Equal("qa-lead", qaRecheck.DecisionRoleKey);
+        Assert.Contains(qaRecheck.BranchOutcomes, outcome => outcome.Key == "quality-accepted");
+        Assert.Contains(qaRecheck.BranchOutcomes, outcome => outcome.Key == "repair-escalation");
+        Assert.Contains(
+            qaRecheck.Dependencies,
+            dependency => dependency.DependsOnStepKey == "qa-validation" &&
+                dependency.DependsOnBranchOutcomeKey == "repair-required");
+        Assert.Contains(qaRecheck.Dependencies, dependency => dependency.DependsOnStepKey == "implementation");
+
+        var securityReview = software.Steps.Single(step => step.Key == "security-review");
+        Assert.Contains(
+            securityReview.Dependencies,
+            dependency => dependency.DependsOnStepKey == "qa-validation" &&
+                dependency.DependsOnBranchOutcomeKey == "quality-accepted");
+
+        var repairedSecurityReview = software.Steps.Single(step => step.Key == "security-review-after-repair");
+        Assert.Contains(
+            repairedSecurityReview.Dependencies,
+            dependency => dependency.DependsOnStepKey == "qa-recheck" &&
+                dependency.DependsOnBranchOutcomeKey == "quality-accepted");
+
+        var repairedReleaseApproval = software.Steps.Single(step => step.Key == "release-approval-after-repair");
+        Assert.Contains(
+            repairedReleaseApproval.Dependencies,
+            dependency => dependency.DependsOnStepKey == "qa-recheck" &&
+                dependency.DependsOnBranchOutcomeKey == "quality-accepted");
+        Assert.Contains(
+            repairedReleaseApproval.ArtifactInputs,
+            input => input.SourceStepKey == "qa-recheck" &&
+                input.ArtifactExpectationKey == "repaired-regression-evidence-pack");
+
+        var repairEscalation = software.Steps.Single(step => step.Key == "repair-escalation");
+        Assert.Equal("delivery-manager", repairEscalation.DecisionRoleKey);
+        Assert.Contains(
+            repairEscalation.Dependencies,
+            dependency => dependency.DependsOnStepKey == "qa-recheck" &&
+                dependency.DependsOnBranchOutcomeKey == "repair-escalation");
+        Assert.Contains(repairEscalation.Dependencies, dependency => dependency.DependsOnStepKey == "quality-repair");
+    }
+
+    [Fact]
     public void Software_delivery_keeps_agent_owned_review_artifacts_review_required_and_human_release_gate()
     {
         var pack = new ProcessTemplatePackLoader().Load();
@@ -73,6 +135,9 @@ public sealed class CurrentArchitectureTemplateParityTests
         var qaValidation = software.Steps.Single(step => step.Key == "qa-validation");
         var securityReview = software.Steps.Single(step => step.Key == "security-review");
         var releaseApproval = software.Steps.Single(step => step.Key == "release-approval");
+        var repairedQaValidation = software.Steps.Single(step => step.Key == "qa-recheck");
+        var repairedSecurityReview = software.Steps.Single(step => step.Key == "security-review-after-repair");
+        var repairedReleaseApproval = software.Steps.Single(step => step.Key == "release-approval-after-repair");
 
         Assert.Equal(
             "ReviewRequired",
@@ -80,6 +145,9 @@ public sealed class CurrentArchitectureTemplateParityTests
         Assert.Equal("ReviewRequired", Assert.Single(qaValidation.ArtifactExpectations).TrustRequirement);
         Assert.Equal("ReviewRequired", Assert.Single(securityReview.ArtifactExpectations).TrustRequirement);
         Assert.Equal("HumanApproved", Assert.Single(releaseApproval.ArtifactExpectations).TrustRequirement);
+        Assert.Equal("ReviewRequired", Assert.Single(repairedQaValidation.ArtifactExpectations).TrustRequirement);
+        Assert.Equal("ReviewRequired", Assert.Single(repairedSecurityReview.ArtifactExpectations).TrustRequirement);
+        Assert.Equal("HumanApproved", Assert.Single(repairedReleaseApproval.ArtifactExpectations).TrustRequirement);
     }
 
     [Fact]

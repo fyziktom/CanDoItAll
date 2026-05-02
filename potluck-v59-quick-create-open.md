@@ -1,0 +1,274 @@
+- main [ref=e2146]:
+  - generic [ref=e2147]:
+    - generic [ref=e2150]:
+      - generic [ref=e2151]:
+        - button "Dashboard" [ref=e2153]:
+          - generic [ref=e2154]: Dashboard
+          - generic [ref=e2156]: push_pin
+        - button "Projects" [ref=e2158]:
+          - generic [ref=e2159]: Projects
+        - button "Projects" [ref=e2161]:
+          - generic [ref=e2162]: Projects
+        - button "Projects" [ref=e2164]:
+          - generic [ref=e2165]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e2167]:
+          - generic [ref=e2168]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e2170]:
+          - generic [ref=e2171]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e2172]:
+        - textbox "Search tabs" [ref=e2173]
+        - group [ref=e2174]:
+          - generic "+19" [ref=e4145] [cursor=pointer]
+    - generic [ref=e2177]:
+      - generic [ref=e2178]:
+        - generic [ref=e2179]: Active database
+        - generic [ref=e2180]: PostgreSQL workspace
+        - generic [ref=e2181]: PostgreSQL
+        - button "Show db details" [ref=e2183] [cursor=pointer]:
+          - generic [ref=e2184]: "?"
+      - button "Switch database" [ref=e2185]:
+        - generic [ref=e2186]: Switch database
+      - generic [ref=e2187]: Interactive Server
+      - generic [ref=e2188]: Live items 12
+      - generic [ref=e2189]: Tabs 25
+  - generic [ref=e4147]:
+    - button "tune" [ref=e4148]
+    - generic [ref=e4149]:
+      - generic [ref=e4151]:
+        - paragraph [ref=e4152]: Workbench
+        - heading "Validation v59 - Community Potluck Allergen Board structure" [level=1] [ref=e4153]
+      - generic [ref=e4154]:
+        - generic [ref=e4156]:
+          - generic [ref=e4157]:
+            - paragraph [ref=e4158]: Structure canvas
+            - generic [ref=e4159]:
+              - generic [ref=e4160]:
+                - heading "Validation v59 - Community Potluck Allergen Board workbench" [level=2] [ref=e4162]
+                - paragraph [ref=e4163]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e4164]:
+                - generic [ref=e4165]:
+                  - generic [ref=e4166]: Nodes
+                  - strong [ref=e4167]: "1"
+                - generic [ref=e4168]:
+                  - generic [ref=e4169]: Links
+                  - strong [ref=e4170]: "0"
+                - generic [ref=e4171]:
+                  - generic [ref=e4172]: Selection
+                  - strong [ref=e4173]: "1"
+          - generic [ref=e4175]:
+            - generic [ref=e4176]:
+              - generic [ref=e4177]:
+                - button "Open quick create actions" [ref=e4178] [cursor=pointer]:
+                  - generic [ref=e4179]: add
+                  - generic [ref=e4180]: Open quick create actions
+                - button "Focus root" [ref=e4181] [cursor=pointer]:
+                  - generic [ref=e4182]: center_focus_strong
+                  - generic [ref=e4183]: Focus root
+                - generic [ref=e4184]:
+                  - generic [ref=e4185]:
+                    - button "Select" [ref=e4186] [cursor=pointer]
+                    - button "Dependency" [ref=e4189] [cursor=pointer]
+                    - button "Delete" [ref=e4192] [cursor=pointer]
+                  - button "Inspector" [ref=e4195] [cursor=pointer]:
+                    - generic [ref=e4196]: visibility
+                    - generic [ref=e4197]: visibility
+                  - button "Health" [ref=e4198] [cursor=pointer]:
+                    - generic [ref=e4199]: assessment
+                    - generic [ref=e4200]: assessment
+                  - button "Blocks" [ref=e4201] [cursor=pointer]:
+                    - generic [ref=e4202]: dashboard
+                    - generic [ref=e4203]: dashboard
+                  - button "Signals" [ref=e4204] [cursor=pointer]:
+                    - generic [ref=e4205]: notifications_active
+                    - generic [ref=e4206]: notifications active
+                  - button "Agents" [ref=e4207] [cursor=pointer]:
+                    - generic [ref=e4208]: smart_toy
+                    - generic [ref=e4209]: smart toy
+                  - button "Recompose" [disabled] [ref=e4210]:
+                    - generic [ref=e4211]: Recompose
+              - generic [ref=e4212]:
+                - button "Fit canvas" [ref=e4213] [cursor=pointer]:
+                  - generic [ref=e4214]: fit_screen
+                  - generic [ref=e4215]: Fit canvas
+                - button "Toggle maximize" [ref=e4216] [cursor=pointer]:
+                  - generic [ref=e4217]: open_in_full
+                  - generic [ref=e4218]: Maximize canvas
+                - button "Toggle minimap" [ref=e4219] [cursor=pointer]:
+                  - generic [ref=e4220]: map
+                  - generic [ref=e4221]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e4222] [cursor=pointer]:
+                  - generic [ref=e4223]: monitor_heart
+                  - generic [ref=e4224]: Toggle diagnostics
+                - button "Toggle help" [ref=e4225] [cursor=pointer]:
+                  - generic [ref=e4226]: help
+                  - generic [ref=e4227]: Canvas help
+                - button "Toggle settings" [ref=e4228] [cursor=pointer]:
+                  - generic [ref=e4229]: settings
+                  - generic [ref=e4230]: Canvas settings
+                - generic [ref=e4231]:
+                  - button "Zoom out" [ref=e4232] [cursor=pointer]:
+                    - generic [ref=e4233]: remove
+                    - generic [ref=e4234]: Zoom out
+                  - slider "Canvas zoom" [ref=e4235]: "100"
+                  - button "Zoom in" [ref=e4236] [cursor=pointer]:
+                    - generic [ref=e4237]: add
+                    - generic [ref=e4238]: Zoom in
+                  - generic [ref=e4239]: 100%
+            - generic [ref=e4240]:
+              - generic "Canvas workbench" [active] [ref=e4241]:
+                - generic [ref=e4242]:
+                  - generic:
+                    - generic "Validation v59 - Community Potluck Allergen Board Input" [ref=e4244]
+                    - generic "Validation v59 - Community Potluck Allergen Board Output" [ref=e4245]
+                    - generic "Validation v59 - Community Potluck Allergen Board Input" [ref=e4246]
+                    - generic "Validation v59 - Community Potluck Allergen Board Output" [ref=e4247]
+                - generic [ref=e4628]:
+                  - generic [ref=e4631]: Validation v59 - Community Potluck Allergen Board
+                  - button "Note, shortcut N" [ref=e4632] [cursor=pointer]:
+                    - generic [ref=e4634]: ✎
+                    - strong [ref=e4635]
+                  - button "Decision, shortcut D" [ref=e4637] [cursor=pointer]:
+                    - generic [ref=e4639]: ◆
+                    - strong [ref=e4640]
+                  - button "Milestone, shortcut M" [ref=e4642] [cursor=pointer]:
+                    - generic [ref=e4644]: ◷
+                    - strong [ref=e4645]
+                  - button "Phase, shortcut H" [ref=e4647] [cursor=pointer]:
+                    - generic [ref=e4649]: ◭
+                    - strong [ref=e4650]
+                  - button "Blocks, shortcut B, opens submenu" [ref=e4652] [cursor=pointer]:
+                    - generic [ref=e4654]: B
+                    - strong [ref=e4655]
+                    - generic [ref=e4657]: ›
+                  - button "Meetings, shortcut Q, opens submenu" [ref=e4658] [cursor=pointer]:
+                    - generic [ref=e4660]: M
+                    - strong [ref=e4661]
+                    - generic [ref=e4665]: ›
+                  - button "People, shortcut P, opens submenu" [ref=e4666] [cursor=pointer]:
+                    - generic [ref=e4668]: P
+                    - strong [ref=e4669]
+                    - generic [ref=e4671]: ›
+                  - button "Work, shortcut W, opens submenu" [ref=e4672] [cursor=pointer]:
+                    - generic [ref=e4674]: T
+                    - strong [ref=e4675]
+                    - generic [ref=e4677]: ›
+                  - button "Prompts, shortcut R, opens submenu" [ref=e4678] [cursor=pointer]:
+                    - generic [ref=e4680]: ✶
+                    - strong [ref=e4681]
+                    - generic [ref=e4683]: ›
+                  - button "Runtime, shortcut U, opens submenu" [ref=e4684] [cursor=pointer]:
+                    - generic [ref=e4686]: R
+                    - strong [ref=e4687]
+                    - generic [ref=e4689]: ›
+                  - button "Assets, shortcut A, opens submenu" [ref=e4690] [cursor=pointer]:
+                    - generic [ref=e4692]: A
+                    - strong [ref=e4693]
+                    - generic [ref=e4695]: ›
+                  - button "Infrastructure, shortcut I, opens submenu" [ref=e4696] [cursor=pointer]:
+                    - generic [ref=e4698]: I
+                    - strong [ref=e4699]
+                    - generic [ref=e4701]: ›
+                  - button "Assurance, shortcut S, opens submenu" [ref=e4702] [cursor=pointer]:
+                    - generic [ref=e4704]: A
+                    - strong [ref=e4705]
+                    - generic [ref=e4707]: ›
+              - generic [ref=e4248]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e4249]:
+                - generic [ref=e4250]:
+                  - generic [ref=e4251]:
+                    - paragraph [ref=e4252]: Project agents
+                    - heading "Project agents" [level=3] [ref=e4253]
+                  - generic [ref=e4254]:
+                    - button "Minimize window" [ref=e4255]
+                    - button "Restart window position and size" [disabled] [ref=e4257]
+                    - button "Hide window" [ref=e4259]
+                - generic [ref=e4262]:
+                  - generic [ref=e4263]:
+                    - textbox "Search contextual agents" [ref=e4264]:
+                      - /placeholder: Search agents
+                    - textbox "Filter tags" [ref=e4268]
+                  - generic [ref=e4269]:
+                    - generic [ref=e4270]: 19 of 19
+                    - generic [ref=e4271]: This project
+                    - generic "Show contextual agent window help" [ref=e4273]
+                  - generic [ref=e4275]:
+                    - button "Open a new contextual chat thread with .NET Application Developer" [ref=e4276]
+                    - button "Open a new contextual chat thread with .NET QA Review Lead" [ref=e4288]
+                    - button "Open a new contextual chat thread with .NET Solution Architect" [ref=e4300]
+                    - button "Open a new contextual chat thread with Blazor Application Developer" [ref=e4312]
+                    - button "Open a new contextual chat thread with Business Strategist" [ref=e4325]
+                    - button "Open a new contextual chat thread with Code Review Lead" [ref=e4337]
+                    - button "Open a new contextual chat thread with Delivery QA Observer" [ref=e4349]
+                    - button "Open a new contextual chat thread with Financial Strategist" [ref=e4361]
+                    - button "Open a new contextual chat thread with HR Staffing Manager" [ref=e4373]
+                    - button "Open a new contextual chat thread with JavaScript Application Developer" [ref=e4385]
+                    - button "Open a new contextual chat thread with JavaScript QA Review Lead" [ref=e4397]
+                    - button "Open a new contextual chat thread with JavaScript Solution Architect" [ref=e4409]
+                    - button "Open a new contextual chat thread with Marketing Specialist" [ref=e4421]
+                    - button "Open a new contextual chat thread with Portfolio Architect" [ref=e4433]
+                    - button "Open a new contextual chat thread with Programming Workspace Analyst" [ref=e4446]
+                    - button "Open a new contextual chat thread with Release Readiness Manager" [ref=e4458]
+                    - button "Open a new contextual chat thread with Research Deep Dive Analyst" [ref=e4470]
+                    - button "Open a new contextual chat thread with Security Reviewer" [ref=e4482]
+                    - button "Open a new contextual chat thread with UI Review Lead" [ref=e4494]
+              - region "Project structure selection panel" [ref=e4506]:
+                - generic [ref=e4507]:
+                  - generic [ref=e4508]:
+                    - paragraph [ref=e4509]: Selection panel
+                    - heading "Validation v59 - Community Potluck Allergen Board" [level=3] [ref=e4510]
+                    - paragraph [ref=e4511]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e4512]:
+                    - button "Minimize window" [ref=e4513]
+                    - button "Restart window position and size" [disabled] [ref=e4515]
+                    - button "Hide window" [ref=e4517]
+                - generic [ref=e4520]:
+                  - generic [ref=e4521]:
+                    - paragraph [ref=e4522]: Project
+                    - heading "Validation v59 - Community Potluck Allergen Board" [level=3] [ref=e4523]
+                    - paragraph [ref=e4524]: Deliver a small but usable app for coordinating community potluck dishes, allergens, attendee commitments, and serving-readiness checks. The app must be created by the process agents, validated by build/test/run/browser evidence, and leave durable proof in the governed process artifacts.
+                    - generic [ref=e4525]
+                    - generic [ref=e4530]
+                  - generic [ref=e4537]:
+                    - paragraph [ref=e4538]: Node actions
+                    - generic [ref=e4539]
+                  - generic [ref=e4572]:
+                    - paragraph [ref=e4573]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e4574]
+                    - paragraph [ref=e4575]
+                    - generic [ref=e4577]
+                    - button "Open standard blocks" [ref=e4583]
+                  - group [ref=e4585]:
+                    - generic "Advanced details Show advanced details help" [ref=e4586]
+              - generic:
+                - generic: Validation v59 - Community Potluck Allergen Board is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 1 canvas nodes
+                  - list:
+                    - listitem: Validation v59 - Community Potluck Allergen BoardDeliver a small but usable app for coordinating community potluck dishes, allergens, attendee commitments, and serving-readiness checks. The app must be created by the process agents, validated by build/test/run/browser evidence, and leave durable proof in the governed process artifacts. • Status Draft • 3 annotations
+        - generic [ref=e4597]:
+          - generic [ref=e4599]:
+            - paragraph [ref=e4600]: Outline
+            - heading "Project object index" [level=5] [ref=e4601]
+            - tree "Project object index" [ref=e4603]:
+              - treeitem "Validation v59 - Community Potluck Allergen Board Draft" [selected] [ref=e4604]:
+                - button "Validation v59 - Community Potluck Allergen Board Draft" [ref=e4607]:
+                  - generic [ref=e4609]: folder
+                  - generic [ref=e4610]: Validation v59 - Community Potluck Allergen Board
+                  - generic [ref=e4611]: Draft
+          - generic [ref=e4613]:
+            - paragraph [ref=e4614]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e4615]
+            - generic [ref=e4616]:
+              - generic [ref=e4617]:
+                - paragraph [ref=e4618]: Total nodes
+                - paragraph [ref=e4619]: "1"
+              - generic [ref=e4620]:
+                - paragraph [ref=e4621]: Total links
+                - paragraph [ref=e4622]: "0"
+              - generic [ref=e4623]:
+                - paragraph [ref=e4624]: Selected
+                - paragraph [ref=e4625]: "1"
+            - paragraph [ref=e4626]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e4048]:
+    - generic "Workbench utilities" [ref=e4627] [cursor=pointer]

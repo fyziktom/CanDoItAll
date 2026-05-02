@@ -1,0 +1,61 @@
+- main [ref=e393]:
+  - group [ref=e394]:
+    - generic "Workspace navigation" [ref=e395] [cursor=pointer]
+  - generic [ref=e396]:
+    - generic [ref=e399]:
+      - generic [ref=e400]:
+        - button "Dashboard" [ref=e402]:
+          - generic [ref=e403]: Dashboard
+          - generic [ref=e405]: push_pin
+        - button "Validation v80 - Trail Cleanup Volunteer Scheduler · Structure" [ref=e407]:
+          - generic [ref=e408]: Validation v80 - Trail Cleanup Volunteer Scheduler · Structure
+        - button "Projects" [ref=e410]:
+          - generic [ref=e411]: Projects
+        - button "Validation v80 - Art Studio Kiln Firing Board · Structure" [ref=e413]:
+          - generic [ref=e414]: Validation v80 - Art Studio Kiln Firing Board · Structure
+        - button "Projects" [ref=e416]:
+          - generic [ref=e417]: Projects
+        - button "Projects" [ref=e419]:
+          - generic [ref=e420]: Projects
+      - generic [ref=e421]:
+        - textbox "Search tabs" [ref=e422]
+        - group [ref=e423]:
+          - generic "+14" [ref=e424] [cursor=pointer]
+    - generic [ref=e426]:
+      - generic [ref=e427]:
+        - generic [ref=e428]: Active database
+        - generic [ref=e429]: PostgreSQL workspace
+        - generic [ref=e430]: PostgreSQL
+        - button "Show db details" [ref=e432] [cursor=pointer]:
+          - generic [ref=e433]: "?"
+      - button "Switch database" [ref=e434]:
+        - generic [ref=e435]: Switch database
+      - generic [ref=e436]: Interactive Server
+      - generic [ref=e437]: Live items 9
+      - generic [ref=e438]: Tabs 20
+  - generic [ref=e441]:
+    - button "tune" [ref=e442]
+    - generic [ref=e443]:
+      - generic [ref=e445]:
+        - paragraph [ref=e446]: Workbench
+        - heading "Validation v85 - Neighborhood Snow Shovel Roster structure" [level=1] [ref=e447]
+      - generic [ref=e448]:
+        - generic [ref=e450]:
+          - generic [ref=e451]:
+            - paragraph [ref=e452]: Structure canvas
+            - generic [ref=e453]
+          - generic [ref=e469]:
+            - generic [ref=e470]
+            - generic [ref=e534]
+        - generic [ref=e767]:
+          - generic [ref=e769]:
+            - paragraph [ref=e770]: Outline
+            - heading "Project object index" [level=5] [ref=e771]
+            - tree "Project object index" [ref=e773]
+          - generic [ref=e799]:
+            - paragraph [ref=e800]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e801]
+            - generic [ref=e802]
+            - paragraph [ref=e812]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e813]:
+    - generic "Workbench utilities" [ref=e814] [cursor=pointer]

@@ -54,7 +54,7 @@ internal sealed class ProcessMockAgentRuntime(
 
         return Task.FromResult(new ProviderTestChatResult(
             Model: ProcessMockAgentCatalog.Model,
-            ResponseText: "Process mock provider is deterministic. Use role-specific mock agents in a calculator process to exercise QA repair loops.",
+            ResponseText: "Process mock provider is deterministic. Use role-specific mock agents in a generic delivery process to exercise QA repair loops.",
             InputTokens: 16,
             OutputTokens: 22));
     }
@@ -218,24 +218,24 @@ internal sealed class ProcessMockAgentRuntime(
         var scopePath = $"{state.ArtifactRoot}/01-scope.md";
         var markdown =
             """
-            # Calculator Scope
+            # Generic Delivery Scope
 
-            Build a simple calculator app with add, subtract, multiply, and divide operations.
+            Build a small validation component that normalizes a user-provided name.
 
             ## Acceptance Criteria
-            - Addition, subtraction, multiplication, and division are supported.
-            - Divide by zero produces an explicit validation failure.
-            - QA must reject an implementation that lacks divide-by-zero handling.
+            - Non-empty names are trimmed before use.
+            - Blank names produce an explicit validation failure.
+            - QA must reject an implementation that accepts blank input.
             """;
         fileService.WriteTextFile(scopePath, markdown, overwrite: true);
 
         return BuildOutcome(
-            "Scope captured for the deterministic calculator process.",
+            "Scope captured for the deterministic mock delivery process.",
             "Completed",
-            "Calculator scope and acceptance criteria were written.",
+            "Mock scope and acceptance criteria were written.",
             null,
             "Product owner mock scope artifact saved.",
-            [CreateArtifact(scopePath, "calculator scope artifact acceptance criteria arithmetic divide zero")]);
+            [CreateArtifact(scopePath, "mock scope artifact acceptance criteria validation blank input")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteArchitect(ProcessMockRuntimeState state)
@@ -244,51 +244,51 @@ internal sealed class ProcessMockAgentRuntime(
         var architecturePath = $"{state.ArtifactRoot}/02-architecture.md";
         var markdown =
             """
-            # Calculator Architecture
+            # Generic Delivery Architecture
 
             Use a small application boundary:
 
-            - `CalculatorEngine` owns arithmetic rules.
+            - `ValidationEngine` owns input validation and normalization rules.
             - UI orchestration calls the engine and displays validation feedback.
-            - QA verifies divide-by-zero behavior before release.
+            - QA verifies blank-input behavior before release.
             """;
         fileService.WriteTextFile(architecturePath, markdown, overwrite: true);
 
         return BuildOutcome(
-            "Architecture captured for the deterministic calculator process.",
+            "Architecture captured for the deterministic mock delivery process.",
             "Completed",
-            "Calculator architecture guidance was written.",
+            "Mock architecture guidance was written.",
             null,
             "Architect mock handoff artifact saved.",
-            [CreateArtifact(architecturePath, "calculator architecture artifact boundary implementation qa expectations")]);
+            [CreateArtifact(architecturePath, "mock architecture artifact boundary implementation qa expectations")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteDeveloper(ProcessMockRuntimeState state)
     {
         fileService.CreateDirectory(state.ArtifactRoot);
-        fileService.CreateDirectory($"{state.OutputRoot}/CalculatorApp");
+        fileService.CreateDirectory($"{state.OutputRoot}/MockApp");
 
         var implementationPath = $"{state.ArtifactRoot}/03-implementation.md";
-        var enginePath = $"{state.OutputRoot}/CalculatorApp/CalculatorEngine.cs";
-        fileService.WriteTextFile(enginePath, FirstPassCalculatorEngine, overwrite: true);
+        var enginePath = $"{state.OutputRoot}/MockApp/ValidationEngine.cs";
+        fileService.WriteTextFile(enginePath, FirstPassValidationEngine, overwrite: true);
         var artifacts = new List<ProcessMockRuntimeArtifact>
         {
             CreateArtifact(
                 implementationPath,
-                "calculator first implementation artifact deliverable deterministic defect")
+                "mock first implementation artifact deliverable deterministic defect")
         };
 
         var markdown =
             $"""
-            # Calculator Implementation
+            # Mock Implementation
 
-            The first-pass calculator engine was written to `{enginePath}`.
+            The first-pass validation engine was written to `{enginePath}`.
 
             ## Known Mock Defect
-            This deterministic first pass intentionally lacks explicit divide-by-zero handling so QA can send the work back for repair.
+            This deterministic first pass intentionally accepts blank input so QA can send the work back for repair.
             """;
         fileService.WriteTextFile(implementationPath, markdown, overwrite: true);
-        var responseSummary = "First-pass calculator implementation completed with the deterministic QA defect.";
+        var responseSummary = "First-pass mock implementation completed with the deterministic QA defect.";
         var requiredArtifactSections = BuildImplementationRequiredArtifactSections(state, repaired: false, artifacts);
         if (!string.IsNullOrWhiteSpace(requiredArtifactSections))
         {
@@ -298,7 +298,7 @@ internal sealed class ProcessMockAgentRuntime(
         return BuildOutcome(
             responseSummary,
             "Completed",
-            "First-pass calculator implementation artifact was written.",
+            "First-pass mock implementation artifact was written.",
             null,
             "Developer mock implementation artifact saved.",
             artifacts);
@@ -319,48 +319,48 @@ internal sealed class ProcessMockAgentRuntime(
             """
             # QA Finding
 
-            QA rejects the first-pass calculator implementation.
+            QA rejects the first-pass mock implementation.
 
             ## Blocking Defect
-            `CalculatorEngine.Divide` divides directly by the denominator and does not explicitly reject zero. Repair is required before approval.
+            `ValidationEngine.NormalizeName` trims input but does not explicitly reject blank values. Repair is required before approval.
             """;
         fileService.WriteTextFile(findingPath, markdown, overwrite: true);
 
         return BuildOutcome(
-            "QA rejected the first-pass calculator implementation and selected the repair branch.",
+            "QA rejected the first-pass mock implementation and selected the repair branch.",
             "Completed",
-            "Divide-by-zero handling is missing; repair is required.",
+            "Blank-input handling is missing; repair is required.",
             ProcessMockAgentCatalog.BranchRepairsRequired,
             "QA mock rejection artifact saved.",
-            [CreateArtifact(findingPath, "calculator qa rejection artifact finding repair branch reason")]);
+            [CreateArtifact(findingPath, "mock qa rejection artifact finding repair branch reason")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteRepairDeveloper(ProcessMockRuntimeState state)
     {
         fileService.CreateDirectory(state.ArtifactRoot);
-        fileService.CreateDirectory($"{state.OutputRoot}/CalculatorApp");
+        fileService.CreateDirectory($"{state.OutputRoot}/MockApp");
 
         var repairPath = $"{state.ArtifactRoot}/05-repair.md";
-        var enginePath = $"{state.OutputRoot}/CalculatorApp/CalculatorEngine.cs";
-        fileService.WriteTextFile(enginePath, RepairedCalculatorEngine, overwrite: true);
+        var enginePath = $"{state.OutputRoot}/MockApp/ValidationEngine.cs";
+        fileService.WriteTextFile(enginePath, RepairedValidationEngine, overwrite: true);
         var artifacts = new List<ProcessMockRuntimeArtifact>
         {
             CreateArtifact(
                 repairPath,
-                "calculator repair artifact implementation divide zero fix")
+                "mock repair artifact implementation blank input fix")
         };
 
         var markdown =
             $"""
-            # Calculator Repair
+            # Mock Repair
 
-            The calculator engine was repaired at `{enginePath}`.
+            The validation engine was repaired at `{enginePath}`.
 
             ## Repair
-            `CalculatorEngine.Divide` now throws `DivideByZeroException` when the denominator is zero.
+            `ValidationEngine.NormalizeName` now throws `ArgumentException` when the input is blank.
             """;
         fileService.WriteTextFile(repairPath, markdown, overwrite: true);
-        var responseSummary = "Calculator divide-by-zero repair completed.";
+        var responseSummary = "Blank-input validation repair completed.";
         var requiredArtifactSections = BuildImplementationRequiredArtifactSections(state, repaired: true, artifacts);
         if (!string.IsNullOrWhiteSpace(requiredArtifactSections))
         {
@@ -370,7 +370,7 @@ internal sealed class ProcessMockAgentRuntime(
         return BuildOutcome(
             responseSummary,
             "Completed",
-            "Divide-by-zero repair artifact was written.",
+            "Blank-input repair artifact was written.",
             null,
             "Repair developer mock artifact saved.",
             artifacts);
@@ -384,22 +384,22 @@ internal sealed class ProcessMockAgentRuntime(
             """
             # QA Approval
 
-            QA approves the repaired calculator implementation.
+            QA approves the repaired mock implementation.
 
             ## Verified Behavior
-            - Arithmetic operations remain supported.
-            - Divide by zero is handled explicitly.
+            - Non-empty values are normalized.
+            - Blank input is handled explicitly.
             - Repair evidence is ready for release notes.
             """;
         fileService.WriteTextFile(approvalPath, markdown, overwrite: true);
 
         return BuildOutcome(
-            "QA approved the repaired calculator implementation and selected the approval branch.",
+            "QA approved the repaired mock implementation and selected the approval branch.",
             "Completed",
-            "Repaired calculator implementation passed QA.",
+            "Repaired mock implementation passed QA.",
             ProcessMockAgentCatalog.BranchApproved,
             "QA mock approval artifact saved.",
-            [CreateArtifact(approvalPath, "calculator qa approval artifact repaired implementation release")]);
+            [CreateArtifact(approvalPath, "mock qa approval artifact repaired implementation release")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteReleaseManager(ProcessMockRuntimeState state)
@@ -408,14 +408,14 @@ internal sealed class ProcessMockAgentRuntime(
         var releasePath = $"{state.ArtifactRoot}/07-release-notes.md";
         var markdown =
             """
-            # Calculator Release Notes
+            # Generic Delivery Release Notes
 
-            The calculator process completed with a deterministic QA repair loop.
+            The mock delivery process completed with a deterministic QA repair loop.
 
             ## Release Summary
             - Scope and architecture were captured.
             - First implementation was rejected by QA.
-            - Repair developer fixed divide-by-zero behavior.
+            - Repair developer fixed blank-input behavior.
             - QA approved the repaired output.
             """;
         fileService.WriteTextFile(releasePath, markdown, overwrite: true);
@@ -426,7 +426,7 @@ internal sealed class ProcessMockAgentRuntime(
             "Release notes were written after QA approval.",
             null,
             "Release manager mock artifact saved.",
-            [CreateArtifact(releasePath, "calculator release notes artifact qa approval repair evidence")]);
+            [CreateArtifact(releasePath, "mock release notes artifact qa approval repair evidence")]);
     }
 
     private static ProcessMockRuntimeOutcome BuildOutcome(
@@ -462,14 +462,14 @@ internal sealed class ProcessMockAgentRuntime(
                 # Implementation Change Set
 
                 ## Touched Surface Inventory
-                - `{{state.OutputRoot}}/CalculatorApp/CalculatorEngine.cs` contains the calculator arithmetic implementation.
+                - `{{state.OutputRoot}}/MockApp/ValidationEngine.cs` contains the mock validation implementation.
 
                 ## Tests And Validation
                 - Deterministic process mock validation stands in for the implementation agent proof path.
-                - The change set is linked to calculator arithmetic tests and migration notes by this governed artifact.
+                - The change set is linked to validation behavior tests and migration notes by this governed artifact.
 
                 ## Migration Notes
-                - No schema or data migration is introduced by the calculator implementation.
+                - No schema or data migration is introduced by the mock implementation.
                 """;
             fileService.WriteTextFile(changeSetPath, changeSetMarkdown, overwrite: true);
             artifacts.Add(CreateArtifact(
@@ -478,7 +478,7 @@ internal sealed class ProcessMockAgentRuntime(
             sections.Add(
                 """
                 ## Implementation change set
-                Touched surface inventory: CalculatorEngine owns Add, Subtract, Multiply, and Divide behavior for the calculator app.
+                Touched surface inventory: ValidationEngine owns name normalization and blank-input validation behavior for the mock implementation target.
                 Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
                 Migration notes: no schema, persistent data, or backfill changes are part of this implementation.
                 """);
@@ -499,7 +499,7 @@ internal sealed class ProcessMockAgentRuntime(
 
                 ## Operational Preconditions
                 - Implementation validation must pass before rollout.
-                - QA must verify calculator arithmetic and divide-by-zero behavior before release.
+                - QA must verify name normalization and blank-input behavior before release.
 
                 ## Rollback Steps
                 - Revert the implementation change set or restore the previous project state.
@@ -513,7 +513,7 @@ internal sealed class ProcessMockAgentRuntime(
                 """
                 ## Migration and rollout preparation checklist
                 Data changes: no data migration required; no schema migration, seed update, backfill, or data rollback is needed.
-                Operational preconditions: implementation validation must pass and QA must verify calculator arithmetic plus divide-by-zero behavior.
+                Operational preconditions: implementation validation must pass and QA must verify name normalization plus blank-input behavior.
                 Rollback steps: revert the implementation change set or restore the previous project state; no data rollback is required.
                 """);
         }
@@ -609,7 +609,7 @@ internal sealed class ProcessMockAgentRuntime(
     {
         return prompt.Contains("qa recheck", StringComparison.OrdinalIgnoreCase) ||
                prompt.Contains("recheck repaired", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("repaired calculator implementation", StringComparison.OrdinalIgnoreCase) ||
+               prompt.Contains("repaired mock implementation", StringComparison.OrdinalIgnoreCase) ||
                prompt.Contains("approve repaired", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -647,63 +647,33 @@ internal sealed class ProcessMockAgentRuntime(
         }
     }
 
-    private const string FirstPassCalculatorEngine =
+    private const string FirstPassValidationEngine =
         """
-        namespace CalculatorApp;
+        namespace MockApp;
 
-        public sealed class CalculatorEngine
+        public sealed class ValidationEngine
         {
-            public decimal Add(decimal left, decimal right)
+            public string NormalizeName(string value)
             {
-                return left + right;
-            }
-
-            public decimal Subtract(decimal left, decimal right)
-            {
-                return left - right;
-            }
-
-            public decimal Multiply(decimal left, decimal right)
-            {
-                return left * right;
-            }
-
-            public decimal Divide(decimal left, decimal right)
-            {
-                return left / right;
+                return value.Trim();
             }
         }
         """;
 
-    private const string RepairedCalculatorEngine =
+    private const string RepairedValidationEngine =
         """
-        namespace CalculatorApp;
+        namespace MockApp;
 
-        public sealed class CalculatorEngine
+        public sealed class ValidationEngine
         {
-            public decimal Add(decimal left, decimal right)
+            public string NormalizeName(string value)
             {
-                return left + right;
-            }
-
-            public decimal Subtract(decimal left, decimal right)
-            {
-                return left - right;
-            }
-
-            public decimal Multiply(decimal left, decimal right)
-            {
-                return left * right;
-            }
-
-            public decimal Divide(decimal left, decimal right)
-            {
-                if (right == 0)
+                if (string.IsNullOrWhiteSpace(value))
                 {
-                    throw new DivideByZeroException("Cannot divide by zero.");
+                    throw new ArgumentException("Value is required.", nameof(value));
                 }
 
-                return left / right;
+                return value.Trim();
             }
         }
         """;

@@ -27,6 +27,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessRunRecoveryService>();
+        services.AddSingleton<ProcessRunRecoveryStartupGate>();
         services.AddScoped<IProcessEscalationService, ProcessEscalationService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
@@ -50,8 +51,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         if (backgroundWorkersEnabled)
         {
             services.AddHostedService<ProcessCatalogWarmupWorker>();
-            services.AddHostedService<ProcessOutboxDrainWorker>();
             services.AddHostedService<ProcessRunRecoveryWorker>();
+            services.AddHostedService<ProcessOutboxDrainWorker>();
         }
 
         return services;
@@ -64,6 +65,18 @@ public interface IProcessProjectStructureBridge
         AppDbContext dbContext,
         ProcessRun run,
         IReadOnlyCollection<ProcessStepRun> stepRuns,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<string>> ListLaunchContextAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProcessProjectStructureContext? projectStructureContext,
+        CancellationToken cancellationToken = default);
+
+    Task<ProcessProjectStructureContext?> TryResolveLaunchContextAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        Guid processDefinitionId,
         CancellationToken cancellationToken = default);
 }
 
@@ -79,6 +92,26 @@ internal sealed class NoopProcessProjectStructureBridge : IProcessProjectStructu
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(stepRuns);
         return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<string>> ListLaunchContextAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProcessProjectStructureContext? projectStructureContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        return Task.FromResult<IReadOnlyList<string>>([]);
+    }
+
+    public Task<ProcessProjectStructureContext?> TryResolveLaunchContextAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        Guid processDefinitionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        return Task.FromResult<ProcessProjectStructureContext?>(null);
     }
 }
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -188,6 +189,118 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void TryBuildRequiredFinalizerRuntimeResponse_returns_authoritative_finalizer_json()
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "TryBuildRequiredFinalizerRuntimeResponse",
+                         BindingFlags.NonPublic | BindingFlags.Static)
+                     ?? throw new InvalidOperationException("Required finalizer response builder was not found.");
+        var outcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Scope packet completed.",
+            EvidenceRefs = ["workspace://artifacts/scope-packets/example.md"],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = "Completed."
+        };
+        var timestamp = DateTimeOffset.UtcNow;
+        var response = Assert.IsType<AgentRuntimeResponse>(method.Invoke(
+            null,
+            [
+                AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+                AgentFinalizerMode.Required,
+                "runtime-session",
+                "{\"session\":true}",
+                new[]
+                {
+                    new AgentFinalizerInvocation(
+                        AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                        JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions),
+                        Sequence: 1)
+                },
+                new[]
+                {
+                    new AgentToolInvocationTrace(
+                        AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                        ToolInvocationClassification.Read,
+                        Sequence: 1,
+                        StartedAtUtc: timestamp,
+                        CompletedAtUtc: timestamp,
+                        Succeeded: true,
+                        FailureMessage: string.Empty)
+                }
+            ]));
+
+        var parsed = JsonSerializer.Deserialize<ProcessStepOutcomeResult>(
+            response.ResponseText,
+            AgentOutputJson.SerializerOptions);
+        Assert.NotNull(parsed);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, parsed.Status);
+        Assert.Equal("runtime-session", response.RuntimeSessionKey);
+        Assert.Equal("{\"session\":true}", response.SerializedSessionStateJson);
+        Assert.Single(response.FinalizerInvocations);
+        Assert.Single(response.ToolInvocationTraces);
+    }
+
+    [Fact]
+    public void ExecuteRunAsync_checks_required_finalizer_after_streaming_finishes()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+        var streamingLoopEnd = source.IndexOf(
+            "var postStreamingFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync",
+            StringComparison.Ordinal);
+
+        Assert.True(streamingLoopEnd >= 0, "The runtime must check captured required finalizers after the streaming loop completes.");
+        var providerCatch = source.IndexOf("catch (Exception exception)", streamingLoopEnd, StringComparison.Ordinal);
+        Assert.True(providerCatch > streamingLoopEnd, "The post-streaming finalizer check must run before provider failure handling.");
+    }
+
+    [Fact]
+    public void Required_finalizer_tool_call_short_circuits_before_post_finalizer_model_turn()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var runtimeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+        var factorySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.AgentFactory.cs"));
+
+        Assert.Contains("catch (RequiredFinalizerCapturedException exception)", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("TryCreateFinalizerResponseAfterEarlyFinalizerAsync", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("throw new RequiredFinalizerCapturedException(functionName)", factorySource, StringComparison.Ordinal);
+        Assert.Contains("IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode)", factorySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Required_finalizer_session_serialization_is_bounded()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var runtimeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+
+        Assert.Contains("FinalizerSessionSerializationTimeout", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains(".WaitAsync(", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("catch (TimeoutException)", runtimeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AppendFinalizerInstructions_uses_json_response_wording_for_required_mode()
     {
         var appendMethod = typeof(MafAgentRuntime).GetMethod(
@@ -229,7 +342,7 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
-    public void Repeated_tool_guard_does_not_embed_calculator_process_guidance()
+    public void Repeated_tool_guard_does_not_embed_workflow_process_guidance()
     {
         var repositoryRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
@@ -239,9 +352,9 @@ public sealed class MafAgentRuntimeTests
             "Runtime",
             "MafAgentRuntime.cs"));
 
-        Assert.DoesNotContain("Calculator.Tests", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Calculator/Components/Pages/Home.razor", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("If this is the calculator process", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workflow.Tests", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workflow/Components/Pages/Home.razor", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("If this is the workflow process", source, StringComparison.Ordinal);
     }
 
     [Fact]

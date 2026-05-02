@@ -93,8 +93,8 @@ public sealed partial class AgentFrameworkAuditProofTests
         throw new TimeoutException($"Timed out waiting for denied direct-message evidence. Last snapshot: {lastSnapshot}");
     }
 
-    private async Task<CalculatorRunEvidence> WaitForCalculatorReviewGateAsync(
-        CalculatorScenarioSeed seed,
+    private async Task<WorkflowRunEvidence> WaitForWorkflowReviewGateAsync(
+        WorkflowScenarioSeed seed,
         string launchName)
     {
         await using var serviceProvider = await BuildSeedServiceProviderAsync();
@@ -119,10 +119,10 @@ public sealed partial class AgentFrameworkAuditProofTests
                 var generationArtifact = details.ExecutionRuns
                     .SelectMany(item => item.Artifacts)
                     .FirstOrDefault(item => item.RelativePath.EndsWith("/generation-report.md", StringComparison.OrdinalIgnoreCase));
-                var projectRoot = TryResolveCalculatorProjectRoot(details.ExecutionRuns) ?? ResolveScenarioCalculatorProjectRoot(run.Id);
+                var projectRoot = TryResolveWorkflowProjectRoot(details.ExecutionRuns) ?? ResolveScenarioWorkflowProjectRoot(run.Id);
                 var homePageFile = Path.Combine(projectRoot, "Components", "Pages", "Home.razor");
                 var readmeFile = Path.Combine(projectRoot, "README.md");
-                var projectFile = Path.Combine(projectRoot, "ScenarioCalculator.csproj");
+                var projectFile = Path.Combine(projectRoot, "ScenarioWorkflow.csproj");
 
                 var executionArtifactPaths = details.ExecutionRuns
                     .SelectMany(item => item.Artifacts)
@@ -139,7 +139,7 @@ public sealed partial class AgentFrameworkAuditProofTests
                     File.Exists(readmeFile) &&
                     File.Exists(projectFile))
                 {
-                    return new CalculatorRunEvidence(
+                    return new WorkflowRunEvidence(
                         run.Id,
                         run.Status,
                         details.ExecutionRuns.SelectMany(item => item.Artifacts).Select(item => item.RelativePath).ToList(),
@@ -159,8 +159,8 @@ public sealed partial class AgentFrameworkAuditProofTests
         throw new TimeoutException($"Timed out waiting for the SC11 review gate. Last snapshot: {lastSnapshot}");
     }
 
-    private async Task<CalculatorRunEvidence> WaitForCalculatorRunCompletionAsync(
-        CalculatorScenarioSeed seed,
+    private async Task<WorkflowRunEvidence> WaitForWorkflowRunCompletionAsync(
+        WorkflowScenarioSeed seed,
         string launchName)
     {
         await using var serviceProvider = await BuildSeedServiceProviderAsync();
@@ -182,7 +182,7 @@ public sealed partial class AgentFrameworkAuditProofTests
                     string.Equals(item.Title, "generation-report.md", StringComparison.Ordinal));
                 var reviewArtifactRecorded = details.Artifacts.Any(item =>
                     string.Equals(item.Title, "review-report.md", StringComparison.Ordinal));
-                var projectRoot = TryResolveCalculatorProjectRoot(details.ExecutionRuns) ?? ResolveScenarioCalculatorProjectRoot(run.Id);
+                var projectRoot = TryResolveWorkflowProjectRoot(details.ExecutionRuns) ?? ResolveScenarioWorkflowProjectRoot(run.Id);
                 var homePageFile = Path.Combine(projectRoot, "Components", "Pages", "Home.razor");
                 var readmeFile = Path.Combine(projectRoot, "README.md");
                 var homePageContent = File.Exists(homePageFile)
@@ -203,13 +203,13 @@ public sealed partial class AgentFrameworkAuditProofTests
                     homePageContent.Contains("Divide", StringComparison.OrdinalIgnoreCase) &&
                     readmeContent.Contains("dotnet run", StringComparison.OrdinalIgnoreCase))
                 {
-                    return new CalculatorRunEvidence(
+                    return new WorkflowRunEvidence(
                         run.Id,
                         run.Status,
                         details.ExecutionRuns.SelectMany(item => item.Artifacts).Select(item => item.RelativePath).ToList(),
                         details.Artifacts.Select(item => item.Title).ToList(),
                         projectRoot,
-                        Path.Combine(projectRoot, "ScenarioCalculator.csproj"),
+                        Path.Combine(projectRoot, "ScenarioWorkflow.csproj"),
                         homePageFile,
                         readmeFile,
                         details.DirectMessageThreads.FirstOrDefault()?.ThreadId,
@@ -220,10 +220,10 @@ public sealed partial class AgentFrameworkAuditProofTests
             await Task.Delay(1_000);
         }
 
-        throw new TimeoutException($"Timed out waiting for the SC11 calculator run to complete. Last snapshot: {lastSnapshot}");
+        throw new TimeoutException($"Timed out waiting for the SC11 workflow run to complete. Last snapshot: {lastSnapshot}");
     }
 
-    private string? TryResolveCalculatorProjectRoot(IReadOnlyList<ProcessExecutionRunViewModel> executionRuns)
+    private string? TryResolveWorkflowProjectRoot(IReadOnlyList<ProcessExecutionRunViewModel> executionRuns)
     {
         if (string.IsNullOrWhiteSpace(fixture.StorageWorkspaceRoot))
         {
@@ -233,7 +233,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         var projectArtifact = executionRuns
             .SelectMany(item => item.Artifacts)
             .Select(item => item.RelativePath)
-            .FirstOrDefault(item => item.EndsWith("/ScenarioCalculator.csproj", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(item => item.EndsWith("/ScenarioWorkflow.csproj", StringComparison.OrdinalIgnoreCase));
         if (string.IsNullOrWhiteSpace(projectArtifact))
         {
             return null;
@@ -245,13 +245,13 @@ public sealed partial class AgentFrameworkAuditProofTests
         return Path.GetDirectoryName(projectPath);
     }
 
-    private string BuildCalculatorEvidenceMarkdown(
-        CalculatorScenarioSeed seed,
+    private string BuildWorkflowEvidenceMarkdown(
+        WorkflowScenarioSeed seed,
         string launchName,
-        CalculatorRunEvidence evidence)
+        WorkflowRunEvidence evidence)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("# SC11 Calculator Delivery Evidence")
+        builder.AppendLine("# SC11 Workflow Delivery Evidence")
             .AppendLine()
             .Append("- Project id: `")
             .Append(seed.ProjectId.ToString("D"))
@@ -324,7 +324,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         return builder.ToString().TrimEnd();
     }
 
-    private string ResolveScenarioCalculatorProjectRoot(Guid runId)
+    private string ResolveScenarioWorkflowProjectRoot(Guid runId)
     {
         if (string.IsNullOrWhiteSpace(fixture.StorageWorkspaceRoot))
         {
@@ -338,7 +338,7 @@ public sealed partial class AgentFrameworkAuditProofTests
             CreateProcessScenarioStorageKey(runId),
             "sc03",
             "w",
-            "ScenarioCalculator");
+            "ScenarioWorkflow");
     }
 
     private static string CreateProcessScenarioStorageKey(Guid runId)
@@ -366,7 +366,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         string StepTitle,
         string ArtifactTitle);
 
-    private sealed record CalculatorScenarioSeed(
+    private sealed record WorkflowScenarioSeed(
         Guid ProjectId,
         Guid DefinitionId,
         string ManagerName,
@@ -382,7 +382,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         string HandoffStepTitle,
         string ReviewStepTitle);
 
-    private sealed record CalculatorRunEvidence(
+    private sealed record WorkflowRunEvidence(
         Guid RunId,
         ProcessRunStatus RunStatus,
         IReadOnlyList<string> ExecutionArtifactPaths,

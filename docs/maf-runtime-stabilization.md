@@ -94,7 +94,7 @@ This is checkpoint bridging, not full MAF Workflow orchestration of the process 
 
 ## Recovery guidance
 
-Generic process automation delegates domain-specific retry guidance to recovery guidance providers. Calculator-specific recovery text lives behind a calculator guidance provider instead of being hardcoded directly in the generic recovery directive path.
+Generic process automation delegates domain-specific retry guidance to recovery guidance providers. Runtime recovery paths must stay workload-neutral; product-specific advice belongs in opt-in agent instructions, reusable skills, or explicitly selected tools, not in the dispatcher.
 
 ## New-agent checklist
 

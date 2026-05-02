@@ -72,6 +72,38 @@ public sealed class ProjectsServiceIntegrationTests
     }
 
     [Fact]
+    public async Task SaveAsync_normalizes_date_only_editor_values_to_utc()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+
+        var editor = await projectsService.GetAsync(null);
+        editor.Name = "Date normalization project";
+        editor.Description = "Project date normalization validation";
+        editor.Objective = "Save browser date input values without provider-specific timestamp failures.";
+        editor.CurrentPhase = "Planning";
+        editor.TargetDateUtc = new DateTime(2026, 5, 8);
+        editor.Phases.Add(new ProjectPhaseEditorModel
+        {
+            Name = "Planning",
+            Goal = "Validate project phase date normalization",
+            StartDateUtc = new DateTime(2026, 5, 1),
+            EndDateUtc = new DateTime(2026, 5, 8)
+        });
+
+        var result = await projectsService.SaveAsync(editor);
+
+        Assert.True(result.IsSuccess);
+
+        var saved = await projectsService.GetAsync(result.Value);
+        Assert.Equal(DateTimeKind.Utc, saved.TargetDateUtc?.Kind);
+        var phase = Assert.Single(saved.Phases);
+        Assert.Equal(DateTimeKind.Utc, phase.StartDateUtc?.Kind);
+        Assert.Equal(DateTimeKind.Utc, phase.EndDateUtc?.Kind);
+    }
+
+    [Fact]
     public async Task AddSubprojectAsync_rejects_cycles_and_ReconnectSubprojectAsync_moves_the_selected_parent_link()
     {
         await using var application = await TestApplication.CreateAsync();

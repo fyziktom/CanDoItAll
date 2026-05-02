@@ -1,0 +1,110 @@
+- main [ref=e4]:
+  - group [ref=e5]:
+    - generic "Workspace navigation" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - button "Dashboard" [ref=e13]:
+          - generic [ref=e14]: Dashboard
+          - generic [ref=e16]: push_pin
+        - button "Validation v40 - Clinic Room Turnover Board · Structure" [ref=e18]:
+          - generic [ref=e19]: Validation v40 - Clinic Room Turnover Board · Structure
+        - button "Projects" [ref=e21]:
+          - generic [ref=e22]: Projects
+        - button "Validation v40 - Community Tool Checkout · Structure" [ref=e24]:
+          - generic [ref=e25]: Validation v40 - Community Tool Checkout · Structure
+        - button "Projects" [ref=e27]:
+          - generic [ref=e28]: Projects
+        - button "Validation v41 - Library Study Room Planner · Structure" [ref=e30]:
+          - generic [ref=e31]: Validation v41 - Library Study Room Planner · Structure
+      - generic [ref=e32]:
+        - textbox "Search tabs" [ref=e33]
+        - group [ref=e34]:
+          - generic "+4" [ref=e35] [cursor=pointer]
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: Active database
+        - generic [ref=e40]: PostgreSQL workspace
+        - generic [ref=e322]: PostgreSQL
+        - button "Show db details" [ref=e324] [cursor=pointer]:
+          - generic [ref=e325]: "?"
+      - button "Switch database" [ref=e41]:
+        - generic [ref=e42]: Switch database
+      - generic [ref=e43]: Interactive Server
+      - generic [ref=e44]: Live items 5
+      - generic [ref=e45]: Tabs 10
+  - generic [ref=e484]:
+    - button "tune" [ref=e485]
+    - generic [ref=e486]:
+      - generic [ref=e488]:
+        - paragraph [ref=e489]: Workbench
+        - heading "Validation v42 - Seed Swap Planner structure" [level=1] [ref=e490]
+      - generic [ref=e491]:
+        - generic [ref=e493]:
+          - generic [ref=e494]:
+            - paragraph [ref=e495]: Structure canvas
+            - generic [ref=e496]:
+              - generic [ref=e497]:
+                - heading "Validation v42 - Seed Swap Planner workbench" [level=2] [ref=e499]
+                - paragraph [ref=e500]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e501]:
+                - generic [ref=e502]
+                - generic [ref=e505]
+                - generic [ref=e508]
+          - generic [ref=e512]:
+            - generic [ref=e513]:
+              - generic [ref=e514]:
+                - button "Open quick create actions" [ref=e515] [cursor=pointer]
+                - button "Focus root" [ref=e518] [cursor=pointer]
+                - generic [ref=e521]
+              - generic [ref=e549]:
+                - button "Fit canvas" [ref=e550] [cursor=pointer]
+                - button "Toggle maximize" [ref=e553] [cursor=pointer]
+                - button "Toggle minimap" [ref=e556] [cursor=pointer]
+                - button "Toggle diagnostics" [ref=e559] [cursor=pointer]
+                - button "Toggle help" [ref=e562] [cursor=pointer]
+                - button "Toggle settings" [ref=e565] [cursor=pointer]
+                - generic [ref=e568]
+            - generic [ref=e577]:
+              - generic "Canvas workbench" [ref=e578]:
+                - generic [ref=e579]
+              - generic [ref=e585]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e586]:
+                - generic [ref=e587]
+                - generic [ref=e599]
+              - region "Project structure standard blocks toolbox" [ref=e984]:
+                - generic [ref=e985]
+                - region "Project structure standard blocks toolbox" [ref=e998]
+              - region "Project structure selection panel" [ref=e843]:
+                - generic [ref=e844]
+                - generic [ref=e857]
+              - generic:
+                - generic: Multi-team software delivery and release governance is the primary selection.
+                - region "Canvas accessibility mirror"
+        - generic [ref=e934]:
+          - generic [ref=e936]:
+            - paragraph [ref=e937]: Outline
+            - heading "Project object index" [level=5] [ref=e938]
+            - tree "Project object index" [ref=e940]:
+              - treeitem "Validation v42 - Seed Swap Planner Active" [ref=e941]:
+                - button "Validation v42 - Seed Swap Planner Active" [ref=e944]
+              - treeitem "Build SeedSwapPlanner Draft" [ref=e949]:
+                - button "Build SeedSwapPlanner Draft" [ref=e952]
+              - treeitem "Multi-team software delivery and release governance Published" [selected] [ref=e957]:
+                - button "Multi-team software delivery and release governance Published" [active] [ref=e960]
+          - generic [ref=e966]:
+            - paragraph [ref=e967]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e968]
+            - generic [ref=e969]:
+              - generic [ref=e970]:
+                - paragraph [ref=e971]: Total nodes
+                - paragraph [ref=e972]: "3"
+              - generic [ref=e973]:
+                - paragraph [ref=e974]: Total links
+                - paragraph [ref=e975]: "2"
+              - generic [ref=e976]:
+                - paragraph [ref=e977]: Selected
+                - paragraph [ref=e978]: "1"
+            - paragraph [ref=e979]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e320]:
+    - generic "Workbench utilities" [ref=e321] [cursor=pointer]

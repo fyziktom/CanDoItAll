@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -9,7 +11,13 @@ internal sealed class WorkspaceCommandPlanBuilder
         "blazor",
         "classlib",
         "console",
+        "mstest",
+        "mvc",
+        "nunit",
+        "razor",
+        "web",
         "webapi",
+        "worker",
         "xunit"
     };
 
@@ -19,6 +27,13 @@ internal sealed class WorkspaceCommandPlanBuilder
         ".fsproj",
         ".sln",
         ".slnx",
+        ".vbproj"
+    };
+
+    private static readonly HashSet<string> AllowedRunnableProjectExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".csproj",
+        ".fsproj",
         ".vbproj"
     };
 
@@ -187,6 +202,102 @@ internal sealed class WorkspaceCommandPlanBuilder
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 512 * 1024,
             stderrLimitCharacters: 96 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildDotnetRun(
+        string targetPath,
+        string? url = null,
+        string configuration = "Debug",
+        bool noBuild = true,
+        bool waitForHttp = true,
+        string? workingDirectory = null,
+        int startupTimeoutSeconds = 45,
+        int timeoutSeconds = 120)
+    {
+        var target = BuildDotnetRunnableTarget(targetPath, workingDirectory);
+        var urls = ResolveDotnetRunUrls(url);
+        var normalizedConfiguration = NormalizeConfiguration(configuration);
+
+        if (!waitForHttp)
+        {
+            var arguments = new List<string>
+            {
+                "run",
+                "--project",
+                target.ProjectArgument,
+                "--configuration",
+                normalizedConfiguration
+            };
+            if (noBuild)
+            {
+                arguments.Add("--no-build");
+            }
+
+            if (!string.IsNullOrWhiteSpace(urls.ListenUrl))
+            {
+                arguments.Add("--no-launch-profile");
+                arguments.Add("--");
+                arguments.Add("--urls");
+                arguments.Add(urls.ListenUrl);
+            }
+
+            return CreatePlan(
+                toolName: "workspace_dotnet_run",
+                recipeId: "dotnet_run",
+                riskClass: "LocalExecution",
+                approvalRequired: false,
+                networkAllowed: !string.IsNullOrWhiteSpace(urls.ProbeUrl),
+                mutatesWorkspace: false,
+                targetPaths: target.TargetPaths,
+                workingDirectory: target.WorkingDirectoryRelative,
+                workingDirectoryPath: target.WorkingDirectoryPath,
+                executableCandidates: ["dotnet"],
+                arguments: arguments,
+                timeoutSeconds: timeoutSeconds,
+                stdoutLimitCharacters: 256 * 1024,
+                stderrLimitCharacters: 96 * 1024);
+        }
+
+        var boundedStartupTimeoutSeconds = Math.Clamp(startupTimeoutSeconds, 1, 600);
+        var artifactPaths = BuildDotnetRunArtifactPaths();
+        var script = BuildDotnetHttpRunPowerShellScript(
+            target.ProjectArgument,
+            target.WorkingDirectoryPath,
+            normalizedConfiguration,
+            noBuild,
+            urls.ListenUrl,
+            urls.ProbeUrl,
+            artifactPaths.StdoutLogFullPath,
+            artifactPaths.StderrLogFullPath,
+            artifactPaths.StartupReceiptFullPath,
+            boundedStartupTimeoutSeconds);
+        var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+        var planTimeoutSeconds = Math.Max(timeoutSeconds, boundedStartupTimeoutSeconds + 10);
+
+        return CreatePlan(
+            toolName: "workspace_dotnet_run",
+            recipeId: "dotnet_run_http_smoke",
+            riskClass: "LocalExecution",
+            approvalRequired: false,
+            networkAllowed: true,
+            mutatesWorkspace: true,
+            targetPaths: target.TargetPaths.Concat(artifactPaths.TargetPaths).ToArray(),
+            workingDirectory: target.WorkingDirectoryRelative,
+            workingDirectoryPath: target.WorkingDirectoryPath,
+            executableCandidates: ["pwsh", "powershell"],
+            arguments:
+            [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-EncodedCommand",
+                encodedCommand
+            ],
+            timeoutSeconds: planTimeoutSeconds,
+            stdoutLimitCharacters: 128 * 1024,
+            stderrLimitCharacters: 128 * 1024);
     }
 
     public WorkspaceCommandPlan BuildDotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
@@ -536,12 +647,11 @@ internal sealed class WorkspaceCommandPlanBuilder
             return (workingDirectoryResolution.FullPath, workingDirectoryRelative, [], []);
         }
 
-        var resolution = ResolveExistingWorkspacePath(targetPath, allowFiles: true, allowDirectories: false);
-        var extension = Path.GetExtension(resolution.FullPath);
-        if (!AllowedProjectExtensions.Contains(extension))
-        {
-            throw new InvalidOperationException($"Workspace dotnet recipes only allow solution or project targets. '{resolution.RelativePath}' uses '{extension}'.");
-        }
+        var resolution = ResolveDotnetTargetPath(
+            targetPath,
+            AllowedProjectExtensions,
+            "Workspace dotnet recipes only allow solution or project targets.",
+            "workspace dotnet recipes");
 
         // External-target aliases should be executed via absolute paths because the
         // process workspace and the external target can live in unrelated roots.
@@ -557,6 +667,224 @@ internal sealed class WorkspaceCommandPlanBuilder
             [targetArgument],
             [resolution.RelativePath]);
     }
+
+    private DotnetRunnableTarget BuildDotnetRunnableTarget(string targetPath, string? workingDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            throw new InvalidOperationException("workspace_dotnet_run requires a project file target.");
+        }
+
+        var projectResolution = ResolveDotnetTargetPath(
+            targetPath,
+            AllowedRunnableProjectExtensions,
+            "workspace_dotnet_run requires a .csproj, .fsproj, or .vbproj target.",
+            "workspace_dotnet_run");
+
+        string workingDirectoryRelative;
+        WorkspacePathResolution workingDirectoryResolution;
+        if (string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            var projectDirectory = Path.GetDirectoryName(projectResolution.FullPath)
+                ?? throw new InvalidOperationException($"Could not resolve the parent directory for '{projectResolution.RelativePath}'.");
+            workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(pathPolicy.ToDisplayPath(projectDirectory), createIfMissing: false, out workingDirectoryResolution);
+        }
+        else
+        {
+            workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out workingDirectoryResolution);
+        }
+
+        return new DotnetRunnableTarget(
+            ProjectArgument: projectResolution.FullPath,
+            WorkingDirectoryPath: workingDirectoryResolution.FullPath,
+            WorkingDirectoryRelative: workingDirectoryRelative,
+            TargetPaths: [projectResolution.RelativePath]);
+    }
+
+    private DotnetRunArtifactPaths BuildDotnetRunArtifactPaths()
+    {
+        var stamp = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
+        var relativeDirectory = pathPolicy.WorkspaceScope.CombineArtifactPath("process-runs", "dotnet-run", stamp);
+        var fullDirectory = Path.GetFullPath(Path.Combine(pathPolicy.WorkspaceRoot, relativeDirectory.Replace('/', Path.DirectorySeparatorChar)));
+        var stdoutRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stdout.log"));
+        var stderrRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stderr.log"));
+        var startupReceiptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "startup.json"));
+
+        return new DotnetRunArtifactPaths(
+            StdoutLogFullPath: Path.Combine(fullDirectory, "app.stdout.log"),
+            StderrLogFullPath: Path.Combine(fullDirectory, "app.stderr.log"),
+            StartupReceiptFullPath: Path.Combine(fullDirectory, "startup.json"),
+            TargetPaths:
+            [
+                stdoutRelativePath,
+                stderrRelativePath,
+                startupReceiptRelativePath
+            ]);
+    }
+
+    private static DotnetRunUrls ResolveDotnetRunUrls(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return new DotnetRunUrls(null, null);
+        }
+
+        var trimmed = url.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException("workspace_dotnet_run url must be an absolute http:// or https:// loopback URL.");
+        }
+
+        if (!IsLoopbackHost(uri.Host))
+        {
+            throw new InvalidOperationException("workspace_dotnet_run only accepts loopback URLs such as http://127.0.0.1:<port> or http://localhost:<port>.");
+        }
+
+        return new DotnetRunUrls(
+            ListenUrl: uri.GetLeftPart(UriPartial.Authority),
+            ProbeUrl: trimmed);
+    }
+
+    private static bool IsLoopbackHost(string host)
+    {
+        if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address);
+    }
+
+    private static string BuildDotnetHttpRunPowerShellScript(
+        string projectPath,
+        string workingDirectory,
+        string configuration,
+        bool noBuild,
+        string? listenUrl,
+        string? probeUrl,
+        string stdoutLogPath,
+        string stderrLogPath,
+        string startupReceiptPath,
+        int startupTimeoutSeconds)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("$ErrorActionPreference = 'Stop'");
+        builder.AppendLine("$ProgressPreference = 'SilentlyContinue'");
+        builder.AppendLine("$projectPath = " + ToPowerShellSingleQuotedString(projectPath));
+        builder.AppendLine("$workingDirectory = " + ToPowerShellSingleQuotedString(workingDirectory));
+        builder.AppendLine("$configuration = " + ToPowerShellSingleQuotedString(configuration));
+        builder.AppendLine("$listenUrl = " + ToPowerShellSingleQuotedString(listenUrl ?? string.Empty));
+        builder.AppendLine("$probeUrl = " + ToPowerShellSingleQuotedString(probeUrl ?? string.Empty));
+        builder.AppendLine("$stdoutLog = " + ToPowerShellSingleQuotedString(stdoutLogPath));
+        builder.AppendLine("$stderrLog = " + ToPowerShellSingleQuotedString(stderrLogPath));
+        builder.AppendLine("$startupReceipt = " + ToPowerShellSingleQuotedString(startupReceiptPath));
+        builder.AppendLine("$startupTimeoutSeconds = " + startupTimeoutSeconds.ToString());
+        builder.AppendLine("$noBuild = " + (noBuild ? "$true" : "$false"));
+        builder.AppendLine("$appProcess = $null");
+        builder.AppendLine("function Read-LogTail {");
+        builder.AppendLine("    param([string]$Path)");
+        builder.AppendLine("    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }");
+        builder.AppendLine("    try {");
+        builder.AppendLine("        $content = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop");
+        builder.AppendLine("        if ($content.Length -le 4000) { return $content }");
+        builder.AppendLine("        return $content.Substring($content.Length - 4000)");
+        builder.AppendLine("    } catch { return '' }");
+        builder.AppendLine("}");
+        builder.AppendLine("function Quote-ProcessArgument {");
+        builder.AppendLine("    param([string]$Value)");
+        builder.AppendLine("    if ($null -eq $Value -or $Value.Length -eq 0) { return '\"\"' }");
+        builder.AppendLine("    if ($Value.IndexOfAny([char[]](\" `\"`t`r`n\")) -lt 0) { return $Value }");
+        builder.AppendLine("    return '\"' + $Value.Replace('\"', '\\\"') + '\"'");
+        builder.AppendLine("}");
+        builder.AppendLine("function Write-StartupReceipt {");
+        builder.AppendLine("    param([bool]$Succeeded, [string]$Message)");
+        builder.AppendLine("    $payload = [ordered]@{");
+        builder.AppendLine("        succeeded = $Succeeded");
+        builder.AppendLine("        message = $Message");
+        builder.AppendLine("        projectPath = $projectPath");
+        builder.AppendLine("        workingDirectory = $workingDirectory");
+        builder.AppendLine("        listenUrl = $listenUrl");
+        builder.AppendLine("        probeUrl = $probeUrl");
+        builder.AppendLine("        appProcessId = if ($appProcess -ne $null) { $appProcess.Id } else { $null }");
+        builder.AppendLine("        stdoutLog = $stdoutLog");
+        builder.AppendLine("        stderrLog = $stderrLog");
+        builder.AppendLine("        stdoutTail = Read-LogTail $stdoutLog");
+        builder.AppendLine("        stderrTail = Read-LogTail $stderrLog");
+        builder.AppendLine("        capturedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')");
+        builder.AppendLine("        stopCommand = if ($appProcess -ne $null) { \"Stop-Process -Id $($appProcess.Id)\" } else { '' }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $startupReceipt) | Out-Null");
+        builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 6");
+        builder.AppendLine("    Set-Content -LiteralPath $startupReceipt -Value $json -Encoding UTF8");
+        builder.AppendLine("    return $json");
+        builder.AppendLine("}");
+        builder.AppendLine("try {");
+        builder.AppendLine("    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { throw \"Project file not found: $projectPath\" }");
+        builder.AppendLine("    if (-not (Test-Path -LiteralPath $workingDirectory -PathType Container)) { throw \"Working directory not found: $workingDirectory\" }");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($listenUrl)) {");
+        builder.AppendLine("        $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $listener.Start()");
+        builder.AppendLine("            $port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port");
+        builder.AppendLine("        } finally {");
+        builder.AppendLine("            $listener.Stop()");
+        builder.AppendLine("        }");
+        builder.AppendLine("        $listenUrl = \"http://127.0.0.1:$port\"");
+        builder.AppendLine("    }");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($probeUrl)) { $probeUrl = $listenUrl }");
+        builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $stdoutLog) | Out-Null");
+        builder.AppendLine("    $dotnetPath = (Get-Command dotnet -ErrorAction Stop).Source");
+        builder.AppendLine("    $argumentList = @('run', '--project', $projectPath, '--configuration', $configuration, '--no-launch-profile')");
+        builder.AppendLine("    if ($noBuild) { $argumentList += '--no-build' }");
+        builder.AppendLine("    $argumentList += @('--', '--urls', $listenUrl)");
+        builder.AppendLine("    $argumentString = ($argumentList | ForEach-Object { Quote-ProcessArgument $_ }) -join ' '");
+        builder.AppendLine("    $startParameters = @{");
+        builder.AppendLine("        FilePath = $dotnetPath");
+        builder.AppendLine("        ArgumentList = $argumentString");
+        builder.AppendLine("        WorkingDirectory = $workingDirectory");
+        builder.AppendLine("        RedirectStandardOutput = $stdoutLog");
+        builder.AppendLine("        RedirectStandardError = $stderrLog");
+        builder.AppendLine("        PassThru = $true");
+        builder.AppendLine("    }");
+        builder.AppendLine("    if ($IsWindows -or $env:OS -eq 'Windows_NT') { $startParameters['WindowStyle'] = 'Hidden' }");
+        builder.AppendLine("    $appProcess = Start-Process @startParameters");
+        builder.AppendLine("    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($startupTimeoutSeconds)");
+        builder.AppendLine("    $lastError = ''");
+        builder.AppendLine("    $ready = $false");
+        builder.AppendLine("    while ([DateTimeOffset]::UtcNow -lt $deadline) {");
+        builder.AppendLine("        $appProcess.Refresh()");
+        builder.AppendLine("        if ($appProcess.HasExited) { throw \"dotnet run exited before $probeUrl returned success. Exit code $($appProcess.ExitCode). stderr tail: $(Read-LogTail $stderrLog)\" }");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $response = Invoke-WebRequest -Uri $probeUrl -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop");
+        builder.AppendLine("            $statusCode = [int]$response.StatusCode");
+        builder.AppendLine("            if ($statusCode -ge 200 -and $statusCode -lt 400) { $ready = $true; break }");
+        builder.AppendLine("            $lastError = \"HTTP $statusCode\"");
+        builder.AppendLine("        } catch {");
+        builder.AppendLine("            $lastError = $_.Exception.Message");
+        builder.AppendLine("        }");
+        builder.AppendLine("        Start-Sleep -Milliseconds 500");
+        builder.AppendLine("    }");
+        builder.AppendLine("    if (-not $ready) { throw \"Timed out after $startupTimeoutSeconds second(s) waiting for $probeUrl. Last error: $lastError. stderr tail: $(Read-LogTail $stderrLog)\" }");
+        builder.AppendLine("    $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success.\"");
+        builder.AppendLine("    Write-Output $successJson");
+        builder.AppendLine("} catch {");
+        builder.AppendLine("    $message = $_.Exception.Message");
+        builder.AppendLine("    if ($appProcess -ne $null) {");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $appProcess.Refresh()");
+        builder.AppendLine("            if (-not $appProcess.HasExited) { Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue }");
+        builder.AppendLine("        } catch { }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message");
+        builder.AppendLine("    Write-Error $failureJson");
+        builder.AppendLine("    exit 1");
+        builder.AppendLine("}");
+        return builder.ToString();
+    }
+
+    private static string ToPowerShellSingleQuotedString(string value)
+        => "'" + value.Replace("'", "''") + "'";
 
     private string ResolveOutputWorkspacePath(string outputPath, out string outputFullPath)
     {
@@ -597,6 +925,65 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         throw new InvalidOperationException($"Path '{resolution.RelativePath}' does not exist.");
+    }
+
+    private WorkspacePathResolution ResolveDotnetTargetPath(
+        string path,
+        IReadOnlySet<string> allowedExtensions,
+        string invalidTargetMessage,
+        string recipeName)
+    {
+        var resolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: true);
+        if (File.Exists(resolution.FullPath))
+        {
+            var extension = Path.GetExtension(resolution.FullPath);
+            if (!allowedExtensions.Contains(extension))
+            {
+                throw new InvalidOperationException($"{invalidTargetMessage} '{resolution.RelativePath}' uses '{extension}'.");
+            }
+
+            return resolution;
+        }
+
+        var candidates = Directory.EnumerateFiles(resolution.FullPath, "*", SearchOption.TopDirectoryOnly)
+            .Where(file => allowedExtensions.Contains(Path.GetExtension(file)))
+            .Select(file => new
+            {
+                FullPath = Path.GetFullPath(file),
+                DisplayPath = pathPolicy.ToDisplayPath(Path.GetFullPath(file)),
+                Extension = Path.GetExtension(file)
+            })
+            .OrderBy(item => item.DisplayPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (allowedExtensions.Contains(".sln") || allowedExtensions.Contains(".slnx"))
+        {
+            var solutionCandidates = candidates
+                .Where(item => string.Equals(item.Extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
+                               string.Equals(item.Extension, ".slnx", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (solutionCandidates.Count == 1)
+            {
+                return ResolveExistingWorkspacePath(solutionCandidates[0].DisplayPath, allowFiles: true, allowDirectories: false);
+            }
+
+            if (solutionCandidates.Count > 1)
+            {
+                throw new InvalidOperationException($"Directory '{resolution.RelativePath}' contains multiple solution files. Pass an explicit solution or project file to {recipeName}.");
+            }
+        }
+
+        if (candidates.Count == 1)
+        {
+            return ResolveExistingWorkspacePath(candidates[0].DisplayPath, allowFiles: true, allowDirectories: false);
+        }
+
+        if (candidates.Count == 0)
+        {
+            throw new InvalidOperationException($"Directory '{resolution.RelativePath}' does not contain a supported .NET solution or project file for {recipeName}.");
+        }
+
+        throw new InvalidOperationException($"Directory '{resolution.RelativePath}' contains multiple .NET project files. Pass an explicit project file to {recipeName}.");
     }
 
     private WorkspacePathResolution ResolveWorkspacePath(string path)
@@ -642,4 +1029,18 @@ internal sealed class WorkspaceCommandPlanBuilder
             ? "Release"
             : "Debug";
     }
+
+    private sealed record DotnetRunnableTarget(
+        string ProjectArgument,
+        string WorkingDirectoryPath,
+        string WorkingDirectoryRelative,
+        IReadOnlyList<string> TargetPaths);
+
+    private sealed record DotnetRunArtifactPaths(
+        string StdoutLogFullPath,
+        string StderrLogFullPath,
+        string StartupReceiptFullPath,
+        IReadOnlyList<string> TargetPaths);
+
+    private sealed record DotnetRunUrls(string? ListenUrl, string? ProbeUrl);
 }

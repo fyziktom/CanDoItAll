@@ -515,19 +515,21 @@ public sealed class ProjectsService(
             return CreateNew();
         }
 
-        var phases = await dbContext.Set<ProjectPhase>()
+        var projectPhases = await dbContext.Set<ProjectPhase>()
             .Where(item => item.ProjectId == project.Id)
             .OrderBy(item => item.OrderIndex)
+            .ToListAsync(cancellationToken);
+        var phases = projectPhases
             .Select(item => new ProjectPhaseEditorModel
             {
                 Id = item.Id,
                 Name = item.Name,
                 Goal = item.Goal,
                 Status = item.Status,
-                StartDateUtc = item.StartDateUtc,
-                EndDateUtc = item.EndDateUtc
+                StartDateUtc = NormalizeNullableUtc(item.StartDateUtc),
+                EndDateUtc = NormalizeNullableUtc(item.EndDateUtc)
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var options = await dbContext.Set<ProjectOptionSelection>()
             .Where(item => item.ProjectId == project.Id)
@@ -550,7 +552,7 @@ public sealed class ProjectsService(
             Objective = project.Objective,
             Status = project.Status,
             CurrentPhase = project.CurrentPhase,
-            TargetDateUtc = project.TargetDateUtc,
+            TargetDateUtc = NormalizeNullableUtc(project.TargetDateUtc),
             Phases = phases,
             Options = options.OrderBy(option => option.Category).ToList()
         };
@@ -584,7 +586,7 @@ public sealed class ProjectsService(
         entity.Objective = model.Objective?.Trim() ?? string.Empty;
         entity.Status = model.Status;
         entity.CurrentPhase = model.CurrentPhase?.Trim() ?? string.Empty;
-        entity.TargetDateUtc = model.TargetDateUtc;
+        entity.TargetDateUtc = NormalizeNullableUtc(model.TargetDateUtc);
         entity.UpdatedAtUtc = clock.GetUtcNow();
 
         var existingPhases = await dbContext.Set<ProjectPhase>()
@@ -613,8 +615,8 @@ public sealed class ProjectsService(
             phase.Goal = phaseModel.Goal?.Trim() ?? string.Empty;
             phase.Status = phaseModel.Status;
             phase.OrderIndex = index;
-            phase.StartDateUtc = phaseModel.StartDateUtc;
-            phase.EndDateUtc = phaseModel.EndDateUtc;
+            phase.StartDateUtc = NormalizeNullableUtc(phaseModel.StartDateUtc);
+            phase.EndDateUtc = NormalizeNullableUtc(phaseModel.EndDateUtc);
         }
 
         var existingOptions = await dbContext.Set<ProjectOptionSelection>()
@@ -668,6 +670,17 @@ public sealed class ProjectsService(
             ArtifactId: entity.Id,
             Route: $"/projects?projectId={entity.Id}"), cancellationToken);
         return Result<Guid>.Success(entity.Id);
+    }
+
+    private static DateTime? NormalizeNullableUtc(DateTime? value)
+    {
+        return value?.Kind switch
+        {
+            null => null,
+            DateTimeKind.Utc => value.Value,
+            DateTimeKind.Local => value.Value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+        };
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

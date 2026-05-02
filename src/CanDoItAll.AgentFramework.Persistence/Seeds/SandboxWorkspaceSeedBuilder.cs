@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-04-flexible-process-agents-v27";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v63";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -45,6 +45,8 @@ internal static class SandboxWorkspaceSeedBuilder
         var repositoryPlaybookCapabilityId = CreateStableGuid("capabilities/repository-playbook");
         var mailInlineSkillCapabilityId = CreateStableGuid("capabilities/mail-triage-inline-skill");
         var documentSpreadsheetReconciliationInlineSkillCapabilityId = CreateStableGuid("capabilities/document-spreadsheet-reconciliation-inline-skill");
+        var concreteDeliverableDeliveryInlineSkillCapabilityId = CreateStableGuid("capabilities/concrete-deliverable-delivery-inline-skill");
+        var dotnetAppDeliveryInlineSkillCapabilityId = CreateStableGuid("capabilities/dotnet-app-delivery-inline-skill");
         var blazorSsrDeliveryInlineSkillCapabilityId = CreateStableGuid("capabilities/blazor-ssr-delivery-inline-skill");
         var appSummaryInlineSkillCapabilityId = CreateStableGuid("capabilities/generated-app-summary-inline-skill");
         var architectureReviewInlineSkillCapabilityId = CreateStableGuid("capabilities/architecture-review-inline-skill");
@@ -72,6 +74,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var workspaceDotnetRestoreCapabilityId = CreateStableGuid("capabilities/workspace-dotnet-restore");
         var workspaceDotnetBuildCapabilityId = CreateStableGuid("capabilities/workspace-dotnet-build");
         var workspaceDotnetTestCapabilityId = CreateStableGuid("capabilities/workspace-dotnet-test");
+        var workspaceDotnetRunCapabilityId = CreateStableGuid("capabilities/workspace-dotnet-run");
         var workspaceDotnetNewCapabilityId = CreateStableGuid("capabilities/workspace-dotnet-new");
         var workspacePythonRunFileCapabilityId = CreateStableGuid("capabilities/workspace-python-run-file");
         var workspacePwshRunScriptCapabilityId = CreateStableGuid("capabilities/workspace-pwsh-run-script");
@@ -96,6 +99,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var researchAgentId = CreateStableGuid("agents/research-deep-dive-analyst");
         var dotnetArchitectAgentId = CreateStableGuid("agents/dotnet-solution-architect");
         var dotnetDeveloperAgentId = CreateStableGuid("agents/dotnet-application-developer");
+        var blazorDeveloperAgentId = CreateStableGuid("agents/blazor-application-developer");
         var dotnetQaAgentId = CreateStableGuid("agents/dotnet-qa-review-lead");
         var javascriptArchitectAgentId = CreateStableGuid("agents/javascript-solution-architect");
         var javascriptDeveloperAgentId = CreateStableGuid("agents/javascript-application-developer");
@@ -318,10 +322,24 @@ internal static class SandboxWorkspaceSeedBuilder
                         "Generic JSON response shape for reconciliation tasks.")
                 ]),
             CreateInlineSkillCapability(
+                concreteDeliverableDeliveryInlineSkillCapabilityId,
+                "concrete-deliverable-delivery-inline-skill",
+                "Concrete Deliverable Delivery Skill",
+                "Technology-neutral workflow for creating, validating, and proving apps, services, documents, spreadsheets, decks, scripts, and other durable deliverables.",
+                "concrete-deliverable-delivery",
+                GetSeedText("skills/concrete-deliverable-delivery.instructions")),
+            CreateInlineSkillCapability(
+                dotnetAppDeliveryInlineSkillCapabilityId,
+                "dotnet-app-delivery-inline-skill",
+                ".NET App Delivery Skill",
+                "Reusable workflow guidance for scaffolding, building, testing, running, and proving generic .NET applications.",
+                "dotnet-app-delivery",
+                GetSeedText("skills/dotnet-app-delivery.instructions")),
+            CreateInlineSkillCapability(
                 blazorSsrDeliveryInlineSkillCapabilityId,
                 "blazor-ssr-delivery-inline-skill",
-                "Blazor SSR Delivery Skill",
-                "Reusable workflow guidance for creating and validating a .NET 10 Blazor SSR application.",
+                "Blazor App Delivery Skill",
+                "Reusable workflow guidance for creating, repairing, running, and validating Blazor Web App and component-driven ASP.NET Core UI deliverables.",
                 "blazor-ssr-delivery",
                 GetSeedText("skills/blazor-ssr-delivery.instructions"),
                 [
@@ -336,13 +354,13 @@ internal static class SandboxWorkspaceSeedBuilder
                     new InlineSkillResourceSeed(
                         "dotnet-command-examples",
                         BuildBlazorCommandExamples(),
-                        "Concrete workspace_dotnet_new and workspace_dotnet_build examples for scaffolding and building a Blazor app.")
+                        "Concrete workspace_dotnet_new, workspace_dotnet_build, workspace_dotnet_test, and workspace_dotnet_run examples for generic .NET and Blazor app delivery.")
                 ]),
             CreateInlineSkillCapability(
                 appSummaryInlineSkillCapabilityId,
                 "generated-app-summary-inline-skill",
                 "Generated App Summary Skill",
-                "Workflow for summarizing a generated Blazor app from concrete source files.",
+                "Workflow for summarizing a generated application or runnable deliverable from concrete files and validation receipts.",
                 "generated-app-summary",
                 GetSeedText("skills/generated-app-summary.instructions"),
                 [
@@ -377,13 +395,13 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(providerNativeCodeInterpreterCapabilityId, "provider-native-code-interpreter", "Provider-Native Code Interpreter", "Attaches the hosted code interpreter tool for Responses-backed OpenAI or Azure OpenAI providers so analysis can avoid unnecessary local shell work.", ProviderNativeToolKeys.CodeInterpreter),
             CreateToolCapability(providerNativeFileSearchCapabilityId, "provider-native-file-search", "Provider-Native File Search", "Attaches the hosted file search tool for Responses-backed providers when provider-managed indexes are available.", ProviderNativeToolKeys.FileSearch, additionalConfiguration: new { maximumResultCount = 8 }),
             CreateToolCapability(providerNativeWebSearchCapabilityId, "provider-native-web-search", "Provider-Native Web Search", "Attaches the hosted web search tool for Responses-backed providers instead of inventing a local search wrapper.", ProviderNativeToolKeys.WebSearch),
-            CreateToolCapability(workspaceListFilesCapabilityId, "workspace-list-files", "Workspace List Files", "Lists files and directories from the current workspace.", "workspace_list_files"),
-            CreateToolCapability(workspaceSearchCapabilityId, "workspace-search", "Workspace Search", "Searches text across the current CanDoItAll.AgentFramework workspace for implementation clues.", "workspace_search"),
-            CreateToolCapability(workspaceReadCapabilityId, "workspace-read-file", "Workspace Read File", "Reads text files from the current workspace so programming, mail, and analysis agents can inspect artifacts on demand.", "workspace_read_file"),
-            CreateToolCapability(workspaceStatPathCapabilityId, "workspace-stat-path", "Workspace Stat Path", "Returns path metadata such as kind, existence, and size for a workspace file or directory.", "workspace_stat_path"),
-            CreateToolCapability(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", "Workspace Create Directory", "Creates a directory inside the current workspace before generated artifacts are written.", "workspace_create_directory", approvalRequired: true),
-            CreateToolCapability(workspaceWriteFileCapabilityId, "workspace-write-file", "Workspace Write File", "Creates or overwrites a text file inside the current workspace.", "workspace_write_file", approvalRequired: true),
-            CreateToolCapability(workspaceAppendFileCapabilityId, "workspace-append-file", "Workspace Append File", "Appends text to an existing workspace file or creates it when needed.", "workspace_append_file", approvalRequired: true),
+            CreateToolCapability(workspaceListFilesCapabilityId, "workspace-list-files", "Workspace List Files", "Lists files and directories from the managed workspace or a grounded external-target alias. Supports simple patterns and recursive globstar patterns such as **/* and **/*.cs. In external-target process runs, broad managed-root browsing is denied; list current-run artifacts or the grounded product alias instead.", "workspace_list_files"),
+            CreateToolCapability(workspaceSearchCapabilityId, "workspace-search", "Workspace Search", "Searches text across the current CanDoItAll.AgentFramework workspace for implementation clues; external-target paths require explicit current-run grounding. In external-target process runs, broad managed-root search is denied; search current-run artifacts or the grounded product alias instead.", "workspace_search"),
+            CreateToolCapability(workspaceReadCapabilityId, "workspace-read-file", "Workspace Read File", "Reads text files from the managed workspace or a grounded external-target alias so agents can inspect artifacts and concrete deliverables on demand. In external-target process runs, do not read unmanaged source or helper roots unless they are current-run artifacts.", "workspace_read_file"),
+            CreateToolCapability(workspaceStatPathCapabilityId, "workspace-stat-path", "Workspace Stat Path", "Returns path metadata such as kind, existence, and size for a managed workspace path or grounded external-target alias. In external-target process runs, prefer current-run artifacts and the grounded product alias.", "workspace_stat_path"),
+            CreateToolCapability(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", "Workspace Create Directory", "Creates a directory in the managed workspace or in a grounded external-target alias before generated artifacts or deliverables are written. In external-target process runs, product source, tests, scripts, and assets must stay under the grounded product alias or current-run artifact folders.", "workspace_create_directory", approvalRequired: true),
+            CreateToolCapability(workspaceWriteFileCapabilityId, "workspace-write-file", "Workspace Write File", "Creates or overwrites a text file in the managed workspace or in a grounded external-target alias. In external-target process runs, product source and tests must be written under the grounded product alias, not managed src/tests/tools roots.", "workspace_write_file", approvalRequired: true),
+            CreateToolCapability(workspaceAppendFileCapabilityId, "workspace-append-file", "Workspace Append File", "Appends text to an existing workspace file or creates it when needed. In external-target process runs, product source and tests must be written under the grounded product alias, not managed src/tests/tools roots.", "workspace_append_file", approvalRequired: true),
             CreateToolCapability(workspaceCopyPathCapabilityId, "workspace-copy-path", "Workspace Copy Path", "Copies a file or directory inside the current workspace with receipt generation.", "workspace_copy_path", approvalRequired: true),
             CreateToolCapability(workspaceMovePathCapabilityId, "workspace-move-path", "Workspace Move Path", "Moves or renames a file or directory inside the current workspace with receipt generation.", "workspace_move_path", approvalRequired: true),
             CreateToolCapability(workspaceDeletePathCapabilityId, "workspace-delete-path", "Workspace Delete Path", "Deletes a file or directory inside the current workspace with receipt generation.", "workspace_delete_path", approvalRequired: true),
@@ -391,10 +409,11 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(workspaceExecutionBoundaryCapabilityId, "workspace-execution-boundary", "Workspace Execution Boundary", "Reports the actual tool-execution isolation mode and host enforcement guarantees.", "workspace_execution_boundary"),
             CreateToolCapability(workspaceGitStatusCapabilityId, "workspace-git-status", "Workspace Git Status", "Runs a bounded git status recipe in the current workspace.", "workspace_git_status"),
             CreateToolCapability(workspaceGitDiffCapabilityId, "workspace-git-diff", "Workspace Git Diff", "Runs a bounded git diff recipe in the current workspace.", "workspace_git_diff"),
-            CreateToolCapability(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", "Workspace Dotnet Restore", "Runs a bounded dotnet restore recipe and records the actual isolation boundary.", "workspace_dotnet_restore", approvalRequired: true),
-            CreateToolCapability(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", "Workspace Dotnet Build", "Runs a bounded dotnet build recipe in the current workspace.", "workspace_dotnet_build"),
-            CreateToolCapability(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", "Workspace Dotnet Test", "Runs a bounded dotnet test recipe in the current workspace.", "workspace_dotnet_test"),
-            CreateToolCapability(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", "Workspace Dotnet New", "Creates an approved dotnet project scaffold inside the current workspace.", "workspace_dotnet_new", approvalRequired: true),
+            CreateToolCapability(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", "Workspace Dotnet Restore", "Runs a bounded dotnet restore recipe in the managed workspace or a grounded external-target alias.", "workspace_dotnet_restore", approvalRequired: true),
+            CreateToolCapability(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", "Workspace Dotnet Build", "Runs a bounded dotnet build recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_build"),
+            CreateToolCapability(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", "Workspace Dotnet Test", "Runs a bounded dotnet test recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_test"),
+            CreateToolCapability(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", "Workspace Dotnet Run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias, with durable launch evidence. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_run"),
+            CreateToolCapability(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", "Workspace Dotnet New", "Creates an approved dotnet project scaffold in the managed workspace or a grounded external-target alias. Use approved current SDK template names and inspect an unsuccessful result before retrying. For an exact output root, pass its parent as parentDirectory and the root leaf as name. For test projects, pass a parentDirectory under the grounded product root, such as <product-root>/tests, with name <AppName>.Tests; never reuse the product parent to create <AppName>.Tests as a sibling. Keep tests and support projects under child folders of the grounded product root unless another root is explicitly grounded. Do not scaffold product or test projects into managed src/tests/tools roots or sibling external-target roots during an external-target run.", "workspace_dotnet_new", approvalRequired: true),
             CreateToolCapability(workspacePythonRunFileCapabilityId, "workspace-python-run-file", "Workspace Python Run File", "Runs a workspace Python file through the controlled execution plane with durable receipts.", "workspace_python_run_file", approvalRequired: true),
             CreateToolCapability(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", "Workspace PowerShell Run Script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane.", "workspace_pwsh_run_script", approvalRequired: true),
             CreateToolCapability(workspaceConvertDocumentCapabilityId, "workspace-convert-document", "Workspace Convert Document", "Converts a workspace document such as a PDF into markdown using markitdown.", "workspace_convert_document", approvalRequired: true),
@@ -607,11 +626,14 @@ internal static class SandboxWorkspaceSeedBuilder
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
                 CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
                 CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -622,6 +644,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
                 CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
             ],
             ["qa", "browser", "governance"],
@@ -664,6 +687,8 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
                 CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
@@ -683,6 +708,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
                 CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
                 CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
@@ -848,6 +874,7 @@ internal static class SandboxWorkspaceSeedBuilder
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
@@ -875,6 +902,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default,
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
@@ -1028,6 +1056,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
                 CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
                 CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
@@ -1085,6 +1114,8 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
                 CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
@@ -1103,12 +1134,78 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
                 CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
                 CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
                 CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
             ],
             ["dotnet", "programming", "blazor"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        var blazorDeveloperAgent = CreateWorkloadAgent(
+            blazorDeveloperAgentId,
+            "Blazor Application Developer",
+            "Blazor implementation specialist",
+            "Builds Blazor Web App and component-driven ASP.NET Core UI deliverables with BaseLib/component-library guidance, focused tests, startup proof, and browser evidence.",
+            GetSeedText("agents/blazor-application-developer.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Programming,
+            "blazor-application-developer",
+            WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        slidingWindowTurns = 10,
+                        maxLocalRagResults = 5
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
+                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
+                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
+                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
+                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
+                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
+                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+            ],
+            ["blazor", "dotnet", "frontend", "programming"],
             now,
             ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
@@ -1146,6 +1243,9 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
                 CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -1156,6 +1256,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
                 CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
                 CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
             ],
             ["dotnet", "qa", "browser"],
@@ -1188,6 +1289,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
@@ -1235,6 +1337,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
@@ -1285,6 +1388,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
                 CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
@@ -1328,6 +1432,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
                 CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
@@ -1370,6 +1475,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -1414,6 +1520,7 @@ internal static class SandboxWorkspaceSeedBuilder
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
                 CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
                 CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
                 CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
@@ -1447,6 +1554,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 researchAgent,
                 dotnetArchitectAgent,
                 dotnetDeveloperAgent,
+                blazorDeveloperAgent,
                 dotnetQaAgent,
                 javascriptArchitectAgent,
                 javascriptDeveloperAgent,
@@ -1590,6 +1698,7 @@ internal static class SandboxWorkspaceSeedBuilder
             skillFile,
             SerializeConfiguration(new
             {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
                 skillSource = "file",
                 skillRoot,
                 allowedExternalRoots = allowExternalRoot ? new[] { skillRoot } : Array.Empty<string>(),
@@ -1624,6 +1733,7 @@ internal static class SandboxWorkspaceSeedBuilder
             $"inline://{key}",
             SerializeConfiguration(new
             {
+                managedSeedVersion = SeriousDeliveryManagedSeedVersion,
                 skillSource = "inline",
                 inlineSkill = new
                 {
@@ -1684,6 +1794,7 @@ internal static class SandboxWorkspaceSeedBuilder
     {
         var configuration = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
+            ["managedSeedVersion"] = SeriousDeliveryManagedSeedVersion,
             ["tool"] = toolName,
             ["approvalRequired"] = approvalRequired
         };

@@ -1,0 +1,282 @@
+- generic [ref=e1899]:
+  - complementary [ref=e1900]:
+    - generic [ref=e1901]:
+      - generic [ref=e1902]:
+        - paragraph [ref=e1903]: CanDoItAll
+        - heading "Local delivery workbench" [level=1] [ref=e1904]
+        - paragraph [ref=e1905]: Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.
+      - generic [ref=e1906]:
+        - paragraph [ref=e1907]: Workspace
+        - button "Delivery Workspace Project authoring, structure, calendars, and prompt sessions." [ref=e1908]:
+          - generic [ref=e1909]: Delivery Workspace
+          - generic [ref=e1910]: Project authoring, structure, calendars, and prompt sessions.
+        - button "Quality Desk Validation runs, test plans, and evidence review." [ref=e1911]:
+          - generic [ref=e1912]: Quality Desk
+          - generic [ref=e1913]: Validation runs, test plans, and evidence review.
+        - button "Automation Ops Activity, automation status, and environment settings." [ref=e1914]:
+          - generic [ref=e1915]: Automation Ops
+          - generic [ref=e1916]: Activity, automation status, and environment settings.
+      - generic [ref=e3944]:
+        - paragraph [ref=e3945]: Project Context
+        - paragraph [ref=e3946]: Validation v50 - Garden Tool Sharpening Queue
+        - paragraph [ref=e3947]: Delivery validation
+    - navigation [ref=e1917]:
+      - button "Dashboard Operational summary, provider health, and recent work." [ref=e1918]:
+        - generic [ref=e1920]: DB
+        - generic [ref=e1921]:
+          - generic [ref=e1923]: Dashboard
+          - generic [ref=e1924]: Operational summary, provider health, and recent work.
+      - button "Projects Project setup, phases, stack profile, and delivery context." [ref=e1925]:
+        - generic [ref=e1927]: PR
+        - generic [ref=e1928]:
+          - generic [ref=e1930]: Projects
+          - generic [ref=e1931]: Project setup, phases, stack profile, and delivery context.
+      - button "Processes Role-first process definitions, runtime orchestration, evidence, and improvement signals." [ref=e1932]:
+        - generic [ref=e1934]: PM
+        - generic [ref=e1935]:
+          - generic [ref=e1937]: Processes
+          - generic [ref=e1938]: Role-first process definitions, runtime orchestration, evidence, and improvement signals.
+      - button "Collaboration 77 Human escalation, inbox, and process-scoped conversations." [ref=e1939]:
+        - generic [ref=e1941]: CO
+        - generic [ref=e1942]:
+          - generic [ref=e1943]:
+            - generic [ref=e1944]: Collaboration
+            - generic [ref=e1945]: "77"
+          - generic [ref=e1946]: Human escalation, inbox, and process-scoped conversations.
+      - button "CRM / HR Unified party directory, CRM, workforce, recruiting, agents, and assignments." [ref=e1947]:
+        - generic [ref=e1949]: CH
+        - generic [ref=e1950]:
+          - generic [ref=e1952]: CRM / HR
+          - generic [ref=e1953]: Unified party directory, CRM, workforce, recruiting, agents, and assignments.
+      - button "Agents Integrated AgentFramework foundation, imported tabs, and runtime governance." [ref=e1954]:
+        - generic [ref=e1956]: AG
+        - generic [ref=e1957]:
+          - generic [ref=e1959]: Agents
+          - generic [ref=e1960]: Integrated AgentFramework foundation, imported tabs, and runtime governance.
+      - button "Resources Typed resources, connectors, and validation status." [ref=e1961]:
+        - generic [ref=e1963]: RS
+        - generic [ref=e1964]:
+          - generic [ref=e1966]: Resources
+          - generic [ref=e1967]: Typed resources, connectors, and validation status.
+      - button "Prompt Gallery Prompt library, collections, versions, and usage." [ref=e1968]:
+        - generic [ref=e1970]: PG
+        - generic [ref=e1971]:
+          - generic [ref=e1973]: Prompt Gallery
+          - generic [ref=e1974]: Prompt library, collections, versions, and usage.
+      - button "Prompt Factory Guided prompt assembly with flow templates and blueprints." [ref=e1975]:
+        - generic [ref=e1977]: PF
+        - generic [ref=e1978]:
+          - generic [ref=e1980]: Prompt Factory
+          - generic [ref=e1981]: Guided prompt assembly with flow templates and blueprints.
+      - button "Validation Center Checklists, findings, review decisions, and coverage." [ref=e1982]:
+        - generic [ref=e1984]: VC
+        - generic [ref=e1985]:
+          - generic [ref=e1987]: Validation Center
+          - generic [ref=e1988]: Checklists, findings, review decisions, and coverage.
+      - button "Test Lab Plans, evidence, linked tests, and execution records." [ref=e1989]:
+        - generic [ref=e1991]: TL
+        - generic [ref=e1992]:
+          - generic [ref=e1994]: Test Lab
+          - generic [ref=e1995]: Plans, evidence, linked tests, and execution records.
+      - button "Activity Timeline and cross-entity search for recent work." [ref=e1996]:
+        - generic [ref=e1998]: AC
+        - generic [ref=e1999]:
+          - generic [ref=e2001]: Activity
+          - generic [ref=e2002]: Timeline and cross-entity search for recent work.
+      - button "Automation Background jobs, exports, sends, and operational diagnostics." [ref=e2003]:
+        - generic [ref=e2005]: AU
+        - generic [ref=e2006]:
+          - generic [ref=e2008]: Automation
+          - generic [ref=e2009]: Background jobs, exports, sends, and operational diagnostics.
+      - button "Settings Workspace defaults, providers, secrets, and environment settings." [ref=e2010]:
+        - generic [ref=e2012]: ST
+        - generic [ref=e2013]:
+          - generic [ref=e2015]: Settings
+          - generic [ref=e2016]: Workspace defaults, providers, secrets, and environment settings.
+    - generic [ref=e2017]:
+      - paragraph [ref=e2018]: Opened Projects
+      - button "Validation v43 - Canal Lock Logbook · Structure project-structure / /projects/f2f44c16-5b57-4971-a1b9-74b724790255/structure" [ref=e2019]:
+        - generic [ref=e2020]: Validation v43 - Canal Lock Logbook · Structure
+        - generic [ref=e2021]: project-structure / /projects/f2f44c16-5b57-4971-a1b9-74b724790255/structure
+      - button "Validation v43 - Community Kiln Scheduler · Structure project-structure / /projects/3bd1b61a-5fd6-4d66-bb5f-4c8304d7380c/structure" [ref=e2022]:
+        - generic [ref=e2023]: Validation v43 - Community Kiln Scheduler · Structure
+        - generic [ref=e2024]: project-structure / /projects/3bd1b61a-5fd6-4d66-bb5f-4c8304d7380c/structure
+      - button "Validation v46 - Makerspace Solder Station Log · Structure project-structure / /projects/5508b2e6-0427-4329-a938-454e735b0fa5/structure" [ref=e2025]:
+        - generic [ref=e2026]: Validation v46 - Makerspace Solder Station Log · Structure
+        - generic [ref=e2027]: project-structure / /projects/5508b2e6-0427-4329-a938-454e735b0fa5/structure
+      - button "Validation v46 - Neighborhood Compost Pickup Board · Structure project-structure / /projects/cbc26f7a-72c1-40a3-b965-41f0c2464a5c/structure" [ref=e2028]:
+        - generic [ref=e2029]: Validation v46 - Neighborhood Compost Pickup Board · Structure
+        - generic [ref=e2030]: project-structure / /projects/cbc26f7a-72c1-40a3-b965-41f0c2464a5c/structure
+      - button "Validation v47 - Pocket Seed Library Tracker · Structure project-structure / /projects/17d41485-603e-4595-8779-4af85d7c650c/structure" [ref=e2031]:
+        - generic [ref=e2032]: Validation v47 - Pocket Seed Library Tracker · Structure
+        - generic [ref=e2033]: project-structure / /projects/17d41485-603e-4595-8779-4af85d7c650c/structure
+      - button "Validation v47 - Rooftop Rain Barrel Monitor · Structure project-structure / /projects/2e3d18a9-017e-4fac-89ae-a26dccfcee92/structure" [ref=e2034]:
+        - generic [ref=e2035]: Validation v47 - Rooftop Rain Barrel Monitor · Structure
+        - generic [ref=e2036]: project-structure / /projects/2e3d18a9-017e-4fac-89ae-a26dccfcee92/structure
+      - button "Validation v48 - Community Bike Pump Locator · Structure project-structure / /projects/4c1cf8c6-edba-45bf-b0ae-e5b774b65529/structure" [ref=e2037]:
+        - generic [ref=e2038]: Validation v48 - Community Bike Pump Locator · Structure
+        - generic [ref=e2039]: project-structure / /projects/4c1cf8c6-edba-45bf-b0ae-e5b774b65529/structure
+      - button "Validation v48 - Craft Swap Shelf Catalog · Structure project-structure / /projects/32a7a89b-42f7-48e2-be14-dc00c0baf72c/structure" [ref=e2040]:
+        - generic [ref=e2041]: Validation v48 - Craft Swap Shelf Catalog · Structure
+        - generic [ref=e2042]: project-structure / /projects/32a7a89b-42f7-48e2-be14-dc00c0baf72c/structure
+      - button "Validation v49 - Pantry Expiry Radar · Structure project-structure / /projects/94867a3e-89d2-47c8-b195-9713d2c0e7ab/structure" [ref=e2043]:
+        - generic [ref=e2044]: Validation v49 - Pantry Expiry Radar · Structure
+        - generic [ref=e2045]: project-structure / /projects/94867a3e-89d2-47c8-b195-9713d2c0e7ab/structure
+      - button "Validation v50 - Garden Tool Sharpening Queue · Structure project-structure / /projects/56565367-1a49-4e37-baba-6e821e06e459/structure" [ref=e3948]:
+        - generic [ref=e3949]: Validation v50 - Garden Tool Sharpening Queue · Structure
+        - generic [ref=e3950]: project-structure / /projects/56565367-1a49-4e37-baba-6e821e06e459/structure
+  - main [ref=e2046]:
+    - generic [ref=e2047]:
+      - generic [ref=e2050]:
+        - generic [ref=e2051]:
+          - button "Dashboard" [ref=e2053]:
+            - generic [ref=e2054]: Dashboard
+            - generic [ref=e2056]: push_pin
+          - button "Projects" [ref=e2058]:
+            - generic [ref=e2059]: Projects
+          - button "Projects" [ref=e2061]:
+            - generic [ref=e2062]: Projects
+          - button "Projects" [ref=e2064]:
+            - generic [ref=e2065]: Projects
+          - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e2067]:
+            - generic [ref=e2068]: Validation v43 - Canal Lock Logbook · Structure
+          - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e2070]:
+            - generic [ref=e2071]: Validation v43 - Community Kiln Scheduler · Structure
+        - generic [ref=e2072]:
+          - textbox "Search tabs" [ref=e2073]
+          - group [ref=e2074]:
+            - generic "+15" [ref=e3951] [cursor=pointer]
+      - generic [ref=e2077]:
+        - generic [ref=e2078]:
+          - generic [ref=e2079]: Active database
+          - generic [ref=e2080]: PostgreSQL workspace
+          - generic [ref=e2081]: PostgreSQL
+          - button "Show db details" [ref=e2083] [cursor=pointer]:
+            - generic [ref=e2084]: "?"
+        - button "Switch database" [ref=e2085]:
+          - generic [ref=e2086]: Switch database
+        - generic [ref=e2087]: Interactive Server
+        - generic [ref=e2088]: Live items 10
+        - generic [ref=e2089]: Tabs 21
+    - generic [ref=e3953]:
+      - button "tune" [ref=e3954]
+      - generic [ref=e3955]:
+        - generic [ref=e3957]:
+          - paragraph [ref=e3958]: Workbench
+          - heading "Validation v50 - Garden Tool Sharpening Queue structure" [level=1] [ref=e3959]
+        - generic [ref=e3960]:
+          - generic [ref=e3962]:
+            - generic [ref=e3963]:
+              - paragraph [ref=e3964]: Structure canvas
+              - generic [ref=e3965]:
+                - generic [ref=e3966]:
+                  - heading "Validation v50 - Garden Tool Sharpening Queue workbench" [level=2] [ref=e3968]
+                  - paragraph [ref=e3969]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+                - generic [ref=e3970]:
+                  - generic [ref=e3971]:
+                    - generic [ref=e3972]: Nodes
+                    - strong [ref=e3973]: "3"
+                  - generic [ref=e3974]:
+                    - generic [ref=e3975]: Links
+                    - strong [ref=e3976]: "2"
+                  - generic [ref=e3977]:
+                    - generic [ref=e3978]: Selection
+                    - strong [ref=e3979]: "1"
+            - generic [ref=e3981]:
+              - generic [ref=e3982]:
+                - generic [ref=e3983]:
+                  - button "Open quick create actions" [ref=e3984] [cursor=pointer]:
+                    - generic [ref=e3985]: add
+                    - generic [ref=e3986]: Open quick create actions
+                  - button "Focus root" [ref=e3987] [cursor=pointer]:
+                    - generic [ref=e3988]: center_focus_strong
+                    - generic [ref=e3989]: Focus root
+                  - generic [ref=e3990]:
+                    - generic [ref=e3991]
+                    - button "Inspector" [ref=e4001] [cursor=pointer]
+                    - button "Health" [ref=e4004] [cursor=pointer]
+                    - button "Blocks" [ref=e4007] [cursor=pointer]
+                    - button "Signals" [ref=e4010] [cursor=pointer]
+                    - button "Agents" [ref=e4013] [cursor=pointer]
+                    - button "Recompose" [ref=e4016] [cursor=pointer]
+                - generic [ref=e4018]:
+                  - button "Fit canvas" [ref=e4019] [cursor=pointer]:
+                    - generic [ref=e4020]: fit_screen
+                    - generic [ref=e4021]: Fit canvas
+                  - button "Toggle maximize" [ref=e4022] [cursor=pointer]:
+                    - generic [ref=e4023]: open_in_full
+                    - generic [ref=e4024]: Maximize canvas
+                  - button "Toggle minimap" [ref=e4025] [cursor=pointer]:
+                    - generic [ref=e4026]: map
+                    - generic [ref=e4027]: Toggle minimap
+                  - button "Toggle diagnostics" [ref=e4028] [cursor=pointer]:
+                    - generic [ref=e4029]: monitor_heart
+                    - generic [ref=e4030]: Toggle diagnostics
+                  - button "Toggle help" [ref=e4031] [cursor=pointer]:
+                    - generic [ref=e4032]: help
+                    - generic [ref=e4033]: Canvas help
+                  - button "Toggle settings" [ref=e4034] [cursor=pointer]:
+                    - generic [ref=e4035]: settings
+                    - generic [ref=e4036]: Canvas settings
+                  - generic [ref=e4037]:
+                    - button "Zoom out" [ref=e4038] [cursor=pointer]
+                    - slider "Canvas zoom" [ref=e4041]: "100"
+                    - button "Zoom in" [ref=e4042] [cursor=pointer]
+                    - generic [ref=e4045]: 100%
+              - generic [ref=e4046]:
+                - generic "Canvas workbench" [ref=e4047]:
+                  - generic [ref=e4048]:
+                    - generic
+                - generic [ref=e4054]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+                - region "Project structure selection panel" [ref=e4312]:
+                  - generic [ref=e4313]:
+                    - generic [ref=e4314]
+                    - generic [ref=e4318]
+                  - generic [ref=e4326]:
+                    - generic [ref=e4327]
+                    - generic [ref=e4343]
+                    - generic [ref=e4719]: Multi-team software delivery and release governance was linked to Garden Tool Sharpening Queue source folder.
+                    - generic [ref=e4378]
+                    - group [ref=e4391]
+                - generic:
+                  - generic: Garden Tool Sharpening Queue source folder is the primary selection.
+                  - region "Canvas accessibility mirror":
+                    - heading "Canvas accessibility mirror" [level=3]
+                    - paragraph: 1 selected nodes across 3 canvas nodes
+                    - list
+          - generic [ref=e4403]:
+            - generic [ref=e4405]:
+              - paragraph [ref=e4406]: Outline
+              - heading "Project object index" [level=5] [ref=e4407]
+              - tree "Project object index" [ref=e4409]:
+                - treeitem "Validation v50 - Garden Tool Sharpening Queue Draft" [ref=e4410]:
+                  - button "Validation v50 - Garden Tool Sharpening Queue Draft" [ref=e4413]:
+                    - generic [ref=e4415]: folder
+                    - generic [ref=e4416]: Validation v50 - Garden Tool Sharpening Queue
+                    - generic [ref=e4417]: Draft
+                - treeitem "Garden Tool Sharpening Queue source folder Draft" [selected] [ref=e4675]:
+                  - button "Garden Tool Sharpening Queue source folder Draft" [ref=e4678]:
+                    - generic [ref=e4680]: account_tree
+                    - generic [ref=e4681]: Garden Tool Sharpening Queue source folder
+                    - generic [ref=e4682]: Draft
+                - treeitem "Multi-team software delivery and release governance Published" [ref=e4720]:
+                  - button "Multi-team software delivery and release governance Published" [ref=e4723]:
+                    - generic [ref=e4725]: grid_view
+                    - generic [ref=e4726]: Multi-team software delivery and release governance
+                    - generic [ref=e4727]: Published
+            - generic [ref=e4419]:
+              - paragraph [ref=e4420]: Canvas coverage
+              - heading "Graph health" [level=5] [ref=e4421]
+              - generic [ref=e4422]:
+                - generic [ref=e4423]:
+                  - paragraph [ref=e4424]: Total nodes
+                  - paragraph [ref=e4425]: "3"
+                - generic [ref=e4426]:
+                  - paragraph [ref=e4427]: Total links
+                  - paragraph [ref=e4428]: "2"
+                - generic [ref=e4429]:
+                  - paragraph [ref=e4430]: Selected
+                  - paragraph [ref=e4431]: "1"
+              - paragraph [ref=e4432]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+    - group [ref=e3854]:
+      - generic "Workbench utilities" [ref=e4433] [cursor=pointer]

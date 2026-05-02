@@ -15,6 +15,7 @@
   "textAssets": {
     "agents/code-review-lead.instructions": "instructions/agents/code-review-lead.md",
     "agents/delivery-qa-observer.instructions": "instructions/agents/delivery-qa-observer.md",
+    "agents/blazor-application-developer.instructions": "instructions/agents/blazor-application-developer.md",
     "agents/dotnet-application-developer.instructions": "instructions/agents/dotnet-application-developer.md",
     "agents/dotnet-qa-review-lead.instructions": "instructions/agents/dotnet-qa-review-lead.md",
     "agents/dotnet-solution-architect.instructions": "instructions/agents/dotnet-solution-architect.md",
@@ -35,6 +36,8 @@
     "agents/research-deep-dive-analyst.instructions": "instructions/agents/research-deep-dive-analyst.md",
     "skills/mail-triage-inline.instructions": "instructions/skills/mail-triage-inline.md",
     "skills/document-spreadsheet-reconciliation.instructions": "instructions/skills/document-spreadsheet-reconciliation.md",
+    "skills/concrete-deliverable-delivery.instructions": "instructions/skills/concrete-deliverable-delivery.md",
+    "skills/dotnet-app-delivery.instructions": "instructions/skills/dotnet-app-delivery.md",
     "skills/blazor-ssr-delivery.instructions": "instructions/skills/blazor-ssr-delivery.md",
     "skills/generated-app-summary.instructions": "instructions/skills/generated-app-summary.md",
     "skills/architecture-review.instructions": "instructions/skills/architecture-review.md",

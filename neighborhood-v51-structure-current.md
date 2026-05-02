@@ -1,0 +1,50 @@
+- main [ref=e501]:
+  - group [ref=e502]:
+    - generic "Workspace navigation" [ref=e503] [cursor=pointer]
+  - generic [ref=e504]:
+    - generic [ref=e507]:
+      - generic [ref=e508]:
+        - button "Dashboard" [ref=e510]:
+          - generic [ref=e511]: Dashboard
+          - generic [ref=e513]: push_pin
+        - button "Projects" [ref=e515]:
+          - generic [ref=e516]: Projects
+        - button "Projects" [ref=e518]:
+          - generic [ref=e519]: Projects
+        - button "Projects" [ref=e521]:
+          - generic [ref=e522]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e524]:
+          - generic [ref=e525]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e527]:
+          - generic [ref=e528]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e529]:
+        - textbox "Search tabs" [ref=e530]
+        - group [ref=e531]:
+          - generic "+17" [ref=e532] [cursor=pointer]
+    - generic [ref=e534]:
+      - generic [ref=e535]:
+        - generic [ref=e536]: Active database
+        - generic [ref=e537]: PostgreSQL workspace
+        - generic [ref=e538]: PostgreSQL
+        - button "Show db details" [ref=e540] [cursor=pointer]:
+          - generic [ref=e541]: "?"
+      - button "Switch database" [ref=e542]:
+        - generic [ref=e543]: Switch database
+      - generic [ref=e544]: Interactive Server
+      - generic [ref=e545]: Live items 11
+      - generic [ref=e546]: Tabs 23
+  - generic [ref=e549]:
+    - button "tune" [ref=e550]
+    - generic [ref=e551]:
+      - generic [ref=e553]:
+        - paragraph [ref=e554]: Workbench
+        - heading "Validation v51 - Neighborhood Mural Permit Tracker structure" [level=1] [ref=e555]
+      - generic [ref=e556]:
+        - generic [ref=e558]:
+          - generic [ref=e559]
+          - generic [ref=e577]
+        - generic [ref=e999]:
+          - generic [ref=e1001]
+          - generic [ref=e1015]
+  - group [ref=e1029]:
+    - generic "Workbench utilities" [ref=e1030] [cursor=pointer]

@@ -1,3 +1,4 @@
+using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -23,20 +24,20 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 arguments: ["-StepKey", "qa-validation"],
                 outputPaths:
                 [
-                    "artifacts/showcases/blazor-ssr-calculator/evidence/ui/qa-validation/calculator-proof.png",
-                    "artifacts/showcases/blazor-ssr-calculator/evidence/ui/qa-validation/calculator-page.yml",
-                    "artifacts/showcases/blazor-ssr-calculator/evidence/ui/qa-validation/calculator-console.log",
-                    "artifacts/showcases/blazor-ssr-calculator/evidence/ui/qa-validation/import-summary.json"
+                    "artifacts/showcases/generated-web-app/evidence/ui/qa-validation/primary-proof.png",
+                    "artifacts/showcases/generated-web-app/evidence/ui/qa-validation/page.yml",
+                    "artifacts/showcases/generated-web-app/evidence/ui/qa-validation/console.log",
+                    "artifacts/showcases/generated-web-app/evidence/ui/qa-validation/import-summary.json"
                 ]);
 
             Assert.True(result.Succeeded);
             Assert.True(result.Receipt.MutatesWorkspace);
             Assert.Contains(
                 result.Receipt.TargetPaths,
-                item => string.Equals(item, "artifacts/showcases/blazor-ssr-calculator/evidence/ui/qa-validation/calculator-proof.png", StringComparison.OrdinalIgnoreCase));
+                item => string.Equals(item, "artifacts/showcases/generated-web-app/evidence/ui/qa-validation/primary-proof.png", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(
                 result.Receipt.ArtifactReferences,
-                item => string.Equals(item.RelativePath, "artifacts/showcases/blazor-ssr-calculator/evidence/ui/qa-validation/import-summary.json", StringComparison.OrdinalIgnoreCase));
+                item => string.Equals(item.RelativePath, "artifacts/showcases/generated-web-app/evidence/ui/qa-validation/import-summary.json", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(
                 result.Receipt.TargetPaths,
                 item => string.Equals(item, "scripts/Import-PlaywrightEvidence.ps1", StringComparison.OrdinalIgnoreCase));
@@ -62,15 +63,15 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
 
         var workspaceRoot = CreateDeepWorkspaceRoot();
-        var deliveryDirectory = Path.Combine(workspaceRoot, "deliveries", "blazor-ssr-basic-units-converter");
+        var deliveryDirectory = Path.Combine(workspaceRoot, "deliveries", "blazor-ssr-sample-web");
         Directory.CreateDirectory(deliveryDirectory);
-        await File.WriteAllTextAsync(Path.Combine(deliveryDirectory, "BasicUnitsConverter.sln"), string.Empty);
+        await File.WriteAllTextAsync(Path.Combine(deliveryDirectory, "SampleWeb.sln"), string.Empty);
         var processHost = new FakeWorkspaceProcessHost();
         var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
-            var result = await service.DotnetBuild("deliveries/blazor-ssr-basic-units-converter/BasicUnitsConverter.sln");
+            var result = await service.DotnetBuild("deliveries/blazor-ssr-sample-web/SampleWeb.sln");
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
@@ -80,7 +81,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 StringComparison.OrdinalIgnoreCase);
             Assert.True(processHost.LastRequest.WorkingDirectory.Length < workspaceRoot.Length);
             Assert.Matches("^[A-Z]:\\\\$", processHost.LastRequest.WorkingDirectory);
-            Assert.Equal("deliveries/blazor-ssr-basic-units-converter/BasicUnitsConverter.sln".Replace('/', Path.DirectorySeparatorChar), processHost.LastRequest.Arguments[1]);
+            Assert.Equal("deliveries/blazor-ssr-sample-web/SampleWeb.sln".Replace('/', Path.DirectorySeparatorChar), processHost.LastRequest.Arguments[1]);
         }
         finally
         {
@@ -99,20 +100,209 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = CreateDeepWorkspaceRoot();
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
-        var scriptPath = Path.Combine(scriptDirectory, "Launch-UnitsConverterApp.ps1");
+        var scriptPath = Path.Combine(scriptDirectory, "Launch-WebApp.ps1");
         await File.WriteAllTextAsync(scriptPath, "Write-Output 'ok'");
         var processHost = new FakeWorkspaceProcessHost();
         var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
-            var result = await service.PowerShellRunScript("scripts/Launch-UnitsConverterApp.ps1");
+            var result = await service.PowerShellRunScript("scripts/Launch-WebApp.ps1");
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.True(processHost.LastRequest!.WorkingDirectory.Length < scriptDirectory.Length);
             Assert.StartsWith(processHost.LastRequest.WorkingDirectory[..2], processHost.LastRequest.Arguments[4], StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(workspaceRoot, processHost.LastRequest.Arguments[4], StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb/SampleWeb.csproj",
+                url: "http://127.0.0.1:5123/",
+                startupTimeoutSeconds: 5,
+                timeoutSeconds: 20);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_run", processHost.LastRequest!.ToolName);
+            Assert.Equal(projectDirectory, processHost.LastRequest.WorkingDirectory);
+            Assert.Contains("-EncodedCommand", processHost.LastRequest.Arguments);
+            Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("startup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Receipt.TargetPaths, item => string.Equals(item, "apps/SampleWeb/SampleWeb.csproj", StringComparison.OrdinalIgnoreCase));
+
+            var encodedIndex = processHost.LastRequest.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
+            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            Assert.Contains("http://127.0.0.1:5123", script, StringComparison.Ordinal);
+            Assert.Contains("'--urls'", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("workflow", script, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("converter", script, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetTest_accepts_project_directory_when_target_is_unambiguous()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var testProjectDirectory = Path.Combine(workspaceRoot, "tests", "SampleWeb.Tests");
+        Directory.CreateDirectory(testProjectDirectory);
+        var testProjectPath = Path.Combine(testProjectDirectory, "SampleWeb.Tests.csproj");
+        await File.WriteAllTextAsync(testProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetTest("tests/SampleWeb.Tests");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_test", processHost.LastRequest!.ToolName);
+            Assert.Equal("test", processHost.LastRequest.Arguments[0]);
+            Assert.Equal("tests/SampleWeb.Tests/SampleWeb.Tests.csproj".Replace('/', Path.DirectorySeparatorChar), processHost.LastRequest.Arguments[1]);
+            Assert.Contains("tests/SampleWeb.Tests/SampleWeb.Tests.csproj", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetTest_failure_result_points_agent_to_captured_diagnostics()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var testProjectDirectory = Path.Combine(workspaceRoot, "tests", "SampleWeb.Tests");
+        Directory.CreateDirectory(testProjectDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(testProjectDirectory, "SampleWeb.Tests.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var processHost = new FakeWorkspaceProcessHost(exitCode: 1, stdout: "CS0246 missing reference", stderr: "Build failed");
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetTest("tests/SampleWeb.Tests");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("Inspect captured diagnostics before editing or retrying", result.Message, StringComparison.Ordinal);
+            Assert.Contains("stdout.txt", result.Message, StringComparison.Ordinal);
+            Assert.Contains("stderr.txt", result.Message, StringComparison.Ordinal);
+            Assert.Contains("dotnet_test stdout", result.DiagnosticArtifactSummary, StringComparison.Ordinal);
+            Assert.Contains(
+                result.ArtifactReferences,
+                item => item.RelativePath.EndsWith("stdout.txt", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                result.ArtifactReferences,
+                item => item.RelativePath.EndsWith("stderr.txt", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_accepts_project_directory_when_target_is_unambiguous()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb",
+                url: "http://127.0.0.1:5124/",
+                startupTimeoutSeconds: 5,
+                timeoutSeconds: 20);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal(projectDirectory, processHost.LastRequest!.WorkingDirectory);
+            Assert.Contains(result.Receipt.TargetPaths, item => string.Equals(item, "apps/SampleWeb/SampleWeb.csproj", StringComparison.OrdinalIgnoreCase));
+
+            var encodedIndex = processHost.LastRequest.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
+            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            Assert.Contains(Path.Combine(projectDirectory, "SampleWeb.csproj"), script, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetBuild_rejects_ambiguous_project_directory()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var appDirectory = Path.Combine(workspaceRoot, "apps", "Ambiguous");
+        Directory.CreateDirectory(appDirectory);
+        await File.WriteAllTextAsync(Path.Combine(appDirectory, "First.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        await File.WriteAllTextAsync(Path.Combine(appDirectory, "Second.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
+
+        try
+        {
+            var result = await service.DotnetBuild("apps/Ambiguous");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("contains multiple .NET project files", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("dotnet_build", result.RecipeId);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_foreground_uses_dotnet_run_for_runnable_project()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "WorkerApp");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "WorkerApp.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/WorkerApp/WorkerApp.csproj",
+                waitForHttp: false,
+                noBuild: false);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_run", processHost.LastRequest!.ToolName);
+            Assert.Equal("run", processHost.LastRequest.Arguments[0]);
+            Assert.Equal("--project", processHost.LastRequest.Arguments[1]);
+            Assert.EndsWith("WorkerApp.csproj", processHost.LastRequest.Arguments[2], StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("--no-build", processHost.LastRequest.Arguments);
         }
         finally
         {
@@ -145,6 +335,20 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
     private sealed class FakeWorkspaceProcessHost : IWorkspaceProcessHost
     {
+        private readonly int exitCode;
+        private readonly string stdout;
+        private readonly string stderr;
+
+        public FakeWorkspaceProcessHost(
+            int exitCode = 0,
+            string stdout = "ok",
+            string stderr = "")
+        {
+            this.exitCode = exitCode;
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
+
         public WorkspaceProcessExecutionRequest? LastRequest { get; private set; }
 
         public ExecutionBoundaryDescriptor DescribeBoundary()
@@ -165,9 +369,9 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var now = DateTimeOffset.UtcNow;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,
-                ExitCode: 0,
-                Stdout: "ok",
-                Stderr: string.Empty,
+                ExitCode: exitCode,
+                Stdout: stdout,
+                Stderr: stderr,
                 StdoutTruncated: false,
                 StderrTruncated: false,
                 StartedAtUtc: now,
