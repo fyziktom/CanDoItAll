@@ -9,7 +9,9 @@ public sealed class ProjectStructureAgentService(
     ProjectWorkbenchService projectWorkbenchService,
     ProjectStructureLeaseService leaseService,
     ProjectStructureChecklistService checklistService,
-    ProjectStructureImportService importService)
+    ProjectStructureImportService importService,
+    IProjectStructureRuntimeLauncher runtimeLauncher,
+    IProjectStructureLocalFileOpener localFileOpener)
 {
     private static readonly ProjectStructureReadRequest FullNodeReadRequest = new(
         IncludeLinks: true,
@@ -642,7 +644,7 @@ public sealed class ProjectStructureAgentService(
         return node;
     }
 
-    private static ProjectStructureNodeSummary MapRequiredNode(ProjectStructureNode? node, string nodeId)
+    private ProjectStructureNodeSummary MapRequiredNode(ProjectStructureNode? node, string nodeId)
     {
         if (node is null)
         {
@@ -779,7 +781,7 @@ public sealed class ProjectStructureAgentService(
         }
     }
 
-    private static ProjectStructureNodeSummary MapNodeSummary(
+    private ProjectStructureNodeSummary MapNodeSummary(
         ProjectStructureNode node,
         int effectivePriority,
         ProjectStructureReadRequest options)
@@ -815,7 +817,8 @@ public sealed class ProjectStructureAgentService(
             node.ParentProjectCount,
             options.IncludeLayout ? node.X : null,
             options.IncludeLayout ? node.Y : null,
-            node.DurationSeconds);
+            node.DurationSeconds,
+            ProjectStructureNodeActionCapabilityResolver.Resolve(node, runtimeLauncher, localFileOpener));
     }
 
     private static ProjectStructureDependencyItem MapDependencyItem(ProjectStructureDependencyNodeAnalysis analysis)

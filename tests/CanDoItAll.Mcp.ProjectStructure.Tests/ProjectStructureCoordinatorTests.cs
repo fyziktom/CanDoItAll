@@ -76,6 +76,56 @@ public sealed class ProjectStructureCoordinatorTests
     }
 
     [Fact]
+    public async Task ReadAsync_maps_node_action_capabilities_to_compact_nodes()
+    {
+        var projectId = Guid.NewGuid();
+        var capabilities = new ProjectStructureNodeActionCapabilities(
+            CanRunNormally: true,
+            CanRunAsAdministrator: true,
+            CanOpenInFileExplorer: false,
+            CanOpenInNewTab: false,
+            RuntimeDisplayName: "dotnet watch",
+            RuntimeDisplayCommand: "dotnet watch --project src/App/App.csproj run",
+            RuntimeWorkingDirectory: @"C:\repositories\CanDoItAll\src\App",
+            OpenInNewTabRoute: string.Empty,
+            StorageProvider: string.Empty,
+            StorageLocatorKind: string.Empty,
+            StorageLocator: string.Empty,
+            Actions:
+            [
+                new ProjectStructureNodeActionDescriptor(
+                    "runtime:open",
+                    "Run normally",
+                    "Double-click quick-action dialog and node context menu",
+                    "Launches the resolved workspace command in a normal PowerShell window."),
+                new ProjectStructureNodeActionDescriptor(
+                    "runtime:admin",
+                    "Run as administrator",
+                    "Double-click quick-action dialog and node context menu",
+                    "Launches the same resolved workspace command in an elevated PowerShell window.")
+            ],
+            Guidance:
+            [
+                "Runtime nodes always expose both normal and administrator run actions when the launch plan resolves on this host."
+            ]);
+        var handler = new DelegateHttpMessageHandler(_ => Task.FromResult(JsonResponse(new ProjectStructureReadResponse(
+            projectId,
+            "Runtime project",
+            [CreateNodeSummary(capabilities)],
+            [],
+            []))));
+
+        var coordinator = CreateCoordinator(handler);
+        var result = await coordinator.ReadAsync(projectId, new ProjectStructureReadRequest());
+
+        var compactCapabilities = Assert.IsType<ProjectStructureNodeActionCapabilities>(result.Nodes[0].ActionCapabilities);
+        Assert.True(compactCapabilities.CanRunNormally);
+        Assert.True(compactCapabilities.CanRunAsAdministrator);
+        Assert.Contains(compactCapabilities.Actions, action => action.ActionId == "runtime:open");
+        Assert.Contains(compactCapabilities.Actions, action => action.ActionId == "runtime:admin");
+    }
+
+    [Fact]
     public async Task ImportAsync_posts_to_import_route_and_returns_result()
     {
         var projectId = Guid.NewGuid();
@@ -289,6 +339,41 @@ public sealed class ProjectStructureCoordinatorTests
         var apiClient = new ProjectStructureHttpClient(httpClient, runtime, NullLogger<ProjectStructureHttpClient>.Instance);
         return new ProjectStructureCoordinator(apiClient, runtime);
     }
+
+    private static ProjectStructureNodeSummary CreateNodeSummary(ProjectStructureNodeActionCapabilities? actionCapabilities = null)
+        => new(
+            "node-1",
+            null,
+            ProjectObjectType.Script,
+            "powershell",
+            "Run setup",
+            "Runtime",
+            "Draft",
+            null,
+            "/projects/test",
+            "project-structure-node",
+            null,
+            null,
+            null,
+            null,
+            [],
+            "percent",
+            0,
+            "dot",
+            "info",
+            "Open",
+            0,
+            0,
+            null,
+            null,
+            null,
+            ProjectStructureProjectRole.None,
+            null,
+            0,
+            null,
+            null,
+            null,
+            actionCapabilities);
 
     private static HttpResponseMessage JsonResponse<T>(T payload)
     {

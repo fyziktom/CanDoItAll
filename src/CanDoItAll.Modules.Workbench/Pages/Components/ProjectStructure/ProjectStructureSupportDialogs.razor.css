@@ -2,6 +2,10 @@
     width: min(66rem, calc(100vw - 3rem));
 }
 
+.project-structure-mermaid-dialog {
+    width: min(82rem, calc(100vw - 3rem));
+}
+
 .project-structure-summary-table {
     display: grid;
     gap: 0.7rem;
@@ -40,9 +44,28 @@
     min-width: 0;
 }
 
+.project-structure-mermaid-diagram {
+    min-width: 0;
+}
+
+.project-structure-mermaid-details {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(248, 250, 252, 0.82);
+    overflow: hidden;
+}
+
+.project-structure-mermaid-details > summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 650;
+    padding: 0.75rem 0.9rem;
+}
+
 .project-structure-mermaid-source {
-    min-height: 24rem;
-    max-height: min(62dvh, 40rem);
+    margin: 0;
+    min-height: 10rem;
+    max-height: min(28dvh, 18rem);
 }
 
 @media (max-width: 900px) {

@@ -1,0 +1,145 @@
+.cda-mermaid {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.cda-mermaid__header {
+    align-items: flex-start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.cda-mermaid__copy {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.cda-mermaid__title {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.cda-mermaid__description {
+    color: #475569;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.cda-mermaid__toolbar {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+}
+
+.cda-mermaid__tool {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.375rem;
+    color: #0f172a;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    height: 2rem;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0 0.65rem;
+}
+
+.cda-mermaid__tool:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.cda-mermaid__viewport-shell {
+    height: var(--cda-mermaid-height, var(--cda-mermaid-min-height, 22rem));
+    min-height: var(--cda-mermaid-min-height, 22rem);
+    position: relative;
+}
+
+.cda-mermaid__viewport {
+    background: #ffffff;
+    border: 1px solid #dbe3ef;
+    border-radius: 0.5rem;
+    height: 100%;
+    min-height: var(--cda-mermaid-min-height, 22rem);
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.cda-mermaid__viewport.is-panzoom ::deep svg {
+    cursor: grab;
+    touch-action: none;
+}
+
+.cda-mermaid__viewport.is-panzoom ::deep svg.is-panning {
+    cursor: grabbing;
+}
+
+.cda-mermaid__viewport ::deep svg {
+    display: block;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    width: 100%;
+}
+
+.cda-mermaid__state {
+    align-items: center;
+    color: #64748b;
+    display: flex;
+    font-size: 0.875rem;
+    inset: 0;
+    justify-content: center;
+    padding: 2rem;
+    position: absolute;
+    text-align: center;
+}
+
+.cda-mermaid__error {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 0.5rem;
+    color: #7c2d12;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+}
+
+.cda-mermaid__error p {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    margin: 0;
+}
+
+.cda-mermaid__error pre {
+    background: rgba(124, 45, 18, 0.08);
+    border-radius: 0.35rem;
+    color: #431407;
+    margin: 0.25rem 0;
+    overflow-x: auto;
+    padding: 0.55rem;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+    .cda-mermaid__header {
+        align-items: stretch;
+        display: grid;
+    }
+
+    .cda-mermaid__toolbar {
+        justify-content: flex-start;
+    }
+}

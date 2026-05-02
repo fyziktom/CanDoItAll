@@ -562,7 +562,7 @@ public partial class ProjectStructurePage
         }
 
         OpenMermaidViewer(selectedNode);
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 }
 

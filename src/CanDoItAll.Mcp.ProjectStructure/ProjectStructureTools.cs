@@ -47,7 +47,7 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
     }
 
     [McpServerTool(Name = "project_structure_read", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Reads a filtered project structure with compact node payloads by default so agent context stays small unless notes, metadata, assets, links, or layout are explicitly requested.")]
+    [Description("Reads a filtered project structure with compact node payloads by default. Nodes can include actionCapabilities describing runtime run actions (runtime:open/runtime:admin), local drive File Explorer actions (open-local), and IPFS new-tab actions (open-new-tab).")]
     public Task<McpToolEnvelope<ProjectStructureReadToolData>> ProjectStructureReadAsync(Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_read", () => coordinator.ReadAsync(projectId, request ?? new ProjectStructureReadRequest(), cancellationToken));
@@ -68,14 +68,14 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
     }
 
     [McpServerTool(Name = "project_structure_node_create", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Creates a new project-structure node through the central API. Provide estimatedMinutes when approval thresholds are configured. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers.")]
+    [Description("Creates a new project-structure node through the central API. Provide estimatedMinutes when approval thresholds are configured. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeCreateAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_node_create", () => coordinator.CreateNodeAsync(projectId, request, estimatedMinutes, cancellationToken));
     }
 
     [McpServerTool(Name = "project_structure_node_update", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Updates the title, subtitle, notes, timing, optional metadata, and requested reclassification of an existing project-structure node. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock.")]
+    [Description("Updates the title, subtitle, notes, timing, optional metadata, and requested reclassification of an existing project-structure node. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeUpdateAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_node_update", () => coordinator.UpdateNodeAsync(projectId, nodeId, request, estimatedMinutes, cancellationToken));

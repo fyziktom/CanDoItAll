@@ -6,6 +6,7 @@
   "Catalog": {
     "BaseLibRoot": "src/CanDoItAll.Components.BaseLib",
     "CanvasLibRoot": "src/CanDoItAll.Components.CanvasLib",
+    "ChartsRoot": "src/CanDoItAll.Components.Charts",
     "SandboxRoot": "src/CanDoItAll.Components.Sandbox"
   }
 }

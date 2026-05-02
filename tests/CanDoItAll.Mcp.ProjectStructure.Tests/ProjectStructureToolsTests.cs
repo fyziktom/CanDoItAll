@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Reflection;
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -8,6 +10,27 @@ namespace CanDoItAll.Mcp.ProjectStructure.Tests;
 
 public sealed class ProjectStructureToolsTests
 {
+    [Fact]
+    public void Node_create_and_update_descriptions_define_mermaid_file_asset_contract()
+    {
+        var createDescription = typeof(ProjectStructureTools)
+            .GetMethod(nameof(ProjectStructureTools.ProjectStructureNodeCreateAsync))
+            ?.GetCustomAttribute<DescriptionAttribute>()
+            ?.Description;
+        var updateDescription = typeof(ProjectStructureTools)
+            .GetMethod(nameof(ProjectStructureTools.ProjectStructureNodeUpdateAsync))
+            ?.GetCustomAttribute<DescriptionAttribute>()
+            ?.Description;
+
+        Assert.NotNull(createDescription);
+        Assert.Contains("objectType File", createDescription, StringComparison.Ordinal);
+        Assert.Contains("objectSubtype mermaid", createDescription, StringComparison.Ordinal);
+        Assert.Contains("Mermaid source in notes", createDescription, StringComparison.Ordinal);
+        Assert.NotNull(updateDescription);
+        Assert.Contains("objectSubtype mermaid", updateDescription, StringComparison.Ordinal);
+        Assert.Contains("Mermaid source in notes", updateDescription, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ProjectStructureProjectLeaseAcquireAsync_returns_structured_lease_conflict_failure()
     {
@@ -84,6 +107,65 @@ public sealed class ProjectStructureToolsTests
         Assert.True(result.Ok);
         Assert.Single(result.Data!.Entries);
         Assert.Equal("structure.read", result.Data.Entries[0].OperationName);
+    }
+
+    [Fact]
+    public async Task ProjectStructureReadAsync_returns_node_action_capabilities()
+    {
+        var projectId = Guid.NewGuid();
+        var tools = new ProjectStructureTools(new StubCoordinator
+        {
+            OnRead = (_, _, _) => Task.FromResult(new ProjectStructureReadToolData(
+                projectId,
+                "Node actions",
+                [
+                    new ProjectStructureCompactNode(
+                        "file-1",
+                        null,
+                        ProjectObjectType.File,
+                        "pdf",
+                        "Specs.pdf",
+                        string.Empty,
+                        "Draft",
+                        "/ipfs/specs",
+                        0,
+                        "percent",
+                        0,
+                        ActionCapabilities: new ProjectStructureNodeActionCapabilities(
+                            CanRunNormally: false,
+                            CanRunAsAdministrator: false,
+                            CanOpenInFileExplorer: false,
+                            CanOpenInNewTab: true,
+                            RuntimeDisplayName: string.Empty,
+                            RuntimeDisplayCommand: string.Empty,
+                            RuntimeWorkingDirectory: string.Empty,
+                            OpenInNewTabRoute: "/ipfs/specs",
+                            StorageProvider: "Ipfs",
+                            StorageLocatorKind: "ContentAddress",
+                            StorageLocator: "bafy-test",
+                            Actions:
+                            [
+                                new ProjectStructureNodeActionDescriptor(
+                                    "open-new-tab",
+                                    "Open in New Tab",
+                                    "Double-click quick-action dialog and node context menu",
+                                    "Opens the IPFS-backed file route in a separate browser tab.")
+                            ],
+                            Guidance:
+                            [
+                                "IPFS-backed file nodes open in a browser tab instead of system File Explorer."
+                            ]))
+                ],
+                [],
+                []))
+        }, NullLogger<ProjectStructureTools>.Instance);
+
+        var result = await tools.ProjectStructureReadAsync(projectId);
+
+        Assert.True(result.Ok);
+        var capabilities = Assert.IsType<ProjectStructureNodeActionCapabilities>(result.Data!.Nodes[0].ActionCapabilities);
+        Assert.True(capabilities.CanOpenInNewTab);
+        Assert.Contains(capabilities.Actions, action => action.ActionId == "open-new-tab");
     }
 
     [Fact]
@@ -252,7 +334,8 @@ public sealed class ProjectStructureToolsTests
 
         public Task<ProjectStructureReadToolData> ReadAsync(Guid projectId, ProjectStructureReadRequest request, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return OnRead?.Invoke(projectId, request, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureReadToolData(projectId, "Test project", [], [], []));
         }
 
         public Task<ProjectStructureChecklistResponse> GetChecklistAsync(Guid projectId, ProjectStructureChecklistRequest request, CancellationToken cancellationToken = default)

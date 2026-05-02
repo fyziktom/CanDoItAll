@@ -74,6 +74,68 @@ public sealed class ProjectStructureRuntimeLauncherTests
     }
 
     [Fact]
+    public void Resolve_returns_powershell_command_plan_when_working_directory_is_omitted()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                Command = "pwsh ./scripts/task.ps1",
+                Arguments = "-Verbose"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(@"C:\workspace", result.Plan!.WorkingDirectory);
+        Assert.Equal("PowerShell script", result.Plan.DisplayName);
+        Assert.Equal("pwsh ./scripts/task.ps1 -Verbose", result.Plan.DisplayCommand);
+        Assert.Contains("Set-Location -LiteralPath 'C:\\workspace'", result.Plan.StartupScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Resolve_returns_powershell_script_path_plan_when_working_directory_is_omitted()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptPath = @"scripts\task.ps1"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(@"C:\workspace\scripts", result.Plan!.WorkingDirectory);
+        Assert.Equal("PowerShell script", result.Plan.DisplayName);
+        Assert.Equal("& 'C:\\workspace\\scripts\\task.ps1'", result.Plan.DisplayCommand);
+        Assert.Equal(@"C:\workspace\scripts\task.ps1", result.Plan.Target!.Path);
+    }
+
+    [Fact]
+    public void Resolve_uses_script_subtype_when_kind_metadata_is_missing()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "tailwind-watch",
+            new ProjectScriptMetadata
+            {
+                Command = "npx tailwindcss -i ./input.css -o ./output.css --watch"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(@"C:\workspace", result.Plan!.WorkingDirectory);
+        Assert.Equal("Tailwind watch", result.Plan.DisplayName);
+    }
+
+    [Fact]
     public void Resolve_returns_python_activation_plan_for_virtual_environment_nodes()
     {
         var sut = CreateSut();
@@ -99,19 +161,41 @@ public sealed class ProjectStructureRuntimeLauncherTests
     }
 
     [Fact]
-    public void Resolve_fails_when_script_working_directory_is_missing()
+    public void Resolve_uses_environment_subtype_when_kind_metadata_is_missing()
+    {
+        var sut = CreateSut();
+        var node = CreateEnvironmentNode(
+            ProjectEnvironmentKind.PythonEnvironment,
+            "dotnet-watch",
+            new ProjectEnvironmentMetadata
+            {
+                ProjectPath = @"repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal("dotnet watch", result.Plan!.DisplayName);
+        Assert.Equal(
+            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run",
+            result.Plan.DisplayCommand);
+    }
+
+    [Fact]
+    public void Resolve_fails_when_script_command_and_script_path_are_missing()
     {
         var sut = CreateSut();
         var node = CreateScriptNode(new ProjectScriptMetadata
         {
             ScriptKind = ProjectScriptKind.Console,
-            Command = "npm run dev"
+            WorkingDirectory = @"repos\python-app"
         });
 
         var result = sut.Resolve(node);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("Script launch requires a working directory.", result.Message);
+        Assert.Equal("Script launch requires a command or PowerShell script path.", result.Message);
     }
 
     private static ProjectStructureRuntimeLauncher CreateSut()
@@ -120,15 +204,18 @@ public sealed class ProjectStructureRuntimeLauncherTests
             NullLogger<ProjectStructureRuntimeLauncher>.Instance);
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
-    {
-        metadata.EnvironmentKind = kind;
-        return CreateNode(ProjectObjectType.Environment, kind switch
+        => CreateEnvironmentNode(kind, kind switch
         {
             ProjectEnvironmentKind.DotNetWatch => "dotnet-watch",
             ProjectEnvironmentKind.DotNetRelease => "dotnet-release",
             ProjectEnvironmentKind.PythonEnvironment => "python",
             _ => "dotnet-runtime"
-        }, new ProjectObjectMetadataEnvelope
+        }, metadata);
+
+    private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, string objectSubtype, ProjectEnvironmentMetadata metadata)
+    {
+        metadata.EnvironmentKind = kind;
+        return CreateNode(ProjectObjectType.Environment, objectSubtype, new ProjectObjectMetadataEnvelope
         {
             Environment = metadata
         });
@@ -136,6 +223,12 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
     private static ProjectStructureNode CreateScriptNode(ProjectScriptMetadata metadata)
         => CreateNode(ProjectObjectType.Script, "console", new ProjectObjectMetadataEnvelope
+        {
+            Script = metadata
+        });
+
+    private static ProjectStructureNode CreateScriptNode(string objectSubtype, ProjectScriptMetadata metadata)
+        => CreateNode(ProjectObjectType.Script, objectSubtype, new ProjectObjectMetadataEnvelope
         {
             Script = metadata
         });

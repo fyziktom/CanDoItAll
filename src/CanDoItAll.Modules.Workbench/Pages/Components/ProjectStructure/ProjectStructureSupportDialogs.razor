@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
+@using CanDoItAll.Components.Mermaid
 @using CanDoItAll.Modules.Workspace
 
 @if (SummaryDialog is not null)
@@ -144,25 +145,56 @@
 
 @if (MermaidPreviewNode is not null)
 {
+    var diagramKind = ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(MermaidPreviewNode.Notes);
+
     <ProjectStructureOverlayDialog AriaLabel="@($"{MermaidPreviewNode.Title} Mermaid viewer")"
                                    Kicker="Mermaid viewer"
                                    Title="@MermaidPreviewNode.Title"
-                                   Summary="@($"Detected diagram type: {ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(MermaidPreviewNode.Notes)}")"
-                                   DialogClass="project-structure-summary-dialog"
+                                   Summary="@($"Detected diagram type: {diagramKind}")"
+                                   DialogClass="project-structure-summary-dialog project-structure-mermaid-dialog"
                                    Close="CloseMermaidViewer">
         <Actions>
+            @if (CanEditMermaidNode(MermaidPreviewNode))
+            {
+                <Button Text="Edit"
+                        ButtonStyle="ButtonStyle.Info"
+                        Click="@(() => EditMermaidNode.InvokeAsync(MermaidPreviewNode))" />
+            }
             <Button Text="Close"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
                     Click="CloseMermaidViewer" />
         </Actions>
         <Body>
-            <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@MermaidPreviewNode.Notes</pre>
+            <Stack GapScale="LayoutGap.Medium">
+                <MermaidDiagram Title="@MermaidPreviewNode.Title"
+                                Description="@($"Detected diagram type: {diagramKind}")"
+                                Source="@MermaidPreviewNode.Notes"
+                                Options="@MermaidViewerOptions"
+                                PanZoomEnabled="true"
+                                ShowControls="true"
+                                Class="project-structure-mermaid-diagram"
+                                Style="--cda-mermaid-min-height:28rem; --cda-mermaid-height:min(62dvh, 46rem);"
+                                data-testid="project-structure-mermaid-diagram" />
+
+                <details class="project-structure-mermaid-details">
+                    <summary>Source</summary>
+                    <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@MermaidPreviewNode.Notes</pre>
+                </details>
+            </Stack>
         </Body>
     </ProjectStructureOverlayDialog>
 }
 
 @code {
+    private static readonly MermaidDiagramOptions MermaidViewerOptions = new()
+    {
+        SecurityLevel = "loose",
+        FlowchartUseMaxWidth = true,
+        HtmlLabels = true,
+        ArchitectureRandomize = false
+    };
+
     [Parameter]
     public ProjectStructureSummaryDialogState? SummaryDialog { get; set; }
 
@@ -207,6 +239,12 @@
 
     [Parameter]
     public EventCallback CloseMermaidViewer { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> EditMermaidNode { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanEditMermaidNode { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public Func<ProjectLlmActionKind, string> ResolveTranscriptActionLabel { get; set; } = default!;

@@ -81,7 +81,7 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure with compact node payloads by default."),
+                    "Reads a filtered project structure with compact node payloads by default. Inspect node.actionCapabilities for runtime run actions (runtime:open/runtime:admin), local File Explorer actions (open-local), and IPFS new-tab actions (open-new-tab)."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureChecklistRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureChecklistAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_checklist",
@@ -93,11 +93,11 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new project-structure node through the internal workspace service. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers."),
+                    "Creates a new project-structure node through the internal workspace service. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock."),
+                    "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMoveAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_move",
@@ -1150,7 +1150,8 @@ public sealed partial class MafAgentRuntime
                 node.MediaContentType,
                 node.X,
                 node.Y,
-                node.DurationSeconds);
+                node.DurationSeconds,
+                node.ActionCapabilities);
         }
     }
 
@@ -1210,7 +1211,8 @@ public sealed record ProjectStructureCompactNode(
     string? MediaContentType = null,
     double? X = null,
     double? Y = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
 
 public sealed record ProjectStructureReadToolData(
     Guid ProjectId,

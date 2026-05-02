@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -535,6 +536,89 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task CreateCapabilityState_attaches_configured_external_workspace_read_tools_without_capability_assignment()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                new AgentWorkspaceToolAccessSettings
+                {
+                    CanReadFiles = true,
+                    AllowedExternalTargetAliases =
+                    [
+                        "external-target/C/repositories/demo"
+                    ]
+                })
+        };
+        var provider = CreateProvider("{}");
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("workspace_list_files", toolNames);
+        Assert.Contains("workspace_search", toolNames);
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.Contains("workspace_stat_path", toolNames);
+        Assert.DoesNotContain("workspace_write_file", toolNames);
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("Attached configured workspace file and storage tools", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_attaches_configured_storage_driver_tools_and_wraps_writes()
+    {
+        var services = new ServiceCollection()
+            .AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService())
+            .AddSingleton<IStorageDriverRegistry>(new EmptyStorageDriverRegistry())
+            .BuildServiceProvider();
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services);
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                new AgentWorkspaceToolAccessSettings
+                {
+                    CanReadStorage = true,
+                    CanWriteStorage = true,
+                    AllowAllStorageCatalogs = true
+                })
+        };
+        var provider = CreateProvider("{}");
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+        Assert.Contains(tools, item => string.Equals(item.Name, "storage_catalog_list", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(tools, item => string.Equals(item.Name, "storage_read_text_file", StringComparison.OrdinalIgnoreCase));
+        Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(
+            tools,
+            item => string.Equals(item.Name, "storage_write_text_file", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(
+            tools,
+            item => string.Equals(item.Name, "storage_delete_object", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
     public async Task Approval_filter_omits_unusable_mutation_tools_for_manual_ollama_run()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -929,6 +1013,44 @@ public sealed class MafAgentRuntimeTests
         }
 
         throw new InvalidOperationException("Could not find the repository root from the test output directory.");
+    }
+
+    private sealed class EmptyStorageCatalogService : IStorageCatalogService
+    {
+        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([]);
+
+        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult<StorageCatalogRecord?>(null);
+
+        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+            => Task.FromResult(record);
+
+        public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
+
+        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+            => Task.FromResult(rule);
+    }
+
+    private sealed class EmptyStorageDriverRegistry : IStorageDriverRegistry
+    {
+        public IReadOnlyCollection<StorageProviderKind> RegisteredKinds { get; } = [];
+
+        public bool TryResolve(StorageProviderKind providerKind, out IStorageDriver driver)
+        {
+            driver = null!;
+            return false;
+        }
+
+        public IStorageDriver Resolve(StorageProviderKind providerKind)
+            => throw new InvalidOperationException("No storage drivers are registered for this test.");
     }
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(

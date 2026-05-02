@@ -1,5 +1,6 @@
 using CanDoItAll.Components;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
@@ -46,7 +47,7 @@ builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
 builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
-builder.Services.AddMermaidJS();
+builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
 builder.Services.AddScoped<TuningCoordinator>();

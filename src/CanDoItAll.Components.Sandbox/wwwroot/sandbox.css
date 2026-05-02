@@ -322,6 +322,96 @@
     border: 1px solid color-mix(in srgb, var(--cad-color-border-soft) 82%, transparent);
 }
 
+.sandbox-mermaid-workspace {
+    display: grid;
+    gap: 1rem;
+}
+
+.sandbox-mermaid-stack {
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.sandbox-mermaid-event {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+    border: 1px solid var(--cad-tone-success-soft-border);
+    border-radius: var(--cad-radius-surface);
+    background: color-mix(in srgb, var(--cad-tone-success-soft-bg) 68%, var(--cad-color-surface) 32%);
+    padding: 0.9rem 1rem;
+}
+
+.sandbox-mermaid-event--info {
+    border-color: var(--cad-tone-info-soft-border);
+    background: color-mix(in srgb, var(--cad-tone-info-soft-bg) 66%, var(--cad-color-surface) 34%);
+}
+
+.sandbox-mermaid-event__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    font-size: 0.78rem;
+    color: var(--cad-color-text-muted);
+}
+
+.sandbox-mermaid-event__meta span {
+    border: 1px solid color-mix(in srgb, var(--cad-tone-success-soft-border) 72%, transparent);
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--cad-color-surface) 78%, transparent);
+    padding: 0.24rem 0.55rem;
+}
+
+.sandbox-mermaid-gallery {
+    min-width: 0;
+}
+
+.sandbox-mermaid-gallery__item {
+    display: grid;
+    min-width: 0;
+    gap: 0.65rem;
+}
+
+.sandbox-mermaid-diagram--gallery {
+    height: 100%;
+}
+
+.sandbox-mermaid-gallery__status {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border: 1px solid var(--cad-color-border-soft);
+    border-radius: var(--cad-radius-surface);
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 76%, var(--cad-color-surface) 24%);
+    color: var(--cad-color-text-muted);
+    font-size: 0.76rem;
+    font-weight: 650;
+    padding: 0.45rem 0.6rem;
+}
+
+.sandbox-mermaid-gallery__status span:first-child {
+    color: var(--cad-color-text-strong);
+    text-transform: lowercase;
+}
+
+.sandbox-code-preview {
+    max-height: 18rem;
+    overflow: auto;
+    border: 1px solid var(--cad-color-border-soft);
+    border-radius: var(--cad-radius-surface);
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 86%, transparent);
+    color: var(--cad-color-text);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin: 0;
+    padding: 0.85rem;
+    white-space: pre-wrap;
+}
+
 @keyframes sandbox-fade-in {
     from {
         opacity: 0;

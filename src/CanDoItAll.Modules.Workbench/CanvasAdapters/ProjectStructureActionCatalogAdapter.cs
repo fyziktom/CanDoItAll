@@ -7,6 +7,16 @@ namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
 public sealed class ProjectStructureActionCatalogAdapter
 {
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node)
+        => BuildNodeContextActions(node, canLaunchRuntime: false);
+
+    public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node, bool canLaunchRuntime)
+        => BuildNodeContextActions(node, canLaunchRuntime, canOpenInFileExplorer: false, canOpenInNewTab: false);
+
+    public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(
+        ProjectStructureNode node,
+        bool canLaunchRuntime,
+        bool canOpenInFileExplorer,
+        bool canOpenInNewTab)
     {
         if (node.ProjectRole != ProjectStructureProjectRole.None)
         {
@@ -31,6 +41,58 @@ public sealed class ProjectStructureActionCatalogAdapter
             new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" },
             new() { ActionId = "delete", Label = "Delete", MenuLabel = "Delete", Description = "Delete this node, with confirmation when the impact is not trivial.", Icon = "delete", Tone = "danger" }
         };
+
+        if (canLaunchRuntime)
+        {
+            actions.InsertRange(
+                1,
+                [
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "runtime:open",
+                        Label = "Run normally",
+                        MenuLabel = "Run",
+                        Description = "Launch the resolved workspace command in PowerShell.",
+                        Icon = "powershell",
+                        Tone = "accent"
+                    },
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "runtime:admin",
+                        Label = "Run as administrator",
+                        MenuLabel = "Run admin",
+                        Description = "Launch the resolved workspace command in an elevated PowerShell window.",
+                        Icon = "admin_panel_settings",
+                        Tone = "warn"
+                    }
+                ]);
+        }
+
+        if (canOpenInFileExplorer)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "open-local",
+                Label = "Open in File Explorer",
+                MenuLabel = "Explorer",
+                Description = "Open the trusted managed file or folder in the system File Explorer.",
+                Icon = "folder_open",
+                Tone = "primary"
+            });
+        }
+
+        if (canOpenInNewTab)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "open-new-tab",
+                Label = "Open in New Tab",
+                MenuLabel = "New tab",
+                Description = "Open the routed or IPFS-backed file in a separate browser tab.",
+                Icon = "open",
+                Tone = "accent"
+            });
+        }
 
         if (node.ObjectType == ProjectObjectType.ProcessDefinition)
         {

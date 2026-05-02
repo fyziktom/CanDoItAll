@@ -1,0 +1,324 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/charts"
+@inherits CatalogPageBase
+
+<PageTitle>Charts</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Operational charts behind a CanDoItAll-owned API."
+                  HeroSummary="The charts page proves that Apex-backed rendering can stay behind a wrapper while still covering pies, line trends, area fills, multi-series overlays, labels, units, and tuned colors."
+                  DemoTitle="Chart wrapper examples"
+                  DemoSummary="Generated energy-style samples rendered through CdaChart and CanDoItAll chart models."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>The sandbox page should not use raw chart-library component markup directly.</p>
+            <p>Desktop proof must show nonblank chart output with readable legends, labels, and toolbars.</p>
+            <p>Mobile proof must show charts staying inside the frame without clipped labels or overlapping summary context.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Charts" Title="Preparing chart samples" Description="The wrapper keeps a stable surface while generated trend and share data are loading." />
+        }
+        else if (CurrentScenario == SandboxScenarioKey.EmptyState)
+        {
+            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                <EmptyState Eyebrow="Charts" Title="No chart data" Description="The chart wrapper can render a calm zero-data state before any consumer has series to show." />
+                <CdaChart Title="Empty chart"
+                          Description="No series have been provided."
+                          Series="@EmptySeries"
+                          Options="@AreaOptions" />
+            </div>
+        }
+        else
+        {
+            <SummaryTiles>
+                <SummaryTile Label="Series" Value="@TotalSeriesCount.ToString()" HelperText="Line, area, bar, and pie data are all described by CdaChartSeries." Tone="info" />
+                <SummaryTile Label="Points" Value="@TotalPointCount.ToString()" HelperText="Generated sample points keep browser proof deterministic." Tone="success" />
+                <SummaryTile Label="Wrapper" Value="CdaChart" HelperText="The sandbox consumer uses CanDoItAll models rather than Apex component markup." Tone="warning" />
+                <SummaryTile Label="Mode" Value="@CurrentScenario.ToLabel()" HelperText="@CurrentScenario.ToSummary()" />
+            </SummaryTiles>
+
+            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                <CdaChart Title="Filled consumption area"
+                          Description="Area fill, datetime labels, unit formatting, and toolbar controls."
+                          Series="@ConsumptionAreaSeries"
+                          Options="@AreaOptions"
+                          Height="@PrimaryChartHeight"
+                          data-testid="chart-area" />
+
+                <CdaChart Title="Energy source share"
+                          Description="Pie slices use point-level colors while the wrapper owns labels."
+                          Series="@ShareSeries"
+                          Options="@PieOptions"
+                          Height="@PrimaryChartHeight"
+                          data-testid="chart-pie" />
+            </div>
+
+            <CdaChart Title="Multi-line house overview"
+                      Description="Several operational signals share one datetime axis with tuned colors and stable legend ordering."
+                      Series="@MultiLineSeries"
+                      Options="@MultiLineOptions"
+                      Height="@WideChartHeight"
+                      data-testid="chart-multiline" />
+
+            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                <CdaChart Title="Spot price line with labels"
+                          Description="Data labels and smooth curve support labeled trend inspection without leaving the wrapper."
+                          Series="@PriceSeries"
+                          Options="@PriceOptions"
+                          Height="@PrimaryChartHeight"
+                          data-testid="chart-labels" />
+
+                <CdaChart Title="Color-tuned import/export bars"
+                          Description="Per-point colors distinguish import from export while keeping one public point model."
+                          Series="@ColorTunedSeries"
+                          Options="@BarOptions"
+                          Height="@PrimaryChartHeight"
+                          data-testid="chart-colors" />
+            </div>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Charts);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Charts);
+    private static readonly DateTime Start = new(2026, 4, 30, 3, 0, 0, DateTimeKind.Utc);
+    private static readonly IReadOnlyList<CdaChartSeries> EmptySeries = [];
+
+    private bool IsDense => CurrentScenario == SandboxScenarioKey.DenseContent || CurrentScenario == SandboxScenarioKey.LongText;
+
+    private object PrimaryChartHeight => CurrentFrame == SandboxFramePreset.Mobile ? 300 : 340;
+
+    private object WideChartHeight => CurrentFrame == SandboxFramePreset.Mobile ? 340 : 390;
+
+    private int TotalSeriesCount => ConsumptionAreaSeries.Count + ShareSeries.Count + MultiLineSeries.Count + PriceSeries.Count + ColorTunedSeries.Count;
+
+    private int TotalPointCount => AllSeries.Sum(series => series.Points.Count);
+
+    private IEnumerable<CdaChartSeries> AllSeries => ConsumptionAreaSeries
+        .Concat(ShareSeries)
+        .Concat(MultiLineSeries)
+        .Concat(PriceSeries)
+        .Concat(ColorTunedSeries);
+
+    private IReadOnlyList<CdaChartSeries> ConsumptionAreaSeries =>
+    [
+        new()
+        {
+            Name = "Main meter",
+            Type = CdaChartType.Area,
+            Color = "#14b8a6",
+            Points = BuildDailyProfile(IsDense ? 32 : 24, 0.18m, 0.54m, 0.11m)
+        }
+    ];
+
+    private IReadOnlyList<CdaChartSeries> ShareSeries =>
+    [
+        new()
+        {
+            Name = "Source share",
+            Type = CdaChartType.Pie,
+            Points =
+            [
+                new("Solar", 38m, "#16a34a"),
+                new("Grid import", 34m, "#2563eb"),
+                new("Battery", 18m, "#7c3aed"),
+                new("Export", 10m, "#0891b2")
+            ]
+        }
+    ];
+
+    private IReadOnlyList<CdaChartSeries> MultiLineSeries =>
+    [
+        new()
+        {
+            Name = "House kWh",
+            Type = CdaChartType.Area,
+            Color = "#2563eb",
+            Points = BuildDailyProfile(IsDense ? 30 : 24, 1.1m, 6.4m, 0.8m)
+        },
+        new()
+        {
+            Name = "Solar kWh",
+            Type = CdaChartType.Area,
+            Color = "#16a34a",
+            Points = BuildSolarProfile(IsDense ? 30 : 24)
+        },
+        new()
+        {
+            Name = "Battery kWh",
+            Type = CdaChartType.Line,
+            Color = "#7c3aed",
+            StrokeDash = 5,
+            Points = BuildPulseProfile(IsDense ? 30 : 24, 0.2m, 3.8m, 8)
+        },
+        new()
+        {
+            Name = "Export kWh",
+            Type = CdaChartType.Line,
+            Color = "#0891b2",
+            Points = BuildPulseProfile(IsDense ? 30 : 24, 0.0m, 1.4m, 5)
+        }
+    ];
+
+    private IReadOnlyList<CdaChartSeries> PriceSeries =>
+    [
+        new()
+        {
+            Name = "Spot CZK",
+            Type = CdaChartType.Line,
+            Color = "#0f766e",
+            ShowDataLabels = true,
+            Points = BuildPriceProfile(IsDense ? 14 : 8)
+        }
+    ];
+
+    private IReadOnlyList<CdaChartSeries> ColorTunedSeries =>
+    [
+        new()
+        {
+            Name = "Import / export",
+            Type = CdaChartType.Bar,
+            Points = BuildImportExportProfile(IsDense ? 18 : 12)
+        }
+    ];
+
+    private static readonly CdaChartOptions AreaOptions = new()
+    {
+        Type = CdaChartType.Area,
+        Unit = "kWh",
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Consumption (kWh)",
+        FillOpacity = 0.36,
+        Curve = CdaChartCurve.Step,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#14b8a6"]
+    };
+
+    private static readonly CdaChartOptions PieOptions = new()
+    {
+        Type = CdaChartType.Pie,
+        XAxisType = CdaChartAxisType.Category,
+        ShowDataLabels = true,
+        ShowToolbar = false,
+        EnableZoom = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#16a34a", "#2563eb", "#7c3aed", "#0891b2"]
+    };
+
+    private static readonly CdaChartOptions MultiLineOptions = new()
+    {
+        Type = CdaChartType.Area,
+        Unit = "kWh",
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Energy (kWh)",
+        FillOpacity = 0.22,
+        Curve = CdaChartCurve.Straight,
+        LegendPosition = CdaChartLegendPosition.Top,
+        Palette = ["#2563eb", "#16a34a", "#7c3aed", "#0891b2"]
+    };
+
+    private static readonly CdaChartOptions PriceOptions = new()
+    {
+        Type = CdaChartType.Line,
+        Unit = "CZK",
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Price (CZK)",
+        Curve = CdaChartCurve.Smooth,
+        ShowToolbar = false,
+        ShowDataLabels = true,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#0f766e"]
+    };
+
+    private static readonly CdaChartOptions BarOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        Unit = "kWh",
+        XAxisType = CdaChartAxisType.Category,
+        XAxisTitle = "Interval",
+        YAxisTitle = "Energy balance",
+        ValuePrecision = 1,
+        TooltipPrecision = 2,
+        ShowToolbar = false,
+        RotateXAxisLabels = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#2563eb", "#dc2626"]
+    };
+
+    private static IReadOnlyList<CdaChartPoint> BuildDailyProfile(int count, decimal floor, decimal peak, decimal eveningBump)
+    {
+        var points = new List<CdaChartPoint>(count);
+        for (var index = 0; index < count; index++)
+        {
+            var hour = index * 24m / count;
+            var morning = Math.Max(0, 1 - Math.Abs((double)((hour - 9m) / 5m)));
+            var evening = Math.Max(0, 1 - Math.Abs((double)((hour - 19m) / 2.5m)));
+            var value = floor + (peak - floor) * (decimal)(morning * 0.82) + eveningBump * (decimal)evening;
+            points.Add(new CdaChartPoint(Start.AddMinutes(index * 60), Math.Round(value, 2)));
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<CdaChartPoint> BuildSolarProfile(int count)
+    {
+        var points = new List<CdaChartPoint>(count);
+        for (var index = 0; index < count; index++)
+        {
+            var hour = index * 24d / count;
+            var value = hour is < 6 or > 18 ? 0 : Math.Sin((hour - 6) / 12 * Math.PI) * 4.2;
+            points.Add(new CdaChartPoint(Start.AddMinutes(index * 60), Math.Round((decimal)value, 2)));
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<CdaChartPoint> BuildPulseProfile(int count, decimal floor, decimal high, int spacing)
+    {
+        var points = new List<CdaChartPoint>(count);
+        for (var index = 0; index < count; index++)
+        {
+            var isPulse = index % spacing is 0 or 1;
+            var value = isPulse ? high - (index % 3) * 0.35m : floor + (index % 4) * 0.08m;
+            points.Add(new CdaChartPoint(Start.AddMinutes(index * 60), Math.Round(value, 2)));
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<CdaChartPoint> BuildPriceProfile(int count)
+    {
+        var points = new List<CdaChartPoint>(count);
+        for (var index = 0; index < count; index++)
+        {
+            var value = 3.8m + (decimal)Math.Sin(index * 0.9) * 1.1m + (index % 3 == 0 ? 0.4m : 0m);
+            points.Add(new CdaChartPoint(Start.AddHours(index * 2), Math.Round(value, 2)));
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<CdaChartPoint> BuildImportExportProfile(int count)
+    {
+        var points = new List<CdaChartPoint>(count);
+        for (var index = 0; index < count; index++)
+        {
+            var export = index is >= 4 and <= 8;
+            var value = export ? 0.7m + (index % 3) * 0.22m : 1.1m + (index % 4) * 0.28m;
+            var color = export ? "#16a34a" : "#2563eb";
+            points.Add(new CdaChartPoint($"T{index + 1}", Math.Round(value, 2), color, export ? "Export" : "Import"));
+        }
+
+        return points;
+    }
+}

@@ -19,6 +19,7 @@
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />

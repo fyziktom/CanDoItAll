@@ -10,7 +10,10 @@ public sealed class ProjectStructureGraphAdapter
         ProjectStructureSurface surface,
         CanvasWorkbenchUiState uiState,
         CanvasWorkbenchChrome chrome,
-        ProjectStructureActionCatalogAdapter actionCatalog)
+        ProjectStructureActionCatalogAdapter actionCatalog,
+        Func<ProjectStructureNode, bool>? canLaunchRuntime = null,
+        Func<ProjectStructureNode, bool>? canOpenInFileExplorer = null,
+        Func<ProjectStructureNode, bool>? canOpenInNewTab = null)
     {
         ConfigureChrome(surface, chrome);
         return new CanvasWorkbenchSurface
@@ -19,7 +22,7 @@ public sealed class ProjectStructureGraphAdapter
             Mode = "authoring",
             UiState = uiState,
             Chrome = chrome,
-            Nodes = surface.Nodes.Select(node => MapCanvasNode(surface.Nodes, node, actionCatalog)).ToList(),
+            Nodes = surface.Nodes.Select(node => MapCanvasNode(surface.Nodes, node, actionCatalog, canLaunchRuntime, canOpenInFileExplorer, canOpenInNewTab)).ToList(),
             Links = surface.Links.Select(link => new CanvasWorkbenchLink
             {
                 SourceId = link.SourceId,
@@ -113,7 +116,10 @@ public sealed class ProjectStructureGraphAdapter
     private static CanvasWorkbenchNode MapCanvasNode(
         IReadOnlyList<ProjectStructureNode> nodes,
         ProjectStructureNode node,
-        ProjectStructureActionCatalogAdapter actionCatalog)
+        ProjectStructureActionCatalogAdapter actionCatalog,
+        Func<ProjectStructureNode, bool>? canLaunchRuntime,
+        Func<ProjectStructureNode, bool>? canOpenInFileExplorer,
+        Func<ProjectStructureNode, bool>? canOpenInNewTab)
     {
         var hasChildren = nodes.Any(candidate => string.Equals(candidate.ParentId, node.Id, StringComparison.Ordinal));
         var inlineText = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
@@ -175,7 +181,11 @@ public sealed class ProjectStructureGraphAdapter
             Chips = BuildHeaderChips(node),
             FooterChips = BuildFooterChips(node),
             Annotations = ProjectStructureNodeAnnotationBuilder.Build(node).ToList(),
-            ContextActions = actionCatalog.BuildNodeContextActions(node).ToList()
+            ContextActions = actionCatalog.BuildNodeContextActions(
+                node,
+                canLaunchRuntime?.Invoke(node) == true,
+                canOpenInFileExplorer?.Invoke(node) == true,
+                canOpenInNewTab?.Invoke(node) == true).ToList()
         };
     }
 

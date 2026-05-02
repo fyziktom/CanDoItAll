@@ -39,7 +39,9 @@ public sealed class ComponentsToolsTests
         Assert.Contains(examples.Data!.Examples, example => string.Equals(example.GroupKey, "canvas", StringComparison.OrdinalIgnoreCase));
 
         Assert.True(groups.Ok);
-        Assert.Equal(9, groups.Data!.Count);
+        Assert.Equal(11, groups.Data!.Count);
+        Assert.Contains(groups.Data, group => string.Equals(group.Key, "charts", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(groups.Data, group => string.Equals(group.Key, "mermaid", StringComparison.OrdinalIgnoreCase));
 
         Assert.True(css.Ok);
         Assert.Contains(css.Data!.Stylesheets, stylesheet => stylesheet.Contains("css/workbench/", StringComparison.OrdinalIgnoreCase));
@@ -68,6 +70,8 @@ public sealed class ComponentsToolsTests
             {
                 BaseLibRoot = Path.Combine("src", "CanDoItAll.Components.BaseLib"),
                 CanvasLibRoot = Path.Combine("src", "CanDoItAll.Components.CanvasLib"),
+                ChartsRoot = Path.Combine("src", "CanDoItAll.Components.Charts"),
+                MermaidRoot = Path.Combine("src", "CanDoItAll.Components.Mermaid"),
                 SandboxRoot = Path.Combine("src", "CanDoItAll.Components.Sandbox")
             }
         });

@@ -288,12 +288,12 @@
             <Grid Columns="2"
                   Gap="LayoutGap.Medium"
                   Class="project-structure-quick-action-grid">
-                @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
+                @foreach (var action in quickActionDialog.Actions)
                 {
                     <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
                             Variant="Variant.Outlined"
                             Class="project-structure-quick-action-card"
-                            data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
+                            data-testid="@ResolveQuickActionTestId(action)"
                             Disabled="@action.IsDisabled"
                             Click="@(() => ExecuteQuickAction.InvokeAsync(action))">
                         <Stack GapScale="LayoutGap.Small"
@@ -783,4 +783,14 @@
             _ => ButtonStyle.Primary
         };
     }
+
+    private static string ResolveQuickActionTestId(ProjectStructureQuickActionButton action)
+        => action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit
+            ? "project-structure-quick-action-edit"
+            : $"project-structure-quick-action-{NormalizeTestIdToken(action.ActionId)}";
+
+    private static string NormalizeTestIdToken(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? "primary"
+            : value.Trim().ToLowerInvariant().Replace(':', '-');
 }
