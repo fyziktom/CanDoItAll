@@ -6,10 +6,10 @@
 **Target lead hours:** 6
 
 ## Summary
-Tenant data, secrets, and exception posture
+Sensitive data, secrets, and exception posture
 
 ## Notes
-Review tenant-data handling, secrets, boundary changes, and policy exceptions before release approval.
+Review sensitive-data handling, secrets, boundary changes, and policy exceptions before release approval.
 
 ## Contracts
 - Input contract: Peer-reviewed package, changed-surface inventory, and data-handling notes.
@@ -17,7 +17,7 @@ Review tenant-data handling, secrets, boundary changes, and policy exceptions be
 - Evidence contract: Security review notes, exception rationale, and approved controls.
 
 ## Governance
-- Decision rights: Security reviewer owns the sign-off for tenant-data and policy exceptions.
+- Decision rights: Security reviewer owns the sign-off for sensitive-data and policy exceptions.
 - Exception policy: Block release when data-handling review capacity is missing or exception rationale is incomplete.
 - Requires approval: True
 - Requires decision record: False

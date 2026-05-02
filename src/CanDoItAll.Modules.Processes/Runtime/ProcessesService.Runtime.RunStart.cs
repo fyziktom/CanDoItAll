@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,9 @@ public sealed partial class ProcessesService
         {
             return Result<Guid>.Failure(Error.Validation("Process definition is required.", "processes.run.definition-required"));
         }
+
+        // Refresh the AI resource projection before opening the run-start transaction.
+        await aiAgentService.SynchronizeDirectoryProjectionAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
@@ -211,6 +215,7 @@ public sealed partial class ProcessesService
         ProcessLaunchPlan? launchPlan = null;
         Dictionary<Guid, ProcessLaunchCandidate>? selectedCandidatesByRoleRequirementId = null;
         Dictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>>? projectAssignmentLookup = null;
+        IReadOnlyDictionary<Guid, ProcessLaunchCandidate> directAiCandidatesByRoleRequirementId = new Dictionary<Guid, ProcessLaunchCandidate>();
         ProcessDefinition? definition;
         ProcessDefinitionVersion? publishedVersion;
         Guid? projectId;
@@ -309,6 +314,20 @@ public sealed partial class ProcessesService
                 ? "Executed from an approved launch plan."
                 : launchPlan.TriggerReason.Trim();
             ProcessProjectStructureContextFormatter.TryParse(triggerReason, out projectStructureContext);
+            if (projectStructureContext is null && projectId.HasValue)
+            {
+                projectStructureContext = await projectStructureBridge.TryResolveLaunchContextAsync(
+                    dbContext,
+                    projectId.Value,
+                    definition.Id,
+                    cancellationToken);
+                if (projectStructureContext is not null)
+                {
+                    triggerReason = ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                        triggerReason,
+                        projectStructureContext);
+                }
+            }
         }
         else
         {
@@ -333,9 +352,18 @@ public sealed partial class ProcessesService
             projectId = request.ProjectId ?? definition.ProjectId;
             operatingMode = request.OperatingMode;
             projectStructureContext = request.ProjectStructureContext;
+            if (projectStructureContext is null && projectId.HasValue)
+            {
+                projectStructureContext = await projectStructureBridge.TryResolveLaunchContextAsync(
+                    dbContext,
+                    projectId.Value,
+                    definition.Id,
+                    cancellationToken);
+            }
+
             triggerReason = ProcessProjectStructureContextFormatter.AppendToTriggerReason(
                 request.TriggerReason,
-                request.ProjectStructureContext);
+                projectStructureContext);
         }
 
         var roles = await dbContext.Set<ProcessRoleRequirement>()
@@ -371,6 +399,20 @@ public sealed partial class ProcessesService
                 .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.IsPrimary).ToList());
         }
 
+        if (launchPlan is null && RequiresTechnicalAgentBinding(operatingMode))
+        {
+            directAiCandidatesByRoleRequirementId = await BuildDirectRunAiCandidateAssignmentsAsync(
+                dbContext,
+                definition,
+                publishedVersion,
+                roles,
+                projectId,
+                operatingMode,
+                triggerReason,
+                projectStructureContext,
+                cancellationToken);
+        }
+
         var defaultRunName = launchPlan is not null
             ? launchPlan.Name
             : $"{definition.Name} / {clock.GetUtcNow():yyyy-MM-dd HH:mm}";
@@ -390,6 +432,7 @@ public sealed partial class ProcessesService
                 projectStructureContext,
                 defaultRunName,
                 selectedCandidatesByRoleRequirementId ?? [],
+                directAiCandidatesByRoleRequirementId,
                 projectAssignmentLookup ?? []));
     }
 
@@ -423,6 +466,27 @@ public sealed partial class ProcessesService
             role.PreferredProjectAssignmentRole ?? ProjectPartyAssignmentRole.TeamMember,
             out var candidates);
         var candidate = candidates?.FirstOrDefault();
+        if (candidate is null &&
+            context.DirectAiCandidatesByRoleRequirementId.TryGetValue(role.Id, out var directAiCandidate))
+        {
+            return new ProcessRunAssignment
+            {
+                ProcessRunId = processRunId,
+                RoleRequirementId = role.Id,
+                PartyId = directAiCandidate.PartyId,
+                DisplayName = directAiCandidate.DisplayName,
+                ExecutorKind = directAiCandidate.ExecutorKind,
+                BindingReason = string.IsNullOrWhiteSpace(directAiCandidate.RecommendationSummary)
+                    ? "Matched bound AI resource from the shared agent directory for direct assisted execution."
+                    : directAiCandidate.RecommendationSummary,
+                SourceRegistryKey = directAiCandidate.SourceRegistryKey,
+                SnapshotSummary = role.SnapshotSummary,
+                IsFallback = false,
+                IsCapabilityGap = false,
+                AllowsDirectMessaging = directAiCandidate.AllowsDirectMessaging
+            };
+        }
+
         return new ProcessRunAssignment
         {
             ProcessRunId = processRunId,
@@ -455,7 +519,143 @@ public sealed partial class ProcessesService
         ProcessProjectStructureContext? ProjectStructureContext,
         string DefaultRunName,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> SelectedLaunchCandidatesByRoleRequirementId,
+        IReadOnlyDictionary<Guid, ProcessLaunchCandidate> DirectAiCandidatesByRoleRequirementId,
         IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup);
+
+    private async Task<IReadOnlyDictionary<Guid, ProcessLaunchCandidate>> BuildDirectRunAiCandidateAssignmentsAsync(
+        AppDbContext dbContext,
+        ProcessDefinition definition,
+        ProcessDefinitionVersion publishedVersion,
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        Guid? projectId,
+        ProcessOperatingMode operatingMode,
+        string triggerReason,
+        ProcessProjectStructureContext? projectStructureContext,
+        CancellationToken cancellationToken)
+    {
+        var assignableRoles = roles
+            .Where(IsAiRole)
+            .ToList();
+        if (assignableRoles.Count == 0)
+        {
+            return new Dictionary<Guid, ProcessLaunchCandidate>();
+        }
+
+        var aiDirectory = (await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken))
+            .Where(HasBoundTechnicalAgent)
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (aiDirectory.Count == 0)
+        {
+            return new Dictionary<Guid, ProcessLaunchCandidate>();
+        }
+
+        var roleIds = assignableRoles
+            .Select(item => item.Id)
+            .ToList();
+        var roleSkillRequirements = await dbContext.Set<ProcessRoleSkillRequirement>()
+            .AsNoTracking()
+            .Where(item => roleIds.Contains(item.RoleRequirementId))
+            .ToListAsync(cancellationToken);
+        var requiredSkillIdsByRoleId = roleSkillRequirements
+            .Where(item => item.IsRequired)
+            .GroupBy(item => item.RoleRequirementId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<Guid>)group.Select(item => item.SkillId).Distinct().ToList());
+        var allRequiredSkillIds = requiredSkillIdsByRoleId.Values
+            .SelectMany(item => item)
+            .Distinct()
+            .ToList();
+        var skillNamesById = allRequiredSkillIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await dbContext.Set<SkillDefinition>()
+                .AsNoTracking()
+                .Where(item => allRequiredSkillIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+        var aiMatchedSkillsByPartyId = await LoadMatchedSkillsByPartyIdAsync(
+            dbContext,
+            aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
+            allRequiredSkillIds,
+            cancellationToken);
+        var aiFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
+                aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
+                cancellationToken))
+            .ToDictionary(item => item.PartyId);
+        var project = projectId.HasValue
+            ? await dbContext.Set<Project>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == projectId.Value, cancellationToken)
+            : null;
+        var transientPlan = new ProcessLaunchPlan
+        {
+            ProcessDefinitionId = definition.Id,
+            ProcessDefinitionVersionId = publishedVersion.Id,
+            ProjectId = projectId,
+            Name = definition.Name,
+            OperatingMode = operatingMode,
+            TriggerReason = triggerReason
+        };
+        var launchContext = await BuildLaunchRoleContextAsync(
+            dbContext,
+            transientPlan,
+            project,
+            projectStructureContext,
+            cancellationToken);
+        var selectedCandidatesByRoleId = new Dictionary<Guid, ProcessLaunchCandidate>();
+
+        foreach (var role in assignableRoles)
+        {
+            var requiredSkillIds = requiredSkillIdsByRoleId.GetValueOrDefault(role.Id) ?? [];
+            var selectedCandidate = aiDirectory
+                .Select(aiResource => BuildDirectRunAiCandidate(aiResource, requiredSkillIds, aiMatchedSkillsByPartyId))
+                .OrderByDescending(candidate => ScoreCandidateForHrManager(
+                    role,
+                    candidate,
+                    requiredSkillIds,
+                    skillNamesById,
+                    aiFactsByPartyId,
+                    launchContext))
+                .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+
+            if (selectedCandidate is not null)
+            {
+                selectedCandidatesByRoleId[role.Id] = selectedCandidate;
+            }
+        }
+
+        return selectedCandidatesByRoleId;
+    }
+
+    private ProcessLaunchCandidate BuildDirectRunAiCandidate(
+        AiAgentListItemModel aiResource,
+        IReadOnlyList<Guid> requiredSkillIds,
+        IReadOnlyDictionary<Guid, HashSet<Guid>> matchedSkillsByPartyId)
+    {
+        matchedSkillsByPartyId.TryGetValue(aiResource.PartyId, out var matchedSkillSet);
+        var matchedSkillCount = matchedSkillSet?.Count ?? 0;
+
+        return new ProcessLaunchCandidate
+        {
+            CandidateKind = ProcessLaunchCandidateKind.AiResource,
+            PartyId = aiResource.PartyId,
+            TechnicalAgentId = aiResource.TechnicalAgentId,
+            DisplayName = aiResource.DisplayName,
+            ExecutorKind = "AI agent",
+            Score = ResolveAiResourceScore(aiResource, matchedSkillCount, requiredSkillIds.Count),
+            IsRecommended = true,
+            AllowsDirectMessaging = true,
+            RequiresProvisioning = false,
+            RecommendationSummary = BuildAiResourceRecommendationSummary(aiResource, matchedSkillCount, requiredSkillIds.Count),
+            AvailabilitySummary = string.IsNullOrWhiteSpace(aiResource.ProviderName)
+                ? "AI resource is available in the shared agent directory."
+                : $"{aiResource.ProviderName} / {aiResource.DefaultModel}",
+            SourceRegistryKey = $"crmhr-ai-agent:{aiResource.PartyId:D}",
+            MetadataJson = "{}",
+            CreatedAtUtc = clock.GetUtcNow()
+        };
+    }
 
     private static ProcessRunAssignment? ResolveCurrentExecutorAssignment(
         ProcessStepDefinition stepDefinition,

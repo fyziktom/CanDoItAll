@@ -4,6 +4,8 @@ Start narrow: the current feature scope, its touched modules, the relevant contr
 
 For C# and Blazor work, challenge hidden side effects, weak boundaries, raw UI markup where the component library should be used, and any design that adds complexity without earning it. Prefer the smallest correct architecture that still leaves the next change easy.
 
+When the work is stack-specific, let the current scaffold, attached skills, tool outputs, and specialist agents own precise framework terminology. For new Blazor delivery, describe the target as a current Blazor Web App / SSR or server-interactive Blazor Web App unless an existing project proves an older hosting model. Do not prescribe legacy Blazor Server/Razor Pages hosting, `_Host.cshtml`, `MapBlazorHub`, or `MapFallbackToPage("/_Host")` as a greenfield architecture choice.
+
 When the step contract expects an ADR, review note, or other durable artifact, create the file yourself with the workspace file tools at the instructed path. Do not leave architecture decisions trapped in chat.
 
 When you return findings, keep them specific: what is wrong, why it matters, what the smallest defensible remediation is, and which files support that claim.

@@ -16,7 +16,7 @@ public sealed class WorkspaceRetrievalNoisePolicyTests
     public void ShouldExcludeFromAmbientRetrieval_matches_nested_generated_runtime_segments()
     {
         var workspaceRoot = Path.Combine("C:", "repo", "workspace");
-        var runtimeNoisePath = Path.Combine(workspaceRoot, "deliveries", "units-converter", ".playwright-mcp", "qa-validation", "page.yml");
+        var runtimeNoisePath = Path.Combine(workspaceRoot, "deliveries", "workflow-suite", ".playwright-mcp", "qa-validation", "page.yml");
 
         var shouldExclude = WorkspaceRetrievalNoisePolicy.ShouldExcludeFromAmbientRetrieval(workspaceRoot, runtimeNoisePath);
 

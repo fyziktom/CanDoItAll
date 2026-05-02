@@ -1,0 +1,505 @@
+- main [ref=e1512]:
+  - group [ref=e1513]:
+    - generic "Workspace navigation" [ref=e1514] [cursor=pointer]
+  - generic [ref=e1515]:
+    - generic [ref=e1518]:
+      - generic [ref=e1519]:
+        - button "Dashboard" [ref=e1521]:
+          - generic [ref=e1522]: Dashboard
+          - generic [ref=e1524]: push_pin
+        - button "Projects" [ref=e1526]:
+          - generic [ref=e1527]: Projects
+        - button "Projects" [ref=e1529]:
+          - generic [ref=e1530]: Projects
+        - button "Projects" [ref=e1532]:
+          - generic [ref=e1533]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e1535]:
+          - generic [ref=e1536]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e1538]:
+          - generic [ref=e1539]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e1540]:
+        - textbox "Search tabs" [ref=e1541]
+        - group [ref=e1542]:
+          - generic "+6" [ref=e1543] [cursor=pointer]
+    - generic [ref=e1545]:
+      - generic [ref=e1546]:
+        - generic [ref=e1547]: Active database
+        - generic [ref=e1548]: PostgreSQL workspace
+        - generic [ref=e1549]: PostgreSQL
+        - button "Show db details" [ref=e1551] [cursor=pointer]:
+          - generic [ref=e1552]: "?"
+      - button "Switch database" [ref=e1553]:
+        - generic [ref=e1554]: Switch database
+      - generic [ref=e1555]: Interactive Server
+      - generic [ref=e1556]: Live items 5
+      - generic [ref=e1557]: Tabs 12
+  - generic [ref=e1560]:
+    - button "tune" [ref=e1561]
+    - generic [ref=e1562]:
+      - generic [ref=e1564]:
+        - paragraph [ref=e1565]: Workbench
+        - heading "Validation v47 - Pocket Seed Library Tracker structure" [level=1] [ref=e1566]
+      - generic [ref=e1567]:
+        - generic [ref=e1569]:
+          - generic [ref=e1570]:
+            - paragraph [ref=e1571]: Structure canvas
+            - generic [ref=e1572]:
+              - generic [ref=e1573]:
+                - heading "Validation v47 - Pocket Seed Library Tracker workbench" [level=2] [ref=e1575]
+                - paragraph [ref=e1576]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e1577]:
+                - generic [ref=e1578]:
+                  - generic [ref=e1579]: Nodes
+                  - strong [ref=e1580]: "2"
+                - generic [ref=e1581]:
+                  - generic [ref=e1582]: Links
+                  - strong [ref=e1583]: "1"
+                - generic [ref=e1584]:
+                  - generic [ref=e1585]: Selection
+                  - strong [ref=e1586]: "1"
+          - generic [ref=e1588]:
+            - generic [ref=e1589]:
+              - generic [ref=e1590]:
+                - button "Open quick create actions" [ref=e1591] [cursor=pointer]:
+                  - generic [ref=e1592]: add
+                  - generic [ref=e1593]: Open quick create actions
+                - button "Focus root" [ref=e1594] [cursor=pointer]:
+                  - generic [ref=e1595]: center_focus_strong
+                  - generic [ref=e1596]: Focus root
+                - generic [ref=e1597]:
+                  - generic [ref=e1598]:
+                    - button "Select" [ref=e1599] [cursor=pointer]:
+                      - generic [ref=e1600]: near_me
+                      - generic [ref=e1601]: arrow selector tool
+                    - button "Dependency" [ref=e1602] [cursor=pointer]:
+                      - generic [ref=e1603]: call_split
+                      - generic [ref=e1604]: call split
+                    - button "Delete" [ref=e1605] [cursor=pointer]:
+                      - generic [ref=e1606]: delete
+                      - generic [ref=e1607]: delete
+                  - button "Inspector" [ref=e1608] [cursor=pointer]:
+                    - generic [ref=e1609]: visibility
+                    - generic [ref=e1610]: visibility
+                  - button "Health" [ref=e1611] [cursor=pointer]:
+                    - generic [ref=e1612]: assessment
+                    - generic [ref=e1613]: assessment
+                  - button "Blocks" [ref=e1614] [cursor=pointer]:
+                    - generic [ref=e1615]: dashboard
+                    - generic [ref=e1616]: dashboard
+                  - button "Signals" [ref=e1617] [cursor=pointer]:
+                    - generic [ref=e1618]: notifications_active
+                    - generic [ref=e1619]: notifications active
+                  - button "Agents" [ref=e1620] [cursor=pointer]:
+                    - generic [ref=e1621]: smart_toy
+                    - generic [ref=e1622]: smart toy
+                  - button "Recompose" [disabled] [ref=e1623]:
+                    - generic [ref=e1624]: Recompose
+              - generic [ref=e1625]:
+                - button "Fit canvas" [ref=e1626] [cursor=pointer]:
+                  - generic [ref=e1627]: fit_screen
+                  - generic [ref=e1628]: Fit canvas
+                - button "Toggle maximize" [ref=e1629] [cursor=pointer]:
+                  - generic [ref=e1630]: open_in_full
+                  - generic [ref=e1631]: Maximize canvas
+                - button "Toggle minimap" [ref=e1632] [cursor=pointer]:
+                  - generic [ref=e1633]: map
+                  - generic [ref=e1634]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e1635] [cursor=pointer]:
+                  - generic [ref=e1636]: monitor_heart
+                  - generic [ref=e1637]: Toggle diagnostics
+                - button "Toggle help" [ref=e1638] [cursor=pointer]:
+                  - generic [ref=e1639]: help
+                  - generic [ref=e1640]: Canvas help
+                - button "Toggle settings" [ref=e1641] [cursor=pointer]:
+                  - generic [ref=e1642]: settings
+                  - generic [ref=e1643]: Canvas settings
+                - generic [ref=e1644]:
+                  - button "Zoom out" [ref=e1645] [cursor=pointer]:
+                    - generic [ref=e1646]: remove
+                    - generic [ref=e1647]: Zoom out
+                  - slider "Canvas zoom" [ref=e1648]: "100"
+                  - button "Zoom in" [ref=e1649] [cursor=pointer]:
+                    - generic [ref=e1650]: add
+                    - generic [ref=e1651]: Zoom in
+                  - generic [ref=e1652]: 100%
+            - generic [ref=e1653]:
+              - generic "Canvas workbench" [ref=e1654]:
+                - generic [ref=e1655]:
+                  - generic:
+                    - generic "PocketSeedLibraryTracker output folder Input" [ref=e2244]
+                    - generic "PocketSeedLibraryTracker output folder Output" [ref=e2245]
+                    - generic "PocketSeedLibraryTracker output folder Input" [ref=e2246]
+                    - generic "PocketSeedLibraryTracker output folder Output" [ref=e2247]
+                - generic:
+                  - generic [ref=e2291]:
+                    - generic [ref=e2294]: PocketSeedLibraryTracker output folder
+                    - button "Note, shortcut N" [ref=e2295] [cursor=pointer]:
+                      - generic [ref=e2297]: ✎
+                      - strong [ref=e2298]:
+                        - generic [ref=e2299]: Note
+                    - button "Runtime, shortcut R, opens submenu" [ref=e2300] [cursor=pointer]:
+                      - generic [ref=e2302]: R
+                      - strong [ref=e2303]:
+                        - generic [ref=e2304]: Runtime
+                      - generic [ref=e2305]: ›
+                    - button "Assets, shortcut A, opens submenu" [ref=e2306] [cursor=pointer]:
+                      - generic [ref=e2308]: A
+                      - strong [ref=e2309]:
+                        - generic [ref=e2310]: Assets
+                      - generic [ref=e2311]: ›
+                    - button "Infrastructure, shortcut I, opens submenu" [ref=e2312] [cursor=pointer]:
+                      - generic [ref=e2314]: I
+                      - strong [ref=e2315]:
+                        - generic [ref=e2316]: Infrastructure
+                      - generic [ref=e2317]: ›
+                    - button "Decision, shortcut D" [ref=e2318] [cursor=pointer]:
+                      - generic [ref=e2320]: ◆
+                      - strong [ref=e2321]:
+                        - generic [ref=e2322]: Decision
+                    - button "Work, shortcut W, opens submenu" [active] [ref=e2323] [cursor=pointer]:
+                      - generic [ref=e2325]: T
+                      - strong [ref=e2326]:
+                        - generic [ref=e2327]: Work
+                      - generic [ref=e2328]: ›
+                    - button "Assurance, shortcut S, opens submenu" [ref=e2329] [cursor=pointer]:
+                      - generic [ref=e2331]: A
+                      - strong [ref=e2332]:
+                        - generic [ref=e2333]: Assurance
+                      - generic [ref=e2334]: ›
+                    - button "Prompts, shortcut P, opens submenu" [ref=e2335] [cursor=pointer]:
+                      - generic [ref=e2337]: ✶
+                      - strong [ref=e2338]:
+                        - generic [ref=e2339]: Prompts
+                      - generic [ref=e2340]: ›
+                    - button "Milestone, shortcut M" [ref=e2341] [cursor=pointer]:
+                      - generic [ref=e2343]: ◷
+                      - strong [ref=e2344]:
+                        - generic [ref=e2345]: Milestone
+                    - button "Phase, shortcut H" [ref=e2346] [cursor=pointer]:
+                      - generic [ref=e2348]: ◭
+                      - strong [ref=e2349]:
+                        - generic [ref=e2350]: Phase
+                  - generic [ref=e2351]:
+                    - generic [ref=e2354]: Work
+                    - button "Task, shortcut T" [ref=e2355] [cursor=pointer]:
+                      - generic [ref=e2357]: T
+                      - strong [ref=e2358]:
+                        - generic [ref=e2359]: Task
+                    - button "Issue, shortcut I" [ref=e2360] [cursor=pointer]:
+                      - generic [ref=e2362]: I
+                      - strong [ref=e2363]:
+                        - generic [ref=e2364]: Issue
+                    - button "Revision, shortcut R" [ref=e2365] [cursor=pointer]:
+                      - generic [ref=e2367]: R
+                      - strong [ref=e2368]:
+                        - generic [ref=e2369]: Revision
+                    - button "Feedback, shortcut F" [ref=e2370] [cursor=pointer]:
+                      - generic [ref=e2372]: F
+                      - strong [ref=e2373]:
+                        - generic [ref=e2374]: Feedback
+                    - button "Payment, shortcut P" [ref=e2375] [cursor=pointer]:
+                      - generic [ref=e2377]: P
+                      - strong [ref=e2378]:
+                        - generic [ref=e2379]: Payment
+                    - button "Send, shortcut S" [ref=e2380] [cursor=pointer]:
+                      - generic [ref=e2382]: S
+                      - strong [ref=e2383]:
+                        - generic [ref=e2384]: Send
+              - generic [ref=e1661]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e1662]:
+                - generic [ref=e1663]:
+                  - generic [ref=e1664]:
+                    - paragraph [ref=e1665]: Project agents
+                    - heading "Project agents" [level=3] [ref=e1666]
+                  - generic [ref=e1667]:
+                    - button "Minimize window" [ref=e1668]:
+                      - generic [ref=e1669]: minimize
+                    - button "Restart window position and size" [disabled] [ref=e1670]:
+                      - generic [ref=e1671]: restart_alt
+                    - button "Hide window" [ref=e1672]:
+                      - generic [ref=e1673]: visibility_off
+                - generic [ref=e1675]:
+                  - generic [ref=e1676]:
+                    - textbox "Search contextual agents" [ref=e1677]:
+                      - /placeholder: Search agents
+                    - textbox "Filter tags" [ref=e1681]
+                  - generic [ref=e1682]:
+                    - generic [ref=e1683]: 19 of 19
+                    - generic [ref=e1684]: This project
+                    - generic "Show contextual agent window help" [ref=e1686]:
+                      - generic [ref=e1687]: info
+                  - generic [ref=e1688]:
+                    - button "Open a new contextual chat thread with .NET Application Developer" [ref=e1689]:
+                      - img ".NET Application Developer" [ref=e1690]
+                      - generic [ref=e1691]:
+                        - generic [ref=e1693]: .NET Application Developer
+                        - generic [ref=e1694]
+                      - generic [ref=e1698]:
+                        - generic [ref=e1699]: Read
+                        - generic [ref=e1700]: All projects
+                    - button "Open a new contextual chat thread with .NET QA Review Lead" [ref=e1701]:
+                      - img ".NET QA Review Lead" [ref=e1702]
+                      - generic [ref=e1703]:
+                        - generic [ref=e1705]: .NET QA Review Lead
+                        - generic [ref=e1706]
+                      - generic [ref=e1710]:
+                        - generic [ref=e1711]: Read
+                        - generic [ref=e1712]: All projects
+                    - button "Open a new contextual chat thread with .NET Solution Architect" [ref=e1713]:
+                      - img ".NET Solution Architect" [ref=e1714]
+                      - generic [ref=e1715]:
+                        - generic [ref=e1717]: .NET Solution Architect
+                        - generic [ref=e1718]
+                      - generic [ref=e1722]:
+                        - generic [ref=e1723]: Read
+                        - generic [ref=e1724]: All projects
+                    - button "Open a new contextual chat thread with Blazor Application Developer" [ref=e1725]:
+                      - img "Blazor Application Developer" [ref=e1726]
+                      - generic [ref=e1727]:
+                        - generic [ref=e1729]: Blazor Application Developer
+                        - generic [ref=e1730]
+                      - generic [ref=e1735]:
+                        - generic [ref=e1736]: Read
+                        - generic [ref=e1737]: All projects
+                    - button "Open a new contextual chat thread with Business Strategist" [ref=e1738]:
+                      - img "Business Strategist" [ref=e1739]
+                      - generic [ref=e1740]:
+                        - generic [ref=e1742]: Business Strategist
+                        - generic [ref=e1743]
+                      - generic [ref=e1747]:
+                        - generic [ref=e1748]: Read
+                        - generic [ref=e1749]: All projects
+                    - button "Open a new contextual chat thread with Code Review Lead" [ref=e1750]:
+                      - img "Code Review Lead" [ref=e1751]
+                      - generic [ref=e1752]:
+                        - generic [ref=e1754]: Code Review Lead
+                        - generic [ref=e1755]
+                      - generic [ref=e1759]:
+                        - generic [ref=e1760]: Read
+                        - generic [ref=e1761]: All projects
+                    - button "Open a new contextual chat thread with Delivery QA Observer" [ref=e1762]:
+                      - img "Delivery QA Observer" [ref=e1763]
+                      - generic [ref=e1764]:
+                        - generic [ref=e1766]: Delivery QA Observer
+                        - generic [ref=e1767]
+                      - generic [ref=e1771]:
+                        - generic [ref=e1772]: Read
+                        - generic [ref=e1773]: All projects
+                    - button "Open a new contextual chat thread with Financial Strategist" [ref=e1774]:
+                      - img "Financial Strategist" [ref=e1775]
+                      - generic [ref=e1776]:
+                        - generic [ref=e1778]: Financial Strategist
+                        - generic [ref=e1779]
+                      - generic [ref=e1783]:
+                        - generic [ref=e1784]: Read
+                        - generic [ref=e1785]: All projects
+                    - button "Open a new contextual chat thread with HR Staffing Manager" [ref=e1786]:
+                      - img "HR Staffing Manager" [ref=e1787]
+                      - generic [ref=e1788]:
+                        - generic [ref=e1790]: HR Staffing Manager
+                        - generic [ref=e1791]
+                      - generic [ref=e1795]:
+                        - generic [ref=e1796]: Read
+                        - generic [ref=e1797]: All projects
+                    - button "Open a new contextual chat thread with JavaScript Application Developer" [ref=e1798]:
+                      - img "JavaScript Application Developer" [ref=e1799]
+                      - generic [ref=e1800]:
+                        - generic [ref=e1802]: JavaScript Application Developer
+                        - generic [ref=e1803]
+                      - generic [ref=e1807]:
+                        - generic [ref=e1808]: Read
+                        - generic [ref=e1809]: All projects
+                    - button "Open a new contextual chat thread with JavaScript QA Review Lead" [ref=e1810]:
+                      - img "JavaScript QA Review Lead" [ref=e1811]
+                      - generic [ref=e1812]:
+                        - generic [ref=e1814]: JavaScript QA Review Lead
+                        - generic [ref=e1815]
+                      - generic [ref=e1819]:
+                        - generic [ref=e1820]: Read
+                        - generic [ref=e1821]: All projects
+                    - button "Open a new contextual chat thread with JavaScript Solution Architect" [ref=e1822]:
+                      - img "JavaScript Solution Architect" [ref=e1823]
+                      - generic [ref=e1824]:
+                        - generic [ref=e1826]: JavaScript Solution Architect
+                        - generic [ref=e1827]
+                      - generic [ref=e1831]:
+                        - generic [ref=e1832]: Read
+                        - generic [ref=e1833]: All projects
+                    - button "Open a new contextual chat thread with Marketing Specialist" [ref=e1834]:
+                      - img "Marketing Specialist" [ref=e1835]
+                      - generic [ref=e1836]:
+                        - generic [ref=e1838]: Marketing Specialist
+                        - generic [ref=e1839]
+                      - generic [ref=e1843]:
+                        - generic [ref=e1844]: Read
+                        - generic [ref=e1845]: All projects
+                    - button "Open a new contextual chat thread with Portfolio Architect" [ref=e1846]:
+                      - img "Portfolio Architect" [ref=e1847]
+                      - generic [ref=e1848]:
+                        - generic [ref=e1850]: Portfolio Architect
+                        - generic [ref=e1851]
+                      - generic [ref=e1855]:
+                        - generic [ref=e1856]: Read
+                        - generic [ref=e1857]: Write
+                        - generic [ref=e1858]: All projects
+                    - button "Open a new contextual chat thread with Programming Workspace Analyst" [ref=e1859]:
+                      - img "Programming Workspace Analyst" [ref=e1860]
+                      - generic [ref=e1861]:
+                        - generic [ref=e1863]: Programming Workspace Analyst
+                        - generic [ref=e1864]
+                      - generic [ref=e1868]:
+                        - generic [ref=e1869]: Read
+                        - generic [ref=e1870]: All projects
+                    - button "Open a new contextual chat thread with Release Readiness Manager" [ref=e1871]:
+                      - img "Release Readiness Manager" [ref=e1872]
+                      - generic [ref=e1873]:
+                        - generic [ref=e1875]: Release Readiness Manager
+                        - generic [ref=e1876]
+                      - generic [ref=e1880]:
+                        - generic [ref=e1881]: Read
+                        - generic [ref=e1882]: All projects
+                    - button "Open a new contextual chat thread with Research Deep Dive Analyst" [ref=e1883]:
+                      - img "Research Deep Dive Analyst" [ref=e1884]
+                      - generic [ref=e1885]:
+                        - generic [ref=e1887]: Research Deep Dive Analyst
+                        - generic [ref=e1888]
+                      - generic [ref=e1892]:
+                        - generic [ref=e1893]: Read
+                        - generic [ref=e1894]: All projects
+                    - button "Open a new contextual chat thread with Security Reviewer" [ref=e1895]:
+                      - img "Security Reviewer" [ref=e1896]
+                      - generic [ref=e1897]:
+                        - generic [ref=e1899]: Security Reviewer
+                        - generic [ref=e1900]
+                      - generic [ref=e1904]:
+                        - generic [ref=e1905]: Read
+                        - generic [ref=e1906]: All projects
+                    - button "Open a new contextual chat thread with UI Review Lead" [ref=e1907]:
+                      - img "UI Review Lead" [ref=e1908]
+                      - generic [ref=e1909]:
+                        - generic [ref=e1911]: UI Review Lead
+                        - generic [ref=e1912]
+                      - generic [ref=e1916]:
+                        - generic [ref=e1917]: Read
+                        - generic [ref=e1918]: All projects
+              - region "Project structure selection panel" [ref=e1919]:
+                - generic [ref=e1920]:
+                  - generic [ref=e1921]:
+                    - paragraph [ref=e1922]: Selection panel
+                    - heading "PocketSeedLibraryTracker output folder" [level=3] [ref=e2248]
+                    - paragraph [ref=e1924]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e1925]:
+                    - button "Minimize window" [ref=e1926]:
+                      - generic [ref=e1927]: minimize
+                    - button "Restart window position and size" [disabled] [ref=e1928]:
+                      - generic [ref=e1929]: restart_alt
+                    - button "Hide window" [ref=e1930]:
+                      - generic [ref=e1931]: visibility_off
+                - generic [ref=e1933]:
+                  - generic [ref=e1934]:
+                    - paragraph [ref=e1935]: Local folder
+                    - heading "PocketSeedLibraryTracker output folder" [level=3] [ref=e2249]
+                    - paragraph [ref=e1937]: C:\programovani\dotnet\PocketSeedLibraryTracker
+                    - generic [ref=e1938]:
+                      - generic [ref=e1940]: Draft
+                      - generic [ref=e1942]: Local folder
+                    - generic [ref=e1943]:
+                      - generic [ref=e1944]:
+                        - text: Progress
+                        - strong [ref=e1945]: 0%
+                      - generic [ref=e1946]:
+                        - text: Priority
+                        - strong [ref=e1947]: None
+                      - generic [ref=e1948]:
+                        - text: Marker
+                        - strong [ref=e1949]: None
+                  - generic [ref=e1950]:
+                    - paragraph [ref=e1951]: Node actions
+                    - generic [ref=e1952]:
+                      - button "Edit" [ref=e2250]:
+                        - generic [ref=e1954]
+                      - button "Copy id" [ref=e1957]:
+                        - generic [ref=e1958]
+                      - button "Copy info" [ref=e1961]:
+                        - generic [ref=e1962]
+                      - button "Copy tree ids" [ref=e1965]:
+                        - generic [ref=e1966]
+                      - button "Open" [ref=e2251]:
+                        - generic [ref=e1970]
+                      - button "Validate" [ref=e2252]:
+                        - generic [ref=e1974]
+                      - button "Test" [ref=e2253]:
+                        - generic [ref=e1978]
+                      - button "Summary" [ref=e2254]:
+                        - generic [ref=e1982]
+                      - button "Add process" [ref=e2255]:
+                        - generic [ref=e2256]
+                      - button "Connect selected" [ref=e2259]:
+                        - generic [ref=e2260]
+                      - button "Reconnect" [ref=e2263]:
+                        - generic [ref=e2264]
+                      - button "Disconnect" [ref=e2267]:
+                        - generic [ref=e2268]
+                      - button "To subproject" [ref=e2271]:
+                        - generic [ref=e2272]
+                      - button "Export image" [ref=e2275]:
+                        - generic [ref=e2276]
+                      - button "Delete" [ref=e2279]:
+                        - generic [ref=e2280]
+                  - generic [ref=e1985]:
+                    - paragraph [ref=e1986]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e1987]
+                    - paragraph [ref=e1988]:
+                      - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+                      - strong [ref=e1989]: PocketSeedLibraryTracker output folder
+                      - text: .
+                    - generic [ref=e1990]:
+                      - generic [ref=e1992]: "Source: PocketSeedLibraryTracker output folder"
+                      - generic [ref=e1994]: "Mode: child placement"
+                    - button "Open standard blocks" [ref=e1996]:
+                      - generic [ref=e1997]: Open standard blocks
+                  - group [ref=e1998]:
+                    - generic "Advanced details Show advanced details help" [ref=e1999]:
+                      - generic [ref=e2001]:
+                        - strong [ref=e2002]: Advanced details
+                        - button "Show advanced details help" [ref=e2005] [cursor=pointer]
+                      - generic [ref=e2008]: expand_more
+              - generic:
+                - generic: PocketSeedLibraryTracker output folder is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 2 canvas nodes
+                  - list:
+                    - listitem: PocketSeedLibraryTracker output folderC:\programovani\dotnet\PocketSeedLibraryTracker • Status Draft • 3 annotations
+                    - listitem: Validation v47 - Pocket Seed Library TrackerUse the Multi-team software delivery and release governance process to create, build, run, and test a working app under C:\programovani\dotnet\PocketSeedLibraryTracker without manual repair of the generated app. • Status Draft • 3 annotations
+        - generic [ref=e2010]:
+          - generic [ref=e2012]:
+            - paragraph [ref=e2013]: Outline
+            - heading "Project object index" [level=5] [ref=e2014]
+            - tree "Project object index" [ref=e2016]:
+              - treeitem "Validation v47 - Pocket Seed Library Tracker Draft" [ref=e2017]:
+                - button "Validation v47 - Pocket Seed Library Tracker Draft" [ref=e2020]:
+                  - generic [ref=e2022]: folder
+                  - generic [ref=e2023]: Validation v47 - Pocket Seed Library Tracker
+                  - generic [ref=e2024]: Draft
+              - treeitem "PocketSeedLibraryTracker output folder Draft" [selected] [ref=e2283]:
+                - button "PocketSeedLibraryTracker output folder Draft" [ref=e2286]:
+                  - generic [ref=e2288]: account_tree
+                  - generic [ref=e2289]: PocketSeedLibraryTracker output folder
+                  - generic [ref=e2290]: Draft
+          - generic [ref=e2026]:
+            - paragraph [ref=e2027]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e2028]
+            - generic [ref=e2029]:
+              - generic [ref=e2030]:
+                - paragraph [ref=e2031]: Total nodes
+                - paragraph [ref=e2032]: "2"
+              - generic [ref=e2033]:
+                - paragraph [ref=e2034]: Total links
+                - paragraph [ref=e2035]: "1"
+              - generic [ref=e2036]:
+                - paragraph [ref=e2037]: Selected
+                - paragraph [ref=e2038]: "1"
+            - paragraph [ref=e2039]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e2040]:
+    - generic "Workbench utilities" [ref=e2041] [cursor=pointer]

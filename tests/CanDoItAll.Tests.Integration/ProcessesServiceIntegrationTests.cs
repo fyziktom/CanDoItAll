@@ -8,7 +8,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using static CanDoItAll.Tests.Integration.ProcessCalculatorRepairDefinitionTestFixture;
+using static CanDoItAll.Tests.Integration.ProcessWorkflowRepairDefinitionTestFixture;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -140,6 +140,67 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(assignments.Select(item => item.Id), runDetails.Assignments.Select(item => item.Id));
         Assert.Equal(workBriefs.Select(item => item.Id), runDetails.WorkBriefs.Select(item => item.Id));
         Assert.Equal(conformance.Select(item => item.Id), runDetails.ConformanceObservations.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_rejects_late_transition_after_run_becomes_terminal()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Terminal transition guard project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Terminal transition guard run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration terminal run transition guard"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var stepRun = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            item => item.Sequence == 0);
+        var startResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = stepRun.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started before cancellation.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(startResult.IsSuccess);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runResult.Value);
+            run.Status = ProcessRunStatus.Cancelled;
+            run.CompletedAtUtc = DateTimeOffset.UtcNow;
+            run.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var lateCompletionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = stepRun.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Late in-flight automation completion.",
+            DecidedBy = "process-automation-dispatch"
+        });
+
+        Assert.True(lateCompletionResult.IsFailure);
+        Assert.Contains(lateCompletionResult.Errors, error => error.Code == "processes.run-terminal");
     }
 
     [Fact]
@@ -425,6 +486,87 @@ public sealed class ProcessesServiceIntegrationTests
 
         var persistedArtifact = Assert.Single(matchingArtifacts);
         Assert.Equal(firstRecordResult.Value, persistedArtifact.Id);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_bounds_long_external_reference_key_and_keeps_deduplication()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Long artifact reference key project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Long artifact reference key validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify managed artifact projection keys stay durable."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var longRelativePath = string.Join("/", Enumerable.Repeat("nested-artifact-folder", 12)) + "/implementation-change-set.md";
+        var externalReferenceKey =
+            $"existing-managed-artifact|{Guid.NewGuid():D}|{Guid.NewGuid():D}|{longRelativePath}";
+
+        Assert.True(externalReferenceKey.Length > 200);
+
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Brief,
+            Title = "Long managed artifact projection key",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "First long-key projection pass.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "First record should be stored with a bounded reference key.",
+            ManagedStoragePath = "artifacts/test/long-managed-artifact-projection-key.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.True(firstRecordResult.IsSuccess, string.Join(" | ", firstRecordResult.Errors.Select(error => error.Message)));
+
+        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Brief,
+            Title = "Long managed artifact projection key",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Second long-key projection pass.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Duplicate long key should resolve to the same stored record.",
+            ManagedStoragePath = "artifacts/test/long-managed-artifact-projection-key.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.True(duplicateRecordResult.IsSuccess, string.Join(" | ", duplicateRecordResult.Errors.Select(error => error.Message)));
+        Assert.Equal(firstRecordResult.Value, duplicateRecordResult.Value);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+
+        var persistedArtifact = Assert.Single(persistedArtifacts);
+        Assert.Equal(firstRecordResult.Value, persistedArtifact.Id);
+        Assert.True(persistedArtifact.ExternalReferenceKey.Length <= 200);
+        Assert.StartsWith("existing-managed-artifact|", persistedArtifact.ExternalReferenceKey, StringComparison.Ordinal);
+        Assert.Contains('#', persistedArtifact.ExternalReferenceKey);
     }
 
     [Fact]
@@ -718,7 +860,7 @@ public sealed class ProcessesServiceIntegrationTests
 
         var softwareDeliveryRun = Assert.Single(
             await processesService.ListRunsAsync(softwareDeliveryDefinition.Id, projectId),
-            item => item.Name == "Multi-team software delivery and release governance / billing export capability");
+            item => item.Name == "Multi-team software delivery and release governance / reference delivery capability");
         var softwareDeliveryStepRuns = await processesService.ListStepRunsAsync(softwareDeliveryRun.Id);
         var softwareDeliveryArtifacts = await processesService.ListArtifactsAsync(softwareDeliveryRun.Id);
         var softwareDeliveryConformance = await processesService.ListConformanceObservationsAsync(softwareDeliveryRun.Id);
@@ -726,10 +868,10 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(softwareDeliveryStepRuns.Count >= 9);
         Assert.Contains(softwareDeliveryStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Blocked);
-        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Billing export architecture decision record");
+        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Reference delivery architecture decision record");
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Project structure context brief");
-        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Billing export regression evidence pack");
-        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Open security exception assessment for tenant export capability");
+        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Reference delivery regression evidence pack");
+        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Open security exception assessment for sensitive-data delivery capability");
         Assert.NotEmpty(softwareDeliveryConformance);
         var releaseApprovalStepRun = Assert.Single(softwareDeliveryStepRuns, item => item.Title == "Approve release readiness");
         Assert.True(releaseApprovalStepRun.Dependencies.Count >= 3);
@@ -740,14 +882,14 @@ public sealed class ProcessesServiceIntegrationTests
 
         var hotfixRun = Assert.Single(
             await processesService.ListRunsAsync(hotfixDefinition.Id, projectId),
-            item => item.Name == "Emergency hotfix rollout with shard-risk governance / checkout latency");
+            item => item.Name == "Emergency hotfix rollout with shard-risk governance / critical endpoint latency");
         var hotfixStepRuns = await processesService.ListStepRunsAsync(hotfixRun.Id);
         var hotfixArtifacts = await processesService.ListArtifactsAsync(hotfixRun.Id);
         var hotfixEditor = await processesService.GetEditorAsync(hotfixDefinition.Id, projectId);
 
         Assert.True(hotfixStepRuns.Count >= 7);
         Assert.Contains(hotfixStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Failed);
-        Assert.Contains(hotfixArtifacts, item => item.Title == "Checkout latency emergency rollout and telemetry log");
+        Assert.Contains(hotfixArtifacts, item => item.Title == "Critical endpoint latency emergency rollout and telemetry log");
         var emergencyApprovalStepRun = Assert.Single(hotfixStepRuns, item => item.Title == "Approve emergency release window");
         Assert.True(emergencyApprovalStepRun.Dependencies.Count >= 2);
         Assert.Equal(2, emergencyApprovalStepRun.ArtifactInputCount);
@@ -756,7 +898,7 @@ public sealed class ProcessesServiceIntegrationTests
 
         var branchingRun = Assert.Single(
             await processesService.ListRunsAsync(branchingDefinition.Id, projectId),
-            item => item.Name == "Branching code review and merge governance / account-settings UI");
+            item => item.Name == "Branching code review and merge governance / reviewed UI change");
         var branchingStepRuns = await processesService.ListStepRunsAsync(branchingRun.Id);
         var branchingEditor = await processesService.GetEditorAsync(branchingDefinition.Id, projectId);
 
@@ -1223,16 +1365,16 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task Calculator_repair_process_routes_qa_rejection_repair_recheck_and_release()
+    public async Task Workflow_repair_process_routes_qa_rejection_repair_recheck_and_release()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
-        var projectId = await CreateProjectAsync(projectsService, "Calculator repair process graph project");
-        var fixture = ProcessCalculatorRepairDefinitionTestFixture.Create(projectId);
-        AssertCalculatorRepairGraph(fixture);
+        var projectId = await CreateProjectAsync(projectsService, "Workflow repair process graph project");
+        var fixture = ProcessWorkflowRepairDefinitionTestFixture.Create(projectId);
+        AssertWorkflowRepairGraph(fixture);
 
         var saveResult = await processesService.SaveAsync(fixture.Editor);
 
@@ -1243,9 +1385,9 @@ public sealed class ProcessesServiceIntegrationTests
         {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            RunName = "Calculator QA repair loop validation",
+            RunName = "Workflow QA repair loop validation",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
-            TriggerReason = "Verify deterministic calculator QA repair progression"
+            TriggerReason = "Verify deterministic workflow QA repair progression"
         });
 
         AssertSuccess(runResult);
@@ -2479,7 +2621,7 @@ public sealed class ProcessesServiceIntegrationTests
         });
     }
 
-    private static void AssertCalculatorRepairGraph(CalculatorRepairProcessDefinitionFixture fixture)
+    private static void AssertWorkflowRepairGraph(WorkflowRepairProcessDefinitionFixture fixture)
     {
         Assert.Equal(8, fixture.Editor.Steps.Count);
         Assert.All(
@@ -2576,7 +2718,7 @@ public sealed class ProcessesServiceIntegrationTests
 
     private static ProcessStepRunViewModel GetStepRunByKey(
         IReadOnlyList<ProcessStepRunViewModel> stepRuns,
-        CalculatorRepairProcessDefinitionFixture fixture,
+        WorkflowRepairProcessDefinitionFixture fixture,
         string stepKey)
     {
         var stepDefinitionId = fixture.StepId(stepKey);
@@ -2584,17 +2726,17 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     private static void AssertExpectedArtifactOutput(
-        CalculatorRepairProcessDefinitionFixture fixture,
+        WorkflowRepairProcessDefinitionFixture fixture,
         ProcessStepRunViewModel stepRun)
     {
         var stepKey = fixture.StepIdsByKey.Single(item => item.Value == stepRun.StepDefinitionId).Key;
         var artifactOutput = Assert.Single(stepRun.ArtifactOutputs);
 
-        Assert.Equal(GetExpectedCalculatorArtifactTitle(stepKey), artifactOutput.Title);
+        Assert.Equal(GetExpectedWorkflowArtifactTitle(stepKey), artifactOutput.Title);
         Assert.True(artifactOutput.IsRequired);
     }
 
-    private static string GetExpectedCalculatorArtifactTitle(string stepKey)
+    private static string GetExpectedWorkflowArtifactTitle(string stepKey)
     {
         return stepKey switch
         {
@@ -2606,7 +2748,7 @@ public sealed class ProcessesServiceIntegrationTests
             StepKeys.RepairImplementation => ArtifactTitles.RepairImplementation,
             StepKeys.QaRecheck => ArtifactTitles.QaRecheck,
             StepKeys.ReleaseNotes => ArtifactTitles.ReleaseNotes,
-            _ => throw new InvalidOperationException($"Unknown calculator process step key '{stepKey}'.")
+            _ => throw new InvalidOperationException($"Unknown workflow process step key '{stepKey}'.")
         };
     }
 

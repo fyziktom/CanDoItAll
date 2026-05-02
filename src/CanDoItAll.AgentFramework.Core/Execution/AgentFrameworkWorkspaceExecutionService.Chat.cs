@@ -348,4 +348,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .ThenByDescending(item => item.CreatedAtUtc)
             .ToList();
     }
+
+    private static IReadOnlyList<AgentMemoryRecord> ResolveAgentMemoryForRun(
+        SandboxWorkspaceCatalog catalog,
+        Guid agentId,
+        ExecutionRunRecord run)
+    {
+        return IsGovernedMachineCriticalRun(run)
+            ? []
+            : ResolveAgentMemory(catalog, agentId);
+    }
 }

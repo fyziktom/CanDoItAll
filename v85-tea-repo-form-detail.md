@@ -1,0 +1,42 @@
+- generic [ref=e6585]:
+  - paragraph [ref=e6586]: Repo
+  - heading "Create Repo" [level=3] [ref=e6587]
+  - generic [ref=e6588]:
+    - generic [ref=e6589]:
+      - paragraph [ref=e6590]: Add a repository or code artifact next to the current source.
+      - list [ref=e6591]:
+        - listitem [ref=e6592]:
+          - generic [ref=e6593]: Step 1
+          - strong [ref=e6594]: Details
+        - listitem [ref=e6595]:
+          - generic [ref=e6596]: Step 2
+          - strong [ref=e6597]: Notes
+    - generic [ref=e6598]:
+      - generic [ref=e6599]:
+        - generic [ref=e6600]:
+          - generic [ref=e6601]: "01"
+          - generic [ref=e6602]:
+            - strong [ref=e6603]: Details
+            - generic [ref=e6604]: Name the item and keep the create request readable on the canvas.
+        - generic [ref=e6606]:
+          - generic [ref=e6607]:
+            - generic [ref=e6608]: Repo name
+            - textbox "Repo name" [active] [ref=e6609]:
+              - /placeholder: frontend-app
+          - generic [ref=e6610]:
+            - generic [ref=e6611]: Owner / path
+            - textbox "Owner / path" [ref=e6612]:
+              - /placeholder: team/repository
+      - generic [ref=e6613]:
+        - generic [ref=e6614]:
+          - generic [ref=e6615]: "02"
+          - generic [ref=e6616]:
+            - strong [ref=e6617]: Notes
+            - generic [ref=e6618]: Capture the supporting context and next-step guidance for the new item.
+        - generic [ref=e6621]:
+          - generic [ref=e6622]: Purpose
+          - textbox "Purpose" [ref=e6623]:
+            - /placeholder: What this repo is for
+  - generic [ref=e6624]:
+    - button "Cancel" [ref=e6625] [cursor=pointer]
+    - button "Create" [ref=e6626] [cursor=pointer]

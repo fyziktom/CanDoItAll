@@ -2,10 +2,10 @@
   {
     "Key": "baseline-software-delivery",
     "ProcessTemplateKey": "software-delivery",
-    "RunName": "Multi-team software delivery and release governance / billing export capability",
+    "RunName": "Multi-team software delivery and release governance / reference delivery capability",
     "Summary": "Baseline governed software delivery run aligned with the current module architecture, including explicit release-approval dependencies and artifact inputs.",
     "OperatingMode": "AssistedExecution",
-    "TriggerReason": "Seeded baseline scenario for a cross-team billing export capability.",
+    "TriggerReason": "Seeded baseline scenario for a cross-team reference delivery capability.",
     "Assignments": [
       {
         "StepKey": "",
@@ -112,7 +112,7 @@
       {
         "StepKey": "feature-intake",
         "ArtifactKind": "Brief",
-        "Title": "Billing export scope boundary packet",
+        "Title": "Reference delivery scope boundary packet",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Created from stakeholder intake and acceptance workshop.",
@@ -125,24 +125,24 @@
         "Title": "Project structure context brief",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Recorded from repository structure review and touched-module analysis for the billing export capability.",
+        "ProvenanceSummary": "Recorded from repository structure review and touched-module analysis for the reference delivery capability.",
         "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, and release decisions tied to the same project node.",
         "ReviewSummary": "Originating project node, working directory, touched modules, and downstream artifact expectations are explicit."
       },
       {
         "StepKey": "architecture-review",
         "ArtifactKind": "Decision",
-        "Title": "Billing export architecture decision record",
+        "Title": "Reference delivery architecture decision record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Recorded after the canonical-model and source-of-truth review for the billing export capability.",
+        "ProvenanceSummary": "Recorded after the canonical-model and source-of-truth review for the reference delivery capability.",
         "AllowedFutureUsageSummary": "Reusable for implementation, peer review, and release governance.",
         "ReviewSummary": "Selected option, rejected alternatives, and migration ownership are explicit."
       },
       {
         "StepKey": "implementation",
         "ArtifactKind": "Deliverable",
-        "Title": "Billing export implementation change set",
+        "Title": "Reference delivery implementation change set",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Generated from current branch and linked tests.",
@@ -152,7 +152,7 @@
       {
         "StepKey": "implementation",
         "ArtifactKind": "Checklist",
-        "Title": "Billing export migration and rollout preparation checklist",
+        "Title": "Reference delivery migration and rollout preparation checklist",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Prepared by implementation owner alongside the change set and rollout notes.",
@@ -162,7 +162,7 @@
       {
         "StepKey": "peer-review",
         "ArtifactKind": "Evidence",
-        "Title": "Billing export peer review note",
+        "Title": "Reference delivery peer review note",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded during peer review of the governed delivery package.",
@@ -172,17 +172,17 @@
       {
         "StepKey": "qa-validation",
         "ArtifactKind": "Evidence",
-        "Title": "Billing export regression evidence pack",
+        "Title": "Reference delivery regression evidence pack",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Captured from targeted regression, browser proof, and acceptance checks for the billing export capability.",
+        "ProvenanceSummary": "Captured from targeted regression, browser proof, and acceptance checks for the reference delivery capability.",
         "AllowedFutureUsageSummary": "Reusable for release approval, support readiness, and audit.",
         "ReviewSummary": "QA lead approved the evidence pack after reviewing changed-surface coverage."
       },
       {
         "StepKey": "security-review",
         "ArtifactKind": "Decision",
-        "Title": "Open security exception assessment for tenant export capability",
+        "Title": "Open security exception assessment for sensitive-data delivery capability",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Confidential",
         "ProvenanceSummary": "Recorded by the security reviewer when the release lane was blocked on unresolved exception posture.",
@@ -194,10 +194,10 @@
   {
     "Key": "baseline-branching-code-review",
     "ProcessTemplateKey": "branching-code-review",
-    "RunName": "Branching code review and merge governance / account-settings UI",
+    "RunName": "Branching code review and merge governance / reviewed UI change",
     "Summary": "Baseline branching review run that exercises the explicit review router, QA lane validation, and merge approval path.",
     "OperatingMode": "AssistedExecution",
-    "TriggerReason": "Seeded baseline scenario for a customer-visible account-settings UI change.",
+    "TriggerReason": "Seeded baseline scenario for a customer-visible UI change.",
     "Assignments": [
       {
         "StepKey": "",
@@ -308,10 +308,10 @@
   {
     "Key": "baseline-hotfix-rollout",
     "ProcessTemplateKey": "hotfix-rollout",
-    "RunName": "Emergency hotfix rollout with shard-risk governance / checkout latency",
+    "RunName": "Emergency hotfix rollout with shard-risk governance / critical endpoint latency",
     "Summary": "Baseline emergency hotfix run aligned with explicit blast-radius review, emergency validation, and emergency-release approval inputs.",
     "OperatingMode": "AssistedExecution",
-    "TriggerReason": "Seeded baseline scenario for a checkout latency incident requiring urgent remediation.",
+    "TriggerReason": "Seeded baseline scenario for a critical endpoint latency incident requiring urgent remediation.",
     "Assignments": [
       {
         "StepKey": "",
@@ -374,7 +374,7 @@
         "StepKey": "assess-blast-radius",
         "TargetStatus": "Completed",
         "SelectedBranchOutcomeKey": "",
-        "Reason": "Blast radius assessed and bounded to impacted checkout shards.",
+        "Reason": "Blast radius assessed and bounded to impacted service partitions.",
         "DecidedBy": "Petra Database"
       },
       {
@@ -410,7 +410,7 @@
       {
         "StepKey": "activate-emergency-bridge",
         "ArtifactKind": "Transcript",
-        "Title": "Checkout latency emergency bridge activation log",
+        "Title": "Critical endpoint latency emergency bridge activation log",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded from emergency bridge activation.",
@@ -420,7 +420,7 @@
       {
         "StepKey": "assess-blast-radius",
         "ArtifactKind": "Decision",
-        "Title": "Checkout latency blast-radius assessment",
+        "Title": "Critical endpoint latency blast-radius assessment",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Confidential",
         "ProvenanceSummary": "Prepared during emergency shard-risk review and rollback-trigger evaluation.",
@@ -430,7 +430,7 @@
       {
         "StepKey": "package-hotfix",
         "ArtifactKind": "Deliverable",
-        "Title": "Checkout latency emergency patch and rollback bundle",
+        "Title": "Critical endpoint latency emergency patch and rollback bundle",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Confidential",
         "ProvenanceSummary": "Built from emergency fix branch with rollback notes.",
@@ -440,7 +440,7 @@
       {
         "StepKey": "validate-hotfix",
         "ArtifactKind": "Evidence",
-        "Title": "Checkout latency emergency validation evidence pack",
+        "Title": "Critical endpoint latency emergency validation evidence pack",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Captured from urgent regression checks, smoke coverage, and emergency browser proof.",
@@ -450,7 +450,7 @@
       {
         "StepKey": "approve-emergency-release",
         "ArtifactKind": "Decision",
-        "Title": "Checkout latency emergency release approval record",
+        "Title": "Critical endpoint latency emergency release approval record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Approved by release approver after review of blast radius and validation evidence.",
@@ -460,7 +460,7 @@
       {
         "StepKey": "execute-emergency-rollout",
         "ArtifactKind": "Transcript",
-        "Title": "Checkout latency emergency rollout and telemetry log",
+        "Title": "Critical endpoint latency emergency rollout and telemetry log",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Captured from the failed production rollout and immediate rollback watch.",
@@ -571,10 +571,10 @@
   {
     "Key": "baseline-incident-response",
     "ProcessTemplateKey": "incident-response",
-    "RunName": "Incident response and escalation / tenant login disruption",
+    "RunName": "Incident response and escalation / user access disruption",
     "Summary": "Baseline incident run that exercises explicit triage, diagnosis, and approval escalation.",
     "OperatingMode": "AssistedExecution",
-    "TriggerReason": "Seeded baseline scenario for a tenant login disruption incident.",
+    "TriggerReason": "Seeded baseline scenario for a user access disruption incident.",
     "Assignments": [
       {
         "StepKey": "",
@@ -628,7 +628,7 @@
       {
         "StepKey": "respond",
         "ArtifactKind": "Decision",
-        "Title": "Tenant login incident triage note",
+        "Title": "User access incident triage note",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Prepared from alert, service desk reports, and first telemetry.",
@@ -638,7 +638,7 @@
       {
         "StepKey": "diagnose",
         "ArtifactKind": "Evidence",
-        "Title": "Tenant login diagnosis evidence pack",
+        "Title": "User access diagnosis evidence pack",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Collected from logs, traces, and hypothesis tracking.",
@@ -648,7 +648,7 @@
       {
         "StepKey": "escalate",
         "ArtifactKind": "Decision",
-        "Title": "Tenant login escalation approval record",
+        "Title": "User access escalation approval record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Approved by escalation authority after risk review.",

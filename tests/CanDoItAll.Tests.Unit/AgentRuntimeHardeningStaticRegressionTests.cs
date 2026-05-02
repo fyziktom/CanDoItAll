@@ -164,15 +164,15 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
             "Dispatch",
             "ProcessRunAutomationDispatchService.ImplementationProof.cs");
 
-        Assert.DoesNotContain("BuildCalculatorRecoveryFocusGuidance", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("BuildCalculatorRecoveryChecklist", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildWorkflowRecoveryFocusGuidance", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildWorkflowRecoveryChecklist", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("BuildBlazorBuildRecoveryGuidance", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CalculatorEngine", directiveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("WorkflowEngine", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Components/Pages/Home.razor", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Calculator", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workflow", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Blazor", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_dotnet", providerSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Calculator", proofSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workflow", proofSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Blazor", proofSource, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_dotnet", proofSource, StringComparison.Ordinal);
     }
@@ -191,10 +191,64 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
                 .Where(path => !path.EndsWith("manifest.json", StringComparison.OrdinalIgnoreCase))
                 .Select(File.ReadAllText));
 
-        Assert.DoesNotContain("calculator", searchableText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("SimpleCalculatorApp", searchableText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("office-order", searchableText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Mouser", searchableText, StringComparison.OrdinalIgnoreCase);
+        var forbiddenTerms = new[]
+        {
+            string.Concat("calcu", "lator"),
+            string.Concat("Simple", "Calcu", "lator", "App"),
+            string.Concat("calc", "app"),
+            "arithmetic",
+            "office-order",
+            "Mouser"
+        };
+
+        foreach (var forbiddenTerm in forbiddenTerms)
+        {
+            Assert.DoesNotContain(forbiddenTerm, searchableText, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Active_runtime_and_scenario_tooling_do_not_embed_sample_specific_application_guidance()
+    {
+        var root = FindRepositoryRoot();
+        var searchableRoots = new[]
+        {
+            Path.Combine(root, "src"),
+            Path.Combine(root, "tools"),
+            Path.Combine(root, "Templates", "Processes")
+        };
+        var searchableText = string.Join(
+            Environment.NewLine,
+            searchableRoots
+                .Where(Directory.Exists)
+                .SelectMany(path => Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                .Where(IsSearchableTextFile)
+                .Select(File.ReadAllText));
+        var forbiddenTerms = new[]
+        {
+            string.Concat("calcu", "lator"),
+            string.Concat("Simple", "Calcu", "lator", "App"),
+            string.Concat("calc", "app"),
+            string.Concat("Community", "Bike", "Pump", "Locator"),
+            string.Concat("Craft", "Swap", "Shelf", "Catalog")
+        };
+
+        foreach (var forbiddenTerm in forbiddenTerms)
+        {
+            Assert.DoesNotContain(forbiddenTerm, searchableText, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static bool IsSearchableTextFile(string path)
+    {
+        if (path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{Path.DirectorySeparatorChar}.artifacts{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return Path.GetExtension(path).ToLowerInvariant() is ".cs" or ".json" or ".md" or ".ps1" or ".txt";
     }
 
     private static string ReadRepositoryFile(params string[] pathParts)

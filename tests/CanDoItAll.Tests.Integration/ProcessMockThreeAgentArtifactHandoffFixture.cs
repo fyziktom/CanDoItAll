@@ -15,10 +15,10 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
 
     public static class ArtifactTitles
     {
-        public const string Scope = "Calculator scope artifact";
+        public const string Scope = "Mock scope artifact";
         public const string ImplementationChangeSet = "Implementation change set";
         public const string MigrationRolloutChecklist = "Migration and rollout preparation checklist";
-        public const string QaApproval = "Calculator QA approval artifact";
+        public const string QaApproval = "Mock QA approval artifact";
     }
 
     public static ThreeAgentArtifactHandoffProcessDefinitionFixture Create(Guid projectId)
@@ -56,7 +56,7 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
                     productOwnerRoleId,
                     ProcessMockAgentRoleKeys.ProductOwner,
                     "Product Owner",
-                    "Own calculator scope.",
+                    "Own mock scope.",
                     "Process mock product owner for deterministic scope generation."),
                 CreateRole(
                     developerRoleId,
@@ -77,9 +77,9 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
                 {
                     Id = scopeStepId,
                     Key = StepKeys.Scope,
-                    Title = "Write calculator scope",
+                    Title = "Write mock scope",
                     StepKind = ProcessStepKind.Start,
-                    InputContractSummary = "Calculator product request.",
+                    InputContractSummary = "Mock product request.",
                     OutputContractSummary = "Scope and acceptance criteria.",
                     EvidenceContractSummary = "Scope artifact persisted for downstream implementation.",
                     DecisionRightsSummary = "Product owner owns scope completion.",
@@ -97,14 +97,14 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
                             scopeArtifactId,
                             ProcessArtifactKind.Brief,
                             ArtifactTitles.Scope,
-                            "Scope artifact must describe arithmetic operations and divide-by-zero acceptance criteria.")
+                            "Scope artifact must describe validation behavior and blank-input acceptance criteria.")
                     ]
                 },
                 new ProcessStepEditorModel
                 {
                     Id = implementationStepId,
                     Key = StepKeys.Implementation,
-                    Title = "Implement calculator change set and rollout checklist",
+                    Title = "Implement mock change set and rollout checklist",
                     StepKind = ProcessStepKind.Work,
                     Dependencies = CreateDependencies((scopeStepId, null)),
                     InputContractSummary = "Scope artifact.",
@@ -144,7 +144,7 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
                 {
                     Id = reviewStepId,
                     Key = StepKeys.Review,
-                    Title = "QA recheck calculator artifact handoff",
+                    Title = "QA recheck sample artifact handoff",
                     StepKind = ProcessStepKind.Review,
                     Dependencies = CreateDependencies((implementationStepId, null)),
                     InputContractSummary = "Implementation change set and rollout checklist.",

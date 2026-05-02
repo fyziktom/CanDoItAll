@@ -1,0 +1,106 @@
+- main [ref=e2828]:
+  - group [ref=e2829]:
+    - generic "Workspace navigation" [ref=e2830] [cursor=pointer]
+  - generic [ref=e2831]:
+    - generic [ref=e2834]:
+      - generic [ref=e2835]:
+        - button "Dashboard" [ref=e2837]:
+          - generic [ref=e2838]: Dashboard
+          - generic [ref=e2840]: push_pin
+        - button "Validation v80 - Trail Cleanup Volunteer Scheduler · Structure" [ref=e2842]:
+          - generic [ref=e2843]: Validation v80 - Trail Cleanup Volunteer Scheduler · Structure
+        - button "Projects" [ref=e2845]:
+          - generic [ref=e2846]: Projects
+        - button "Validation v80 - Art Studio Kiln Firing Board · Structure" [ref=e2848]:
+          - generic [ref=e2849]: Validation v80 - Art Studio Kiln Firing Board · Structure
+        - button "Projects" [ref=e2851]:
+          - generic [ref=e2852]: Projects
+        - button "Projects" [ref=e2854]:
+          - generic [ref=e2855]: Projects
+      - generic [ref=e2856]:
+        - textbox "Search tabs" [ref=e2857]
+        - group [ref=e2858]:
+          - generic "+12" [ref=e5925] [cursor=pointer]
+    - generic [ref=e2861]:
+      - generic [ref=e2862]:
+        - generic [ref=e2863]: Active database
+        - generic [ref=e2864]: PostgreSQL workspace
+        - generic [ref=e2865]: PostgreSQL
+        - button "Show db details" [ref=e2867] [cursor=pointer]:
+          - generic [ref=e2868]: "?"
+      - button "Switch database" [ref=e2869]:
+        - generic [ref=e2870]: Switch database
+      - generic [ref=e2871]: Interactive Server
+      - generic [ref=e2872]: Live items 8
+      - generic [ref=e2873]: Tabs 18
+  - generic [ref=e5927]:
+    - button "tune" [ref=e5928]
+    - generic [ref=e5929]:
+      - generic [ref=e5931]:
+        - paragraph [ref=e5932]: Workbench
+        - heading "Validation v85 - Tea Steep Planner structure" [level=1] [ref=e5933]
+      - generic [ref=e5934]:
+        - generic [ref=e5936]:
+          - generic [ref=e5937]:
+            - paragraph [ref=e5938]: Structure canvas
+            - generic [ref=e5939]:
+              - generic [ref=e5940]:
+                - heading "Validation v85 - Tea Steep Planner workbench" [level=2] [ref=e5942]
+                - paragraph [ref=e5943]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e5944]:
+                - generic [ref=e5945]
+                - generic [ref=e5948]
+                - generic [ref=e5951]
+          - generic [ref=e5955]:
+            - generic [ref=e5956]:
+              - generic [ref=e5957]:
+                - button "Open quick create actions" [ref=e5958] [cursor=pointer]
+                - button "Focus root" [ref=e5961] [cursor=pointer]
+                - generic [ref=e5964]
+              - generic [ref=e5992]:
+                - button "Fit canvas" [ref=e5993] [cursor=pointer]
+                - button "Toggle maximize" [ref=e5996] [cursor=pointer]
+                - button "Toggle minimap" [ref=e5999] [cursor=pointer]
+                - button "Toggle diagnostics" [ref=e6002] [cursor=pointer]
+                - button "Toggle help" [ref=e6005] [cursor=pointer]
+                - button "Toggle settings" [ref=e6008] [cursor=pointer]
+                - generic [ref=e6011]
+            - generic [ref=e6020]:
+              - generic "Canvas workbench" [active] [ref=e6021]:
+                - generic [ref=e6022]
+                - generic [ref=e6674]
+              - generic [ref=e6028]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e6029]:
+                - generic [ref=e6030]
+                - generic [ref=e6042]
+              - region "Project structure selection panel" [ref=e6286]:
+                - generic [ref=e6287]
+                - generic [ref=e6300]
+              - generic:
+                - generic: TeaSteepPlanner product root is the primary selection.
+                - region "Canvas accessibility mirror"
+        - generic [ref=e6377]:
+          - generic [ref=e6379]:
+            - paragraph [ref=e6380]: Outline
+            - heading "Project object index" [level=5] [ref=e6381]
+            - tree "Project object index" [ref=e6383]:
+              - treeitem "Validation v85 - Tea Steep Planner Draft" [ref=e6384]:
+                - button "Validation v85 - Tea Steep Planner Draft" [ref=e6387]
+              - treeitem "TeaSteepPlanner product root Draft" [selected] [ref=e6666]:
+                - button "TeaSteepPlanner product root Draft" [ref=e6669]
+          - generic [ref=e6393]:
+            - paragraph [ref=e6394]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e6395]
+            - generic [ref=e6396]:
+              - generic [ref=e6397]:
+                - paragraph [ref=e6398]: Total nodes
+                - paragraph [ref=e6399]: "2"
+              - generic [ref=e6400]:
+                - paragraph [ref=e6401]: Total links
+                - paragraph [ref=e6402]: "1"
+              - generic [ref=e6403]:
+                - paragraph [ref=e6404]: Selected
+                - paragraph [ref=e6405]: "1"
+            - paragraph [ref=e6406]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e2880]:
+    - generic "Workbench utilities" [ref=e6407] [cursor=pointer]

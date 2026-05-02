@@ -196,12 +196,44 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.Failed;
         }
 
+        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        var hasDeclaredOutcome = TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome, out var processOutcome);
+        if (hasDeclaredOutcome && declaredOutcome.Status != ProcessStepRunStatus.Completed)
+        {
+            var contextValidation = ValidateProcessStepOutcomeContext(
+                candidate,
+                detail,
+                processOutcome,
+                declaredOutcome,
+                ResolveOutputInspectionText(responseText));
+            if (contextValidation.IsValid &&
+                (unresolvedCriticalToolFailures.Count > 0 || missingRequiredTools.Count == 0))
+            {
+                return declaredOutcome.Status;
+            }
+
+            if (!contextValidation.IsValid)
+            {
+                return contextValidation.Errors.Any(error =>
+                    error.Code is "process.step_outcome.context.branch_required" or "process.step_outcome.context.branch_invalid")
+                    ? ProcessStepRunStatus.Failed
+                    : declaredOutcome.Status == ProcessStepRunStatus.Completed
+                        ? ProcessStepRunStatus.Blocked
+                        : ProcessStepRunStatus.Failed;
+            }
+
+            if (declaredOutcome.Status != ProcessStepRunStatus.Completed)
+            {
+                return declaredOutcome.Status;
+            }
+        }
+
         if (missingRequiredTools.Count > 0)
         {
             return ProcessStepRunStatus.Failed;
         }
 
-        if (ResolveUnresolvedCriticalToolFailures(detail).Count > 0)
+        if (unresolvedCriticalToolFailures.Count > 0)
         {
             return ProcessStepRunStatus.Failed;
         }
@@ -215,9 +247,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
-        if (TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome, out var processOutcome))
+        var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
+        var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
+        if (hasDeclaredOutcome)
         {
             var contextValidation = ValidateProcessStepOutcomeContext(
                 candidate,
@@ -235,14 +270,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         : ProcessStepRunStatus.Failed;
             }
 
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
+                 !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
+                 !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
+                 !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
+                 !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
+                 !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+                 !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
+                 !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
+            {
+                return ProcessStepRunStatus.Blocked;
+            }
+
             return declaredOutcome.Status;
         }
 
         if (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
             !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
             !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
+            !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
             !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
-            !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
+            !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+            !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
+            !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
         {
             return ProcessStepRunStatus.Blocked;
         }
@@ -815,6 +866,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             normalizedText.Contains("provider returned an empty response", StringComparison.OrdinalIgnoreCase))
         {
             failureSummary = "The assigned provider completed without returning text.";
+            return true;
+        }
+
+        if (normalizedText.Contains("ResponseEnded", StringComparison.OrdinalIgnoreCase) ||
+            normalizedText.Contains("response ended prematurely", StringComparison.OrdinalIgnoreCase))
+        {
+            failureSummary = "The assigned provider response ended before the agent produced a usable response.";
             return true;
         }
 

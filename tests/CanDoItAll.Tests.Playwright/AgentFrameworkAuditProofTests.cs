@@ -262,10 +262,10 @@ public sealed partial class AgentFrameworkAuditProofTests
 
     [Fact]
     [Trait("Category", "Quarantined")]
-    public async Task Processes_calculator_delivery_flow_runs_launch_approval_messaging_and_completion_end_to_end()
+    public async Task Processes_workflow_delivery_flow_runs_launch_approval_messaging_and_completion_end_to_end()
     {
-        var seed = await SeedCalculatorDeliveryScenarioAsync();
-        var launchName = $"SC11 Calculator launch {DateTimeOffset.UtcNow:yyyyMMddHHmmssfff}";
+        var seed = await SeedWorkflowDeliveryScenarioAsync();
+        var launchName = $"SC11 Workflow launch {DateTimeOffset.UtcNow:yyyyMMddHHmmssfff}";
 
         await using var context = await CreateContextAsync(1600, 900);
         var page = await context.NewPageAsync();
@@ -294,10 +294,10 @@ public sealed partial class AgentFrameworkAuditProofTests
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();
         await page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions
         {
-            Name = "SC11 calculator delivery process",
+            Name = "SC11 workflow delivery process",
             Exact = true
         }).WaitForAsync();
-        await ExpectPageTextContainsAsync(page, "SC11 calculator delivery process", refreshTestId: null, attempts: 4, timeoutMsPerAttempt: 10_000);
+        await ExpectPageTextContainsAsync(page, "SC11 workflow delivery process", refreshTestId: null, attempts: 4, timeoutMsPerAttempt: 10_000);
         await OpenRunsTabAsync(page);
         await page.GetByTestId("processes-launch-name-input").FillAsync(launchName);
         await page.GetByTestId("processes-create-launch-plan-button").ClickAsync();
@@ -340,13 +340,13 @@ public sealed partial class AgentFrameworkAuditProofTests
         await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}");
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();
         await OpenRunsTabAsync(page);
-        await page.GetByTestId("processes-launch-decision-summary-input").FillAsync("Manager approval confirms the staffed calculator workflow.");
+        await page.GetByTestId("processes-launch-decision-summary-input").FillAsync("Manager approval confirms the staffed workflow workflow.");
         await page.GetByTestId("processes-launch-decision-summary-input").BlurAsync();
         await page.GetByTestId("processes-launch-approve-button").ClickAsync();
         await WaitForButtonEnabledAsync(page, "processes-launch-execute-button");
         await page.GetByTestId("processes-launch-execute-button").ClickAsync();
 
-        var reviewGateEvidence = await WaitForCalculatorReviewGateAsync(seed, launchName);
+        var reviewGateEvidence = await WaitForWorkflowReviewGateAsync(seed, launchName);
         await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}&runId={reviewGateEvidence.RunId:D}");
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();
         await OpenRunsTabAsync(page);
@@ -366,12 +366,12 @@ public sealed partial class AgentFrameworkAuditProofTests
             page,
             seed.BuilderRoleRequirementId,
             seed.ReviewerRoleRequirementId,
-            "Calculator delivery is ready for reviewer validation after the generated build passed.");
+            "Workflow delivery is ready for reviewer validation after the generated build passed.");
         await page.GetByTestId("processes-direct-message-send-button").ClickAsync();
         await page.GetByTestId("processes-direct-message-thread-card").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-direct-message-thread-card"), seed.BuilderRoleName);
-        await ExpectTextContainsAsync(page.GetByTestId("processes-direct-message-thread-card"), "Calculator delivery is ready for reviewer validation after the generated build passed.");
-        await SaveFullPageScreenshotAsync(page, "sb11-calculator-direct-message.png");
+        await ExpectTextContainsAsync(page.GetByTestId("processes-direct-message-thread-card"), "Workflow delivery is ready for reviewer validation after the generated build passed.");
+        await SaveFullPageScreenshotAsync(page, "sb11-workflow-direct-message.png");
 
         await OpenRunStepsDialogAsync(page, reviewGateEvidence.RunId);
         await SetStepRunStatusAsync(page, seed.HandoffStepTitle, "Start");
@@ -379,8 +379,8 @@ public sealed partial class AgentFrameworkAuditProofTests
         await SetStepRunStatusAsync(page, seed.HandoffStepTitle, "Complete");
         await CloseRunStepsDialogAsync(page);
 
-        var finalEvidence = await WaitForCalculatorRunCompletionAsync(seed, launchName);
-        await WriteProofMetadataAsync("sb11-calculator-run-metadata.md", BuildCalculatorEvidenceMarkdown(seed, launchName, finalEvidence));
+        var finalEvidence = await WaitForWorkflowRunCompletionAsync(seed, launchName);
+        await WriteProofMetadataAsync("sb11-workflow-run-metadata.md", BuildWorkflowEvidenceMarkdown(seed, launchName, finalEvidence));
 
         await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}&runId={finalEvidence.RunId:D}");
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();

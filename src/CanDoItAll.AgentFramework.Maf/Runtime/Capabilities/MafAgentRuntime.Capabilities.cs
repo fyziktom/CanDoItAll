@@ -129,6 +129,9 @@ public sealed partial class MafAgentRuntime
         }
 
         composition.State.ContextProviders.Add(skillsBuilder.Build());
+        composition.State.FrameworkToolNames.Add(AgentToolInvocationPolicyMetadata.LoadSkill);
+        composition.State.FrameworkToolNames.Add(AgentToolInvocationPolicyMetadata.ReadSkillResource);
+        composition.State.FrameworkToolNames.Add(AgentToolInvocationPolicyMetadata.RunSkillScript);
         await progressCallback(
             ExecutionState.Preparing,
             "Skills",

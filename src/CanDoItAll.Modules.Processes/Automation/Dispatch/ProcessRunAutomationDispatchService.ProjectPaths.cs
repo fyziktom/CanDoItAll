@@ -99,30 +99,223 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        var match = Regex.Match(
-            groundingSummary,
-            @"\b(?<path>[A-Za-z]:\\[A-Za-z0-9 _.\-\\]+)",
+        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(groundingSummary))
+        {
+            if (!TryNormalizeAbsoluteExternalPathCandidate(candidatePath, out var normalizedPath))
+            {
+                continue;
+            }
+
+            if (!TryMapAbsoluteExternalPathToAlias(normalizedPath, out var alias))
+            {
+                continue;
+            }
+
+            absolutePath = normalizedPath;
+            mappedAlias = alias;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveProjectStructureExternalTargetHintsForFocus(
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById,
+        IReadOnlyDictionary<string, IReadOnlyList<ProjectStructureGroundingNodeData>> nodesByParentId,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
+        var focusNodeIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in ResolveProjectStructureAncestorPath(targetNodeId, nodesById))
+        {
+            focusNodeIds.Add(node.Id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetNodeId))
+        {
+            focusNodeIds.Add(targetNodeId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedProcessNodeId))
+        {
+            focusNodeIds.Add(selectedProcessNodeId);
+        }
+
+        foreach (var descendant in ResolveProjectStructureDescendants(targetNodeId, nodesByParentId, maxDepth: 2))
+        {
+            focusNodeIds.Add(descendant.Id);
+        }
+
+        return focusNodeIds
+            .Where(nodesById.ContainsKey)
+            .Select(id => nodesById[id])
+            .SelectMany(ResolveExternalTargetHintsFromProjectStructureNode)
+            .GroupBy(hint => hint.MappedAlias, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderByDescending(hint => hint.MappedAlias.Length)
+            .ThenBy(hint => hint.SourceNodeTitle, StringComparer.OrdinalIgnoreCase)
+            .Take(4)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveExternalTargetHintsFromProjectStructureNode(
+        ProjectStructureGroundingNodeData node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var searchText = string.Join(
+            Environment.NewLine,
+            node.Title,
+            node.Subtitle,
+            node.Notes,
+            node.MetadataJson);
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return [];
+        }
+
+        var hints = new List<ProjectStructureExternalTargetHint>();
+        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(searchText))
+        {
+            if (!TryNormalizeAbsoluteExternalPathCandidate(candidatePath, out var normalizedPath) ||
+                !TryMapAbsoluteExternalPathToAlias(normalizedPath, out var alias))
+            {
+                continue;
+            }
+
+            if (hints.Any(item => string.Equals(item.MappedAlias, alias, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            hints.Add(new ProjectStructureExternalTargetHint(
+                normalizedPath,
+                alias,
+                node.Id,
+                node.Title));
+        }
+
+        return hints;
+    }
+
+    private static IEnumerable<string> EnumerateAbsoluteExternalPathCandidates(string text)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in WorkspacePathInToolRequestRegex.Matches(text))
+        {
+            var path = match.Groups["path"].Value;
+            if (!string.IsNullOrWhiteSpace(path) &&
+                path.Length >= 3 &&
+                path[1] == ':' &&
+                path[2] == '\\' &&
+                seen.Add(path))
+            {
+                yield return path;
+            }
+        }
+
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"\b(?<path>[A-Za-z]:\\\\[^\r\n`""']+)",
+                     RegexOptions.CultureInvariant))
+        {
+            var path = match.Groups["path"].Value.Replace(@"\\", @"\");
+            if (!string.IsNullOrWhiteSpace(path) && seen.Add(path))
+            {
+                yield return path;
+            }
+        }
+
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"\b(?<path>[A-Za-z]:\\[^\r\n`""']+)",
+                     RegexOptions.CultureInvariant))
+        {
+            var path = match.Groups["path"].Value;
+            if (!string.IsNullOrWhiteSpace(path) && seen.Add(path))
+            {
+                yield return path;
+            }
+        }
+    }
+
+    private static bool TryNormalizeAbsoluteExternalPathCandidate(
+        string? path,
+        out string normalizedPath)
+    {
+        normalizedPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var trimmed = path.Trim().Trim('`', '"', '\'');
+        trimmed = Regex.Replace(
+            trimmed,
+            @"\\{2,}",
+            "\\",
             RegexOptions.CultureInvariant);
-        if (!match.Success)
+        trimmed = StripInlinePathAnnotations(trimmed);
+        trimmed = Regex.Replace(
+            trimmed,
+            @"(?i)(?:\.\s+|\s+)(?:Acceptance|Accepted|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        trimmed = trimmed.Trim().TrimEnd('\\', '/', '.', ',', ';', ':', ')', ']');
+
+        if (trimmed.Length < 3 || trimmed[1] != ':' || trimmed[2] != '\\')
         {
             return false;
         }
 
-        var candidatePath = match.Groups["path"].Value.Trim().TrimEnd('\\');
-        if (candidatePath.Length < 3 || candidatePath[1] != ':' || candidatePath[2] != '\\')
-        {
-            return false;
-        }
-
-        var driveLetter = char.ToUpperInvariant(candidatePath[0]);
-        var remainder = candidatePath.Length == 3
-            ? string.Empty
-            : candidatePath[3..].Replace('\\', '/');
-        absolutePath = candidatePath;
-        mappedAlias = string.IsNullOrWhiteSpace(remainder)
-            ? $"external-target/{driveLetter}"
-            : $"external-target/{driveLetter}/{remainder}";
+        normalizedPath = trimmed;
         return true;
+    }
+
+    private static string StripInlinePathAnnotations(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var stripped = Regex.Replace(
+            value,
+            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        return stripped.Trim();
+    }
+
+    private static bool TrySplitExternalTargetAliasForScaffold(
+        string? mappedAlias,
+        out string parentAlias,
+        out string leafName)
+    {
+        parentAlias = string.Empty;
+        leafName = string.Empty;
+        if (string.IsNullOrWhiteSpace(mappedAlias))
+        {
+            return false;
+        }
+
+        var normalized = NormalizeExternalTargetAlias(mappedAlias);
+        if (!normalized.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var lastSlashIndex = normalized.LastIndexOf('/');
+        if (lastSlashIndex < ExternalTargetAliasRoot.Length + 2 ||
+            lastSlashIndex >= normalized.Length - 1)
+        {
+            return false;
+        }
+
+        parentAlias = normalized[..lastSlashIndex];
+        leafName = normalized[(lastSlashIndex + 1)..];
+        return !string.IsNullOrWhiteSpace(parentAlias) &&
+               !string.IsNullOrWhiteSpace(leafName);
     }
 
     private static void AppendProjectStructureGroundingNodes(
@@ -252,8 +445,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                normalizedTitle.Contains("workflow", StringComparison.OrdinalIgnoreCase) ||
                normalizedTitle.Contains("button", StringComparison.OrdinalIgnoreCase) ||
                normalizedTitle.Contains("history", StringComparison.OrdinalIgnoreCase) ||
-               normalizedTitle.Contains("keypad", StringComparison.OrdinalIgnoreCase) ||
-               normalizedTitle.Contains("keyboard", StringComparison.OrdinalIgnoreCase) ||
                normalizedTitle.Contains("screen", StringComparison.OrdinalIgnoreCase) ||
                normalizedTitle.Contains("page", StringComparison.OrdinalIgnoreCase) ||
                normalizedTitle.Contains("form", StringComparison.OrdinalIgnoreCase) ||

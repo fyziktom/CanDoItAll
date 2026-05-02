@@ -112,7 +112,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
 
         try
         {
-            var artifactDirectoryPath = Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "demo", "deliveries", "units-converter", "process", "qa-validation");
+            var artifactDirectoryPath = Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "demo", "deliveries", "workflow-suite", "process", "qa-validation");
             Directory.CreateDirectory(artifactDirectoryPath);
 
             var sut = CreateSut(workspaceRoot);
@@ -123,11 +123,11 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
                         null,
                         StorageProviderKind.FileSystem,
                         StorageLocatorKind.RelativePath,
-                        "artifacts/scopes/organization/demo/deliveries/units-converter/process/qa-validation",
+                        "artifacts/scopes/organization/demo/deliveries/workflow-suite/process/qa-validation",
                         string.Empty,
                         "application/x-directory",
                         null,
-                        "/managed-files/artifacts/scopes/organization/demo/deliveries/units-converter/process/qa-validation")));
+                        "/managed-files/artifacts/scopes/organization/demo/deliveries/workflow-suite/process/qa-validation")));
 
             Assert.True(sut.CanOpen(node));
         }

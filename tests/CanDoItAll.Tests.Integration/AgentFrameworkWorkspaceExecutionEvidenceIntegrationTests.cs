@@ -70,7 +70,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
             await workspaceService.ListAgentsAsync(includeTemplates: false),
             item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
 
-        var screenshotPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, "evidence", "playwright", "calculator-proof.png");
+        var screenshotPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, "evidence", "playwright", "workflow-proof.png");
         Directory.CreateDirectory(Path.GetDirectoryName(screenshotPath) ?? application.ActiveProfile.WorkspaceRootPath);
         await File.WriteAllTextAsync(screenshotPath, "proof");
 

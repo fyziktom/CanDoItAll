@@ -89,7 +89,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
     }
 
     [Fact]
-    public async Task Process_mock_launch_plan_selects_expected_calculator_role_agents_when_enabled()
+    public async Task Process_mock_launch_plan_selects_expected_workflow_role_agents_when_enabled()
     {
         await using var application = await CreateEnabledApplicationAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -101,7 +101,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.NotNull(context);
 
         var projectId = await CreateProjectAsync(projectsService, "Process mock launch staffing proof");
-        var fixture = ProcessCalculatorRepairDefinitionTestFixture.Create(projectId);
+        var fixture = ProcessWorkflowRepairDefinitionTestFixture.Create(projectId);
         var saveResult = await processesService.SaveAsync(fixture.Editor);
         Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
 
@@ -151,7 +151,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
     }
 
     [Fact]
-    public async Task Process_mock_calculator_process_completes_end_to_end_through_durable_outbox_dispatch() {
+    public async Task Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch() {
         await using var application = await CreateEnabledApplicationAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
@@ -168,14 +168,14 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.NotNull(context);
 
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
-        var projectId = await CreateProjectAsync(projectsService, $"Process mock calculator E2E {suffix}");
+        var projectId = await CreateProjectAsync(projectsService, $"Process mock workflow E2E {suffix}");
         var managerId = await CreateHumanManagerAsync(
             partyDirectoryService,
             $"Process Mock Launch Manager {suffix}",
             $"process.mock.manager.{suffix}@example.test");
         await SaveAssignmentAsync(projectPartyBridge, projectId, managerId, ProjectPartyAssignmentRole.Manager, "manager", true);
 
-        var fixture = ProcessCalculatorRepairDefinitionTestFixture.Create(projectId);
+        var fixture = ProcessWorkflowRepairDefinitionTestFixture.Create(projectId);
         var saveResult = await processesService.SaveAsync(fixture.Editor);
         Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
 
@@ -186,9 +186,9 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            LaunchName = $"Process mock calculator E2E launch {suffix}",
+            LaunchName = $"Process mock workflow E2E launch {suffix}",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
-            TriggerReason = "Integration test deterministic process mock calculator repair loop.",
+            TriggerReason = "Integration test deterministic process mock workflow repair loop.",
             RequestedBy = "integration-tests"
         });
         Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
@@ -214,7 +214,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         {
             LaunchPlanId = launchResult.Value,
             Status = ProcessLaunchApprovalStatus.Approved,
-            ResolutionSummary = "Manager approved deterministic process mock calculator E2E execution.",
+            ResolutionSummary = "Manager approved deterministic process mock workflow E2E execution.",
             DecidedBy = "integration-tests"
         });
         Assert.True(approveResult.IsSuccess, string.Join(" | ", approveResult.Errors.Select(error => error.Message)));
@@ -242,26 +242,26 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         var stepRuns = await processesService.ListStepRunsAsync(runId);
         Assert.Equal(
             [
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.Scope),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.Architecture),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.FirstImplementation),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.QaFirstReview),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.DirectReleaseNotes),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.RepairImplementation),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.QaRecheck),
-                fixture.StepId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.ReleaseNotes)
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.Scope),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.Architecture),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.FirstImplementation),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.QaFirstReview),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.DirectReleaseNotes),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.RepairImplementation),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.QaRecheck),
+                fixture.StepId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.ReleaseNotes)
             ],
             stepRuns.OrderBy(stepRun => stepRun.Sequence).Select(stepRun => stepRun.StepDefinitionId).ToArray());
 
-        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.Scope).Status);
-        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.Architecture).Status);
-        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.FirstImplementation).Status);
+        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.Scope).Status);
+        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.Architecture).Status);
+        Assert.Equal(ProcessStepRunStatus.Completed, GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.FirstImplementation).Status);
 
-        var qaFirstReviewStep = GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.QaFirstReview);
-        var directReleaseNotesStep = GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.DirectReleaseNotes);
-        var repairImplementationStep = GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.RepairImplementation);
-        var qaRecheckStep = GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.QaRecheck);
-        var releaseNotesStep = GetStepRunByKey(stepRuns, fixture, ProcessCalculatorRepairDefinitionTestFixture.StepKeys.ReleaseNotes);
+        var qaFirstReviewStep = GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.QaFirstReview);
+        var directReleaseNotesStep = GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.DirectReleaseNotes);
+        var repairImplementationStep = GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.RepairImplementation);
+        var qaRecheckStep = GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.QaRecheck);
+        var releaseNotesStep = GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.ReleaseNotes);
 
         Assert.Equal(ProcessStepRunStatus.Completed, qaFirstReviewStep.Status);
         Assert.Equal("Repairs required", qaFirstReviewStep.SelectedBranchOutcomeTitle);
@@ -282,48 +282,48 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.Scope,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.Scope);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.Scope,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.Scope);
         AssertExpectedArtifactRecord(
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.Architecture,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.Architecture);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.Architecture,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.Architecture);
         AssertExpectedArtifactRecord(
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.FirstImplementation,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.FirstImplementation);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.FirstImplementation,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.FirstImplementation);
         AssertExpectedArtifactRecord(
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.QaFirstReview,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.QaFirstReview);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.QaFirstReview,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.QaFirstReview);
         AssertExpectedArtifactRecord(
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.RepairImplementation,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.RepairImplementation);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.RepairImplementation,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.RepairImplementation);
         AssertExpectedArtifactRecord(
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.QaRecheck,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.QaRecheck);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.QaRecheck,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.QaRecheck);
         AssertExpectedArtifactRecord(
             artifactRecords,
             fixture,
             stepRuns,
-            ProcessCalculatorRepairDefinitionTestFixture.StepKeys.ReleaseNotes,
-            ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.ReleaseNotes);
+            ProcessWorkflowRepairDefinitionTestFixture.StepKeys.ReleaseNotes,
+            ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.ReleaseNotes);
         Assert.DoesNotContain(
             artifactRecords,
-            artifact => artifact.ArtifactExpectationId == fixture.ArtifactExpectationId(ProcessCalculatorRepairDefinitionTestFixture.StepKeys.DirectReleaseNotes) ||
-                        string.Equals(artifact.Title, ProcessCalculatorRepairDefinitionTestFixture.ArtifactTitles.DirectReleaseNotes, StringComparison.Ordinal));
+            artifact => artifact.ArtifactExpectationId == fixture.ArtifactExpectationId(ProcessWorkflowRepairDefinitionTestFixture.StepKeys.DirectReleaseNotes) ||
+                        string.Equals(artifact.Title, ProcessWorkflowRepairDefinitionTestFixture.ArtifactTitles.DirectReleaseNotes, StringComparison.Ordinal));
 
         var decisions = await processesService.ListDecisionRecordsAsync(runId);
         Assert.Contains(decisions, decision => decision.BranchOutcomeTitle == "Repairs required");
@@ -457,7 +457,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
     }
 
     [Fact]
-    public async Task Process_mock_runtime_runs_deterministic_calculator_rejection_repair_and_approval()
+    public async Task Process_mock_runtime_runs_deterministic_mock_rejection_repair_and_approval()
     {
         await using var application = await CreateEnabledApplicationAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -474,7 +474,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
         var qaRejection = await workspaceService.ExecuteRunAsync(new ExecutionRunRequest(
             AgentId: qaAgent.Id,
-            Prompt: "Run process mock QA first pass for the calculator implementation.",
+            Prompt: "Run process mock QA first pass for the mock implementation.",
             Context: CreateProcessContext("qa-first-pass", processRunId, "qa-first-pass")));
         Assert.Contains(ProcessMockAgentCatalog.BranchRepairsRequired, qaRejection.ResponseText, StringComparison.Ordinal);
 
@@ -485,7 +485,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
         var repair = await workspaceService.ExecuteRunAsync(new ExecutionRunRequest(
             AgentId: repairAgent.Id,
-            Prompt: "Run process mock repair developer step for the calculator implementation.",
+            Prompt: "Run process mock repair developer step for the mock implementation.",
             Context: CreateProcessContext("repair", processRunId, "repair")));
         var repairOutcome = AgentOutputJson.DeserializeAndValidate<ProcessStepOutcomeResult>(
             repair.ResponseText,
@@ -494,13 +494,13 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.Equal(ProcessStepOutcomeStatus.Completed, repairOutcome.Output?.Status);
 
         var fileService = new WorkspaceFileService(workspaceFactory.GetWorkspaceRoot(), workspaceFactory.GetOrganizationScope());
-        var repairedEngine = fileService.ReadTextFile("output/process-mock/mockrun001/CalculatorApp/CalculatorEngine.cs", 8000);
+        var repairedEngine = fileService.ReadTextFile("output/process-mock/mockrun001/MockApp/ValidationEngine.cs", 8000);
         Assert.True(repairedEngine.Succeeded, repairedEngine.Message);
-        Assert.Contains("throw new DivideByZeroException", repairedEngine.Content, StringComparison.Ordinal);
+        Assert.Contains("throw new ArgumentException", repairedEngine.Content, StringComparison.Ordinal);
 
         var qaApproval = await workspaceService.ExecuteRunAsync(new ExecutionRunRequest(
             AgentId: qaAgent.Id,
-            Prompt: "Run process mock QA approval for the repaired calculator implementation.",
+            Prompt: "Run process mock QA approval for the repaired mock implementation.",
             Context: CreateProcessContext("qa-approval", processRunId, "qa-approval")));
         Assert.Contains(ProcessMockAgentCatalog.BranchApproved, qaApproval.ResponseText, StringComparison.Ordinal);
 
@@ -698,7 +698,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
     private static ProcessStepRunViewModel GetStepRunByKey(
         IReadOnlyList<ProcessStepRunViewModel> stepRuns,
-        CalculatorRepairProcessDefinitionFixture fixture,
+        WorkflowRepairProcessDefinitionFixture fixture,
         string stepKey) {
         var stepDefinitionId = fixture.StepId(stepKey);
         return Assert.Single(stepRuns, stepRun => stepRun.StepDefinitionId == stepDefinitionId);
@@ -706,7 +706,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
     private static void AssertExpectedArtifactRecord(
         IReadOnlyList<ProcessArtifactRecord> artifactRecords,
-        CalculatorRepairProcessDefinitionFixture fixture,
+        WorkflowRepairProcessDefinitionFixture fixture,
         IReadOnlyList<ProcessStepRunViewModel> stepRuns,
         string stepKey,
         string title) {

@@ -16,9 +16,6 @@ internal sealed class ScenarioSeederOptions
 {
     private const string DefaultManagedProfileRoot = @"C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\fe8c1138e1b541cc97a32dbead3a2394";
     public const string DefaultScenario = "agentframework-integration-simulation";
-    public const string AgentShowcaseCalculatorScenario = "agent-showcase-calculator";
-    public const string UnitsConverterDeliveryScenario = "units-converter-delivery";
-    public const string CompleteUnitsConverterHumanStepAction = "complete-units-converter-human-step";
 
     public required string RepositoryRootPath { get; init; }
 
@@ -71,19 +68,6 @@ internal sealed class ScenarioSeederOptions
                 case "--step-sequence":
                     stepSequence = int.Parse(GetRequiredValue(args, ref index));
                     break;
-            }
-        }
-
-        if (string.Equals(actionName, CompleteUnitsConverterHumanStepAction, StringComparison.OrdinalIgnoreCase))
-        {
-            if (!runId.HasValue)
-            {
-                throw new InvalidOperationException("Argument '--run-id' is required for the human-step completion action.");
-            }
-
-            if (!stepSequence.HasValue)
-            {
-                throw new InvalidOperationException("Argument '--step-sequence' is required for the human-step completion action.");
             }
         }
 
@@ -160,8 +144,6 @@ internal static class ScenarioSeederHost
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
         services.AddScoped<AgentFrameworkIntegrationSimulationSeeder>();
-        services.AddScoped<AgentShowcaseCalculatorSeeder>();
-        services.AddScoped<UnitsConverterDeliveryProvisioningSeeder>();
 
         var serviceProvider = services.BuildServiceProvider(ServiceProviderOptions);
         await using var scope = serviceProvider.CreateAsyncScope();

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -68,9 +69,11 @@ internal sealed class WorkspaceFileQueryService
         var entries = new List<WorkspaceFileListEntry>();
         var truncated = false;
 
+        var normalizedSearchPattern = NormalizeSearchPattern(searchPattern);
+        var enumerationSearchPattern = GetEnumerationSearchPattern(normalizedSearchPattern);
         foreach (var path in Directory.EnumerateFileSystemEntries(
                      resolution.FullPath,
-                     NormalizeSearchPattern(searchPattern),
+                     enumerationSearchPattern,
                      new EnumerationOptions
                      {
                          RecurseSubdirectories = true,
@@ -79,6 +82,11 @@ internal sealed class WorkspaceFileQueryService
                      }))
         {
             if (ShouldIgnorePath(path))
+            {
+                continue;
+            }
+
+            if (!MatchesSearchPattern(resolution.FullPath, path, normalizedSearchPattern))
             {
                 continue;
             }
@@ -503,7 +511,7 @@ internal sealed class WorkspaceFileQueryService
     {
         if (File.Exists(rootPath))
         {
-            if (!ShouldIgnoreSearchPath(rootPath))
+            if (!ShouldIgnoreSearchPath(rootPath, rootPath))
             {
                 yield return rootPath;
             }
@@ -521,7 +529,7 @@ internal sealed class WorkspaceFileQueryService
                          AttributesToSkip = 0
                      }))
         {
-            if (ShouldIgnoreSearchPath(filePath))
+            if (ShouldIgnoreSearchPath(rootPath, filePath))
             {
                 continue;
             }
@@ -670,8 +678,35 @@ internal sealed class WorkspaceFileQueryService
         emittedPreviewLines++;
     }
 
-    private bool ShouldIgnoreSearchPath(string fullPath)
-        => ShouldIgnorePath(fullPath) || WorkspaceRetrievalNoisePolicy.ShouldExcludeFromAmbientRetrieval(pathPolicy.WorkspaceRoot, fullPath);
+    private bool ShouldIgnoreSearchPath(string searchRootPath, string fullPath)
+    {
+        if (ShouldIgnorePath(fullPath))
+        {
+            return true;
+        }
+
+        var searchRootRelativePath = pathPolicy.ToRelativePath(searchRootPath);
+        var fileRelativePath = pathPolicy.ToRelativePath(fullPath);
+        var targetedExternalSearch = IsExternalTargetRelativePath(searchRootRelativePath);
+        if (!targetedExternalSearch && IsExternalTargetRelativePath(fileRelativePath))
+        {
+            return true;
+        }
+
+        return WorkspaceRetrievalNoisePolicy.ShouldExcludeFromAmbientRetrieval(pathPolicy.WorkspaceRoot, fullPath);
+    }
+
+    private static bool IsExternalTargetRelativePath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return false;
+        }
+
+        var normalized = relativePath.Replace('\\', '/').Trim().TrimStart('/');
+        return string.Equals(normalized, "external-target", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool ShouldIgnorePath(string fullPath)
     {
@@ -682,6 +717,93 @@ internal sealed class WorkspaceFileQueryService
 
     private static string NormalizeSearchPattern(string searchPattern)
         => string.IsNullOrWhiteSpace(searchPattern) ? "*" : searchPattern.Trim();
+
+    private static string GetEnumerationSearchPattern(string normalizedSearchPattern)
+    {
+        var pattern = normalizedSearchPattern.Replace('\\', '/');
+        if (pattern.Contains('/', StringComparison.Ordinal) ||
+            pattern.Contains("**", StringComparison.Ordinal))
+        {
+            return "*";
+        }
+
+        return pattern;
+    }
+
+    private static bool MatchesSearchPattern(string rootFullPath, string candidateFullPath, string normalizedSearchPattern)
+    {
+        var pattern = normalizedSearchPattern.Replace('\\', '/').TrimStart('/');
+        if (pattern.StartsWith("./", StringComparison.Ordinal))
+        {
+            pattern = pattern[2..];
+        }
+
+        if (pattern is "*" or "**" or "**/*")
+        {
+            return true;
+        }
+
+        var target = pattern.Contains('/', StringComparison.Ordinal)
+            ? Path.GetRelativePath(rootFullPath, candidateFullPath).Replace('\\', '/')
+            : Path.GetFileName(candidateFullPath);
+
+        return MatchesGlob(target, pattern);
+    }
+
+    private static bool MatchesGlob(string value, string pattern)
+    {
+        if (pattern.StartsWith("**/", StringComparison.Ordinal) &&
+            MatchesGlob(value, pattern[3..]))
+        {
+            return true;
+        }
+
+        var builder = new StringBuilder("^");
+        for (var index = 0; index < pattern.Length; index++)
+        {
+            var character = pattern[index];
+            if (character == '*')
+            {
+                var nextIsStar = index + 1 < pattern.Length && pattern[index + 1] == '*';
+                if (nextIsStar)
+                {
+                    index++;
+                    var followedBySlash = index + 1 < pattern.Length && pattern[index + 1] == '/';
+                    if (followedBySlash)
+                    {
+                        index++;
+                        builder.Append("(?:.*/)?");
+                    }
+                    else
+                    {
+                        builder.Append(".*");
+                    }
+
+                    continue;
+                }
+
+                builder.Append("[^/]*");
+                continue;
+            }
+
+            if (character == '?')
+            {
+                builder.Append("[^/]");
+                continue;
+            }
+
+            if (character == '/')
+            {
+                builder.Append('/');
+                continue;
+            }
+
+            builder.Append(Regex.Escape(character.ToString()));
+        }
+
+        builder.Append('$');
+        return Regex.IsMatch(value, builder.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
 
     private static IReadOnlyList<string> BuildTargetPathList(string? path, string? destinationPath)
     {

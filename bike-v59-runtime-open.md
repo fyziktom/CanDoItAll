@@ -1,0 +1,596 @@
+- main [ref=e4]:
+  - group [ref=e5]:
+    - generic "Workspace navigation" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e10]:
+      - generic [ref=e106]:
+        - button "Dashboard" [ref=e108]:
+          - generic [ref=e109]: Dashboard
+          - generic [ref=e111]: push_pin
+        - button "Projects" [ref=e113]:
+          - generic [ref=e114]: Projects
+        - button "Projects" [ref=e116]:
+          - generic [ref=e117]: Projects
+        - button "Projects" [ref=e119]:
+          - generic [ref=e120]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e122]:
+          - generic [ref=e123]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e125]:
+          - generic [ref=e126]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e127]:
+        - textbox "Search tabs" [ref=e128]
+        - group [ref=e129]:
+          - generic "+21" [ref=e2242] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Active database
+        - generic [ref=e15]: PostgreSQL workspace
+        - generic [ref=e131]: PostgreSQL
+        - button "Show db details" [ref=e133] [cursor=pointer]:
+          - generic [ref=e134]: "?"
+      - button "Switch database" [ref=e16]:
+        - generic [ref=e17]: Switch database
+      - generic [ref=e18]: Interactive Server
+      - generic [ref=e19]: Live items 13
+      - generic [ref=e20]: Tabs 27
+  - generic [ref=e2244]:
+    - button "tune" [ref=e2245]
+    - generic [ref=e2246]:
+      - generic [ref=e2248]:
+        - paragraph [ref=e2249]: Workbench
+        - heading "Validation v59 - Bike Repair Slot Scheduler structure" [level=1] [ref=e2250]
+      - generic [ref=e2251]:
+        - generic [ref=e2253]:
+          - generic [ref=e2254]:
+            - paragraph [ref=e2255]: Structure canvas
+            - generic [ref=e2256]:
+              - generic [ref=e2257]:
+                - heading "Validation v59 - Bike Repair Slot Scheduler workbench" [level=2] [ref=e2259]
+                - paragraph [ref=e2260]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e2261]:
+                - generic [ref=e2262]:
+                  - generic [ref=e2263]: Nodes
+                  - strong [ref=e2264]: "1"
+                - generic [ref=e2265]:
+                  - generic [ref=e2266]: Links
+                  - strong [ref=e2267]: "0"
+                - generic [ref=e2268]:
+                  - generic [ref=e2269]: Selection
+                  - strong [ref=e2270]: "1"
+          - generic [ref=e2272]:
+            - generic [ref=e2273]:
+              - generic [ref=e2274]:
+                - button "Open quick create actions" [ref=e2275] [cursor=pointer]:
+                  - generic [ref=e2276]: add
+                  - generic [ref=e2277]: Open quick create actions
+                - button "Focus root" [ref=e2278] [cursor=pointer]:
+                  - generic [ref=e2279]: center_focus_strong
+                  - generic [ref=e2280]: Focus root
+                - generic [ref=e2281]:
+                  - generic [ref=e2282]:
+                    - button "Select" [ref=e2283] [cursor=pointer]:
+                      - generic [ref=e2284]: near_me
+                      - generic [ref=e2285]: arrow selector tool
+                    - button "Dependency" [ref=e2286] [cursor=pointer]:
+                      - generic [ref=e2287]: call_split
+                      - generic [ref=e2288]: call split
+                    - button "Delete" [ref=e2289] [cursor=pointer]:
+                      - generic [ref=e2290]: delete
+                      - generic [ref=e2291]: delete
+                  - button "Inspector" [ref=e2292] [cursor=pointer]:
+                    - generic [ref=e2293]: visibility
+                    - generic [ref=e2294]: visibility
+                  - button "Health" [ref=e2295] [cursor=pointer]:
+                    - generic [ref=e2296]: assessment
+                    - generic [ref=e2297]: assessment
+                  - button "Blocks" [ref=e2298] [cursor=pointer]:
+                    - generic [ref=e2299]: dashboard
+                    - generic [ref=e2300]: dashboard
+                  - button "Signals" [ref=e2301] [cursor=pointer]:
+                    - generic [ref=e2302]: notifications_active
+                    - generic [ref=e2303]: notifications active
+                  - button "Agents" [ref=e2304] [cursor=pointer]:
+                    - generic [ref=e2305]: smart_toy
+                    - generic [ref=e2306]: smart toy
+                  - button "Recompose" [disabled] [ref=e2307]:
+                    - generic [ref=e2308]: Recompose
+              - generic [ref=e2309]:
+                - button "Fit canvas" [ref=e2310] [cursor=pointer]:
+                  - generic [ref=e2311]: fit_screen
+                  - generic [ref=e2312]: Fit canvas
+                - button "Toggle maximize" [ref=e2313] [cursor=pointer]:
+                  - generic [ref=e2314]: open_in_full
+                  - generic [ref=e2315]: Maximize canvas
+                - button "Toggle minimap" [ref=e2316] [cursor=pointer]:
+                  - generic [ref=e2317]: map
+                  - generic [ref=e2318]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e2319] [cursor=pointer]:
+                  - generic [ref=e2320]: monitor_heart
+                  - generic [ref=e2321]: Toggle diagnostics
+                - button "Toggle help" [ref=e2322] [cursor=pointer]:
+                  - generic [ref=e2323]: help
+                  - generic [ref=e2324]: Canvas help
+                - button "Toggle settings" [ref=e2325] [cursor=pointer]:
+                  - generic [ref=e2326]: settings
+                  - generic [ref=e2327]: Canvas settings
+                - generic [ref=e2328]:
+                  - button "Zoom out" [ref=e2329] [cursor=pointer]:
+                    - generic [ref=e2330]: remove
+                    - generic [ref=e2331]: Zoom out
+                  - slider "Canvas zoom" [ref=e2332]: "100"
+                  - button "Zoom in" [ref=e2333] [cursor=pointer]:
+                    - generic [ref=e2334]: add
+                    - generic [ref=e2335]: Zoom in
+                  - generic [ref=e2336]: 100%
+            - generic [ref=e2337]:
+              - generic "Canvas workbench" [ref=e2338]:
+                - generic [ref=e2339]:
+                  - generic:
+                    - generic "Validation v59 - Bike Repair Slot Scheduler Input" [ref=e2341]
+                    - generic "Validation v59 - Bike Repair Slot Scheduler Output" [ref=e2342]
+                    - generic "Validation v59 - Bike Repair Slot Scheduler Input" [ref=e2343]
+                    - generic "Validation v59 - Bike Repair Slot Scheduler Output" [ref=e2344]
+                - generic:
+                  - generic [ref=e2725]:
+                    - generic [ref=e2728]: Validation v59 - Bike Repair Slot Scheduler
+                    - button "Note, shortcut N" [ref=e2729] [cursor=pointer]:
+                      - generic [ref=e2731]: ✎
+                      - strong [ref=e2732]:
+                        - generic [ref=e2733]: Note
+                    - button "Decision, shortcut D" [ref=e2734] [cursor=pointer]:
+                      - generic [ref=e2736]: ◆
+                      - strong [ref=e2737]:
+                        - generic [ref=e2738]: Decision
+                    - button "Milestone, shortcut M" [ref=e2739] [cursor=pointer]:
+                      - generic [ref=e2741]: ◷
+                      - strong [ref=e2742]:
+                        - generic [ref=e2743]: Milestone
+                    - button "Phase, shortcut H" [ref=e2744] [cursor=pointer]:
+                      - generic [ref=e2746]: ◭
+                      - strong [ref=e2747]:
+                        - generic [ref=e2748]: Phase
+                    - button "Blocks, shortcut B, opens submenu" [ref=e2749] [cursor=pointer]:
+                      - generic [ref=e2751]: B
+                      - strong [ref=e2752]:
+                        - generic [ref=e2753]: Blocks
+                      - generic [ref=e2754]: ›
+                    - button "Meetings, shortcut Q, opens submenu" [ref=e2755] [cursor=pointer]:
+                      - generic [ref=e2757]: M
+                      - strong [ref=e2758]:
+                        - generic [ref=e2760]: Q
+                        - generic [ref=e2761]: Meetings
+                      - generic [ref=e2762]: ›
+                    - button "People, shortcut P, opens submenu" [ref=e2763] [cursor=pointer]:
+                      - generic [ref=e2765]: P
+                      - strong [ref=e2766]:
+                        - generic [ref=e2767]: People
+                      - generic [ref=e2768]: ›
+                    - button "Work, shortcut W, opens submenu" [ref=e2769] [cursor=pointer]:
+                      - generic [ref=e2771]: T
+                      - strong [ref=e2772]:
+                        - generic [ref=e2773]: Work
+                      - generic [ref=e2774]: ›
+                    - button "Prompts, shortcut R, opens submenu" [ref=e2775] [cursor=pointer]:
+                      - generic [ref=e2777]: ✶
+                      - strong [ref=e2778]:
+                        - generic [ref=e2779]: Prompts
+                      - generic [ref=e2780]: ›
+                    - button "Runtime, shortcut U, opens submenu" [active] [ref=e2781] [cursor=pointer]:
+                      - generic [ref=e2783]: R
+                      - strong [ref=e2784]:
+                        - generic [ref=e2785]: Runtime
+                      - generic [ref=e2786]: ›
+                    - button "Assets, shortcut A, opens submenu" [ref=e2787] [cursor=pointer]:
+                      - generic [ref=e2789]: A
+                      - strong [ref=e2790]:
+                        - generic [ref=e2791]: Assets
+                      - generic [ref=e2792]: ›
+                    - button "Infrastructure, shortcut I, opens submenu" [ref=e2793] [cursor=pointer]:
+                      - generic [ref=e2795]: I
+                      - strong [ref=e2796]:
+                        - generic [ref=e2797]: Infrastructure
+                      - generic [ref=e2798]: ›
+                    - button "Assurance, shortcut S, opens submenu" [ref=e2799] [cursor=pointer]:
+                      - generic [ref=e2801]: A
+                      - strong [ref=e2802]:
+                        - generic [ref=e2803]: Assurance
+                      - generic [ref=e2804]: ›
+                  - generic [ref=e2805]:
+                    - generic [ref=e2808]: Runtime
+                    - button "Remote repo, shortcut R" [ref=e2809] [cursor=pointer]:
+                      - generic [ref=e2811]: ⌘
+                      - strong [ref=e2812]:
+                        - generic [ref=e2813]: Remote
+                    - button "Local repo, shortcut L" [ref=e2814] [cursor=pointer]:
+                      - generic [ref=e2816]: F
+                      - strong [ref=e2817]:
+                        - generic [ref=e2818]: Local
+                    - button "Local folder, shortcut O" [ref=e2819] [cursor=pointer]:
+                      - generic [ref=e2821]: F
+                      - strong [ref=e2822]:
+                        - generic [ref=e2823]: Local
+                    - button "PowerShell script, shortcut P" [ref=e2824] [cursor=pointer]:
+                      - generic [ref=e2826]: P
+                      - strong [ref=e2827]:
+                        - generic [ref=e2828]: PowerShell
+                    - button "Console script, shortcut C" [ref=e2829] [cursor=pointer]:
+                      - generic [ref=e2831]: C
+                      - strong [ref=e2832]:
+                        - generic [ref=e2833]: Console
+                    - button "EF migration, shortcut E" [ref=e2834] [cursor=pointer]:
+                      - generic [ref=e2836]: M
+                      - strong [ref=e2837]:
+                        - generic [ref=e2838]: EF
+                    - button "Tailwind watch, shortcut T" [ref=e2839] [cursor=pointer]:
+                      - generic [ref=e2841]: T
+                      - strong [ref=e2842]:
+                        - generic [ref=e2843]: Tailwind
+                    - button "Python environment, shortcut Y" [ref=e2844] [cursor=pointer]:
+                      - generic [ref=e2846]: P
+                      - strong [ref=e2847]:
+                        - generic [ref=e2848]: Python
+                    - button ".NET runtime, shortcut N" [ref=e2849] [cursor=pointer]:
+                      - generic [ref=e2851]: D
+                      - strong [ref=e2852]:
+                        - generic [ref=e2853]: .NET
+                    - button "dotnet watch, shortcut D" [ref=e2854] [cursor=pointer]:
+                      - generic [ref=e2856]: W
+                      - strong [ref=e2857]:
+                        - generic [ref=e2858]: dotnet
+                    - button "Release run, shortcut A" [ref=e2859] [cursor=pointer]:
+                      - generic [ref=e2861]: R
+                      - strong [ref=e2862]:
+                        - generic [ref=e2863]: Release
+              - generic [ref=e2345]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e2346]:
+                - generic [ref=e2347]:
+                  - generic [ref=e2348]:
+                    - paragraph [ref=e2349]: Project agents
+                    - heading "Project agents" [level=3] [ref=e2350]
+                  - generic [ref=e2351]:
+                    - button "Minimize window" [ref=e2352]:
+                      - generic [ref=e2353]: minimize
+                    - button "Restart window position and size" [disabled] [ref=e2354]:
+                      - generic [ref=e2355]: restart_alt
+                    - button "Hide window" [ref=e2356]:
+                      - generic [ref=e2357]: visibility_off
+                - generic [ref=e2359]:
+                  - generic [ref=e2360]:
+                    - textbox "Search contextual agents" [ref=e2361]:
+                      - /placeholder: Search agents
+                    - textbox "Filter tags" [ref=e2365]
+                  - generic [ref=e2366]:
+                    - generic [ref=e2367]: 19 of 19
+                    - generic [ref=e2368]: This project
+                    - generic "Show contextual agent window help" [ref=e2370]:
+                      - generic [ref=e2371]: info
+                  - generic [ref=e2372]:
+                    - button "Open a new contextual chat thread with .NET Application Developer" [ref=e2373]:
+                      - img ".NET Application Developer" [ref=e2374]
+                      - generic [ref=e2375]:
+                        - generic [ref=e2377]: .NET Application Developer
+                        - generic [ref=e2378]:
+                          - generic [ref=e2379]: "#blazor"
+                          - generic [ref=e2380]: "#dotnet"
+                          - generic [ref=e2381]: "#programming"
+                      - generic [ref=e2382]:
+                        - generic [ref=e2383]: Read
+                        - generic [ref=e2384]: All projects
+                    - button "Open a new contextual chat thread with .NET QA Review Lead" [ref=e2385]:
+                      - img ".NET QA Review Lead" [ref=e2386]
+                      - generic [ref=e2387]:
+                        - generic [ref=e2389]: .NET QA Review Lead
+                        - generic [ref=e2390]:
+                          - generic [ref=e2391]: "#browser"
+                          - generic [ref=e2392]: "#dotnet"
+                          - generic [ref=e2393]: "#qa"
+                      - generic [ref=e2394]:
+                        - generic [ref=e2395]: Read
+                        - generic [ref=e2396]: All projects
+                    - button "Open a new contextual chat thread with .NET Solution Architect" [ref=e2397]:
+                      - img ".NET Solution Architect" [ref=e2398]
+                      - generic [ref=e2399]:
+                        - generic [ref=e2401]: .NET Solution Architect
+                        - generic [ref=e2402]:
+                          - generic [ref=e2403]: "#architecture"
+                          - generic [ref=e2404]: "#blazor"
+                          - generic [ref=e2405]: "#dotnet"
+                      - generic [ref=e2406]:
+                        - generic [ref=e2407]: Read
+                        - generic [ref=e2408]: All projects
+                    - button "Open a new contextual chat thread with Blazor Application Developer" [ref=e2409]:
+                      - img "Blazor Application Developer" [ref=e2410]
+                      - generic [ref=e2411]:
+                        - generic [ref=e2413]: Blazor Application Developer
+                        - generic [ref=e2414]:
+                          - generic [ref=e2415]: "#blazor"
+                          - generic [ref=e2416]: "#dotnet"
+                          - generic [ref=e2417]: "#frontend"
+                          - generic [ref=e2418]: "#programming"
+                      - generic [ref=e2419]:
+                        - generic [ref=e2420]: Read
+                        - generic [ref=e2421]: All projects
+                    - button "Open a new contextual chat thread with Business Strategist" [ref=e2422]:
+                      - img "Business Strategist" [ref=e2423]
+                      - generic [ref=e2424]:
+                        - generic [ref=e2426]: Business Strategist
+                        - generic [ref=e2427]:
+                          - generic [ref=e2428]: "#business"
+                          - generic [ref=e2429]: "#planning"
+                          - generic [ref=e2430]: "#strategy"
+                      - generic [ref=e2431]:
+                        - generic [ref=e2432]: Read
+                        - generic [ref=e2433]: All projects
+                    - button "Open a new contextual chat thread with Code Review Lead" [ref=e2434]:
+                      - img "Code Review Lead" [ref=e2435]
+                      - generic [ref=e2436]:
+                        - generic [ref=e2438]: Code Review Lead
+                        - generic [ref=e2439]:
+                          - generic [ref=e2440]: "#code"
+                          - generic [ref=e2441]: "#quality"
+                          - generic [ref=e2442]: "#review"
+                      - generic [ref=e2443]:
+                        - generic [ref=e2444]: Read
+                        - generic [ref=e2445]: All projects
+                    - button "Open a new contextual chat thread with Delivery QA Observer" [ref=e2446]:
+                      - img "Delivery QA Observer" [ref=e2447]
+                      - generic [ref=e2448]:
+                        - generic [ref=e2450]: Delivery QA Observer
+                        - generic [ref=e2451]:
+                          - generic [ref=e2452]: "#browser"
+                          - generic [ref=e2453]: "#governance"
+                          - generic [ref=e2454]: "#qa"
+                      - generic [ref=e2455]:
+                        - generic [ref=e2456]: Read
+                        - generic [ref=e2457]: All projects
+                    - button "Open a new contextual chat thread with Financial Strategist" [ref=e2458]:
+                      - img "Financial Strategist" [ref=e2459]
+                      - generic [ref=e2460]:
+                        - generic [ref=e2462]: Financial Strategist
+                        - generic [ref=e2463]:
+                          - generic [ref=e2464]: "#finance"
+                          - generic [ref=e2465]: "#spreadsheet"
+                          - generic [ref=e2466]: "#strategy"
+                      - generic [ref=e2467]:
+                        - generic [ref=e2468]: Read
+                        - generic [ref=e2469]: All projects
+                    - button "Open a new contextual chat thread with HR Staffing Manager" [ref=e2470]:
+                      - img "HR Staffing Manager" [ref=e2471]
+                      - generic [ref=e2472]:
+                        - generic [ref=e2474]: HR Staffing Manager
+                        - generic [ref=e2475]:
+                          - generic [ref=e2476]: "#assignment"
+                          - generic [ref=e2477]: "#hr"
+                          - generic [ref=e2478]: "#staffing"
+                      - generic [ref=e2479]:
+                        - generic [ref=e2480]: Read
+                        - generic [ref=e2481]: All projects
+                    - button "Open a new contextual chat thread with JavaScript Application Developer" [ref=e2482]:
+                      - img "JavaScript Application Developer" [ref=e2483]
+                      - generic [ref=e2484]:
+                        - generic [ref=e2486]: JavaScript Application Developer
+                        - generic [ref=e2487]:
+                          - generic [ref=e2488]: "#javascript"
+                          - generic [ref=e2489]: "#programming"
+                          - generic [ref=e2490]: "#typescript"
+                      - generic [ref=e2491]:
+                        - generic [ref=e2492]: Read
+                        - generic [ref=e2493]: All projects
+                    - button "Open a new contextual chat thread with JavaScript QA Review Lead" [ref=e2494]:
+                      - img "JavaScript QA Review Lead" [ref=e2495]
+                      - generic [ref=e2496]:
+                        - generic [ref=e2498]: JavaScript QA Review Lead
+                        - generic [ref=e2499]:
+                          - generic [ref=e2500]: "#browser"
+                          - generic [ref=e2501]: "#javascript"
+                          - generic [ref=e2502]: "#qa"
+                      - generic [ref=e2503]:
+                        - generic [ref=e2504]: Read
+                        - generic [ref=e2505]: All projects
+                    - button "Open a new contextual chat thread with JavaScript Solution Architect" [ref=e2506]:
+                      - img "JavaScript Solution Architect" [ref=e2507]
+                      - generic [ref=e2508]:
+                        - generic [ref=e2510]: JavaScript Solution Architect
+                        - generic [ref=e2511]:
+                          - generic [ref=e2512]: "#architecture"
+                          - generic [ref=e2513]: "#javascript"
+                          - generic [ref=e2514]: "#typescript"
+                      - generic [ref=e2515]:
+                        - generic [ref=e2516]: Read
+                        - generic [ref=e2517]: All projects
+                    - button "Open a new contextual chat thread with Marketing Specialist" [ref=e2518]:
+                      - img "Marketing Specialist" [ref=e2519]
+                      - generic [ref=e2520]:
+                        - generic [ref=e2522]: Marketing Specialist
+                        - generic [ref=e2523]:
+                          - generic [ref=e2524]: "#go-to-market"
+                          - generic [ref=e2525]: "#marketing"
+                          - generic [ref=e2526]: "#strategy"
+                      - generic [ref=e2527]:
+                        - generic [ref=e2528]: Read
+                        - generic [ref=e2529]: All projects
+                    - button "Open a new contextual chat thread with Portfolio Architect" [ref=e2530]:
+                      - img "Portfolio Architect" [ref=e2531]
+                      - generic [ref=e2532]:
+                        - generic [ref=e2534]: Portfolio Architect
+                        - generic [ref=e2535]:
+                          - generic [ref=e2536]: "#architecture"
+                          - generic [ref=e2537]: "#integration"
+                          - generic [ref=e2538]: "#oversight"
+                      - generic [ref=e2539]:
+                        - generic [ref=e2540]: Read
+                        - generic [ref=e2541]: Write
+                        - generic [ref=e2542]: All projects
+                    - button "Open a new contextual chat thread with Programming Workspace Analyst" [ref=e2543]:
+                      - img "Programming Workspace Analyst" [ref=e2544]
+                      - generic [ref=e2545]:
+                        - generic [ref=e2547]: Programming Workspace Analyst
+                        - generic [ref=e2548]:
+                          - generic [ref=e2549]: "#approval"
+                          - generic [ref=e2550]: "#programming"
+                          - generic [ref=e2551]: "#workspace"
+                      - generic [ref=e2552]:
+                        - generic [ref=e2553]: Read
+                        - generic [ref=e2554]: All projects
+                    - button "Open a new contextual chat thread with Release Readiness Manager" [ref=e2555]:
+                      - img "Release Readiness Manager" [ref=e2556]
+                      - generic [ref=e2557]:
+                        - generic [ref=e2559]: Release Readiness Manager
+                        - generic [ref=e2560]:
+                          - generic [ref=e2561]: "#operations"
+                          - generic [ref=e2562]: "#readiness"
+                          - generic [ref=e2563]: "#release"
+                      - generic [ref=e2564]:
+                        - generic [ref=e2565]: Read
+                        - generic [ref=e2566]: All projects
+                    - button "Open a new contextual chat thread with Research Deep Dive Analyst" [ref=e2567]:
+                      - img "Research Deep Dive Analyst" [ref=e2568]
+                      - generic [ref=e2569]:
+                        - generic [ref=e2571]: Research Deep Dive Analyst
+                        - generic [ref=e2572]:
+                          - generic [ref=e2573]: "#background"
+                          - generic [ref=e2574]: "#evidence"
+                          - generic [ref=e2575]: "#research"
+                      - generic [ref=e2576]:
+                        - generic [ref=e2577]: Read
+                        - generic [ref=e2578]: All projects
+                    - button "Open a new contextual chat thread with Security Reviewer" [ref=e2579]:
+                      - img "Security Reviewer" [ref=e2580]
+                      - generic [ref=e2581]:
+                        - generic [ref=e2583]: Security Reviewer
+                        - generic [ref=e2584]:
+                          - generic [ref=e2585]: "#review"
+                          - generic [ref=e2586]: "#risk"
+                          - generic [ref=e2587]: "#security"
+                      - generic [ref=e2588]:
+                        - generic [ref=e2589]: Read
+                        - generic [ref=e2590]: All projects
+                    - button "Open a new contextual chat thread with UI Review Lead" [ref=e2591]:
+                      - img "UI Review Lead" [ref=e2592]
+                      - generic [ref=e2593]:
+                        - generic [ref=e2595]: UI Review Lead
+                        - generic [ref=e2596]:
+                          - generic [ref=e2597]: "#browser"
+                          - generic [ref=e2598]: "#review"
+                          - generic [ref=e2599]: "#ui"
+                      - generic [ref=e2600]:
+                        - generic [ref=e2601]: Read
+                        - generic [ref=e2602]: All projects
+              - region "Project structure selection panel" [ref=e2603]:
+                - generic [ref=e2604]:
+                  - generic [ref=e2605]:
+                    - paragraph [ref=e2606]: Selection panel
+                    - heading "Validation v59 - Bike Repair Slot Scheduler" [level=3] [ref=e2607]
+                    - paragraph [ref=e2608]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e2609]:
+                    - button "Minimize window" [ref=e2610]:
+                      - generic [ref=e2611]: minimize
+                    - button "Restart window position and size" [disabled] [ref=e2612]:
+                      - generic [ref=e2613]: restart_alt
+                    - button "Hide window" [ref=e2614]:
+                      - generic [ref=e2615]: visibility_off
+                - generic [ref=e2617]:
+                  - generic [ref=e2618]:
+                    - paragraph [ref=e2619]: Project
+                    - heading "Validation v59 - Bike Repair Slot Scheduler" [level=3] [ref=e2620]
+                    - paragraph [ref=e2621]: Create a working small app in C:\programovani\dotnet\BikeRepairSlotScheduler using the governed process agents. The process must design, implement, build, test, run, and collect browser evidence itself. Do not reuse sibling generated apps as source patterns or evidence.
+                    - generic [ref=e2622]:
+                      - generic [ref=e2624]: Draft
+                      - generic [ref=e2626]: Synced
+                    - generic [ref=e2627]:
+                      - generic [ref=e2628]:
+                        - text: Progress
+                        - strong [ref=e2629]: Unset
+                      - generic [ref=e2630]:
+                        - text: Priority
+                        - strong [ref=e2631]: None
+                      - generic [ref=e2632]:
+                        - text: Marker
+                        - strong [ref=e2633]: None
+                  - generic [ref=e2634]:
+                    - paragraph [ref=e2635]: Node actions
+                    - generic [ref=e2636]:
+                      - button "Open" [ref=e2637]:
+                        - generic [ref=e2638]:
+                          - generic [ref=e2640]: open_in_new
+                          - text: Open
+                      - button "Copy id" [ref=e2641]:
+                        - generic [ref=e2642]:
+                          - generic [ref=e2644]: copy
+                          - text: Copy id
+                      - button "Copy info" [ref=e2645]:
+                        - generic [ref=e2646]:
+                          - generic [ref=e2648]: copy
+                          - text: Copy info
+                      - button "Copy tree ids" [ref=e2649]:
+                        - generic [ref=e2650]:
+                          - generic [ref=e2652]: copy
+                          - text: Copy tree ids
+                      - button "Summary" [ref=e2653]:
+                        - generic [ref=e2654]:
+                          - generic [ref=e2656]: pie_chart
+                          - text: Summary
+                      - button "Connect selected" [ref=e2657]:
+                        - generic [ref=e2658]:
+                          - generic [ref=e2660]: link
+                          - text: Connect selected
+                      - button "Export image" [ref=e2661]:
+                        - generic [ref=e2662]:
+                          - generic [ref=e2664]: image
+                          - text: Export image
+                      - button "Add subproject" [ref=e2665]:
+                        - generic [ref=e2666]:
+                          - generic [ref=e2668]: call_split
+                          - text: Add subproject
+                  - generic [ref=e2669]:
+                    - paragraph [ref=e2670]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e2671]
+                    - paragraph [ref=e2672]:
+                      - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+                      - strong [ref=e2673]: Validation v59 - Bike Repair Slot Scheduler
+                      - text: .
+                    - generic [ref=e2674]:
+                      - generic [ref=e2676]: "Source: Validation v59 - Bike Repair Slot Scheduler"
+                      - generic [ref=e2678]: "Mode: child placement"
+                    - button "Open standard blocks" [ref=e2680]:
+                      - generic [ref=e2681]: Open standard blocks
+                  - group [ref=e2682]:
+                    - generic "Advanced details Show advanced details help" [ref=e2683]:
+                      - generic [ref=e2685]:
+                        - strong [ref=e2686]: Advanced details
+                        - button "Show advanced details help" [ref=e2689] [cursor=pointer]:
+                          - generic [ref=e2690]: "?"
+                      - generic [ref=e2692]: expand_more
+              - generic:
+                - generic: Validation v59 - Bike Repair Slot Scheduler is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 1 canvas nodes
+                  - list:
+                    - listitem: Validation v59 - Bike Repair Slot SchedulerCreate a working small app in C:\programovani\dotnet\BikeRepairSlotScheduler using the governed process agents. The process must design, implement, build, test, run, and collect browser evidence itself. Do not reuse sibling generated apps as source patterns or evidence. • Status Draft • 3 annotations
+        - generic [ref=e2694]:
+          - generic [ref=e2696]:
+            - paragraph [ref=e2697]: Outline
+            - heading "Project object index" [level=5] [ref=e2698]
+            - tree "Project object index" [ref=e2700]:
+              - treeitem "Validation v59 - Bike Repair Slot Scheduler Draft" [selected] [ref=e2701]:
+                - button "Validation v59 - Bike Repair Slot Scheduler Draft" [ref=e2704]:
+                  - generic [ref=e2706]: folder
+                  - generic [ref=e2707]: Validation v59 - Bike Repair Slot Scheduler
+                  - generic [ref=e2708]: Draft
+          - generic [ref=e2710]:
+            - paragraph [ref=e2711]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e2712]
+            - generic [ref=e2713]:
+              - generic [ref=e2714]:
+                - paragraph [ref=e2715]: Total nodes
+                - paragraph [ref=e2716]: "1"
+              - generic [ref=e2717]:
+                - paragraph [ref=e2718]: Total links
+                - paragraph [ref=e2719]: "0"
+              - generic [ref=e2720]:
+                - paragraph [ref=e2721]: Selected
+                - paragraph [ref=e2722]: "1"
+            - paragraph [ref=e2723]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e104]:
+    - generic "Workbench utilities" [ref=e2724] [cursor=pointer]

@@ -9,12 +9,14 @@
 Value framing and no-go constraints
 
 ## Notes
-Capture the commercial ask, tenant impact, release deadline, known dependencies, and explicit exclusions before engineering commits.
+Capture the requested outcome, user or operational impact, target delivery window, known dependencies, and explicit exclusions before delivery commits.
+
+If the request, project structure, or selected work node already identifies a concrete deliverable and target boundary, do not block this first step only because optional governance details are missing. Create the scope boundary packet with explicit assumptions, exclusions, `not applicable` entries, unresolved follow-up questions, and validation hooks for later architecture, implementation, QA, security, or release steps. Return `Blocked` only when the core deliverable, target boundary, mandatory upstream artifact, required authority, required credential, or safe execution boundary is genuinely missing and cannot be inferred or deferred to a modeled review or repair step.
 
 ## Contracts
-- Input contract: Feature request, tenant-impact notes, target release window, and customer-facing constraints.
-- Output contract: Decision-ready scope packet with acceptance boundary and dependency map.
-- Evidence contract: Intake notes, acceptance criteria, known exclusions, and unresolved dependency register.
+- Input contract: Requested change, impact notes, target delivery window, and stakeholder-facing constraints.
+- Output contract: Decision-ready scope packet with acceptance boundary, dependency map, assumptions, exclusions, and non-blocking follow-up questions.
+- Evidence contract: Intake notes, acceptance criteria, known exclusions, assumptions, and unresolved dependency register.
 
 ## Governance
 - Decision rights: Product owner can refine the ask but cannot waive architecture, data, or release-governance requirements.
@@ -30,7 +32,7 @@ Capture the commercial ask, tenant impact, release deadline, known dependencies,
 - `delivery-manager` / Delivery manager => Reviewer; required=True; fallback-order=0; rebind=Delivery review remains explicit even if staffing changes mid-stream.
 
 ## Artifact expectations
-- `scope-boundary-packet` -> `scope-boundary-packet` / Scope boundary packet | kind=Brief | trust=ReviewRequired | sensitivity=Internal | validation=Must capture no-go constraints, tenant impact, and acceptance boundary in typed form.
+- `scope-boundary-packet` -> `scope-boundary-packet` / Scope boundary packet | kind=Brief | trust=ReviewRequired | sensitivity=Internal | validation=Must capture no-go constraints, user or operational impact, and acceptance boundary in typed form.
 
 ## Artifact inputs
 - No explicit artifact inputs.

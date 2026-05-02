@@ -1,0 +1,23 @@
+- dialog "Start Multi-team software delivery and release governance" [ref=e6921]:
+  - generic [ref=e6922]:
+    - generic [ref=e6923]:
+      - generic [ref=e6924]:
+        - paragraph [ref=e6925]: Process start
+        - heading "Start Multi-team software delivery and release governance" [level=5] [ref=e6926]
+        - paragraph [ref=e6927]: This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing.
+      - generic [ref=e6928]:
+        - button "Cancel" [disabled] [ref=e6929]:
+          - generic [ref=e6930]: Cancel
+        - button "Continue" [disabled] [ref=e6931]:
+          - generic [ref=e6951]: Continue
+    - generic [ref=e6934]:
+      - generic [ref=e6936]:
+        - paragraph [ref=e6937]: Execution target
+        - paragraph [ref=e6938]: TeaSteepPlanner product root
+        - paragraph [ref=e6939]: "Target node id: custom:9dd51af8445641e8b5982f2c5a78951f"
+        - paragraph [ref=e6940]: "Resolved parent node id: custom:9dd51af8445641e8b5982f2c5a78951f"
+        - paragraph [ref=e6941]: "Selected process node id: process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0"
+        - paragraph [ref=e6942]: "Project id: 416d3fa2-b9de-4840-9dc3-215c3d09912f"
+      - generic [ref=e6944]:
+        - paragraph [ref=e6945]: What happens next
+        - paragraph [ref=e6946]: The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context.

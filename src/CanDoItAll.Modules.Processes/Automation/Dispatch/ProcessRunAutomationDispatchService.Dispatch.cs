@@ -133,6 +133,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         return;
                     }
 
+                    if (await IsRunTerminalAsync(candidate.Run.Id, cancellationToken))
+                    {
+                        logger.LogInformation(
+                            "Skipping automation completion projection for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
+                        return;
+                    }
+
                     var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
                         ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded before completion.");
                     if (ShouldSkipAutomationCompletionTransition(stepRunSnapshot.Status, executionOutcome.CompletionStatus))
@@ -162,7 +171,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                 Reason = executionOutcome.CompletionReason,
                                 SelectedBranchOutcomeId = executionOutcome.SelectedBranchOutcomeId,
                                 DecidedBy = AutomationActor,
-                                SuppressAutomationDispatch = true
+                                SuppressAutomationDispatch = executionOutcome.CompletionStatus != ProcessStepRunStatus.Completed
                             },
                             cancellationToken);
                         if (completionResult.IsFailure)
@@ -184,6 +193,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             }
                         }
                     }
+
+                    return;
                 }
                 catch (Exception exception)
                 {
@@ -192,6 +203,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         "Process automation dispatch failed for run {RunId}, step {StepRunId}.",
                         candidate.Run.Id,
                         candidate.StepRun.Id);
+
+                    if (await IsRunTerminalAsync(candidate.Run.Id, cancellationToken))
+                    {
+                        logger.LogInformation(
+                            "Skipping automation failure transition for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
+                        return;
+                    }
 
                     var failResult = await TransitionStepAsync(
                         new ProcessStepTransitionRequest
@@ -210,6 +230,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             candidate.StepRun.Id,
                             string.Join(" | ", failResult.Errors.Select(error => error.Message)));
                     }
+
+                    return;
                 }
             }
             finally
@@ -217,6 +239,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 dispatchGuard.Release();
             }
         }
+    }
+
+    private async Task<bool> IsRunTerminalAsync(
+        Guid processRunId,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var status = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(item => item.Id == processRunId)
+            .Select(item => (ProcessRunStatus?)item.Status)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return status is null or ProcessRunStatus.Completed or ProcessRunStatus.Cancelled or ProcessRunStatus.Failed;
     }
 
     private ProcessAutomationDatabaseRequirementFailure? ResolveAutomationDatabaseRequirementFailure()

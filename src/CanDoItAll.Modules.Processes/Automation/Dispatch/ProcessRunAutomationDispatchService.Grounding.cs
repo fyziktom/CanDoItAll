@@ -26,8 +26,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         CancellationToken cancellationToken)
     {
-        if (!ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext) ||
-            projectStructureContext is null)
+        ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
+        var projectId = projectStructureContext?.ProjectId ?? candidate.Run.ProjectId;
+        if (!projectId.HasValue || projectId.Value == Guid.Empty)
         {
             return PrefetchedProjectStructureGrounding.Empty;
         }
@@ -69,7 +70,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     }
                     else
                     {
-                        var surfaceTask = getStructureAsync.Invoke(projectWorkbenchService, [projectStructureContext.ProjectId, cancellationToken]) as Task;
+                        var surfaceTask = getStructureAsync.Invoke(projectWorkbenchService, [projectId.Value, cancellationToken]) as Task;
                         if (surfaceTask is not null)
                         {
                             await surfaceTask;
@@ -91,26 +92,46 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Could not prefetch projected project structure grounding for process run {RunId}, step {StepRunId}, project {ProjectId}. Falling back to canonical workbench nodes only.",
                 candidate.Run.Id,
                 candidate.StepRun.Id,
-                projectStructureContext.ProjectId);
+                projectId.Value);
         }
 
-        var canonicalNodes = await TryLoadCanonicalProjectStructureGroundingNodesAsync(projectStructureContext.ProjectId, cancellationToken);
+        var canonicalNodes = await TryLoadCanonicalProjectStructureGroundingNodesAsync(projectId.Value, cancellationToken);
         if (surfaceNodes.Count == 0 && canonicalNodes.Count == 0)
         {
             return PrefetchedProjectStructureGrounding.Empty;
         }
 
+        var mergedNodes = MergeProjectStructureGroundingNodes(surfaceNodes, canonicalNodes);
+        if (projectStructureContext is null)
+        {
+            projectStructureContext = TryResolveProjectLevelProjectStructureContext(
+                projectId.Value,
+                candidate.Definition.Name,
+                mergedNodes);
+            if (projectStructureContext is null)
+            {
+                return PrefetchedProjectStructureGrounding.Empty;
+            }
+
+            logger.LogInformation(
+                "Resolved project-level structure grounding for process run {RunId}, step {StepRunId}, project {ProjectId}, target node {TargetNodeId}.",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                projectId.Value,
+                projectStructureContext.ResolveTargetNodeId());
+        }
+
         if (string.IsNullOrWhiteSpace(projectName))
         {
-            projectName = await TryResolveProjectStructureProjectNameAsync(projectStructureContext.ProjectId, cancellationToken);
+            projectName = await TryResolveProjectStructureProjectNameAsync(projectId.Value, cancellationToken);
         }
 
         var promptSummary = BuildProjectStructureGroundingSummary(
             string.IsNullOrWhiteSpace(projectName)
-                ? projectStructureContext.ProjectId.ToString("D")
+                ? projectId.Value.ToString("D")
                 : projectName,
-            surfaceNodes,
-            canonicalNodes,
+            mergedNodes,
+            [],
             projectStructureContext);
         return string.IsNullOrWhiteSpace(promptSummary)
             ? PrefetchedProjectStructureGrounding.Empty
@@ -379,26 +400,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             try
             {
                 await using var command = connection.CreateCommand();
-                command.CommandText = """
-SELECT
-    NodeKey,
-    COALESCE(ParentNodeKey, ''),
-    ObjectType,
-    COALESCE(ObjectSubtype, ''),
-    COALESCE(Title, ''),
-    COALESCE(Subtitle, ''),
-    COALESCE(Status, ''),
-    COALESCE(Notes, ''),
-    COALESCE(MetadataJson, '{}')
-FROM Workbench_ProjectObjects
-WHERE lower(ProjectId) = lower($projectId)
-  AND IsSystemManaged = 0
-ORDER BY CreatedAtUtc, Title;
-""";
+                var isPostgreSql = IsPostgreSqlProvider(dbContext.Database.ProviderName);
+                command.CommandText = BuildCanonicalProjectStructureGroundingSql(isPostgreSql);
 
                 var projectIdParameter = command.CreateParameter();
-                projectIdParameter.ParameterName = "$projectId";
-                projectIdParameter.Value = projectId.ToString("D");
+                projectIdParameter.ParameterName = "@projectId";
+                projectIdParameter.Value = isPostgreSql
+                    ? projectId
+                    : projectId.ToString("D");
                 command.Parameters.Add(projectIdParameter);
 
                 var nodes = new List<ProjectStructureGroundingNodeData>();
@@ -441,6 +450,49 @@ ORDER BY CreatedAtUtc, Title;
                 projectId);
             return [];
         }
+    }
+
+    private static bool IsPostgreSqlProvider(string? providerName)
+    {
+        return !string.IsNullOrWhiteSpace(providerName) &&
+               providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildCanonicalProjectStructureGroundingSql(bool isPostgreSql)
+    {
+        return isPostgreSql
+            ? """
+SELECT
+    "NodeKey",
+    COALESCE("ParentNodeKey", ''),
+    "ObjectType",
+    COALESCE("ObjectSubtype", ''),
+    COALESCE("Title", ''),
+    COALESCE("Subtitle", ''),
+    COALESCE("Status", ''),
+    COALESCE("Notes", ''),
+    COALESCE("MetadataJson", '{}')
+FROM "Workbench_ProjectObjects"
+WHERE "ProjectId" = @projectId
+  AND "IsSystemManaged" = FALSE
+ORDER BY "CreatedAtUtc", "Title";
+"""
+            : """
+SELECT
+    "NodeKey",
+    COALESCE("ParentNodeKey", ''),
+    "ObjectType",
+    COALESCE("ObjectSubtype", ''),
+    COALESCE("Title", ''),
+    COALESCE("Subtitle", ''),
+    COALESCE("Status", ''),
+    COALESCE("Notes", ''),
+    COALESCE("MetadataJson", '{}')
+FROM "Workbench_ProjectObjects"
+WHERE lower("ProjectId") = lower(@projectId)
+  AND "IsSystemManaged" = 0
+ORDER BY "CreatedAtUtc", "Title";
+""";
     }
 
     private async Task<string> TryResolveProjectStructureProjectNameAsync(
@@ -515,6 +567,35 @@ ORDER BY CreatedAtUtc, Title;
         var builder = new StringBuilder();
         builder.AppendLine($"Dispatcher fetched the live project structure for `{projectName}` and focused this prompt on the selected work branch.");
 
+        var externalTargetHints = ResolveProjectStructureExternalTargetHintsForFocus(
+            nodesById,
+            nodesByParentId,
+            targetNodeId,
+            selectedProcessNodeId);
+        if (externalTargetHints.Count > 0)
+        {
+            builder.AppendLine("Grounded external target paths from the selected project structure:");
+            foreach (var hint in externalTargetHints)
+            {
+                builder.Append("- `");
+                builder.Append(hint.AbsolutePath);
+                builder.Append("` mapped to `");
+                builder.Append(hint.MappedAlias);
+                builder.Append("` from ");
+                builder.Append(string.IsNullOrWhiteSpace(hint.SourceNodeTitle)
+                    ? hint.SourceNodeId
+                    : hint.SourceNodeTitle);
+                if (!string.IsNullOrWhiteSpace(hint.SourceNodeId))
+                {
+                    builder.Append(" (");
+                    builder.Append(hint.SourceNodeId);
+                    builder.Append(')');
+                }
+
+                builder.AppendLine();
+            }
+        }
+
         var ancestorPath = ResolveProjectStructureAncestorPath(targetNodeId, nodesById);
         if (ancestorPath.Count > 0)
         {
@@ -533,11 +614,12 @@ ORDER BY CreatedAtUtc, Title;
         if (!string.IsNullOrWhiteSpace(targetNodeId) &&
             nodesById.TryGetValue(targetNodeId, out var targetNode))
         {
-            var siblingNodes = nodes
+            var projectLevelPlanningNodes = nodes
                 .Where(node =>
                     !string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal) &&
                     !string.Equals(node.Id, selectedProcessNodeId, StringComparison.Ordinal) &&
-                    string.Equals(node.ParentId, targetNode.ParentId, StringComparison.Ordinal))
+                    string.Equals(node.ParentId, targetNode.ParentId, StringComparison.Ordinal) &&
+                    IsProjectLevelPlanningContextNode(node))
                 .Select(node => new
                 {
                     Node = node,
@@ -550,13 +632,13 @@ ORDER BY CreatedAtUtc, Title;
                 .Select(item => item.Node)
                 .ToList();
 
-            if (siblingNodes.Count > 0)
+            if (projectLevelPlanningNodes.Count > 0)
             {
-                builder.AppendLine("Sibling planning context under the same parent:");
-                AppendProjectStructureGroundingNodes(builder, siblingNodes);
+                builder.AppendLine("Project-level planning context under the target parent:");
+                AppendProjectStructureGroundingNodes(builder, projectLevelPlanningNodes);
             }
 
-            var siblingDescendantNodes = siblingNodes
+            var projectLevelPlanningDescendantNodes = projectLevelPlanningNodes
                 .SelectMany(node => ResolveProjectStructureDescendants(node.Id, nodesByParentId, maxDepth: 3))
                 .Where(node =>
                     !string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal) &&
@@ -574,10 +656,10 @@ ORDER BY CreatedAtUtc, Title;
                 .Select(item => item.Node)
                 .ToList();
 
-            if (siblingDescendantNodes.Count > 0)
+            if (projectLevelPlanningDescendantNodes.Count > 0)
             {
-                builder.AppendLine("Descendant requirement context from sibling planning nodes:");
-                AppendProjectStructureGroundingNodes(builder, siblingDescendantNodes);
+                builder.AppendLine("Requirements from project-level planning context:");
+                AppendProjectStructureGroundingNodes(builder, projectLevelPlanningDescendantNodes);
             }
 
             var childNodes = nodes
@@ -635,6 +717,110 @@ ORDER BY CreatedAtUtc, Title;
         }
 
         return merged.Values.ToList();
+    }
+
+    private static bool IsProjectLevelPlanningContextNode(ProjectStructureGroundingNodeData node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        if (IsProjectStructureGroundingNoiseNode(node))
+        {
+            return false;
+        }
+
+        if (string.Equals(node.ObjectType, "ProjectBlock", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(node.ObjectType, "Note", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var subtype = NormalizeProjectStructureNodeSubtype(node.ObjectSubtype);
+        return subtype.Contains("architecture", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("feature", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("requirement", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("constraint", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("decision", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("planning", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("note", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ProcessProjectStructureContext? TryResolveProjectLevelProjectStructureContext(
+        Guid projectId,
+        string? processDefinitionName,
+        IReadOnlyList<ProjectStructureGroundingNodeData> nodes)
+    {
+        if (projectId == Guid.Empty || nodes.Count == 0)
+        {
+            return null;
+        }
+
+        var targetNode = ResolveProjectLevelGroundingTargetNode(nodes);
+        if (targetNode is null)
+        {
+            return null;
+        }
+
+        return new ProcessProjectStructureContext
+        {
+            ProjectId = projectId,
+            NodeId = string.IsNullOrWhiteSpace(targetNode.Id) ? projectId.ToString("D") : targetNode.Id,
+            NodeTitle = string.IsNullOrWhiteSpace(targetNode.Title)
+                ? string.IsNullOrWhiteSpace(processDefinitionName) ? "Project work target" : processDefinitionName.Trim()
+                : targetNode.Title.Trim()
+        };
+    }
+
+    private static ProjectStructureGroundingNodeData? ResolveProjectLevelGroundingTargetNode(
+        IReadOnlyList<ProjectStructureGroundingNodeData> nodes)
+    {
+        return nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.Id) && !IsProjectStructureGroundingNoiseNode(node))
+            .Select(node => new
+            {
+                Node = node,
+                Score = GetProjectLevelGroundingTargetScore(node),
+                ExternalTargetHintCount = ResolveExternalTargetHintsFromProjectStructureNode(node).Count,
+                LongestExternalTargetPathLength = ResolveExternalTargetHintsFromProjectStructureNode(node)
+                    .Select(hint => hint.AbsolutePath.Length)
+                    .DefaultIfEmpty(0)
+                    .Max()
+            })
+            .Where(item => item.Score > 0)
+            .OrderByDescending(item => item.ExternalTargetHintCount > 0)
+            .ThenByDescending(item => item.Score)
+            .ThenByDescending(item => item.LongestExternalTargetPathLength)
+            .ThenBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Node.Id, StringComparer.Ordinal)
+            .Select(item => item.Node)
+            .FirstOrDefault();
+    }
+
+    private static int GetProjectLevelGroundingTargetScore(ProjectStructureGroundingNodeData node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var score = GetProjectStructureGroundingSignalScore(node);
+        var externalTargetHintCount = ResolveExternalTargetHintsFromProjectStructureNode(node).Count;
+        if (externalTargetHintCount > 0)
+        {
+            score += 100 + externalTargetHintCount * 10;
+        }
+
+        if (node.ObjectType.Contains("folder", StringComparison.OrdinalIgnoreCase) ||
+            node.ObjectSubtype.Contains("folder", StringComparison.OrdinalIgnoreCase) ||
+            node.ObjectSubtype.Contains("repository", StringComparison.OrdinalIgnoreCase) ||
+            node.ObjectSubtype.Contains("workspace", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 10;
+        }
+
+        if (node.MetadataJson.Contains("localPath", StringComparison.OrdinalIgnoreCase) ||
+            node.MetadataJson.Contains("repository", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 10;
+        }
+
+        return score;
     }
 
     private static string ReadProjectStructureGroundingColumn(DbDataReader reader, int ordinal)

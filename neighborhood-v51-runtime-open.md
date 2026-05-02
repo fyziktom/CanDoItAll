@@ -1,0 +1,255 @@
+- main [ref=e501]:
+  - group [ref=e502]:
+    - generic "Workspace navigation" [ref=e503] [cursor=pointer]
+  - generic [ref=e504]:
+    - generic [ref=e507]:
+      - generic [ref=e508]:
+        - button "Dashboard" [ref=e510]:
+          - generic [ref=e511]: Dashboard
+          - generic [ref=e513]: push_pin
+        - button "Projects" [ref=e515]:
+          - generic [ref=e516]: Projects
+        - button "Projects" [ref=e518]:
+          - generic [ref=e519]: Projects
+        - button "Projects" [ref=e521]:
+          - generic [ref=e522]: Projects
+        - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e524]:
+          - generic [ref=e525]: Validation v43 - Canal Lock Logbook · Structure
+        - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e527]:
+          - generic [ref=e528]: Validation v43 - Community Kiln Scheduler · Structure
+      - generic [ref=e529]:
+        - textbox "Search tabs" [ref=e530]
+        - group [ref=e531]:
+          - generic "+17" [ref=e532] [cursor=pointer]
+    - generic [ref=e534]:
+      - generic [ref=e535]:
+        - generic [ref=e536]: Active database
+        - generic [ref=e537]: PostgreSQL workspace
+        - generic [ref=e538]: PostgreSQL
+        - button "Show db details" [ref=e540] [cursor=pointer]:
+          - generic [ref=e541]: "?"
+      - button "Switch database" [ref=e542]:
+        - generic [ref=e543]: Switch database
+      - generic [ref=e544]: Interactive Server
+      - generic [ref=e545]: Live items 11
+      - generic [ref=e546]: Tabs 23
+  - generic [ref=e549]:
+    - button "tune" [ref=e550]
+    - generic [ref=e551]:
+      - generic [ref=e553]:
+        - paragraph [ref=e554]: Workbench
+        - heading "Validation v51 - Neighborhood Mural Permit Tracker structure" [level=1] [ref=e555]
+      - generic [ref=e556]:
+        - generic [ref=e558]:
+          - generic [ref=e559]:
+            - paragraph [ref=e560]: Structure canvas
+            - generic [ref=e561]:
+              - generic [ref=e562]:
+                - heading "Validation v51 - Neighborhood Mural Permit Tracker workbench" [level=2] [ref=e564]
+                - paragraph [ref=e565]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e566]:
+                - generic [ref=e567]:
+                  - generic [ref=e568]: Nodes
+                  - strong [ref=e569]: "1"
+                - generic [ref=e570]:
+                  - generic [ref=e571]: Links
+                  - strong [ref=e572]: "0"
+                - generic [ref=e573]:
+                  - generic [ref=e574]: Selection
+                  - strong [ref=e575]: "1"
+          - generic [ref=e577]:
+            - generic [ref=e578]:
+              - generic [ref=e579]:
+                - button "Open quick create actions" [ref=e580] [cursor=pointer]:
+                  - generic [ref=e581]: add
+                  - generic [ref=e582]: Open quick create actions
+                - button "Focus root" [ref=e583] [cursor=pointer]:
+                  - generic [ref=e584]: center_focus_strong
+                  - generic [ref=e585]: Focus root
+                - generic [ref=e586]:
+                  - generic [ref=e587]:
+                    - button "Select" [ref=e588] [cursor=pointer]
+                    - button "Dependency" [ref=e591] [cursor=pointer]
+                    - button "Delete" [ref=e594] [cursor=pointer]
+                  - button "Inspector" [ref=e597] [cursor=pointer]:
+                    - generic [ref=e598]: visibility
+                    - generic [ref=e599]: visibility
+                  - button "Health" [ref=e600] [cursor=pointer]:
+                    - generic [ref=e601]: assessment
+                    - generic [ref=e602]: assessment
+                  - button "Blocks" [ref=e603] [cursor=pointer]:
+                    - generic [ref=e604]: dashboard
+                    - generic [ref=e605]: dashboard
+                  - button "Signals" [ref=e606] [cursor=pointer]:
+                    - generic [ref=e607]: notifications_active
+                    - generic [ref=e608]: notifications active
+                  - button "Agents" [ref=e609] [cursor=pointer]:
+                    - generic [ref=e610]: smart_toy
+                    - generic [ref=e611]: smart toy
+                  - button "Recompose" [disabled] [ref=e612]:
+                    - generic [ref=e613]: Recompose
+              - generic [ref=e614]:
+                - button "Fit canvas" [ref=e615] [cursor=pointer]:
+                  - generic [ref=e616]: fit_screen
+                  - generic [ref=e617]: Fit canvas
+                - button "Toggle maximize" [ref=e618] [cursor=pointer]:
+                  - generic [ref=e619]: open_in_full
+                  - generic [ref=e620]: Maximize canvas
+                - button "Toggle minimap" [ref=e621] [cursor=pointer]:
+                  - generic [ref=e622]: map
+                  - generic [ref=e623]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e624] [cursor=pointer]:
+                  - generic [ref=e625]: monitor_heart
+                  - generic [ref=e626]: Toggle diagnostics
+                - button "Toggle help" [ref=e627] [cursor=pointer]:
+                  - generic [ref=e628]: help
+                  - generic [ref=e629]: Canvas help
+                - button "Toggle settings" [ref=e630] [cursor=pointer]:
+                  - generic [ref=e631]: settings
+                  - generic [ref=e632]: Canvas settings
+                - generic [ref=e633]:
+                  - button "Zoom out" [ref=e634] [cursor=pointer]:
+                    - generic [ref=e635]: remove
+                    - generic [ref=e636]: Zoom out
+                  - slider "Canvas zoom" [ref=e637]: "100"
+                  - button "Zoom in" [ref=e638] [cursor=pointer]:
+                    - generic [ref=e639]: add
+                    - generic [ref=e640]: Zoom in
+                  - generic [ref=e641]: 100%
+            - generic [ref=e642]:
+              - generic "Canvas workbench" [ref=e643]:
+                - generic [ref=e644]:
+                  - generic:
+                    - generic "Validation v51 - Neighborhood Mural Permit Tracker Input" [ref=e646]
+                    - generic "Validation v51 - Neighborhood Mural Permit Tracker Output" [ref=e647]
+                    - generic "Validation v51 - Neighborhood Mural Permit Tracker Input" [ref=e648]
+                    - generic "Validation v51 - Neighborhood Mural Permit Tracker Output" [ref=e649]
+                - generic:
+                  - generic [ref=e1031]:
+                    - generic [ref=e1034]: Validation v51 - Neighborhood Mural Permit Tracker
+                    - button "Note, shortcut N" [ref=e1035] [cursor=pointer]
+                    - button "Decision, shortcut D" [ref=e1040] [cursor=pointer]
+                    - button "Milestone, shortcut M" [ref=e1045] [cursor=pointer]
+                    - button "Phase, shortcut H" [ref=e1050] [cursor=pointer]
+                    - button "Blocks, shortcut B, opens submenu" [ref=e1055] [cursor=pointer]
+                    - button "Meetings, shortcut Q, opens submenu" [ref=e1061] [cursor=pointer]
+                    - button "People, shortcut P, opens submenu" [ref=e1069] [cursor=pointer]
+                    - button "Work, shortcut W, opens submenu" [ref=e1075] [cursor=pointer]
+                    - button "Prompts, shortcut R, opens submenu" [ref=e1081] [cursor=pointer]
+                    - button "Runtime, shortcut U, opens submenu" [active] [ref=e1087] [cursor=pointer]
+                    - button "Assets, shortcut A, opens submenu" [ref=e1093] [cursor=pointer]
+                    - button "Infrastructure, shortcut I, opens submenu" [ref=e1099] [cursor=pointer]
+                    - button "Assurance, shortcut S, opens submenu" [ref=e1105] [cursor=pointer]
+                  - generic [ref=e1111]:
+                    - generic [ref=e1114]: Runtime
+                    - button "Remote repo, shortcut R" [ref=e1115] [cursor=pointer]
+                    - button "Local repo, shortcut L" [ref=e1120] [cursor=pointer]
+                    - button "Local folder, shortcut O" [ref=e1125] [cursor=pointer]
+                    - button "PowerShell script, shortcut P" [ref=e1130] [cursor=pointer]
+                    - button "Console script, shortcut C" [ref=e1135] [cursor=pointer]
+                    - button "EF migration, shortcut E" [ref=e1140] [cursor=pointer]
+                    - button "Tailwind watch, shortcut T" [ref=e1145] [cursor=pointer]
+                    - button "Python environment, shortcut Y" [ref=e1150] [cursor=pointer]
+                    - button ".NET runtime, shortcut N" [ref=e1155] [cursor=pointer]
+                    - button "dotnet watch, shortcut D" [ref=e1160] [cursor=pointer]
+                    - button "Release run, shortcut A" [ref=e1165] [cursor=pointer]
+              - generic [ref=e650]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e651]:
+                - generic [ref=e652]:
+                  - generic [ref=e653]:
+                    - paragraph [ref=e654]: Project agents
+                    - heading "Project agents" [level=3] [ref=e655]
+                  - generic [ref=e656]:
+                    - button "Minimize window" [ref=e657]
+                    - button "Restart window position and size" [disabled] [ref=e659]
+                    - button "Hide window" [ref=e661]
+                - generic [ref=e664]:
+                  - generic [ref=e665]:
+                    - textbox "Search contextual agents" [ref=e666]:
+                      - /placeholder: Search agents
+                    - textbox "Filter tags" [ref=e670]
+                  - generic [ref=e671]:
+                    - generic [ref=e672]: 19 of 19
+                    - generic [ref=e673]: This project
+                    - generic "Show contextual agent window help" [ref=e675]
+                  - generic [ref=e677]:
+                    - button "Open a new contextual chat thread with .NET Application Developer" [ref=e678]
+                    - button "Open a new contextual chat thread with .NET QA Review Lead" [ref=e690]
+                    - button "Open a new contextual chat thread with .NET Solution Architect" [ref=e702]
+                    - button "Open a new contextual chat thread with Blazor Application Developer" [ref=e714]
+                    - button "Open a new contextual chat thread with Business Strategist" [ref=e727]
+                    - button "Open a new contextual chat thread with Code Review Lead" [ref=e739]
+                    - button "Open a new contextual chat thread with Delivery QA Observer" [ref=e751]
+                    - button "Open a new contextual chat thread with Financial Strategist" [ref=e763]
+                    - button "Open a new contextual chat thread with HR Staffing Manager" [ref=e775]
+                    - button "Open a new contextual chat thread with JavaScript Application Developer" [ref=e787]
+                    - button "Open a new contextual chat thread with JavaScript QA Review Lead" [ref=e799]
+                    - button "Open a new contextual chat thread with JavaScript Solution Architect" [ref=e811]
+                    - button "Open a new contextual chat thread with Marketing Specialist" [ref=e823]
+                    - button "Open a new contextual chat thread with Portfolio Architect" [ref=e835]
+                    - button "Open a new contextual chat thread with Programming Workspace Analyst" [ref=e848]
+                    - button "Open a new contextual chat thread with Release Readiness Manager" [ref=e860]
+                    - button "Open a new contextual chat thread with Research Deep Dive Analyst" [ref=e872]
+                    - button "Open a new contextual chat thread with Security Reviewer" [ref=e884]
+                    - button "Open a new contextual chat thread with UI Review Lead" [ref=e896]
+              - region "Project structure selection panel" [ref=e908]:
+                - generic [ref=e909]:
+                  - generic [ref=e910]:
+                    - paragraph [ref=e911]: Selection panel
+                    - heading "Validation v51 - Neighborhood Mural Permit Tracker" [level=3] [ref=e912]
+                    - paragraph [ref=e913]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e914]:
+                    - button "Minimize window" [ref=e915]
+                    - button "Restart window position and size" [disabled] [ref=e917]
+                    - button "Hide window" [ref=e919]
+                - generic [ref=e922]:
+                  - generic [ref=e923]:
+                    - paragraph [ref=e924]: Project
+                    - heading "Validation v51 - Neighborhood Mural Permit Tracker" [level=3] [ref=e925]
+                    - paragraph [ref=e926]: Use the Multi-team software delivery and release governance process to create, build, run, and test a working app under C:\programovani\dotnet\NeighborhoodMuralPermitTracker without manual repair of the generated app.
+                    - generic [ref=e927]
+                    - generic [ref=e932]
+                  - generic [ref=e939]:
+                    - paragraph [ref=e940]: Node actions
+                    - generic [ref=e941]
+                  - generic [ref=e974]:
+                    - paragraph [ref=e975]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e976]
+                    - paragraph [ref=e977]
+                    - generic [ref=e979]
+                    - button "Open standard blocks" [ref=e985]
+                  - group [ref=e987]:
+                    - generic "Advanced details Show advanced details help" [ref=e988]
+              - generic:
+                - generic: Validation v51 - Neighborhood Mural Permit Tracker is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 1 canvas nodes
+                  - list:
+                    - listitem: Validation v51 - Neighborhood Mural Permit TrackerUse the Multi-team software delivery and release governance process to create, build, run, and test a working app under C:\programovani\dotnet\NeighborhoodMuralPermitTracker without manual repair of the generated app. • Status Draft • 3 annotations
+        - generic [ref=e999]:
+          - generic [ref=e1001]:
+            - paragraph [ref=e1002]: Outline
+            - heading "Project object index" [level=5] [ref=e1003]
+            - tree "Project object index" [ref=e1005]:
+              - treeitem "Validation v51 - Neighborhood Mural Permit Tracker Draft" [selected] [ref=e1006]:
+                - button "Validation v51 - Neighborhood Mural Permit Tracker Draft" [ref=e1009]:
+                  - generic [ref=e1011]: folder
+                  - generic [ref=e1012]: Validation v51 - Neighborhood Mural Permit Tracker
+                  - generic [ref=e1013]: Draft
+          - generic [ref=e1015]:
+            - paragraph [ref=e1016]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e1017]
+            - generic [ref=e1018]:
+              - generic [ref=e1019]:
+                - paragraph [ref=e1020]: Total nodes
+                - paragraph [ref=e1021]: "1"
+              - generic [ref=e1022]:
+                - paragraph [ref=e1023]: Total links
+                - paragraph [ref=e1024]: "0"
+              - generic [ref=e1025]:
+                - paragraph [ref=e1026]: Selected
+                - paragraph [ref=e1027]: "1"
+            - paragraph [ref=e1028]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e1029]:
+    - generic "Workbench utilities" [ref=e1030] [cursor=pointer]

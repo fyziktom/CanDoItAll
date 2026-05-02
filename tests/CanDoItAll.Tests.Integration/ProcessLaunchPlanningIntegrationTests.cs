@@ -1,6 +1,8 @@
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -50,16 +52,16 @@ public sealed class ProcessLaunchPlanningIntegrationTests
             aiAgentService,
             builderId,
             managerId,
-            "Build calculator",
-            "Create a simple Blazor calculator delivery.",
+            "Build generated app",
+            "Create a simple Blazor app delivery.",
             "Workspace build",
             "Deterministic builder profile for launch planning validation.");
         await SaveApprovedAiProfileAsync(
             aiAgentService,
             reviewerId,
             managerId,
-            "Review calculator",
-            "Inspect calculator delivery evidence.",
+            "Review generated app",
+            "Inspect app delivery evidence.",
             "Readonly workspace",
             "Deterministic reviewer profile for launch planning validation.");
 
@@ -226,16 +228,16 @@ public sealed class ProcessLaunchPlanningIntegrationTests
             aiAgentService,
             builderId,
             substituteId,
-            "Build calculator",
-            "Create a simple Blazor calculator delivery.",
+            "Build generated app",
+            "Create a simple Blazor app delivery.",
             "Workspace build",
             "Deterministic builder profile for substitute validation.");
         await SaveApprovedAiProfileAsync(
             aiAgentService,
             reviewerId,
             substituteId,
-            "Review calculator",
-            "Inspect calculator delivery evidence.",
+            "Review generated app",
+            "Inspect app delivery evidence.",
             "Readonly workspace",
             "Deterministic reviewer profile for substitute validation.");
 
@@ -454,21 +456,345 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.True(selectedCandidate.Score > genericCandidate.Score);
     }
 
+    [Fact]
+    public async Task CreateLaunchPlanAsync_prefers_blazor_specialist_for_blazor_app_delivery()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Blazor launch proof {suffix}",
+            objective: "Build a working Blazor Web App with browser-visible interactions.");
+        var definition = BuildBlazorLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Blazor app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Build a small Blazor Web App and validate it with dotnet build, dotnet run, and browser proof.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var role = Assert.Single(details!.Roles);
+        Assert.True(role.SelectedCandidateId.HasValue);
+        var selectedCandidate = Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
+        var workspaceAnalyst = Assert.Single(role.Candidates, item => string.Equals(item.DisplayName, "Programming Workspace Analyst", StringComparison.Ordinal));
+
+        Assert.Equal("Blazor Application Developer", selectedCandidate.DisplayName);
+        Assert.True(selectedCandidate.Score > workspaceAnalyst.Score);
+        Assert.Contains(role.Candidates, item => string.Equals(item.DisplayName, ".NET Application Developer", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_keeps_blazor_specialist_on_implementation_roles_only()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Blazor governed launch proof {suffix}",
+            objective: "Build a working Blazor Web App with browser-visible interactions.");
+        var definition = BuildBlazorGovernedLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Blazor governed launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Build a small Blazor Web App and validate it with dotnet build, dotnet run, and browser proof.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var productOwner = GetSelectedCandidate(details!, "Product owner");
+        var deliveryManager = GetSelectedCandidate(details, "Delivery manager");
+        var leadEngineer = GetSelectedCandidate(details, "Lead engineer");
+
+        Assert.Equal("Blazor Application Developer", leadEngineer.DisplayName);
+        Assert.DoesNotContain(productOwner.DisplayName, TechnicalImplementationAgentNames);
+        Assert.DoesNotContain(deliveryManager.DisplayName, TechnicalImplementationAgentNames);
+
+        var productOwnerBlazorCandidate = GetCandidate(details, "Product owner", "Blazor Application Developer");
+        var deliveryManagerBlazorCandidate = GetCandidate(details, "Delivery manager", "Blazor Application Developer");
+        Assert.True(productOwner.Score > productOwnerBlazorCandidate.Score);
+        Assert.True(deliveryManager.Score > deliveryManagerBlazorCandidate.Score);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_direct_assisted_start_uses_ai_directory_for_agent_capable_roles()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Direct Blazor staffing proof {suffix}",
+            objective: "Build a working Blazor Web App with browser-visible interactions.");
+        var definition = BuildBlazorGovernedLaunchPlanningDefinition(projectId);
+        var productOwnerRoleId = definition.Roles.Single(item => item.Key == "product-owner").Id!.Value;
+        var deliveryManagerRoleId = definition.Roles.Single(item => item.Key == "delivery-manager").Id!.Value;
+        var leadEngineerRoleId = definition.Roles.Single(item => item.Key == "lead-engineer").Id!.Value;
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = $"Direct Blazor app run {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Build a small Blazor Web App and validate it with dotnet build, dotnet run, and browser proof."
+        });
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetRunDetailsAsync(runResult.Value);
+        Assert.All(details.Assignments, assignment => Assert.False(assignment.IsCapabilityGap));
+        var assignmentsByRole = details.Assignments.ToDictionary(item => item.RoleRequirementId);
+        Assert.Equal("Blazor Application Developer", assignmentsByRole[leadEngineerRoleId].DisplayName);
+        Assert.DoesNotContain(assignmentsByRole[productOwnerRoleId].DisplayName, TechnicalImplementationAgentNames);
+        Assert.DoesNotContain(assignmentsByRole[deliveryManagerRoleId].DisplayName, TechnicalImplementationAgentNames);
+
+        var stepRun = Assert.Single(details.StepRuns);
+        Assert.Equal("Blazor Application Developer", stepRun.CurrentExecutorName);
+        Assert.Equal(ProcessCapabilityGapSeverity.None, stepRun.CapabilityGapSeverity);
+
+        var run = await processesService.GetRunAsync(runResult.Value);
+        Assert.NotNull(run);
+        Assert.Equal(0, run!.CapabilityGapCount);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_uses_project_structure_context_for_generic_implementation_role()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Project structure launch proof {suffix}",
+            objective: "Deliver the requested application from the project structure.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build interactive app",
+                "Implementation",
+                "Build a small Blazor Web App under C:\\programovani\\dotnet\\StructuredLaunchProof. Validate dotnet build, dotnet run, and browser-visible behavior.",
+                null));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Generic app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var role = Assert.Single(details!.Roles);
+        Assert.True(role.SelectedCandidateId.HasValue);
+        var selectedCandidate = Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
+        var workspaceAnalyst = Assert.Single(role.Candidates, item => string.Equals(item.DisplayName, "Programming Workspace Analyst", StringComparison.Ordinal));
+        var qaObserver = Assert.Single(role.Candidates, item => string.Equals(item.DisplayName, "Delivery QA Observer", StringComparison.Ordinal));
+
+        Assert.Equal("Blazor Application Developer", selectedCandidate.DisplayName);
+        Assert.True(selectedCandidate.Score > workspaceAnalyst.Score);
+        Assert.True(selectedCandidate.Score > qaObserver.Score);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_infers_project_structure_context_from_single_process_link()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Linked process launch proof {suffix}",
+            objective: "Use the project structure target when a process is launched from the process workspace.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build neighborhood tool",
+                "Implementation target",
+                "Build a small application under C:\\programovani\\dotnet\\LinkedProcessLaunchProof and validate it end to end.",
+                null));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var processNodeKey = $"process-definition:{saveResult.Value:D}";
+        await workbenchService.LinkObjectsAsync(projectId, workItem.Id, processNodeKey, ProjectObjectLinkKind.Uses);
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Linked app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Created from the process workspace.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+        Assert.True(ProcessProjectStructureContextFormatter.TryParse(details!.TriggerReason, out var parsedContext));
+        Assert.NotNull(parsedContext);
+        Assert.Equal(projectId, parsedContext!.ProjectId);
+        Assert.Equal(processNodeKey, parsedContext.NodeId);
+        Assert.Equal(workItem.Id, parsedContext.ParentNodeId);
+        Assert.Equal(workItem.Title, parsedContext.ParentNodeTitle);
+        Assert.Contains("Project structure target", details.TriggerReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_reuses_open_project_structure_launch_plan_for_same_context()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Project structure retry launch proof {suffix}",
+            objective: "Use a pending project-structure launch plan when the same start request is retried.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build reusable launch target",
+                "Implementation target",
+                "Build a small application under C:\\programovani\\dotnet\\ReusableLaunchProof and validate it end to end.",
+                null));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var request = new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Reusable app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "project-structure"
+        };
+
+        var firstLaunchResult = await processesService.CreateLaunchPlanAsync(request);
+        Assert.True(firstLaunchResult.IsSuccess, string.Join(" | ", firstLaunchResult.Errors.Select(error => error.Message)));
+
+        var retryLaunchResult = await processesService.CreateLaunchPlanAsync(request);
+        Assert.True(retryLaunchResult.IsSuccess, string.Join(" | ", retryLaunchResult.Errors.Select(error => error.Message)));
+
+        Assert.Equal(firstLaunchResult.Value, retryLaunchResult.Value);
+
+        var launchPlans = await processesService.ListLaunchPlansAsync(saveResult.Value, projectId);
+        Assert.Single(launchPlans, item => item.Name == request.LaunchName);
+    }
+
+    private static readonly string[] TechnicalImplementationAgentNames =
+    [
+        "Blazor Application Developer",
+        ".NET Application Developer",
+        "JavaScript Application Developer",
+        "Programming Workspace Analyst"
+    ];
+
     private static LaunchPlanningDefinitionFixture BuildLaunchPlanningDefinition(Guid projectId)
     {
         var builderRoleId = Guid.NewGuid();
         var reviewerRoleId = Guid.NewGuid();
         var buildStepId = Guid.NewGuid();
 
-        const string builderRoleName = "Calculator builder agent";
-        const string reviewerRoleName = "Calculator reviewer agent";
+        const string builderRoleName = "Application builder agent";
+        const string reviewerRoleName = "Application reviewer agent";
 
         return new LaunchPlanningDefinitionFixture(
             new ProcessDefinitionEditorModel
             {
                 ProjectId = projectId,
                 Name = "Launch planning proof process",
-                Summary = "Creates a launch plan for a simple calculator delivery.",
+                Summary = "Creates a launch plan for a simple app delivery.",
                 ValueStatement = "Launch planning must resolve AI candidates before approval starts.",
                 CustomerName = "Integration proof customer",
                 OwnerName = "Integration proof owner",
@@ -482,9 +808,9 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     new ProcessRoleEditorModel
                     {
                         Id = builderRoleId,
-                        Key = "calculator-builder-ai",
+                        Key = "application-builder-ai",
                         DisplayName = builderRoleName,
-                        Purpose = "Generate the calculator delivery.",
+                        Purpose = "Generate the app delivery.",
                         StaffingIntent = "Technical AI builder.",
                         PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
                         PreferredExecutorKind = "AI agent",
@@ -493,9 +819,9 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     new ProcessRoleEditorModel
                     {
                         Id = reviewerRoleId,
-                        Key = "calculator-reviewer-ai",
+                        Key = "application-reviewer-ai",
                         DisplayName = reviewerRoleName,
-                        Purpose = "Review the calculator delivery.",
+                        Purpose = "Review the app delivery.",
                         StaffingIntent = "Technical AI reviewer.",
                         PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
                         PreferredExecutorKind = "AI agent",
@@ -515,14 +841,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     new ProcessStepEditorModel
                     {
                         Id = buildStepId,
-                        Key = "build-calculator",
-                        Title = "Build calculator",
+                        Key = "build-app",
+                        Title = "Build app",
                         StepKind = ProcessStepKind.Start,
-                        InputContractSummary = "Simple calculator specification.",
-                        OutputContractSummary = "Calculator delivery prepared for review.",
+                        InputContractSummary = "Simple app specification.",
+                        OutputContractSummary = "App delivery prepared for review.",
                         EvidenceContractSummary = "Generated assets are captured.",
                         DecisionRightsSummary = "Builder completes deterministic generation.",
-                        ExceptionPolicySummary = "Fail when the calculator delivery is missing.",
+                        ExceptionPolicySummary = "Fail when the app delivery is missing.",
                         TargetLeadHours = 1,
                         CanvasX = 180,
                         CanvasY = 180,
@@ -537,13 +863,13 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     },
                     new ProcessStepEditorModel
                     {
-                        Key = "review-calculator",
-                        Title = "Review calculator",
+                        Key = "review-app",
+                        Title = "Review app",
                         StepKind = ProcessStepKind.Review,
-                        InputContractSummary = "Generated calculator delivery.",
-                        OutputContractSummary = "Validated calculator delivery.",
+                        InputContractSummary = "Generated app delivery.",
+                        OutputContractSummary = "Validated app delivery.",
                         EvidenceContractSummary = "Review evidence is captured.",
-                        DecisionRightsSummary = "Reviewer confirms calculator readiness.",
+                        DecisionRightsSummary = "Reviewer confirms app readiness.",
                         ExceptionPolicySummary = "Do not close without review evidence.",
                         TargetLeadHours = 1,
                         Dependencies =
@@ -694,13 +1020,234 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         };
     }
 
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
+    private static ProcessDefinitionEditorModel BuildBlazorLaunchPlanningDefinition(Guid projectId)
+    {
+        var leadEngineerRoleId = Guid.NewGuid();
+        var buildStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Blazor launch planning proof process",
+            Summary = "Prefers a Blazor specialist when the requested app delivery is explicitly Blazor.",
+            ValueStatement = "Technology-specific app delivery must route to the most relevant specialist without hardcoding a sample domain.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "Role matching stays generic and technology-aware.",
+            ChangeSummary = "Blazor specialist launch planning integration proof.",
+            ConstitutionRuleSummary = "Do not route Blazor implementation to a broad analyst when a Blazor specialist is available.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = leadEngineerRoleId,
+                    Key = "lead-engineer",
+                    DisplayName = "Lead engineer",
+                    Purpose = "Build a small Blazor Web App with visible interactive behavior.",
+                    StaffingIntent = "Select a Blazor-capable AI implementation specialist with .NET build, test, run, and browser validation capability.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = buildStepId,
+                    Key = "build-blazor-app",
+                    Title = "Build Blazor app",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Blazor app delivery request.",
+                    OutputContractSummary = "Working Blazor app prepared with validation evidence.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected AI resource owns implementation.",
+                    ExceptionPolicySummary = "Fail when a less relevant generalist is selected ahead of a Blazor specialist.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = leadEngineerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildBlazorGovernedLaunchPlanningDefinition(Guid projectId)
+    {
+        var productOwnerRoleId = Guid.NewGuid();
+        var deliveryManagerRoleId = Guid.NewGuid();
+        var leadEngineerRoleId = Guid.NewGuid();
+        var buildStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Blazor governed launch planning proof process",
+            Summary = "Keeps technology specialists on implementation roles while coordination roles use role-fit staffing.",
+            ValueStatement = "Technology context must inform app-build staffing without collapsing every governance role onto the same specialist.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "Role matching separates role identity from work-item technology context.",
+            ChangeSummary = "Blazor governed launch planning integration proof.",
+            ConstitutionRuleSummary = "Do not select a technical implementation specialist for product ownership or delivery management solely because the work item is technical.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = productOwnerRoleId,
+                    Key = "product-owner",
+                    DisplayName = "Product owner",
+                    Purpose = "Convert business intent into acceptance boundaries, priority decisions, and value trade-offs.",
+                    StaffingIntent = "Select a scope and stakeholder decision owner, not an implementation specialist.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.CustomerContact,
+                    PreferredExecutorKind = "person-or-agent",
+                    DefaultAllocationPercent = 35
+                },
+                new ProcessRoleEditorModel
+                {
+                    Id = deliveryManagerRoleId,
+                    Key = "delivery-manager",
+                    DisplayName = "Delivery manager",
+                    Purpose = "Keep delivery feasible, staffed, sequenced, and escalation-ready.",
+                    StaffingIntent = "Select a delivery-side coordinator with governance and readiness focus.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person-or-agent",
+                    DefaultAllocationPercent = 50
+                },
+                new ProcessRoleEditorModel
+                {
+                    Id = leadEngineerRoleId,
+                    Key = "lead-engineer",
+                    DisplayName = "Lead engineer",
+                    Purpose = "Build a small Blazor Web App with visible interactive behavior.",
+                    StaffingIntent = "Select a Blazor-capable AI implementation specialist with .NET build, test, run, and browser validation capability.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = buildStepId,
+                    Key = "build-blazor-app",
+                    Title = "Build Blazor app",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Blazor app delivery request.",
+                    OutputContractSummary = "Working Blazor app prepared with validation evidence.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Product owner owns scope, delivery manager owns sequencing, and lead engineer owns implementation.",
+                    ExceptionPolicySummary = "Fail when technology context overrides role accountability.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = productOwnerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Approver
+                        },
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = deliveryManagerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Approver
+                        },
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = leadEngineerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildGenericImplementationLaunchPlanningDefinition(Guid projectId)
+    {
+        var leadEngineerRoleId = Guid.NewGuid();
+        var buildStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Generic implementation launch planning proof process",
+            Summary = "Routes a generic implementation role from the project-structure delivery context.",
+            ValueStatement = "Launch planning must use project-structure work context instead of only role titles.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "Role matching stays generic and context-aware.",
+            ChangeSummary = "Project-structure launch context integration proof.",
+            ConstitutionRuleSummary = "Do not ignore the selected work item when staffing generic implementation roles.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = leadEngineerRoleId,
+                    Key = "lead-engineer",
+                    DisplayName = "Lead engineer",
+                    Purpose = "Build the requested application.",
+                    StaffingIntent = "Select an AI implementation specialist with build, run, and browser validation capability.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = buildStepId,
+                    Key = "build-requested-app",
+                    Title = "Build requested app",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Project-structure work item describes the requested app.",
+                    OutputContractSummary = "Working app prepared with validation evidence.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected AI resource owns implementation.",
+                    ExceptionPolicySummary = "Fail when project-structure context is ignored.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = leadEngineerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static async Task<Guid> CreateProjectAsync(
+        ProjectsService projectsService,
+        string name,
+        string? description = null,
+        string? objective = null)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
         {
             Name = name,
-            Description = $"{name} description",
-            Objective = $"{name} objective",
+            Description = description ?? $"{name} description",
+            Objective = objective ?? $"{name} objective",
             CurrentPhase = "Execution"
         });
 
@@ -807,6 +1354,24 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         });
 
         Assert.True(profile.IsSuccess, string.Join(" | ", profile.Errors.Select(error => error.Message)));
+    }
+
+    private static ProcessLaunchCandidateViewModel GetSelectedCandidate(
+        ProcessLaunchPlanDetails details,
+        string roleName)
+    {
+        var role = Assert.Single(details.Roles, item => string.Equals(item.DisplayName, roleName, StringComparison.Ordinal));
+        Assert.True(role.SelectedCandidateId.HasValue);
+        return Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
+    }
+
+    private static ProcessLaunchCandidateViewModel GetCandidate(
+        ProcessLaunchPlanDetails details,
+        string roleName,
+        string candidateName)
+    {
+        var role = Assert.Single(details.Roles, item => string.Equals(item.DisplayName, roleName, StringComparison.Ordinal));
+        return Assert.Single(role.Candidates, item => string.Equals(item.DisplayName, candidateName, StringComparison.Ordinal));
     }
 
     private sealed record LaunchPlanningDefinitionFixture(

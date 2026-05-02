@@ -15,7 +15,7 @@ public sealed class WorkspaceFileServiceTests
             var service = new WorkspaceFileService(workspaceRoot);
 
             var result = service.WriteTextFile(
-                "showcases/blazor-ssr-calculator/app/SimpleCalculatorApp/Program.cs",
+                "showcases/blazor-ssr-workflow/app/SimpleWorkflowApp/Program.cs",
                 "var builder = WebApplication.CreateBuilder(args);");
 
             Assert.True(result.Succeeded);
@@ -25,7 +25,7 @@ public sealed class WorkspaceFileServiceTests
                     string.Equals(item.Zone, "generated-output", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(
                         item.RelativePath,
-                        "showcases/blazor-ssr-calculator/app/SimpleCalculatorApp/Program.cs",
+                        "showcases/blazor-ssr-workflow/app/SimpleWorkflowApp/Program.cs",
                         StringComparison.OrdinalIgnoreCase));
         }
         finally

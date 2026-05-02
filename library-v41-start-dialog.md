@@ -1,0 +1,236 @@
+- main [ref=e517]:
+  - group [ref=e518]:
+    - generic "Workspace navigation" [ref=e519] [cursor=pointer]
+  - generic [ref=e520]:
+    - generic [ref=e524]:
+      - button "Dashboard" [ref=e526]:
+        - generic [ref=e527]: Dashboard
+        - generic [ref=e529]: push_pin
+      - button "Validation v40 - Clinic Room Turnover Board · Structure" [ref=e531]:
+        - generic [ref=e532]: Validation v40 - Clinic Room Turnover Board · Structure
+      - button "Projects" [ref=e534]:
+        - generic [ref=e535]: Projects
+      - button "Validation v40 - Community Tool Checkout · Structure" [ref=e537]:
+        - generic [ref=e538]: Validation v40 - Community Tool Checkout · Structure
+      - button "Projects" [ref=e540]:
+        - generic [ref=e541]: Projects
+      - button "Validation v41 - Library Study Room Planner · Structure" [ref=e543]:
+        - generic [ref=e544]: Validation v41 - Library Study Room Planner · Structure
+    - generic [ref=e546]:
+      - generic [ref=e547]:
+        - generic [ref=e548]: Active database
+        - generic [ref=e549]: PostgreSQL workspace
+        - generic [ref=e550]: PostgreSQL
+        - button "Show db details" [ref=e552] [cursor=pointer]:
+          - generic [ref=e553]: "?"
+      - button "Switch database" [ref=e554]:
+        - generic [ref=e555]: Switch database
+      - generic [ref=e556]: Interactive Server
+      - generic [ref=e557]: Live items 3
+      - generic [ref=e558]: Tabs 6
+  - generic [ref=e721]:
+    - button "tune" [ref=e722]
+    - generic [ref=e723]:
+      - generic [ref=e725]:
+        - paragraph [ref=e726]: Workbench
+        - heading "Validation v41 - Library Study Room Planner structure" [level=1] [ref=e727]
+      - generic [ref=e728]:
+        - generic [ref=e730]:
+          - generic [ref=e731]:
+            - paragraph [ref=e732]: Structure canvas
+            - generic [ref=e733]:
+              - generic [ref=e734]:
+                - heading "Validation v41 - Library Study Room Planner workbench" [level=2] [ref=e736]
+                - paragraph [ref=e737]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e738]:
+                - generic [ref=e739]:
+                  - generic [ref=e740]: Nodes
+                  - strong [ref=e741]: "3"
+                - generic [ref=e742]:
+                  - generic [ref=e743]: Links
+                  - strong [ref=e744]: "2"
+                - generic [ref=e745]:
+                  - generic [ref=e746]: Selection
+                  - strong [ref=e747]: "1"
+          - generic [ref=e749]:
+            - generic [ref=e750]:
+              - generic [ref=e751]:
+                - button "Open quick create actions" [ref=e752] [cursor=pointer]:
+                  - generic [ref=e753]: add
+                  - generic [ref=e754]: Open quick create actions
+                - button "Focus root" [ref=e755] [cursor=pointer]:
+                  - generic [ref=e756]: center_focus_strong
+                  - generic [ref=e757]: Focus root
+                - generic [ref=e758]:
+                  - generic [ref=e759]:
+                    - button "Select" [ref=e760] [cursor=pointer]
+                    - button "Dependency" [ref=e763] [cursor=pointer]
+                    - button "Delete" [ref=e766] [cursor=pointer]
+                  - button "Inspector" [ref=e769] [cursor=pointer]:
+                    - generic [ref=e770]: visibility
+                    - generic [ref=e771]: visibility
+                  - button "Health" [ref=e772] [cursor=pointer]:
+                    - generic [ref=e773]: assessment
+                    - generic [ref=e774]: assessment
+                  - button "Blocks" [ref=e775] [cursor=pointer]:
+                    - generic [ref=e776]: dashboard
+                    - generic [ref=e777]: dashboard
+                  - button "Signals" [ref=e778] [cursor=pointer]:
+                    - generic [ref=e779]: notifications_active
+                    - generic [ref=e780]: notifications active
+                  - button "Agents" [ref=e781] [cursor=pointer]:
+                    - generic [ref=e782]: smart_toy
+                    - generic [ref=e783]: smart toy
+                  - button "Recompose" [disabled] [ref=e784]:
+                    - generic [ref=e785]: Recompose
+              - generic [ref=e786]:
+                - button "Fit canvas" [ref=e787] [cursor=pointer]:
+                  - generic [ref=e788]: fit_screen
+                  - generic [ref=e789]: Fit canvas
+                - button "Toggle maximize" [ref=e790] [cursor=pointer]:
+                  - generic [ref=e791]: open_in_full
+                  - generic [ref=e792]: Maximize canvas
+                - button "Toggle minimap" [ref=e793] [cursor=pointer]:
+                  - generic [ref=e794]: map
+                  - generic [ref=e795]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e796] [cursor=pointer]:
+                  - generic [ref=e797]: monitor_heart
+                  - generic [ref=e798]: Toggle diagnostics
+                - button "Toggle help" [ref=e799] [cursor=pointer]:
+                  - generic [ref=e800]: help
+                  - generic [ref=e801]: Canvas help
+                - button "Toggle settings" [ref=e802] [cursor=pointer]:
+                  - generic [ref=e803]: settings
+                  - generic [ref=e804]: Canvas settings
+                - generic [ref=e805]:
+                  - button "Zoom out" [ref=e806] [cursor=pointer]:
+                    - generic [ref=e807]: remove
+                    - generic [ref=e808]: Zoom out
+                  - slider "Canvas zoom" [ref=e809]: "100"
+                  - button "Zoom in" [ref=e810] [cursor=pointer]:
+                    - generic [ref=e811]: add
+                    - generic [ref=e812]: Zoom in
+                  - generic [ref=e813]: 100%
+            - generic [ref=e814]:
+              - generic "Canvas workbench" [ref=e815]:
+                - generic [ref=e816]:
+                  - generic:
+                    - generic "Multi-team software delivery and release governance Input" [ref=e1368]
+                    - generic "Multi-team software delivery and release governance Output" [ref=e1369]
+                    - generic "Multi-team software delivery and release governance Input" [ref=e1370]
+                    - generic "Multi-team software delivery and release governance Output" [ref=e1371]
+              - generic [ref=e822]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure standard blocks toolbox" [ref=e1221]:
+                - generic [ref=e1222]:
+                  - generic [ref=e1223]:
+                    - paragraph [ref=e1224]: Standard blocks Toolbox
+                    - heading "Project structure toolbox" [level=3] [ref=e1225]
+                    - paragraph [ref=e1226]: Search the shared block catalog, drag the window where you need it, and keep typed creation close to the canvas.
+                  - generic [ref=e1227]:
+                    - button "Minimize window" [ref=e1228]
+                    - button "Restart window position and size" [disabled] [ref=e1230]
+                    - button "Hide window" [ref=e1232]
+                - region "Project structure standard blocks toolbox" [ref=e1235]:
+                  - generic [ref=e1236]:
+                    - generic [ref=e1237]: Multi-team software delivery and release governance
+                    - generic [ref=e1238]: 87 items
+                  - searchbox "Search blocks, files, runtime, or infrastructure" [ref=e1239]
+                  - generic [ref=e1242]:
+                    - button "Project structure Standard blocks 87" [ref=e1243] [cursor=pointer]
+                    - generic [ref=e1248]
+              - region "Project structure selection panel" [ref=e1080]:
+                - generic [ref=e1081]:
+                  - generic [ref=e1082]:
+                    - paragraph [ref=e1083]: Selection panel
+                    - heading "Multi-team software delivery and release governance" [level=3] [ref=e1330]
+                    - paragraph [ref=e1085]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e1086]:
+                    - button "Minimize window" [ref=e1087]
+                    - button "Restart window position and size" [disabled] [ref=e1089]
+                    - button "Hide window" [ref=e1091]
+                - generic [ref=e1094]:
+                  - generic [ref=e1095]:
+                    - paragraph [ref=e1096]: Process definition
+                    - heading "Multi-team software delivery and release governance" [level=3] [ref=e1331]
+                    - paragraph [ref=e1098]: Published · 8 role(s) · 9 step(s)
+                    - generic [ref=e1099]
+                    - generic [ref=e1104]
+                  - generic [ref=e1111]:
+                    - paragraph [ref=e1112]: Node actions
+                    - generic [ref=e1113]
+                  - generic [ref=e1146]:
+                    - paragraph [ref=e1147]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e1148]
+                    - paragraph [ref=e1149]
+                    - generic [ref=e1151]
+                    - button "Open standard blocks" [ref=e1157]
+                  - group [ref=e1159]:
+                    - generic "Advanced details Show advanced details help" [ref=e1160]
+              - generic:
+                - generic: Multi-team software delivery and release governance is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 3 canvas nodes
+                  - list:
+                    - listitem: Multi-team software delivery and release governancePublished · 8 role(s) · 9 step(s) • Status Published • Branch Runs • 3 annotations
+                    - listitem: Build LibraryStudyRoomPlannerGeneric Blazor app delivery validation • Status Draft • 3 annotations
+                    - listitem: Validation v41 - Library Study Room PlannerBuild a small Blazor app under C:\programovani\dotnet\LibraryStudyRoomPlanner for rooms, reservations, occupancy, cleanup status, equipment needs, and upcoming availability. • Status Active • 3 annotations
+        - generic [ref=e1171]:
+          - generic [ref=e1173]:
+            - paragraph [ref=e1174]: Outline
+            - heading "Project object index" [level=5] [ref=e1175]
+            - tree "Project object index" [ref=e1177]:
+              - treeitem "Validation v41 - Library Study Room Planner Active" [ref=e1178]:
+                - button "Validation v41 - Library Study Room Planner Active" [ref=e1181]:
+                  - generic [ref=e1183]: folder
+                  - generic [ref=e1184]: Validation v41 - Library Study Room Planner
+                  - generic [ref=e1185]: Active
+              - treeitem "Build LibraryStudyRoomPlanner Draft" [ref=e1186]:
+                - button "Build LibraryStudyRoomPlanner Draft" [ref=e1189]:
+                  - generic [ref=e1191]: task
+                  - generic [ref=e1192]: Build LibraryStudyRoomPlanner
+                  - generic [ref=e1193]: Draft
+              - treeitem "Multi-team software delivery and release governance Published" [selected] [ref=e1194]:
+                - button "Multi-team software delivery and release governance Published" [ref=e1197]:
+                  - generic [ref=e1199]: grid_view
+                  - generic [ref=e1200]: Multi-team software delivery and release governance
+                  - generic [ref=e1201]: Published
+          - generic [ref=e1203]:
+            - paragraph [ref=e1204]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e1205]
+            - generic [ref=e1206]:
+              - generic [ref=e1207]:
+                - paragraph [ref=e1208]: Total nodes
+                - paragraph [ref=e1209]: "3"
+              - generic [ref=e1210]:
+                - paragraph [ref=e1211]: Total links
+                - paragraph [ref=e1212]: "2"
+              - generic [ref=e1213]:
+                - paragraph [ref=e1214]: Selected
+                - paragraph [ref=e1215]: "1"
+            - paragraph [ref=e1216]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+    - dialog "Start Multi-team software delivery and release governance" [ref=e1373]:
+      - generic [ref=e1374]:
+        - generic [ref=e1375]:
+          - generic [ref=e1376]:
+            - paragraph [ref=e1377]: Process start
+            - heading "Start Multi-team software delivery and release governance" [level=5] [ref=e1378]
+            - paragraph [ref=e1379]: This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing.
+          - generic [ref=e1380]:
+            - button "Cancel" [ref=e1381]:
+              - generic [ref=e1382]: Cancel
+            - button "Continue" [ref=e1383]:
+              - generic [ref=e1384]: Continue
+        - generic [ref=e1386]:
+          - generic [ref=e1388]:
+            - paragraph [ref=e1389]: Execution target
+            - paragraph [ref=e1390]: Build LibraryStudyRoomPlanner
+            - paragraph [ref=e1391]: "Target node id: custom:82d9cd4baca149fa94387d3c4fbf1abf"
+            - paragraph [ref=e1392]: "Resolved parent node id: custom:82d9cd4baca149fa94387d3c4fbf1abf"
+            - paragraph [ref=e1393]: "Selected process node id: process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0"
+            - paragraph [ref=e1394]: "Project id: 3e81f2af-83ad-4c22-a9d0-dcf6c6cdba01"
+          - generic [ref=e1396]:
+            - paragraph [ref=e1397]: What happens next
+            - paragraph [ref=e1398]: The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context.
+  - group [ref=e565]:
+    - generic "Workbench utilities" [ref=e566] [cursor=pointer]

@@ -1,0 +1,164 @@
+- main [ref=e393]:
+  - group [ref=e394]:
+    - generic "Workspace navigation" [ref=e395] [cursor=pointer]
+  - generic [ref=e396]:
+    - generic [ref=e399]:
+      - generic [ref=e400]:
+        - button "Dashboard" [ref=e402]:
+          - generic [ref=e403]: Dashboard
+          - generic [ref=e405]: push_pin
+        - button "Validation v80 - Trail Cleanup Volunteer Scheduler · Structure" [ref=e407]:
+          - generic [ref=e408]: Validation v80 - Trail Cleanup Volunteer Scheduler · Structure
+        - button "Projects" [ref=e410]:
+          - generic [ref=e411]: Projects
+        - button "Validation v80 - Art Studio Kiln Firing Board · Structure" [ref=e413]:
+          - generic [ref=e414]: Validation v80 - Art Studio Kiln Firing Board · Structure
+        - button "Projects" [ref=e416]:
+          - generic [ref=e417]: Projects
+        - button "Projects" [ref=e419]:
+          - generic [ref=e420]: Projects
+      - generic [ref=e421]:
+        - textbox "Search tabs" [ref=e422]
+        - group [ref=e423]:
+          - generic "+14" [ref=e424] [cursor=pointer]
+    - generic [ref=e426]:
+      - generic [ref=e427]:
+        - generic [ref=e428]: Active database
+        - generic [ref=e429]: PostgreSQL workspace
+        - generic [ref=e430]: PostgreSQL
+        - button "Show db details" [ref=e432] [cursor=pointer]:
+          - generic [ref=e433]: "?"
+      - button "Switch database" [ref=e434]:
+        - generic [ref=e435]: Switch database
+      - generic [ref=e436]: Interactive Server
+      - generic [ref=e437]: Live items 9
+      - generic [ref=e438]: Tabs 20
+  - generic [ref=e441]:
+    - button "tune" [ref=e442]
+    - generic [ref=e443]:
+      - generic [ref=e445]:
+        - paragraph [ref=e446]: Workbench
+        - heading "Validation v85 - Neighborhood Snow Shovel Roster structure" [level=1] [ref=e447]
+      - generic [ref=e448]:
+        - generic [ref=e450]:
+          - generic [ref=e451]:
+            - paragraph [ref=e452]: Structure canvas
+            - generic [ref=e453]:
+              - generic [ref=e454]:
+                - heading "Validation v85 - Neighborhood Snow Shovel Roster workbench" [level=2] [ref=e456]
+                - paragraph [ref=e457]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e458]:
+                - generic [ref=e459]:
+                  - generic [ref=e460]: Nodes
+                  - strong [ref=e461]: "3"
+                - generic [ref=e462]:
+                  - generic [ref=e463]: Links
+                  - strong [ref=e464]: "2"
+                - generic [ref=e465]:
+                  - generic [ref=e466]: Selection
+                  - strong [ref=e467]: "1"
+          - generic [ref=e469]:
+            - generic [ref=e470]:
+              - generic [ref=e471]:
+                - button "Open quick create actions" [ref=e472] [cursor=pointer]:
+                  - generic [ref=e473]: add
+                  - generic [ref=e474]: Open quick create actions
+                - button "Focus root" [ref=e475] [cursor=pointer]:
+                  - generic [ref=e476]: center_focus_strong
+                  - generic [ref=e477]: Focus root
+                - generic [ref=e478]:
+                  - generic [ref=e479]
+                  - button "Inspector" [ref=e489] [cursor=pointer]
+                  - button "Health" [ref=e492] [cursor=pointer]
+                  - button "Blocks" [ref=e495] [cursor=pointer]
+                  - button "Signals" [ref=e498] [cursor=pointer]
+                  - button "Agents" [ref=e501] [cursor=pointer]
+                  - button "Recompose" [disabled] [ref=e504]
+              - generic [ref=e506]:
+                - button "Fit canvas" [ref=e507] [cursor=pointer]:
+                  - generic [ref=e508]: fit_screen
+                  - generic [ref=e509]: Fit canvas
+                - button "Toggle maximize" [ref=e510] [cursor=pointer]:
+                  - generic [ref=e511]: open_in_full
+                  - generic [ref=e512]: Maximize canvas
+                - button "Toggle minimap" [ref=e513] [cursor=pointer]:
+                  - generic [ref=e514]: map
+                  - generic [ref=e515]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e516] [cursor=pointer]:
+                  - generic [ref=e517]: monitor_heart
+                  - generic [ref=e518]: Toggle diagnostics
+                - button "Toggle help" [ref=e519] [cursor=pointer]:
+                  - generic [ref=e520]: help
+                  - generic [ref=e521]: Canvas help
+                - button "Toggle settings" [ref=e522] [cursor=pointer]:
+                  - generic [ref=e523]: settings
+                  - generic [ref=e524]: Canvas settings
+                - generic [ref=e525]:
+                  - button "Zoom out" [ref=e526] [cursor=pointer]
+                  - slider "Canvas zoom" [ref=e529]: "100"
+                  - button "Zoom in" [ref=e530] [cursor=pointer]
+                  - generic [ref=e533]: 100%
+            - generic [ref=e534]:
+              - generic "Canvas workbench" [ref=e535]:
+                - generic [ref=e536]:
+                  - generic
+              - generic [ref=e542]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure standard blocks toolbox" [ref=e543]:
+                - generic [ref=e544]:
+                  - generic [ref=e545]
+                  - generic [ref=e549]
+                - region "Project structure standard blocks toolbox" [ref=e557]:
+                  - generic [ref=e558]
+                  - searchbox "Search blocks, files, runtime, or infrastructure" [ref=e561]
+                  - generic [ref=e564]
+              - region "Project structure selection panel" [ref=e652]:
+                - generic [ref=e653]:
+                  - generic [ref=e654]
+                  - generic [ref=e658]
+                - generic [ref=e666]:
+                  - generic [ref=e667]
+                  - generic [ref=e683]
+                  - generic [ref=e742]
+                  - group [ref=e755]
+              - generic:
+                - generic: Multi-team software delivery and release governance is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 3 canvas nodes
+                  - list
+        - generic [ref=e767]:
+          - generic [ref=e769]:
+            - paragraph [ref=e770]: Outline
+            - heading "Project object index" [level=5] [ref=e771]
+            - tree "Project object index" [ref=e773]:
+              - treeitem "Validation v85 - Neighborhood Snow Shovel Roster Draft" [ref=e774]:
+                - button "Validation v85 - Neighborhood Snow Shovel Roster Draft" [ref=e777]:
+                  - generic [ref=e779]: folder
+                  - generic [ref=e780]: Validation v85 - Neighborhood Snow Shovel Roster
+                  - generic [ref=e781]: Draft
+              - treeitem "Multi-team software delivery and release governance Published" [selected] [ref=e782]:
+                - button "Multi-team software delivery and release governance Published" [ref=e785]:
+                  - generic [ref=e787]: grid_view
+                  - generic [ref=e788]: Multi-team software delivery and release governance
+                  - generic [ref=e789]: Published
+              - treeitem "NeighborhoodSnowShovelRoster product root Draft" [ref=e790]:
+                - button "NeighborhoodSnowShovelRoster product root Draft" [ref=e793]:
+                  - generic [ref=e795]: account_tree
+                  - generic [ref=e796]: NeighborhoodSnowShovelRoster product root
+                  - generic [ref=e797]: Draft
+          - generic [ref=e799]:
+            - paragraph [ref=e800]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e801]
+            - generic [ref=e802]:
+              - generic [ref=e803]:
+                - paragraph [ref=e804]: Total nodes
+                - paragraph [ref=e805]: "3"
+              - generic [ref=e806]:
+                - paragraph [ref=e807]: Total links
+                - paragraph [ref=e808]: "2"
+              - generic [ref=e809]:
+                - paragraph [ref=e810]: Selected
+                - paragraph [ref=e811]: "1"
+            - paragraph [ref=e812]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+  - group [ref=e813]:
+    - generic "Workbench utilities" [ref=e814] [cursor=pointer]

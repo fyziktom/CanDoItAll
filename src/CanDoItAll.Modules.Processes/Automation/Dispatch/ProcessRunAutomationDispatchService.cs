@@ -47,6 +47,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private const int DefaultMaxExecutionAttempts = 3;
     private const int ConcreteImplementationMaxExecutionAttempts = 5;
     private const int MaxBrowserSnapshotInspectionCharacters = 262_144;
+    private static readonly TimeSpan ProviderFallbackHealthProbeTimeout = TimeSpan.FromSeconds(15);
     private const string ProcessMockSessionFlagPropertyName = "processMockAgent";
     private const string ProcessMockRoleKeyPropertyName = "roleKey";
     private const string ProcessMockArtifactRootPropertyName = "artifactRoot";
@@ -66,7 +67,10 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         @"\b(?:workspace|browser|project_structure)_[a-z0-9_]+\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex WorkspacePathInToolRequestRegex = new(
-        @"(?<path>[A-Za-z]:\\[^`""'\r\n\s]+|external-target/[^\s`""']+)",
+        @"(?<path>[A-Za-z]:\\[^`""'\r\n\s]+|external-target[\\/][^\s`""']+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex ManagedWorkspacePathRegex = new(
+        @"(?<path>(?:artifacts|output|integration-map|data)/(?:scopes/[^\s`""']+|[^\s`""']+))",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly string[] NegatedRequiredToolPhrases =
     [
@@ -202,5 +206,11 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         string Status,
         string Notes,
         string MetadataJson);
+
+    private readonly record struct ProjectStructureExternalTargetHint(
+        string AbsolutePath,
+        string MappedAlias,
+        string SourceNodeId,
+        string SourceNodeTitle);
 
 }

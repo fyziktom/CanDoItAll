@@ -25,7 +25,9 @@ public static class WorkspaceExecutionAuditContext
             run.SchedulerRunId,
             run.MessageId,
             run.ProviderName,
-            run.Model);
+            run.Model,
+            ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run),
+            ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run));
         return new Scope(previous);
     }
 
@@ -41,7 +43,9 @@ public static class WorkspaceExecutionAuditContext
         string SchedulerRunId,
         string MessageId,
         string ProviderName,
-        string Model);
+        string Model,
+        IReadOnlyList<string> AllowedExternalTargetAliases,
+        IReadOnlyList<string> ReadOnlyExternalTargetAliases);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

@@ -9,11 +9,11 @@
   ],
   "ProjectedEnvelopeFacts": {
     "RoleCount": 7,
-    "StepCount": 9,
-    "DependencyCount": 10,
-    "ArtifactExpectationCount": 10,
-    "ArtifactInputCount": 5,
-    "BranchOutcomeCount": 0
+    "StepCount": 16,
+    "DependencyCount": 37,
+    "ArtifactExpectationCount": 18,
+    "ArtifactInputCount": 34,
+    "BranchOutcomeCount": 4
   },
   "SidecarOnlyFields": [
     "Shared versus local resource folders and markdown sidecars remain outside the import envelope.",

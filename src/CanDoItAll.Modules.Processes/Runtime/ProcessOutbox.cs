@@ -111,10 +111,11 @@ public sealed class ProcessOutboxService(
 {
     private const int MaxAttempts = 3;
     private const int DefaultBatchSize = 20;
-    private const string AutomationDispatchCommandKey = "dispatch-run-automation";
+    internal const string AutomationDispatchCommandKey = "dispatch-run-automation";
     private static readonly JsonSerializerOptions PayloadSerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan DefaultLeaseDuration = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan AutomationDispatchLeaseDuration = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan LeaseRenewalHeartbeatInterval = TimeSpan.FromSeconds(5);
 
     public Task<Guid> EnqueueDefinitionSaveAsync(
         AppDbContext dbContext,
@@ -430,6 +431,12 @@ public sealed class ProcessOutboxService(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         Exception? dispatchFailure = null;
+        using var leaseRenewalCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var leaseRenewalTask = RenewLeaseUntilDispatchCompletesAsync(
+            record.Id,
+            record.LeaseToken,
+            record.CommandKey,
+            leaseRenewalCancellation.Token);
         try
         {
             await DispatchAsync(record, cancellationToken);
@@ -437,6 +444,10 @@ public sealed class ProcessOutboxService(
         catch (Exception exception)
         {
             dispatchFailure = exception;
+        }
+        finally
+        {
+            await StopLeaseRenewalAsync(leaseRenewalCancellation, leaseRenewalTask);
         }
 
         now = clock.GetUtcNow();
@@ -563,6 +574,47 @@ public sealed class ProcessOutboxService(
         }
     }
 
+    private async Task RenewLeaseUntilDispatchCompletesAsync(
+        Guid outboxId,
+        string leaseToken,
+        string commandKey,
+        CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(LeaseRenewalHeartbeatInterval, cancellationToken);
+                await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Could not heartbeat-renew process outbox lease for record {OutboxId}. The dispatch will continue and the next heartbeat will retry.",
+                    outboxId);
+            }
+        }
+    }
+
+    private static async Task StopLeaseRenewalAsync(
+        CancellationTokenSource leaseRenewalCancellation,
+        Task leaseRenewalTask)
+    {
+        await leaseRenewalCancellation.CancelAsync();
+        try
+        {
+            await leaseRenewalTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     private async Task<string?> TryClaimRecordAsync(
         Guid outboxId,
         TimeSpan leaseDuration,
@@ -582,13 +634,6 @@ public sealed class ProcessOutboxService(
 
         var claimLeaseDuration = ResolveClaimLeaseDuration(commandKey, leaseDuration);
         var leaseExpiresAtUtc = now.Add(claimLeaseDuration);
-        if (string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal))
-        {
-            logger.LogInformation(
-                "Claiming process automation dispatch outbox record {OutboxId} with lease duration {LeaseDuration}.",
-                outboxId,
-                claimLeaseDuration);
-        }
 
         var updatedRows = dbContext.Database.IsSqlite()
             ? await TryClaimRecordForSqliteAsync(
@@ -609,6 +654,15 @@ public sealed class ProcessOutboxService(
                         .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
                         .SetProperty(item => item.UpdatedAtUtc, now),
                     cancellationToken);
+
+        if (updatedRows > 0 &&
+            string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal))
+        {
+            logger.LogInformation(
+                "Claimed process automation dispatch outbox record {OutboxId} with lease duration {LeaseDuration}.",
+                outboxId,
+                claimLeaseDuration);
+        }
 
         return updatedRows == 0
             ? null
@@ -724,45 +778,96 @@ public sealed class ProcessOutboxService(
 
 public sealed class ProcessOutboxDrainWorker(
     IServiceScopeFactory scopeFactory,
+    ProcessRunRecoveryStartupGate recoveryStartupGate,
     ILogger<ProcessOutboxDrainWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(2);
+    private const int MaxConcurrentDispatches = 8;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        try
+        {
+            await recoveryStartupGate.WaitForStartupRecoveryAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var activeDispatches = new HashSet<Task<int>>();
         while (!stoppingToken.IsCancellationRequested)
         {
-            try
+            await ObserveCompletedDispatchesAsync(activeDispatches);
+
+            if (activeDispatches.Count < MaxConcurrentDispatches)
             {
-                await using var scope = scopeFactory.CreateAsyncScope();
-                var outbox = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
-                var processedCount = await outbox.ProcessPendingAsync(cancellationToken: stoppingToken);
-                if (processedCount == 0)
-                {
-                    await Task.Delay(IdleDelay, stoppingToken);
-                }
+                activeDispatches.Add(ProcessPendingRecordAsync(stoppingToken));
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+
+            if (activeDispatches.Count == 0)
             {
-                return;
+                await Task.Delay(IdleDelay, stoppingToken);
+                continue;
             }
-            catch (Exception exception) when (SqliteWriteCoordination.IsBusy(exception))
+
+            var delayTask = Task.Delay(IdleDelay, stoppingToken);
+            await Task.WhenAny(activeDispatches.Cast<Task>().Append(delayTask));
+        }
+
+        await ObserveCompletedDispatchesAsync(activeDispatches);
+    }
+
+    private async Task<int> ProcessPendingRecordAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var outbox = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+            return await outbox.ProcessPendingAsync(take: 1, cancellationToken: stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return 0;
+        }
+        catch (Exception exception) when (SqliteWriteCoordination.IsBusy(exception))
+        {
+            logger.LogWarning(
+                exception,
+                "ProcessOutboxDrainWorker hit transient SQLite contention. The worker will retry after {FailureBackoff}.",
+                FailureBackoff);
+            await Task.Delay(FailureBackoff, stoppingToken);
+            return 0;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "ProcessOutboxDrainWorker iteration failed. The worker will retry after {FailureBackoff}.",
+                FailureBackoff);
+            await Task.Delay(FailureBackoff, stoppingToken);
+            return 0;
+        }
+    }
+
+    private static async Task ObserveCompletedDispatchesAsync(HashSet<Task<int>> activeDispatches)
+    {
+        foreach (var task in activeDispatches.Where(task => task.IsCompleted).ToArray())
+        {
+            activeDispatches.Remove(task);
+            if (task.IsCanceled)
             {
-                logger.LogWarning(
-                    exception,
-                    "ProcessOutboxDrainWorker hit transient SQLite contention. The worker will retry after {FailureBackoff}.",
-                    FailureBackoff);
-                await Task.Delay(FailureBackoff, stoppingToken);
+                continue;
             }
-            catch (Exception exception)
+
+            if (task.IsFaulted)
             {
-                logger.LogError(
-                    exception,
-                    "ProcessOutboxDrainWorker iteration failed. The worker will retry after {FailureBackoff}.",
-                    FailureBackoff);
-                await Task.Delay(FailureBackoff, stoppingToken);
+                _ = task.Exception;
+                continue;
             }
+
+            await task;
         }
     }
 }

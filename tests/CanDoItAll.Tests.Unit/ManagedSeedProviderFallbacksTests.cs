@@ -46,6 +46,7 @@ public sealed class ManagedSeedProviderFallbacksTests
     [Theory]
     [InlineData("delivery-qa-observer")]
     [InlineData("dotnet-application-developer")]
+    [InlineData("blazor-application-developer")]
     [InlineData("javascript-application-developer")]
     [InlineData("business-strategist")]
     [InlineData("financial-strategist")]

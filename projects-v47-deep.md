@@ -1,0 +1,158 @@
+- generic [active] [ref=e1] [box=0,0,932,919]:
+  - main [ref=e1512] [box=16,12,900,895]:
+    - group [ref=e1513] [box=16,12,900,46]:
+      - generic "Workspace navigation" [ref=e1514] [cursor=pointer] [box=33,25,866,20]
+    - generic [ref=e1515] [box=16,66,900,268]:
+      - generic [ref=e1518] [box=20,66,94,264]:
+        - generic [ref=e1519] [box=20,66,94,190]:
+          - button "Dashboard" [ref=e1521] [box=29,71,85,20]:
+            - generic [ref=e1522] [box=29,73,59,16]: Dashboard
+            - generic [ref=e1524] [box=94,71,20,20]: push_pin
+          - button "Projects" [ref=e1526] [box=29,107,43,16]:
+            - generic [ref=e1527] [box=29,107,43,16]: Projects
+          - button "Projects" [ref=e1529] [box=29,139,43,16]:
+            - generic [ref=e1530] [box=29,139,43,16]: Projects
+          - button "Projects" [ref=e1532] [box=29,171,43,16]:
+            - generic [ref=e1533] [box=29,171,43,16]: Projects
+          - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e1535] [box=29,203,258,16]:
+            - generic [ref=e1536] [box=29,203,258,16]: Validation v43 - Canal Lock Logbook · Structure
+          - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e1538] [box=29,235,293,16]:
+            - generic [ref=e1539] [box=29,235,293,16]: Validation v43 - Community Kiln Scheduler · Structure
+        - generic [ref=e1540] [box=20,264,94,66]:
+          - textbox "Search tabs" [ref=e1541] [box=20,264,144,34]
+          - group [ref=e1542] [box=20,304,33,26]:
+            - generic "+5" [ref=e1543] [cursor=pointer] [box=20,304,33,26]
+      - generic [ref=e1545] [box=126,179,790,42]:
+        - generic [ref=e1546] [box=126,182,356,36]:
+          - generic [ref=e1547] [box=127,193,110,13]: Active database
+          - generic [ref=e1548] [box=243,192,124,16]: PostgreSQL workspace
+          - generic [ref=e1549] [box=373,187,85,26]: PostgreSQL
+          - button "Show db details" [ref=e1551] [cursor=pointer] [box=464,192,17,17]:
+            - generic [ref=e1552] [box=470,195,4,10]: "?"
+        - button "Switch database" [ref=e1553] [box=490,179,140,42]:
+          - generic [ref=e1554] [box=503,188,114,24]: Switch database
+        - generic [ref=e1555] [box=637,187,117,26]: Interactive Server
+        - generic [ref=e1556] [box=762,187,87,26]: Live items 4
+        - generic [ref=e1557] [box=857,187,59,26]: Tabs 11
+    - generic [ref=e1560] [box=33,359,866,174]:
+      - paragraph [ref=e1561] [box=54,392,824,16]: Database startup
+      - heading "Continue with the active database to load the workspace" [level=3] [ref=e1562] [box=54,416,824,28]
+      - paragraph [ref=e1563] [box=130,452,672,48]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+    - group [ref=e1564] [box=16,861,900,46]:
+      - generic "Workspace context" [ref=e1565] [cursor=pointer] [box=33,874,866,20]
+  - dialog "Database profiles" [ref=e1568] [box=16,28,900,864]:
+    - banner [ref=e1569] [box=17,29,898,163]:
+      - generic [ref=e1570] [box=37,45,858,130]:
+        - generic [ref=e1571] [box=37,45,759,76]:
+          - generic [ref=e1572] [box=37,45,66,16]: Startup
+          - heading "Database profiles" [level=2] [ref=e1574] [box=37,65,149,28]
+          - paragraph [ref=e1575] [box=37,97,759,24]: Continue with the resolved runtime database, switch to another saved profile, or create a fresh managed SQLite workspace.
+        - button "Close" [ref=e1577] [box=37,133,92,42]:
+          - generic [ref=e1578] [box=50,144,20,20]: close
+          - generic [ref=e1579] [box=78,142,38,24]: Close
+    - generic [ref=e1581] [box=37,212,843,1182]:
+      - generic [ref=e1582] [box=37,212,839,242]:
+        - generic [ref=e1583] [box=54,229,805,44]:
+          - generic [ref=e1584] [box=54,229,165,44]:
+            - paragraph [ref=e1585] [box=54,229,144,16]: Resolved profile
+            - paragraph [ref=e1586] [box=54,249,165,24]: PostgreSQL workspace
+          - generic [ref=e1587] [box=618,229,241,26]:
+            - generic [ref=e1588] [box=618,229,85,26]: PostgreSQL
+            - generic [ref=e1589] [box=710,229,149,26]: PostgreSQL connection
+        - generic [ref=e1590] [box=54,285,805,124]:
+          - generic [ref=e1591] [box=54,285,198,58]:
+            - generic [ref=e1592] [box=54,285,158,58]:
+              - paragraph [ref=e1593] [box=54,285,139,16]: Resolved target
+              - paragraph [ref=e1594] [box=54,305,158,38]: localhost:5432/candoitall
+            - button "Copy active database target" [ref=e1595] [box=220,285,32,38]:
+              - generic [ref=e1596] [box=226,294,20,20]: content_copy
+              - generic [ref=e1597] [box=236,303,1,1]: content copy
+          - generic [ref=e1599] [box=54,351,805,58]:
+            - generic [ref=e1600] [box=54,351,765,58]:
+              - paragraph [ref=e1601] [box=54,351,138,16]: Workspace root
+              - paragraph [ref=e1602] [box=54,371,765,38]: C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\bf40a76da44f4d0f858dc55f428483c8\workspace
+            - button "Copy active database workspace root" [ref=e1603] [box=827,351,32,38]:
+              - generic [ref=e1604] [box=833,360,20,20]: content_copy
+              - generic [ref=e1605] [box=842,369,1,1]: content copy
+        - paragraph [ref=e1607] [box=54,421,805,16]: "Selection source: Last active profile"
+      - generic [ref=e1608] [box=37,470,843,924]:
+        - generic [ref=e1610] [box=54,487,542,94]:
+          - button "Legacy SQLite workspace SQLite External SQLite file C:\\repositories\\CanDoItAll\\src\\CanDoItAll.Web\\.artifacts\\workspace\\candoitall.db" [ref=e1611] [box=54,487,498,94]:
+            - generic [ref=e1613] [box=54,487,262,58]:
+              - generic [ref=e1614] [box=54,487,262,38]:
+                - paragraph [ref=e1615] [box=54,496,160,20]: Legacy SQLite workspace
+                - generic [ref=e1617] [box=235,494,68,24]: SQLite
+              - paragraph [ref=e1618] [box=54,529,99,16]: External SQLite file
+            - paragraph [ref=e1619] [box=54,557,498,24]: C:\repositories\CanDoItAll\src\CanDoItAll.Web\.artifacts\workspace\candoitall.db
+          - button "Copy database target for Legacy SQLite workspace" [ref=e1621] [box=564,487,32,38]:
+            - generic [ref=e1622] [box=570,496,20,20]: content_copy
+            - generic [ref=e1623] [box=580,505,1,1]: content copy
+        - generic [ref=e1626] [box=54,627,809,118]:
+          - button "Managed SQLite workspace SQLite Managed SQLite C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\control-plane\\database-profiles\\managed-sqlite\\81690627179847f7878af21473d93ae4\\db\\candoitall.db" [ref=e1627] [box=54,627,765,118]:
+            - generic [ref=e1629] [box=54,627,278,58]:
+              - generic [ref=e1630] [box=54,627,278,38]:
+                - paragraph [ref=e1631] [box=54,636,176,20]: Managed SQLite workspace
+                - generic [ref=e1633] [box=251,634,68,24]: SQLite
+              - paragraph [ref=e1634] [box=54,669,88,16]: Managed SQLite
+            - paragraph [ref=e1635] [box=54,697,765,48]: C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\81690627179847f7878af21473d93ae4\db\candoitall.db
+          - button "Copy database target for Managed SQLite workspace" [ref=e1637] [box=831,627,32,38]:
+            - generic [ref=e1638] [box=837,636,20,20]: content_copy
+            - generic [ref=e1639] [box=847,645,1,1]: content copy
+        - generic [ref=e1642] [box=54,791,809,118]:
+          - button "Managed SQLite workspace SQLite Managed SQLite C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\control-plane\\database-profiles\\managed-sqlite\\fe8c1138e1b541cc97a32dbead3a2394\\db\\candoitall.db" [ref=e1643] [box=54,791,765,118]:
+            - generic [ref=e1645] [box=54,791,278,58]:
+              - generic [ref=e1646] [box=54,791,278,38]:
+                - paragraph [ref=e1647] [box=54,800,176,20]: Managed SQLite workspace
+                - generic [ref=e1649] [box=251,798,68,24]: SQLite
+              - paragraph [ref=e1650] [box=54,833,88,16]: Managed SQLite
+            - paragraph [ref=e1651] [box=54,861,765,48]: C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\fe8c1138e1b541cc97a32dbead3a2394\db\candoitall.db
+          - button "Copy database target for Managed SQLite workspace" [ref=e1653] [box=831,791,32,38]:
+            - generic [ref=e1654] [box=837,800,20,20]: content_copy
+            - generic [ref=e1655] [box=847,809,1,1]: content copy
+        - generic [ref=e1658] [box=54,955,809,118]:
+          - button "Managed SQLite workspace SQLite Managed SQLite C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\control-plane\\database-profiles\\managed-sqlite\\529c12060808489fad29feb5bc60dda1\\db\\candoitall.db" [ref=e1659] [box=54,955,765,118]:
+            - generic [ref=e1661] [box=54,955,278,58]:
+              - generic [ref=e1662] [box=54,955,278,38]:
+                - paragraph [ref=e1663] [box=54,964,176,20]: Managed SQLite workspace
+                - generic [ref=e1665] [box=251,962,68,24]: SQLite
+              - paragraph [ref=e1666] [box=54,997,88,16]: Managed SQLite
+            - paragraph [ref=e1667] [box=54,1025,765,48]: C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\529c12060808489fad29feb5bc60dda1\db\candoitall.db
+          - button "Copy database target for Managed SQLite workspace" [ref=e1669] [box=831,955,32,38]:
+            - generic [ref=e1670] [box=837,964,20,20]: content_copy
+            - generic [ref=e1671] [box=847,973,1,1]: content copy
+        - generic [ref=e1674] [box=54,1119,809,118]:
+          - button "Managed SQLite workspace SQLite Managed SQLite C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\control-plane\\database-profiles\\managed-sqlite\\bf40a76da44f4d0f858dc55f428483c8\\db\\candoitall.db" [ref=e1675] [box=54,1119,765,118]:
+            - generic [ref=e1677] [box=54,1119,278,58]:
+              - generic [ref=e1678] [box=54,1119,278,38]:
+                - paragraph [ref=e1679] [box=54,1128,176,20]: Managed SQLite workspace
+                - generic [ref=e1681] [box=251,1126,68,24]: SQLite
+              - paragraph [ref=e1682] [box=54,1161,88,16]: Managed SQLite
+            - paragraph [ref=e1683] [box=54,1189,765,48]: C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\bf40a76da44f4d0f858dc55f428483c8\db\candoitall.db
+          - button "Copy database target for Managed SQLite workspace" [ref=e1685] [box=831,1119,32,38]:
+            - generic [ref=e1686] [box=837,1128,20,20]: content_copy
+            - generic [ref=e1687] [box=847,1137,1,1]: content copy
+        - generic [ref=e1690] [box=54,1283,415,94]:
+          - button "PostgreSQL workspace PostgreSQL PostgreSQL connection Active localhost:5432/candoitall" [ref=e1691] [box=54,1283,371,94]:
+            - generic [ref=e1692] [box=54,1283,371,58]:
+              - generic [ref=e1693] [box=54,1283,303,58]:
+                - generic [ref=e1694] [box=54,1283,303,38]:
+                  - paragraph [ref=e1695] [box=54,1292,144,20]: PostgreSQL workspace
+                  - generic [ref=e1697] [box=219,1290,125,24]: PostgreSQL
+                - paragraph [ref=e1698] [box=54,1325,123,16]: PostgreSQL connection
+              - generic [ref=e1701] [box=369,1283,56,26]: Active
+            - paragraph [ref=e1702] [box=54,1353,371,24]: localhost:5432/candoitall
+          - button "Copy database target for PostgreSQL workspace" [ref=e1704] [box=437,1283,32,38]:
+            - generic [ref=e1705] [box=443,1292,20,20]: content_copy
+            - generic [ref=e1706] [box=453,1301,1,1]: content copy
+    - contentinfo [ref=e1708] [box=17,815,898,75]:
+      - generic [ref=e1709] [box=37,832,858,42]:
+        - generic [ref=e1710] [box=37,832,276,42]:
+          - button "Continue" [ref=e1711] [box=37,832,98,42]:
+            - generic [ref=e1712] [box=54,841,64,24]: Continue
+          - button "Open Data Sources" [ref=e1713] [box=143,832,170,42]:
+            - generic [ref=e1714] [box=160,841,136,24]: Open Data Sources
+        - generic [ref=e1715] [box=554,832,341,42]:
+          - button "Create managed SQLite" [ref=e1716] [box=554,832,201,42]:
+            - generic [ref=e1717] [box=571,841,167,24]: Create managed SQLite
+          - button "Already active" [disabled] [ref=e1718] [box=762,832,133,42]:
+            - generic [ref=e1719] [box=779,841,99,24]: Already active

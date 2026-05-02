@@ -1,0 +1,11 @@
+- main [ref=e2593]:
+  - group [ref=e2594]:
+    - generic "Workspace navigation" [ref=e2595] [cursor=pointer]
+  - generic [ref=e2596]:
+    - generic [ref=e2599]
+    - generic [ref=e2622]
+  - generic [ref=e5456]:
+    - button "tune" [ref=e5457]
+    - generic [ref=e5458]
+  - group [ref=e2641]:
+    - generic "Workbench utilities" [ref=e5936] [cursor=pointer]

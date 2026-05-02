@@ -1,0 +1,213 @@
+- generic [ref=e3] [box=0,0,1600,1000]:
+  - complementary [ref=e4] [box=20,12,256,976]:
+    - generic [ref=e5] [box=37,29,207,599]:
+      - generic [ref=e6] [box=37,29,207,152]:
+        - paragraph [ref=e7] [box=37,29,95,16]: CanDoItAll
+        - heading "Local delivery workbench" [level=1] [ref=e8] [box=37,49,207,56]
+        - paragraph [ref=e9] [box=37,109,207,72]: Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.
+      - generic [ref=e10] [box=37,197,207,347]:
+        - paragraph [ref=e11] [box=50,210,74,13]: Workspace
+        - button "Delivery Workspace Project authoring, structure, calendars, and prompt sessions." [ref=e12] [box=50,231,181,108]:
+          - generic [ref=e13] [box=62,243,157,20]: Delivery Workspace
+          - generic [ref=e14] [box=62,267,157,60]: Project authoring, structure, calendars, and prompt sessions.
+        - button "Quality Desk Validation runs, test plans, and evidence review." [ref=e15] [box=50,347,181,88]:
+          - generic [ref=e16] [box=62,359,157,20]: Quality Desk
+          - generic [ref=e17] [box=62,383,157,40]: Validation runs, test plans, and evidence review.
+        - button "Automation Ops Activity, automation status, and environment settings." [ref=e18] [box=50,443,181,88]:
+          - generic [ref=e19] [box=62,455,157,20]: Automation Ops
+          - generic [ref=e20] [box=62,479,157,40]: Activity, automation status, and environment settings.
+      - generic [ref=e2698] [box=37,560,140,67]:
+        - paragraph [ref=e2699] [box=50,573,114,13]: Project Context
+        - paragraph [ref=e2700] [box=50,595,114,20]: Validation
+    - navigation [ref=e21] [box=37,628,207,1700]:
+      - button "Dashboard Operational summary, provider health, and recent work." [ref=e22] [box=37,628,207,108]:
+        - generic [ref=e24] [box=59,652,16,16]: DB
+        - generic [ref=e25] [box=97,640,135,84]:
+          - generic [ref=e27] [box=97,640,69,20]: Dashboard
+          - generic [ref=e28] [box=97,664,135,60]: Operational summary, provider health, and recent work.
+      - button "Projects Project setup, phases, stack profile, and delivery context." [ref=e29] [box=37,744,207,108]:
+        - generic [ref=e31] [box=60,768,14,16]: PR
+        - generic [ref=e32] [box=97,756,135,84]:
+          - generic [ref=e34] [box=97,756,50,20]: Projects
+          - generic [ref=e35] [box=97,780,135,60]: Project setup, phases, stack profile, and delivery context.
+      - button "Processes Role-first process definitions, runtime orchestration, evidence, and improvement signals." [ref=e36] [box=37,860,207,148]:
+        - generic [ref=e38] [box=58,884,18,16]: PM
+        - generic [ref=e39] [box=97,872,135,124]:
+          - generic [ref=e41] [box=97,872,61,20]: Processes
+          - generic [ref=e42] [box=97,896,135,100]: Role-first process definitions, runtime orchestration, evidence, and improvement signals.
+      - button "Collaboration 99+ Human escalation, inbox, and process-scoped conversations." [ref=e43] [box=37,1016,207,112]:
+        - generic [ref=e45] [box=59,1040,16,16]: CO
+        - generic [ref=e46] [box=97,1028,135,88]:
+          - generic [ref=e47] [box=97,1028,135,24]:
+            - generic [ref=e48] [box=97,1028,86,20]: Collaboration
+            - generic [ref=e49] [box=191,1028,45,24]: 99+
+          - generic [ref=e50] [box=97,1056,135,60]: Human escalation, inbox, and process-scoped conversations.
+      - button "CRM / HR Unified party directory, CRM, workforce, recruiting, agents, and assignments." [ref=e51] [box=37,1136,207,128]:
+        - generic [ref=e53] [box=59,1160,16,16]: CH
+        - generic [ref=e54] [box=97,1148,135,104]:
+          - generic [ref=e56] [box=97,1148,63,20]: CRM / HR
+          - generic [ref=e57] [box=97,1172,135,80]: Unified party directory, CRM, workforce, recruiting, agents, and assignments.
+      - button "Agents Integrated AgentFramework foundation, imported tabs, and runtime governance." [ref=e58] [box=37,1272,207,148]:
+        - generic [ref=e60] [box=59,1296,16,16]: AG
+        - generic [ref=e61] [box=97,1284,135,124]:
+          - generic [ref=e63] [box=97,1284,45,20]: Agents
+          - generic [ref=e64] [box=97,1308,135,100]: Integrated AgentFramework foundation, imported tabs, and runtime governance.
+      - button "Resources Typed resources, connectors, and validation status." [ref=e65] [box=37,1428,207,108]:
+        - generic [ref=e67] [box=60,1452,14,16]: RS
+        - generic [ref=e68] [box=97,1440,135,84]:
+          - generic [ref=e70] [box=97,1440,64,20]: Resources
+          - generic [ref=e71] [box=97,1464,135,60]: Typed resources, connectors, and validation status.
+      - button "Prompt Gallery Prompt library, collections, versions, and usage." [ref=e72] [box=37,1544,207,108]:
+        - generic [ref=e74] [box=59,1568,15,16]: PG
+        - generic [ref=e75] [box=97,1556,135,84]:
+          - generic [ref=e77] [box=97,1556,96,20]: Prompt Gallery
+          - generic [ref=e78] [box=97,1580,135,60]: Prompt library, collections, versions, and usage.
+      - button "Prompt Factory Guided prompt assembly with flow templates and blueprints." [ref=e79] [box=37,1660,207,108]:
+        - generic [ref=e81] [box=60,1684,13,16]: PF
+        - generic [ref=e82] [box=97,1672,135,84]:
+          - generic [ref=e84] [box=97,1672,98,20]: Prompt Factory
+          - generic [ref=e85] [box=97,1696,135,60]: Guided prompt assembly with flow templates and blueprints.
+      - button "Validation Center Checklists, findings, review decisions, and coverage." [ref=e86] [box=37,1776,207,108]:
+        - generic [ref=e88] [box=60,1800,15,16]: VC
+        - generic [ref=e89] [box=97,1788,135,84]:
+          - generic [ref=e91] [box=97,1788,109,20]: Validation Center
+          - generic [ref=e92] [box=97,1812,135,60]: Checklists, findings, review decisions, and coverage.
+      - button "Test Lab Plans, evidence, linked tests, and execution records." [ref=e93] [box=37,1892,207,108]:
+        - generic [ref=e95] [box=61,1916,12,16]: TL
+        - generic [ref=e96] [box=97,1904,135,84]:
+          - generic [ref=e98] [box=97,1904,51,20]: Test Lab
+          - generic [ref=e99] [box=97,1928,135,60]: Plans, evidence, linked tests, and execution records.
+      - button "Activity Timeline and cross-entity search for recent work." [ref=e100] [box=37,2008,207,88]:
+        - generic [ref=e102] [box=59,2032,15,16]: AC
+        - generic [ref=e103] [box=97,2020,135,64]:
+          - generic [ref=e105] [box=97,2020,48,20]: Activity
+          - generic [ref=e106] [box=97,2044,135,40]: Timeline and cross-entity search for recent work.
+      - button "Automation Background jobs, exports, sends, and operational diagnostics." [ref=e107] [box=37,2104,207,108]:
+        - generic [ref=e109] [box=59,2128,16,16]: AU
+        - generic [ref=e110] [box=97,2116,135,84]:
+          - generic [ref=e112] [box=97,2116,76,20]: Automation
+          - generic [ref=e113] [box=97,2140,135,60]: Background jobs, exports, sends, and operational diagnostics.
+      - button "Settings Workspace defaults, providers, secrets, and environment settings." [ref=e114] [box=37,2220,207,108]:
+        - generic [ref=e116] [box=60,2244,13,16]: ST
+        - generic [ref=e117] [box=97,2232,135,84]:
+          - generic [ref=e119] [box=97,2232,51,20]: Settings
+          - generic [ref=e120] [box=97,2256,135,60]: Workspace defaults, providers, secrets, and environment settings.
+    - generic [ref=e121] [box=37,2328,207,3171]:
+      - paragraph [ref=e122] [box=37,2328,114,13]: Opened Projects
+      - button "Validation v43 - Canal Lock Logbook · Structure project-structure / /projects/f2f44c16-5b57-4971-a1b9-74b724790255/structure" [ref=e123] [box=37,2349,207,118]:
+        - generic [ref=e124] [box=50,2362,181,40]: Validation v43 - Canal Lock Logbook · Structure
+        - generic [ref=e125] [box=50,2406,181,48]: project-structure / /projects/f2f44c16-5b57-4971-a1b9-74b724790255/structure
+      - button "Validation v43 - Community Kiln Scheduler · Structure project-structure / /projects/3bd1b61a-5fd6-4d66-bb5f-4c8304d7380c/structure" [ref=e126] [box=37,2475,207,118]:
+        - generic [ref=e127] [box=50,2488,181,40]: Validation v43 - Community Kiln Scheduler · Structure
+        - generic [ref=e128] [box=50,2532,181,48]: project-structure / /projects/3bd1b61a-5fd6-4d66-bb5f-4c8304d7380c/structure
+      - button "Validation v46 - Makerspace Solder Station Log · Structure project-structure / /projects/5508b2e6-0427-4329-a938-454e735b0fa5/structure" [ref=e129] [box=37,2601,207,138]:
+        - generic [ref=e130] [box=50,2614,181,60]: Validation v46 - Makerspace Solder Station Log · Structure
+        - generic [ref=e131] [box=50,2678,181,48]: project-structure / /projects/5508b2e6-0427-4329-a938-454e735b0fa5/structure
+      - button "Validation v46 - Neighborhood Compost Pickup Board · Structure project-structure / /projects/cbc26f7a-72c1-40a3-b965-41f0c2464a5c/structure" [ref=e132] [box=37,2747,207,138]:
+        - generic [ref=e133] [box=50,2760,181,60]: Validation v46 - Neighborhood Compost Pickup Board · Structure
+        - generic [ref=e134] [box=50,2824,181,48]: project-structure / /projects/cbc26f7a-72c1-40a3-b965-41f0c2464a5c/structure
+      - button "Validation v47 - Pocket Seed Library Tracker · Structure project-structure / /projects/17d41485-603e-4595-8779-4af85d7c650c/structure" [ref=e135] [box=37,2893,207,118]:
+        - generic [ref=e136] [box=50,2906,181,40]: Validation v47 - Pocket Seed Library Tracker · Structure
+        - generic [ref=e137] [box=50,2950,181,48]: project-structure / /projects/17d41485-603e-4595-8779-4af85d7c650c/structure
+      - button "Validation v47 - Rooftop Rain Barrel Monitor · Structure project-structure / /projects/2e3d18a9-017e-4fac-89ae-a26dccfcee92/structure" [ref=e138] [box=37,3019,207,138]:
+        - generic [ref=e139] [box=50,3032,181,60]: Validation v47 - Rooftop Rain Barrel Monitor · Structure
+        - generic [ref=e140] [box=50,3096,181,48]: project-structure / /projects/2e3d18a9-017e-4fac-89ae-a26dccfcee92/structure
+      - button "Validation v48 - Community Bike Pump Locator · Structure project-structure / /projects/4c1cf8c6-edba-45bf-b0ae-e5b774b65529/structure" [ref=e141] [box=37,3165,207,138]:
+        - generic [ref=e142] [box=50,3178,181,60]: Validation v48 - Community Bike Pump Locator · Structure
+        - generic [ref=e143] [box=50,3242,181,48]: project-structure / /projects/4c1cf8c6-edba-45bf-b0ae-e5b774b65529/structure
+      - button "Validation v48 - Craft Swap Shelf Catalog · Structure project-structure / /projects/32a7a89b-42f7-48e2-be14-dc00c0baf72c/structure" [ref=e144] [box=37,3311,207,118]:
+        - generic [ref=e145] [box=50,3324,181,40]: Validation v48 - Craft Swap Shelf Catalog · Structure
+        - generic [ref=e146] [box=50,3368,181,48]: project-structure / /projects/32a7a89b-42f7-48e2-be14-dc00c0baf72c/structure
+      - button "Validation v49 - Pantry Expiry Radar · Structure project-structure / /projects/94867a3e-89d2-47c8-b195-9713d2c0e7ab/structure" [ref=e147] [box=37,3437,207,118]:
+        - generic [ref=e148] [box=50,3450,181,40]: Validation v49 - Pantry Expiry Radar · Structure
+        - generic [ref=e149] [box=50,3494,181,48]: project-structure / /projects/94867a3e-89d2-47c8-b195-9713d2c0e7ab/structure
+      - button "Validation v50 - Garden Tool Sharpening Queue · Structure project-structure / /projects/56565367-1a49-4e37-baba-6e821e06e459/structure" [ref=e150] [box=37,3563,207,138]:
+        - generic [ref=e151] [box=50,3576,181,60]: Validation v50 - Garden Tool Sharpening Queue · Structure
+        - generic [ref=e152] [box=50,3640,181,48]: project-structure / /projects/56565367-1a49-4e37-baba-6e821e06e459/structure
+      - button "Validation v51 - Neighborhood Mural Permit Tracker · Structure project-structure / /projects/dd9c5fcd-8a69-41a9-a350-c47a50d00d7f/structure" [ref=e153] [box=37,3709,207,138]:
+        - generic [ref=e154] [box=50,3722,181,60]: Validation v51 - Neighborhood Mural Permit Tracker · Structure
+        - generic [ref=e155] [box=50,3786,181,48]: project-structure / /projects/dd9c5fcd-8a69-41a9-a350-c47a50d00d7f/structure
+      - button "Validation v59 - Community Potluck Allergen Board · Structure project-structure / /projects/4f5c3394-f0e0-45bc-83f0-8352f762d961/structure" [ref=e156] [box=37,3855,207,138]:
+        - generic [ref=e157] [box=50,3868,181,60]: Validation v59 - Community Potluck Allergen Board · Structure
+        - generic [ref=e158] [box=50,3932,181,48]: project-structure / /projects/4f5c3394-f0e0-45bc-83f0-8352f762d961/structure
+      - button "Validation v59 - Bike Repair Slot Scheduler · Structure project-structure / /projects/b6590948-c420-4a0e-b899-a033a887e477/structure" [ref=e159] [box=37,4001,207,118]:
+        - generic [ref=e160] [box=50,4014,181,40]: Validation v59 - Bike Repair Slot Scheduler · Structure
+        - generic [ref=e161] [box=50,4058,181,48]: project-structure / /projects/b6590948-c420-4a0e-b899-a033a887e477/structure
+      - button "Validation v60 - Community Kite Repair Counter · Structure project-structure / /projects/71f63c26-2671-4b02-ad1d-49d71e649730/structure" [ref=e162] [box=37,4127,207,138]:
+        - generic [ref=e163] [box=50,4140,181,60]: Validation v60 - Community Kite Repair Counter · Structure
+        - generic [ref=e164] [box=50,4204,181,48]: project-structure / /projects/71f63c26-2671-4b02-ad1d-49d71e649730/structure
+      - button "Validation v60 - Pop-up Clinic Queue Board · Structure project-structure / /projects/8dbca5cf-f40a-42d1-8c2f-fb2662e3bc14/structure" [ref=e165] [box=37,4273,207,138]:
+        - generic [ref=e166] [box=50,4286,181,60]: Validation v60 - Pop-up Clinic Queue Board · Structure
+        - generic [ref=e167] [box=50,4350,181,48]: project-structure / /projects/8dbca5cf-f40a-42d1-8c2f-fb2662e3bc14/structure
+      - button "Validation v61 - Mobile Soup Kitchen Route Board · Structure project-structure / /projects/3f39cf9d-0e4e-4d0a-88d9-6f35fa07824f/structure" [ref=e168] [box=37,4419,207,138]:
+        - generic [ref=e169] [box=50,4432,181,60]: Validation v61 - Mobile Soup Kitchen Route Board · Structure
+        - generic [ref=e170] [box=50,4496,181,48]: project-structure / /projects/3f39cf9d-0e4e-4d0a-88d9-6f35fa07824f/structure
+      - button "Validation v61 - Bookmobile Stop Sign-in Board · Structure project-structure / /projects/7d20a948-d514-4a80-abd8-c0286ac4372c/structure" [ref=e171] [box=37,4565,207,138]:
+        - generic [ref=e172] [box=50,4578,181,60]: Validation v61 - Bookmobile Stop Sign-in Board · Structure
+        - generic [ref=e173] [box=50,4642,181,48]: project-structure / /projects/7d20a948-d514-4a80-abd8-c0286ac4372c/structure
+      - button "Validation v62 - Seed Library Swap Scheduler · Structure project-structure / /projects/0ebb5fba-4349-4eb5-880c-2b42d89cffed/structure" [ref=e174] [box=37,4711,207,138]:
+        - generic [ref=e175] [box=50,4724,181,60]: Validation v62 - Seed Library Swap Scheduler · Structure
+        - generic [ref=e176] [box=50,4788,181,48]: project-structure / /projects/0ebb5fba-4349-4eb5-880c-2b42d89cffed/structure
+      - button "Validation v62 - Trail Cleanup Supply Board · Structure project-structure / /projects/d1303fbf-0332-4d3a-8cca-e09007ed6e23/structure" [ref=e177] [box=37,4857,207,138]:
+        - generic [ref=e178] [box=50,4870,181,60]: Validation v62 - Trail Cleanup Supply Board · Structure
+        - generic [ref=e179] [box=50,4934,181,48]: project-structure / /projects/d1303fbf-0332-4d3a-8cca-e09007ed6e23/structure
+      - button "Validation v63 - Trailhead Volunteer Snack Board · Structure project-structure / /projects/06fca124-5858-48d2-95a7-669ecb034e6c/structure" [ref=e180] [box=37,5003,207,138]:
+        - generic [ref=e181] [box=50,5016,181,60]: Validation v63 - Trailhead Volunteer Snack Board · Structure
+        - generic [ref=e182] [box=50,5080,181,48]: project-structure / /projects/06fca124-5858-48d2-95a7-669ecb034e6c/structure
+      - button "Validation v63 - Repair Cafe Tool Reservation · Structure project-structure / /projects/1508e56a-4129-495e-8b6c-9cec057f5e8d/structure" [ref=e183] [box=37,5149,207,118]:
+        - generic [ref=e184] [box=50,5162,181,40]: Validation v63 - Repair Cafe Tool Reservation · Structure
+        - generic [ref=e185] [box=50,5206,181,48]: project-structure / /projects/1508e56a-4129-495e-8b6c-9cec057f5e8d/structure
+      - button "Validation v67 - Ferry Lost Item Kiosk · Structure project-structure / /projects/33488a96-04e2-4be1-b94f-01404193a21e/structure" [ref=e186] [box=37,5275,207,118]:
+        - generic [ref=e187] [box=50,5288,181,40]: Validation v67 - Ferry Lost Item Kiosk · Structure
+        - generic [ref=e188] [box=50,5332,181,48]: project-structure / /projects/33488a96-04e2-4be1-b94f-01404193a21e/structure
+      - button "Validation · Structure project-structure / /projects/2b01cf43-37d9-4a01-909d-2143b172e245/structure" [ref=e2701] [box=37,5401,207,98]:
+        - generic [ref=e2702] [box=50,5414,181,20]: Validation · Structure
+        - generic [ref=e2703] [box=50,5438,181,48]: project-structure / /projects/2b01cf43-37d9-4a01-909d-2143b172e245/structure
+  - main [ref=e189] [box=288,12,1292,976]:
+    - generic [ref=e190] [box=288,12,1292,136]:
+      - generic [ref=e193] [box=292,12,476,136]:
+        - generic [ref=e194] [box=292,12,476,94]:
+          - button "Dashboard" [ref=e196] [box=301,17,85,20]:
+            - generic [ref=e197] [box=301,19,59,16]: Dashboard
+            - generic [ref=e199] [box=366,17,20,20]: push_pin
+          - button "Projects" [ref=e201] [box=410,19,43,16]:
+            - generic [ref=e202] [box=410,19,43,16]: Projects
+          - button "Projects" [ref=e204] [box=477,19,43,16]:
+            - generic [ref=e205] [box=477,19,43,16]: Projects
+          - button "Projects" [ref=e207] [box=544,19,43,16]:
+            - generic [ref=e208] [box=544,19,43,16]: Projects
+          - button "Validation v43 - Canal Lock Logbook · Structure" [ref=e210] [box=301,53,258,16]:
+            - generic [ref=e211] [box=301,53,258,16]: Validation v43 - Canal Lock Logbook · Structure
+          - button "Validation v43 - Community Kiln Scheduler · Structure" [ref=e213] [box=301,85,293,16]:
+            - generic [ref=e214] [box=301,85,293,16]: Validation v43 - Community Kiln Scheduler · Structure
+        - generic [ref=e215] [box=292,114,476,34]:
+          - textbox "Search tabs" [ref=e216] [box=292,114,144,34]
+          - group [ref=e217] [box=442,118,40,26]:
+            - generic "+43" [ref=e2704] [cursor=pointer] [box=442,118,40,26]
+      - generic [ref=e220] [box=780,59,800,42]:
+        - generic [ref=e221] [box=780,62,356,36]:
+          - generic [ref=e222] [box=781,73,110,13]: Active database
+          - generic [ref=e223] [box=897,72,124,16]: PostgreSQL workspace
+          - generic [ref=e224] [box=1027,67,85,26]: PostgreSQL
+          - button "Show db details" [ref=e226] [cursor=pointer] [box=1117,72,17,17]:
+            - generic [ref=e227] [box=1124,75,4,10]: "?"
+        - button "Switch database" [ref=e228] [box=1143,59,140,42]:
+          - generic [ref=e229] [box=1156,68,114,24]: Switch database
+        - generic [ref=e230] [box=1291,67,117,26]: Interactive Server
+        - generic [ref=e231] [box=1416,67,93,26]: Live items 23
+        - generic [ref=e232] [box=1517,67,63,26]: Tabs 49
+    - generic [ref=e2706] [box=288,-101,1292,1460]:
+      - button "tune" [ref=e2707] [box=288,-101,57,34]
+      - generic [ref=e2708] [box=288,-101,1292,1460]:
+        - generic [ref=e2710] [box=288,-101,256,28]:
+          - paragraph [ref=e2711] [box=288,-96,78,13]: Workbench
+          - heading "Validation structure" [level=1] [ref=e2712] [box=376,-101,168,28]
+        - generic [ref=e2713] [box=288,-49,1292,1408]:
+          - generic [ref=e2715] [box=288,-49,1292,917]:
+            - generic [ref=e2716] [box=309,-28,1250,185]
+            - generic [ref=e2734] [box=309,173,1250,674]
+          - generic [ref=e3156] [box=288,892,734,466]:
+            - generic [ref=e3158] [box=322,926,666,156]
+            - generic [ref=e3172] [box=322,1132,666,192]
+    - group [ref=e2608] [box=288,942,1292,46]:
+      - generic "Workbench utilities" [ref=e3186] [cursor=pointer] [box=305,955,1258,20]

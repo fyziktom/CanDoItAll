@@ -1,0 +1,281 @@
+- main [ref=e4]:
+  - group [ref=e5]:
+    - generic "Workspace navigation" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e10]:
+      - generic [ref=e77]:
+        - button "Dashboard" [ref=e79]:
+          - generic [ref=e80]: Dashboard
+          - generic [ref=e82]: push_pin
+        - button "Validation v40 - Clinic Room Turnover Board · Structure" [ref=e84]:
+          - generic [ref=e85]: Validation v40 - Clinic Room Turnover Board · Structure
+        - button "Projects" [ref=e87]:
+          - generic [ref=e88]: Projects
+        - button "Validation v40 - Community Tool Checkout · Structure" [ref=e90]:
+          - generic [ref=e91]: Validation v40 - Community Tool Checkout · Structure
+        - button "Projects" [ref=e93]:
+          - generic [ref=e94]: Projects
+        - button "Validation v41 - Library Study Room Planner · Structure" [ref=e96]:
+          - generic [ref=e97]: Validation v41 - Library Study Room Planner · Structure
+      - generic [ref=e98]:
+        - textbox "Search tabs" [ref=e99]
+        - group [ref=e100]:
+          - generic "+2" [ref=e101] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Active database
+        - generic [ref=e15]: PostgreSQL workspace
+        - generic [ref=e102]: PostgreSQL
+        - button "Show db details" [ref=e104] [cursor=pointer]:
+          - generic [ref=e105]: "?"
+      - button "Switch database" [ref=e16]:
+        - generic [ref=e17]: Switch database
+      - generic [ref=e18]: Interactive Server
+      - generic [ref=e19]: Live items 4
+      - generic [ref=e20]: Tabs 8
+  - generic [ref=e264]:
+    - button "tune" [ref=e265]
+    - generic [ref=e266]:
+      - generic [ref=e268]:
+        - paragraph [ref=e269]: Workbench
+        - heading "Validation v41 - Festival Volunteer Roster structure" [level=1] [ref=e270]
+      - generic [ref=e271]:
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - paragraph [ref=e275]: Structure canvas
+            - generic [ref=e276]:
+              - generic [ref=e277]:
+                - heading "Validation v41 - Festival Volunteer Roster workbench" [level=2] [ref=e279]
+                - paragraph [ref=e280]: The shared canvas system now owns the same authoring vocabulary, chrome, grouped create tooling, and inspector rhythm used across the canvas upgrades.
+              - generic [ref=e281]:
+                - generic [ref=e282]:
+                  - generic [ref=e283]: Nodes
+                  - strong [ref=e284]: "3"
+                - generic [ref=e285]:
+                  - generic [ref=e286]: Links
+                  - strong [ref=e287]: "2"
+                - generic [ref=e288]:
+                  - generic [ref=e289]: Selection
+                  - strong [ref=e290]: "1"
+          - generic [ref=e292]:
+            - generic [ref=e293]:
+              - generic [ref=e294]:
+                - button "Open quick create actions" [ref=e295] [cursor=pointer]:
+                  - generic [ref=e296]: add
+                  - generic [ref=e297]: Open quick create actions
+                - button "Focus root" [ref=e298] [cursor=pointer]:
+                  - generic [ref=e299]: center_focus_strong
+                  - generic [ref=e300]: Focus root
+                - generic [ref=e301]:
+                  - generic [ref=e302]:
+                    - button "Select" [ref=e303] [cursor=pointer]:
+                      - generic [ref=e304]: near_me
+                      - generic [ref=e305]: arrow selector tool
+                    - button "Dependency" [ref=e306] [cursor=pointer]:
+                      - generic [ref=e307]: call_split
+                      - generic [ref=e308]: call split
+                    - button "Delete" [ref=e309] [cursor=pointer]:
+                      - generic [ref=e310]: delete
+                      - generic [ref=e311]: delete
+                  - button "Inspector" [ref=e312] [cursor=pointer]:
+                    - generic [ref=e313]: visibility
+                    - generic [ref=e314]: visibility
+                  - button "Health" [ref=e315] [cursor=pointer]:
+                    - generic [ref=e316]: assessment
+                    - generic [ref=e317]: assessment
+                  - button "Blocks" [ref=e318] [cursor=pointer]:
+                    - generic [ref=e319]: dashboard
+                    - generic [ref=e320]: dashboard
+                  - button "Signals" [ref=e321] [cursor=pointer]:
+                    - generic [ref=e322]: notifications_active
+                    - generic [ref=e323]: notifications active
+                  - button "Agents" [ref=e324] [cursor=pointer]:
+                    - generic [ref=e325]: smart_toy
+                    - generic [ref=e326]: smart toy
+                  - button "Recompose" [disabled] [ref=e327]:
+                    - generic [ref=e328]: Recompose
+              - generic [ref=e329]:
+                - button "Fit canvas" [ref=e330] [cursor=pointer]:
+                  - generic [ref=e331]: fit_screen
+                  - generic [ref=e332]: Fit canvas
+                - button "Toggle maximize" [ref=e333] [cursor=pointer]:
+                  - generic [ref=e334]: open_in_full
+                  - generic [ref=e335]: Maximize canvas
+                - button "Toggle minimap" [ref=e336] [cursor=pointer]:
+                  - generic [ref=e337]: map
+                  - generic [ref=e338]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e339] [cursor=pointer]:
+                  - generic [ref=e340]: monitor_heart
+                  - generic [ref=e341]: Toggle diagnostics
+                - button "Toggle help" [ref=e342] [cursor=pointer]:
+                  - generic [ref=e343]: help
+                  - generic [ref=e344]: Canvas help
+                - button "Toggle settings" [ref=e345] [cursor=pointer]:
+                  - generic [ref=e346]: settings
+                  - generic [ref=e347]: Canvas settings
+                - generic [ref=e348]:
+                  - button "Zoom out" [ref=e349] [cursor=pointer]:
+                    - generic [ref=e350]: remove
+                    - generic [ref=e351]: Zoom out
+                  - slider "Canvas zoom" [ref=e352]: "100"
+                  - button "Zoom in" [ref=e353] [cursor=pointer]:
+                    - generic [ref=e354]: add
+                    - generic [ref=e355]: Zoom in
+                  - generic [ref=e356]: 100%
+            - generic [ref=e357]:
+              - generic "Canvas workbench" [ref=e358]:
+                - generic [ref=e359]:
+                  - generic:
+                    - generic "Multi-team software delivery and release governance Input" [ref=e361]
+                    - generic "Multi-team software delivery and release governance Output" [ref=e362]
+                    - generic "Multi-team software delivery and release governance Input" [ref=e363]
+                    - generic "Multi-team software delivery and release governance Output" [ref=e364]
+              - generic [ref=e365]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure selection panel" [ref=e366]:
+                - generic [ref=e367]:
+                  - generic [ref=e368]:
+                    - paragraph [ref=e369]: Selection panel
+                    - heading "Multi-team software delivery and release governance" [level=3] [ref=e370]
+                    - paragraph [ref=e371]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e372]:
+                    - button "Minimize window" [ref=e373]:
+                      - generic [ref=e374]: minimize
+                    - button "Restart window position and size" [disabled] [ref=e375]:
+                      - generic [ref=e376]: restart_alt
+                    - button "Hide window" [ref=e377]:
+                      - generic [ref=e378]: visibility_off
+                - generic [ref=e380]:
+                  - generic [ref=e381]:
+                    - paragraph [ref=e382]: Process definition
+                    - heading "Multi-team software delivery and release governance" [level=3] [ref=e383]
+                    - paragraph [ref=e384]: Published · 8 role(s) · 9 step(s)
+                    - generic [ref=e385]:
+                      - generic [ref=e387]: Published
+                      - generic [ref=e389]: Synced
+                    - generic [ref=e390]:
+                      - generic [ref=e391]:
+                        - text: Progress
+                        - strong [ref=e392]: Unset
+                      - generic [ref=e393]:
+                        - text: Priority
+                        - strong [ref=e394]: None
+                      - generic [ref=e395]:
+                        - text: Marker
+                        - strong [ref=e396]: None
+                  - generic [ref=e397]:
+                    - paragraph [ref=e398]: Node actions
+                    - generic [ref=e399]:
+                      - button "Copy id" [ref=e400]:
+                        - generic [ref=e401]
+                      - button "Copy info" [ref=e404]:
+                        - generic [ref=e405]
+                      - button "Copy tree ids" [ref=e408]:
+                        - generic [ref=e409]
+                      - button "Open" [ref=e412]:
+                        - generic [ref=e413]
+                      - button "Validate" [ref=e416]:
+                        - generic [ref=e417]
+                      - button "Test" [ref=e420]:
+                        - generic [ref=e421]
+                      - button "Summary" [ref=e424]:
+                        - generic [ref=e425]
+                      - button "Start" [ref=e428]:
+                        - generic [ref=e429]
+                      - button "Connect selected" [ref=e432]:
+                        - generic [ref=e433]
+                      - button "Reconnect" [ref=e436]:
+                        - generic [ref=e437]
+                      - button "Disconnect" [ref=e440]:
+                        - generic [ref=e441]
+                      - button "To subproject" [ref=e444]:
+                        - generic [ref=e445]
+                      - button "Export image" [ref=e448]:
+                        - generic [ref=e449]
+                      - button "Delete" [ref=e452]:
+                        - generic [ref=e453]
+                  - generic [ref=e456]:
+                    - paragraph [ref=e457]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e458]
+                    - paragraph [ref=e459]:
+                      - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+                      - strong [ref=e460]: Multi-team software delivery and release governance
+                      - text: .
+                    - generic [ref=e461]:
+                      - generic [ref=e463]: "Source: Multi-team software delivery and release governance"
+                      - generic [ref=e465]: "Mode: child placement"
+                    - button "Open standard blocks" [ref=e467]:
+                      - generic [ref=e468]: Open standard blocks
+                  - group [ref=e469]:
+                    - generic "Advanced details Show advanced details help" [ref=e470]:
+                      - generic [ref=e472]:
+                        - strong [ref=e473]: Advanced details
+                        - button "Show advanced details help" [ref=e476] [cursor=pointer]
+                      - generic [ref=e479]: expand_more
+              - generic:
+                - generic: Multi-team software delivery and release governance is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 3 canvas nodes
+                  - list:
+                    - listitem: Multi-team software delivery and release governancePublished · 8 role(s) · 9 step(s) • Status Published • Branch Runs • 3 annotations
+                    - listitem: Build FestivalVolunteerRosterGeneric Blazor app delivery validation • Status Draft • 3 annotations
+                    - listitem: Validation v41 - Festival Volunteer RosterBuild a small Blazor app under C:\programovani\dotnet\FestivalVolunteerRoster for shifts, roles, check-in status, coverage gaps, contact notes, and risk flags. • Status Active • 3 annotations
+        - generic [ref=e481]:
+          - generic [ref=e483]:
+            - paragraph [ref=e484]: Outline
+            - heading "Project object index" [level=5] [ref=e485]
+            - tree "Project object index" [ref=e487]:
+              - treeitem "Validation v41 - Festival Volunteer Roster Active" [ref=e488]:
+                - button "Validation v41 - Festival Volunteer Roster Active" [ref=e491]:
+                  - generic [ref=e493]: folder
+                  - generic [ref=e494]: Validation v41 - Festival Volunteer Roster
+                  - generic [ref=e495]: Active
+              - treeitem "Build FestivalVolunteerRoster Draft" [ref=e496]:
+                - button "Build FestivalVolunteerRoster Draft" [ref=e499]:
+                  - generic [ref=e501]: task
+                  - generic [ref=e502]: Build FestivalVolunteerRoster
+                  - generic [ref=e503]: Draft
+              - treeitem "Multi-team software delivery and release governance Published" [selected] [ref=e504]:
+                - button "Multi-team software delivery and release governance Published" [ref=e507]:
+                  - generic [ref=e509]: grid_view
+                  - generic [ref=e510]: Multi-team software delivery and release governance
+                  - generic [ref=e511]: Published
+          - generic [ref=e513]:
+            - paragraph [ref=e514]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e515]
+            - generic [ref=e516]:
+              - generic [ref=e517]:
+                - paragraph [ref=e518]: Total nodes
+                - paragraph [ref=e519]: "3"
+              - generic [ref=e520]:
+                - paragraph [ref=e521]: Total links
+                - paragraph [ref=e522]: "2"
+              - generic [ref=e523]:
+                - paragraph [ref=e524]: Selected
+                - paragraph [ref=e525]: "1"
+            - paragraph [ref=e526]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+    - dialog "Start Multi-team software delivery and release governance" [ref=e528]:
+      - generic [ref=e529]:
+        - generic [ref=e530]:
+          - generic [ref=e531]:
+            - paragraph [ref=e532]: Process start
+            - heading "Start Multi-team software delivery and release governance" [level=5] [ref=e533]
+            - paragraph [ref=e534]: This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing.
+          - generic [ref=e535]:
+            - button "Cancel" [disabled] [ref=e536]:
+              - generic [ref=e537]: Cancel
+            - button "Continue" [disabled] [ref=e538]:
+              - generic [ref=e540]: Continue
+        - generic [ref=e542]:
+          - generic [ref=e544]:
+            - paragraph [ref=e545]: Execution target
+            - paragraph [ref=e546]: Build FestivalVolunteerRoster
+            - paragraph [ref=e547]: "Target node id: custom:2a72bd37924844a884ff7af1bdddc055"
+            - paragraph [ref=e548]: "Resolved parent node id: custom:2a72bd37924844a884ff7af1bdddc055"
+            - paragraph [ref=e549]: "Selected process node id: process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0"
+            - paragraph [ref=e550]: "Project id: 632ea4d2-303d-4e55-b510-59d11d45b2a0"
+          - generic [ref=e552]:
+            - paragraph [ref=e553]: What happens next
+            - paragraph [ref=e554]: The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context.
+  - group [ref=e75]:
+    - generic "Workbench utilities" [ref=e76] [cursor=pointer]

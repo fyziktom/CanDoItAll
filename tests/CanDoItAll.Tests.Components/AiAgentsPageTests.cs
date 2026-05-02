@@ -29,17 +29,17 @@ public sealed class AiAgentsPageTests
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
 
         var editor = await workspaceService.GetAgentEditorAsync();
-        editor.Name = "Runtime Calculator Builder";
+        editor.Name = "Runtime Workflow Builder";
         editor.RoleTitle = "UI builder";
-        editor.Summary = "Builds SSR calculator surfaces through the technical agent catalog.";
-        editor.Instructions = "Focus on calculator delivery tasks.";
+        editor.Summary = "Builds SSR workflow surfaces through the technical agent catalog.";
+        editor.Instructions = "Focus on workflow delivery tasks.";
         editor.Status = CanDoItAll.AgentFramework.Models.AgentLifecycleStatus.Active;
         editor.IsTemplate = false;
         editor.TemplateKey = string.Empty;
         editor.Tags =
         [
             "showcase",
-            "calculator"
+            "workflow"
         ];
 
         var technicalAgentId = await workspaceService.SaveAgentAsync(editor);
@@ -49,7 +49,7 @@ public sealed class AiAgentsPageTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Runtime Calculator Builder", cut.Markup);
+            Assert.Contains("Runtime Workflow Builder", cut.Markup);
             Assert.DoesNotContain("No projected AI agents", cut.Markup);
         });
 
@@ -63,7 +63,7 @@ public sealed class AiAgentsPageTests
         Assert.Equal(technicalAgentId, workspace!.TechnicalAgentId);
         Assert.Contains(
             parties,
-            item => item.DisplayName == "Runtime Calculator Builder" && item.PartyType == PartyType.AiAgent);
+            item => item.DisplayName == "Runtime Workflow Builder" && item.PartyType == PartyType.AiAgent);
     }
 
     [Fact]

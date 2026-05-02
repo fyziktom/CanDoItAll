@@ -1,0 +1,36 @@
+- generic [ref=e6524]:
+  - generic [ref=e6525]:
+    - paragraph [ref=e6526]: Add a repository or code artifact next to the current source.
+    - list [ref=e6527]:
+      - listitem [ref=e6528]:
+        - generic [ref=e6529]: Step 1
+        - strong [ref=e6530]: Details
+      - listitem [ref=e6531]:
+        - generic [ref=e6532]: Step 2
+        - strong [ref=e6533]: Notes
+  - generic [ref=e6534]:
+    - generic [ref=e6535]:
+      - generic [ref=e6536]:
+        - generic [ref=e6537]: "01"
+        - generic [ref=e6538]:
+          - strong [ref=e6539]: Details
+          - generic [ref=e6540]: Name the item and keep the create request readable on the canvas.
+      - generic [ref=e6542]:
+        - generic [ref=e6543]:
+          - generic [ref=e6544]: Repo name
+          - textbox "Repo name" [active] [ref=e6545]:
+            - /placeholder: frontend-app
+        - generic [ref=e6546]:
+          - generic [ref=e6547]: Owner / path
+          - textbox "Owner / path" [ref=e6548]:
+            - /placeholder: team/repository
+    - generic [ref=e6549]:
+      - generic [ref=e6550]:
+        - generic [ref=e6551]: "02"
+        - generic [ref=e6552]:
+          - strong [ref=e6553]: Notes
+          - generic [ref=e6554]: Capture the supporting context and next-step guidance for the new item.
+      - generic [ref=e6557]:
+        - generic [ref=e6558]: Purpose
+        - textbox "Purpose" [ref=e6559]:
+          - /placeholder: What this repo is for

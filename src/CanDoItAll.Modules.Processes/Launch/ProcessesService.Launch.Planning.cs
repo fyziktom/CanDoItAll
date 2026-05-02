@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,25 +31,51 @@ public sealed partial class ProcessesService
                     "processes.launch.published-version-required"));
             }
 
-            var now = clock.GetUtcNow();
             var projectId = request.ProjectId ?? publishedContext.Definition.ProjectId;
+            var projectStructureContext = request.ProjectStructureContext;
+            if (projectStructureContext is null && projectId.HasValue)
+            {
+                projectStructureContext = await projectStructureBridge.TryResolveLaunchContextAsync(
+                    dbContext,
+                    projectId.Value,
+                    publishedContext.Definition.Id,
+                    cancellationToken);
+            }
+
+            var now = clock.GetUtcNow();
+            var planName = ResolveLaunchPlanName(request.LaunchName, publishedContext.Definition.Name, now);
+            var triggerReason = ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                request.TriggerReason,
+                projectStructureContext);
+            var requestedBy = ResolveLaunchPlanRequestedBy(request.RequestedBy);
+            var reusableLaunchPlanId = await TryFindReusableOpenLaunchPlanAsync(
+                dbContext,
+                publishedContext.Definition.Id,
+                publishedContext.PublishedVersion.Id,
+                projectId,
+                planName,
+                request.OperatingMode,
+                triggerReason,
+                requestedBy,
+                cancellationToken);
+            if (reusableLaunchPlanId.HasValue)
+            {
+                return Result<Guid>.Success(reusableLaunchPlanId.Value);
+            }
+
             var plan = new ProcessLaunchPlan
             {
                 ProcessDefinitionId = publishedContext.Definition.Id,
                 ProcessDefinitionVersionId = publishedContext.PublishedVersion.Id,
                 ProjectId = projectId,
-                Name = string.IsNullOrWhiteSpace(request.LaunchName)
-                    ? $"{publishedContext.Definition.Name} launch / {now:yyyy-MM-dd HH:mm}"
-                    : request.LaunchName.Trim(),
+                Name = planName,
                 OperatingMode = request.OperatingMode,
-                TriggerReason = ProcessProjectStructureContextFormatter.AppendToTriggerReason(
-                    request.TriggerReason,
-                    request.ProjectStructureContext),
+                TriggerReason = triggerReason,
                 Status = ProcessLaunchPlanStatus.Draft,
                 RecommendationStrategy = "Project assignments first, then CRM-HR staffing and AI resource directories, then deterministic AI proposal fallback.",
                 FallbackStrategy = "Human substitute approval and explicit provisioning remain mandatory when no ready executor is already bound.",
                 Summary = publishedContext.Definition.ValueStatement,
-                RequestedBy = string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-workspace" : request.RequestedBy.Trim(),
+                RequestedBy = requestedBy,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
@@ -81,6 +108,60 @@ public sealed partial class ProcessesService
                 "Launch plan creation conflicted with another update. Reload and try again.",
                 "processes.launch.conflict"));
         }
+    }
+
+    private static string ResolveLaunchPlanName(
+        string requestedName,
+        string definitionName,
+        DateTimeOffset now)
+    {
+        return string.IsNullOrWhiteSpace(requestedName)
+            ? $"{definitionName} launch / {now:yyyy-MM-dd HH:mm}"
+            : requestedName.Trim();
+    }
+
+    private static string ResolveLaunchPlanRequestedBy(string requestedBy)
+    {
+        return string.IsNullOrWhiteSpace(requestedBy)
+            ? "process-workspace"
+            : requestedBy.Trim();
+    }
+
+    private static async Task<Guid?> TryFindReusableOpenLaunchPlanAsync(
+        AppDbContext dbContext,
+        Guid processDefinitionId,
+        Guid processDefinitionVersionId,
+        Guid? projectId,
+        string planName,
+        ProcessOperatingMode operatingMode,
+        string triggerReason,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        var matchingPlans = await dbContext.Set<ProcessLaunchPlan>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessDefinitionId == processDefinitionId &&
+                item.ProcessDefinitionVersionId == processDefinitionVersionId &&
+                item.ProjectId == projectId &&
+                item.Name == planName &&
+                item.OperatingMode == operatingMode &&
+                item.TriggerReason == triggerReason &&
+                item.RequestedBy == requestedBy &&
+                item.GeneratedRunId == null &&
+                (item.Status == ProcessLaunchPlanStatus.Draft ||
+                 item.Status == ProcessLaunchPlanStatus.ChangesRequested))
+            .Select(item => new
+            {
+                item.Id,
+                item.UpdatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        return matchingPlans
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Select(item => (Guid?)item.Id)
+            .FirstOrDefault();
     }
 
     public async Task<Result> SelectLaunchCandidateAsync(

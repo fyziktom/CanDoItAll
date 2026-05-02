@@ -62,7 +62,7 @@ public sealed partial class ProcessesService
                 now);
 
             transitionContext.Run.UpdatedAtUtc = now;
-            transitionContext.Run.Status = ProcessRunStatusCalculator.Resolve(transitionContext.PersistedStepRuns, transitionContext.StepRun);
+        transitionContext.Run.Status = ProcessRunStatusResolver.Resolve(transitionContext.PersistedStepRuns, transitionContext.StepRun);
             if (transitionContext.Run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled)
             {
                 transitionContext.Run.CompletedAtUtc = now;
@@ -221,6 +221,15 @@ public sealed partial class ProcessesService
 
         var run = await dbContext.Set<ProcessRun>()
             .SingleAsync(item => item.Id == stepRun.ProcessRunId, cancellationToken);
+        if (run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Cancelled ||
+            run.Status == ProcessRunStatus.Failed && !IsFailedRunStepRestart(request, stepRun))
+        {
+            return Result<ProcessRuntimeTransitionContext>.Failure(
+                Error.Validation(
+                    $"Process run '{run.Name}' is {run.Status} and no longer accepts step transitions.",
+                    "processes.run-terminal"));
+        }
+
         var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
             .Where(item => item.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
             .ToListAsync(cancellationToken);
@@ -272,6 +281,12 @@ public sealed partial class ProcessesService
                 persistedStepRuns,
                 requiredArtifactExpectations,
                 stepArtifacts));
+    }
+
+    private static bool IsFailedRunStepRestart(ProcessStepTransitionRequest request, ProcessStepRun stepRun)
+    {
+        return stepRun.Status == ProcessStepRunStatus.Failed &&
+            request.TargetStatus == ProcessStepRunStatus.InProgress;
     }
 
     private static Result ValidateRequiredArtifactsForCompletion(

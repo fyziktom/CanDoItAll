@@ -69,8 +69,8 @@ public sealed class AgentRecoveryModelsTests
             processRunId,
             implementationStepRunId,
             qaStepRunId,
-            "Calculator keypad does not update the visible display.",
-            "external-target/C/app/Calculator/Components/Pages/Home.razor",
+            "Workflow keypad does not update the visible display.",
+            "external-target/C/app/Workflow/Components/Pages/Home.razor",
             sourceExecutionRunId: "execution-004");
         var summary = AgentReworkPromptRenderer.RenderPacketSummary(packet);
 
@@ -90,12 +90,12 @@ public sealed class AgentRecoveryModelsTests
         var packet = AgentReworkPacketFactory.CreateManualRerunPacket(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            "Implement calculator UI",
+            "Implement workflow UI",
             "Keep the current host and repair only the broken divide-by-zero behavior.",
             [
                 new AgentReworkArtifactRef(
-                    "Calculator page",
-                    "Calculator/Components/Pages/Home.razor",
+                    "Workflow page",
+                    "Workflow/Components/Pages/Home.razor",
                     "Verify before editing.")
             ]);
         var directive = AgentReworkPromptRenderer.RenderRecoveryDirective(
@@ -121,7 +121,7 @@ public sealed class AgentRecoveryModelsTests
     {
         var sourceHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Calculator/Domain/CalculatorEngine.cs"] = "hash-a"
+            ["SampleApp/Domain/ValidationEngine.cs"] = "hash-a"
         };
         var artifactHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -130,7 +130,7 @@ public sealed class AgentRecoveryModelsTests
         var finishedAtUtc = DateTimeOffset.UtcNow;
         var receipt = AgentProofFingerprintService.CreateReceipt(
             "workspace_dotnet_test",
-            "dotnet test Calculator.Tests.csproj",
+            "dotnet test SampleApp.Tests.csproj",
             "external-target/C/app",
             sourceHashes,
             artifactHashes,
@@ -154,18 +154,18 @@ public sealed class AgentRecoveryModelsTests
     }
 
     [Theory]
-    [InlineData("Calculator/Domain/CalculatorEngine.cs")]
-    [InlineData("Calculator/Calculator.csproj")]
-    [InlineData("Calculator.slnx")]
+    [InlineData("SampleApp/Domain/ValidationEngine.cs")]
+    [InlineData("SampleApp/SampleApp.csproj")]
+    [InlineData("SampleApp.slnx")]
     public void BuildAndTestProofs_are_invalidated_by_code_or_project_files(string path)
     {
         Assert.True(AgentProofFingerprintService.InvalidatesBuildOrTestProof(path));
     }
 
     [Theory]
-    [InlineData("Calculator/Components/Pages/Home.razor")]
-    [InlineData("Calculator/wwwroot/app.css")]
-    [InlineData("Calculator/wwwroot/site.js")]
+    [InlineData("SampleApp/Components/Pages/Home.razor")]
+    [InlineData("SampleApp/wwwroot/app.css")]
+    [InlineData("SampleApp/wwwroot/site.js")]
     public void BrowserProofs_are_invalidated_by_ui_or_static_asset_files(string path)
     {
         Assert.True(AgentProofFingerprintService.InvalidatesBrowserProof(path));

@@ -69,6 +69,14 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
+    public Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildDotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds),
+            "workspace_dotnet_run",
+            waitForHttp ? "dotnet_run_http_smoke" : "dotnet_run",
+            "LocalExecution",
+            approvalRequired: false);
+
     public Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
         => ExecutePlanAsync(
             () => planBuilder.BuildDotnetNew(template, name, parentDirectory, force, timeoutSeconds),

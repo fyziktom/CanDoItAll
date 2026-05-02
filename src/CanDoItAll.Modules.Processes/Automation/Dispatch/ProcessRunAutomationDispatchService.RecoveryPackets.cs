@@ -153,6 +153,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return AgentFailureCategory.ProviderFailure;
         }
 
+        if (TryResolveRecoverableExecutionInterruption(detail, responseText, out _))
+        {
+            return AgentFailureCategory.Timeout;
+        }
+
         if (MentionsQaRejection(responseText) || MentionsQaRejection(detail.Run.ResultSummary))
         {
             return AgentFailureCategory.QaRejected;
@@ -216,6 +221,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (TryResolveRecoverableProviderFailure(detail, responseText, out var providerFailureSummary))
         {
             return providerFailureSummary;
+        }
+
+        if (TryResolveRecoverableExecutionInterruption(detail, responseText, out var interruptionSummary))
+        {
+            return interruptionSummary;
         }
 
         if (missingRequiredTools.Count > 0)

@@ -45,7 +45,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var matchedExpectation = ResolveArtifactExpectation(candidate, artifact);
             var externalReferenceKey = BuildExternalReferenceKey(artifact);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
@@ -79,6 +78,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var matchedExpectation = ResolveArtifactExpectation(
+                candidate,
+                artifact,
+                TryDecodeTextArtifactContent(artifact, fullPath, content));
             var placement = await storagePlacementService.PlaceAsync(
                 new StoragePlacementRequest(
                     Path.GetFileName(fullPath),
@@ -127,6 +130,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         await ProjectProcessMockArtifactsAsync(
+            candidate,
+            detail,
+            workspaceRoot,
+            workspaceScope,
+            cancellationToken);
+        await ProjectWorkspaceWrittenArtifactsAsync(
+            candidate,
+            detail,
+            workspaceRoot,
+            workspaceScope,
+            cancellationToken);
+        await ProjectExistingManagedArtifactFilesAsync(
             candidate,
             detail,
             workspaceRoot,
@@ -255,6 +270,366 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.ExternalReferenceKeys.Add(externalReferenceKey);
             projectedExpectationIds.Add(expectedArtifact.Id);
         }
+    }
+
+    private async Task ProjectWorkspaceWrittenArtifactsAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        CancellationToken cancellationToken)
+    {
+        if (candidate.ExpectedArtifacts.Count == 0)
+        {
+            return;
+        }
+
+        var fileWrites = ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson);
+        if (fileWrites.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var expectedArtifact in candidate.ExpectedArtifacts)
+        {
+            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            {
+                continue;
+            }
+
+            var matchingWrite = fileWrites
+                .LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
+                    candidate.ExpectedArtifacts,
+                    expectedArtifact,
+                    file.Path,
+                    file.Content));
+            if (matchingWrite is null)
+            {
+                continue;
+            }
+
+            var projectedRelativePath = ResolveWorkspaceWrittenArtifactRelativePath(workspaceScope, matchingWrite.Path);
+            if (string.IsNullOrWhiteSpace(projectedRelativePath))
+            {
+                continue;
+            }
+
+            var externalReferenceKey = BuildWorkspaceWrittenArtifactExternalReferenceKey(
+                detail.Run.Id,
+                expectedArtifact.Id,
+                projectedRelativePath);
+            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            {
+                continue;
+            }
+
+            if (!TryResolveArtifactFullPath(workspaceRoot, projectedRelativePath, out var fullPath, out var pathResolutionFailure) ||
+                !File.Exists(fullPath))
+            {
+                logger.LogDebug(
+                    "Skipping workspace-written artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because path '{RelativePath}' is unavailable. Reason: {Reason}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    expectedArtifact.Title,
+                    projectedRelativePath,
+                    string.IsNullOrWhiteSpace(pathResolutionFailure) ? "File does not exist." : pathResolutionFailure);
+                continue;
+            }
+
+            byte[] content;
+            try
+            {
+                content = await File.ReadAllBytesAsync(fullPath, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Workspace-written artifact '{ArtifactTitle}' could not be read for process run {RunId}.",
+                    expectedArtifact.Title,
+                    candidate.Run.Id);
+                continue;
+            }
+
+            var syntheticArtifact = new ExecutionArtifactRecord(
+                Guid.NewGuid(),
+                detail.Run.Id,
+                "generated-output",
+                expectedArtifact.Title,
+                projectedRelativePath,
+                GuessContentTypeFromPath(fullPath),
+                "workspace_write_file",
+                $"Projected from workspace file write '{matchingWrite.Path}' for AgentFramework execution run {detail.Run.Id:D}.",
+                DateTimeOffset.UtcNow);
+            var placement = await storagePlacementService.PlaceAsync(
+                new StoragePlacementRequest(
+                    Path.GetFileName(fullPath),
+                    syntheticArtifact.ContentType,
+                    content,
+                    StorageUsagePurpose.Evidence,
+                    ResolveStorageContentKind(syntheticArtifact.ContentType, fullPath),
+                    ProjectId: candidate.Run.ProjectId,
+                    RelativePathHint: BuildStorageRelativePath(candidate, syntheticArtifact)),
+                cancellationToken);
+
+            var recordResult = await RecordArtifactAsync(
+                new ProcessArtifactRecordRequest
+                {
+                    ProcessRunId = candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    ArtifactExpectationId = expectedArtifact.Id,
+                    ArtifactKind = expectedArtifact.ArtifactKind,
+                    Title = expectedArtifact.Title,
+                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                    SensitivityLevel = expectedArtifact.SensitivityLevel,
+                    ProvenanceSummary = syntheticArtifact.Summary,
+                    AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+                        ? "Process evidence and audit review."
+                        : expectedArtifact.AllowedFutureUsageSummary,
+                    ReviewSummary = $"Workspace file write produced '{projectedRelativePath}'.",
+                    ManagedStoragePath = placement.RelativePath,
+                    ExternalReferenceKey = externalReferenceKey
+                },
+                cancellationToken);
+            if (recordResult.IsSuccess)
+            {
+                candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Workspace-written artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    expectedArtifact.Title,
+                    string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+            }
+        }
+    }
+
+    private async Task ProjectExistingManagedArtifactFilesAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        CancellationToken cancellationToken)
+    {
+        if (candidate.ExpectedArtifacts.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var expectedArtifact in candidate.ExpectedArtifacts)
+        {
+            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            {
+                continue;
+            }
+
+            var projectedRelativePath = ResolveExpectedManagedArtifactRelativePaths(
+                    candidate,
+                    workspaceScope,
+                    expectedArtifact)
+                .FirstOrDefault(relativePath => ExistingManagedArtifactFileMatches(
+                    candidate.ExpectedArtifacts,
+                    expectedArtifact,
+                    workspaceRoot,
+                    relativePath));
+            if (string.IsNullOrWhiteSpace(projectedRelativePath))
+            {
+                continue;
+            }
+
+            var externalReferenceKey = BuildExistingManagedArtifactExternalReferenceKey(
+                detail.Run.Id,
+                expectedArtifact.Id,
+                projectedRelativePath);
+            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            {
+                continue;
+            }
+
+            if (!TryResolveArtifactFullPath(workspaceRoot, projectedRelativePath, out var fullPath, out var pathResolutionFailure) ||
+                !File.Exists(fullPath))
+            {
+                logger.LogDebug(
+                    "Skipping existing managed artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because path '{RelativePath}' is unavailable. Reason: {Reason}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    expectedArtifact.Title,
+                    projectedRelativePath,
+                    string.IsNullOrWhiteSpace(pathResolutionFailure) ? "File does not exist." : pathResolutionFailure);
+                continue;
+            }
+
+            byte[] content;
+            try
+            {
+                content = await File.ReadAllBytesAsync(fullPath, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Existing managed artifact '{ArtifactTitle}' could not be read for process run {RunId}.",
+                    expectedArtifact.Title,
+                    candidate.Run.Id);
+                continue;
+            }
+
+            var contentType = GuessContentTypeFromPath(fullPath);
+            var placement = await storagePlacementService.PlaceAsync(
+                new StoragePlacementRequest(
+                    Path.GetFileName(fullPath),
+                    contentType,
+                    content,
+                    StorageUsagePurpose.Evidence,
+                    ResolveStorageContentKind(contentType, fullPath),
+                    ProjectId: candidate.Run.ProjectId,
+                    RelativePathHint: BuildStorageRelativePath(
+                        candidate,
+                        new ExecutionArtifactRecord(
+                            Guid.NewGuid(),
+                            detail.Run.Id,
+                            "generated-output",
+                            expectedArtifact.Title,
+                            projectedRelativePath,
+                            contentType,
+                            "managed-workspace-file",
+                            $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                            DateTimeOffset.UtcNow))),
+                cancellationToken);
+
+            var recordResult = await RecordArtifactAsync(
+                new ProcessArtifactRecordRequest
+                {
+                    ProcessRunId = candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    ArtifactExpectationId = expectedArtifact.Id,
+                    ArtifactKind = expectedArtifact.ArtifactKind,
+                    Title = expectedArtifact.Title,
+                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                    SensitivityLevel = expectedArtifact.SensitivityLevel,
+                    ProvenanceSummary = $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                    AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+                        ? "Process evidence and audit review."
+                        : expectedArtifact.AllowedFutureUsageSummary,
+                    ReviewSummary = $"Managed workspace artifact '{projectedRelativePath}' already existed when the step outcome was finalized.",
+                    ManagedStoragePath = placement.RelativePath,
+                    ExternalReferenceKey = externalReferenceKey
+                },
+                cancellationToken);
+            if (recordResult.IsSuccess)
+            {
+                candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Existing managed artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    expectedArtifact.Title,
+                    string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+            }
+        }
+    }
+
+    private static IReadOnlyList<string> ResolveExpectedManagedArtifactRelativePaths(
+        DispatchCandidate candidate,
+        WorkspaceScopeDescriptor workspaceScope,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        var paths = new List<string>();
+        if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var declaredRelativePath))
+        {
+            AddManagedArtifactPath(paths, workspaceScope, declaredRelativePath);
+        }
+
+        if (CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact))
+        {
+            AddManagedArtifactPath(
+                paths,
+                workspaceScope,
+                BuildFallbackResponseTextArtifactRelativePath(candidate, expectedArtifact));
+        }
+
+        return paths;
+    }
+
+    private static void AddManagedArtifactPath(
+        ICollection<string> paths,
+        WorkspaceScopeDescriptor workspaceScope,
+        string relativePath)
+    {
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
+        if (string.IsNullOrWhiteSpace(normalizedPath) ||
+            IsExternalTargetAliasPath(normalizedPath))
+        {
+            return;
+        }
+
+        var scopedPath = ResolveScopedManagedRelativePath(workspaceScope, normalizedPath);
+        if (string.IsNullOrWhiteSpace(scopedPath) ||
+            paths.Contains(scopedPath, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        paths.Add(scopedPath);
+    }
+
+    private static bool ExistingManagedArtifactFileMatches(
+        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
+        DispatchArtifactExpectation expectedArtifact,
+        string workspaceRoot,
+        string relativePath)
+    {
+        if (!TryResolveArtifactFullPath(workspaceRoot, relativePath, out var fullPath, out _) ||
+            !File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        string? textContent = null;
+        try
+        {
+            var fileInfo = new FileInfo(fullPath);
+            if (fileInfo.Length is > 0 and <= 512 * 1024)
+            {
+                var bytes = File.ReadAllBytes(fullPath);
+                textContent = TryDecodeTextArtifactContent(
+                    new ExecutionArtifactRecord(
+                        Guid.Empty,
+                        Guid.Empty,
+                        "generated-output",
+                        expectedArtifact.Title,
+                        relativePath,
+                        GuessContentTypeFromPath(fullPath),
+                        "managed-workspace-file",
+                        "Existing managed workspace artifact.",
+                        DateTimeOffset.MinValue),
+                    fullPath,
+                    bytes);
+            }
+        }
+        catch (Exception)
+        {
+            textContent = null;
+        }
+
+        var syntheticArtifact = new ExecutionArtifactRecord(
+            Guid.Empty,
+            Guid.Empty,
+            "generated-output",
+            expectedArtifact.Title,
+            relativePath,
+            GuessContentTypeFromPath(fullPath),
+            "managed-workspace-file",
+            "Existing managed workspace artifact.",
+            DateTimeOffset.MinValue);
+        var matchedExpectationId = MatchExpectedArtifactId(expectedArtifacts, syntheticArtifact, textContent);
+        return matchedExpectationId == expectedArtifact.Id;
     }
 
     private async Task EnsureDecisionArtifactsForCompletedStepAsync(
