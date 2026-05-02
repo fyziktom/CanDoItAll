@@ -1,3 +1,5 @@
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit;
@@ -80,5 +82,50 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.True(settings.CanWriteStorage);
         Assert.Equal([storageId], settings.AllowedStorageCatalogIds);
         Assert.Contains("\"existing\":true", configurationJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_allowed_alias_for_write_enabled_agent()
+    {
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            "{}",
+            """analyze "C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler" and add architecture""",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var aliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", aliases);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
+    }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_readonly_alias_for_read_only_agent()
+    {
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            "{}",
+            """inspect C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler before reporting""",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = false
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var aliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", aliases);
     }
 }

@@ -83,8 +83,9 @@ Allow technical agents to be granted explicit external filesystem workspace root
 
 - `dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter AgentWorkspaceToolAccessMetadataTests --no-restore -m:1` passed.
 - `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter CreateCapabilityState_attaches_configured --no-restore -m:1` passed.
-- Metadata normalization rejects drive roots, normalizes absolute Windows paths, and accepts only selected external alias roots and children.
-- Runtime composition attaches native browse/search/read/stat tools for configured external roots without requiring shell workarounds.
+- Metadata normalization rejects drive roots, normalizes absolute Windows paths, and accepts selected external alias roots, prompt-grounded roots, and their children.
+- Runtime composition attaches native browse/search/read/stat tools for configured or prompt-grounded external roots without requiring shell workarounds.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "CreateCapabilityState_attaches_prompt_grounded|WorkspaceRuntimePlugin_maps_prompt_grounded" --no-restore -m:1` passed.
 
 ## Browser Validation Logging
 

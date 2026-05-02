@@ -21,71 +21,71 @@ public sealed partial class MafAgentRuntime
 
         public WorkspaceFileListResult ListWorkspaceFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
         {
-            EnsureFileReadAllowed(relativePath);
-            return fileService.ListFiles(relativePath, searchPattern, maxResults);
+            var allowedPath = PrepareFileReadPath(relativePath);
+            return fileService.ListFiles(allowedPath, searchPattern, maxResults);
         }
 
         public WorkspaceTextSearchResult SearchWorkspace(string query, string? relativePath = null, int maxResults = 20)
         {
-            EnsureFileReadAllowed(relativePath);
-            return fileService.SearchText(query, relativePath, maxResults);
+            var allowedPath = PrepareFileReadPath(relativePath);
+            return fileService.SearchText(query, allowedPath, maxResults);
         }
 
         public WorkspaceTextFileReadResult ReadWorkspaceTextFile(string path, int maxCharacters = 12000)
         {
-            EnsureFileReadAllowed(path);
-            return fileService.ReadTextFile(path, maxCharacters);
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            return fileService.ReadTextFile(allowedPath, maxCharacters);
         }
 
         public WorkspacePathStatResult StatWorkspacePath(string path)
         {
-            EnsureFileReadAllowed(path);
-            return fileService.StatPath(path);
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            return fileService.StatPath(allowedPath);
         }
 
         public WorkspaceFileMutationResult CreateWorkspaceDirectory(string path)
         {
-            EnsureFileWriteAllowed(path);
-            return fileService.CreateDirectory(path);
+            var allowedPath = PrepareFileWritePath(path) ?? path;
+            return fileService.CreateDirectory(allowedPath);
         }
 
         public WorkspaceFileMutationResult WriteWorkspaceTextFile(string path, string content, bool overwrite = true)
         {
-            EnsureFileWriteAllowed(path);
-            return fileService.WriteTextFile(path, content, overwrite);
+            var allowedPath = PrepareFileWritePath(path) ?? path;
+            return fileService.WriteTextFile(allowedPath, content, overwrite);
         }
 
         public WorkspaceFileMutationResult AppendWorkspaceTextFile(string path, string content)
         {
-            EnsureFileWriteAllowed(path);
-            return fileService.AppendTextFile(path, content);
+            var allowedPath = PrepareFileWritePath(path) ?? path;
+            return fileService.AppendTextFile(allowedPath, content);
         }
 
         public WorkspaceFileMutationResult CopyWorkspacePath(string sourcePath, string destinationPath, bool overwrite = false)
         {
-            EnsureFileReadAllowed(sourcePath);
-            EnsureFileWriteAllowed(destinationPath);
-            return fileService.CopyPath(sourcePath, destinationPath, overwrite);
+            var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
+            var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
+            return fileService.CopyPath(allowedSourcePath, allowedDestinationPath, overwrite);
         }
 
         public WorkspaceFileMutationResult MoveWorkspacePath(string sourcePath, string destinationPath, bool overwrite = false)
         {
-            EnsureFileWriteAllowed(sourcePath);
-            EnsureFileWriteAllowed(destinationPath);
-            return fileService.MovePath(sourcePath, destinationPath, overwrite);
+            var allowedSourcePath = PrepareFileWritePath(sourcePath) ?? sourcePath;
+            var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
+            return fileService.MovePath(allowedSourcePath, allowedDestinationPath, overwrite);
         }
 
         public WorkspaceFileMutationResult DeleteWorkspacePath(string path, bool recursive = false)
         {
-            EnsureFileWriteAllowed(path);
-            return fileService.DeletePath(path, recursive);
+            var allowedPath = PrepareFileWritePath(path) ?? path;
+            return fileService.DeletePath(allowedPath, recursive);
         }
 
         public WorkspaceTextDiffResult DiffWorkspaceTextFiles(string leftPath, string rightPath, int maxLines = 160)
         {
-            EnsureFileReadAllowed(leftPath);
-            EnsureFileReadAllowed(rightPath);
-            return fileService.DiffTextFiles(leftPath, rightPath, maxLines);
+            var allowedLeftPath = PrepareFileReadPath(leftPath) ?? leftPath;
+            var allowedRightPath = PrepareFileReadPath(rightPath) ?? rightPath;
+            return fileService.DiffTextFiles(allowedLeftPath, allowedRightPath, maxLines);
         }
 
         public WorkspaceCommandExecutionResult GetWorkspaceExecutionBoundary()
@@ -93,81 +93,92 @@ public sealed partial class MafAgentRuntime
 
         public Task<WorkspaceCommandExecutionResult> GitWorkspaceStatus(bool includeBranch = true, string? workingDirectory = null, int timeoutSeconds = 30)
         {
-            EnsureFileReadAllowed(workingDirectory);
-            return commandExecutionService.GitStatus(includeBranch, workingDirectory, timeoutSeconds);
+            var allowedWorkingDirectory = PrepareFileReadPath(workingDirectory);
+            return commandExecutionService.GitStatus(includeBranch, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> GitWorkspaceDiff(string? path = null, bool nameOnly = false, string? workingDirectory = null, int timeoutSeconds = 30)
         {
-            EnsureFileReadAllowed(path);
-            EnsureFileReadAllowed(workingDirectory);
-            return commandExecutionService.GitDiff(path, nameOnly, workingDirectory, timeoutSeconds);
+            var allowedPath = PrepareFileReadPath(path);
+            var allowedWorkingDirectory = PrepareFileReadPath(workingDirectory);
+            return commandExecutionService.GitDiff(allowedPath, nameOnly, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600)
         {
-            EnsureFileWriteAllowed(targetPath);
-            EnsureFileWriteAllowed(workingDirectory);
-            return commandExecutionService.DotnetRestore(targetPath, workingDirectory, timeoutSeconds);
+            var allowedTargetPath = PrepareFileWritePath(targetPath);
+            var allowedWorkingDirectory = PrepareFileWritePath(workingDirectory);
+            return commandExecutionService.DotnetRestore(allowedTargetPath, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600)
         {
-            EnsureFileWriteAllowed(targetPath);
-            EnsureFileWriteAllowed(workingDirectory);
-            return commandExecutionService.DotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds);
+            var allowedTargetPath = PrepareFileWritePath(targetPath);
+            var allowedWorkingDirectory = PrepareFileWritePath(workingDirectory);
+            return commandExecutionService.DotnetBuild(allowedTargetPath, configuration, noRestore, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 1200)
         {
-            EnsureFileWriteAllowed(targetPath);
-            EnsureFileWriteAllowed(workingDirectory);
-            return commandExecutionService.DotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds);
+            var allowedTargetPath = PrepareFileWritePath(targetPath);
+            var allowedWorkingDirectory = PrepareFileWritePath(workingDirectory);
+            return commandExecutionService.DotnetTest(allowedTargetPath, configuration, filter, noBuild, noRestore, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120)
         {
-            EnsureFileWriteAllowed(targetPath);
-            EnsureFileWriteAllowed(workingDirectory);
-            return commandExecutionService.DotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds);
+            var allowedTargetPath = PrepareFileWritePath(targetPath) ?? targetPath;
+            var allowedWorkingDirectory = PrepareFileWritePath(workingDirectory);
+            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
         {
-            EnsureFileWriteAllowed(parentDirectory);
-            return commandExecutionService.DotnetNew(template, name, parentDirectory, force, timeoutSeconds);
+            var allowedParentDirectory = PrepareFileWritePath(parentDirectory);
+            return commandExecutionService.DotnetNew(template, name, allowedParentDirectory, force, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
         {
-            EnsureFileReadAllowed(path);
-            EnsureFileReadAllowed(workingDirectory);
-            return commandExecutionService.PythonRunFile(path, arguments, workingDirectory, timeoutSeconds);
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            var allowedWorkingDirectory = PrepareFileReadPath(workingDirectory);
+            return commandExecutionService.PythonRunFile(allowedPath, arguments, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
         {
-            EnsureFileReadAllowed(path);
-            EnsureFileReadAllowed(workingDirectory);
-            foreach (var outputPath in outputPaths ?? [])
-            {
-                EnsureFileWriteAllowed(outputPath);
-            }
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            var allowedWorkingDirectory = PrepareFileReadPath(workingDirectory);
+            var allowedOutputPaths = (outputPaths ?? [])
+                .Select(outputPath => PrepareFileWritePath(outputPath) ?? outputPath)
+                .ToArray();
 
-            return commandExecutionService.PowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds);
+            return commandExecutionService.PowerShellRunScript(allowedPath, arguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds);
         }
 
         public Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(string path, string? outputPath = null, int previewCharacters = 4000)
         {
-            EnsureFileReadAllowed(path);
-            EnsureFileWriteAllowed(outputPath);
-            return artifactToolService.ConvertDocumentToMarkdown(path, outputPath, previewCharacters);
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            var allowedOutputPath = PrepareFileWritePath(outputPath);
+            return artifactToolService.ConvertDocumentToMarkdown(allowedPath, allowedOutputPath, previewCharacters);
         }
 
         public Task<WorkspaceSpreadsheetInspectionResult> InspectSpreadsheetFile(string path, int maxRows = 8, int maxColumns = 8, int previewCharacters = 4000)
         {
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            return artifactToolService.InspectSpreadsheetFile(allowedPath, maxRows, maxColumns, previewCharacters);
+        }
+
+        private string? PrepareFileReadPath(string? path)
+        {
             EnsureFileReadAllowed(path);
-            return artifactToolService.InspectSpreadsheetFile(path, maxRows, maxColumns, previewCharacters);
+            return NormalizeAllowedExternalPathForWorkspaceTools(path);
+        }
+
+        private string? PrepareFileWritePath(string? path)
+        {
+            EnsureFileWriteAllowed(path);
+            return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
         private void EnsureFileReadAllowed(string? path)
@@ -208,19 +219,67 @@ public sealed partial class MafAgentRuntime
                 return;
             }
 
-            if (!AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
-                    normalizedAlias,
-                    accessSettings.AllowedExternalTargetAliases))
+            var readOnlyAliases = ResolveReadOnlyExternalTargetAliases();
+            if (requireWrite &&
+                IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases))
+            {
+                throw new InvalidOperationException(
+                    $"External workspace path '{normalizedAlias}' is read-only for this run.");
+            }
+
+            var allowedAliases = ResolveAllowedExternalTargetAliases();
+            var isAllowedForRead = IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases) ||
+                                   IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases);
+            if (!isAllowedForRead)
             {
                 throw new InvalidOperationException(
                     $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
             }
 
-            if (requireWrite && !accessSettings.CanWriteFiles)
+            if (requireWrite &&
+                !IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases))
             {
                 throw new InvalidOperationException(
-                    $"External workspace path '{normalizedAlias}' is read-only for this agent.");
+                    $"External workspace path '{normalizedAlias}' is read-only for this run.");
             }
+        }
+
+        private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) ||
+                IsManagedWorkspaceAbsolutePath(path))
+            {
+                return path;
+            }
+
+            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
+            return string.IsNullOrWhiteSpace(normalizedAlias)
+                ? path
+                : normalizedAlias;
+        }
+
+        private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
+        {
+            return accessSettings.AllowedExternalTargetAliases
+                .Concat(WorkspaceExecutionAuditContext.Current?.AllowedExternalTargetAliases ?? [])
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases()
+        {
+            return WorkspaceExecutionAuditContext.Current?.ReadOnlyExternalTargetAliases
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? [];
+        }
+
+        private static bool IsExternalTargetAliasAllowed(
+            string normalizedAlias,
+            IReadOnlyList<string> allowedAliases)
+        {
+            return AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
+                normalizedAlias,
+                allowedAliases);
         }
 
         private bool IsManagedWorkspaceAbsolutePath(string path)

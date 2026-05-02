@@ -320,6 +320,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ? chatSessionId?.ToString("N") ?? string.Empty
             : context.SourceId ?? string.Empty;
         var metadataJson = ExecutionInvocationMetadata.Build(context.MetadataJson, context.Policy);
+        if (ShouldGroundPromptExternalTargetAliases(sourceKind, context))
+        {
+            metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+                metadataJson,
+                prompt,
+                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+        }
 
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),
@@ -356,6 +363,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             StructuredOutputTypeName: structuredOutput?.OutputType.AssemblyQualifiedName ?? string.Empty,
             StructuredOutputSchemaName: structuredOutput?.SchemaName ?? string.Empty,
             StructuredOutputSchemaDescription: structuredOutput?.SchemaDescription ?? string.Empty);
+    }
+
+    private static bool ShouldGroundPromptExternalTargetAliases(
+        string sourceKind,
+        ExecutionInvocationContext context)
+    {
+        return !string.Equals(sourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
+               string.IsNullOrWhiteSpace(context.ProcessRunId) &&
+               string.IsNullOrWhiteSpace(context.ProcessStepId);
     }
 
     private static AgentDefinition EnsureAgentExists(
