@@ -44,6 +44,8 @@ public partial class AgentCatalogPanel
     private IReadOnlyList<ProcessDefinitionListItem> processDefinitions = [];
     private IReadOnlyList<string> tagValues = [];
     private string agentSearch = string.Empty;
+    private string externalWorkspaceRootsText = string.Empty;
+    private string allowedStorageCatalogIdsText = string.Empty;
     private Guid? linkedPartyId;
     private bool hasLoaded;
     private bool isLoading = true;
@@ -272,6 +274,7 @@ public partial class AgentCatalogPanel
     {
         try
         {
+            SyncWorkspaceToolAccessFromEditorText();
             editorModel.Tags = BuildAgentTagsForSave().ToList();
             var agentId = await WorkspaceService.SaveAgentAsync(editorModel);
             await ReloadAgentsAsync(agentId);
@@ -374,6 +377,40 @@ public partial class AgentCatalogPanel
         return editor.ProcessAccess.AllowAllDefinitions
             ? "All current and future processes"
             : $"{CountAllowedProcesses(editor)} selected";
+    }
+
+    private static string DescribeWorkspaceFileScope(AgentEditorModel editor)
+    {
+        if (!editor.WorkspaceToolAccess.CanReadFiles &&
+            !editor.WorkspaceToolAccess.CanWriteFiles)
+        {
+            return "File tools disabled";
+        }
+
+        var accessMode = editor.WorkspaceToolAccess.CanWriteFiles
+            ? "Read/write"
+            : "Read-only";
+        var externalRootCount = editor.WorkspaceToolAccess.AllowedExternalTargetAliases.Count;
+        return externalRootCount == 0
+            ? $"{accessMode}; managed workspace only"
+            : $"{accessMode}; {externalRootCount} external root(s)";
+    }
+
+    private static string DescribeStorageScope(AgentEditorModel editor)
+    {
+        if (!editor.WorkspaceToolAccess.CanReadStorage &&
+            !editor.WorkspaceToolAccess.CanWriteStorage)
+        {
+            return "Storage tools disabled";
+        }
+
+        var accessMode = editor.WorkspaceToolAccess.CanWriteStorage
+            ? "Read/write"
+            : "Read-only";
+
+        return editor.WorkspaceToolAccess.AllowAllStorageCatalogs
+            ? $"{accessMode}; all storage catalogs"
+            : $"{accessMode}; {editor.WorkspaceToolAccess.AllowedStorageCatalogIds.Count} storage catalog(s)";
     }
 
     private string DescribeRuntimeParameterPolicy(ProviderProfile provider)
@@ -481,6 +518,57 @@ public partial class AgentCatalogPanel
         }
     }
 
+    private void ToggleWorkspaceFileRead(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.WorkspaceToolAccess.CanReadFiles = isEnabled;
+        if (!isEnabled)
+        {
+            editorModel.WorkspaceToolAccess.CanWriteFiles = false;
+        }
+    }
+
+    private void ToggleWorkspaceFileWrite(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.WorkspaceToolAccess.CanWriteFiles = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.WorkspaceToolAccess.CanReadFiles = true;
+        }
+    }
+
+    private void ToggleStorageRead(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.WorkspaceToolAccess.CanReadStorage = isEnabled;
+        if (!isEnabled)
+        {
+            editorModel.WorkspaceToolAccess.CanWriteStorage = false;
+            editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs = false;
+        }
+    }
+
+    private void ToggleStorageWrite(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.WorkspaceToolAccess.CanWriteStorage = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.WorkspaceToolAccess.CanReadStorage = true;
+        }
+    }
+
+    private void ToggleStorageAllowAll(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.WorkspaceToolAccess.CanReadStorage = true;
+        }
+    }
+
     private bool HasProjectStructureProjectAccess(Guid projectId)
     {
         return editorModel.ProjectStructureAccess.AllowedProjectIds.Contains(projectId);
@@ -569,6 +657,36 @@ public partial class AgentCatalogPanel
         return Task.CompletedTask;
     }
 
+    private void SyncWorkspaceToolAccessFromEditorText()
+    {
+        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = SplitEditorLines(externalWorkspaceRootsText)
+            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = SplitEditorLines(allowedStorageCatalogIdsText)
+            .Where(item => Guid.TryParse(item, out _))
+            .Select(Guid.Parse)
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .OrderBy(item => item)
+            .ToList();
+
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
+        externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
+        allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
+    }
+
+    private static IReadOnlyList<string> SplitEditorLines(string value)
+    {
+        return value
+            .Split(["\r\n", "\n", "\r", ",", ";"], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+    }
+
     private IReadOnlyList<string> BuildAgentTagsForSave()
     {
         var nextTags = NormalizeVisibleTags(tagValues).ToList();
@@ -626,6 +744,8 @@ public partial class AgentCatalogPanel
     {
         editorModel = AgentEditorModel.FromDefinition(definition);
         tagValues = NormalizeVisibleTags(editorModel.Tags);
+        externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
+        allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
         linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
     }
 
@@ -633,6 +753,8 @@ public partial class AgentCatalogPanel
     {
         editorModel = new AgentEditorModel();
         tagValues = [];
+        externalWorkspaceRootsText = string.Empty;
+        allowedStorageCatalogIdsText = string.Empty;
         linkedPartyId = null;
     }
 }

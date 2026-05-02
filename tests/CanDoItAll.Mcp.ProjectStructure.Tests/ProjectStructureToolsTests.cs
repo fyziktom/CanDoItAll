@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Reflection;
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -8,6 +10,27 @@ namespace CanDoItAll.Mcp.ProjectStructure.Tests;
 
 public sealed class ProjectStructureToolsTests
 {
+    [Fact]
+    public void Node_create_and_update_descriptions_define_mermaid_file_asset_contract()
+    {
+        var createDescription = typeof(ProjectStructureTools)
+            .GetMethod(nameof(ProjectStructureTools.ProjectStructureNodeCreateAsync))
+            ?.GetCustomAttribute<DescriptionAttribute>()
+            ?.Description;
+        var updateDescription = typeof(ProjectStructureTools)
+            .GetMethod(nameof(ProjectStructureTools.ProjectStructureNodeUpdateAsync))
+            ?.GetCustomAttribute<DescriptionAttribute>()
+            ?.Description;
+
+        Assert.NotNull(createDescription);
+        Assert.Contains("objectType File", createDescription, StringComparison.Ordinal);
+        Assert.Contains("objectSubtype mermaid", createDescription, StringComparison.Ordinal);
+        Assert.Contains("Mermaid source in notes", createDescription, StringComparison.Ordinal);
+        Assert.NotNull(updateDescription);
+        Assert.Contains("objectSubtype mermaid", updateDescription, StringComparison.Ordinal);
+        Assert.Contains("Mermaid source in notes", updateDescription, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ProjectStructureProjectLeaseAcquireAsync_returns_structured_lease_conflict_failure()
     {

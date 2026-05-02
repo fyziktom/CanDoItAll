@@ -22,6 +22,7 @@ public sealed class AgentEditorModel
     public AgentPermissionsPolicy Permissions { get; set; } = AgentPermissionsPolicy.Default;
     public AgentProjectStructureAccessSettings ProjectStructureAccess { get; set; } = new();
     public AgentProcessAccessSettings ProcessAccess { get; set; } = new();
+    public AgentWorkspaceToolAccessSettings WorkspaceToolAccess { get; set; } = new();
     public List<Guid> SelectedCapabilityIds { get; set; } = [];
     public List<string> Tags { get; set; } = [];
 
@@ -49,6 +50,7 @@ public sealed class AgentEditorModel
             Permissions = definition.Permissions,
             ProjectStructureAccess = AgentProjectStructureAccessMetadata.Read(definition.ConfigurationJson),
             ProcessAccess = AgentProcessAccessMetadata.Read(definition.ConfigurationJson),
+            WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(definition.ConfigurationJson),
             SelectedCapabilityIds = definition.Capabilities.Select(item => item.CapabilityId).ToList(),
             Tags = definition.Tags.ToList()
         };

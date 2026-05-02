@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
@@ -24,6 +25,7 @@ public sealed partial class MafAgentRuntime
 
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements);
+        await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
         await AttachInternalProcessToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachCatalogCapabilitiesAsync(
@@ -45,20 +47,22 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<CapabilityCatalogItem> capabilities)
     {
         var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
+        var workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
         var workspaceFileService = services.GetService(typeof(IWorkspaceFileService)) as IWorkspaceFileService
             ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
         var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
             ?? new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost(), workspaceScope);
         var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
             ?? new WorkspaceArtifactToolService(workspaceRoot, workspaceCommandExecutionService, workspaceScope);
-        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceFileService, workspaceCommandExecutionService, workspaceArtifactToolService);
+        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceFileService, workspaceCommandExecutionService, workspaceArtifactToolService, workspaceRoot, workspaceToolAccess);
+        var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(this);
         var contextBuilder = new ContextCapabilityBuilder(this);
         var mcpBuilder = new McpCapabilityBuilder(this);
         var projectStructureToolBuilder = CreateProjectStructureToolBuilder(workspaceCommandExecutionService);
         var processToolBuilder = CreateProcessToolBuilder();
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
-        var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, workspaceCommandExecutionService, fileSkillExecutionPolicies);
+        var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, storagePlugin, workspaceCommandExecutionService, fileSkillExecutionPolicies);
 
         return new RuntimeCapabilityComposition(
             new RuntimeCapabilityState(),
@@ -69,6 +73,15 @@ public sealed partial class MafAgentRuntime
             projectStructureToolBuilder,
             processToolBuilder,
             toolBuilder);
+    }
+
+    private StorageRuntimePlugin? CreateStorageRuntimePlugin(AgentWorkspaceToolAccessSettings accessSettings)
+    {
+        var catalogService = services.GetService(typeof(IStorageCatalogService)) as IStorageCatalogService;
+        var driverRegistry = services.GetService(typeof(IStorageDriverRegistry)) as IStorageDriverRegistry;
+        return catalogService is null || driverRegistry is null
+            ? null
+            : new StorageRuntimePlugin(catalogService, driverRegistry, accessSettings);
     }
 
     private async Task AttachWorkspaceMemoryAsync(
@@ -182,6 +195,31 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "Project structure",
             "Attached internal project-structure tools backed by the workspace services and current agent policy.");
+    }
+
+    private async Task AttachConfiguredWorkspaceToolsAsync(
+        RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        bool suppressApprovalRequirements)
+    {
+        if (!agent.Permissions.CanUseTools)
+        {
+            return;
+        }
+
+        var tools = composition.ToolBuilder.CreateConfiguredWorkspaceTools(agent, suppressApprovalRequirements);
+        if (tools.Count == 0)
+        {
+            return;
+        }
+
+        composition.State.Tools.AddRange(tools);
+        composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Workspace tools",
+            "Attached configured workspace file and storage tools from the current agent settings.");
     }
 
     private async Task AttachInternalProcessToolsAsync(

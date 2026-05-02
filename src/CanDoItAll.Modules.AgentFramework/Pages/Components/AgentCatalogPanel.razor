@@ -282,6 +282,83 @@
                     </Grid>
                 </FormSection>
 
+                <FormSection Title="Workspace Tools" Description="These settings decide whether the current agent receives native workspace file tools, external workspace roots, and storage-driver tools.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-workspace-tools">
+                        <div class="cda-admin-subpanel">
+                            <p class="cda-field-label mb-2">File access</p>
+                            <Stack GapScale="LayoutGap.Small">
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.WorkspaceToolAccess.CanReadFiles"
+                                           @onchange="args => ToggleWorkspaceFileRead(args.Value)"
+                                           data-testid="agents-catalog-workspace-read" />
+                                    Can browse and read files
+                                </label>
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.WorkspaceToolAccess.CanWriteFiles"
+                                           @onchange="args => ToggleWorkspaceFileWrite(args.Value)"
+                                           data-testid="agents-catalog-workspace-write" />
+                                    Can write files and run build tools
+                                </label>
+                            </Stack>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                @DescribeWorkspaceFileScope(editorModel)
+                            </p>
+                        </div>
+                        <div class="cda-admin-subpanel md:col-span-2">
+                            <label class="cda-field-label">External workspace roots</label>
+                            <InputTextArea @bind-Value="externalWorkspaceRootsText"
+                                           class="cda-input cda-input--textarea mt-2 min-h-28"
+                                           placeholder="C:\repositories\OtherRepo&#10;external-target/D/work/repos/demo"
+                                           data-testid="agents-catalog-workspace-external-roots" />
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Add one absolute folder or external-target alias per line. Managed workspace paths remain available when file tools are enabled.
+                            </p>
+                        </div>
+                        <div class="cda-admin-subpanel">
+                            <p class="cda-field-label mb-2">Storage access</p>
+                            <Stack GapScale="LayoutGap.Small">
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.WorkspaceToolAccess.CanReadStorage"
+                                           @onchange="args => ToggleStorageRead(args.Value)"
+                                           data-testid="agents-catalog-storage-read" />
+                                    Can read storage driver catalogs
+                                </label>
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.WorkspaceToolAccess.CanWriteStorage"
+                                           @onchange="args => ToggleStorageWrite(args.Value)"
+                                           data-testid="agents-catalog-storage-write" />
+                                    Can write storage driver objects
+                                </label>
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                                           @onchange="args => ToggleStorageAllowAll(args.Value)"
+                                           data-testid="agents-catalog-storage-all" />
+                                    Allow all storage catalogs
+                                </label>
+                            </Stack>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                @DescribeStorageScope(editorModel)
+                            </p>
+                        </div>
+                        <div class="cda-admin-subpanel md:col-span-2">
+                            <label class="cda-field-label">Allowed storage catalog IDs</label>
+                            <InputTextArea @bind-Value="allowedStorageCatalogIdsText"
+                                           class="cda-input cda-input--textarea mt-2 min-h-28"
+                                           disabled="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                                           placeholder="00000000-0000-0000-0000-000000000000"
+                                           data-testid="agents-catalog-storage-ids" />
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Use one catalog ID per line when the all-storage option is off. Write permission is still blocked for read-only catalogs.
+                            </p>
+                        </div>
+                    </Grid>
+                </FormSection>
+
                 <FormSection Title="Process Access" Description="Internal agents always carry the process-module tool family. These settings decide whether the current agent can read or mutate process data and which process definitions it may touch.">
                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-process-access">
                         <div class="cda-admin-subpanel">

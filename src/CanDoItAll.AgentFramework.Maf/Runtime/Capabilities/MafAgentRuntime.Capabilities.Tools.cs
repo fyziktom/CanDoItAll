@@ -10,6 +10,7 @@ public sealed partial class MafAgentRuntime
     private sealed class ToolCapabilityBuilder(
         MafAgentRuntime owner,
         WorkspaceRuntimePlugin workspacePlugin,
+        StorageRuntimePlugin? storagePlugin,
         IWorkspaceCommandExecutionService workspaceCommandExecutionService,
         IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies)
     {
@@ -95,6 +96,55 @@ public sealed partial class MafAgentRuntime
             }
 
             return MafAgentRuntime.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
+        }
+
+        public IReadOnlyList<AITool> CreateConfiguredWorkspaceTools(
+            AgentDefinition agent,
+            bool suppressApprovalRequirements = false)
+        {
+            var access = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
+            var tools = new List<AITool>();
+            var attachFileTools = access.AllowedExternalTargetAliases.Count > 0 || access.CanWriteFiles;
+            if (attachFileTools && (access.CanReadFiles || access.CanWriteFiles))
+            {
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, "workspace_execution_boundary", "Describes the effective tool-execution boundary and whether the host provides real sandboxing."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.ListWorkspaceFiles, "workspace_list_files", "Lists files and directories from the managed workspace or one of this agent's configured external workspace roots."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.SearchWorkspace, "workspace_search", "Searches text across the managed workspace or one of this agent's configured external workspace roots."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.ReadWorkspaceTextFile, "workspace_read_file", "Reads text files from the managed workspace or one of this agent's configured external workspace roots."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.StatWorkspacePath, "workspace_stat_path", "Returns file or directory metadata for a managed workspace path or configured external workspace root."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.DiffWorkspaceTextFiles, "workspace_diff_text", "Computes a bounded line-level diff between two allowed workspace text files."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.GitWorkspaceStatus, "workspace_git_status", "Runs a bounded git status recipe in the managed workspace or configured external workspace root."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", "Runs a bounded git diff recipe in the managed workspace or configured external workspace root."));
+            }
+
+            if (attachFileTools && access.CanWriteFiles)
+            {
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CopyWorkspacePath, "workspace_copy_path", "Copies a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.MoveWorkspacePath, "workspace_move_path", "Moves or renames a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DeleteWorkspacePath, "workspace_delete_path", "Deletes a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", "Creates a bounded dotnet project scaffold in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+            }
+
+            if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
+            {
+                tools.Add(AIFunctionFactory.Create(storagePlugin.ListStorageCatalogs, "storage_catalog_list", "Lists storage catalogs this agent is allowed to use."));
+                tools.Add(AIFunctionFactory.Create(storagePlugin.ReadStorageTextFile, "storage_read_text_file", "Reads a text object from an allowed storage catalog through the configured storage driver."));
+            }
+
+            if (storagePlugin is not null && access.CanWriteStorage)
+            {
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(storagePlugin.WriteStorageTextFile, "storage_write_text_file", "Writes a text object to an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(storagePlugin.DeleteStorageObject, "storage_delete_object", "Deletes an object from an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
+            }
+
+            return tools;
         }
 
         public async Task<object?> RunSkillScriptAsync(
