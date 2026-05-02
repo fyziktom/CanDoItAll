@@ -1006,6 +1006,78 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    private void EnsureProviderNativeBrowserOutputDirectories(DispatchCandidate candidate)
+    {
+        if (!RequiresConcreteBrowserProof(candidate))
+        {
+            return;
+        }
+
+        var workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
+        foreach (var relativeDirectory in ResolveProviderNativeBrowserOutputDirectoryPaths(
+                     BuildCurrentRunManagedArtifactRoot(candidate),
+                     candidate.ExpectedArtifacts))
+        {
+            var fullPath = Path.GetFullPath(Path.Combine(
+                workspaceRoot,
+                relativeDirectory.Replace('/', Path.DirectorySeparatorChar)));
+            if (!IsWithinWorkspace(workspaceRoot, fullPath))
+            {
+                logger.LogWarning(
+                    "Skipping provider-native browser output directory preflight for process run {RunId}; path '{RelativeDirectory}' resolves outside the workspace root.",
+                    candidate.Run.Id,
+                    relativeDirectory);
+                continue;
+            }
+
+            Directory.CreateDirectory(fullPath);
+        }
+    }
+
+    internal static IReadOnlyList<string> ResolveProviderNativeBrowserOutputDirectoryPaths(
+        string currentRunManagedArtifactRoot,
+        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts)
+    {
+        var directories = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddProviderNativeBrowserDirectory(directories, currentRunManagedArtifactRoot);
+
+        foreach (var expectedArtifact in expectedArtifacts)
+        {
+            if (!TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath) ||
+                string.IsNullOrWhiteSpace(ResolveProviderNativeBrowserToolName(expectedRelativePath)))
+            {
+                continue;
+            }
+
+            AddProviderNativeBrowserDirectory(
+                directories,
+                Path.GetDirectoryName(expectedRelativePath.Replace('/', Path.DirectorySeparatorChar)) ?? string.Empty);
+        }
+
+        return directories.ToList();
+    }
+
+    private static void AddProviderNativeBrowserDirectory(
+        ISet<string> directories,
+        string relativeDirectory)
+    {
+        var normalizedDirectory = WorkspaceScopeDescriptor.NormalizeRelativePath(relativeDirectory);
+        if (string.IsNullOrWhiteSpace(normalizedDirectory) ||
+            Path.IsPathRooted(normalizedDirectory) ||
+            IsExternalTargetAliasPath(normalizedDirectory))
+        {
+            return;
+        }
+
+        var segments = normalizedDirectory.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0 || !IsManagedRootSegment(segments[0]))
+        {
+            return;
+        }
+
+        directories.Add(normalizedDirectory);
+    }
+
     private async Task<Result> TransitionStepAsync(
         ProcessStepTransitionRequest request,
         CancellationToken cancellationToken)

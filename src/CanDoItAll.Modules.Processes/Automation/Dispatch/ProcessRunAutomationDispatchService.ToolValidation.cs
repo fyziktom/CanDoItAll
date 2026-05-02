@@ -426,7 +426,67 @@ internal sealed partial class ProcessRunAutomationDispatchService
             successfulToolNames.Add(toolName);
         }
 
+        foreach (var toolName in ResolveSuccessfulExecutionLogToolNames(detail.ExecutionLog))
+        {
+            successfulToolNames.Add(toolName);
+        }
+
         return successfulToolNames;
+    }
+
+    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(IReadOnlyList<ExecutionLogEntry> executionLog)
+    {
+        if (executionLog.Count == 0)
+        {
+            return [];
+        }
+
+        var toolNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in executionLog)
+        {
+            if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
+                entry.State == ExecutionState.Failed ||
+                !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
+                !IsProviderNativeExecutionLogToolName(toolName))
+            {
+                continue;
+            }
+
+            toolNames.Add(toolName);
+        }
+
+        return toolNames.ToList();
+    }
+
+    private static bool TryResolveExecutionLogInvokedToolName(string message, out string toolName)
+    {
+        toolName = string.Empty;
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        const string prefix = "Invoking tool '";
+        var start = message.IndexOf(prefix, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        start += prefix.Length;
+        var end = message.IndexOf('\'', start);
+        if (end <= start)
+        {
+            return false;
+        }
+
+        toolName = NormalizeToolToken(message[start..end]);
+        return !string.IsNullOrWhiteSpace(toolName);
+    }
+
+    private static bool IsProviderNativeExecutionLogToolName(string toolName)
+    {
+        return toolName.StartsWith("browser_", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> ResolveSuccessfulSessionToolNames(string? serializedSessionStateJson)

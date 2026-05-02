@@ -3147,6 +3147,65 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
+    public void ResolveCompletionStatus_blocks_completed_browser_proof_step_when_response_reports_runtime_error()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the requested app.",
+            ProcessStepKind.Review);
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "QA run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "QA smoke executed; host started and Playwright browser proof captured. Root route shows an application error.",
+                    summaryMarkdown: "Browser snapshot and screenshot captured the primary route, but the route shows an application error and needs implementation repair."),
+                "OpenAI chat completions",
+                "gpt-4o-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Artifact path verified.")),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Artifact contents reviewed.")),
+                    ("browser_console_messages", CreateProviderNativeTextResult("Console inspected.")),
+                    ("browser_snapshot", CreateProviderNativeTextResult("Snapshot captured.")),
+                    ("browser_take_screenshot", CreateProviderNativeTextResult("Screenshot captured."))),
+                []),
+            null,
+            [],
+            []);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("application runtime error", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_fails_when_run_completed_but_provider_outcome_failed()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -3293,6 +3352,62 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
+    public void ResolveCompletionStatus_allows_completion_when_required_browser_tools_are_confirmed_by_execution_log()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+
+        var candidate = CreateDispatchCandidate(
+            "Validate the UI.\nInstructions: Call browser_take_screenshot, browser_snapshot, and browser_console_messages before you conclude.",
+            ProcessStepKind.Review);
+        var now = DateTimeOffset.UtcNow;
+        var runId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                runId,
+                agentId,
+                null,
+                "QA run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Required browser evidence was captured."),
+                "OpenAI chat completions",
+                "gpt-4o-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Artifact path verified.")),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Artifact contents reviewed."))),
+                []),
+            null,
+            [
+                CreateExecutionLogToolInvocation(runId, agentId, now, "browser_take_screenshot"),
+                CreateExecutionLogToolInvocation(runId, agentId, now, "browser_snapshot"),
+                CreateExecutionLogToolInvocation(runId, agentId, now, "browser_console_messages")
+            ],
+            []);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, status);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_ignores_suggested_browser_input_tools_when_browser_proof_succeeds()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -3350,7 +3465,7 @@ Downstream artifact expectations: implementation change set, migration checklist
                     "LocalExecution",
                     "Required",
                     "PolicyOnlyLocal",
-                    "Launch-UnitsApp.ps1",
+                    "Launch-WorkflowProof.ps1",
                     "deliveries/workflow-suite",
                     "Succeeded",
                     now,
@@ -3384,6 +3499,41 @@ Downstream artifact expectations: implementation change set, migration checklist
         Assert.Contains("execute-release-rollout/workflow-proof.png", outputFilesByToolName["browser_take_screenshot"], StringComparer.OrdinalIgnoreCase);
         Assert.Contains("execute-release-rollout/workflow-page.yml", outputFilesByToolName["browser_snapshot"], StringComparer.OrdinalIgnoreCase);
         Assert.Contains("execute-release-rollout/workflow-console.log", outputFilesByToolName["browser_console_messages"], StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveProviderNativeBrowserOutputDirectoryPaths_prepares_current_run_and_browser_expectation_dirs()
+    {
+        var runId = Guid.NewGuid();
+        var expectedArtifacts = new[]
+        {
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                Guid.NewGuid(),
+                ProcessArtifactKind.Evidence,
+                "Workflow screenshot",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                $"Create this artifact at artifacts/process-runs/{runId:D}/browser/workflow-proof.png using browser_take_screenshot.",
+                string.Empty),
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                Guid.NewGuid(),
+                ProcessArtifactKind.Checklist,
+                "QA note",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                $"Create this artifact at artifacts/process-runs/{runId:D}/notes/qa-note.md using workspace_write_file.",
+                string.Empty)
+        };
+
+        var directories = ProcessRunAutomationDispatchService.ResolveProviderNativeBrowserOutputDirectoryPaths(
+            $"artifacts/process-runs/{runId:D}",
+            expectedArtifacts);
+
+        Assert.Contains($"artifacts/process-runs/{runId:D}", directories, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains($"artifacts/process-runs/{runId:D}/browser", directories, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain($"artifacts/process-runs/{runId:D}/notes", directories, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -7092,6 +7242,22 @@ Requirements from project-level planning context:
             exitSummary,
             timestamp,
             timestamp);
+    }
+
+    private static ExecutionLogEntry CreateExecutionLogToolInvocation(
+        Guid executionRunId,
+        Guid agentId,
+        DateTimeOffset timestamp,
+        string toolName)
+    {
+        return new ExecutionLogEntry(
+            Guid.NewGuid(),
+            agentId,
+            null,
+            timestamp,
+            ExecutionState.Running,
+            "Tool",
+            $"Invoking tool '{toolName}' with test arguments.") { ExecutionRunId = executionRunId };
     }
 
     private static string ToExternalTargetAlias(string path)

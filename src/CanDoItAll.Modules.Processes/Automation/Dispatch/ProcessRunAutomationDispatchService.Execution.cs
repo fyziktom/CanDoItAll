@@ -43,6 +43,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             StringComparer.Ordinal);
         successfulToolNamesAcrossAttempts.UnionWith(prefetchedArtifactInspectionGrounding.SatisfiedToolNames);
         var maxExecutionAttempts = ResolveMaxExecutionAttempts(candidate);
+        EnsureProviderNativeBrowserOutputDirectories(candidate);
 
         for (var attemptNumber = 1; attemptNumber <= maxExecutionAttempts; attemptNumber++)
         {
