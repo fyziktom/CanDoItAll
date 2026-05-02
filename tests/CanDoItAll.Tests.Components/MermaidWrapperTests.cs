@@ -33,6 +33,35 @@ public sealed class MermaidWrapperTests
         Assert.False(options.ArchitectureRandomize);
     }
 
+    [Theory]
+    [InlineData("```mermaid\nflowchart TB\nA[Start] --> B[Done]\n```", "flowchart TB\nA[Start] --> B[Done]")]
+    [InlineData("```mermaid flowchart TB\nA[Start] --> B[Done]\n```", "flowchart TB\nA[Start] --> B[Done]")]
+    [InlineData("```mermaid sequenceDiagram\nparticipant A\nA->>A: done\n```", "sequenceDiagram\nparticipant A\nA->>A: done")]
+    [InlineData("```mermaid sequenceDiagram participant A A->>A: done ```", "sequenceDiagram participant A A->>A: done")]
+    [InlineData("flowchart LR\nA --> B", "flowchart LR\nA --> B")]
+    public void Mermaid_Source_Normalizer_Strips_Render_Block_Fences(string source, string expected)
+    {
+        Assert.Equal(expected, MermaidSourceNormalizer.Normalize(source));
+    }
+
+    [Fact]
+    public void Mermaid_Source_Normalizer_Extracts_Mermaid_Block_From_Markdown()
+    {
+        const string source = """
+            Diagram follows:
+
+            ```mermaid
+            sequenceDiagram
+            participant User
+            User->>App: open
+            ```
+            """;
+
+        Assert.Equal(
+            "sequenceDiagram\nparticipant User\nUser->>App: open",
+            MermaidSourceNormalizer.Normalize(source));
+    }
+
     [Fact]
     public void Mermaid_Diagram_Renders_Control_Chrome()
     {

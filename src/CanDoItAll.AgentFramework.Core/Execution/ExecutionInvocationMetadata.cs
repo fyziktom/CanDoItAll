@@ -37,6 +37,66 @@ public static class ExecutionInvocationMetadata
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
+    public static string GroundPromptExternalTargetAliases(
+        string? metadataJson,
+        string? prompt,
+        AgentWorkspaceToolAccessSettings? workspaceToolAccess)
+    {
+        var metadata = ParseObject(metadataJson);
+        var accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess ?? new AgentWorkspaceToolAccessSettings());
+        if ((!accessSettings.CanReadFiles && !accessSettings.CanWriteFiles) ||
+            string.IsNullOrWhiteSpace(prompt))
+        {
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        var aliases = ExtractPromptExternalTargetAliases(prompt);
+        if (aliases.Count == 0)
+        {
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        MergeExternalTargetAliases(
+            metadata,
+            accessSettings.CanWriteFiles
+                ? AllowedExternalTargetAliasesMetadataKey
+                : ReadOnlyExternalTargetAliasesMetadataKey,
+            aliases);
+
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static IReadOnlyList<string> ExtractPromptExternalTargetAliases(string? prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return [];
+        }
+
+        var aliases = new List<string>();
+        for (var index = 0; index < prompt.Length; index++)
+        {
+            if (!IsPathCandidateStart(prompt, index))
+            {
+                continue;
+            }
+
+            var candidate = ReadPathCandidate(prompt, index, out var nextIndex);
+            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(candidate);
+            if (!string.IsNullOrWhiteSpace(alias))
+            {
+                aliases.Add(alias);
+            }
+
+            index = Math.Max(index, nextIndex - 1);
+        }
+
+        return aliases
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static int ResolveMaxStructuredOutputRepairAttempts(
         ExecutionRunRecord run)
     {
@@ -188,6 +248,83 @@ public static class ExecutionInvocationMetadata
             return [];
         }
     }
+
+    private static void MergeExternalTargetAliases(
+        JsonObject metadata,
+        string metadataKey,
+        IReadOnlyList<string> aliases)
+    {
+        var mergedAliases = new List<string>();
+        if (metadata[metadataKey] is JsonArray existingAliases)
+        {
+            mergedAliases.AddRange(existingAliases
+                .Select(item => item?.GetValue<string>())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item))
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Cast<string>());
+        }
+
+        mergedAliases.AddRange(aliases);
+        metadata[metadataKey] = new JsonArray(
+            mergedAliases
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .Select(alias => JsonValue.Create(alias))
+                .ToArray());
+    }
+
+    private static bool IsPathCandidateStart(string value, int index)
+    {
+        if (index < 0 || index >= value.Length)
+        {
+            return false;
+        }
+
+        if (index + 2 < value.Length &&
+            char.IsLetter(value[index]) &&
+            value[index + 1] == ':' &&
+            (value[index + 2] == '\\' || value[index + 2] == '/'))
+        {
+            return index == 0 || !char.IsLetterOrDigit(value[index - 1]);
+        }
+
+        return value.AsSpan(index).StartsWith("external-target/", StringComparison.OrdinalIgnoreCase) &&
+               (index == 0 || !char.IsLetterOrDigit(value[index - 1]));
+    }
+
+    private static string ReadPathCandidate(string value, int startIndex, out int nextIndex)
+    {
+        var terminator = startIndex > 0 && IsQuote(value[startIndex - 1])
+            ? value[startIndex - 1]
+            : '\0';
+
+        var index = startIndex;
+        while (index < value.Length)
+        {
+            var current = value[index];
+            if (terminator != '\0')
+            {
+                if (current == terminator)
+                {
+                    break;
+                }
+            }
+            else if (char.IsWhiteSpace(current) ||
+                     current is '"' or '\'' or '`' or '<' or '>' or '|' or '?' or '*' or ',' or ';' or ')' or ']' or '}')
+            {
+                break;
+            }
+
+            index++;
+        }
+
+        nextIndex = index;
+        return value[startIndex..index].Trim().TrimEnd('.', ',', ';', ':', ')', ']', '}');
+    }
+
+    private static bool IsQuote(char value)
+        => value is '"' or '\'' or '`';
 
     private static bool IsGovernedMachineCriticalRun(ExecutionRunRecord run)
     {

@@ -103,15 +103,21 @@ public sealed partial class MafAgentRuntime
             bool suppressApprovalRequirements = false)
         {
             var access = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
+            var auditScope = WorkspaceExecutionAuditContext.Current;
+            var hasGroundedExternalPath = auditScope is not null &&
+                                          (auditScope.AllowedExternalTargetAliases.Count > 0 ||
+                                           auditScope.ReadOnlyExternalTargetAliases.Count > 0);
             var tools = new List<AITool>();
-            var attachFileTools = access.AllowedExternalTargetAliases.Count > 0 || access.CanWriteFiles;
+            var attachFileTools = access.AllowedExternalTargetAliases.Count > 0 ||
+                                  access.CanWriteFiles ||
+                                  hasGroundedExternalPath;
             if (attachFileTools && (access.CanReadFiles || access.CanWriteFiles))
             {
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, "workspace_execution_boundary", "Describes the effective tool-execution boundary and whether the host provides real sandboxing."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.ListWorkspaceFiles, "workspace_list_files", "Lists files and directories from the managed workspace or one of this agent's configured external workspace roots."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.SearchWorkspace, "workspace_search", "Searches text across the managed workspace or one of this agent's configured external workspace roots."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.ReadWorkspaceTextFile, "workspace_read_file", "Reads text files from the managed workspace or one of this agent's configured external workspace roots."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.StatWorkspacePath, "workspace_stat_path", "Returns file or directory metadata for a managed workspace path or configured external workspace root."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.ListWorkspaceFiles, "workspace_list_files", "Lists files and directories from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.SearchWorkspace, "workspace_search", "Searches text across the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.ReadWorkspaceTextFile, "workspace_read_file", "Reads text files from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.StatWorkspacePath, "workspace_stat_path", "Returns file or directory metadata for a managed workspace path, configured external workspace root, or prompt-grounded absolute external path."));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.DiffWorkspaceTextFiles, "workspace_diff_text", "Computes a bounded line-level diff between two allowed workspace text files."));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.GitWorkspaceStatus, "workspace_git_status", "Runs a bounded git status recipe in the managed workspace or configured external workspace root."));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", "Runs a bounded git diff recipe in the managed workspace or configured external workspace root."));

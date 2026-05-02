@@ -26,6 +26,14 @@ public sealed record ContextualAgentAccessSummary(
     public bool CanWrite => AccessLevel.HasFlag(ContextualAgentAccessLevel.Write);
 }
 
+public sealed record ContextualAgentWorkspaceRefreshRequest(
+    ContextualAgentWorkspaceKind WorkspaceKind,
+    Guid AgentId,
+    Guid? ChatSessionId,
+    Guid? ExecutionRunId,
+    Guid? ProjectId = null,
+    Guid? ProcessDefinitionId = null);
+
 public static class ContextualAgentAccessResolver
 {
     public static IReadOnlyList<ContextualAgentAccessSummary> Resolve(

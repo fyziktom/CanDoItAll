@@ -578,6 +578,112 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task CreateCapabilityState_attaches_prompt_grounded_workspace_read_tools_without_preconfigured_external_roots()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                new AgentWorkspaceToolAccessSettings
+                {
+                    CanReadFiles = true,
+                    CanWriteFiles = false
+                })
+        };
+        var provider = CreateProvider("{}");
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            "{}",
+            """analyze "C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler" and add architecture""",
+            AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+        var run = CreateExecutionRunForAuditScope(agent, provider, metadataJson);
+        var progressMessages = new List<string>();
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var state = await InvokeCreateCapabilityStateAsync(
+                runtime,
+                agent,
+                provider,
+                Array.Empty<CapabilityCatalogItem>(),
+                progressMessages);
+            var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+                state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+            var toolNames = tools
+                .Select(item => item.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            Assert.Contains("workspace_list_files", toolNames);
+            Assert.Contains("workspace_search", toolNames);
+            Assert.Contains("workspace_read_file", toolNames);
+            Assert.Contains("workspace_stat_path", toolNames);
+            Assert.DoesNotContain("workspace_write_file", toolNames);
+        }
+    }
+
+    [Fact]
+    public void WorkspaceRuntimePlugin_maps_prompt_grounded_absolute_external_path_to_alias_before_listing()
+    {
+        var workspaceRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-workspace-{Guid.NewGuid():N}")).FullName;
+        var externalRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"BikeRepairSlotScheduler-{Guid.NewGuid():N}")).FullName;
+        File.WriteAllText(Path.Combine(externalRoot, "BikeRepairSlotScheduler.csproj"), "<Project />");
+
+        try
+        {
+            var agent = CreateToolAgent() with
+            {
+                ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                    "{}",
+                    new AgentWorkspaceToolAccessSettings
+                    {
+                        CanReadFiles = true,
+                        CanWriteFiles = false
+                    })
+            };
+            var provider = CreateProvider("{}");
+            var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+                "{}",
+                $"""analyze "{externalRoot}" and add architecture""",
+                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+            var run = CreateExecutionRunForAuditScope(agent, provider, metadataJson);
+            var pluginType = typeof(MafAgentRuntime).GetNestedType("WorkspaceRuntimePlugin", BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("WorkspaceRuntimePlugin type was not found.");
+            var commandService = new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost());
+            var artifactService = new WorkspaceArtifactToolService(workspaceRoot, commandService);
+            var plugin = Activator.CreateInstance(
+                             pluginType,
+                             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                             binder: null,
+                             args:
+                             [
+                                 new WorkspaceFileService(workspaceRoot),
+                                 commandService,
+                                 artifactService,
+                                 workspaceRoot,
+                                 AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+                             ],
+                             culture: null)
+                         ?? throw new InvalidOperationException("WorkspaceRuntimePlugin could not be created.");
+            var listMethod = pluginType.GetMethod("ListWorkspaceFiles", BindingFlags.Public | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("ListWorkspaceFiles method was not found.");
+
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = Assert.IsType<WorkspaceFileListResult>(listMethod.Invoke(plugin, [externalRoot, "*", 20]));
+
+                Assert.True(result.Succeeded, result.Message);
+                Assert.Equal(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot), result.RootPath);
+                Assert.Contains(result.Entries, entry => entry.RelativePath.EndsWith("BikeRepairSlotScheduler.csproj", StringComparison.OrdinalIgnoreCase));
+            }
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task CreateCapabilityState_attaches_configured_storage_driver_tools_and_wraps_writes()
     {
         var services = new ServiceCollection()
@@ -1013,6 +1119,49 @@ public sealed class MafAgentRuntimeTests
         }
 
         throw new InvalidOperationException("Could not find the repository root from the test output directory.");
+    }
+
+    private static ExecutionRunRecord CreateExecutionRunForAuditScope(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string metadataJson)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agent.Id,
+            ChatSessionId: null,
+            Title: "Prompt grounded external path",
+            SourceKind: "chat-session",
+            SourceId: string.Empty,
+            CorrelationId: string.Empty,
+            CausationId: string.Empty,
+            RequestedBy: "test",
+            RequestedByKind: "integration-test",
+            MetadataJson: metadataJson,
+            InputSummary: "Analyze external path.",
+            ResultSummary: string.Empty,
+            ProviderName: provider.Name,
+            Model: provider.DefaultModel,
+            State: ExecutionState.Preparing,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            AutoApprovePendingToolCalls: false,
+            ProcessRunId: string.Empty,
+            ProcessStepId: string.Empty,
+            SchedulerRunId: string.Empty,
+            MessageId: string.Empty,
+            Revision: 1L,
+            StructuredOutputContractKey: string.Empty,
+            StructuredOutputTypeName: string.Empty,
+            StructuredOutputSchemaName: string.Empty,
+            StructuredOutputSchemaDescription: string.Empty);
     }
 
     private sealed class EmptyStorageCatalogService : IStorageCatalogService
