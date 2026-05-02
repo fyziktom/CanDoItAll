@@ -80,6 +80,7 @@
     private MermaidRenderError? _currentError;
     private bool _isRendering;
     private bool _disposed;
+    private string NormalizedSource => MermaidSourceNormalizer.Normalize(Source);
 
     [Parameter]
     public string? Title { get; set; }
@@ -117,7 +118,7 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private bool HasSource => !string.IsNullOrWhiteSpace(Source);
+    private bool HasSource => !string.IsNullOrWhiteSpace(NormalizedSource);
 
     private string ResolvedAriaLabel => !string.IsNullOrWhiteSpace(Title)
         ? Title
@@ -180,7 +181,7 @@
                 new
                 {
                     diagramId = _instanceId,
-                    source = Source ?? string.Empty,
+                    source = NormalizedSource,
                     options = Options,
                     panZoomEnabled = PanZoomEnabled
                 });
@@ -226,7 +227,7 @@
         return JsonSerializer.Serialize(
             new
             {
-                Source,
+                Source = NormalizedSource,
                 Options,
                 PanZoomEnabled
             },
