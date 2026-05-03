@@ -873,6 +873,57 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task CreateCapabilityState_applies_governed_process_tool_profile_override_to_configured_tools()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly))
+        };
+        var provider = CreateProvider("{}");
+        var metadataJson = ExecutionInvocationMetadata.ApplyProcessCooperation(
+            "{}",
+            new AgentProcessCooperationMetadata(
+                AgentProcessCooperationMode.ProcessArtifactHandoff,
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+                "Governed implementation step uses software-development workspace tools."));
+        var run = CreateExecutionRunForAuditScope(agent, provider, metadataJson) with
+        {
+            SourceKind = "process-step",
+            SourceId = Guid.NewGuid().ToString("D"),
+            RequestedByKind = "system",
+            ProcessRunId = Guid.NewGuid().ToString("D"),
+            ProcessStepId = Guid.NewGuid().ToString("D")
+        };
+        var progressMessages = new List<string>();
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var state = await InvokeCreateCapabilityStateAsync(
+                runtime,
+                agent,
+                provider,
+                Array.Empty<CapabilityCatalogItem>(),
+                progressMessages);
+            var toolNames = ReadToolNames(state);
+
+            Assert.Contains("workspace_read_file", toolNames);
+            Assert.Contains("workspace_write_file", toolNames);
+            Assert.Contains("workspace_dotnet_build", toolNames);
+            Assert.Contains("workspace_dotnet_test", toolNames);
+            Assert.Contains("workspace_dotnet_run", toolNames);
+            Assert.Contains("workspace_dotnet_new", toolNames);
+            Assert.Contains("workspace_pwsh_run_script", toolNames);
+        }
+
+        Assert.Contains(
+            progressMessages,
+            message => message.Contains("software-development", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task CreateCapabilityState_attaches_qa_profile_validation_tools_without_project_mutation_tools()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -941,10 +992,92 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task CreateCapabilityState_filters_workspace_plugin_tools_by_effective_workspace_access()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly))
+        };
+        var provider = CreateProvider("{}");
+        var capability = CreateWorkspacePluginCapability();
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            [capability],
+            progressMessages);
+        var toolNames = ReadToolNames(state);
+
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.DoesNotContain("workspace_write_file", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_build", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_test", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_run", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_new", toolNames);
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_applies_governed_process_tool_profile_override_to_workspace_plugin_tools()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly))
+        };
+        var provider = CreateProvider("{}");
+        var metadataJson = ExecutionInvocationMetadata.ApplyProcessCooperation(
+            "{}",
+            new AgentProcessCooperationMetadata(
+                AgentProcessCooperationMode.ProcessArtifactHandoff,
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+                "Governed implementation step uses software-development workspace tools."));
+        var run = CreateExecutionRunForAuditScope(agent, provider, metadataJson) with
+        {
+            SourceKind = "process-step",
+            SourceId = Guid.NewGuid().ToString("D"),
+            RequestedByKind = "system",
+            ProcessRunId = Guid.NewGuid().ToString("D"),
+            ProcessStepId = Guid.NewGuid().ToString("D")
+        };
+        var capability = CreateWorkspacePluginCapability();
+        var progressMessages = new List<string>();
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var state = await InvokeCreateCapabilityStateAsync(
+                runtime,
+                agent,
+                provider,
+                [capability],
+                progressMessages);
+            var toolNames = ReadToolNames(state);
+
+            Assert.Contains("workspace_read_file", toolNames);
+            Assert.Contains("workspace_write_file", toolNames);
+            Assert.Contains("workspace_dotnet_build", toolNames);
+            Assert.Contains("workspace_dotnet_test", toolNames);
+            Assert.Contains("workspace_dotnet_run", toolNames);
+            Assert.Contains("workspace_dotnet_new", toolNames);
+        }
+    }
+
+    [Fact]
     public async Task Approval_filter_omits_unusable_mutation_tools_for_manual_ollama_run()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
-        var agent = CreateToolAgent();
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment))
+        };
         var provider = CreateProvider("{}");
         var capability = CreateWorkspacePluginCapability();
         var progressMessages = new List<string>();
@@ -990,7 +1123,12 @@ public sealed class MafAgentRuntimeTests
     public async Task Workspace_plugin_mutation_tools_remain_available_when_approval_requirements_are_suppressed()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
-        var agent = CreateToolAgent();
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment))
+        };
         var provider = CreateProvider("{}");
         var capability = CreateWorkspacePluginCapability();
         var progressMessages = new List<string>();

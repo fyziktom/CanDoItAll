@@ -3,6 +3,7 @@
 ## Status
 
 - `Completed`
+- Reopened for live tool-profile regression proof on `2026-05-03`.
 
 ## Objective
 
@@ -21,6 +22,7 @@ Run focused and broader validation that proves package upgrade, default model mi
 - `REQ-09`
 - `REQ-10`
 - `REQ-12`
+- `REQ-13`
 
 ## Prerequisites
 
@@ -35,6 +37,7 @@ Run focused and broader validation that proves package upgrade, default model mi
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj`
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj`
 - `C:\repositories\CanDoItAll\codex\bundles\maf-1-3-a2a-handoffs\reviews\01-execution-report.md`
+- `C:\repositories\CanDoItAll\codex\bundles\maf-1-3-a2a-handoffs\inputs\03-live-process-tool-profile-regression.md`
 
 ## Deliverables
 
@@ -74,6 +77,7 @@ Run focused and broader validation that proves package upgrade, default model mi
 - Default model proof recorded.
 - A2A/handoff proof recorded.
 - Tool profile proof recorded.
+- Effective tool-surface/enforcement alignment proof recorded.
 - Process artifact handoff proof recorded.
 - Context/session proof recorded.
 
@@ -91,6 +95,8 @@ Run focused and broader validation that proves package upgrade, default model mi
 - Initial unit run caught the root execution-report fixture, generic proof wording, local Playwright artifact scanning, and a raw test secret fixture; all were fixed and the full unit project passed.
 - Initial integration run caught the `DispatchCandidate` test reflection helper and an invalid software-delivery baseline branch transition; both were fixed with explicit process cooperation metadata and explicit QA branch selection.
 - Final proof: restore passed, solution build passed, full unit tests passed, full integration tests passed, and `git diff --check` passed with LF-to-CRLF warnings only.
+- Live regression repair proof: targeted MAF runtime tests passed and MAF project build passed after changing effective workspace access propagation into tool construction.
+- Broader `ProcessMockAgentRuntimeIntegrationTests` was attempted after the live regression repair but failed on existing process-mock launch-plan fixture drift and temp-directory cleanup locking; the result is recorded as a validation gap for process-mock fixtures, not as a blocker for the effective tool-profile repair.
 - Browser validation was not required because this bundle changed runtime, templates, metadata, process dispatch, tests, and docs, not visible Blazor UI.
 
 ## Browser Validation Logging

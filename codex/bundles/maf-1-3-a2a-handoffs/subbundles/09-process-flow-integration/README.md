@@ -10,6 +10,7 @@
 - Process dispatch now resolves step role intent, selected agent A2A/handoff configuration, upstream artifact handoff state, and branch options before invoking AgentFramework.
 - Core execution logs the process cooperation decision and exposes trusted process metadata through `WorkspaceExecutionAuditContext`.
 - Maf runtime honors trusted process workspace-tool profile overrides for the current execution only, preserving configured external target and storage bounds.
+- Live regression repair on `2026-05-03` tightened that contract so the same effective process profile now drives MAF tool attachment, not only the runtime plugin permission checks.
 - The deterministic three-agent artifact handoff test now proves implementation and QA execution runs carry process cooperation metadata, runtime audit state, execution log evidence, and QA stat/read inspection of implementation artifacts.
 
 ## Objective
@@ -22,9 +23,11 @@ Wire A2A/handoff cooperation, tool profiles, context policy, and artifact gates 
 - `NOTE-04`
 - `NOTE-05`
 - `NOTE-06`
+- `NOTE-10`
 - `REQ-07`
 - `REQ-08`
 - `REQ-09`
+- `REQ-13`
 
 ## Prerequisites
 
@@ -40,12 +43,16 @@ Wire A2A/handoff cooperation, tool profiles, context policy, and artifact gates 
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs`
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs`
 
 ## Deliverables
 
 - Process launch/staffing metadata that selects cooperation mode and tool profiles for step roles.
 - Dispatch integration that passes handoff/A2A execution options to the agent runtime.
+- Dispatch/runtime integration proof that trusted process workspace-tool profile metadata affects the actual tool surface presented to MAF agents.
 - Progression logic that respects artifact gates and branch outcomes after handoff-enabled steps.
 - Tests showing a software-delivery-like process produces implementation artifacts and QA consumes them.
 
@@ -82,11 +89,13 @@ Wire A2A/handoff cooperation, tool profiles, context policy, and artifact gates 
 - Handoff-enabled process execution logs identify cooperation decisions. `Done`
 - Implementation artifacts are available to QA/review. `Done`
 - Existing process mock flows still pass. `Done`
+- Runtime capability composition applies process-selected software-development tools even when persisted agent settings are read-only. `Done`
 
 ## Proof Required
 
 - `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter ProcessMockAgentRuntimeIntegrationTests --no-restore -m:1`
 - Integration proof that process metadata reaches runtime options.
+- Runtime proof that process metadata reaches tool attachment for configured workspace tools and `workspace-plugin`.
 - Execution log assertion for cooperation mode where applicable.
 
 ## Proof Captured
@@ -94,6 +103,8 @@ Wire A2A/handoff cooperation, tool profiles, context policy, and artifact gates 
 - `dotnet build src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj --no-restore -m:1`: passed with existing NU1902, NU1904, and nullable warnings.
 - `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests" --no-restore -m:1`: passed; 7 tests.
 - `git diff --check`: passed with existing LF-to-CRLF warnings only.
+- Live regression repair proof: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~MafAgentRuntimeTests" --no-restore -m:1`: passed; 40 tests.
+- Broader process-mock rerun after the repair did not pass because existing launch-plan fixture expectations selected seeded .NET agents instead of process-mock agents, and one failed test left a temp workspace locked. Treat this as a separate fixture/proof reliability issue, not proof against the MAF runtime repair.
 
 ## Browser Validation Logging
 

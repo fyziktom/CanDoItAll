@@ -2,7 +2,12 @@
 
 ## Status
 
-- Execution state: `Subbundles 01-12 completed`
+- Execution state: `Subbundles 01-12 completed; live tool-profile regression repair completed`
+
+## Live Regression Repair
+
+- `2026-05-03`: Reopened the bundle after process run `cf086486-2424-487b-bd29-bfc3c111f307` blocked during implementation with scaffold/build validation tool denials and an invalid test-project repair path.
+- Root cause addressed in this pass: MAF tool construction used persisted agent workspace settings for configured tools and exposed broad catalog `workspace-plugin` functions, while the runtime plugin enforced the effective process-scoped workspace profile. The tool surface and enforcement now use the same effective access settings, and host-denial exceptions now name the effective workspace profile.
 
 ## Commands
 
@@ -49,6 +54,11 @@
 - `dotnet build CanDoItAll.slnx --no-restore -m:1`: final post-fix build passed with existing NU1510, NU1902, NU1904, and analyzer warnings.
 - `git diff --check`: passed with LF-to-CRLF warnings only after subbundle 11.
 - `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\codex\bundles\maf-1-3-a2a-handoffs`: passed.
+- `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage prepared C:\repositories\CanDoItAll\codex\bundles\maf-1-3-a2a-handoffs`: passed before live regression repair execution.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~MafAgentRuntimeTests" --no-restore -m:1`: first attempt failed because running `CanDoItAll.Web` process `25736` locked Web output assemblies; after stopping that local process, rerun passed with 40 tests.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests" --no-restore -m:1`: failed on existing process-mock launch-plan fixture drift and temp workspace cleanup locking; recorded as a process-mock fixture/proof reliability gap.
+- `dotnet build src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj --no-restore -m:1`: passed with existing NU1902 and NU1904 warnings after live regression repair.
+- `dotnet build src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj --no-restore -m:1`: passed again with existing NU1902 and NU1904 warnings after improving scaffold/validation denial messages.
 
 ## Browser Artifacts
 
@@ -70,6 +80,8 @@
 | `10-architecture-review-gate-2` | `Subbundle 09 completed with proof` | `Written architecture review recorded in reviews/03-architecture-review-gate-2.md` | `Subbundle 11 may run validation and operator proof` | `Completed` | Decision: Proceed. Accepted risk: process role profile selection is inferred until a process-editor override is justified. |
 | `11-validation-and-operator-proof` | `Architecture review gate 2 returned Proceed` | `Restore, solution build, full unit tests, full integration tests, and diff hygiene passed` | `Subbundle 12 may run final architecture closure` | `Completed` | Validation caught and fixed a package downgrade, test-fixture drift, secret-scanner fixture risk, and a real baseline branch-selection contract issue. |
 | `12-final-architecture-review-and-closure` | `Subbundle 11 validation proof complete` | `Final architecture review recorded and completed bundle validator passed` | `Initiative closed` | `Completed` | Decision: Proceed to closure. Live provider/A2A interoperability remains an explicit operator acceptance risk. |
+| `06-tool-availability-profiles` live repair | `Live run contradicted old tool-profile proof` | `Maf runtime tests passed after effective access was used for configured tools and workspace-plugin filtering` | `Subbundle 09 live repair may rely on aligned tool attachment/enforcement` | `Completed` | Prevents agents from seeing scaffold/build/test/run tools that the runtime profile will deny, and allows trusted process software-development overrides to attach those tools. |
+| `09-process-flow-integration` live repair | `Subbundle 06 live repair passed` | `Maf runtime tests proved trusted governed process metadata changes tool attachment` | `Operators may rerun implementation steps with a coherent developer tool surface` | `Completed with process-mock fixture gap` | Broader process-mock tests need separate fixture repair; targeted runtime/process metadata path is proven. |
 
 ## Browser Validation Analytics
 
@@ -94,10 +106,12 @@
 | `NOTE-07` | `Implemented` | `REQ-10`, subbundle 07; context policy tests and artifact-grounded process prompt proof passed |
 | `NOTE-08` | `Implemented` | `REQ-11`, subbundles 08, 10, and 12 completed with architecture review records |
 | `NOTE-09` | `Mapped` | Source artifacts and subbundles 01, 03, 04 |
+| `NOTE-10` | `Implemented` | `REQ-13`; `MafAgentRuntimeTests` proves governed software-development overrides attach scaffold/build/test/run tools and `workspace-plugin` filters by effective access. |
 
 ## Residual Risks
 
 - A2A hosting packages are currently preview in the 1.3 package line; keep preview SDK types behind the MAF infrastructure boundary unless subbundle 03 proves a stable package is available.
 - Process dispatch classifies role profiles from persisted role/step text and selected agent configuration; future process-editor metadata should expose explicit overrides if operators need to pin a non-obvious role profile.
 - Live OpenAI/A2A provider interoperability was not exercised in this validation pass; run an operator acceptance test before enabling remote A2A endpoints in production.
+- Process-mock fixture proof currently has drift: the launch-plan tests selected seeded .NET agents instead of process-mock agents, and one failed run left a temp workspace locked. Repair this separately before using that group as final proof for process-template matching.
 - Existing NU1902 and NU1904 package vulnerability warnings predate this bundle and remain unresolved.

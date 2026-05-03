@@ -68,7 +68,7 @@ public sealed partial class MafAgentRuntime
         var projectStructureToolBuilder = CreateProjectStructureToolBuilder(workspaceCommandExecutionService);
         var processToolBuilder = CreateProcessToolBuilder();
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
-        var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, storagePlugin, workspaceCommandExecutionService, fileSkillExecutionPolicies);
+        var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, storagePlugin, workspaceCommandExecutionService, workspaceToolAccess, fileSkillExecutionPolicies);
 
         return new RuntimeCapabilityComposition(
             new RuntimeCapabilityState(),

@@ -16,6 +16,7 @@
 
 - `inputs/00-original-request.md`
 - `inputs/01-source-artifacts.md`
+- `inputs/03-live-process-tool-profile-regression.md`
 - `C:\repositories\agent-framework`
 - `snap-20260502224603-ca161729`
 
@@ -30,6 +31,7 @@
 - `NOTE-07`: Check context/session/compaction limits and repair policies that cause governed process agents to lose necessary context.
 - `NOTE-08`: Include architecture review checkpoints every few subbundles and add refactor subbundles if direction is wrong.
 - `NOTE-09`: Use local MAF clone guidance.
+- `NOTE-10`: A live software-delivery process reached implementation but the Blazor developer agent was denied scaffold/build validation tools and then blocked with an invalid test-project path.
 
 ## Dependency And Sequencing Signals
 
@@ -37,12 +39,14 @@
 - Default model work can proceed after package breakage is known, but before validation closure.
 - A2A and handoff runtime must be in place before process flow integration.
 - Tool profiles and context policy must be reviewed before process integration, otherwise process proof can be misleading.
+- Runtime tool exposure must use the same effective workspace access as runtime enforcement, including trusted process overrides.
 
 ## Validation Expectations
 
 - Targeted `dotnet build` for AgentFramework Core/Maf/Hosting and affected Modules.
 - Unit tests for model serialization, provider defaults, feature matrices, tool profile rules, and handoff/A2A guards.
 - Integration tests for Maf runtime and process artifact handoff.
+- Regression tests for governed process tool-profile overrides and `workspace-plugin` filtering.
 - Browser validation only when visible Blazor UI changes are made.
 
 ## UI Validation Strategy
@@ -65,4 +69,5 @@
 - Preview A2A types leaking into stable Core contracts.
 - Recursive handoff loops.
 - Tool overexposure for developer agents.
+- Tool underexposure or mismatched exposure/enforcement for governed implementation agents.
 - Context/session policy dropping upstream artifact evidence.

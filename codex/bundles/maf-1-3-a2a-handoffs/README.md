@@ -10,6 +10,12 @@ This bundle coordinates the MAF 1.3 upgrade, default model migration to `gpt-5.4
 
 Upgrade the CanDoItAll agent runtime to the current Microsoft Agent Framework .NET 1.3 package line, expose A2A and handoff cooperation through typed agent/process contracts, and make software-delivery and business-analysis agents enter process steps with the tools, context, and artifact obligations needed for downstream QA to proceed from real evidence.
 
+## Reopened Live Regression
+
+- `2026-05-03`: Live run `cf086486-2424-487b-bd29-bfc3c111f307` proved the closed bundle still allowed an implementation agent to reach a process step with an unusable scaffold/build/test surface. See `inputs/03-live-process-tool-profile-regression.md`.
+- Reopened scope: `06-tool-availability-profiles`, `09-process-flow-integration`, and `11-validation-and-operator-proof`.
+- Repair decision: effective runtime workspace access, including trusted process workspace-tool profile overrides, must drive both configured workspace tools and catalog `workspace-plugin` tool exposure.
+
 ## Bundle Layout
 
 - `inputs/` raw request, artifacts, and structured input
@@ -44,7 +50,7 @@ Upgrade the CanDoItAll agent runtime to the current Microsoft Agent Framework .N
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Execution status: `Subbundles 01-12 completed`
-- Subbundle gate review: `Completed`
-- Final closure gate: `Completed`
+- Execution status: `Subbundles 01-12 completed; live tool-profile regression repair completed`
+- Subbundle gate review: `Completed after reopening subbundles 06, 09, and 11`
+- Final closure gate: `Completed for original scope; live regression repair prepared/completed with targeted proof`
 - Browser validation analytics: `Not required; no visible Blazor UI changed`

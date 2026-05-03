@@ -14,12 +14,14 @@
 - `REQ-10`: Audit context, session serialization, MAF compaction, transcript replay, and process prompt injection so governed process runs do not lose necessary upstream artifacts or tool results.
 - `REQ-11`: Add architecture review subbundles after the initial runtime/model work and after process-flow integration, with authority to insert refactor/remediation subbundles before continuing.
 - `REQ-12`: Provide focused unit/integration tests and, for visible UI changes, browser validation proof.
+- `REQ-13`: Ensure effective workspace tool access is single-source-of-truth for tool attachment and runtime enforcement, including trusted governed process overrides and catalog `workspace-plugin` tools.
 
 ## Non-Functional Requirements
 
 - `NFR-01`: Keep A2A and handoff abstractions strongly typed and owned by the agent framework models/core layers.
 - `NFR-02`: Preserve least privilege. New cooperation features must respect `AgentPermissionsPolicy`, workspace tool access settings, provider feature matrices, and existing approval policy.
 - `NFR-03`: Make errors diagnosable with actionable logs that identify agent id/name, provider id/name, cooperation mode, endpoint identity, protocol binding, run id, and masked auth state.
+- `NFR-07`: Do not expose workspace tools that the same runtime plugin will deny for the current effective profile; denied host tools are a configuration/projection bug, not a normal agent recovery path.
 - `NFR-04`: Avoid large refactors unless an architecture review gate proves the current layering blocks safe implementation.
 - `NFR-05`: Keep package updates reproducible and validated with `dotnet restore`, targeted builds, and targeted tests before broader solution tests.
 - `NFR-06`: Do not change historical EF migrations only to rewrite seed model strings unless runtime seed normalization or tests require it.

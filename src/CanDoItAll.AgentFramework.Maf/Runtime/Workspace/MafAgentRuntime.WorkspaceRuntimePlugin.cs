@@ -240,7 +240,7 @@ public sealed partial class MafAgentRuntime
         {
             if (!accessSettings.CanRunValidationCommands)
             {
-                throw new InvalidOperationException("This agent is not allowed to run workspace validation commands.");
+                throw new InvalidOperationException($"This agent is not allowed to run workspace validation commands. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant validation commands; repair the agent or governed process workspace-tool profile instead of retrying the command.");
             }
 
             EnsureFileReadAllowed(path);
@@ -250,7 +250,7 @@ public sealed partial class MafAgentRuntime
         {
             if (!accessSettings.CanScaffoldProjects)
             {
-                throw new InvalidOperationException("This agent is not allowed to scaffold workspace projects.");
+                throw new InvalidOperationException($"This agent is not allowed to scaffold workspace projects. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant project scaffolding; implementation process steps must use a software-development workspace-tool profile.");
             }
 
             EnsureFileWriteAllowed(path);
@@ -382,5 +382,8 @@ public sealed partial class MafAgentRuntime
                 ? path
                 : path + Path.DirectorySeparatorChar;
         }
+
+        private string FormatEffectiveWorkspaceProfile()
+            => AgentWorkspaceToolAccessProfiles.GetProfileKey(accessSettings.Profile);
     }
 }
