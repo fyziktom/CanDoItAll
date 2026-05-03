@@ -93,7 +93,7 @@ public sealed partial class ProcessesService
         {
             timeout.Cancel();
             logger.LogWarning(
-                "AI resource projection refresh for {OperationName} exceeded {TimeoutSeconds:0.#} seconds. Continuing with the current projection and live Agent Framework facts.",
+                "AI resource projection refresh for {OperationName} exceeded {TimeoutSeconds:0.#} seconds. Continuing with the current CRM-HR AI projection.",
                 operationName,
                 ProcessAiDirectoryProjectionSyncTimeout.TotalSeconds);
 
@@ -132,51 +132,17 @@ public sealed partial class ProcessesService
         AppDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var partyProjections = await dbContext.Set<Party>()
-            .AsNoTracking()
-            .Where(item => item.PartyType == PartyType.AiAgent)
-            .Select(item => new LaunchAiPartyProjection(
-                item.Id,
-                item.DisplayName,
-                item.Summary,
-                item.LifecycleStatus,
-                item.UpdatedAtUtc))
-            .ToDictionaryAsync(item => item.PartyId, cancellationToken);
-        var projectedPartyIds = partyProjections.Keys.ToList();
-        var staffingFacts = await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
-            projectedPartyIds.Count == 0 ? null : projectedPartyIds,
-            cancellationToken);
+        var staffingFacts = await aiAgentService.ListAgentStaffingFactsProjectionAsync(dbContext, cancellationToken: cancellationToken);
         var factsByPartyId = staffingFacts
             .Where(IsUsableLaunchAiFact)
             .GroupBy(item => item.PartyId)
             .ToDictionary(
                 group => group.Key,
                 group => group.First());
-        var missingPartyIds = factsByPartyId.Keys
-            .Where(partyId => !partyProjections.ContainsKey(partyId))
-            .ToList();
-        if (missingPartyIds.Count > 0)
-        {
-            var missingParties = await dbContext.Set<Party>()
-                .AsNoTracking()
-                .Where(item => missingPartyIds.Contains(item.Id))
-                .Select(item => new LaunchAiPartyProjection(
-                    item.Id,
-                    item.DisplayName,
-                    item.Summary,
-                    item.LifecycleStatus,
-                    item.UpdatedAtUtc))
-                .ToListAsync(cancellationToken);
-
-            foreach (var party in missingParties)
-            {
-                partyProjections[party.PartyId] = party;
-            }
-        }
 
         var now = clock.GetUtcNow();
         var directory = factsByPartyId.Values
-            .Select(fact => BuildAiDirectoryItem(fact, partyProjections.GetValueOrDefault(fact.PartyId), now))
+            .Select(fact => BuildAiDirectoryItem(fact, now))
             .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -204,21 +170,13 @@ public sealed partial class ProcessesService
 
     private static AiAgentListItemModel BuildAiDirectoryItem(
         AiAgentStaffingFactListItemModel fact,
-        LaunchAiPartyProjection? party,
         DateTimeOffset now)
     {
-        var displayName = string.IsNullOrWhiteSpace(party?.DisplayName)
-            ? fact.DisplayName
-            : party.DisplayName;
-        var summary = string.IsNullOrWhiteSpace(party?.Summary)
-            ? fact.Summary
-            : party.Summary;
-
         return new AiAgentListItemModel(
             fact.PartyId,
-            string.IsNullOrWhiteSpace(displayName) ? "AI agent" : displayName,
-            summary,
-            party?.LifecycleStatus ?? PartyLifecycleStatus.Active,
+            string.IsNullOrWhiteSpace(fact.DisplayName) ? "AI agent" : fact.DisplayName,
+            fact.Summary,
+            PartyLifecycleStatus.Active,
             fact.TechnicalAgentId,
             fact.BindingStatus,
             fact.BindingSummary,
@@ -230,7 +188,7 @@ public sealed partial class ProcessesService
             fact.Capabilities.Count,
             true,
             fact.AgentsRoute,
-            party?.UpdatedAtUtc ?? now);
+            now);
     }
 
     private static string BuildLaunchRecommendationSummary(IReadOnlyList<ProcessLaunchCandidate> candidates)
@@ -376,13 +334,6 @@ public sealed partial class ProcessesService
     private sealed record LaunchAiDirectorySnapshot(
         IReadOnlyList<AiAgentListItemModel> Directory,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> StaffingFactsByPartyId);
-
-    private sealed record LaunchAiPartyProjection(
-        Guid PartyId,
-        string DisplayName,
-        string Summary,
-        PartyLifecycleStatus LifecycleStatus,
-        DateTimeOffset UpdatedAtUtc);
 
     private sealed record LaunchApprovalAuthority(
         Guid? ApproverPartyId,

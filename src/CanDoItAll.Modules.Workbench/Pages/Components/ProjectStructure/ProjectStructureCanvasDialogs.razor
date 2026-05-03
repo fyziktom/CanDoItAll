@@ -411,12 +411,12 @@
                 {
                     <PanelCard>
                         <Stack GapScale="LayoutGap.Tiny">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
-                            <TextBlock TextStyle="TextStyle.Note"
-                                       Value="The app will create a launch plan, auto-approve it, provision anything required, and then start the process run with the selected node and parent-node context."
-                                       Class="cw-panel-copy" />
-                        </Stack>
-                    </PanelCard>
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="The app will create or reuse a launch plan, then open staffing review. Approval, provisioning, and execution only happen after the role assignments are reviewed and the final Start action is confirmed."
+                           Class="cw-panel-copy" />
+            </Stack>
+        </PanelCard>
                 }
                 else
                 {
@@ -483,6 +483,10 @@
                                 .ThenByDescending(candidate => candidate.IsResolvable)
                                 .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
                                 .ToList();
+                            var visibleCandidates = showAllProcessStartCandidates
+                                ? orderedCandidates
+                                : SelectVisibleProcessStartCandidates(orderedCandidates);
+                            var hiddenCandidateCount = orderedCandidates.Count - visibleCandidates.Count;
 
                             <PanelCard data-testid="@($"project-structure-process-start-role-{role.LaunchPlanRoleId:D}")">
                                 <Stack GapScale="LayoutGap.Small">
@@ -520,7 +524,7 @@
                                     else
                                     {
                                         <div class="space-y-3">
-                                            @foreach (var candidate in orderedCandidates)
+                                            @foreach (var candidate in visibleCandidates)
                                             {
                                                 <PanelCard Class="@(candidate.IsSelected ? "ring-2 ring-emerald-400/70" : string.Empty)"
                                                            data-testid="@($"project-structure-process-start-candidate-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")">
@@ -579,6 +583,22 @@
                                                                     data-testid="@($"project-structure-process-start-select-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")"
                                                                     Click="@(() => SelectProcessStartCandidate.InvokeAsync(new ProjectStructureProcessStartCandidateSelection(role.LaunchPlanRoleId, candidate.CandidateId)))" />
                                                         </div>
+                                                    </Stack>
+                                                </PanelCard>
+                                            }
+
+                                            @if (hiddenCandidateCount > 0)
+                                            {
+                                                <PanelCard Class="project-structure-inline-feedback"
+                                                           data-tone="info">
+                                                    <Stack GapScale="LayoutGap.Tiny">
+                                                        <TextBlock TextStyle="TextStyle.Note"
+                                                                   Value="@($"{hiddenCandidateCount} additional candidate(s) remain available in this launch plan. The dialog shows selected and recommended options first to keep the staffing review responsive.")"
+                                                                   Class="cw-panel-copy" />
+                                                        <Button Text="Show all candidates"
+                                                                Variant="Variant.Text"
+                                                                ButtonStyle="ButtonStyle.Info"
+                                                                Click="ShowAllProcessStartCandidates" />
                                                     </Stack>
                                                 </PanelCard>
                                             }
@@ -661,6 +681,10 @@
 }
 
 @code {
+    private const int ProcessStartVisibleCandidateCount = 5;
+    private Guid? processStartCandidateVisibilityLaunchPlanId;
+    private bool showAllProcessStartCandidates;
+
     [Parameter]
     public ProjectStructureProjectHierarchyDialogState? ProjectHierarchyDialog { get; set; }
 
@@ -772,6 +796,18 @@
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, string> ResolveAttachmentPreviewSource { get; set; } = default!;
 
+    protected override void OnParametersSet()
+    {
+        var launchPlanId = ProcessStartDialog?.LaunchPlanId;
+        if (launchPlanId == processStartCandidateVisibilityLaunchPlanId)
+        {
+            return;
+        }
+
+        processStartCandidateVisibilityLaunchPlanId = launchPlanId;
+        showAllProcessStartCandidates = false;
+    }
+
     private static ButtonStyle ResolveButtonStyle(string tone)
     {
         return tone switch
@@ -793,4 +829,45 @@
         => string.IsNullOrWhiteSpace(value)
             ? "primary"
             : value.Trim().ToLowerInvariant().Replace(':', '-');
+
+    private static IReadOnlyList<ProjectStructureProcessStartCandidateState> SelectVisibleProcessStartCandidates(
+        IReadOnlyList<ProjectStructureProcessStartCandidateState> orderedCandidates)
+    {
+        if (orderedCandidates.Count <= ProcessStartVisibleCandidateCount)
+        {
+            return orderedCandidates;
+        }
+
+        var visibleCandidates = new List<ProjectStructureProcessStartCandidateState>();
+        var visibleCandidateIds = new HashSet<Guid>();
+        foreach (var candidate in orderedCandidates)
+        {
+            if ((candidate.IsSelected || candidate.IsRecommended) &&
+                visibleCandidateIds.Add(candidate.CandidateId))
+            {
+                visibleCandidates.Add(candidate);
+            }
+        }
+
+        foreach (var candidate in orderedCandidates)
+        {
+            if (visibleCandidates.Count >= ProcessStartVisibleCandidateCount)
+            {
+                break;
+            }
+
+            if (visibleCandidateIds.Add(candidate.CandidateId))
+            {
+                visibleCandidates.Add(candidate);
+            }
+        }
+
+        return visibleCandidates;
+    }
+
+    private Task ShowAllProcessStartCandidates()
+    {
+        showAllProcessStartCandidates = true;
+        return Task.CompletedTask;
+    }
 }

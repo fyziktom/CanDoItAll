@@ -527,6 +527,11 @@
     background: rgba(255, 247, 237, 0.94);
 }
 
+.project-structure-inline-feedback[data-tone="info"] {
+    border-color: rgba(14, 165, 233, 0.2);
+    background: rgba(240, 249, 255, 0.94);
+}
+
 .project-structure-audio-preview,
 .project-structure-preview-dialog__audio {
     width: 100%;
