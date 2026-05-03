@@ -63,8 +63,7 @@ public sealed partial class ProcessesService
             return Result.Failure(Error.Validation("Launch plan is required.", "processes.launch.plan-required"));
         }
 
-        // Keep projection repair outside the launch-plan transaction to avoid self-blocking SQLite writes.
-        await aiAgentService.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeAiDirectoryProjectionForProcessAsync("launch-plan HR matching", cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);

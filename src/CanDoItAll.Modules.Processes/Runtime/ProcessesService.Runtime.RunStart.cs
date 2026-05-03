@@ -15,8 +15,7 @@ public sealed partial class ProcessesService
             return Result<Guid>.Failure(Error.Validation("Process definition is required.", "processes.run.definition-required"));
         }
 
-        // Refresh the AI resource projection before opening the run-start transaction.
-        await aiAgentService.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeAiDirectoryProjectionForProcessAsync("process run start", cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
@@ -541,7 +540,8 @@ public sealed partial class ProcessesService
             return new Dictionary<Guid, ProcessLaunchCandidate>();
         }
 
-        var aiDirectory = (await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken))
+        var aiDirectorySnapshot = await LoadLaunchAiDirectorySnapshotAsync(dbContext, cancellationToken);
+        var aiDirectory = aiDirectorySnapshot.Directory
             .Where(HasBoundTechnicalAgent)
             .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -578,10 +578,7 @@ public sealed partial class ProcessesService
             aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
             allRequiredSkillIds,
             cancellationToken);
-        var aiFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
-                aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
-                cancellationToken))
-            .ToDictionary(item => item.PartyId);
+        var aiFactsByPartyId = aiDirectorySnapshot.StaffingFactsByPartyId;
         var project = projectId.HasValue
             ? await dbContext.Set<Project>()
                 .AsNoTracking()

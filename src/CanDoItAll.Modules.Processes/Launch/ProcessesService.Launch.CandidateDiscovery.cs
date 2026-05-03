@@ -31,12 +31,10 @@ public sealed partial class ProcessesService
                     .OrderByDescending(item => item.IsPrimary)
                     .ThenBy(item => item.PartyDisplayName)
                     .ToList());
-        var aiDirectory = await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken);
+        var aiDirectorySnapshot = await LoadLaunchAiDirectorySnapshotAsync(dbContext, cancellationToken);
+        var aiDirectory = aiDirectorySnapshot.Directory;
         var aiDirectoryByPartyId = aiDirectory.ToDictionary(item => item.PartyId);
-        var aiStaffingFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
-                aiDirectory.Select(item => item.PartyId).Distinct().ToList(),
-                cancellationToken))
-            .ToDictionary(item => item.PartyId);
+        var aiStaffingFactsByPartyId = aiDirectorySnapshot.StaffingFactsByPartyId;
         ProcessProjectStructureContextFormatter.TryParse(plan.TriggerReason, out var projectStructureContext);
         var roleSkillIds = publishedContext.RoleSkillsByRoleId.Values
             .SelectMany(item => item)

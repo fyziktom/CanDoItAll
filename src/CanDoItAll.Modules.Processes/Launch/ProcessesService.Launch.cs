@@ -4,12 +4,14 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService
 {
     private static readonly JsonSerializerOptions LaunchJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan ProcessAiDirectoryProjectionSyncTimeout = TimeSpan.FromSeconds(3);
 
     public Task<Result<Guid>> ExecuteLaunchPlanAsync(
         ProcessLaunchExecutionRequest request,
@@ -74,6 +76,161 @@ public sealed partial class ProcessesService
         return aiResource is not null &&
                aiResource.TechnicalAgentId.HasValue &&
                aiResource.BindingStatus == AiResourceBindingStatus.Bound;
+    }
+
+    private async Task SynchronizeAiDirectoryProjectionForProcessAsync(
+        string operationName,
+        CancellationToken cancellationToken)
+    {
+        CancellationTokenSource? timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var syncTask = aiAgentService.SynchronizeDirectoryProjectionAsync(timeout.Token);
+
+        try
+        {
+            await syncTask.WaitAsync(ProcessAiDirectoryProjectionSyncTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            timeout.Cancel();
+            logger.LogWarning(
+                "AI resource projection refresh for {OperationName} exceeded {TimeoutSeconds:0.#} seconds. Continuing with the current projection and live Agent Framework facts.",
+                operationName,
+                ProcessAiDirectoryProjectionSyncTimeout.TotalSeconds);
+
+            ObserveTimedOutAiDirectoryProjectionSync(syncTask, timeout, operationName);
+            timeout = null;
+        }
+        finally
+        {
+            timeout?.Dispose();
+        }
+    }
+
+    private void ObserveTimedOutAiDirectoryProjectionSync(
+        Task syncTask,
+        CancellationTokenSource timeout,
+        string operationName)
+    {
+        _ = syncTask.ContinueWith(
+            completedTask =>
+            {
+                timeout.Dispose();
+                if (completedTask.IsFaulted && completedTask.Exception is not null)
+                {
+                    logger.LogWarning(
+                        completedTask.Exception.GetBaseException(),
+                        "Timed-out AI resource projection refresh for {OperationName} failed after process launch continued.",
+                        operationName);
+                }
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private async Task<LaunchAiDirectorySnapshot> LoadLaunchAiDirectorySnapshotAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var partyProjections = await dbContext.Set<Party>()
+            .AsNoTracking()
+            .Where(item => item.PartyType == PartyType.AiAgent)
+            .Select(item => new LaunchAiPartyProjection(
+                item.Id,
+                item.DisplayName,
+                item.Summary,
+                item.LifecycleStatus,
+                item.UpdatedAtUtc))
+            .ToDictionaryAsync(item => item.PartyId, cancellationToken);
+        var projectedPartyIds = partyProjections.Keys.ToList();
+        var staffingFacts = await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
+            projectedPartyIds.Count == 0 ? null : projectedPartyIds,
+            cancellationToken);
+        var factsByPartyId = staffingFacts
+            .Where(IsUsableLaunchAiFact)
+            .GroupBy(item => item.PartyId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First());
+        var missingPartyIds = factsByPartyId.Keys
+            .Where(partyId => !partyProjections.ContainsKey(partyId))
+            .ToList();
+        if (missingPartyIds.Count > 0)
+        {
+            var missingParties = await dbContext.Set<Party>()
+                .AsNoTracking()
+                .Where(item => missingPartyIds.Contains(item.Id))
+                .Select(item => new LaunchAiPartyProjection(
+                    item.Id,
+                    item.DisplayName,
+                    item.Summary,
+                    item.LifecycleStatus,
+                    item.UpdatedAtUtc))
+                .ToListAsync(cancellationToken);
+
+            foreach (var party in missingParties)
+            {
+                partyProjections[party.PartyId] = party;
+            }
+        }
+
+        var now = clock.GetUtcNow();
+        var directory = factsByPartyId.Values
+            .Select(fact => BuildAiDirectoryItem(fact, partyProjections.GetValueOrDefault(fact.PartyId), now))
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new LaunchAiDirectorySnapshot(directory, factsByPartyId);
+    }
+
+    private static bool IsUsableLaunchAiFact(AiAgentStaffingFactListItemModel fact)
+    {
+        if (fact.PartyId == Guid.Empty)
+        {
+            return false;
+        }
+
+        if (fact.BindingStatus == AiResourceBindingStatus.Bound && fact.TechnicalAgentId.HasValue)
+        {
+            return true;
+        }
+
+        return fact.Capabilities.Count > 0 ||
+               !string.IsNullOrWhiteSpace(fact.ProviderName) ||
+               !string.IsNullOrWhiteSpace(fact.DefaultModel) ||
+               !string.IsNullOrWhiteSpace(fact.TemplateKey) ||
+               !string.IsNullOrWhiteSpace(fact.Instructions);
+    }
+
+    private static AiAgentListItemModel BuildAiDirectoryItem(
+        AiAgentStaffingFactListItemModel fact,
+        LaunchAiPartyProjection? party,
+        DateTimeOffset now)
+    {
+        var displayName = string.IsNullOrWhiteSpace(party?.DisplayName)
+            ? fact.DisplayName
+            : party.DisplayName;
+        var summary = string.IsNullOrWhiteSpace(party?.Summary)
+            ? fact.Summary
+            : party.Summary;
+
+        return new AiAgentListItemModel(
+            fact.PartyId,
+            string.IsNullOrWhiteSpace(displayName) ? "AI agent" : displayName,
+            summary,
+            party?.LifecycleStatus ?? PartyLifecycleStatus.Active,
+            fact.TechnicalAgentId,
+            fact.BindingStatus,
+            fact.BindingSummary,
+            fact.ExecutionMode,
+            AiValidationStatus.Draft,
+            fact.ProviderName,
+            fact.DefaultModel,
+            string.Empty,
+            fact.Capabilities.Count,
+            true,
+            fact.AgentsRoute,
+            party?.UpdatedAtUtc ?? now);
     }
 
     private static string BuildLaunchRecommendationSummary(IReadOnlyList<ProcessLaunchCandidate> candidates)
@@ -215,6 +372,17 @@ public sealed partial class ProcessesService
 
     private sealed record ProcessLaunchCandidateSet(
         IReadOnlyList<ProcessLaunchRoleRecommendation> Roles);
+
+    private sealed record LaunchAiDirectorySnapshot(
+        IReadOnlyList<AiAgentListItemModel> Directory,
+        IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> StaffingFactsByPartyId);
+
+    private sealed record LaunchAiPartyProjection(
+        Guid PartyId,
+        string DisplayName,
+        string Summary,
+        PartyLifecycleStatus LifecycleStatus,
+        DateTimeOffset UpdatedAtUtc);
 
     private sealed record LaunchApprovalAuthority(
         Guid? ApproverPartyId,
