@@ -302,6 +302,24 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void Approval_continuation_rejects_missing_or_incompatible_serialized_session_state()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var sessionSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.Session.cs"));
+
+        Assert.Contains(
+            "Cannot continue pending tool approvals because serialized Microsoft Agent Framework session state is unavailable or incompatible",
+            sessionSource,
+            StringComparison.Ordinal);
+        Assert.Contains("isApprovalContinuation && (session.Compatibility?.PendingApprovals.Count ?? 0) > 0", sessionSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AppendFinalizerInstructions_uses_json_response_wording_for_required_mode()
     {
         var appendMethod = typeof(MafAgentRuntime).GetMethod(
@@ -387,6 +405,98 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task CreateCapabilityState_skips_compaction_for_governed_process_even_when_agent_requests_it()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = """{"enableCompaction":true}"""
+        };
+        var provider = CreateProvider("{}");
+        var run = CreateExecutionRunForAuditScope(agent, provider, "{}") with
+        {
+            ProcessRunId = Guid.NewGuid().ToString("D"),
+            ProcessStepId = Guid.NewGuid().ToString("D")
+        };
+        var progressMessages = new List<string>();
+
+        object state;
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            state = await InvokeCreateCapabilityStateAsync(
+                runtime,
+                agent,
+                provider,
+                Array.Empty<CapabilityCatalogItem>(),
+                progressMessages);
+        }
+
+        Assert.DoesNotContain("CompactionProvider", ReadContextProviderTypeNames(state));
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("governed process automation", StringComparison.Ordinal) &&
+                    item.Contains("must not be summarized", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_skips_compaction_for_auto_approved_non_interactive_runs()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = """{"enableCompaction":true}"""
+        };
+        var provider = CreateProvider("{}");
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages,
+            suppressApprovalRequirements: true);
+
+        Assert.DoesNotContain("CompactionProvider", ReadContextProviderTypeNames(state));
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("auto-approved non-interactive execution", StringComparison.Ordinal) &&
+                    item.Contains("must not block unattended tool continuations", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_attaches_interactive_compaction_with_expanded_defaults()
+    {
+        var previousOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        try
+        {
+            Environment.SetEnvironmentVariable("OPENAI_API_KEY", "test-key");
+            var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+            var agent = CreateToolAgent();
+            var provider = CreateProvider("{}");
+            var progressMessages = new List<string>();
+
+            var state = await InvokeCreateCapabilityStateAsync(
+                runtime,
+                agent,
+                provider,
+                Array.Empty<CapabilityCatalogItem>(),
+                progressMessages);
+
+            Assert.Contains("CompactionProvider", ReadContextProviderTypeNames(state));
+            Assert.Contains(
+                progressMessages,
+                item => item.Contains("32 turns", StringComparison.Ordinal) &&
+                        item.Contains("64000 tokens", StringComparison.Ordinal) &&
+                        item.Contains("40 tool messages", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OPENAI_API_KEY", previousOpenAiApiKey);
+        }
+    }
+
+    [Fact]
     public async Task CreateCapabilityState_skips_unsupported_provider_native_web_search_for_ollama()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();
@@ -435,7 +545,10 @@ public sealed class MafAgentRuntimeTests
     public async Task CreateCapabilityState_skips_retired_workspace_delivery_skill_even_when_its_service_type_no_longer_matches_the_legacy_assembly_name()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();
-        var seededAgent = seed.Agents[0];
+        var seededAgent = seed.Agents[0] with
+        {
+            ConfigurationJson = "{}"
+        };
         var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
         var retiredCapability = new CapabilityCatalogItem(
             Guid.NewGuid(),
@@ -503,7 +616,10 @@ public sealed class MafAgentRuntimeTests
     public async Task CreateCapabilityState_skips_disabled_builtin_tool_configuration()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();
-        var seededAgent = seed.Agents[0];
+        var seededAgent = seed.Agents[0] with
+        {
+            ConfigurationJson = "{}"
+        };
         var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
         var disabledReadCapability = new CapabilityCatalogItem(
             Guid.NewGuid(),
@@ -722,6 +838,106 @@ public sealed class MafAgentRuntimeTests
         Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(
             tools,
             item => string.Equals(item.Name, "storage_delete_object", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_attaches_development_profile_workspace_tools_without_catalog_assignments()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment))
+        };
+        var provider = CreateProvider("{}");
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages);
+        var toolNames = ReadToolNames(state);
+
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.Contains("workspace_write_file", toolNames);
+        Assert.Contains("workspace_dotnet_build", toolNames);
+        Assert.Contains("workspace_dotnet_test", toolNames);
+        Assert.Contains("workspace_dotnet_run", toolNames);
+        Assert.Contains("workspace_dotnet_new", toolNames);
+        Assert.Contains("workspace_pwsh_run_script", toolNames);
+        Assert.Contains("workspace_copy_path", toolNames);
+        Assert.Contains("workspace_delete_path", toolNames);
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_attaches_qa_profile_validation_tools_without_project_mutation_tools()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.QualityValidation))
+        };
+        var provider = CreateProvider("{}");
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages);
+        var toolNames = ReadToolNames(state);
+
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.Contains("workspace_write_file", toolNames);
+        Assert.Contains("workspace_dotnet_build", toolNames);
+        Assert.Contains("workspace_dotnet_test", toolNames);
+        Assert.Contains("workspace_dotnet_run", toolNames);
+        Assert.Contains("workspace_pwsh_run_script", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_new", toolNames);
+        Assert.DoesNotContain("workspace_copy_path", toolNames);
+        Assert.DoesNotContain("workspace_delete_path", toolNames);
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_filters_catalog_workspace_tools_denied_by_read_only_profile()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var readOnlySettings = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly);
+        readOnlySettings.AllowedExternalTargetAliases =
+        [
+            "external-target/C/repositories/demo"
+        ];
+        var agent = CreateToolAgent() with
+        {
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write("{}", readOnlySettings)
+        };
+        var provider = CreateProvider("{}");
+        var progressMessages = new List<string>();
+        var capabilities = new[]
+        {
+            CreateWorkspaceToolCapability("workspace-write-file", "workspace_write_file"),
+            CreateWorkspaceToolCapability("workspace-dotnet-build", "workspace_dotnet_build"),
+            CreateWorkspaceToolCapability("workspace-dotnet-run", "workspace_dotnet_run")
+        };
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            provider,
+            capabilities,
+            progressMessages);
+        var toolNames = ReadToolNames(state);
+
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.DoesNotContain("workspace_write_file", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_build", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_run", toolNames);
     }
 
     [Fact]
@@ -1068,6 +1284,42 @@ public sealed class MafAgentRuntimeTests
             string.Empty,
             null,
             false);
+    }
+
+    private static CapabilityCatalogItem CreateWorkspaceToolCapability(string key, string toolName)
+    {
+        return new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Tool,
+            key,
+            key,
+            $"{toolName} test capability.",
+            string.Empty,
+            $$"""{"tool":"{{toolName}}","enabled":true}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+    }
+
+    private static HashSet<string> ReadToolNames(object state)
+    {
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+        return tools
+            .Select(tool => tool.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static HashSet<string> ReadContextProviderTypeNames(object state)
+    {
+        var contextProviders = Assert.IsAssignableFrom<IEnumerable<AIContextProvider>>(
+            state.GetType().GetProperty("ContextProviders", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+        return contextProviders
+            .Select(provider => provider.GetType().Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string[] ProcessMutationTools()

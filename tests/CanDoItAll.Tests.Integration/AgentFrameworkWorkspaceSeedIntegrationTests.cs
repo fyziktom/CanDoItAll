@@ -435,6 +435,54 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_workspace_seeds_typed_workspace_tool_profiles_for_delivery_roles()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+
+        var programming = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal)).Id);
+        var qa = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal)).Id);
+        var security = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal)).Id);
+        var business = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal)).Id);
+        var research = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Research Deep Dive Analyst", StringComparison.Ordinal)).Id);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.SoftwareDevelopment, programming.WorkspaceToolAccess.Profile);
+        Assert.True(programming.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.True(programming.WorkspaceToolAccess.CanScaffoldProjects);
+        Assert.True(programming.WorkspaceToolAccess.CanManageWorkspacePaths);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, qa.WorkspaceToolAccess.Profile);
+        Assert.True(qa.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.True(qa.WorkspaceToolAccess.CanWriteFiles);
+        Assert.False(qa.WorkspaceToolAccess.CanScaffoldProjects);
+        Assert.False(qa.WorkspaceToolAccess.CanManageWorkspacePaths);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.SecurityReview, security.WorkspaceToolAccess.Profile);
+        Assert.True(security.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.False(security.WorkspaceToolAccess.CanScaffoldProjects);
+        Assert.False(security.WorkspaceToolAccess.CanManageWorkspacePaths);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.BusinessAnalysis, business.WorkspaceToolAccess.Profile);
+        Assert.True(business.WorkspaceToolAccess.CanWriteFiles);
+        Assert.True(business.WorkspaceToolAccess.CanTransformArtifacts);
+        Assert.False(business.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.False(business.WorkspaceToolAccess.CanScaffoldProjects);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.ReadOnly, research.WorkspaceToolAccess.Profile);
+        Assert.True(research.WorkspaceToolAccess.CanReadFiles);
+        Assert.False(research.WorkspaceToolAccess.CanWriteFiles);
+        Assert.False(research.WorkspaceToolAccess.CanRunValidationCommands);
+    }
+
+    [Fact]
     public async Task Programming_agent_seed_instructions_require_modern_mstest_assertions_for_scaffolded_projects()
     {
         await using var application = await TestApplication.CreateAsync();

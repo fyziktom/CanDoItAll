@@ -334,7 +334,20 @@ public sealed record AgentRuntimeExecutionOptions(
     AgentStructuredOutputContract? StructuredOutput,
     AgentFinalizerMode FinalizerMode,
     bool RequireStructuredOutputValidation,
-    int MaxStructuredOutputRepairAttempts);
+    int MaxStructuredOutputRepairAttempts,
+    AgentRuntimeHandoffExecutionOptions? Handoff = null);
+
+public sealed record AgentRuntimeHandoffExecutionOptions(
+    AgentHandoffSettings Settings,
+    IReadOnlyList<AgentRuntimeHandoffParticipant> Participants,
+    Guid EntryAgentId,
+    string CorrelationId);
+
+public sealed record AgentRuntimeHandoffParticipant(
+    AgentDefinition Agent,
+    ProviderProfile Provider,
+    IReadOnlyList<CapabilityCatalogItem> Capabilities,
+    IReadOnlyList<AgentMemoryRecord> Memory);
 
 public sealed record ExecutionRunRecord(
     Guid Id,

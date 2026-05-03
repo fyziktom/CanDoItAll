@@ -18,10 +18,22 @@ public sealed partial class MafAgentRuntime
             CapabilityCatalogItem capability,
             ProviderProfile provider,
             bool suppressApprovalRequirements = false)
+            => CreateTools(capability, provider, agent: null, suppressApprovalRequirements);
+
+        public IReadOnlyList<AITool> CreateTools(
+            CapabilityCatalogItem capability,
+            ProviderProfile provider,
+            AgentDefinition? agent,
+            bool suppressApprovalRequirements = false)
         {
             var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
             var toolKey = configuration.Tool ?? capability.Key;
             if (!IsBuiltInToolEnabled(toolKey, configuration))
+            {
+                return [];
+            }
+
+            if (agent is not null && !IsWorkspaceToolAllowedForAgent(agent, toolKey))
             {
                 return [];
             }
@@ -86,13 +98,14 @@ public sealed partial class MafAgentRuntime
         public IReadOnlyList<AITool> CreatePluginTools(
             CapabilityCatalogItem capability,
             ProviderProfile provider,
+            AgentDefinition? agent,
             bool suppressApprovalRequirements = false)
         {
             var configuration = DeserializeConfiguration<PluginCapabilityConfiguration>(capability.ConfigurationJson) ?? new PluginCapabilityConfiguration();
             var tools = ResolveRegisteredPluginTools(capability, configuration);
             if (tools.Count == 0)
             {
-                tools = CreateTools(capability, provider, suppressApprovalRequirements);
+                tools = CreateTools(capability, provider, agent, suppressApprovalRequirements);
             }
 
             return MafAgentRuntime.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
@@ -110,6 +123,11 @@ public sealed partial class MafAgentRuntime
             var tools = new List<AITool>();
             var attachFileTools = access.AllowedExternalTargetAliases.Count > 0 ||
                                   access.CanWriteFiles ||
+                                  access.CanRunValidationCommands ||
+                                  access.CanRunLocalScripts ||
+                                  access.CanScaffoldProjects ||
+                                  access.CanManageWorkspacePaths ||
+                                  access.CanTransformArtifacts ||
                                   hasGroundedExternalPath;
             if (attachFileTools && (access.CanReadFiles || access.CanWriteFiles))
             {
@@ -128,14 +146,38 @@ public sealed partial class MafAgentRuntime
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+            }
+
+            if (attachFileTools && access.CanManageWorkspacePaths)
+            {
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CopyWorkspacePath, "workspace_copy_path", "Copies a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.MoveWorkspacePath, "workspace_move_path", "Moves or renames a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DeleteWorkspacePath, "workspace_delete_path", "Deletes a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+            }
+
+            if (attachFileTools && access.CanRunValidationCommands)
+            {
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the managed workspace or configured external workspace root."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or configured external workspace root."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or configured external workspace root."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or configured external workspace root."));
+            }
+
+            if (attachFileTools && access.CanScaffoldProjects)
+            {
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", "Creates a bounded dotnet project scaffold in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
+            }
+
+            if (attachFileTools && access.CanRunLocalScripts)
+            {
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePythonFile, "workspace_python_run_file", "Runs a workspace Python file with structured arguments through the controlled execution plane."), suppressApprovalRequirements));
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane."), suppressApprovalRequirements));
+            }
+
+            if (attachFileTools && access.CanTransformArtifacts)
+            {
+                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."));
             }
 
             if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
@@ -237,6 +279,18 @@ public sealed partial class MafAgentRuntime
             }
 
             throw new InvalidOperationException($"Registered plugin service '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' does not expose AITool instances.");
+        }
+
+        private static bool IsWorkspaceToolAllowedForAgent(AgentDefinition agent, string toolKey)
+        {
+            if (!AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(toolKey, out _))
+            {
+                return true;
+            }
+
+            return AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(
+                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson),
+                toolKey);
         }
 
         private IReadOnlyList<AITool> CreateWorkspacePluginTools(bool suppressApprovalRequirements)

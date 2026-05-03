@@ -375,6 +375,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         AddRetryReason(reasons, "missing runnable application proof", ResolveMissingRunnableApplicationProofSummary(candidate, detail));
         AddRetryReason(reasons, "invalid browser proof", ResolveInvalidBrowserProofSummary(candidate, detail));
         AddRetryReason(reasons, "missing required artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
+        AddRetryReason(reasons, "missing upstream artifact inspection", ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail));
         AddRetryReason(reasons, "stale or ungrounded product path reference", ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText));
         AddRetryReason(reasons, "shared managed artifact collision risk", ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText));
 
@@ -590,12 +591,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return $"AgentFramework run '{run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}";
         }
 
+        var missingUpstreamArtifactInputSummary = ResolveMissingUpstreamArtifactInputSummary(candidate);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
         if (hasDeclaredOutcome)
@@ -604,6 +607,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (!string.IsNullOrWhiteSpace(branchOutcomeSelectionFailure))
             {
                 return branchOutcomeSelectionFailure;
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary))
+            {
+                return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but required upstream artifacts are missing: {missingUpstreamArtifactInputSummary}";
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
@@ -643,6 +652,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary))
+            {
+                return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but inherited implementation artifacts were not directly inspected: {missingUpstreamArtifactInspectionSummary}";
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
                 !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary))
             {
                 return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but generated evidence used stale or ungrounded product paths: {outOfScopeExternalTargetReferenceSummary}";
@@ -655,6 +670,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             return BuildDeclaredStepOutcomeReason(run.Title, stepTitle, declaredOutcome);
+        }
+
+        if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary))
+        {
+            return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because required upstream artifacts are missing: {missingUpstreamArtifactInputSummary}";
         }
 
         if (!string.IsNullOrWhiteSpace(missingConcreteProofSummary))
@@ -685,6 +705,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
         {
             return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because required artifacts still could not be recorded automatically: {missingRequiredArtifactSummary}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary))
+        {
+            return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because inherited implementation artifacts were not directly inspected: {missingUpstreamArtifactInspectionSummary}";
         }
 
         if (!string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary))

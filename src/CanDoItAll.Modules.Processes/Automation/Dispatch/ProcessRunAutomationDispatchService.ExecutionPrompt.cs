@@ -60,6 +60,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine($"Step: {candidate.StepRun.Title}");
         builder.AppendLine($"Executor: {candidate.StepRun.CurrentExecutorName}");
         builder.AppendLine();
+        builder.AppendLine("Process cooperation plan:");
+        builder.AppendLine($"- Mode: {candidate.CooperationMetadata.CooperationMode}");
+        builder.AppendLine($"- Workspace tool profile: {AgentWorkspaceToolAccessProfiles.GetProfileKey(candidate.CooperationMetadata.WorkspaceToolProfile)}");
+        builder.AppendLine($"- Basis: {candidate.CooperationMetadata.Summary}");
+        builder.AppendLine("- Use upstream artifacts, MAF handoff participants, or A2A tools only when they are explicitly provided by this run or attached to the selected agent. Do not invent hidden background collaboration.");
+        builder.AppendLine();
         builder.AppendLine("Current-run managed artifact root:");
         builder.AppendLine($"- `{currentRunManagedArtifactRoot}`");
         builder.AppendLine("- Use this root for discretionary evidence, notes, logs, and required text artifacts that do not have an explicit governed path.");
@@ -151,6 +157,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("Upstream artifacts:");
         builder.AppendLine(BuildArtifactInputSummary(candidate.ArtifactInputs));
         builder.AppendLine();
+        builder.AppendLine("Context preservation rules:");
+        builder.AppendLine("- Treat the run objective, current-run managed artifact root, required output artifact paths, upstream artifact paths, prefetched governed artifact grounding, and successful validation receipts as required context for this run.");
+        builder.AppendLine("- Do not replace concrete artifact paths, tool receipts, or direct file inspections with memory summaries during implementation, handoff, QA, security, repair, or release decisions.");
+        builder.AppendLine("- If an upstream artifact excerpt is truncated or insufficient, use workspace_read_file with a larger maxCharacters value on the concrete artifact path before deciding.");
+        builder.AppendLine();
         var missingUpstreamArtifactInputSummary = ResolveMissingUpstreamArtifactInputSummary(candidate);
         if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary))
         {
@@ -191,7 +202,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             {
                 if (!string.IsNullOrWhiteSpace(artifactInspectionGroundingSummary))
                 {
-                    builder.AppendLine("- The dispatcher already inspected upstream governed artifact files and included the verified paths and excerpts below. Treat that grounding as current evidence, and call workspace_stat_path or workspace_read_file again only when you need broader or fresher inspection before you conclude.");
+                    builder.AppendLine("- The dispatcher already inspected upstream governed artifact files and included verified paths and excerpts below as orientation. If upstream artifact input paths are listed in this prompt, direct workspace_stat_path and workspace_read_file inspection of those paths is still required before a review step approves or rejects the handoff.");
                 }
 
                 builder.AppendLine("- Use workspace_stat_path and workspace_read_file on the concrete workspace files or durable artifacts you cite as evidence. Do not rely only on summaries, RAG snippets, or prior notes.");
@@ -302,6 +313,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (RequiresConcreteImplementationReview(candidate))
         {
             builder.AppendLine("- Because this review step depends on real implementation, inspect actual changed files, durable artifacts, records, or outputs in addition to managed summaries before you conclude.");
+            builder.AppendLine("- Directly inspect every inherited implementation artifact path listed in the upstream artifact rules with workspace_stat_path and workspace_read_file before approving or rejecting the handoff. Summaries, prefetched excerpts, RAG snippets, and EvidenceRefs alone are not enough.");
+            builder.AppendLine("- If an inherited implementation artifact path cannot be inspected, return Blocked and name the missing artifact path instead of approving readiness from memory or summaries.");
             builder.AppendLine("- If the implementation artifacts describe concrete required paths or records that the workspace does not contain, return Blocked with the missing concrete items instead of approving readiness.");
             builder.AppendLine("- Successful upstream validation receipts for the same unchanged deliverable count as evidence for this review step. Do not require fresh transient outputs unless the current step contract explicitly requires a rerun or those exact files.");
             builder.AppendLine("- When the implementation lives under a grounded external target, review the concrete deliverable in that target instead of blocking only because managed artifact folders do not contain product outputs.");

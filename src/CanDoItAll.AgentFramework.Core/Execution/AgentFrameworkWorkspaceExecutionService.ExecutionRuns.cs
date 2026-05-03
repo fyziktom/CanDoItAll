@@ -81,6 +81,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
         var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         var structuredOutput = ResolveContinuationStructuredOutputContract(run);
+        var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run.resume", prepared.OriginalRun);
         AgentFrameworkTelemetry.RecordRunResume(prepared.OriginalRun);
 
@@ -143,7 +144,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     cancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput));
+                    executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -162,6 +163,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         runtimeResponse,
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                         structuredOutput,
+                        handoffOptions,
                         cancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -556,6 +558,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var prompt = request.Prompt.Trim();
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
         var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
+        var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
 
         PrimeProviderCredentialEnvironment(provider);
@@ -568,6 +571,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             "Planning",
             $"Preparing provider {provider.Name}.",
             cancellationToken);
+        await AppendProcessCooperationLogAsync(run, agent.Id, run.ChatSessionId, cancellationToken);
 
         var startedAt = DateTimeOffset.UtcNow;
         try
@@ -588,7 +592,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     cancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput));
+                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
@@ -607,6 +611,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         runtimeResponse,
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                         request.StructuredOutput,
+                        handoffOptions,
                         cancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -1001,9 +1006,59 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return response;
     }
 
+    private async Task<AgentRuntimeHandoffExecutionOptions?> ResolveHandoffExecutionOptionsAsync(
+        AgentDefinition agent,
+        SandboxWorkspaceCatalog catalog,
+        ExecutionRunRecord run,
+        CancellationToken cancellationToken)
+    {
+        var settings = AgentHandoffMetadata.Read(agent.ConfigurationJson);
+        if (!settings.Enabled)
+        {
+            return null;
+        }
+
+        var validation = AgentHandoffMetadata.Validate(settings);
+        if (!validation.Succeeded)
+        {
+            throw new InvalidOperationException("Agent handoff configuration is invalid: " + string.Join(" ", validation.Errors));
+        }
+
+        var entryAgentId = settings.EntryAgentId.GetValueOrDefault(agent.Id);
+        var participantIds = AgentHandoffMetadata
+            .ResolveParticipantAgentIds(settings, entryAgentId)
+            .ToHashSet();
+        participantIds.Add(entryAgentId);
+
+        var participants = new List<AgentRuntimeHandoffParticipant>();
+        foreach (var participantId in participantIds.OrderBy(item => item))
+        {
+            var participantAgent = EnsureAgentExists(catalog, participantId);
+            if (participantAgent.Status is AgentLifecycleStatus.Archived or AgentLifecycleStatus.Suspended)
+            {
+                throw new InvalidOperationException(
+                    $"Handoff participant agent '{participantAgent.Name}' is {participantAgent.Status} and cannot be used in a runtime workflow.");
+            }
+
+            var participantProvider = await ResolveProviderForAgentAsync(participantAgent, catalog, cancellationToken);
+            participants.Add(new AgentRuntimeHandoffParticipant(
+                participantAgent,
+                participantProvider,
+                ResolveAttachedCapabilities(catalog, participantAgent),
+                ResolveAgentMemoryForRun(catalog, participantAgent.Id, run)));
+        }
+
+        return new AgentRuntimeHandoffExecutionOptions(
+            settings,
+            participants,
+            entryAgentId,
+            string.IsNullOrWhiteSpace(run.CorrelationId) ? run.Id.ToString("D") : run.CorrelationId);
+    }
+
     private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
         ExecutionRunRecord run,
-        AgentStructuredOutputContract? structuredOutput)
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeHandoffExecutionOptions? handoffOptions = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -1011,7 +1066,39 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             StructuredOutput: structuredOutput,
             FinalizerMode: AgentFinalizerPolicies.ResolveMode(run, structuredOutput),
             RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
-            MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run));
+            MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
+            Handoff: handoffOptions);
+    }
+
+    private async Task AppendProcessCooperationLogAsync(
+        ExecutionRunRecord run,
+        Guid agentId,
+        Guid? chatSessionId,
+        CancellationToken cancellationToken)
+    {
+        var cooperationMode = ExecutionInvocationMetadata.ResolveProcessCooperationMode(run);
+        var workspaceToolProfile = ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run);
+        if (cooperationMode is null && workspaceToolProfile is null)
+        {
+            return;
+        }
+
+        var summary = ExecutionInvocationMetadata.ResolveProcessCooperationSummary(run);
+        var profileLabel = workspaceToolProfile.HasValue
+            ? AgentWorkspaceToolAccessProfiles.GetProfileKey(workspaceToolProfile.Value)
+            : "agent-configured";
+        var message = string.IsNullOrWhiteSpace(summary)
+            ? $"Process dispatch selected cooperation mode '{cooperationMode?.ToString() ?? "unspecified"}' with workspace tool profile '{profileLabel}'."
+            : $"{summary} Workspace tool profile: {profileLabel}.";
+
+        await AppendExecutionLogAsync(
+            run.Id,
+            agentId,
+            chatSessionId,
+            ExecutionState.Preparing,
+            "Process cooperation",
+            message,
+            cancellationToken);
     }
 
     private async Task<AgentRuntimeResponse> ValidateFinalizerBeforeCompletionAsync(

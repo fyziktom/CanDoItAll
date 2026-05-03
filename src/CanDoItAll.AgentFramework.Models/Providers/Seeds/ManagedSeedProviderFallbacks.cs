@@ -48,7 +48,7 @@ public static class ManagedSeedProviderFallbacks
 
     private static readonly IReadOnlyList<string> ManagedSeedOpenAiSuggestedModels =
     [
-        "gpt-5-mini",
+        "gpt-5.4-mini",
         "gpt-4.1-mini",
         "gpt-4o-mini",
         "gpt-4.1"
@@ -56,7 +56,7 @@ public static class ManagedSeedProviderFallbacks
 
     public const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
     public const string OpenAiBaseUrl = "https://api.openai.com/v1";
-    public const string OpenAiDefaultModel = "gpt-5-mini";
+    public const string OpenAiDefaultModel = "gpt-5.4-mini";
     public const string FallbackProviderName = "Remote Ollama";
     public const string FallbackBaseUrl = "http://192.168.10.132:11434";
     public const string FallbackModel = "gptoss32k:latest";

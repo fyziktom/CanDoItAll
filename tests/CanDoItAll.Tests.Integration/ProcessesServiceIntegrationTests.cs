@@ -867,13 +867,20 @@ public sealed class ProcessesServiceIntegrationTests
         var softwareDeliveryEditor = await processesService.GetEditorAsync(softwareDeliveryDefinition.Id, projectId);
 
         Assert.True(softwareDeliveryStepRuns.Count >= 9);
-        Assert.Contains(softwareDeliveryStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Blocked);
+        Assert.Contains(
+            softwareDeliveryStepRuns,
+            item => item.Title == "Run QA validation and browser proof" &&
+                    item.SelectedBranchOutcomeTitle == "Quality accepted");
+        Assert.Contains(
+            softwareDeliveryStepRuns,
+            item => item.Title == "Perform security and data-handling review" &&
+                    item.Status == ProcessStepRunStatus.Blocked);
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Reference delivery architecture decision record");
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Project structure context brief");
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Reference delivery regression evidence pack");
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Open security exception assessment for sensitive-data delivery capability");
         Assert.NotEmpty(softwareDeliveryConformance);
-        var releaseApprovalStepRun = Assert.Single(softwareDeliveryStepRuns, item => item.Title == "Approve release readiness");
+        var releaseApprovalStepRun = Assert.Single(softwareDeliveryStepRuns, item => item.Title == "Approve first-pass release readiness");
         Assert.True(releaseApprovalStepRun.Dependencies.Count >= 3);
         Assert.Equal(4, releaseApprovalStepRun.ArtifactInputCount);
         Assert.Contains(releaseApprovalStepRun.ResponsibilityPorts, item => item.ResponsibilityKind == ProcessResponsibilityKind.Approver);

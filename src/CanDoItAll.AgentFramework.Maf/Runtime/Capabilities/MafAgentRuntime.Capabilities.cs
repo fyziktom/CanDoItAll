@@ -7,11 +7,16 @@ using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed partial class MafAgentRuntime
 {
+    private const int DefaultCompactionSlidingWindowTurns = 32;
+    private const int DefaultCompactionTruncationTokenLimit = 64000;
+    private const int DefaultToolCompactionMessageThreshold = 40;
+
     private async Task<RuntimeCapabilityState> CreateCapabilityStateAsync(
         AgentDefinition agent,
         ProviderProfile provider,
@@ -28,6 +33,7 @@ public sealed partial class MafAgentRuntime
         await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
         await AttachInternalProcessToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
+        await AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements);
         await AttachCatalogCapabilitiesAsync(
             composition,
             agent,
@@ -47,7 +53,7 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<CapabilityCatalogItem> capabilities)
     {
         var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
-        var workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
+        var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
         var workspaceFileService = services.GetService(typeof(IWorkspaceFileService)) as IWorkspaceFileService
             ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
         var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
@@ -73,6 +79,25 @@ public sealed partial class MafAgentRuntime
             projectStructureToolBuilder,
             processToolBuilder,
             toolBuilder);
+    }
+
+    private static AgentWorkspaceToolAccessSettings ResolveWorkspaceToolAccessForRuntime(AgentDefinition agent)
+    {
+        var configured = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
+        var overrideProfile = WorkspaceExecutionAuditContext.Current?.WorkspaceToolProfileOverride;
+        if (!overrideProfile.HasValue)
+        {
+            return configured;
+        }
+
+        var processProfile = AgentWorkspaceToolAccessProfiles.CreateSettings(overrideProfile.Value);
+        processProfile.AllowedExternalTargetAliases = configured.AllowedExternalTargetAliases.ToList();
+        processProfile.CanReadStorage = configured.CanReadStorage;
+        processProfile.CanWriteStorage = configured.CanWriteStorage;
+        processProfile.AllowAllStorageCatalogs = configured.AllowAllStorageCatalogs;
+        processProfile.AllowedStorageCatalogIds = configured.AllowedStorageCatalogIds.ToList();
+
+        return AgentWorkspaceToolAccessMetadata.Normalize(processProfile);
     }
 
     private StorageRuntimePlugin? CreateStorageRuntimePlugin(AgentWorkspaceToolAccessSettings accessSettings)
@@ -216,10 +241,14 @@ public sealed partial class MafAgentRuntime
 
         composition.State.Tools.AddRange(tools);
         composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        var overrideProfile = WorkspaceExecutionAuditContext.Current?.WorkspaceToolProfileOverride;
+        var profileSuffix = overrideProfile.HasValue
+            ? $" Process dispatch override profile: {AgentWorkspaceToolAccessProfiles.GetProfileKey(overrideProfile.Value)}."
+            : string.Empty;
         await progressCallback(
             ExecutionState.Preparing,
             "Workspace tools",
-            "Attached configured workspace file and storage tools from the current agent settings.");
+            "Attached configured workspace file and storage tools from the current agent settings." + profileSuffix);
     }
 
     private async Task AttachInternalProcessToolsAsync(
@@ -248,6 +277,54 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "Processes",
             "Attached internal process-module tools backed by the workspace services and current agent policy.");
+    }
+
+    private async Task AttachA2ARemoteAgentToolsAsync(
+        RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements)
+    {
+        if (!agent.Permissions.CanUseTools ||
+            !agent.Permissions.CanAskOtherAgents)
+        {
+            return;
+        }
+
+        var settings = AgentA2AMetadata.Read(agent.ConfigurationJson);
+        var endpoints = settings.RemoteEndpoints
+            .Where(endpoint => endpoint.Enabled && endpoint.ExposeSkillsAsTools)
+            .ToList();
+        if (endpoints.Count == 0)
+        {
+            return;
+        }
+
+        var validation = AgentA2AMetadata.Validate(settings);
+        if (!validation.Succeeded)
+        {
+            throw new InvalidOperationException("Agent A2A configuration is invalid: " + string.Join(" ", validation.Errors));
+        }
+
+        var factory = new A2ARemoteAgentToolFactory(
+            services.GetService<IConfiguration>(),
+            services.GetService<ILoggerFactory>());
+        var result = await factory.CreateSkillToolsAsync(endpoints, cancellationToken);
+        var approvalRequired = agent.Permissions.RequiresApprovalForExternalCalls;
+        var tools = ApplyApprovalRequirement(
+                result.Tools,
+                approvalRequired,
+                suppressApprovalRequirements)
+            .ToList();
+
+        composition.State.Tools.AddRange(tools);
+        composition.State.Disposables.AddRange(result.Disposables);
+        composition.State.HasApprovalTools |= !suppressApprovalRequirements && approvalRequired;
+        await progressCallback(
+            ExecutionState.Preparing,
+            "A2A",
+            $"Attached {tools.Count} A2A skill tool(s) from {endpoints.Count} configured remote endpoint(s).");
     }
 
     private static AITool WrapInternalProcessMutationTool(
@@ -281,7 +358,7 @@ public sealed partial class MafAgentRuntime
         switch (capability.Kind)
         {
             case CapabilityKind.Tool:
-                foreach (var tool in composition.ToolBuilder.CreateTools(capability, provider, suppressApprovalRequirements))
+                foreach (var tool in composition.ToolBuilder.CreateTools(capability, provider, agent, suppressApprovalRequirements))
                 {
                     composition.State.Tools.Add(tool);
                 }
@@ -289,7 +366,7 @@ public sealed partial class MafAgentRuntime
                 composition.State.HasApprovalTools |= composition.ToolBuilder.CapabilityHasApprovalTools(capability, suppressApprovalRequirements);
                 break;
             case CapabilityKind.Plugin:
-                foreach (var tool in composition.ToolBuilder.CreatePluginTools(capability, provider, suppressApprovalRequirements))
+                foreach (var tool in composition.ToolBuilder.CreatePluginTools(capability, provider, agent, suppressApprovalRequirements))
                 {
                     composition.State.Tools.Add(tool);
                 }
@@ -367,26 +444,13 @@ public sealed partial class MafAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         bool suppressApprovalRequirements)
     {
-        if (!ShouldEnableCompaction(agent, composition.AgentConfiguration))
-        {
-            return;
-        }
-
-        if (IsGovernedProcessAutomationRun())
+        var decision = ResolveCompactionDecision(agent, composition.AgentConfiguration, suppressApprovalRequirements);
+        if (!decision.ShouldAttachCompaction)
         {
             await progressCallback(
                 ExecutionState.Preparing,
                 "Compaction",
-                "Skipped Microsoft Agent Framework compaction for governed process automation. Process-step prompts are bounded, and compaction must not block the run before the agent session starts.");
-            return;
-        }
-
-        if (suppressApprovalRequirements)
-        {
-            await progressCallback(
-                ExecutionState.Preparing,
-                "Compaction",
-                "Skipped Microsoft Agent Framework compaction for auto-approved non-interactive execution. Compaction is optional and must not block unattended runs before the agent session starts.");
+                decision.Message);
             return;
         }
 
@@ -403,18 +467,88 @@ public sealed partial class MafAgentRuntime
         await progressCallback(
             ExecutionState.Preparing,
             "Compaction",
-            "Attached Microsoft Agent Framework compaction to manage long-running local history.");
+            $"Attached Microsoft Agent Framework compaction for {decision.PolicyKind} context with defaults of {DefaultCompactionSlidingWindowTurns} turns, {DefaultCompactionTruncationTokenLimit} tokens, and {DefaultToolCompactionMessageThreshold} tool messages unless overridden by agent configuration.");
     }
 
-    private static bool ShouldEnableCompaction(AgentDefinition agent, AgentRuntimeConfiguration configuration)
+    private static RuntimeCompactionDecision ResolveCompactionDecision(
+        AgentDefinition agent,
+        AgentRuntimeConfiguration configuration,
+        bool suppressApprovalRequirements)
     {
+        var policyKind = ResolveContextPolicyKind(agent, suppressApprovalRequirements);
         if (configuration.EnableCompaction.HasValue)
         {
-            return configuration.EnableCompaction.Value;
+            if (configuration.EnableCompaction.Value)
+            {
+                if (policyKind == AgentRuntimeContextPolicyKind.GovernedProcessAutomation)
+                {
+                    return RuntimeCompactionDecision.Skip(
+                        policyKind,
+                        "Skipped Microsoft Agent Framework compaction for governed process automation even though the agent requested compaction. Process-step prompts carry required artifact paths and tool-evidence rules, so they must not be summarized before the run starts.");
+                }
+
+                if (policyKind == AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive)
+                {
+                    return RuntimeCompactionDecision.Skip(
+                        policyKind,
+                        "Skipped Microsoft Agent Framework compaction for auto-approved non-interactive execution even though the agent requested compaction. Compaction is optional and must not block unattended tool continuations before the agent session starts.");
+                }
+
+                return RuntimeCompactionDecision.Attach(
+                    policyKind,
+                    "Agent configuration explicitly enabled Microsoft Agent Framework compaction.");
+            }
+
+            return RuntimeCompactionDecision.Skip(
+                policyKind,
+                "Skipped Microsoft Agent Framework compaction because agent configuration explicitly disabled it.");
         }
 
-        return agent.ChatHistoryMode == AgentChatHistoryMode.FrameworkManaged
-            || agent.Workload is AgentWorkloadKind.Programming or AgentWorkloadKind.Research;
+        if (policyKind == AgentRuntimeContextPolicyKind.GovernedProcessAutomation)
+        {
+            return RuntimeCompactionDecision.Skip(
+                policyKind,
+                "Skipped Microsoft Agent Framework compaction for governed process automation. Process-step prompts are bounded and include required artifact paths, so compaction must not trim evidence context before the agent session starts.");
+        }
+
+        if (policyKind == AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive)
+        {
+            return RuntimeCompactionDecision.Skip(
+                policyKind,
+                "Skipped Microsoft Agent Framework compaction for auto-approved non-interactive execution. Compaction is optional and must not block unattended runs before the agent session starts.");
+        }
+
+        if (agent.ChatHistoryMode == AgentChatHistoryMode.FrameworkManaged ||
+            agent.Workload is AgentWorkloadKind.Programming or AgentWorkloadKind.Research)
+        {
+            return RuntimeCompactionDecision.Attach(
+                policyKind,
+                "Default context policy enables Microsoft Agent Framework compaction for framework-managed, programming, and research histories.");
+        }
+
+        return RuntimeCompactionDecision.Skip(
+            policyKind,
+            $"Skipped Microsoft Agent Framework compaction because the {policyKind} context policy does not require it for workload '{agent.Workload}'.");
+    }
+
+    private static AgentRuntimeContextPolicyKind ResolveContextPolicyKind(
+        AgentDefinition agent,
+        bool suppressApprovalRequirements)
+    {
+        if (IsGovernedProcessAutomationRun())
+        {
+            return AgentRuntimeContextPolicyKind.GovernedProcessAutomation;
+        }
+
+        if (suppressApprovalRequirements)
+        {
+            return AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive;
+        }
+
+        var a2aSettings = AgentA2AMetadata.Read(agent.ConfigurationJson);
+        return a2aSettings.Hosting.Enabled
+            ? AgentRuntimeContextPolicyKind.A2AEndpoint
+            : AgentRuntimeContextPolicyKind.InteractiveChat;
     }
 
     private static bool IsGovernedProcessAutomationRun()
@@ -445,9 +579,9 @@ public sealed partial class MafAgentRuntime
 
     private static CompactionProvider CreateCompactionProvider(AgentRuntimeConfiguration configuration)
     {
-        var slidingWindowTurns = configuration.SlidingWindowTurns ?? 8;
-        var truncationTokenLimit = configuration.TruncationTokenLimit ?? 12000;
-        var toolMessageThreshold = configuration.ToolCompactionMessageThreshold ?? 10;
+        var slidingWindowTurns = configuration.SlidingWindowTurns ?? DefaultCompactionSlidingWindowTurns;
+        var truncationTokenLimit = configuration.TruncationTokenLimit ?? DefaultCompactionTruncationTokenLimit;
+        var toolMessageThreshold = configuration.ToolCompactionMessageThreshold ?? DefaultToolCompactionMessageThreshold;
 
         var pipeline = new PipelineCompactionStrategy(
             new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(toolMessageThreshold)),
@@ -614,6 +748,34 @@ public sealed partial class MafAgentRuntime
         string RootPath,
         bool ApprovalRequired,
         string TrustLevel);
+
+    private enum AgentRuntimeContextPolicyKind
+    {
+        InteractiveChat = 0,
+        GovernedProcessAutomation = 1,
+        AutoApprovedNonInteractive = 2,
+        A2AEndpoint = 3
+    }
+
+    private sealed record RuntimeCompactionDecision(
+        AgentRuntimeContextPolicyKind PolicyKind,
+        bool ShouldAttachCompaction,
+        string Message)
+    {
+        public static RuntimeCompactionDecision Attach(
+            AgentRuntimeContextPolicyKind policyKind,
+            string message)
+        {
+            return new RuntimeCompactionDecision(policyKind, true, message);
+        }
+
+        public static RuntimeCompactionDecision Skip(
+            AgentRuntimeContextPolicyKind policyKind,
+            string message)
+        {
+            return new RuntimeCompactionDecision(policyKind, false, message);
+        }
+    }
 
     private sealed record RuntimeCapabilityComposition(
         RuntimeCapabilityState State,

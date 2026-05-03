@@ -2006,6 +2006,90 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return new GovernedInspectionPaths(statPaths.ToList(), readPaths.ToList());
     }
 
+    private static string ResolveMissingUpstreamArtifactInspectionSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!RequiresGovernedInspection(candidate.StepRun) || candidate.ArtifactInputs.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var requiredInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
+        if (requiredInspectionPaths.StatPaths.Count == 0 && requiredInspectionPaths.ReadPaths.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var successfulStatPaths = ResolveSuccessfulWorkspaceInspectionPaths(
+            detail,
+            "workspace_stat_path",
+            ResolveSuccessfulSessionPathStats(detail.Run.SerializedSessionStateJson));
+        var successfulReadPaths = ResolveSuccessfulWorkspaceInspectionPaths(
+            detail,
+            "workspace_read_file",
+            ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson));
+
+        var missingStatPaths = requiredInspectionPaths.StatPaths
+            .Where(path => !successfulStatPaths.Contains(path))
+            .Take(3)
+            .ToList();
+        var missingReadPaths = requiredInspectionPaths.ReadPaths
+            .Where(path => !successfulReadPaths.Contains(path))
+            .Take(3)
+            .ToList();
+        if (missingStatPaths.Count == 0 && missingReadPaths.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string>();
+        if (missingStatPaths.Count > 0)
+        {
+            parts.Add($"workspace_stat_path missing for {FormatPromptPathList(missingStatPaths)}");
+        }
+
+        if (missingReadPaths.Count > 0)
+        {
+            parts.Add($"workspace_read_file missing for {FormatPromptPathList(missingReadPaths)}");
+        }
+
+        return "the review step did not directly inspect inherited upstream artifacts: " + string.Join("; ", parts);
+    }
+
+    private static IReadOnlySet<string> ResolveSuccessfulWorkspaceInspectionPaths(
+        ExecutionRunDetail detail,
+        string normalizedToolName,
+        IReadOnlyList<SessionFileContent> sessionPaths)
+    {
+        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var sessionPath in sessionPaths)
+        {
+            AddNormalizedWorkspaceInspectionPath(paths, sessionPath.Path);
+        }
+
+        foreach (var receipt in detail.ToolReceipts.Where(receipt =>
+                     !IsFailedToolReceipt(receipt) &&
+                     string.Equals(NormalizeToolToken(receipt.ToolName), normalizedToolName, StringComparison.Ordinal)))
+        {
+            foreach (var path in ResolveManagedWorkspacePathsFromReceipt(receipt))
+            {
+                AddNormalizedWorkspaceInspectionPath(paths, path);
+            }
+        }
+
+        return paths;
+    }
+
+    private static void AddNormalizedWorkspaceInspectionPath(ISet<string> paths, string path)
+    {
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        if (!string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            paths.Add(normalizedPath);
+        }
+    }
+
     private static string FormatPromptPathList(IReadOnlyList<string> relativePaths)
     {
         return string.Join(", ", relativePaths.Select(relativePath => $"`{relativePath}`"));

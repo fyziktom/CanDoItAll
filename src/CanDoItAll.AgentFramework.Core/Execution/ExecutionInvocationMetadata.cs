@@ -10,6 +10,9 @@ public static class ExecutionInvocationMetadata
     public const string RequireStructuredOutputValidationMetadataKey = "agentRequireStructuredOutputValidation";
     public const string AllowedExternalTargetAliasesMetadataKey = "agentAllowedExternalTargetAliases";
     public const string ReadOnlyExternalTargetAliasesMetadataKey = "agentReadOnlyExternalTargetAliases";
+    public const string ProcessCooperationModeMetadataKey = "agentProcessCooperationMode";
+    public const string ProcessWorkspaceToolProfileMetadataKey = "agentProcessWorkspaceToolProfile";
+    public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
 
@@ -34,6 +37,19 @@ public static class ExecutionInvocationMetadata
         }
 
         metadata[RequireStructuredOutputValidationMetadataKey] = policy.RequireStructuredOutputValidation;
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyProcessCooperation(
+        string? metadataJson,
+        AgentProcessCooperationMetadata cooperationMetadata)
+    {
+        ArgumentNullException.ThrowIfNull(cooperationMetadata);
+
+        var metadata = ParseObject(metadataJson);
+        metadata[ProcessCooperationModeMetadataKey] = cooperationMetadata.CooperationMode.ToString();
+        metadata[ProcessWorkspaceToolProfileMetadataKey] = AgentWorkspaceToolAccessProfiles.GetProfileKey(cooperationMetadata.WorkspaceToolProfile);
+        metadata[ProcessCooperationSummaryMetadataKey] = cooperationMetadata.Summary.Trim();
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -137,6 +153,45 @@ public static class ExecutionInvocationMetadata
         return ResolveExternalTargetAliases(run, ReadOnlyExternalTargetAliasesMetadataKey);
     }
 
+    public static AgentProcessCooperationMode? ResolveProcessCooperationMode(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return null;
+        }
+
+        var value = TryReadString(run.MetadataJson, ProcessCooperationModeMetadataKey);
+        return Enum.TryParse<AgentProcessCooperationMode>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    public static AgentWorkspaceToolProfileKind? ResolveProcessWorkspaceToolProfile(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return null;
+        }
+
+        var value = TryReadString(run.MetadataJson, ProcessWorkspaceToolProfileMetadataKey);
+        return AgentWorkspaceToolAccessProfiles.TryParseProfileKey(value, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    public static string ResolveProcessCooperationSummary(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run)
+            ? TryReadString(run.MetadataJson, ProcessCooperationSummaryMetadataKey)
+            : string.Empty;
+    }
+
     private static JsonObject ParseObject(string? metadataJson)
     {
         if (string.IsNullOrWhiteSpace(metadataJson))
@@ -211,6 +266,30 @@ public static class ExecutionInvocationMetadata
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    private static string TryReadString(
+        string? metadataJson,
+        string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty(propertyName, out var value) &&
+                   value.ValueKind == JsonValueKind.String
+                ? value.GetString()?.Trim() ?? string.Empty
+                : string.Empty;
+        }
+        catch (JsonException)
+        {
+            return string.Empty;
         }
     }
 
@@ -330,6 +409,14 @@ public static class ExecutionInvocationMetadata
     {
         return string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
                !string.IsNullOrWhiteSpace(run.ProcessRunId) ||
+               !string.IsNullOrWhiteSpace(run.ProcessStepId);
+    }
+
+    private static bool IsTrustedGovernedProcessRun(ExecutionRunRecord run)
+    {
+        return string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(run.RequestedByKind, "system", StringComparison.OrdinalIgnoreCase) &&
+               !string.IsNullOrWhiteSpace(run.ProcessRunId) &&
                !string.IsNullOrWhiteSpace(run.ProcessStepId);
     }
 }

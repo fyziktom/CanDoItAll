@@ -84,6 +84,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (declaredOutcome.Status == ProcessStepRunStatus.Completed)
         {
+            AddContextGap(errors, "process.step_outcome.context.missing_upstream_artifact", ResolveMissingUpstreamArtifactInputSummary(candidate));
+            AddContextGap(errors, "process.step_outcome.context.missing_upstream_artifact_inspection", ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail));
             AddContextGap(errors, "process.step_outcome.context.missing_concrete_proof", ResolveMissingConcreteProofSummary(candidate, inspectionText));
             AddContextGap(errors, "process.step_outcome.context.incomplete_implementation", ResolveIncompleteImplementationSummary(candidate, inspectionText));
             AddContextGap(errors, "process.step_outcome.context.missing_implementation_proof", ResolveMissingConcreteImplementationProofSummary(candidate, detail));

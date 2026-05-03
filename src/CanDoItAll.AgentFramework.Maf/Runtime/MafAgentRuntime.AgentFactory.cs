@@ -28,7 +28,10 @@ public sealed partial class MafAgentRuntime
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyList<AgentMemoryRecord> memory,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool suppressApprovalRequirements = false,
+        bool forceOmitTemperature = false,
+        AgentRuntimeExecutionOptions? executionOptions = null)
     {
         var runtimeBuild = await CreateRuntimeBuildAsync(
             agent,
@@ -36,7 +39,10 @@ public sealed partial class MafAgentRuntime
             capabilities,
             memory,
             static (_, _, _) => Task.CompletedTask,
-            cancellationToken);
+            cancellationToken,
+            suppressApprovalRequirements,
+            forceOmitTemperature,
+            executionOptions);
 
         return new HostedRuntimeAgent(runtimeBuild);
     }
@@ -53,6 +59,18 @@ public sealed partial class MafAgentRuntime
         AgentRuntimeExecutionOptions? executionOptions = null)
     {
         var runtimeOptions = executionOptions ?? CreateDisabledRuntimeExecutionOptions(null);
+        if (runtimeOptions.Handoff is not null)
+        {
+            return await CreateHandoffRuntimeBuildAsync(
+                agent,
+                provider,
+                progressCallback,
+                cancellationToken,
+                suppressApprovalRequirements,
+                forceOmitTemperature,
+                runtimeOptions);
+        }
+
         var toolInvocationTraceRecorder = new ToolInvocationTraceRecorder();
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
         var managedSeedProvider = ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent)
@@ -110,6 +128,7 @@ public sealed partial class MafAgentRuntime
 
         var options = new ChatClientAgentOptions
         {
+            Id = agent.Id.ToString("D"),
             Name = agent.Name,
             Description = agent.Summary,
             ChatOptions = chatOptions,
@@ -137,6 +156,103 @@ public sealed partial class MafAgentRuntime
             ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
             finalizerCapture,
             toolInvocationTraceRecorder);
+    }
+
+    private async Task<RuntimeBuildResult> CreateHandoffRuntimeBuildAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements,
+        bool forceOmitTemperature,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        var handoffOptions = runtimeOptions.Handoff
+            ?? throw new InvalidOperationException("Handoff runtime build requires handoff execution options.");
+        var settings = AgentHandoffMetadata.Normalize(handoffOptions.Settings);
+        var validation = AgentHandoffMetadata.Validate(settings);
+        if (!validation.Succeeded)
+        {
+            throw new InvalidOperationException("Agent handoff configuration is invalid: " + string.Join(" ", validation.Errors));
+        }
+
+        var participantIds = AgentHandoffMetadata.ResolveParticipantAgentIds(settings, handoffOptions.EntryAgentId);
+        var missingParticipantIds = participantIds
+            .Where(participantId => handoffOptions.Participants.All(item => item.Agent.Id != participantId))
+            .Select(participantId => participantId.ToString("D"))
+            .ToList();
+        if (missingParticipantIds.Count > 0)
+        {
+            throw new InvalidOperationException("Handoff participants are incomplete: " + string.Join(", ", missingParticipantIds));
+        }
+
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Handoff",
+            $"Composing a Microsoft Agent Framework handoff workflow with {participantIds.Count} local participant agent(s).");
+
+        var participantExecutionOptions = runtimeOptions with
+        {
+            Handoff = null
+        };
+        var participantBuilds = new List<RuntimeBuildResult>();
+        try
+        {
+            var participantAgents = new Dictionary<Guid, AIAgent>();
+            foreach (var participant in handoffOptions.Participants.Where(item => participantIds.Contains(item.Agent.Id)))
+            {
+                var participantBuild = await CreateRuntimeBuildAsync(
+                    participant.Agent,
+                    participant.Provider,
+                    participant.Capabilities,
+                    participant.Memory,
+                    progressCallback,
+                    cancellationToken,
+                    suppressApprovalRequirements,
+                    forceOmitTemperature,
+                    participantExecutionOptions);
+                participantBuilds.Add(participantBuild);
+                participantAgents[participant.Agent.Id] = participantBuild.Agent;
+            }
+
+            var entryBuild = participantBuilds.FirstOrDefault(item =>
+                    string.Equals(item.Agent.Id, handoffOptions.EntryAgentId.ToString("D"), StringComparison.OrdinalIgnoreCase))
+                ?? participantBuilds.FirstOrDefault(item => item.Agent.Id == agent.Id.ToString("D"))
+                ?? throw new InvalidOperationException($"Handoff entry agent '{handoffOptions.EntryAgentId:D}' was not built.");
+            var buildResult = MafHandoffWorkflowFactory.Build(
+                settings,
+                participantAgents,
+                handoffOptions.EntryAgentId,
+                handoffOptions.CorrelationId);
+
+            return new RuntimeBuildResult(
+                buildResult.Agent,
+                entryBuild.Provider,
+                entryBuild.Model,
+                participantBuilds,
+                [],
+                participantBuilds.Any(item => item.HasApprovalTools),
+                entryBuild.IsTemperatureOmitted,
+                finalizerCapture: null,
+                toolInvocationTraceRecorder: null,
+                snapshotFinalizerInvocations: () => participantBuilds
+                    .SelectMany(item => item.SnapshotFinalizerInvocations())
+                    .OrderBy(item => item.Sequence)
+                    .ToList(),
+                snapshotToolInvocationTraces: () => participantBuilds
+                    .SelectMany(item => item.SnapshotToolInvocationTraces())
+                    .OrderBy(item => item.Sequence)
+                    .ToList());
+        }
+        catch
+        {
+            foreach (var participantBuild in participantBuilds)
+            {
+                await participantBuild.DisposeAsync();
+            }
+
+            throw;
+        }
     }
 
     private AIAgent CreateFrameworkAgent(
@@ -901,7 +1017,9 @@ public sealed partial class MafAgentRuntime
         bool hasApprovalTools,
         bool isTemperatureOmitted,
         FinalizerCapture? finalizerCapture,
-        ToolInvocationTraceRecorder toolInvocationTraceRecorder) : IAsyncDisposable
+        ToolInvocationTraceRecorder? toolInvocationTraceRecorder,
+        Func<IReadOnlyList<AgentFinalizerInvocation>>? snapshotFinalizerInvocations = null,
+        Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null) : IAsyncDisposable
     {
         public AIAgent Agent { get; } = agent;
 
@@ -914,10 +1032,10 @@ public sealed partial class MafAgentRuntime
         public bool IsTemperatureOmitted { get; } = isTemperatureOmitted;
 
         public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
-            => finalizerCapture?.Snapshot() ?? [];
+            => snapshotFinalizerInvocations?.Invoke() ?? finalizerCapture?.Snapshot() ?? [];
 
         public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
-            => toolInvocationTraceRecorder.Snapshot();
+            => snapshotToolInvocationTraces?.Invoke() ?? toolInvocationTraceRecorder?.Snapshot() ?? [];
 
         public async ValueTask DisposeAsync()
         {

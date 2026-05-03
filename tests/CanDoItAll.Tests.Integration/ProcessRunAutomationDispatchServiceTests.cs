@@ -1428,6 +1428,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.NotNull(prompt);
         Assert.Contains("Prefetched governed artifact grounding:", prompt, StringComparison.Ordinal);
         Assert.Contains("scope-boundary-packet.md", prompt, StringComparison.Ordinal);
+        Assert.Contains("Context preservation rules:", prompt, StringComparison.Ordinal);
+        Assert.Contains("prefetched governed artifact grounding", prompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file with a larger maxCharacters value", prompt, StringComparison.Ordinal);
         Assert.Contains(
             "The dispatcher already inspected upstream governed artifact files",
             prompt,
@@ -1696,6 +1699,126 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Contains("Workflow architecture artifact", prompt, StringComparison.Ordinal);
         Assert.Contains("Return `Blocked`", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not fabricate an upstream artifact", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_review_completion_without_upstream_artifact_inspection()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        const string upstreamArtifactPath = "artifacts/process-runs/run-001/implementation/implementation-change-set.md";
+        var candidate = CreateReviewDispatchCandidateWithArtifactInputs(
+            "Review the implementation change set and decide whether QA can proceed.",
+            (
+                "Implementation",
+                "Implementation change set",
+                [("Implementation change set", "Deliverable", upstreamArtifactPath, "Implementation artifact was produced.", "workspace")]));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "QA accepted the implementation handoff.",
+            evidenceRefs: [upstreamArtifactPath]);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                (
+                    "workspace_stat_path",
+                    new Dictionary<string, object?> { ["path"] = "artifacts/process-runs/run-001/implementation/unrelated.md" },
+                    CreateProviderNativeTextResult("Path exists.")),
+                (
+                    "workspace_read_file",
+                    new Dictionary<string, object?> { ["path"] = "artifacts/process-runs/run-001/implementation/unrelated.md" },
+                    CreateProviderNativeTextResult("Read complete."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "QA validation"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("not directly inspected", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace_stat_path", reason, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file", reason, StringComparison.Ordinal);
+        Assert.Contains(upstreamArtifactPath, reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_allows_review_completion_when_upstream_artifacts_are_inspected()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        const string upstreamArtifactPath = "artifacts/process-runs/run-001/implementation/implementation-change-set.md";
+        var candidate = CreateReviewDispatchCandidateWithArtifactInputs(
+            "Review the implementation change set and decide whether QA can proceed.",
+            (
+                "Implementation",
+                "Implementation change set",
+                [("Implementation change set", "Deliverable", upstreamArtifactPath, "Implementation artifact was produced.", "workspace")]));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "QA accepted the implementation handoff.",
+            evidenceRefs: [upstreamArtifactPath]);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                (
+                    "workspace_stat_path",
+                    new Dictionary<string, object?> { ["path"] = upstreamArtifactPath },
+                    CreateProviderNativeTextResult("Path exists.")),
+                (
+                    "workspace_read_file",
+                    new Dictionary<string, object?> { ["path"] = upstreamArtifactPath },
+                    CreateProviderNativeTextResult("Read complete."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "QA validation"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Completed, status);
+        Assert.NotNull(reason);
+        Assert.Contains("QA accepted the implementation handoff", reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_review_completion_when_upstream_artifact_input_is_missing()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateReviewDispatchCandidateWithArtifactInputs(
+            "Review the implementation change set and decide whether QA can proceed.",
+            (
+                "Implementation",
+                "Implementation change set",
+                []));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "QA accepted the implementation handoff.");
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                (
+                    "workspace_stat_path",
+                    new Dictionary<string, object?> { ["path"] = "artifacts/process-runs/run-001/implementation/unrelated.md" },
+                    CreateProviderNativeTextResult("Path exists.")),
+                (
+                    "workspace_read_file",
+                    new Dictionary<string, object?> { ["path"] = "artifacts/process-runs/run-001/implementation/unrelated.md" },
+                    CreateProviderNativeTextResult("Read complete."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "QA validation"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("required upstream artifacts are missing", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Implementation", reason, StringComparison.Ordinal);
+        Assert.Contains("Implementation change set", reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -6870,6 +6993,20 @@ Requirements from project-level planning context:
             artifactInputDefinitions);
     }
 
+    private static object CreateReviewDispatchCandidateWithArtifactInputs(
+        string workBriefText,
+        params (string SourceStepTitle, string ExpectedArtifactTitle, (string Title, string ArtifactKind, string ManagedStoragePath, string ReviewSummary, string ProvenanceSummary)[] Artifacts)[] artifactInputDefinitions)
+    {
+        return CreateDispatchCandidateCore(
+            workBriefText,
+            ProcessStepKind.Review,
+            [],
+            false,
+            [],
+            artifactInputDefinitions,
+            stepTitle: "QA validation");
+    }
+
     private static object CreateDispatchCandidateCore(
         string workBriefText,
         ProcessStepKind stepKind,
@@ -6952,7 +7089,7 @@ Requirements from project-level planning context:
         }
 
         var constructor = candidateType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .Single(candidateConstructor => candidateConstructor.GetParameters().Length == 13);
+            .Single(candidateConstructor => candidateConstructor.GetParameters().Length == 14);
         return constructor.Invoke(
                     [
                         new ProcessRun
@@ -6987,9 +7124,49 @@ Requirements from project-level planning context:
                        null,
                        string.Empty,
                        branchOutcomes,
-                       requiresExplicitBranchOutcomeSelection
+                       requiresExplicitBranchOutcomeSelection,
+                       new AgentProcessCooperationMetadata(
+                           AgentProcessCooperationMode.ProcessArtifactHandoff,
+                           AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+                           "Test dispatch candidate uses the default process artifact handoff cooperation profile.")
                    ])
                ?? throw new InvalidOperationException("DispatchCandidate could not be constructed.");
+    }
+
+    private static ExecutionRunDetail CreateSuccessfulExecutionDetail(
+        string responseText,
+        string? serializedSessionStateJson)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Process step run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                serializedSessionStateJson,
+                []),
+            null,
+            [],
+            []);
     }
 
     private static MethodInfo ResolveSelectedBranchOutcomeIdMethod(Type serviceType)

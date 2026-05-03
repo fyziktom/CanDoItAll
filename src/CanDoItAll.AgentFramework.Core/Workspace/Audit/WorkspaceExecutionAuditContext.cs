@@ -27,7 +27,9 @@ public static class WorkspaceExecutionAuditContext
             run.ProviderName,
             run.Model,
             ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run),
-            ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run));
+            ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run),
+            ExecutionInvocationMetadata.ResolveProcessCooperationMode(run),
+            ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run));
         return new Scope(previous);
     }
 
@@ -45,7 +47,9 @@ public static class WorkspaceExecutionAuditContext
         string ProviderName,
         string Model,
         IReadOnlyList<string> AllowedExternalTargetAliases,
-        IReadOnlyList<string> ReadOnlyExternalTargetAliases);
+        IReadOnlyList<string> ReadOnlyExternalTargetAliases,
+        AgentProcessCooperationMode? ProcessCooperationMode,
+        AgentWorkspaceToolProfileKind? WorkspaceToolProfileOverride);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

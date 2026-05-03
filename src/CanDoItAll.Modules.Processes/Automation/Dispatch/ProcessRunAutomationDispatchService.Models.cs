@@ -35,7 +35,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? RecoveryExecutionRunId,
         string ManualRecoveryDirective,
         IReadOnlyList<DispatchBranchOutcome> BranchOutcomes,
-        bool RequiresExplicitBranchOutcomeSelection);
+        bool RequiresExplicitBranchOutcomeSelection,
+        AgentProcessCooperationMetadata CooperationMetadata);
 
     private sealed record ConcurrentAutomationExecution(
         Guid ExecutionRunId,

@@ -12,9 +12,9 @@ Regression, UX, and quality evidence
 Execute targeted regression, browser proof, and defect triage against the reviewed implementation package.
 
 ## Contracts
-- Input contract: Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.
+- Input contract: Peer-reviewed change set, changed-surface inventory, release-scope assumptions, and direct inspection of inherited implementation artifact paths.
 - Output contract: Targeted QA result with screenshots, regressions, and explicit residual quality risk.
-- Evidence contract: Regression logs, browser proof, screenshots, and defect notes.
+- Evidence contract: Regression logs, browser proof, screenshots, defect notes, and stat/read evidence for the exact implementation artifacts under review.
 
 ## Governance
 - Decision rights: QA lead may block release progression when evidence is too thin for the risk profile.

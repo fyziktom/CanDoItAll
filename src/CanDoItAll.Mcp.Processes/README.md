@@ -33,8 +33,8 @@ Framework references:
 Direct package references:
 
 - `ModelContextProtocol (1.1.0)`
-- `Microsoft.Extensions.Hosting (10.0.0)`
-- `Microsoft.Extensions.Logging.Console (10.0.0)`
+- `Microsoft.Extensions.Hosting (10.0.1)`
+- `Microsoft.Extensions.Logging.Console (10.0.1)`
 - `Microsoft.Extensions.Options.ConfigurationExtensions (10.0.5)`
 - `Microsoft.Extensions.Options.DataAnnotations (10.0.0)`
 

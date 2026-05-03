@@ -244,12 +244,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var inspectionText = ResolveOutputInspectionText(responseText);
+        var missingUpstreamArtifactInputSummary = ResolveMissingUpstreamArtifactInputSummary(candidate);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
         if (hasDeclaredOutcome)
@@ -271,12 +273,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
+                (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
+                 !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
                  !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
                  !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
                  !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
                  !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
                  !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+                 !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
                  !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
                  !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
             {
@@ -286,12 +290,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return declaredOutcome.Status;
         }
 
-        if (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
+        if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
+            !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
             !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
             !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
             !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+            !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
             !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
             !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
         {
@@ -624,6 +630,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                 var content = TryResolveStringProperty(resultContent, "content") ?? string.Empty;
                 return new SessionFileContent(path.Trim(), content);
+            });
+    }
+
+    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionPathStats(string? serializedSessionStateJson)
+    {
+        return ResolveSuccessfulSessionFileContents(
+            serializedSessionStateJson,
+            static toolName => string.Equals(toolName, "workspace_stat_path", StringComparison.Ordinal),
+            static callContent =>
+            {
+                if (!callContent.TryGetProperty("arguments", out var arguments) ||
+                    arguments.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                var path = TryResolveStringProperty(arguments, "path");
+                return string.IsNullOrWhiteSpace(path)
+                    ? null
+                    : new SessionFileContent(path.Trim(), string.Empty);
+            },
+            static resultContent =>
+            {
+                var path = TryResolveStringProperty(resultContent, "path");
+                return string.IsNullOrWhiteSpace(path)
+                    ? null
+                    : new SessionFileContent(path.Trim(), string.Empty);
             });
     }
 

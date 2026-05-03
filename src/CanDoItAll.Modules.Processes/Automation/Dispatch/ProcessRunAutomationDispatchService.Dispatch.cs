@@ -398,6 +398,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Select(item => item.StepDefinitionId)
             .Distinct()
             .ToList();
+        var stepRoleRequirements = readyStepDefinitionIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
+                .AsNoTracking()
+                .Where(item => readyStepDefinitionIds.Contains(item.StepDefinitionId))
+                .OrderBy(item => item.FallbackOrder)
+                .ToListAsync(cancellationToken);
+        var stepRoleRequirementsByStepDefinitionId = stepRoleRequirements
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ProcessStepRoleAssignmentRequirement>)group.ToList());
+        var roleRequirementIds = stepRoleRequirements
+            .Select(item => item.RoleRequirementId)
+            .Distinct()
+            .ToList();
+        var roleRequirementsById = roleRequirementIds.Count == 0
+            ? new Dictionary<Guid, ProcessRoleRequirement>()
+            : await dbContext.Set<ProcessRoleRequirement>()
+                .AsNoTracking()
+                .Where(item => roleRequirementIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var runAssignments = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == processRunId)
+            .ToListAsync(cancellationToken);
         var artifactInputs = readyStepDefinitionIds.Count == 0
             ? []
             : await dbContext.Set<ProcessStepArtifactInputDefinition>()
@@ -504,6 +530,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var agentEditor = await workspaceService.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
             artifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
             var availableBranchOutcomes = branchOutcomesByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredBranchOutcomes)
                 ? configuredBranchOutcomes
@@ -513,28 +540,44 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var requiresExplicitBranchOutcomeSelection =
                 conditionalDependencyOutcomeIdsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var requiredBranchOutcomeIds) &&
                 availableBranchOutcomes.Any(item => requiredBranchOutcomeIds.Contains(item.Id));
+            stepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var currentStepRoleRequirements);
+            var currentAssignment = ResolveDispatchCurrentAssignment(stepRun, currentStepRoleRequirements ?? [], runAssignments);
+            var currentRole = currentAssignment is null
+                ? null
+                : roleRequirementsById.GetValueOrDefault(currentAssignment.RoleRequirementId);
+            var expectedArtifacts = await LoadExpectedArtifactsAsync(dbContext, stepRun.StepDefinitionId, cancellationToken);
+            var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
+                BuildResolvedArtifactInputs(
+                    configuredArtifactInputs ?? [],
+                    artifactExpectationsById,
+                    sourceStepsById,
+                    stepRunsByDefinitionId,
+                    existingArtifacts),
+                workspaceRoot,
+                workspaceScope);
             return new DispatchCandidate(
                 run,
                 definition,
                 stepRun,
                 workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                 technicalAgentSummary.TechnicalAgentId.Value,
-                await LoadExpectedArtifactsAsync(dbContext, stepRun.StepDefinitionId, cancellationToken),
-                PrepareArtifactInputsForPrompt(
-                    BuildResolvedArtifactInputs(
-                        configuredArtifactInputs ?? [],
-                        artifactExpectationsById,
-                        sourceStepsById,
-                        stepRunsByDefinitionId,
-                        existingArtifacts),
-                    workspaceRoot,
-                    workspaceScope),
+                expectedArtifacts,
+                preparedArtifactInputs,
                 externalReferenceKeys,
                 reusableChatSessionId,
                 recoveryExecutionRunId,
                 manualRecoveryDirective,
                 availableBranchOutcomes,
-                requiresExplicitBranchOutcomeSelection);
+                requiresExplicitBranchOutcomeSelection,
+                ResolveProcessCooperationMetadata(
+                    stepRun,
+                    workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                    currentRole,
+                    currentAssignment,
+                    expectedArtifacts,
+                    preparedArtifactInputs,
+                    availableBranchOutcomes,
+                    agentEditor));
         }
 
         return null;

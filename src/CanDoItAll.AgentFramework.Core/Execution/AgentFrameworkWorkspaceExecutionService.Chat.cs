@@ -199,6 +199,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentRuntimeResponse initialResponse,
         Func<ExecutionState, string, string, Task> progressCallback,
         AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeHandoffExecutionOptions? handoffOptions,
         CancellationToken cancellationToken)
     {
         var currentSession = session;
@@ -242,7 +243,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 cancellationToken,
                 suppressApprovalRequirements: true,
                 structuredOutput: structuredOutput,
-                executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput));
+                executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
 
             totalInputTokens += currentResponse.InputTokens;
             totalOutputTokens += currentResponse.OutputTokens;
