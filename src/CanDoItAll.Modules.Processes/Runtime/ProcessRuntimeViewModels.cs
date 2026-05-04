@@ -560,6 +560,15 @@ public sealed class ProcessRunStartRequest
     public Guid? LaunchPlanId { get; set; }
 }
 
+public sealed class ProcessRunStopRequest
+{
+    public Guid ProcessRunId { get; set; }
+
+    public string Reason { get; set; } = string.Empty;
+
+    public string StoppedBy { get; set; } = "process-workspace";
+}
+
 public sealed class ProcessLaunchCreateRequest
 {
     public Guid ProcessDefinitionId { get; set; }

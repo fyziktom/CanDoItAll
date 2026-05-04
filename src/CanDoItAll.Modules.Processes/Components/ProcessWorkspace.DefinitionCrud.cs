@@ -13,12 +13,10 @@ public partial class ProcessWorkspace
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
         editor = await ProcessesService.GetEditorAsync(null, ProjectId);
-        detailTab = "definition";
-        runs = [];
-        activeRunSummaries = [];
+        detailTab = DetailTabDefinition;
+        ClearRuntimePaneData();
         improvements = [];
         analytics = await ProcessesService.GetAnalyticsAsync(null, ProjectId);
-        await LoadRunDetailsAsync();
         CloseCanvasEditor();
         canvasActionDialog = null;
         RefreshCanvasSurface();
@@ -29,7 +27,7 @@ public partial class ProcessWorkspace
     {
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
         selectedProcessId = definitionId;
-        detailTab = "definition";
+        detailTab = DetailTabDefinition;
         selectedCanvasNodeId = null;
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
@@ -48,6 +46,7 @@ public partial class ProcessWorkspace
         }
 
         selectedProcessId = result.Value;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
         SetMessage("Process definition saved.");
     }
@@ -92,6 +91,7 @@ public partial class ProcessWorkspace
         selectedCanvasNodeId = null;
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
         SetMessage("Process definition deleted.");
     }
@@ -110,7 +110,8 @@ public partial class ProcessWorkspace
         selectedCanvasNodeId = null;
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
-        detailTab = "runs";
+        detailTab = DetailTabRuns;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
         SetMessage("Development seed baseline prepared.");
     }
@@ -125,7 +126,7 @@ public partial class ProcessWorkspace
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
         var envelope = await ProcessesService.ExportAsync(selectedProcessId.Value);
         exportJson = JsonSerializer.Serialize(envelope, JsonOptions);
-        detailTab = "exchange";
+        detailTab = DetailTabExchange;
         SetMessage("Process definition exported.");
     }
 
@@ -328,11 +329,19 @@ public partial class ProcessWorkspace
         RefreshCanvasSurface();
     }
 
-    private Task HandleDetailTabChanged(int index)
+    private async Task HandleDetailTabChanged(int index)
     {
         detailTab = ResolveDetailTabKey(index);
+        if (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))
+        {
+            await LoadRuntimePaneDataAsync();
+        }
+        else
+        {
+            ClearRunDetails();
+        }
+
         RefreshCanvasSurface();
         UpdateRuntimeRefreshLoop();
-        return Task.CompletedTask;
     }
 }

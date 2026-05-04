@@ -36,9 +36,9 @@ public partial class ProcessWorkspace
     private Task pendingDefinitionCanvasPersistTask = Task.CompletedTask;
     private Task definitionCanvasPersistDrainTask = Task.CompletedTask;
 
-    private bool IsDefinitionCanvasActive => string.Equals(detailTab, "steps", StringComparison.Ordinal);
+    private bool IsDefinitionCanvasActive => string.Equals(detailTab, DetailTabSteps, StringComparison.Ordinal);
 
-    private bool IsRuntimeCanvasActive => string.Equals(detailTab, "runs", StringComparison.Ordinal) && SelectedRun is not null;
+    private bool IsRuntimeCanvasActive => string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) && SelectedRun is not null;
 
     private bool IsCanvasEditorOpen => canvasEditorWindowState.IsVisible && (canvasRoleDraft is not null || canvasStepDraft is not null);
 

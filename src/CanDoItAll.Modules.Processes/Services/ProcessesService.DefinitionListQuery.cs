@@ -161,7 +161,7 @@ public sealed class ProcessDefinitionListQueryService : IProcessDefinitionListQu
                             ? stepCount
                             : 0,
                         definitionRuns.Count(
-                            run => run.Status == ProcessRunStatus.Active || run.Status == ProcessRunStatus.Blocked),
+                            run => run.Status == ProcessRunStatus.Active),
                         capabilityGapCount,
                         definition.Summary,
                         definition.ValueStatement,

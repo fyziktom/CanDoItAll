@@ -34,7 +34,7 @@ public partial class ProcessWorkspace
     private bool ShouldAutoRefreshRuntime()
     {
         if (!selectedProcessId.HasValue ||
-            !string.Equals(detailTab, "runs", StringComparison.Ordinal))
+            !string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))
         {
             return false;
         }
@@ -79,21 +79,12 @@ public partial class ProcessWorkspace
         }
 
         analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
-        launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId);
-        selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
-        await LoadLaunchPlanDetailsAsync();
-        runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId);
-        activeRunSummaries = await RunDetailsLoader.LoadActiveRunSummariesAsync(runs, cancellationToken);
-
-        var nextSelectedRunId = ResolveSelectedRunId();
-        if (nextSelectedRunId != selectedRunId)
-        {
-            selectedCanvasNodeId = null;
-            ResetRuntimeCanvasState();
-        }
-
-        selectedRunId = nextSelectedRunId;
-        await LoadRunDetailsAsync();
+        runtimeStateOverview = await RuntimeStateOverviewService.GetOverviewAsync(
+            definitions.Select(definition => definition.Id).ToList(),
+            ProjectId,
+            forceRefresh: true,
+            cancellationToken);
+        await LoadRuntimePaneDataAsync(cancellationToken);
         RefreshCanvasSurface();
         StateHasChanged();
 

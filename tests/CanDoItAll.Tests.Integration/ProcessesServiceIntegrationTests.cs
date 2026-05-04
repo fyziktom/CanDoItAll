@@ -1039,6 +1039,145 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task RuntimeStateOverview_separates_active_blocked_and_failed_runs()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var runtimeStateOverviewService = scope.ServiceProvider.GetRequiredService<ProcessRuntimeStateOverviewService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process runtime state overview project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var activeRunId = await StartTestRunAsync(processesService, saveResult.Value, projectId, "Active overview run");
+        var blockedRunId = await StartTestRunAsync(processesService, saveResult.Value, projectId, "Blocked overview run");
+        var failedRunId = await StartTestRunAsync(processesService, saveResult.Value, projectId, "Failed overview run");
+
+        var blockedStep = Assert.Single(
+            await processesService.ListStepRunsAsync(blockedRunId),
+            item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = blockedStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "Blocked for runtime state overview verification.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var failedStep = Assert.Single(
+            await processesService.ListStepRunsAsync(failedRunId),
+            item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = failedStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started for runtime state overview verification.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = failedStep.Id,
+            TargetStatus = ProcessStepRunStatus.Failed,
+            Reason = "Failed for runtime state overview verification.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var definitions = await processesService.ListDefinitionsAsync(projectId);
+        var definition = Assert.Single(definitions, item => item.Id == saveResult.Value);
+        var overview = await runtimeStateOverviewService.GetOverviewAsync([saveResult.Value], projectId, forceRefresh: true);
+        var definitionRunCounts = overview.GetDefinition(saveResult.Value).RunCounts;
+
+        Assert.NotEqual(Guid.Empty, activeRunId);
+        Assert.Equal(1, definition.ActiveRunCount);
+        Assert.Equal(1, overview.Totals.Active);
+        Assert.Equal(1, overview.Totals.Blocked);
+        Assert.Equal(1, overview.Totals.Failed);
+        Assert.Equal(1, definitionRunCounts.Active);
+        Assert.Equal(1, definitionRunCounts.Blocked);
+        Assert.Equal(1, definitionRunCounts.Failed);
+    }
+
+    [Fact]
+    public async Task StopBlockedRunAsync_cancels_blocked_run_and_rejects_late_transitions()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Stop blocked process run project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var activeRunId = await StartTestRunAsync(processesService, saveResult.Value, projectId, "Active stop guard run");
+        var activeStopResult = await processesService.StopBlockedRunAsync(new ProcessRunStopRequest
+        {
+            ProcessRunId = activeRunId,
+            Reason = "Active runs must not be stopped by the blocked-run action.",
+            StoppedBy = "integration-tests"
+        });
+
+        Assert.True(activeStopResult.IsFailure);
+        Assert.Contains(activeStopResult.Errors, error => error.Code == "processes.stop-blocked-run-invalid-status");
+
+        var blockedRunId = await StartTestRunAsync(processesService, saveResult.Value, projectId, "Blocked stop run");
+        var blockedStep = Assert.Single(
+            await processesService.ListStepRunsAsync(blockedRunId),
+            item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = blockedStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "Blocked before stop verification.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var stopResult = await processesService.StopBlockedRunAsync(new ProcessRunStopRequest
+        {
+            ProcessRunId = blockedRunId,
+            Reason = "Operator stopped a blocked run during integration verification.",
+            StoppedBy = "integration-tests"
+        });
+
+        Assert.True(stopResult.IsSuccess);
+
+        var stoppedRun = Assert.Single(await processesService.ListRunsAsync(saveResult.Value, projectId), item => item.Id == blockedRunId);
+        var lateTransitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = blockedStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Late blocked run resume after stop.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.Equal(ProcessRunStatus.Cancelled, stoppedRun.Status);
+        Assert.True(lateTransitionResult.IsFailure);
+        Assert.Contains(lateTransitionResult.Errors, error => error.Code == "processes.run-terminal");
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedRun = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == blockedRunId);
+        var stopDecision = await dbContext.Set<ProcessDecisionRecord>()
+            .SingleAsync(item => item.ProcessRunId == blockedRunId && item.Title == "Stopped blocked process run");
+        var stopJournalEntry = await dbContext.Set<ProcessJournalEntry>()
+            .SingleAsync(item => item.ProcessRunId == blockedRunId && item.EventType == "blocked-run-stopped");
+
+        Assert.NotNull(persistedRun.CompletedAtUtc);
+        Assert.Equal(ProcessDecisionKind.Exception, stopDecision.DecisionKind);
+        Assert.Equal(ProcessDecisionOutcome.Rejected, stopDecision.Outcome);
+        Assert.Equal("integration-tests", stopDecision.DecidedBy);
+        Assert.Equal("Operator stopped a blocked run during integration verification.", stopJournalEntry.Description);
+    }
+
+    [Fact]
     public async Task PublishAsync_rejects_unused_branch_outcomes()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -3501,6 +3640,25 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task<Guid> StartTestRunAsync(
+        ProcessesService processesService,
+        Guid definitionId,
+        Guid projectId,
+        string runName)
+    {
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionId,
+            ProjectId = projectId,
+            RunName = runName,
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+        return runResult.Value;
     }
 
     private static async Task<DirectMessagingRunFixture> CreateDirectMessagingRunFixtureAsync(

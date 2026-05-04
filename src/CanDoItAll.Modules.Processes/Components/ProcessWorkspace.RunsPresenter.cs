@@ -334,6 +334,21 @@ public partial class ProcessWorkspace
             return workspace.OpenRunStepsDialogAsync(runId);
         }
 
+        public bool CanStopBlockedRun(ProcessRunListItem run)
+        {
+            return run.Status == ProcessRunStatus.Blocked;
+        }
+
+        public bool IsStoppingRun(Guid runId)
+        {
+            return workspace.stoppingRunId == runId;
+        }
+
+        public Task StopBlockedRunAsync(Guid runId)
+        {
+            return workspace.StopBlockedRunAsync(runId);
+        }
+
         public string BuildLaunchPlanSummary(ProcessLaunchPlanListItem plan)
         {
             return ProcessWorkspace.BuildLaunchPlanSummary(plan);

@@ -20,8 +20,12 @@
                                  Text="@DefinitionCountText" />
                     <StatusBadge Tone="info"
                                  Text="@VisibleDefinitionCountText" />
-                    <StatusBadge Tone="neutral"
+                    <StatusBadge Tone="info"
                                  Text="@ActiveRunCountText" />
+                    <StatusBadge Tone="warning"
+                                 Text="@BlockedRunCountText" />
+                    <StatusBadge Tone="danger"
+                                 Text="@FailedRunCountText" />
                     <StatusBadge Tone="warning"
                                  Text="@ImprovementCountText" />
                 </Cluster>
@@ -109,6 +113,7 @@
                             <Stack GapScale="LayoutGap.Small">
                                 @foreach (var definition in FilteredDefinitions)
                                 {
+                                    var definitionRunCounts = ResolveDefinitionRunCounts(definition.Id);
                                     <SelectionListItem Title="@definition.Name"
                                                        Eyebrow="@(string.IsNullOrWhiteSpace(definition.ProjectName) ? "Global process" : definition.ProjectName)"
                                                        Meta="@BuildDefinitionSummary(definition)"
@@ -121,7 +126,17 @@
                                                 <StatusBadge Tone="@ResolveDefinitionStatusTone(definition.Status)"
                                                              Text="@definition.Status.ToString()" />
                                                 <StatusBadge Tone="info"
-                                                             Text="@($"{definition.ActiveRunCount} active run(s)")" />
+                                                             Text="@FormatCount(definitionRunCounts.Active, "active run", "active runs")" />
+                                                @if (definitionRunCounts.Blocked > 0)
+                                                {
+                                                    <StatusBadge Tone="warning"
+                                                                 Text="@FormatCount(definitionRunCounts.Blocked, "blocked run", "blocked runs")" />
+                                                }
+                                                @if (definitionRunCounts.Failed > 0)
+                                                {
+                                                    <StatusBadge Tone="danger"
+                                                                 Text="@FormatCount(definitionRunCounts.Failed, "failed run", "failed runs")" />
+                                                }
                                             </Cluster>
                                         </Status>
                                     </SelectionListItem>
