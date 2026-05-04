@@ -127,6 +127,14 @@ public sealed class ProcessRun : IHasConcurrencyToken {
 
     public Guid ProcessDefinitionVersionId { get; set; }
 
+    public Guid? ParentRunId { get; set; }
+
+    public Guid? ParentStepRunId { get; set; }
+
+    public Guid? RootRunId { get; set; }
+
+    public int HierarchyDepth { get; set; }
+
     public Guid? ProjectId { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -142,6 +150,10 @@ public sealed class ProcessRun : IHasConcurrencyToken {
     public string PolicySnapshot { get; set; } = string.Empty;
 
     public string ExecutorSnapshotSummary { get; set; } = string.Empty;
+
+    public Guid? ManagerAgentId { get; set; }
+
+    public string ManagerAgentName { get; set; } = string.Empty;
 
     public string ReplayPackageKey { get; set; } = string.Empty;
 

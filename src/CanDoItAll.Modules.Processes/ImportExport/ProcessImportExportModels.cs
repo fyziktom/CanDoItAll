@@ -50,6 +50,10 @@ public sealed class ProcessDefinitionImportExportModel
 
     public string SimulationReadinessSummary { get; set; } = string.Empty;
 
+    public Guid? ManagerAgentOverrideId { get; set; }
+
+    public string ManagerAgentOverrideName { get; set; } = string.Empty;
+
     public ProcessCriticality Criticality { get; set; } = ProcessCriticality.Standard;
 
     public ProcessAutonomyLevel AutonomyLevel { get; set; } = ProcessAutonomyLevel.Assisted;
@@ -76,6 +80,10 @@ public sealed class ProcessStepImportExportModel
     public string Notes { get; set; } = string.Empty;
 
     public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
+
+    public Guid? SubprocessDefinitionId { get; set; }
+
+    public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
 
     public bool AllowsManualSkip { get; set; }
 

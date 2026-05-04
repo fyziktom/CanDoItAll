@@ -1,0 +1,8 @@
+{
+  "ProcessKey": "dotnet-development-slice",
+  "Status": "Compatible",
+  "Notes": [
+    "Uses one subprocess step resolved by definition name during import.",
+    "Requires the .NET Blazor SSR solution setup subprocess to exist before import or synchronization."
+  ]
+}

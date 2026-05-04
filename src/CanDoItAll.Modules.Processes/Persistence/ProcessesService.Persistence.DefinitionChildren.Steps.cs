@@ -38,6 +38,12 @@ public sealed partial class ProcessesService
             step.Subtitle = stepModel.Subtitle.Trim();
             step.Notes = stepModel.Notes.Trim();
             step.StepKind = stepModel.StepKind;
+            step.SubprocessDefinitionId = stepModel.StepKind == ProcessStepKind.Subprocess
+                ? stepModel.SubprocessDefinitionId
+                : null;
+            step.SubprocessDefinitionSnapshotName = stepModel.StepKind == ProcessStepKind.Subprocess
+                ? stepModel.SubprocessDefinitionSnapshotName.Trim()
+                : string.Empty;
             step.AllowsManualSkip = stepModel.AllowsManualSkip;
             step.AllowsSafeRefusal = stepModel.AllowsSafeRefusal;
             step.RequiresApproval = stepModel.RequiresApproval;

@@ -78,6 +78,28 @@
                     </Cluster>
                 }
             </FormField>
+            @if (Model.StepKind == ProcessStepKind.Subprocess)
+            {
+                <FormField Text="Subprocess definition">
+                    @if (AvailableSubprocessDefinitions.Count == 0)
+                    {
+                        <p class="text-sm leading-6 text-slate-600">Create or select another process definition before saving this subprocess step.</p>
+                    }
+                    else
+                    {
+                        <select class="cda-input"
+                                value="@SelectedSubprocessDefinitionValue"
+                                @onchange="HandleSubprocessDefinitionChanged"
+                                data-testid="processes-subprocess-definition-select">
+                            <option value="">Select subprocess</option>
+                            @foreach (var definition in AvailableSubprocessDefinitions)
+                            {
+                                <option value="@definition.DefinitionId">@BuildSubprocessDefinitionLabel(definition)</option>
+                            }
+                        </select>
+                    }
+                </FormField>
+            }
             <FormField Text="Canvas-managed artifact inputs">
                 @if (ArtifactInputSummaries.Count == 0)
                 {
@@ -254,6 +276,9 @@
     public IReadOnlyList<ProcessStepEditorModel> DependencyOptions { get; set; } = [];
 
     [Parameter]
+    public IReadOnlyList<ProcessSubprocessDefinitionOption> AvailableSubprocessDefinitions { get; set; } = [];
+
+    [Parameter]
     public string Eyebrow { get; set; } = "Step definition";
 
     [Parameter]
@@ -306,6 +331,29 @@
 
     private bool HasSystemBranchOutcomes
         => Model.BranchOutcomes.Any(ProcessCanvasBranching.IsSystemOutcome);
+
+    private string SelectedSubprocessDefinitionValue => Model.SubprocessDefinitionId?.ToString("D") ?? string.Empty;
+
+    private void HandleSubprocessDefinitionChanged(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue) ||
+            !Guid.TryParse(rawValue, out var selectedDefinitionId))
+        {
+            Model.SubprocessDefinitionId = null;
+            Model.SubprocessDefinitionSnapshotName = string.Empty;
+            return;
+        }
+
+        var definition = AvailableSubprocessDefinitions.FirstOrDefault(item => item.DefinitionId == selectedDefinitionId);
+        Model.SubprocessDefinitionId = selectedDefinitionId;
+        Model.SubprocessDefinitionSnapshotName = definition?.Name ?? string.Empty;
+    }
+
+    private static string BuildSubprocessDefinitionLabel(ProcessSubprocessDefinitionOption definition)
+    {
+        return $"{definition.Name} / {definition.ScopeLabel} / {definition.Status}";
+    }
 
     private string BuildDependencySummary(ProcessStepDependencyEditorModel dependency)
     {

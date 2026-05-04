@@ -216,6 +216,12 @@ public partial class ProcessWorkspace
             set => workspace.operatorReworkDirective = value ?? string.Empty;
         }
 
+        public string OperatorManagerDirective
+        {
+            get => workspace.operatorManagerDirective;
+            set => workspace.operatorManagerDirective = value ?? string.Empty;
+        }
+
         public string OperatorEscalationOwner
         {
             get => workspace.operatorEscalationOwner;
@@ -497,6 +503,11 @@ public partial class ProcessWorkspace
         public Task RequestManualReworkAsync()
         {
             return workspace.RequestManualReworkAsync();
+        }
+
+        public Task SendManagerDirectiveAsync()
+        {
+            return workspace.SendManagerDirectiveAsync();
         }
 
         public Task DecideOperatorApprovalAsync(

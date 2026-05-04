@@ -66,6 +66,7 @@ public partial class ProcessWorkspace
         selectedProcessId = nextSelectedProcessId;
         editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId);
         executorOptions = await ProcessesService.ListExecutorOptionsAsync();
+        managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync();
         analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
         improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId);
 
@@ -252,6 +253,7 @@ public partial class ProcessWorkspace
         artifactStepRunId = null;
         operatorReworkStepRunId = null;
         operatorReworkDirective = string.Empty;
+        operatorManagerDirective = string.Empty;
         operatorEscalationResolution = string.Empty;
         operatorApprovalDecisionSummary = string.Empty;
         assignmentAllowsDirectMessaging = true;

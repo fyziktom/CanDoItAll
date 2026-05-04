@@ -33,13 +33,14 @@ public enum ProcessAutonomyLevel
 
 public enum ProcessStepKind
 {
-    Start,
-    Work,
-    Decision,
-    Approval,
-    Review,
-    Delivery,
-    End
+    Start = 0,
+    Work = 1,
+    Decision = 2,
+    Approval = 3,
+    Review = 4,
+    Delivery = 5,
+    End = 6,
+    Subprocess = 7
 }
 
 public enum ProcessResponsibilityKind

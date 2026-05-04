@@ -109,6 +109,13 @@ public sealed class ProcessCanvasChromeCatalogService
                 "Add a standard execution step with proof-oriented defaults.",
                 "add_circle",
                 "accent"),
+            ProcessCanvasActionIds.CreateStepSubprocess => BuildAction(
+                actionId,
+                "Subprocess",
+                "Add subprocess step",
+                "Add a step that runs another process definition as its observed child run.",
+                "account_tree",
+                "info"),
             ProcessCanvasActionIds.CreateStepQa => BuildAction(
                 actionId,
                 "QA gate",
@@ -145,6 +152,20 @@ public sealed class ProcessCanvasChromeCatalogService
                 "Add a step that depends on the current selection.",
                 "add_circle",
                 "accent"),
+            ProcessCanvasActionIds.AddSubprocessStep => BuildAction(
+                actionId,
+                "Add subprocess",
+                "Add subprocess step",
+                "Add a subprocess step that depends on the current selection.",
+                "account_tree",
+                "info"),
+            ProcessCanvasActionIds.OpenSubprocessDefinition => BuildAction(
+                actionId,
+                "Open subprocess",
+                "Open subprocess definition",
+                "Open the referenced subprocess definition in a new browser tab.",
+                "open_in_new",
+                "info"),
             ProcessCanvasActionIds.AddRoleBinding => BuildAction(
                 actionId,
                 "Add role binding",

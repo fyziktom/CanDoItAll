@@ -191,6 +191,16 @@ public partial class ProcessWorkspace
             tags.Add(new("Running now", "info"));
         }
 
+        if (run.HierarchyDepth > 0)
+        {
+            tags.Add(new($"Subprocess depth {run.HierarchyDepth}", "info"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(run.ManagerAgentName))
+        {
+            tags.Add(new($"Manager {run.ManagerAgentName}", "neutral"));
+        }
+
         if (run.BlockedStepCount > 0)
         {
             tags.Add(new($"{run.BlockedStepCount} blocked", "warning"));

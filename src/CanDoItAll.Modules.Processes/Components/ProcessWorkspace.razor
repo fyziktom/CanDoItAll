@@ -199,6 +199,7 @@
                         <TabsItem Text="Definition">
                         <ProcessDefinitionForm Model="@editor"
                                                ScopeLabel="@(ProjectId.HasValue ? projectName : "Global process library")"
+                                               ManagerAgentOptions="@managerAgentOptions"
                                                Save="SaveAsync"
                                                Publish="PublishAsync"
                                                Delete="DeleteAsync" />
@@ -329,6 +330,12 @@
             <Stack GapScale="LayoutGap.Medium">
                 @if (canvasActionDialog.IsRuntime)
                 {
+                    @if (SelectedCanvasRuntimeStep?.SubprocessRun is not null)
+                    {
+                        <Button Text="Open subprocess run"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeOpenSubprocessRun))" />
+                    }
                     <Button Text="Start step"
                             ButtonStyle="ButtonStyle.Light"
                             Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.InProgress))"
@@ -358,11 +365,21 @@
                 }
                 else
                 {
+                    @if (SelectedCanvasDefinitionStep?.StepKind == ProcessStepKind.Subprocess &&
+                         SelectedCanvasDefinitionStep.SubprocessDefinitionId.HasValue)
+                    {
+                        <Button Text="Open subprocess definition"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.OpenSubprocessDefinition))" />
+                    }
                     <Button Text="Edit step"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.EditDefinitionStep))" />
                     <Button Text="Add dependent step"
                             ButtonStyle="ButtonStyle.Light"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddDependentStep))" />
+                    <Button Text="Add subprocess step"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddSubprocessStep))" />
                     <Button Text="Add branch outcome"
                             ButtonStyle="ButtonStyle.Light"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddBranchOutcome))" />

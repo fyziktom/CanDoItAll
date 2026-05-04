@@ -371,6 +371,8 @@ public sealed partial class ProcessesService
             ConstitutionRuleSummary = publishedVersion.ConstitutionRuleSummary,
             OperatingModeSummary = publishedVersion.OperatingModeSummary,
             SimulationReadinessSummary = publishedVersion.SimulationReadinessSummary,
+            ManagerAgentOverrideId = publishedVersion.ManagerAgentOverrideId,
+            ManagerAgentOverrideName = publishedVersion.ManagerAgentOverrideName,
             ImportedFrom = publishedVersion.ImportedFrom,
             ImportWarnings = publishedVersion.ImportWarnings,
             CreatedAtUtc = now,

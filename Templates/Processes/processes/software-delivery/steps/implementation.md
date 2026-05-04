@@ -1,24 +1,24 @@
-# Implement feature, tests, and migration notes
+# Run atomic implementation slice
 
 **Process:** `software-delivery` / Multi-team software delivery and release governance  
 **Step key:** `implementation`  
-**Step kind:** Work  
+**Step kind:** Subprocess  
 **Target lead hours:** 36
 
 ## Summary
-Code, tests, and reviewable proof
+Observed implementation subprocess
 
 ## Notes
-Produce the change set, migration guidance, and targeted validation without losing traceability to the approved design.
+Launch the `.NET implementation slice with atomic validation` subprocess so implementation, setup, tests, and blockers are observable from this parent delivery run.
 
 ## Contracts
-- Input contract: Approved architecture path, scope packet, and unresolved technical questions.
-- Output contract: Review-ready implementation with tests, migration notes, and rollout checklist inputs.
-- Evidence contract: Change set, test outputs, migration steps, and touched-surface inventory.
+- Input contract: Approved architecture path, scope packet, unresolved technical questions, and implementation-slice start criteria.
+- Output contract: Completed child implementation slice with tests, migration notes, blockers, and rollout checklist inputs visible from the parent process.
+- Evidence contract: Child run journal, implementation change set, test outputs, migration steps, and touched-surface inventory.
 
 ## Governance
-- Decision rights: Lead engineer can implement but cannot silently alter the approved architecture or reduce proof depth.
-- Exception policy: Pause when migration impact, performance risk, or dependency scope grows beyond the approved path.
+- Decision rights: Parent delivery manager can instruct the child manager, but implementation changes remain owned by the child slice roles.
+- Exception policy: Do not complete the parent implementation step until the child implementation slice reaches a completed terminal state.
 - Requires approval: False
 - Requires decision record: True
 

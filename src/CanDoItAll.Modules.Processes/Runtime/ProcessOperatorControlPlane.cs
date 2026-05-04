@@ -61,6 +61,7 @@ public enum ProcessAttemptTimelineKind
     Approval,
     Outbox,
     Escalation,
+    ManagerDirective,
     Recovery,
     ReworkPacket,
     ManualRerun
@@ -255,6 +256,7 @@ public sealed class ProcessEscalationService(
     private static readonly string[] TimelineJournalEventTypeValues =
     [
         .. ProcessEscalationJournal.EventTypeValues,
+        ProcessRuntimeEventTypes.ManagerDirectiveRecorded,
         ProcessRuntimeEventTypes.AgentRecoveryAttemptRecorded,
         ProcessRuntimeEventTypes.AgentReworkPacketCreated,
         ProcessRuntimeEventTypes.ManualAgentStepRerun,
@@ -677,6 +679,7 @@ public sealed class ProcessEscalationService(
     {
         var kind = entry.EventType switch
         {
+            ProcessRuntimeEventTypes.ManagerDirectiveRecorded => ProcessAttemptTimelineKind.ManagerDirective,
             ProcessRuntimeEventTypes.AgentRecoveryAttemptRecorded => ProcessAttemptTimelineKind.Recovery,
             ProcessRuntimeEventTypes.AgentReworkPacketCreated => ProcessAttemptTimelineKind.ReworkPacket,
             ProcessRuntimeEventTypes.ManualAgentStepRerun => ProcessAttemptTimelineKind.ManualRerun,
@@ -686,6 +689,7 @@ public sealed class ProcessEscalationService(
         var tone = entry.EventType switch
         {
             ProcessRuntimeEventTypes.ProcessEscalationResolved => "mint",
+            ProcessRuntimeEventTypes.ManagerDirectiveRecorded => "info",
             ProcessRuntimeEventTypes.ProcessEscalationReworkRequested => "warning",
             ProcessRuntimeEventTypes.AgentReworkPacketCreated => "info",
             ProcessRuntimeEventTypes.ManualAgentStepRerun => "warning",

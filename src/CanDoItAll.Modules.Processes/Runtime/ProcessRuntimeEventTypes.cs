@@ -6,6 +6,9 @@ internal static class ProcessRuntimeEventTypes
     public const string AgentReworkPacketCreated = "agent-rework-packet-created";
     public const string AgentRecoveryAttemptRecorded = "agent-recovery-attempt-recorded";
     public const string BlockedRunStopped = "blocked-run-stopped";
+    public const string SubprocessRunCreated = "subprocess-run-created";
+    public const string SubprocessRunObserved = "subprocess-run-observed";
+    public const string ManagerDirectiveRecorded = "manager-directive-recorded";
     public const string ProcessEscalationCreated = "process-escalation-created";
     public const string ProcessEscalationAssigned = "process-escalation-assigned";
     public const string ProcessEscalationResolved = "process-escalation-resolved";

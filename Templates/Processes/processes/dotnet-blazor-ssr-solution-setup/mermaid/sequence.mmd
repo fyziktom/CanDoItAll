@@ -1,0 +1,8 @@
+sequenceDiagram
+    participant Parent
+    participant Manager
+    participant Engineer
+    Parent->>Manager: Start setup subprocess
+    Manager->>Engineer: Execute scaffold contract
+    Engineer-->>Manager: Created solution and test project
+    Manager-->>Parent: Handoff build evidence

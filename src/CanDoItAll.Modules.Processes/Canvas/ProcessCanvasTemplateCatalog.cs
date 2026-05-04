@@ -14,6 +14,7 @@ internal static class ProcessCanvasActionIds
     public const string CreateStepDecision = "process-step.decision";
     public const string CreateStepArchitecture = "process-step.architecture";
     public const string CreateStepImplementation = "process-step.implementation";
+    public const string CreateStepSubprocess = "process-step.subprocess";
     public const string CreateStepQa = "process-step.qa";
     public const string CreateStepSecurityReview = "process-step.security-review";
     public const string CreateStepReleaseApproval = "process-step.release-approval";
@@ -23,6 +24,8 @@ internal static class ProcessCanvasActionIds
     public const string EditDefinitionStep = "process-definition.edit-step";
     public const string EditDefinitionRole = "process-definition.edit-role";
     public const string AddDependentStep = "process-definition.add-dependent-step";
+    public const string AddSubprocessStep = "process-definition.add-subprocess-step";
+    public const string OpenSubprocessDefinition = "process-definition.open-subprocess";
     public const string AddBranchOutcome = "process-definition.add-branch-outcome";
     public const string AddRoleBinding = "process-definition.add-role-binding";
     public const string AddArtifactExpectation = "process-definition.add-artifact-expectation";
@@ -36,6 +39,7 @@ internal static class ProcessCanvasActionIds
     public const string RuntimeRefuse = "process-runtime.refuse";
     public const string RuntimeFail = "process-runtime.fail";
     public const string RuntimeRecordArtifact = "process-runtime.record-artifact";
+    public const string RuntimeOpenSubprocessRun = "process-runtime.open-subprocess-run";
 }
 
 public sealed record ProcessCanvasToolboxGroup(

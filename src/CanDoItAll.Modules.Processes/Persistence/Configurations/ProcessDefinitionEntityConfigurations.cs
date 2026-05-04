@@ -48,10 +48,12 @@ internal sealed class ProcessDefinitionVersionConfiguration : IEntityTypeConfigu
         builder.Property(version => version.ConstitutionRuleSummary).HasColumnType("TEXT");
         builder.Property(version => version.OperatingModeSummary).HasColumnType("TEXT");
         builder.Property(version => version.SimulationReadinessSummary).HasColumnType("TEXT");
+        builder.Property(version => version.ManagerAgentOverrideName).HasMaxLength(200);
         builder.Property(version => version.ImportedFrom).HasMaxLength(200);
         builder.Property(version => version.ImportWarnings).HasColumnType("TEXT");
         builder.Property(version => version.PublishedBy).HasMaxLength(160);
         builder.Property(version => version.ConcurrencyToken).IsConcurrencyToken();
+        builder.HasIndex(version => version.ManagerAgentOverrideId);
         builder.HasAlternateKey(version => new { version.ProcessDefinitionId, version.Id });
         builder.HasIndex(version => new { version.ProcessDefinitionId, version.Status })
             .HasDatabaseName(ProcessPersistenceConstraintNames.VersionDraftPerDefinitionUniqueIndex)
@@ -146,6 +148,7 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
         builder.Property(step => step.Subtitle).HasMaxLength(200);
         builder.Property(step => step.Notes).HasColumnType("TEXT");
         builder.Property(step => step.StepKind).HasConversion<string>().HasMaxLength(48);
+        builder.Property(step => step.SubprocessDefinitionSnapshotName).HasMaxLength(200);
         builder.Property(step => step.InputContractSummary).HasColumnType("TEXT");
         builder.Property(step => step.OutputContractSummary).HasColumnType("TEXT");
         builder.Property(step => step.EvidenceContractSummary).HasColumnType("TEXT");
@@ -154,6 +157,7 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
         builder.HasIndex(step => new { step.ProcessDefinitionVersionId, step.OrderIndex });
         builder.HasIndex(step => new { step.ProcessDefinitionVersionId, step.Key }).IsUnique();
         builder.HasIndex(step => step.DecisionRoleRequirementId);
+        builder.HasIndex(step => step.SubprocessDefinitionId);
         builder.HasOne<ProcessDefinitionVersion>()
             .WithMany()
             .HasForeignKey(step => step.ProcessDefinitionVersionId)
@@ -161,6 +165,10 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
         builder.HasOne<ProcessRoleRequirement>()
             .WithMany()
             .HasForeignKey(step => step.DecisionRoleRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessDefinition>()
+            .WithMany()
+            .HasForeignKey(step => step.SubprocessDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

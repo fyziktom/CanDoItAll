@@ -157,6 +157,9 @@ public sealed class ProcessTemplateCatalogService
             Subtitle = template.Subtitle,
             Notes = BuildStepNotes(template),
             StepKind = EnumValueParser.ParseOrDefault(template.StepKind, ProcessStepKind.Work),
+            SubprocessDefinitionSnapshotName = string.IsNullOrWhiteSpace(template.SubprocessDefinitionSnapshotName)
+                ? template.SubprocessProcessKey
+                : template.SubprocessDefinitionSnapshotName,
             AllowsManualSkip = template.AllowsManualSkip,
             AllowsSafeRefusal = template.AllowsSafeRefusal,
             RequiresApproval = template.RequiresApproval,

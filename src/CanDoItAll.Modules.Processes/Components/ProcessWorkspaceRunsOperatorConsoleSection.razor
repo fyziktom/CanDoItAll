@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
 
 <Stack GapScale="LayoutGap.Large"
        data-testid="processes-operator-control-section">
@@ -31,6 +32,34 @@
                          Tone="neutral"
                          ShowHelperTextAsTooltip="true" />
         </SummaryTiles>
+    </SectionCard>
+
+    <SectionCard Title="Manager Direction"
+                 Description=""
+                 HelpText="Manager directives are journaled on the selected run so operators can instruct the responsible process manager without splitting coordination state away from the process runtime.">
+        <Stack GapScale="LayoutGap.Medium">
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="info"
+                             Text="@BuildManagerLabel()" />
+                @if (Presenter.SelectedRun is { HierarchyDepth: > 0 } selectedRun)
+                {
+                    <StatusBadge Tone="neutral"
+                                 Text="@($"subprocess depth {selectedRun.HierarchyDepth}")" />
+                }
+            </Cluster>
+            <FormField Text="Directive">
+                <InputTextArea @bind-Value="Presenter.OperatorManagerDirective"
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-manager-directive-input" />
+            </FormField>
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Send to manager"
+                        Disabled="@string.IsNullOrWhiteSpace(Presenter.OperatorManagerDirective)"
+                        Click="Presenter.SendManagerDirectiveAsync"
+                        data-testid="processes-manager-directive-button" />
+            </Cluster>
+        </Stack>
     </SectionCard>
 
     <Grid Gap="LayoutGap.Large"
@@ -274,5 +303,13 @@
             escalation.IsOpen &&
             escalation.StepRunId.HasValue &&
             Presenter.StepRuns.Any(stepRun => stepRun.Id == escalation.StepRunId.Value && stepRun.Health.CanManualRerun);
+    }
+
+    private string BuildManagerLabel()
+    {
+        var managerName = Presenter.SelectedRun?.ManagerAgentName;
+        return string.IsNullOrWhiteSpace(managerName)
+            ? "manager: default"
+            : $"manager: {managerName}";
     }
 }

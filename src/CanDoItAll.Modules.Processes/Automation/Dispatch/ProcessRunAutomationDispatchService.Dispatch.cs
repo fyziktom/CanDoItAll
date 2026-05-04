@@ -73,6 +73,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     return;
                 }
 
+                if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
+                {
+                    await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, cancellationToken);
+                    return;
+                }
+
                 var databaseRequirementFailure = ResolveAutomationDatabaseRequirementFailure();
                 if (databaseRequirementFailure is not null)
                 {
@@ -272,6 +278,112 @@ internal sealed partial class ProcessRunAutomationDispatchService
             $"Governed process automation requires PostgreSQL, but the active database profile is '{profile.Profile.DisplayName}' ({profile.Profile.Id:D}, provider {profile.Profile.ProviderKind}, source {profile.Profile.SourceKind}, resolved by {profile.ResolutionSource}). Switch the active database profile to PostgreSQL before rerunning automation.");
     }
 
+    private async Task HandleSubprocessDispatchAsync(
+        DispatchCandidate candidate,
+        string trigger,
+        Guid? triggerStepRunId,
+        CancellationToken cancellationToken)
+    {
+        var stepRunSnapshot = candidate.StepRun;
+        if (stepRunSnapshot.Status != ProcessStepRunStatus.InProgress)
+        {
+            var startResult = await TransitionStepAsync(
+                new ProcessStepTransitionRequest
+                {
+                    StepRunId = stepRunSnapshot.Id,
+                    StepRunConcurrencyToken = stepRunSnapshot.ConcurrencyToken,
+                    TargetStatus = ProcessStepRunStatus.InProgress,
+                    Reason = $"Started subprocess by the durable process automation dispatcher ({NormalizeTrigger(trigger, triggerStepRunId)}).",
+                    DecidedBy = AutomationActor,
+                    SuppressAutomationDispatch = true
+                },
+                cancellationToken);
+            if (startResult.IsFailure)
+            {
+                logger.LogInformation(
+                    "Process subprocess step {StepRunId} could not be claimed on run {RunId}. Errors: {Errors}",
+                    stepRunSnapshot.Id,
+                    candidate.Run.Id,
+                    string.Join(" | ", startResult.Errors.Select(error => error.Message)));
+                return;
+            }
+        }
+
+        await using var scope = serviceScopeFactory.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var subprocessResult = await processesService.EnsureSubprocessRunForStepAsync(stepRunSnapshot.Id, cancellationToken);
+        if (subprocessResult.IsFailure)
+        {
+            await TransitionStepAsync(
+                new ProcessStepTransitionRequest
+                {
+                    StepRunId = stepRunSnapshot.Id,
+                    TargetStatus = ProcessStepRunStatus.Blocked,
+                    Reason = string.Join(" | ", subprocessResult.Errors.Select(error => error.Message)),
+                    DecidedBy = AutomationActor,
+                    SuppressAutomationDispatch = true
+                },
+                cancellationToken);
+            return;
+        }
+
+        var subprocessRun = subprocessResult.Value!;
+        var terminalStatus = ResolveSubprocessParentStepStatus(subprocessRun.Status);
+        if (!terminalStatus.HasValue)
+        {
+            logger.LogInformation(
+                "Subprocess step {StepRunId} on run {RunId} is observing child run {SubprocessRunId} with status {SubprocessStatus}.",
+                stepRunSnapshot.Id,
+                candidate.Run.Id,
+                subprocessRun.RunId,
+                subprocessRun.Status);
+            return;
+        }
+
+        var transitionResult = await TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRunSnapshot.Id,
+                TargetStatus = terminalStatus.Value,
+                Reason = BuildSubprocessParentTransitionReason(subprocessRun),
+                DecidedBy = AutomationActor,
+                SuppressAutomationDispatch = terminalStatus.Value != ProcessStepRunStatus.Completed
+            },
+            cancellationToken);
+        if (transitionResult.IsFailure)
+        {
+            logger.LogWarning(
+                "Subprocess step {StepRunId} on run {RunId} could not mirror child run {SubprocessRunId}. Errors: {Errors}",
+                stepRunSnapshot.Id,
+                candidate.Run.Id,
+                subprocessRun.RunId,
+                string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+        }
+    }
+
+    private static ProcessStepRunStatus? ResolveSubprocessParentStepStatus(ProcessRunStatus subprocessStatus)
+    {
+        return subprocessStatus switch
+        {
+            ProcessRunStatus.Completed => ProcessStepRunStatus.Completed,
+            ProcessRunStatus.Blocked => ProcessStepRunStatus.Blocked,
+            ProcessRunStatus.Cancelled or ProcessRunStatus.Failed => ProcessStepRunStatus.Failed,
+            _ => null
+        };
+    }
+
+    private static string BuildSubprocessParentTransitionReason(ProcessSubprocessRunStartResult subprocessRun)
+    {
+        return subprocessRun.Status switch
+        {
+            ProcessRunStatus.Completed => $"Subprocess run '{subprocessRun.RunName}' completed.",
+            ProcessRunStatus.Blocked => $"Subprocess run '{subprocessRun.RunName}' is blocked.",
+            ProcessRunStatus.Cancelled => $"Subprocess run '{subprocessRun.RunName}' was cancelled.",
+            ProcessRunStatus.Failed => $"Subprocess run '{subprocessRun.RunName}' failed.",
+            _ => $"Subprocess run '{subprocessRun.RunName}' is {subprocessRun.Status}."
+        };
+    }
+
     private async Task BlockDispatchForDatabaseRequirementAsync(
         DispatchCandidate candidate,
         ProcessAutomationDatabaseRequirementFailure failure,
@@ -398,6 +510,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Select(item => item.StepDefinitionId)
             .Distinct()
             .ToList();
+        var readyStepDefinitionsById = readyStepDefinitionIds.Count == 0
+            ? new Dictionary<Guid, ProcessStepDefinition>()
+            : await dbContext.Set<ProcessStepDefinition>()
+                .AsNoTracking()
+                .Where(item => readyStepDefinitionIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
         var stepRoleRequirements = readyStepDefinitionIds.Count == 0
             ? []
             : await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
@@ -486,6 +604,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         foreach (var stepRun in dispatchableSteps)
         {
+            if (!readyStepDefinitionsById.TryGetValue(stepRun.StepDefinitionId, out var currentStepDefinition))
+            {
+                continue;
+            }
+
+            if (stepRun.StepKind == ProcessStepKind.Subprocess)
+            {
+                return new DispatchCandidate(
+                    run,
+                    definition,
+                    stepRun,
+                    currentStepDefinition,
+                    workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                    Guid.Empty,
+                    [],
+                    new HashSet<Guid>(),
+                    [],
+                    externalReferenceKeys,
+                    null,
+                    null,
+                    string.Empty,
+                    [],
+                    false,
+                    new AgentProcessCooperationMetadata(
+                        AgentProcessCooperationMode.ProcessArtifactHandoff,
+                        AgentWorkspaceToolProfileKind.ReadOnly,
+                        "Subprocess step is orchestrated by the process runtime."));
+            }
+
             if (!stepRun.CurrentExecutorPartyId.HasValue)
             {
                 continue;
@@ -563,6 +710,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 run,
                 definition,
                 stepRun,
+                currentStepDefinition,
                 workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                 technicalAgentSummary.TechnicalAgentId.Value,
                 expectedArtifacts,
