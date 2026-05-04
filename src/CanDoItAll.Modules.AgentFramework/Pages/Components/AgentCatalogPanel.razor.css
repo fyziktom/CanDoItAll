@@ -1,0 +1,14 @@
+.agent-catalog-panel {
+    min-width: 0;
+}
+
+.agent-catalog-panel__hero {
+    border-bottom: 1px solid rgb(226 232 240);
+    display: grid;
+    gap: 1rem;
+    padding-bottom: 1rem;
+}
+
+.agent-catalog-panel__grid {
+    align-items: stretch;
+}

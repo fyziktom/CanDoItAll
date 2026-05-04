@@ -1,0 +1,43 @@
+.agent-details-dialog {
+    min-height: min(72vh, 52rem);
+}
+
+.agent-details-dialog__tabs {
+    min-height: min(60vh, 42rem);
+}
+
+.agent-details-dialog__full-field {
+    width: 100%;
+}
+
+.agent-details-dialog__summary-textarea,
+.agent-details-dialog__instructions-textarea {
+    display: block;
+    resize: vertical;
+    width: 100%;
+}
+
+.agent-details-dialog__summary-textarea {
+    min-height: 9rem;
+}
+
+.agent-details-dialog__instructions-textarea {
+    min-height: 18rem;
+}
+
+.agent-details-dialog__new-capability {
+    border: 1px solid rgb(226 232 240);
+    border-radius: 1rem;
+    background: rgb(248 250 252);
+    padding: 1rem;
+}
+
+@media (max-width: 760px) {
+    .agent-details-dialog {
+        min-height: auto;
+    }
+
+    .agent-details-dialog__tabs {
+        min-height: 34rem;
+    }
+}
