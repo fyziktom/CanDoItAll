@@ -176,6 +176,61 @@ public sealed partial class AppSmokeTests
 
     [Fact]
     [Trait("Surface", "SharedCanvas")]
+    public async Task Shared_canvas_recreate_disposes_previous_runtime_before_keyboard_note_create()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1600,
+                Height = 1100
+            }
+        });
+        var page = await context.NewPageAsync();
+
+        await CreateProjectAsync(page, "Playwright Recreate Note Editor", "Validation");
+        await page.Locator(".cw-canvas-host").WaitForAsync();
+
+        var recreated = await page.EvaluateAsync<bool>(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                const workbench = window.CanDoItAll?.canvasWorkbench;
+                if (!host || !state || !workbench?.create || !state.dotNetRef || !state.surface) {
+                    return false;
+                }
+
+                const selectedNodeIds = Array.isArray(state.ui?.selectedNodeIds)
+                    ? [...state.ui.selectedNodeIds]
+                    : [];
+                workbench.create(
+                    host,
+                    state.dotNetRef,
+                    state.surface,
+                    state.selectionDispatchId || 0,
+                    state.stateDispatchId || 0,
+                    {
+                        fitView: false,
+                        selectedNodeIds,
+                        primaryNodeId: selectedNodeIds[0] || null
+                    });
+                return true;
+            }");
+        Assert.True(recreated, "Expected the browser workbench runtime to be available for the recreate regression.");
+
+        var canvasHost = page.Locator(".cw-canvas-host");
+        await canvasHost.FocusAsync();
+        await canvasHost.PressAsync("Tab");
+        await page.Locator(".cw-note-editor__input").WaitForAsync();
+
+        Assert.Equal(1, await page.Locator(".cw-note-editor__input").CountAsync());
+        Assert.Equal(1, await page.Locator(".cw-canvas-composer.is-note").CountAsync());
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    [Trait("Surface", "SharedCanvas")]
     public async Task Shared_canvas_viewport_culling_reduces_rendered_nodes_without_losing_offscreen_selection()
     {
         var repoRoot = GetRepoRoot();

@@ -646,6 +646,11 @@
                 return false;
             }
 
+            const previousState = resolveWorkbenchState(host, { requireConnected: false });
+            if (previousState) {
+                disposeWorkbenchState(previousState);
+            }
+
             const state = workbenchInternals.runtime.hydrateState(
                 host,
                 dotNetRef,
