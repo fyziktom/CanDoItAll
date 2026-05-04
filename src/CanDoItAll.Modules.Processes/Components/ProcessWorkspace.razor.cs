@@ -14,6 +14,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private const string DefinitionCanvasDeleteTool = "delete";
     private const string CompactHelpPopoverRootClass = "pf-help-popover flex items-center";
     private const string CompactHelpPopoverToggleClass = "pf-help-popover__toggle pf-help-popover__toggle--compact";
+    private const string DetailTabDefinition = "definition";
+    private const string DetailTabRoles = "roles";
+    private const string DetailTabSteps = "steps";
+    private const string DetailTabRuns = "runs";
+    private const string DetailTabAnalytics = "analytics";
+    private const string DetailTabExchange = "exchange";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -22,12 +28,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private static readonly IReadOnlyList<SecondaryTabItem> DetailTabs =
     [
-        new("definition", "Definition", Description: "Identity, governance, and publication controls."),
-        new("roles", "Roles", Description: "Role-first staffing semantics and executor intent."),
-        new("steps", "Steps", Description: "Typed workflow steps, bindings, artifacts, and authoring canvas."),
-        new("runs", "Runs", Description: "Runtime state, assignments, work briefs, and evidence capture."),
-        new("analytics", "Analytics", Description: "Economics, conformance, capability gaps, and improvement signals."),
-        new("exchange", "Exchange", Description: "Import, export, and future executor-registry seam review.")
+        new(DetailTabDefinition, "Definition", Description: "Identity, governance, and publication controls."),
+        new(DetailTabRoles, "Roles", Description: "Role-first staffing semantics and executor intent."),
+        new(DetailTabSteps, "Steps", Description: "Typed workflow steps, bindings, artifacts, and authoring canvas."),
+        new(DetailTabRuns, "Runs", Description: "Runtime state, assignments, work briefs, and evidence capture."),
+        new(DetailTabAnalytics, "Analytics", Description: "Economics, conformance, capability gaps, and improvement signals."),
+        new(DetailTabExchange, "Exchange", Description: "Import, export, and future executor-registry seam review.")
     ];
 
     [Inject]
@@ -47,6 +53,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     [Inject]
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
+
+    [Inject]
+    private ProcessRuntimeStateOverviewService RuntimeStateOverviewService { get; set; } = default!;
 
     [Inject]
     private DialogService DialogService { get; set; } = default!;
@@ -87,6 +96,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
 
+    private ProcessRuntimeStateOverview runtimeStateOverview = ProcessRuntimeStateOverview.Empty(null);
     private ProcessAnalyticsSummary analytics = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     private ProcessRunHealthSummaryViewModel selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
     private ProcessDefinitionEditorModel editor = new();
@@ -98,7 +108,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? selectedProcessId;
     private Guid? selectedRunId;
     private Guid? selectedAssignmentId;
-    private string detailTab = "definition";
+    private string detailTab = DetailTabDefinition;
     private string definitionSearch = string.Empty;
     private string runNameDraft = string.Empty;
     private ProcessOperatingMode runOperatingMode = ProcessOperatingMode.AssistedExecution;
@@ -130,6 +140,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string importJson = string.Empty;
     private string projectName = string.Empty;
     private bool isFeedingDefaults;
+    private Guid? stoppingRunId;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
     private Guid? loadedProcessQueryId;
@@ -194,7 +205,11 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private string VisibleDefinitionCountText => $"{FilteredDefinitions.Count} visible";
 
-    private string ActiveRunCountText => FormatCount(definitions.Sum(item => item.ActiveRunCount), "active run", "active runs");
+    private string ActiveRunCountText => FormatCount(runtimeStateOverview.Totals.Active, "active run", "active runs");
+
+    private string BlockedRunCountText => FormatCount(runtimeStateOverview.Totals.Blocked, "blocked run", "blocked runs");
+
+    private string FailedRunCountText => FormatCount(runtimeStateOverview.Totals.Failed, "failed run", "failed runs");
 
     private string ImprovementCountText => FormatCount(analytics.ImprovementCandidateCount, "improvement", "improvements");
 
@@ -225,6 +240,11 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     {
         var label = count == 1 ? singularLabel : pluralLabel;
         return $"{count} {label}";
+    }
+
+    private ProcessRunStatusCounts ResolveDefinitionRunCounts(Guid definitionId)
+    {
+        return runtimeStateOverview.GetDefinition(definitionId).RunCounts;
     }
 
     private void SetMessage(string value)
@@ -259,6 +279,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         try
         {
             await CatalogWarmupService.WarmupAsync(synchronizeExistingDefinitions: true);
+            RuntimeStateOverviewService.Invalidate();
             await LoadWorkspaceAsync();
             SetMessage("Default processes were synchronized from the current template pack.");
         }

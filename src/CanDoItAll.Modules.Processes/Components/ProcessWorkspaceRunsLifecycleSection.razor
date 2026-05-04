@@ -44,6 +44,17 @@
                                              Text="@run.Status.ToString()" />
                                 <StatusBadge Tone="neutral"
                                              Text="@($"{run.BlockedStepCount} blocked")" />
+                                @if (Presenter.CanStopBlockedRun(run))
+                                {
+                                    <Button Text="Stop"
+                                            Icon="stop"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@Presenter.IsStoppingRun(run.Id)"
+                                            IsBusy="@Presenter.IsStoppingRun(run.Id)"
+                                            Click="@(() => Presenter.StopBlockedRunAsync(run.Id))"
+                                            data-testid="@($"processes-stop-blocked-run-{run.Id}")" />
+                                }
                             </Cluster>
                         </Status>
                     </SelectionListItem>

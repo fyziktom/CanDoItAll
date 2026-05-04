@@ -76,7 +76,7 @@ public partial class ProcessWorkspace
         }
 
         selectedLaunchPlanId = result.Value;
-        detailTab = "runs";
+        detailTab = DetailTabRuns;
         launchNameDraft = string.Empty;
         await LoadWorkspaceAsync();
         SetMessage("Launch plan created.");
@@ -103,8 +103,8 @@ public partial class ProcessWorkspace
             return;
         }
 
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Launch candidate selected.");
     }
 
@@ -124,8 +124,8 @@ public partial class ProcessWorkspace
         }
 
         launchDecisionSummary = string.Empty;
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Launch plan submitted for approval.");
     }
 
@@ -152,8 +152,8 @@ public partial class ProcessWorkspace
         }
 
         launchDecisionSummary = string.Empty;
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage($"Launch plan updated to {status}.");
     }
 
@@ -172,8 +172,8 @@ public partial class ProcessWorkspace
             return;
         }
 
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Launch provisioning completed.");
     }
 
@@ -200,8 +200,9 @@ public partial class ProcessWorkspace
         selectedRunId = result.Value;
         selectedCanvasNodeId = null;
         ResetRuntimeCanvasState();
+        detailTab = DetailTabRuns;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Launch plan executed into a process run.");
     }
 

@@ -8,7 +8,7 @@ public partial class ProcessWorkspace
     private void RefreshCanvasSurface()
     {
         NormalizeEditorForAuthoring();
-        canvasSurface = detailTab == "runs" && SelectedRun is not null
+        canvasSurface = detailTab == DetailTabRuns && SelectedRun is not null
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
             : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId, definitionCanvasTool);
 

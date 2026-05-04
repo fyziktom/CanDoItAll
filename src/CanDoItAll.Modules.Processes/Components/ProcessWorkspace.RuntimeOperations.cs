@@ -30,8 +30,9 @@ public partial class ProcessWorkspace
         selectedRunId = result.Value;
         selectedCanvasNodeId = null;
         ResetRuntimeCanvasState();
-        detailTab = "runs";
+        detailTab = DetailTabRuns;
         runNameDraft = string.Empty;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
         SetMessage("Process run started.");
     }
@@ -39,6 +40,7 @@ public partial class ProcessWorkspace
     private async Task SelectRunAsync(Guid runId)
     {
         selectedRunId = runId;
+        detailTab = DetailTabRuns;
         selectedCanvasNodeId = null;
         ResetRuntimeCanvasState();
         await LoadRunDetailsAsync();
@@ -75,6 +77,49 @@ public partial class ProcessWorkspace
             });
     }
 
+    private async Task StopBlockedRunAsync(Guid runId)
+    {
+        var run = runs.FirstOrDefault(item => item.Id == runId);
+        if (run is null)
+        {
+            SetError("Reload the process before stopping this run.");
+            return;
+        }
+
+        if (run.Status != ProcessRunStatus.Blocked)
+        {
+            SetError("Only blocked process runs can be stopped from this action.");
+            return;
+        }
+
+        stoppingRunId = runId;
+        try
+        {
+            var result = await ProcessesService.StopBlockedRunAsync(
+                new ProcessRunStopRequest
+                {
+                    ProcessRunId = runId,
+                    Reason = "Stopped from the process workspace Runs tab.",
+                    StoppedBy = "process-workspace"
+                });
+            if (result.IsFailure)
+            {
+                SetError(result.Errors);
+                return;
+            }
+
+            selectedRunId = runId;
+            detailTab = DetailTabRuns;
+            RuntimeStateOverviewService.Invalidate();
+            await LoadWorkspaceAsync();
+            SetMessage("Blocked process run stopped.");
+        }
+        finally
+        {
+            stoppingRunId = null;
+        }
+    }
+
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)
     {
         var currentStepRun = stepRuns.FirstOrDefault(item => item.Id == stepRunId);
@@ -103,8 +148,9 @@ public partial class ProcessWorkspace
             return;
         }
 
+        detailTab = DetailTabRuns;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage($"Step updated to {targetStatus}.");
     }
 
@@ -135,8 +181,9 @@ public partial class ProcessWorkspace
 
         operatorReworkStepRunId = null;
         operatorReworkDirective = string.Empty;
+        detailTab = DetailTabRuns;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Agent step rerun requested with a recovery directive.");
     }
 
@@ -157,8 +204,8 @@ public partial class ProcessWorkspace
             return;
         }
 
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Escalation assigned.");
     }
 
@@ -180,8 +227,8 @@ public partial class ProcessWorkspace
         }
 
         operatorEscalationResolution = string.Empty;
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Escalation resolved.");
     }
 
@@ -203,8 +250,8 @@ public partial class ProcessWorkspace
         }
 
         operatorEscalationResolution = string.Empty;
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Escalation reopened.");
     }
 
@@ -242,8 +289,9 @@ public partial class ProcessWorkspace
 
         operatorReworkStepRunId = null;
         operatorReworkDirective = string.Empty;
+        detailTab = DetailTabRuns;
+        RuntimeStateOverviewService.Invalidate();
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Escalation rework requested.");
     }
 
@@ -307,8 +355,8 @@ public partial class ProcessWorkspace
         }
 
         operatorApprovalDecisionSummary = string.Empty;
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage($"Approval {status}.");
     }
 
@@ -372,8 +420,8 @@ public partial class ProcessWorkspace
             return;
         }
 
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Run assignment resolved.");
     }
 
@@ -458,14 +506,14 @@ public partial class ProcessWorkspace
         if (result.IsFailure)
         {
             await LoadRunDetailsAsync();
-            detailTab = "runs";
+            detailTab = DetailTabRuns;
             SetError(result.Errors);
             return;
         }
 
         directMessageBody = string.Empty;
         await LoadRunDetailsAsync();
-        detailTab = "runs";
+        detailTab = DetailTabRuns;
         SetMessage("Direct message recorded.");
     }
 
@@ -500,8 +548,8 @@ public partial class ProcessWorkspace
         artifactProvenance = string.Empty;
         artifactAllowedUsage = string.Empty;
         artifactReview = string.Empty;
+        detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
-        detailTab = "runs";
         SetMessage("Artifact recorded.");
     }
 

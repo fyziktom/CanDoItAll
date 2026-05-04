@@ -25,6 +25,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
+        services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessRunRecoveryService>();
         services.AddSingleton<ProcessRunRecoveryStartupGate>();

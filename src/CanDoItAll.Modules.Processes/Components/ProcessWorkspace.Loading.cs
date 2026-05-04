@@ -35,6 +35,11 @@ public partial class ProcessWorkspace
 
     private async Task LoadWorkspaceAsync()
     {
+        if (RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue)
+        {
+            detailTab = DetailTabRuns;
+        }
+
         if (ProjectId.HasValue)
         {
             var project = await ProjectsService.GetAsync(ProjectId.Value);
@@ -46,6 +51,9 @@ public partial class ProcessWorkspace
         }
 
         definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
+        runtimeStateOverview = await RuntimeStateOverviewService.GetOverviewAsync(
+            definitions.Select(definition => definition.Id).ToList(),
+            ProjectId);
         var nextSelectedProcessId = ResolveSelectedProcessId();
         if (nextSelectedProcessId != selectedProcessId)
         {
@@ -72,20 +80,40 @@ public partial class ProcessWorkspace
 
         if (selectedProcessId.HasValue)
         {
-            launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId);
-            selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
-            await LoadLaunchPlanDetailsAsync();
-            runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId);
-            activeRunSummaries = await RunDetailsLoader.LoadActiveRunSummariesAsync(runs);
+            if (ShouldLoadRuntimePaneData())
+            {
+                await LoadRuntimePaneDataAsync();
+            }
+            else
+            {
+                ClearRuntimePaneData();
+            }
         }
         else
         {
-            launchPlans = [];
-            selectedLaunchPlanId = null;
-            selectedLaunchPlan = null;
-            runs = [];
-            activeRunSummaries = [];
+            ClearRuntimePaneData();
         }
+
+        RefreshCanvasSurface();
+        UpdateRuntimeRefreshLoop();
+        StateHasChanged();
+    }
+
+    private async Task LoadRuntimePaneDataAsync(CancellationToken cancellationToken = default)
+    {
+        if (!selectedProcessId.HasValue)
+        {
+            ClearRuntimePaneData();
+            return;
+        }
+
+        launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId, cancellationToken);
+        selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
+        await LoadLaunchPlanDetailsAsync();
+        runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId, cancellationToken);
+        activeRunSummaries = string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal)
+            ? await RunDetailsLoader.LoadActiveRunSummariesAsync(runs, cancellationToken)
+            : [];
 
         var nextSelectedRunId = ResolveSelectedRunId();
         if (nextSelectedRunId != selectedRunId)
@@ -95,49 +123,48 @@ public partial class ProcessWorkspace
         }
 
         selectedRunId = nextSelectedRunId;
-        if ((RunIdQuery.HasValue && selectedRunId.HasValue) ||
-            (LaunchPlanIdQuery.HasValue && selectedLaunchPlanId.HasValue))
+        if (ShouldLoadSelectedRunDetails())
         {
-            detailTab = "runs";
-        }
-
-        await LoadRunDetailsAsync();
-        RefreshCanvasSurface();
-        UpdateRuntimeRefreshLoop();
-        StateHasChanged();
-    }
-
-    private async Task LoadRunDetailsAsync()
-    {
-        if (!selectedRunId.HasValue)
-        {
-            stepRuns = [];
-            decisions = [];
-            artifacts = [];
-            outboxRecords = [];
-            assignments = [];
-            workBriefs = [];
-            conformanceObservations = [];
-            executionRuns = [];
-            processEscalations = [];
-            operatorApprovals = [];
-            attemptTimeline = [];
-            selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
-            directMessageThreads = [];
-            selectedAssignmentId = null;
-            artifactStepRunId = null;
-            operatorReworkStepRunId = null;
-            operatorReworkDirective = string.Empty;
-            operatorEscalationResolution = string.Empty;
-            operatorApprovalDecisionSummary = string.Empty;
-            assignmentAllowsDirectMessaging = true;
-            directMessageSourceRoleRequirementId = null;
-            directMessageTargetRoleRequirementId = null;
-            directMessageBody = string.Empty;
+            await LoadRunDetailsAsync(cancellationToken);
             return;
         }
 
-        var runDetails = await RunDetailsLoader.LoadAsync(selectedRunId.Value);
+        ClearRunDetails();
+    }
+
+    private void ClearRuntimePaneData()
+    {
+        launchPlans = [];
+        selectedLaunchPlanId = null;
+        selectedLaunchPlan = null;
+        runs = [];
+        activeRunSummaries = [];
+        selectedRunId = null;
+        ClearRunDetails();
+    }
+
+    private bool ShouldLoadRuntimePaneData()
+    {
+        return selectedProcessId.HasValue &&
+            (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) ||
+                RunIdQuery.HasValue ||
+                LaunchPlanIdQuery.HasValue);
+    }
+
+    private bool ShouldLoadSelectedRunDetails()
+    {
+        return selectedRunId.HasValue && ShouldLoadRuntimePaneData();
+    }
+
+    private async Task LoadRunDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        if (!selectedRunId.HasValue)
+        {
+            ClearRunDetails();
+            return;
+        }
+
+        var runDetails = await RunDetailsLoader.LoadAsync(selectedRunId.Value, cancellationToken);
         stepRuns = runDetails.StepRuns;
         decisions = runDetails.Decisions;
         artifacts = runDetails.Artifacts;
@@ -185,6 +212,33 @@ public partial class ProcessWorkspace
         }
     }
 
+    private void ClearRunDetails()
+    {
+        stepRuns = [];
+        decisions = [];
+        artifacts = [];
+        outboxRecords = [];
+        assignments = [];
+        workBriefs = [];
+        conformanceObservations = [];
+        executionRuns = [];
+        processEscalations = [];
+        operatorApprovals = [];
+        attemptTimeline = [];
+        selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
+        directMessageThreads = [];
+        selectedAssignmentId = null;
+        artifactStepRunId = null;
+        operatorReworkStepRunId = null;
+        operatorReworkDirective = string.Empty;
+        operatorEscalationResolution = string.Empty;
+        operatorApprovalDecisionSummary = string.Empty;
+        assignmentAllowsDirectMessaging = true;
+        directMessageSourceRoleRequirementId = null;
+        directMessageTargetRoleRequirementId = null;
+        directMessageBody = string.Empty;
+    }
+
     private Guid? ResolveSelectedProcessId()
     {
         if (ProcessIdQuery.HasValue && definitions.Any(definition => definition.Id == ProcessIdQuery.Value))
@@ -205,6 +259,11 @@ public partial class ProcessWorkspace
         if (RunIdQuery.HasValue && runs.Any(run => run.Id == RunIdQuery.Value))
         {
             return RunIdQuery.Value;
+        }
+
+        if (!string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))
+        {
+            return null;
         }
 
         if (selectedRunId.HasValue && runs.Any(run => run.Id == selectedRunId.Value))
