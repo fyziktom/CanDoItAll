@@ -32,7 +32,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var baseMetadataJson = metadata.Count == 0
             ? null
             : JsonSerializer.Serialize(metadata, AgentOutputJson.SerializerOptions);
-        return ExecutionInvocationMetadata.Build(baseMetadataJson, processInvocationPolicy);
+        var cooperationMetadataJson = ExecutionInvocationMetadata.ApplyProcessCooperation(
+            baseMetadataJson,
+            candidate.CooperationMetadata);
+        return ExecutionInvocationMetadata.Build(cooperationMetadataJson, processInvocationPolicy);
     }
 
     private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases(

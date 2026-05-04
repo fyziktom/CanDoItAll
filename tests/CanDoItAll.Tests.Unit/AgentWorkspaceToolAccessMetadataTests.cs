@@ -85,6 +85,40 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
+    public void Write_and_read_round_trip_typed_workspace_tool_profile()
+    {
+        var configurationJson = AgentWorkspaceToolAccessMetadata.Write(
+            "{}",
+            AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment));
+
+        var settings = AgentWorkspaceToolAccessMetadata.Read(configurationJson);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.SoftwareDevelopment, settings.Profile);
+        Assert.True(settings.CanReadFiles);
+        Assert.True(settings.CanWriteFiles);
+        Assert.True(settings.CanRunValidationCommands);
+        Assert.True(settings.CanRunLocalScripts);
+        Assert.True(settings.CanScaffoldProjects);
+        Assert.True(settings.CanManageWorkspacePaths);
+        Assert.True(settings.CanTransformArtifacts);
+        Assert.Contains(AgentWorkspaceToolAccessProfiles.SoftwareDevelopmentProfileKey, configurationJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IsWorkspaceToolAllowed_applies_profile_permissions_by_tool_family()
+    {
+        var qaProfile = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.QualityValidation);
+        var businessProfile = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.BusinessAnalysis);
+
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_build"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_write_file"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_new"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_delete_path"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_convert_document"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_dotnet_run"));
+    }
+
+    [Fact]
     public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_allowed_alias_for_write_enabled_agent()
     {
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(

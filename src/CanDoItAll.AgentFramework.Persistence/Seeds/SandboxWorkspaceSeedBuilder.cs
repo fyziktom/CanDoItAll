@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v63";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v64";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -412,7 +412,7 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", "Workspace Dotnet Restore", "Runs a bounded dotnet restore recipe in the managed workspace or a grounded external-target alias.", "workspace_dotnet_restore", approvalRequired: true),
             CreateToolCapability(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", "Workspace Dotnet Build", "Runs a bounded dotnet build recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_build"),
             CreateToolCapability(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", "Workspace Dotnet Test", "Runs a bounded dotnet test recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_test"),
-            CreateToolCapability(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", "Workspace Dotnet Run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias, with durable launch evidence. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_run"),
+            CreateToolCapability(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", "Workspace Dotnet Run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias, with durable launch evidence. HTTP smoke stops the launched process tree by default; use keepAlive true only for same-step browser proof and stop it with the recorded startup.json stopCommand before finalizing. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_run"),
             CreateToolCapability(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", "Workspace Dotnet New", "Creates an approved dotnet project scaffold in the managed workspace or a grounded external-target alias. Use approved current SDK template names and inspect an unsuccessful result before retrying. For an exact output root, pass its parent as parentDirectory and the root leaf as name. For test projects, pass a parentDirectory under the grounded product root, such as <product-root>/tests, with name <AppName>.Tests; never reuse the product parent to create <AppName>.Tests as a sibling. Keep tests and support projects under child folders of the grounded product root unless another root is explicitly grounded. Do not scaffold product or test projects into managed src/tests/tools roots or sibling external-target roots during an external-target run.", "workspace_dotnet_new", approvalRequired: true),
             CreateToolCapability(workspacePythonRunFileCapabilityId, "workspace-python-run-file", "Workspace Python Run File", "Runs a workspace Python file through the controlled execution plane with durable receipts.", "workspace_python_run_file", approvalRequired: true),
             CreateToolCapability(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", "Workspace PowerShell Run Script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane.", "workspace_pwsh_run_script", approvalRequired: true),
@@ -544,7 +544,8 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             false,
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -563,6 +564,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.ArchitectureReview),
             false,
             "portfolio-architect",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, AutoApproveExternalCallsByDefault = true },
@@ -606,7 +608,8 @@ internal static class SandboxWorkspaceSeedBuilder
             0.1d,
             false,
             false,
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -620,6 +623,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
             false,
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
@@ -660,7 +664,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Programming,
             "programming-workspace-analyst",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -676,6 +681,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -727,7 +733,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "code-review-lead",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -741,6 +748,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
@@ -769,7 +777,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "ui-review-lead",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -783,6 +792,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -814,7 +824,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "security-reviewer",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -828,6 +839,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.SecurityReview),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
@@ -856,7 +868,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Management,
             "release-readiness-manager",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -870,6 +883,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -898,7 +912,9 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiChatProviderId,
             AgentWorkloadKind.Spreadsheet,
             "spreadsheet-analyst",
-            SerializeConfiguration(new { enableCompaction = true, maxLocalRagResults = 4 }),
+            WithWorkspaceToolProfile(
+                SerializeConfiguration(new { enableCompaction = true, maxLocalRagResults = 4 }),
+                AgentWorkspaceToolProfileKind.BusinessAnalysis),
             AgentPermissionsPolicy.Default,
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
@@ -924,7 +940,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Management,
             "hr-staffing-manager",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -938,6 +955,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: true,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.ReadOnly),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
@@ -961,7 +979,9 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiChatProviderId,
             AgentWorkloadKind.Mail,
             "mail-triage-analyst",
-            SerializeConfiguration(new { enableCompaction = true, maxLocalRagResults = 4 }),
+            WithWorkspaceToolProfile(
+                SerializeConfiguration(new { enableCompaction = true, maxLocalRagResults = 4 }),
+                AgentWorkspaceToolProfileKind.BusinessAnalysis),
             AgentPermissionsPolicy.Default,
             [
                 CreateAssignment(mailInlineSkillCapabilityId, "mail-triage-inline-skill", CapabilityKind.Skill),
@@ -991,7 +1011,8 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             true,
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1006,6 +1027,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.ReadOnly),
             false,
             "research-deep-dive-analyst",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
@@ -1039,7 +1061,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Research,
             "dotnet-solution-architect",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1053,6 +1076,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.ArchitectureReview),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
@@ -1088,7 +1112,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Programming,
             "dotnet-application-developer",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1103,6 +1128,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -1153,7 +1179,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Programming,
             "blazor-application-developer",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1168,6 +1195,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -1218,7 +1246,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "dotnet-qa-review-lead",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1232,6 +1261,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -1272,7 +1302,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Research,
             "javascript-solution-architect",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1286,6 +1317,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.ArchitectureReview),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
@@ -1319,7 +1351,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Programming,
             "javascript-application-developer",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1334,6 +1367,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
             AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -1371,7 +1405,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Qa,
             "javascript-qa-review-lead",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1385,6 +1420,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
@@ -1415,7 +1451,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Management,
             "business-strategist",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1429,6 +1466,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.BusinessAnalysis),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
@@ -1458,7 +1496,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Spreadsheet,
             "financial-strategist",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1472,6 +1511,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.BusinessAnalysis),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
@@ -1503,7 +1543,8 @@ internal static class SandboxWorkspaceSeedBuilder
             openAiProviderId,
             AgentWorkloadKind.Sales,
             "marketing-specialist",
-            WithProcessAccess(
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
                 WithProjectStructureAccess(
                     SerializeConfiguration(new
                     {
@@ -1517,6 +1558,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.BusinessAnalysis),
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
             [
                 CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
@@ -1673,6 +1715,15 @@ internal static class SandboxWorkspaceSeedBuilder
                 CanWrite = canWrite,
                 AllowAllDefinitions = allowAllDefinitions
             });
+    }
+
+    private static string WithWorkspaceToolProfile(
+        string configurationJson,
+        AgentWorkspaceToolProfileKind profile)
+    {
+        return AgentWorkspaceToolAccessMetadata.Write(
+            configurationJson,
+            AgentWorkspaceToolAccessProfiles.CreateSettings(profile));
     }
 
     private static string GetSeedSkillRoot(string key)

@@ -1,0 +1,32 @@
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.AgentFramework.Core;
+
+public sealed class AgentRunFailedException : InvalidOperationException
+{
+    public AgentRunFailedException(
+        Guid agentId,
+        Guid executionRunId,
+        Guid? chatSessionId,
+        string providerName,
+        string modelName,
+        Exception innerException)
+        : base($"The run failed: {innerException.Message}", innerException)
+    {
+        AgentId = agentId;
+        ExecutionRunId = executionRunId;
+        ChatSessionId = chatSessionId;
+        ProviderName = providerName;
+        ModelName = modelName;
+    }
+
+    public Guid AgentId { get; }
+
+    public Guid ExecutionRunId { get; }
+
+    public Guid? ChatSessionId { get; }
+
+    public string ProviderName { get; }
+
+    public string ModelName { get; }
+}

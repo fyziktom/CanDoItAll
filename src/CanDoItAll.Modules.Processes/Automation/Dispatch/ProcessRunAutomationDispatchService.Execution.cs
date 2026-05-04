@@ -33,15 +33,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ? null
             : candidate.ManualRecoveryDirective.Trim();
         var recoverableExecutionRunId = candidate.RecoveryExecutionRunId;
-        var automationChatSessionId = string.IsNullOrWhiteSpace(recoveryDirective)
-            ? candidate.ChatSessionId
-            : null;
+        Guid? automationChatSessionId = null;
         var prefetchedProjectStructureGrounding = await TryBuildProjectStructureGroundingAsync(candidate, cancellationToken);
         var prefetchedArtifactInspectionGrounding = await TryBuildArtifactInspectionGroundingAsync(candidate, cancellationToken);
         var successfulToolNamesAcrossAttempts = new HashSet<string>(
             prefetchedProjectStructureGrounding.SatisfiedToolNames,
             StringComparer.Ordinal);
         successfulToolNamesAcrossAttempts.UnionWith(prefetchedArtifactInspectionGrounding.SatisfiedToolNames);
+        var carriedImplementationProof = CarriedImplementationProof.None;
         var maxExecutionAttempts = ResolveMaxExecutionAttempts(candidate);
         EnsureProviderNativeBrowserOutputDirectories(candidate);
 
@@ -88,10 +87,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 }
                 else
                 {
-                    automationChatSessionId = (await workspaceService.GetOrCreateChatSessionAsync(
-                        candidate.TechnicalAgentId,
-                        automationChatSessionId,
-                        cancellationToken)).Id;
                     ExecutionRunResult? executionResult = null;
                     ConcurrentAutomationExecution? adoptedConcurrentExecution = null;
                     ExecutionRunDetail? failedExecutionDetail = null;
@@ -125,7 +120,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     prefetchedArtifactInspectionGrounding.HasPromptSummary
                                         ? prefetchedArtifactInspectionGrounding.PromptSummary
                                         : null),
-                                ChatSessionId: automationChatSessionId,
+                                ChatSessionId: null,
                                 Context: new ExecutionInvocationContext(
                                     SourceKind: "process-step",
                                     SourceId: candidate.StepRun.Id.ToString("D"),
@@ -144,6 +139,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             cancellationToken);
                     }
                     catch (AgentChatRunFailedException exception)
+                    {
+                        failedExecutionRunId = exception.ExecutionRunId;
+                        automationChatSessionId ??= exception.ChatSessionId;
+                        failedExecutionDetail = await workspaceService.GetExecutionRunDetailAsync(
+                            exception.ExecutionRunId,
+                            cancellationToken);
+                        failedResponseText = ResolvePreferredExecutionResponseText(
+                            candidate,
+                            exception.Message,
+                            failedExecutionDetail);
+
+                        logger.LogWarning(
+                            exception,
+                            "Continuing recovery inspection for failed AgentFramework execution run {ExecutionRunId} on process step {StepRunId} and run {RunId}.",
+                            exception.ExecutionRunId,
+                            candidate.StepRun.Id,
+                            candidate.Run.Id);
+                    }
+                    catch (AgentRunFailedException exception)
                     {
                         failedExecutionRunId = exception.ExecutionRunId;
                         automationChatSessionId ??= exception.ChatSessionId;
@@ -227,27 +241,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             successfulToolNamesAcrossAttempts.UnionWith(ResolveSuccessfulToolNames(detail));
+            carriedImplementationProof = ResolveCarriedImplementationProof(candidate, detail, carriedImplementationProof);
             if (renewLeaseAsync is not null)
             {
                 await renewLeaseAsync(cancellationToken);
             }
 
-            var missingRequiredTools = ResolveMissingRequiredToolExecutionsWithCarryForward(
+            var missingRequiredTools = ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
                 candidate,
                 detail,
-                successfulToolNamesAcrossAttempts);
+                successfulToolNamesAcrossAttempts,
+                carriedImplementationProof);
             var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
             var completionStatus = ResolveCompletionStatusWithCarryForward(
                 candidate,
                 detail,
                 successfulToolNamesAcrossAttempts,
-                responseText);
+                responseText,
+                carriedImplementationProof);
             var completionReason = BuildCompletionReasonWithCarryForward(
                 candidate,
                 detail,
                 candidate.StepRun.Title,
                 successfulToolNamesAcrossAttempts,
-                responseText);
+                responseText,
+                carriedImplementationProof);
             var selectedBranchOutcomeId = ResolveSelectedBranchOutcomeId(
                 candidate,
                 completionStatus,
@@ -268,6 +286,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 missingRequiredTools,
                 attemptNumber,
                 selectedBranchOutcomeId);
+            CleanupKeptAliveDotnetRunProcesses(candidate, detail);
+
+            if (completionStatus == ProcessStepRunStatus.Completed)
+            {
+                return finalOutcome;
+            }
 
             var providerRepair = await TryRepairAssignedAgentProvidersAsync(
                 candidate,
@@ -398,8 +422,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 providerFallbackCount: 0,
                 cancellationToken);
 
-            // Start recovery attempts on a fresh chat session so stale context or provider-side errors
-            // from the previous attempt do not poison the next governed retry.
+                        // Start recovery attempts on a fresh run so stale provider-side state
+                        // from the previous attempt does not poison the next governed retry.
             automationChatSessionId = null;
 
             var legacyRecoveryDirective = BuildRecoveryDirective(

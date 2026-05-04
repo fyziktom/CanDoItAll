@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.Options;
@@ -11,6 +12,13 @@ internal sealed class ProcessMockAgentRuntime(
     IWorkspaceFileService fileService,
     IOptions<ProcessMockAgentOptions> options) : IAgentRuntime
 {
+    private const string WorkspaceStatPathToolName = "workspace_stat_path";
+    private const string WorkspaceReadFileToolName = "workspace_read_file";
+
+    private static readonly Regex ManagedWorkspacePathRegex = new(
+        @"(?<path>\b(?:artifacts|output|integration-map|data)/[^\s`'""<>()\[\]{},;]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -126,6 +134,9 @@ internal sealed class ProcessMockAgentRuntime(
             ProcessMockAgentRoleKeys.ReleaseManager => ExecuteReleaseManager(state),
             _ => throw new InvalidOperationException($"Unsupported process mock role '{roleKey}'.")
         };
+        var inspectedArtifactPaths = string.Equals(roleKey, ProcessMockAgentRoleKeys.Qa, StringComparison.Ordinal)
+            ? ResolveQaArtifactInspectionPaths(prompt)
+            : [];
 
         await progressCallback(
             ExecutionState.Persisting,
@@ -142,21 +153,7 @@ internal sealed class ProcessMockAgentRuntime(
             OutputTokens: EstimateTokens(outcome.ResponseText),
             ToolCalls: outcome.ToolCalls,
             RuntimeSessionKey: state.RuntimeSessionKey,
-            SerializedSessionStateJson: JsonSerializer.Serialize(
-                new
-                {
-                    processMockAgent = true,
-                    roleKey,
-                    state.RunKey,
-                    state.ArtifactRoot,
-                    outcome.BranchOutcomeKey,
-                    artifacts = outcome.Artifacts.Select(artifact => new
-                    {
-                        artifact.RelativePath,
-                        artifact.ContentSignalText
-                    }).ToArray()
-                },
-                JsonOptions),
+            SerializedSessionStateJson: BuildSerializedSessionState(roleKey, state, outcome, inspectedArtifactPaths),
             PendingApprovals: [])
         {
             FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText),
@@ -209,7 +206,11 @@ internal sealed class ProcessMockAgentRuntime(
                 : runtimeSessionKey,
             RunKey: runKey,
             ArtifactRoot: $"{ProcessMockAgentCatalog.ArtifactRoot}/{runKey}",
-            OutputRoot: $"{ProcessMockAgentCatalog.OutputRoot}/{runKey}");
+            OutputRoot: $"{ProcessMockAgentCatalog.OutputRoot}/{runKey}",
+            ProcessCooperationMode: auditScope?.ProcessCooperationMode?.ToString() ?? string.Empty,
+            WorkspaceToolProfileOverride: auditScope?.WorkspaceToolProfileOverride is null
+                ? string.Empty
+                : AgentWorkspaceToolAccessProfiles.GetProfileKey(auditScope.WorkspaceToolProfileOverride.Value));
     }
 
     private ProcessMockRuntimeOutcome ExecuteProductOwner(ProcessMockRuntimeState state)
@@ -235,7 +236,7 @@ internal sealed class ProcessMockAgentRuntime(
             "Mock scope and acceptance criteria were written.",
             null,
             "Product owner mock scope artifact saved.",
-            [CreateArtifact(scopePath, "mock scope artifact acceptance criteria validation blank input")]);
+            [CreateArtifact(scopePath, "mock sample scope artifact acceptance criteria validation blank input")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteArchitect(ProcessMockRuntimeState state)
@@ -260,7 +261,7 @@ internal sealed class ProcessMockAgentRuntime(
             "Mock architecture guidance was written.",
             null,
             "Architect mock handoff artifact saved.",
-            [CreateArtifact(architecturePath, "mock architecture artifact boundary implementation qa expectations")]);
+            [CreateArtifact(architecturePath, "mock sample architecture artifact boundary implementation qa expectations")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteDeveloper(ProcessMockRuntimeState state)
@@ -275,7 +276,7 @@ internal sealed class ProcessMockAgentRuntime(
         {
             CreateArtifact(
                 implementationPath,
-                "mock first implementation artifact deliverable deterministic defect")
+                "mock sample first implementation artifact deliverable deterministic defect")
         };
 
         var markdown =
@@ -332,7 +333,7 @@ internal sealed class ProcessMockAgentRuntime(
             "Blank-input handling is missing; repair is required.",
             ProcessMockAgentCatalog.BranchRepairsRequired,
             "QA mock rejection artifact saved.",
-            [CreateArtifact(findingPath, "mock qa rejection artifact finding repair branch reason")]);
+            [CreateArtifact(findingPath, "mock sample qa rejection artifact finding repair branch reason")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteRepairDeveloper(ProcessMockRuntimeState state)
@@ -347,7 +348,7 @@ internal sealed class ProcessMockAgentRuntime(
         {
             CreateArtifact(
                 repairPath,
-                "mock repair artifact implementation blank input fix")
+                "mock sample repair artifact implementation blank input fix")
         };
 
         var markdown =
@@ -399,7 +400,7 @@ internal sealed class ProcessMockAgentRuntime(
             "Repaired mock implementation passed QA.",
             ProcessMockAgentCatalog.BranchApproved,
             "QA mock approval artifact saved.",
-            [CreateArtifact(approvalPath, "mock qa approval artifact repaired implementation release")]);
+            [CreateArtifact(approvalPath, "mock sample qa approval artifact repaired implementation release")]);
     }
 
     private ProcessMockRuntimeOutcome ExecuteReleaseManager(ProcessMockRuntimeState state)
@@ -426,7 +427,7 @@ internal sealed class ProcessMockAgentRuntime(
             "Release notes were written after QA approval.",
             null,
             "Release manager mock artifact saved.",
-            [CreateArtifact(releasePath, "mock release notes artifact qa approval repair evidence")]);
+            [CreateArtifact(releasePath, "mock sample release notes artifact qa approval repair evidence")]);
     }
 
     private static ProcessMockRuntimeOutcome BuildOutcome(
@@ -524,6 +525,162 @@ internal sealed class ProcessMockAgentRuntime(
     private static bool PromptRequiresArtifact(string prompt, string artifactTitle)
     {
         return prompt.Contains(artifactTitle, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildSerializedSessionState(
+        string roleKey,
+        ProcessMockRuntimeState state,
+        ProcessMockRuntimeOutcome outcome,
+        IReadOnlyList<string> inspectedArtifactPaths)
+    {
+        var callContents = new List<Dictionary<string, object?>>();
+        var resultContents = new List<Dictionary<string, object?>>();
+        var callSequence = 1;
+        foreach (var artifactPath in inspectedArtifactPaths)
+        {
+            var statCallId = $"stat-{callSequence}";
+            var readCallId = $"read-{callSequence}";
+            callContents.Add(CreateFunctionCall(statCallId, WorkspaceStatPathToolName, artifactPath));
+            callContents.Add(CreateFunctionCall(readCallId, WorkspaceReadFileToolName, artifactPath));
+            resultContents.Add(CreateFunctionResult(
+                statCallId,
+                new Dictionary<string, object?>
+                {
+                    ["succeeded"] = true,
+                    ["path"] = artifactPath,
+                    ["exists"] = true
+                }));
+            resultContents.Add(CreateFunctionResult(
+                readCallId,
+                new Dictionary<string, object?>
+                {
+                    ["succeeded"] = true,
+                    ["path"] = artifactPath,
+                    ["content"] = $"Process mock QA inspected inherited artifact {artifactPath}."
+                }));
+            callSequence++;
+        }
+
+        return JsonSerializer.Serialize(
+            new
+            {
+                processMockAgent = true,
+                roleKey,
+                state.RunKey,
+                state.ArtifactRoot,
+                state.ProcessCooperationMode,
+                state.WorkspaceToolProfileOverride,
+                outcome.BranchOutcomeKey,
+                artifacts = outcome.Artifacts.Select(artifact => new
+                {
+                    artifact.RelativePath,
+                    artifact.ContentSignalText
+                }).ToArray(),
+                stateBag = new Dictionary<string, object?>
+                {
+                    ["InMemoryChatHistoryProvider"] = new
+                    {
+                        messages = new object[]
+                        {
+                            new
+                            {
+                                role = "assistant",
+                                contents = callContents.ToArray()
+                            },
+                            new
+                            {
+                                role = "tool",
+                                contents = resultContents.ToArray()
+                            }
+                        }
+                    }
+                }
+            },
+            JsonOptions);
+    }
+
+    private static Dictionary<string, object?> CreateFunctionCall(
+        string callId,
+        string toolName,
+        string artifactPath)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["$type"] = "functionCall",
+            ["callId"] = callId,
+            ["name"] = toolName,
+            ["arguments"] = new Dictionary<string, object?>
+            {
+                ["path"] = artifactPath
+            }
+        };
+    }
+
+    private static Dictionary<string, object?> CreateFunctionResult(
+        string callId,
+        Dictionary<string, object?> result)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["$type"] = "functionResult",
+            ["callId"] = callId,
+            ["result"] = result
+        };
+    }
+
+    private static IReadOnlyList<string> ResolveQaArtifactInspectionPaths(string prompt)
+    {
+        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var inUpstreamArtifactsSection = false;
+        foreach (var line in prompt.Split(["\r\n", "\n"], StringSplitOptions.None))
+        {
+            if (string.Equals(line.Trim(), "Upstream artifacts:", StringComparison.OrdinalIgnoreCase))
+            {
+                inUpstreamArtifactsSection = true;
+                continue;
+            }
+
+            if (inUpstreamArtifactsSection && string.IsNullOrWhiteSpace(line))
+            {
+                inUpstreamArtifactsSection = false;
+                continue;
+            }
+
+            if (!inUpstreamArtifactsSection && !MentionsInheritedArtifactInspection(line))
+            {
+                continue;
+            }
+
+            foreach (Match match in ManagedWorkspacePathRegex.Matches(line))
+            {
+                var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
+                if (IsConcreteManagedInspectionPath(normalizedPath))
+                {
+                    paths.Add(normalizedPath);
+                }
+            }
+        }
+
+        return paths.ToList();
+    }
+
+    private static bool MentionsInheritedArtifactInspection(string line)
+    {
+        return line.Contains("upstream durable", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("upstream artifact", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("inherited implementation artifact", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("inherited evidence", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsConcreteManagedInspectionPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var slashIndex = path.IndexOf('/');
+        return slashIndex > 0 && slashIndex < path.Length - 1;
     }
 
     private static ProcessMockRuntimeArtifact CreateArtifact(
@@ -683,7 +840,9 @@ internal sealed class ProcessMockAgentRuntime(
         string RuntimeSessionKey,
         string RunKey,
         string ArtifactRoot,
-        string OutputRoot);
+        string OutputRoot,
+        string ProcessCooperationMode,
+        string WorkspaceToolProfileOverride);
 
     private sealed record ProcessMockRuntimeArtifact(
         string RelativePath,

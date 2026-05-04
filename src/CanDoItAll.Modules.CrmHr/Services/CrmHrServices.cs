@@ -3918,6 +3918,111 @@ public sealed partial class AiAgentService(
             .ToList();
     }
 
+    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsProjectionAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<Guid>? partyIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var resolvedPartyIds = partyIds?
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToList()
+            ?? [];
+        var partiesQuery = dbContext.Set<Party>()
+            .AsNoTracking()
+            .Where(item => item.PartyType == PartyType.AiAgent);
+        if (resolvedPartyIds.Count > 0)
+        {
+            partiesQuery = partiesQuery.Where(item => resolvedPartyIds.Contains(item.Id));
+        }
+
+        var parties = await partiesQuery
+            .OrderBy(item => item.DisplayName)
+            .Select(item => new
+            {
+                item.Id,
+                item.DisplayName,
+                item.Summary,
+                item.TagsJson
+            })
+            .ToListAsync(cancellationToken);
+        if (parties.Count == 0)
+        {
+            return [];
+        }
+
+        var partyIdsToLoad = parties.Select(item => item.Id).ToList();
+        var profiles = await dbContext.Set<AiAgentProfile>()
+            .AsNoTracking()
+            .Where(item => partyIdsToLoad.Contains(item.PartyId))
+            .ToDictionaryAsync(item => item.PartyId, cancellationToken);
+        var bindings = await dbContext.Set<AiResourceBinding>()
+            .AsNoTracking()
+            .Where(item => partyIdsToLoad.Contains(item.PartyId))
+            .ToDictionaryAsync(item => item.PartyId, cancellationToken);
+        var technicalFacts = await technicalAgentBridge.GetStaffingFactsAsync(partyIdsToLoad, cancellationToken);
+        var providerIds = profiles.Values
+            .Where(item => item.ProviderProfileId.HasValue)
+            .Select(item => item.ProviderProfileId!.Value)
+            .Distinct()
+            .ToList();
+        var providers = providerIds.Count == 0
+            ? new Dictionary<Guid, ProviderProfile>()
+            : await dbContext.Set<ProviderProfile>()
+                .AsNoTracking()
+                .Where(item => providerIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        return parties
+            .Select(party =>
+            {
+                profiles.TryGetValue(party.Id, out var profile);
+                bindings.TryGetValue(party.Id, out var binding);
+                technicalFacts.TryGetValue(party.Id, out var technicalFact);
+                ProviderProfile? provider = null;
+                if (profile?.ProviderProfileId is Guid providerId)
+                {
+                    providers.TryGetValue(providerId, out provider);
+                }
+
+                var capabilities = technicalFact is { Capabilities.Count: > 0 }
+                    ? technicalFact.Capabilities
+                    : profile is null
+                        ? []
+                        : DeserializeCapabilities(profile.CapabilityJson, profile.Id);
+
+                return new AiAgentStaffingFactListItemModel(
+                    party.Id,
+                    technicalFact?.TechnicalAgentId ?? binding?.TechnicalAgentId,
+                    party.DisplayName,
+                    technicalFact?.RoleTitle ?? string.Empty,
+                    party.Summary,
+                    string.IsNullOrWhiteSpace(technicalFact?.Instructions)
+                        ? profile?.Notes ?? string.Empty
+                        : technicalFact.Instructions,
+                    technicalFact?.BindingStatus ?? binding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    string.IsNullOrWhiteSpace(technicalFact?.BindingSummary)
+                        ? ResolveAiProjectionBindingSummary(binding)
+                        : technicalFact.BindingSummary,
+                    technicalFact?.ExecutionMode ?? profile?.ExecutionMode,
+                    string.IsNullOrWhiteSpace(technicalFact?.ProviderName)
+                        ? provider?.Name ?? string.Empty
+                        : technicalFact.ProviderName,
+                    string.IsNullOrWhiteSpace(technicalFact?.DefaultModel)
+                        ? profile is null ? string.Empty : ResolveDefaultModel(profile.DefaultModel, provider?.DefaultModel)
+                        : technicalFact.DefaultModel,
+                    technicalFact?.TemplateKey ?? string.Empty,
+                    ResolveAiProjectionTags(party.TagsJson, party.Id, technicalFact?.Tags ?? []),
+                    capabilities,
+                    string.IsNullOrWhiteSpace(technicalFact?.AgentsRoute)
+                        ? BuildAgentsRoute(binding?.TechnicalAgentId)
+                        : technicalFact.AgentsRoute);
+            })
+            .ToList();
+    }
+
     private async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryFromProjectionAsync(
         AppDbContext dbContext,
         CancellationToken cancellationToken)
@@ -4358,6 +4463,64 @@ public sealed partial class AiAgentService(
         }
 
         return providerDefaultModel?.Trim() ?? string.Empty;
+    }
+
+    private static string ResolveAiProjectionBindingSummary(AiResourceBinding? binding)
+    {
+        if (binding is null)
+        {
+            return "No technical binding.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(binding.LastError))
+        {
+            return $"{binding.BindingStatus}: {binding.LastError.Trim()}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(binding.BindingReason))
+        {
+            return binding.BindingReason.Trim();
+        }
+
+        return binding.BindingStatus.ToString();
+    }
+
+    private static IReadOnlyList<string> DeserializeAiProjectionTags(string json, Guid partyId)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException($"AI agent party '{partyId}' contains invalid tags JSON.");
+        }
+    }
+
+    private static IReadOnlyList<string> ResolveAiProjectionTags(
+        string json,
+        Guid partyId,
+        IReadOnlyList<string> technicalTags)
+    {
+        return DeserializeAiProjectionTags(json, partyId)
+            .Concat(technicalTags)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildAgentsRoute(Guid? technicalAgentId)
+    {
+        return technicalAgentId.HasValue
+            ? $"/agents?tab=agents&agentId={technicalAgentId.Value:D}"
+            : "/agents?tab=agents";
     }
 
     private static DateTimeOffset? ToUtcDate(DateOnly? value)

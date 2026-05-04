@@ -42,19 +42,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var successfulReceipts = detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))
             .ToList();
-        var concreteReadReceipt = ResolveLatestReceipt(
-            successfulReceipts,
-            "workspace_read_file",
-            requireConcreteProductPath: true,
-            requireConcreteDeliverableOrSourcePath: true);
+        var concreteReadReceipt = ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts);
         if (concreteReadReceipt is null)
         {
-            return "the current attempt did not read any concrete product deliverable, source, or project file";
+            return RequiresSourceOrProjectImplementationProof(candidate)
+                ? "the current attempt did not read any concrete product source or project file"
+                : "the current attempt did not read any concrete product deliverable, source, or project file";
         }
 
         var concreteMutationReceipts = successfulReceipts
             .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
-            .Where(IsConcreteProductMutationReceipt)
+            .Where(receipt => IsConcreteProductMutationReceipt(candidate, receipt))
             .ToList();
 
         var latestMutationReceipt = concreteMutationReceipts
@@ -63,7 +61,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .FirstOrDefault();
         if (latestMutationReceipt is not null)
         {
-            if (IsReceiptAfter(latestMutationReceipt, concreteReadReceipt))
+            var latestValidationReceipt = ResolveLatestRequiredImplementationValidationReceipt(
+                candidate,
+                successfulReceipts);
+            var hasValidationAfterLatestMutation = latestValidationReceipt is not null &&
+                                                   !IsReceiptAfter(latestMutationReceipt, latestValidationReceipt);
+            if (IsReceiptAfter(latestMutationReceipt, concreteReadReceipt) &&
+                !hasValidationAfterLatestMutation)
             {
                 return "workspace_read_file ran before the latest concrete product mutation";
             }
@@ -77,14 +81,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 !successfulReceipts.Any(receipt =>
                     ConcreteProductSourceWriteToolNames.Contains(NormalizeToolToken(receipt.ToolName)) &&
                     IsReceiptAfter(receipt, latestBootstrapReceipt) &&
-                    HasConcreteProductDeliverableOrSourcePath(receipt)))
+                    HasConcreteProductImplementationPath(candidate, receipt)))
             {
                 return "the latest scaffold or bootstrap tool was not followed by a concrete product deliverable, source, or project file write";
             }
 
-            var latestValidationReceipt = ResolveLatestRequiredImplementationValidationReceipt(
-                candidate,
-                successfulReceipts);
             if (latestValidationReceipt is not null &&
                 IsReceiptAfter(latestMutationReceipt, latestValidationReceipt))
             {
@@ -137,7 +138,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var latestMutationReceipt = successfulReceipts
             .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
-            .Where(IsConcreteProductMutationReceipt)
+            .Where(receipt => IsConcreteProductMutationReceipt(candidate, receipt))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
             .ThenByDescending(receipt => receipt.StartedAtUtc)
             .FirstOrDefault();
@@ -148,6 +149,123 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return string.Empty;
+    }
+
+    private static CarriedImplementationProof ResolveCarriedImplementationProof(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        CarriedImplementationProof previous)
+    {
+        if (!RequiresConcreteImplementationProof(candidate))
+        {
+            return previous;
+        }
+
+        var hasConcreteMutation = HasSuccessfulConcreteProductMutation(candidate, detail);
+        var hasConcreteImplementationProof = hasConcreteMutation
+            ? false
+            : previous.HasConcreteImplementationProof;
+        var hasRunnableApplicationProof = hasConcreteMutation
+            ? false
+            : previous.HasRunnableApplicationProof;
+
+        if (string.IsNullOrWhiteSpace(ResolveMissingConcreteImplementationProofSummary(candidate, detail)) &&
+            HasConcreteImplementationProofEvidence(candidate, detail))
+        {
+            hasConcreteImplementationProof = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(ResolveMissingRunnableApplicationProofSummary(candidate, detail)) &&
+            HasRunnableApplicationProofEvidence(detail))
+        {
+            hasRunnableApplicationProof = true;
+        }
+
+        return new CarriedImplementationProof(hasConcreteImplementationProof, hasRunnableApplicationProof);
+    }
+
+    private static string ResolveMissingConcreteImplementationProofSummaryWithCarryForward(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        CarriedImplementationProof carriedProof)
+    {
+        var summary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        if (string.IsNullOrWhiteSpace(summary) ||
+            !carriedProof.HasConcreteImplementationProof ||
+            HasSuccessfulConcreteProductMutation(candidate, detail))
+        {
+            return summary;
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveMissingRunnableApplicationProofSummaryWithCarryForward(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        CarriedImplementationProof carriedProof)
+    {
+        var summary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
+        if (string.IsNullOrWhiteSpace(summary) ||
+            !carriedProof.HasRunnableApplicationProof ||
+            HasSuccessfulConcreteProductMutation(candidate, detail))
+        {
+            return summary;
+        }
+
+        return string.Empty;
+    }
+
+    private static bool HasConcreteImplementationProofEvidence(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (ResolveProcessMockArtifactProjections(detail.Run.SerializedSessionStateJson)
+            .Any(projection => CanSatisfyConcreteImplementationProofWithProcessMock(candidate, projection)))
+        {
+            return true;
+        }
+
+        var successfulReceipts = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .ToList();
+        return ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts) is not null;
+    }
+
+    private static bool HasRunnableApplicationProofEvidence(ExecutionRunDetail detail)
+    {
+        var successfulReceipts = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .ToList();
+        return ResolveLatestReceipt(
+            successfulReceipts,
+            IsRunValidationToolName,
+            requireConcreteProductPath: true,
+            requireConcreteDeliverableOrSourcePath: false) is not null;
+    }
+
+    private static bool HasSuccessfulConcreteProductMutation(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        return detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .Any(receipt =>
+                IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)) &&
+                IsConcreteProductMutationReceipt(candidate, receipt));
+    }
+
+    private static ToolExecutionReceiptRecord? ResolveLatestImplementationProofReadReceipt(
+        DispatchCandidate candidate,
+        IEnumerable<ToolExecutionReceiptRecord> successfulReceipts)
+    {
+        return successfulReceipts
+            .Where(receipt => string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_read_file", StringComparison.Ordinal))
+            .Where(receipt => HasConcreteProductPath(receipt))
+            .Where(receipt => HasConcreteProductImplementationPath(candidate, receipt))
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .ThenByDescending(receipt => receipt.StartedAtUtc)
+            .FirstOrDefault();
     }
 
     private static bool HasBuildValidationReceipt(IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
@@ -202,6 +320,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
                text.Contains(".csproj", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool ImplementationContractMentionsTests(DispatchCandidate candidate)
+    {
+        if (!RequiresConcreteImplementationProof(candidate) ||
+            !ContainsRunnableApplicationContractSignal(candidate))
+        {
+            return false;
+        }
+
+        var textParts = new[]
+            {
+                candidate.StepRun.Title,
+                candidate.WorkBrief?.Title,
+                candidate.WorkBrief?.WorkBriefText,
+                candidate.WorkBrief?.ExpectedOutcome,
+                candidate.WorkBrief?.EvidenceExpectationSummary
+            }
+            .Concat(candidate.ExpectedArtifacts.Select(item => item.Title))
+            .Concat(candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary));
+        var text = CollapsePromptWhitespace(string.Join(' ', textParts));
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return ContainsContractWord(text, "test") ||
+               ContainsContractWord(text, "tests") ||
+               ContainsContractWord(text, "testing");
+    }
+
     private static bool ContainsContractWord(string text, string word)
     {
         return Regex.IsMatch(
@@ -219,92 +366,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            if (TryResolveMixedBlazorHostingShapeSummary(fullPath, out var summary))
+            if (TryResolveInvalidWebHostShapeSummary(fullPath, out var summary))
             {
                 return summary;
             }
         }
 
         return string.Empty;
-    }
-
-    private static bool TryResolveMixedBlazorHostingShapeSummary(
-        string projectFilePath,
-        out string summary)
-    {
-        summary = string.Empty;
-        var projectRoot = Path.GetDirectoryName(projectFilePath);
-        if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot))
-        {
-            return false;
-        }
-
-        var hasCurrentBlazorWebAppFiles =
-            File.Exists(Path.Combine(projectRoot, "Components", "App.razor")) &&
-            File.Exists(Path.Combine(projectRoot, "Components", "Routes.razor"));
-        if (!hasCurrentBlazorWebAppFiles)
-        {
-            return false;
-        }
-
-        var signals = new List<string>();
-        AddExistingRelativeFileSignal(projectRoot, "Pages/_Host.cshtml", signals);
-        AddExistingRelativeFileSignal(projectRoot, "Startup.cs", signals);
-
-        var programPath = Path.Combine(projectRoot, "Program.cs");
-        if (File.Exists(programPath))
-        {
-            string programText;
-            try
-            {
-                programText = File.ReadAllText(programPath);
-            }
-            catch (IOException)
-            {
-                programText = string.Empty;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                programText = string.Empty;
-            }
-
-            AddTextSignal(programText, "AddServerSideBlazor", signals);
-            AddTextSignal(programText, "MapBlazorHub", signals);
-            AddTextSignal(programText, "MapFallbackToPage", signals);
-            AddTextSignal(programText, "UseStartup", signals);
-        }
-
-        if (signals.Count == 0)
-        {
-            return false;
-        }
-
-        var displayPath = TryMapAbsolutePathToExternalTargetAlias(projectFilePath);
-        summary = $"detected mixed Blazor hosting shape in {displayPath}: current Blazor Web App files are present alongside legacy Blazor Server hosting artifacts or APIs ({string.Join(", ", signals.Distinct(StringComparer.OrdinalIgnoreCase))}). Repair the project to one hosting model before claiming runnable startup proof.";
-        return true;
-    }
-
-    private static void AddExistingRelativeFileSignal(
-        string root,
-        string relativePath,
-        List<string> signals)
-    {
-        var fullPath = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
-        if (File.Exists(fullPath))
-        {
-            signals.Add(relativePath);
-        }
-    }
-
-    private static void AddTextSignal(
-        string text,
-        string token,
-        List<string> signals)
-    {
-        if (text.Contains(token, StringComparison.Ordinal))
-        {
-            signals.Add($"{token}(...)");
-        }
     }
 
     private static IReadOnlyList<string> ResolveRunnableDotNetHostProjectPaths(
@@ -350,6 +418,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
         if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        if (!IsConcreteProductPath(normalized))
         {
             return;
         }
@@ -540,13 +613,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .FirstOrDefault();
     }
 
-    private static bool IsConcreteProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+    private static bool IsConcreteProductMutationReceipt(
+        DispatchCandidate candidate,
+        ToolExecutionReceiptRecord receipt)
     {
         var toolName = NormalizeToolToken(receipt.ToolName);
         if (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
             string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal))
         {
-            return HasConcreteProductDeliverableOrSourcePath(receipt);
+            return HasConcreteProductImplementationPath(candidate, receipt);
         }
 
         return HasConcreteProductPath(receipt);
@@ -586,6 +661,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return ResolveWorkspacePathsFromReceipt(receipt)
             .Any(IsConcreteProductDeliverableOrSourcePath);
+    }
+
+    private static bool HasConcreteProductImplementationPath(
+        DispatchCandidate candidate,
+        ToolExecutionReceiptRecord receipt)
+    {
+        return RequiresSourceOrProjectImplementationProof(candidate)
+            ? HasConcreteProductSourceOrProjectPath(receipt)
+            : HasConcreteProductDeliverableOrSourcePath(receipt);
+    }
+
+    private static bool HasConcreteProductSourceOrProjectPath(ToolExecutionReceiptRecord receipt)
+    {
+        return ResolveWorkspacePathsFromReceipt(receipt)
+            .Any(IsConcreteProductSourceOrProjectPath);
     }
 
     private static IReadOnlyList<string> ResolveWorkspacePathsFromReceipt(ToolExecutionReceiptRecord receipt)
@@ -665,6 +755,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return IsImplementationDeliverableOrSourceExtension(extension);
     }
 
+    private static bool IsConcreteProductSourceOrProjectPath(string promptPath)
+    {
+        return IsConcreteProductPath(promptPath) &&
+               IsCodeOrProjectExtension(Path.GetExtension(promptPath));
+    }
+
     private static bool IsImplementationDeliverableOrSourceExtension(string extension)
     {
         return IsCodeOrProjectExtension(extension) ||
@@ -691,9 +787,51 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (IsExternalTargetAliasPath(normalized))
+        {
+            return segments.Length >= 2 &&
+                   !IsExternalTargetAliasWithinManagedWorkspace(segments) &&
+                   !segments.Any(IsExternalTargetNonProductPathSegment);
+        }
+
         return segments.Length > 0 &&
                !IsManagedRootSegment(segments[0]) &&
                !segments.Any(IsNonProductPathSegment);
+    }
+
+    private static bool RequiresSourceOrProjectImplementationProof(DispatchCandidate candidate)
+    {
+        return ContainsRunnableApplicationContractSignal(candidate);
+    }
+
+    private static bool IsExternalTargetAliasWithinManagedWorkspace(IReadOnlyList<string> segments)
+    {
+        var hasCanDoItAllControlPlanePrefix = false;
+        for (var index = 0; index < segments.Count; index++)
+        {
+            if (string.Equals(segments[index], "CanDoItAll", StringComparison.OrdinalIgnoreCase))
+            {
+                hasCanDoItAllControlPlanePrefix = segments
+                    .Skip(index + 1)
+                    .Take(3)
+                    .Any(segment => string.Equals(segment, "control-plane", StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!hasCanDoItAllControlPlanePrefix ||
+                !string.Equals(segments[index], "workspace", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsExternalTargetNonProductPathSegment(string segment)
+    {
+        return string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsNonProductPathSegment(string segment)

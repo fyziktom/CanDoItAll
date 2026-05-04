@@ -92,6 +92,7 @@ public sealed class SecretScanningTests
         var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         return segments.Any(segment =>
             string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "node_modules", StringComparison.OrdinalIgnoreCase));

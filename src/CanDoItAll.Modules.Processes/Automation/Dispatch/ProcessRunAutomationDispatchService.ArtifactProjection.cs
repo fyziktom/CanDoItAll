@@ -103,7 +103,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ArtifactExpectationId = matchedExpectation?.Id,
                     ArtifactKind = matchedExpectation?.ArtifactKind ?? ResolveProcessArtifactKind(candidate, artifact),
                     Title = matchedExpectation?.Title ?? BuildArtifactTitle(artifact),
-                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                    TrustStatus = matchedExpectation is null
+                        ? ProcessArtifactTrustStatus.ReviewRequired
+                        : ResolveProjectedArtifactTrustStatus(matchedExpectation, completionStatus),
                     SensitivityLevel = matchedExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
                     ProvenanceSummary = $"Projected from AgentFramework execution run {detail.Run.Id:D} artifact '{artifact.RelativePath}'.",
                     AllowedFutureUsageSummary = "Process evidence and audit review.",
@@ -134,18 +136,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             workspaceRoot,
             workspaceScope,
+            completionStatus,
             cancellationToken);
         await ProjectWorkspaceWrittenArtifactsAsync(
             candidate,
             detail,
             workspaceRoot,
             workspaceScope,
+            completionStatus,
             cancellationToken);
         await ProjectExistingManagedArtifactFilesAsync(
             candidate,
             detail,
             workspaceRoot,
             workspaceScope,
+            completionStatus,
             cancellationToken);
         await ProjectResponseTextArtifactsAsync(
             candidate,
@@ -154,7 +159,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             workspaceRoot,
             completionStatus,
             cancellationToken);
-        await ProjectProviderNativeBrowserArtifactsAsync(candidate, detail, workspaceRoot, cancellationToken);
+        await ProjectProviderNativeBrowserArtifactsAsync(
+            candidate,
+            detail,
+            workspaceRoot,
+            completionStatus,
+            cancellationToken);
         await EnsureDecisionArtifactsForCompletedStepAsync(
             candidate,
             detail,
@@ -168,6 +178,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
         if (candidate.ExpectedArtifacts.Count == 0)
@@ -250,7 +261,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ArtifactExpectationId = expectedArtifact.Id,
                     ArtifactKind = expectedArtifact.ArtifactKind,
                     Title = expectedArtifact.Title,
-                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                    TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                     SensitivityLevel = expectedArtifact.SensitivityLevel,
                     ProvenanceSummary = $"Projected from deterministic process mock artifact '{projection.RelativePath}' at scoped workspace path '{scopedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
                     AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
@@ -277,6 +288,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
         if (candidate.ExpectedArtifacts.Count == 0)
@@ -285,7 +297,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var fileWrites = ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson);
-        if (fileWrites.Count == 0)
+        var receiptFileWrites = ResolveSuccessfulWorkspaceFileMutationReceiptPaths(detail)
+            .Select(path => new SessionFileContent(path, string.Empty))
+            .ToList();
+        if (fileWrites.Count == 0 && receiptFileWrites.Count == 0)
         {
             return;
         }
@@ -299,6 +314,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             var matchingWrite = fileWrites
                 .LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
+                    candidate.ExpectedArtifacts,
+                    expectedArtifact,
+                    file.Path,
+                    file.Content)) ??
+                receiptFileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
                     candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
@@ -380,7 +400,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ArtifactExpectationId = expectedArtifact.Id,
                     ArtifactKind = expectedArtifact.ArtifactKind,
                     Title = expectedArtifact.Title,
-                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                    TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                     SensitivityLevel = expectedArtifact.SensitivityLevel,
                     ProvenanceSummary = syntheticArtifact.Summary,
                     AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
@@ -407,11 +427,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    private static IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ExecutionRunDetail detail)
+    {
+        return detail.ToolReceipts
+            .Where(IsSuccessfulWorkspaceFileMutationReceipt)
+            .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private async Task ProjectExistingManagedArtifactFilesAsync(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
         if (candidate.ExpectedArtifacts.Count == 0)
@@ -508,7 +538,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ArtifactExpectationId = expectedArtifact.Id,
                     ArtifactKind = expectedArtifact.ArtifactKind,
                     Title = expectedArtifact.Title,
-                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                    TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                     SensitivityLevel = expectedArtifact.SensitivityLevel,
                     ProvenanceSummary = $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
                     AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
@@ -646,6 +676,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         foreach (var expectedArtifact in candidate.ExpectedArtifacts.Where(ShouldAutoRecordCompletedDecisionArtifact))
         {
+            if (candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                HasProjectedArtifactExpectationExternalReference(candidate.ExternalReferenceKeys, expectedArtifact.Id))
+            {
+                continue;
+            }
+
             var externalReferenceKey = BuildCompletedDecisionArtifactExternalReferenceKey(
                 candidate.StepRun.Id,
                 expectedArtifact.Id);
@@ -688,6 +724,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    private static bool HasProjectedArtifactExpectationExternalReference(
+        IEnumerable<string> externalReferenceKeys,
+        Guid artifactExpectationId)
+    {
+        var marker = $"|{artifactExpectationId:D}|";
+        var suffix = $"|{artifactExpectationId:D}";
+        return externalReferenceKeys.Any(key =>
+            !string.IsNullOrWhiteSpace(key) &&
+            (key.Contains(marker, StringComparison.OrdinalIgnoreCase) ||
+             key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)));
+    }
+
     private async Task ProjectResponseTextArtifactsAsync(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
@@ -703,7 +751,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
-        var normalizedResponseText = responseText.Trim().ReplaceLineEndings(Environment.NewLine);
+        var normalizedResponseText = ResolveProjectableResponseArtifactText(responseText).ReplaceLineEndings(Environment.NewLine);
         if (string.IsNullOrWhiteSpace(normalizedResponseText))
         {
             return;
@@ -760,6 +808,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             try
             {
+                if (File.Exists(targetFullPath) &&
+                    await TryRecordExistingManagedArtifactForResponseProjectionAsync(
+                        candidate,
+                        detail,
+                        expectedArtifact,
+                        workspaceRoot,
+                        projectedRelativePath,
+                        targetFullPath,
+                        completionStatus,
+                        cancellationToken))
+                {
+                    continue;
+                }
+
                 var targetDirectory = Path.GetDirectoryName(targetFullPath);
                 if (!string.IsNullOrWhiteSpace(targetDirectory))
                 {
@@ -802,7 +864,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         ArtifactExpectationId = expectedArtifact.Id,
                         ArtifactKind = expectedArtifact.ArtifactKind,
                         Title = expectedArtifact.Title,
-                        TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                        TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                         SensitivityLevel = expectedArtifact.SensitivityLevel,
                         ProvenanceSummary = $"Projected from the final assistant response for AgentFramework execution run {detail.Run.Id:D}.",
                         AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
@@ -839,18 +901,103 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    private async Task<bool> TryRecordExistingManagedArtifactForResponseProjectionAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DispatchArtifactExpectation expectedArtifact,
+        string workspaceRoot,
+        string projectedRelativePath,
+        string targetFullPath,
+        ProcessStepRunStatus completionStatus,
+        CancellationToken cancellationToken)
+    {
+        if (!ExistingManagedArtifactFileMatches(
+                candidate.ExpectedArtifacts,
+                expectedArtifact,
+                workspaceRoot,
+                projectedRelativePath))
+        {
+            return false;
+        }
+
+        var externalReferenceKey = BuildExistingManagedArtifactExternalReferenceKey(
+            detail.Run.Id,
+            expectedArtifact.Id,
+            projectedRelativePath);
+        if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+        {
+            return true;
+        }
+
+        var content = await File.ReadAllBytesAsync(targetFullPath, cancellationToken);
+        var contentType = GuessContentTypeFromPath(targetFullPath);
+        var syntheticArtifact = new ExecutionArtifactRecord(
+            Guid.NewGuid(),
+            detail.Run.Id,
+            "generated-output",
+            expectedArtifact.Title,
+            projectedRelativePath,
+            contentType,
+            "managed-workspace-file",
+            $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+            DateTimeOffset.UtcNow);
+        var placement = await storagePlacementService.PlaceAsync(
+            new StoragePlacementRequest(
+                Path.GetFileName(targetFullPath),
+                contentType,
+                content,
+                StorageUsagePurpose.Evidence,
+                ResolveStorageContentKind(contentType, targetFullPath),
+                ProjectId: candidate.Run.ProjectId,
+                RelativePathHint: BuildStorageRelativePath(candidate, syntheticArtifact)),
+            cancellationToken);
+        var recordResult = await RecordArtifactAsync(
+            new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = candidate.Run.Id,
+                StepRunId = candidate.StepRun.Id,
+                ArtifactExpectationId = expectedArtifact.Id,
+                ArtifactKind = expectedArtifact.ArtifactKind,
+                Title = expectedArtifact.Title,
+                TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
+                SensitivityLevel = expectedArtifact.SensitivityLevel,
+                ProvenanceSummary = syntheticArtifact.Summary,
+                AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+                    ? "Process evidence and audit review."
+                    : expectedArtifact.AllowedFutureUsageSummary,
+                ReviewSummary = $"Managed workspace artifact '{projectedRelativePath}' already existed when the step outcome was finalized.",
+                ManagedStoragePath = placement.RelativePath,
+                ExternalReferenceKey = externalReferenceKey
+            },
+            cancellationToken);
+        if (recordResult.IsFailure)
+        {
+            logger.LogWarning(
+                "Existing response-target artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                expectedArtifact.Title,
+                string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+            return false;
+        }
+
+        candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+        return true;
+    }
+
     private async Task ProjectProviderNativeBrowserArtifactsAsync(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
         string workspaceRoot,
+        ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
-        if (candidate.ExpectedArtifacts.Count == 0 || string.IsNullOrWhiteSpace(detail.Run.SerializedSessionStateJson))
+        if (string.IsNullOrWhiteSpace(detail.Run.SerializedSessionStateJson))
         {
             return;
         }
 
-        var browserOutputsByToolName = ResolveSuccessfulSessionToolOutputFiles(detail.Run.SerializedSessionStateJson);
+        var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
         if (browserOutputsByToolName.Count == 0)
         {
             return;
@@ -971,7 +1118,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         ArtifactExpectationId = expectedArtifact.Id,
                         ArtifactKind = expectedArtifact.ArtifactKind,
                         Title = expectedArtifact.Title,
-                        TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                        TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                         SensitivityLevel = expectedArtifact.SensitivityLevel,
                         ProvenanceSummary = $"Projected from provider-native browser output '{matchedOutputFileName}' for AgentFramework execution run {detail.Run.Id:D}.",
                         AllowedFutureUsageSummary = "Process evidence and audit review.",
@@ -1004,6 +1151,164 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     expectedArtifact.Title);
             }
         }
+
+        await ProjectProviderNativeBrowserOutputArtifactsAsync(
+            candidate,
+            detail,
+            workspaceRoot,
+            workspaceScope,
+            browserOutputsByToolName,
+            browserWorkingDirectory,
+            cancellationToken);
+    }
+
+    private async Task ProjectProviderNativeBrowserOutputArtifactsAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> browserOutputsByToolName,
+        string browserWorkingDirectory,
+        CancellationToken cancellationToken)
+    {
+        foreach (var pair in browserOutputsByToolName)
+        {
+            foreach (var outputFileName in pair.Value)
+            {
+                var normalizedOutputPath = WorkspaceScopeDescriptor.NormalizeRelativePath(outputFileName);
+                if (!IsProviderNativeBrowserArtifactPath(normalizedOutputPath))
+                {
+                    continue;
+                }
+
+                var projectedRelativePath = ResolveScopedManagedRelativePath(workspaceScope, normalizedOutputPath);
+                var externalReferenceKey = BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                    detail.Run.Id,
+                    projectedRelativePath);
+                if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+                {
+                    continue;
+                }
+
+                var sourceFullPath = Path.GetFullPath(Path.Combine(
+                    browserWorkingDirectory,
+                    normalizedOutputPath.Replace('/', Path.DirectorySeparatorChar)));
+                if (!IsWithinWorkspace(workspaceRoot, sourceFullPath) || !File.Exists(sourceFullPath))
+                {
+                    logger.LogDebug(
+                        "Skipping provider-native browser output projection for run {RunId}, step {StepRunId} because source file {SourcePath} is unavailable.",
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        sourceFullPath);
+                    continue;
+                }
+
+                var targetFullPath = Path.GetFullPath(Path.Combine(
+                    workspaceRoot,
+                    projectedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+                if (!IsWithinWorkspace(workspaceRoot, targetFullPath))
+                {
+                    logger.LogWarning(
+                        "Skipping provider-native browser output projection for run {RunId}, step {StepRunId} because target path '{ProjectedPath}' resolves outside the workspace root.",
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        projectedRelativePath);
+                    continue;
+                }
+
+                try
+                {
+                    var targetDirectory = Path.GetDirectoryName(targetFullPath);
+                    if (!string.IsNullOrWhiteSpace(targetDirectory))
+                    {
+                        Directory.CreateDirectory(targetDirectory);
+                    }
+
+                    if (!string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Copy(sourceFullPath, targetFullPath, overwrite: true);
+                    }
+
+                    var content = await File.ReadAllBytesAsync(targetFullPath, cancellationToken);
+                    var contentType = GuessContentTypeFromPath(targetFullPath);
+                    var syntheticArtifact = new ExecutionArtifactRecord(
+                        Guid.NewGuid(),
+                        detail.Run.Id,
+                        "generated-output",
+                        Path.GetFileName(projectedRelativePath),
+                        projectedRelativePath,
+                        contentType,
+                        pair.Key,
+                        $"Projected provider-native browser output '{normalizedOutputPath}' into the scoped managed artifact path.",
+                        DateTimeOffset.UtcNow);
+                    var placement = await storagePlacementService.PlaceAsync(
+                        new StoragePlacementRequest(
+                            Path.GetFileName(targetFullPath),
+                            contentType,
+                            content,
+                            StorageUsagePurpose.Evidence,
+                            ResolveStorageContentKind(contentType, targetFullPath),
+                            ProjectId: candidate.Run.ProjectId,
+                            RelativePathHint: projectedRelativePath),
+                        cancellationToken);
+
+                    var recordResult = await RecordArtifactAsync(
+                        new ProcessArtifactRecordRequest
+                        {
+                            ProcessRunId = candidate.Run.Id,
+                            StepRunId = candidate.StepRun.Id,
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = BuildArtifactTitle(syntheticArtifact),
+                            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                            SensitivityLevel = ProcessSensitivityLevel.Internal,
+                            ProvenanceSummary = $"Projected from provider-native browser output '{normalizedOutputPath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                            AllowedFutureUsageSummary = "Process evidence and audit review.",
+                            ReviewSummary = syntheticArtifact.Summary,
+                            ManagedStoragePath = placement.RelativePath,
+                            ExternalReferenceKey = externalReferenceKey
+                        },
+                        cancellationToken);
+                    if (recordResult.IsSuccess)
+                    {
+                        candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            "Provider-native browser output projection failed for run {RunId}, step {StepRunId}, output {OutputPath}. Errors: {Errors}",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id,
+                            normalizedOutputPath,
+                            string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                    }
+                }
+                catch (Exception exception)
+                {
+                    logger.LogWarning(
+                        exception,
+                        "Provider-native browser output projection failed for run {RunId}, step {StepRunId}, output {OutputPath}.",
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        normalizedOutputPath);
+                }
+            }
+        }
+    }
+
+    private static bool IsProviderNativeBrowserArtifactPath(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return false;
+        }
+
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
+        if (!normalizedPath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
     }
 
     private void EnsureProviderNativeBrowserOutputDirectories(DispatchCandidate candidate)

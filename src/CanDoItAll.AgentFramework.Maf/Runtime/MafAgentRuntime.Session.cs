@@ -22,6 +22,12 @@ public sealed partial class MafAgentRuntime
             return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
         }
 
+        if (isApprovalContinuation && (session.Compatibility?.PendingApprovals.Count ?? 0) > 0)
+        {
+            throw new InvalidOperationException(
+                "Cannot continue pending tool approvals because serialized Microsoft Agent Framework session state is unavailable or incompatible with the current provider/history mode.");
+        }
+
         return await runtimeAgent.CreateSessionAsync(cancellationToken);
     }
 

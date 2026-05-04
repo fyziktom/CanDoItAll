@@ -29,13 +29,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessWorkBrief? WorkBrief,
         Guid TechnicalAgentId,
         IReadOnlyList<DispatchArtifactExpectation> ExpectedArtifacts,
+        IReadOnlySet<Guid> RecordedArtifactExpectationIds,
         IReadOnlyList<DispatchArtifactInput> ArtifactInputs,
         HashSet<string> ExternalReferenceKeys,
         Guid? ChatSessionId,
         Guid? RecoveryExecutionRunId,
         string ManualRecoveryDirective,
         IReadOnlyList<DispatchBranchOutcome> BranchOutcomes,
-        bool RequiresExplicitBranchOutcomeSelection);
+        bool RequiresExplicitBranchOutcomeSelection,
+        AgentProcessCooperationMetadata CooperationMetadata);
 
     private sealed record ConcurrentAutomationExecution(
         Guid ExecutionRunId,
@@ -81,6 +83,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> MissingRequiredTools,
         int AttemptNumber,
         Guid? SelectedBranchOutcomeId);
+
+    private readonly record struct CarriedImplementationProof(
+        bool HasConcreteImplementationProof,
+        bool HasRunnableApplicationProof)
+    {
+        public static CarriedImplementationProof None { get; } = new(false, false);
+    }
 
     private sealed record ProviderFallbackResolution(
         ProviderProfile Provider,

@@ -57,6 +57,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         IEnumerable<string> successfulToolNamesFromPriorAttempts)
     {
+        return ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
+            candidate,
+            detail,
+            successfulToolNamesFromPriorAttempts,
+            CarriedImplementationProof.None);
+    }
+
+    private static IReadOnlyList<string> ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IEnumerable<string> successfulToolNamesFromPriorAttempts,
+        CarriedImplementationProof carriedImplementationProof)
+    {
         var requiredToolNames = ResolveRequiredToolNames(candidate);
         if (requiredToolNames.Count == 0)
         {
@@ -89,7 +102,40 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        return missing;
+        return CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof)
+            ? missing
+                .Where(toolName =>
+                    !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
+                    !IsImplementationValidationToolName(toolName) &&
+                    !(string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) &&
+                      CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail)))
+                .ToList()
+            : missing;
+    }
+
+    private static bool CanSatisfyImplementationProofToolsWithCarriedProof(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        CarriedImplementationProof carriedImplementationProof)
+    {
+        return RequiresConcreteImplementationProof(candidate) &&
+               carriedImplementationProof.HasConcreteImplementationProof &&
+               !HasSuccessfulConcreteProductMutation(candidate, detail);
+    }
+
+    private static bool CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        return RequiresConcreteImplementationProof(candidate) &&
+               !HasSuccessfulConcreteProductMutation(candidate, detail) &&
+               candidate.ExpectedArtifacts
+                   .Where(expectedArtifact => expectedArtifact.IsRequired &&
+                                              expectedArtifact.ArtifactKind != ProcessArtifactKind.Decision)
+                   .All(expectedArtifact => HasRecordedOrExecutionArtifactForExpectedArtifact(
+                       candidate,
+                       detail,
+                       expectedArtifact));
     }
 
     private static IReadOnlyList<string> ResolveProcessMockSatisfiedToolNames(
@@ -105,6 +151,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var satisfiedToolNames = new List<string>();
+        if (requiredToolNames.Contains("workspace_write_file", StringComparer.Ordinal))
+        {
+            satisfiedToolNames.Add("workspace_write_file");
+        }
+
         if (RequiresGovernedInspection(candidate.StepRun))
         {
             satisfiedToolNames.AddRange(requiredToolNames
@@ -116,7 +167,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (hasProcessMockImplementationProof)
         {
             satisfiedToolNames.AddRange(requiredToolNames
-                .Where(toolName => ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal)));
+                .Where(toolName =>
+                    ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) ||
+                    IsImplementationValidationToolName(toolName)));
         }
 
         return satisfiedToolNames
@@ -152,6 +205,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                IsImplementationValidationToolName(normalizedToolName);
     }
 
+    private static bool HasUnrecoverableMissingRequiredTool(IReadOnlyList<string> missingRequiredTools)
+    {
+        return missingRequiredTools.Any(toolName =>
+            !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !IsImplementationValidationToolName(toolName));
+    }
+
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
@@ -170,11 +231,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         string? responseText)
     {
-        var run = detail.Run;
-        var missingRequiredTools = ResolveMissingRequiredToolExecutionsWithCarryForward(
+        return ResolveCompletionStatusWithCarryForward(
             candidate,
             detail,
-            successfulToolNamesFromPriorAttempts);
+            successfulToolNamesFromPriorAttempts,
+            responseText,
+            CarriedImplementationProof.None);
+    }
+
+    private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IEnumerable<string> successfulToolNamesFromPriorAttempts,
+        string? responseText,
+        CarriedImplementationProof carriedImplementationProof)
+    {
+        var run = detail.Run;
+        var missingRequiredTools = ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
+            candidate,
+            detail,
+            successfulToolNamesFromPriorAttempts,
+            carriedImplementationProof);
         if (run.State != ExecutionState.Completed)
         {
             return run.PendingApprovals.Count > 0
@@ -200,12 +277,38 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var hasDeclaredOutcome = TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome, out var processOutcome);
         if (hasDeclaredOutcome && declaredOutcome.Status != ProcessStepRunStatus.Completed)
         {
-            var contextValidation = ValidateProcessStepOutcomeContext(
+            var contextValidation = ValidateProcessStepOutcomeContextWithCarryForward(
                 candidate,
                 detail,
                 processOutcome,
                 declaredOutcome,
-                ResolveOutputInspectionText(responseText));
+                ResolveOutputInspectionText(responseText),
+                carriedImplementationProof);
+            if (contextValidation.IsValid &&
+                TryResolveRepairBranchCompletionFromBlockedOutcome(
+                    candidate,
+                    detail,
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    carriedImplementationProof,
+                    out _))
+            {
+                return ProcessStepRunStatus.Completed;
+            }
+
+            if (contextValidation.IsValid &&
+                TryResolveTerminalEscalationCompletionFromBlockedOutcome(
+                    candidate,
+                    detail,
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    out _))
+            {
+                return ProcessStepRunStatus.Completed;
+            }
+
             if (contextValidation.IsValid &&
                 (unresolvedCriticalToolFailures.Count > 0 || missingRequiredTools.Count == 0))
             {
@@ -214,6 +317,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (!contextValidation.IsValid)
             {
+                if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                    HasUnrecoverableMissingRequiredTool(missingRequiredTools))
+                {
+                    return ProcessStepRunStatus.Failed;
+                }
+
                 return contextValidation.Errors.Any(error =>
                     error.Code is "process.step_outcome.context.branch_required" or "process.step_outcome.context.branch_invalid")
                     ? ProcessStepRunStatus.Failed
@@ -228,11 +337,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        if (missingRequiredTools.Count > 0)
-        {
-            return ProcessStepRunStatus.Failed;
-        }
-
         if (unresolvedCriticalToolFailures.Count > 0)
         {
             return ProcessStepRunStatus.Failed;
@@ -244,24 +348,39 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var inspectionText = ResolveOutputInspectionText(responseText);
+        var missingUpstreamArtifactInputSummary = ResolveMissingUpstreamArtifactInputSummary(candidate);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
-        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
-        var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
+        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummaryWithCarryForward(
+            candidate,
+            detail,
+            carriedImplementationProof);
+        var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummaryWithCarryForward(
+            candidate,
+            detail,
+            carriedImplementationProof);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
         if (hasDeclaredOutcome)
         {
-            var contextValidation = ValidateProcessStepOutcomeContext(
+            var contextValidation = ValidateProcessStepOutcomeContextWithCarryForward(
                 candidate,
                 detail,
                 processOutcome,
                 declaredOutcome,
-                inspectionText);
+                inspectionText,
+                carriedImplementationProof);
             if (!contextValidation.IsValid)
             {
+                if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                    HasUnrecoverableMissingRequiredTool(missingRequiredTools))
+                {
+                    return ProcessStepRunStatus.Failed;
+                }
+
                 return contextValidation.Errors.Any(error =>
                     error.Code is "process.step_outcome.context.branch_required" or "process.step_outcome.context.branch_invalid")
                     ? ProcessStepRunStatus.Failed
@@ -271,27 +390,43 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
+                HasUnrecoverableMissingRequiredTool(missingRequiredTools))
+            {
+                return ProcessStepRunStatus.Failed;
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
+                 !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
                  !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
                  !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
                  !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
                  !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
                  !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+                 !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
                  !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
                  !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
             {
                 return ProcessStepRunStatus.Blocked;
             }
 
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                missingRequiredTools.Count > 0)
+            {
+                return ProcessStepRunStatus.Failed;
+            }
+
             return declaredOutcome.Status;
         }
 
-        if (!string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
+        if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
+            !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
             !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
             !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
             !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+            !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
             !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
             !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
         {
@@ -304,6 +439,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         if (RequiresGovernedStepOutcome(candidate.StepRun))
+        {
+            return ProcessStepRunStatus.Failed;
+        }
+
+        if (missingRequiredTools.Count > 0)
         {
             return ProcessStepRunStatus.Failed;
         }
@@ -332,12 +472,34 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         string? responseText)
     {
-        return BuildCompletionReasonCore(
+        return BuildCompletionReasonWithCarryForward(
             candidate,
             detail,
             stepTitle,
-            ResolveMissingRequiredToolExecutionsWithCarryForward(candidate, detail, successfulToolNamesFromPriorAttempts),
-            responseText);
+            successfulToolNamesFromPriorAttempts,
+            responseText,
+            CarriedImplementationProof.None);
+    }
+
+    private static string BuildCompletionReasonWithCarryForward(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string stepTitle,
+        IEnumerable<string> successfulToolNamesFromPriorAttempts,
+        string? responseText,
+        CarriedImplementationProof carriedImplementationProof)
+    {
+        return BuildCompletionReasonCoreWithCarryForward(
+            candidate,
+            detail,
+            stepTitle,
+            ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
+                candidate,
+                detail,
+                successfulToolNamesFromPriorAttempts,
+                carriedImplementationProof),
+            responseText,
+            carriedImplementationProof);
     }
 
     private static bool TryResolveDeclaredStepOutcome(string? responseText, out DeclaredStepOutcome declaredOutcome)
@@ -456,6 +618,116 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return toolNames.ToList();
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ExecutionRunDetail detail)
+    {
+        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var pair in ResolveSuccessfulSessionToolOutputFiles(detail.Run.SerializedSessionStateJson ?? string.Empty))
+        {
+            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
+        }
+
+        foreach (var pair in ResolveExecutionLogBrowserToolOutputFiles(detail.ExecutionLog))
+        {
+            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
+        }
+
+        return outputFilesByToolName.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            StringComparer.Ordinal);
+    }
+
+    private static void AddBrowserOutputFiles(
+        IDictionary<string, HashSet<string>> outputFilesByToolName,
+        string toolName,
+        IEnumerable<string> outputFiles)
+    {
+        var normalizedToolName = NormalizeToolToken(toolName);
+        if (string.IsNullOrWhiteSpace(normalizedToolName) ||
+            !normalizedToolName.StartsWith("browser_", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!outputFilesByToolName.TryGetValue(normalizedToolName, out var files))
+        {
+            files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            outputFilesByToolName[normalizedToolName] = files;
+        }
+
+        foreach (var outputFile in outputFiles)
+        {
+            if (!string.IsNullOrWhiteSpace(outputFile))
+            {
+                files.Add(WorkspaceScopeDescriptor.NormalizeRelativePath(outputFile));
+            }
+        }
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveExecutionLogBrowserToolOutputFiles(IReadOnlyList<ExecutionLogEntry> executionLog)
+    {
+        if (executionLog.Count == 0)
+        {
+            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        }
+
+        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var entry in executionLog)
+        {
+            if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
+                entry.State == ExecutionState.Failed ||
+                !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
+                !toolName.StartsWith("browser_", StringComparison.Ordinal) ||
+                !TryResolveExecutionLogFilenameArgument(entry.Message, out var outputFileName))
+            {
+                continue;
+            }
+
+            if (!outputFilesByToolName.TryGetValue(toolName, out var outputFiles))
+            {
+                outputFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                outputFilesByToolName[toolName] = outputFiles;
+            }
+
+            outputFiles.Add(WorkspaceScopeDescriptor.NormalizeRelativePath(outputFileName));
+        }
+
+        return outputFilesByToolName.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            StringComparer.Ordinal);
+    }
+
+    private static bool TryResolveExecutionLogFilenameArgument(string message, out string fileName)
+    {
+        fileName = string.Empty;
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        const string marker = "filename=\"";
+        var start = message.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        start += marker.Length;
+        var end = message.IndexOf('"', start);
+        if (end <= start)
+        {
+            return false;
+        }
+
+        fileName = message[start..end].Trim();
+        return !string.IsNullOrWhiteSpace(fileName);
     }
 
     private static bool TryResolveExecutionLogInvokedToolName(string message, out string toolName)
@@ -624,6 +896,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                 var content = TryResolveStringProperty(resultContent, "content") ?? string.Empty;
                 return new SessionFileContent(path.Trim(), content);
+            });
+    }
+
+    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionPathStats(string? serializedSessionStateJson)
+    {
+        return ResolveSuccessfulSessionFileContents(
+            serializedSessionStateJson,
+            static toolName => string.Equals(toolName, "workspace_stat_path", StringComparison.Ordinal),
+            static callContent =>
+            {
+                if (!callContent.TryGetProperty("arguments", out var arguments) ||
+                    arguments.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                var path = TryResolveStringProperty(arguments, "path");
+                return string.IsNullOrWhiteSpace(path)
+                    ? null
+                    : new SessionFileContent(path.Trim(), string.Empty);
+            },
+            static resultContent =>
+            {
+                var path = TryResolveStringProperty(resultContent, "path");
+                return string.IsNullOrWhiteSpace(path)
+                    ? null
+                    : new SessionFileContent(path.Trim(), string.Empty);
             });
     }
 

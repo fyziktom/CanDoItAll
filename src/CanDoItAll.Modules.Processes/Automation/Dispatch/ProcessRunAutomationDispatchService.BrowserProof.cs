@@ -42,7 +42,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return string.Empty;
         }
 
-        var outputsByToolName = ResolveSuccessfulSessionToolOutputFiles(detail.Run.SerializedSessionStateJson ?? string.Empty);
+        var outputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
         if (!outputsByToolName.TryGetValue("browser_snapshot", out var snapshotFiles) ||
             snapshotFiles.Count == 0)
         {

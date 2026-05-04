@@ -32,6 +32,8 @@ public interface IProcessesCoordinator
 
     Task TransitionStepAsync(ProcessStepTransitionRequest request, CancellationToken cancellationToken = default);
 
+    Task RerunAgentStepAsync(ProcessAgentStepRerunRequest request, CancellationToken cancellationToken = default);
+
     Task ResolveAssignmentAsync(ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken = default);
 
     Task<Guid> RecordArtifactAsync(ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default);
@@ -199,6 +201,16 @@ public sealed class ProcessesCoordinator(IServiceScopeFactory scopeFactory) : IP
             {
                 var service = provider.GetRequiredService<ProcessesService>();
                 EnsureSuccess(await service.TransitionStepAsync(request, cancellationToken));
+            });
+    }
+
+    public Task RerunAgentStepAsync(ProcessAgentStepRerunRequest request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteWithScopeAsync(
+            async provider =>
+            {
+                var service = provider.GetRequiredService<ProcessesService>();
+                EnsureSuccess(await service.RerunAgentStepAsync(request, cancellationToken));
             });
     }
 

@@ -3,11 +3,183 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+public enum AgentWorkspaceToolProfileKind
+{
+    Custom,
+    ReadOnly,
+    SoftwareDevelopment,
+    QualityValidation,
+    ArchitectureReview,
+    SecurityReview,
+    BusinessAnalysis
+}
+
+public enum AgentWorkspaceToolPermissionKind
+{
+    ReadFiles,
+    WriteFiles,
+    ManagePaths,
+    RunValidationCommands,
+    ScaffoldProjects,
+    RunLocalScripts,
+    TransformArtifacts
+}
+
+public static class AgentWorkspaceToolAccessProfiles
+{
+    public const string CustomProfileKey = "custom";
+    public const string ReadOnlyProfileKey = "read-only";
+    public const string SoftwareDevelopmentProfileKey = "software-development";
+    public const string QualityValidationProfileKey = "quality-validation";
+    public const string ArchitectureReviewProfileKey = "architecture-review";
+    public const string SecurityReviewProfileKey = "security-review";
+    public const string BusinessAnalysisProfileKey = "business-analysis";
+
+    public static AgentWorkspaceToolAccessSettings CreateSettings(AgentWorkspaceToolProfileKind profile)
+    {
+        return profile switch
+        {
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = profile,
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanRunValidationCommands = true,
+                CanRunLocalScripts = true,
+                CanScaffoldProjects = true,
+                CanManageWorkspacePaths = true,
+                CanTransformArtifacts = true
+            },
+            AgentWorkspaceToolProfileKind.QualityValidation => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = profile,
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanRunValidationCommands = true,
+                CanRunLocalScripts = true,
+                CanTransformArtifacts = true
+            },
+            AgentWorkspaceToolProfileKind.ArchitectureReview => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = profile,
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanTransformArtifacts = true
+            },
+            AgentWorkspaceToolProfileKind.SecurityReview => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = profile,
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanRunValidationCommands = true,
+                CanTransformArtifacts = true
+            },
+            AgentWorkspaceToolProfileKind.BusinessAnalysis => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = profile,
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanTransformArtifacts = true
+            },
+            AgentWorkspaceToolProfileKind.ReadOnly => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = profile,
+                CanReadFiles = true
+            },
+            _ => new AgentWorkspaceToolAccessSettings
+            {
+                Profile = AgentWorkspaceToolProfileKind.Custom,
+                CanReadFiles = true
+            }
+        };
+    }
+
+    public static string GetProfileKey(AgentWorkspaceToolProfileKind profile)
+    {
+        return profile switch
+        {
+            AgentWorkspaceToolProfileKind.ReadOnly => ReadOnlyProfileKey,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment => SoftwareDevelopmentProfileKey,
+            AgentWorkspaceToolProfileKind.QualityValidation => QualityValidationProfileKey,
+            AgentWorkspaceToolProfileKind.ArchitectureReview => ArchitectureReviewProfileKey,
+            AgentWorkspaceToolProfileKind.SecurityReview => SecurityReviewProfileKey,
+            AgentWorkspaceToolProfileKind.BusinessAnalysis => BusinessAnalysisProfileKey,
+            _ => CustomProfileKey
+        };
+    }
+
+    public static bool TryParseProfileKey(string? profileKey, out AgentWorkspaceToolProfileKind profile)
+    {
+        profile = AgentWorkspaceToolProfileKind.Custom;
+        if (string.IsNullOrWhiteSpace(profileKey))
+        {
+            return false;
+        }
+
+        var normalized = profileKey.Trim();
+        if (string.Equals(normalized, CustomProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.Custom;
+            return true;
+        }
+
+        if (string.Equals(normalized, ReadOnlyProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.ReadOnly;
+            return true;
+        }
+
+        if (string.Equals(normalized, SoftwareDevelopmentProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.SoftwareDevelopment;
+            return true;
+        }
+
+        if (string.Equals(normalized, QualityValidationProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.QualityValidation;
+            return true;
+        }
+
+        if (string.Equals(normalized, ArchitectureReviewProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.ArchitectureReview;
+            return true;
+        }
+
+        if (string.Equals(normalized, SecurityReviewProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.SecurityReview;
+            return true;
+        }
+
+        if (string.Equals(normalized, BusinessAnalysisProfileKey, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = AgentWorkspaceToolProfileKind.BusinessAnalysis;
+            return true;
+        }
+
+        return false;
+    }
+}
+
 public sealed class AgentWorkspaceToolAccessSettings
 {
+    public AgentWorkspaceToolProfileKind Profile { get; set; } = AgentWorkspaceToolProfileKind.Custom;
+
     public bool CanReadFiles { get; set; } = true;
 
     public bool CanWriteFiles { get; set; }
+
+    public bool CanRunValidationCommands { get; set; }
+
+    public bool CanRunLocalScripts { get; set; }
+
+    public bool CanScaffoldProjects { get; set; }
+
+    public bool CanManageWorkspacePaths { get; set; }
+
+    public bool CanTransformArtifacts { get; set; }
 
     public List<string> AllowedExternalTargetAliases { get; set; } = [];
 
@@ -23,8 +195,14 @@ public sealed class AgentWorkspaceToolAccessSettings
 public static class AgentWorkspaceToolAccessMetadata
 {
     private const string RootPropertyName = "workspaceTools";
+    private const string ProfilePropertyName = "profile";
     private const string CanReadFilesPropertyName = "canReadFiles";
     private const string CanWriteFilesPropertyName = "canWriteFiles";
+    private const string CanRunValidationCommandsPropertyName = "canRunValidationCommands";
+    private const string CanRunLocalScriptsPropertyName = "canRunLocalScripts";
+    private const string CanScaffoldProjectsPropertyName = "canScaffoldProjects";
+    private const string CanManageWorkspacePathsPropertyName = "canManageWorkspacePaths";
+    private const string CanTransformArtifactsPropertyName = "canTransformArtifacts";
     private const string AllowedExternalTargetAliasesPropertyName = "allowedExternalTargetAliases";
     private const string CanReadStoragePropertyName = "canReadStorage";
     private const string CanWriteStoragePropertyName = "canWriteStorage";
@@ -50,8 +228,14 @@ public static class AgentWorkspaceToolAccessMetadata
 
             var settings = new AgentWorkspaceToolAccessSettings
             {
+                Profile = TryReadProfile(workspaceTools),
                 CanReadFiles = TryReadBoolean(workspaceTools, CanReadFilesPropertyName, defaultValue: true),
                 CanWriteFiles = TryReadBoolean(workspaceTools, CanWriteFilesPropertyName),
+                CanRunValidationCommands = TryReadBoolean(workspaceTools, CanRunValidationCommandsPropertyName),
+                CanRunLocalScripts = TryReadBoolean(workspaceTools, CanRunLocalScriptsPropertyName),
+                CanScaffoldProjects = TryReadBoolean(workspaceTools, CanScaffoldProjectsPropertyName),
+                CanManageWorkspacePaths = TryReadBoolean(workspaceTools, CanManageWorkspacePathsPropertyName),
+                CanTransformArtifacts = TryReadBoolean(workspaceTools, CanTransformArtifactsPropertyName),
                 CanReadStorage = TryReadBoolean(workspaceTools, CanReadStoragePropertyName),
                 CanWriteStorage = TryReadBoolean(workspaceTools, CanWriteStoragePropertyName),
                 AllowAllStorageCatalogs = TryReadBoolean(workspaceTools, AllowAllStorageCatalogsPropertyName)
@@ -104,8 +288,14 @@ public static class AgentWorkspaceToolAccessMetadata
 
         root[RootPropertyName] = new JsonObject
         {
+            [ProfilePropertyName] = AgentWorkspaceToolAccessProfiles.GetProfileKey(normalized.Profile),
             [CanReadFilesPropertyName] = normalized.CanReadFiles,
             [CanWriteFilesPropertyName] = normalized.CanWriteFiles,
+            [CanRunValidationCommandsPropertyName] = normalized.CanRunValidationCommands,
+            [CanRunLocalScriptsPropertyName] = normalized.CanRunLocalScripts,
+            [CanScaffoldProjectsPropertyName] = normalized.CanScaffoldProjects,
+            [CanManageWorkspacePathsPropertyName] = normalized.CanManageWorkspacePaths,
+            [CanTransformArtifactsPropertyName] = normalized.CanTransformArtifacts,
             [AllowedExternalTargetAliasesPropertyName] = new JsonArray(
                 normalized.AllowedExternalTargetAliases
                     .Select(alias => JsonValue.Create(alias))
@@ -126,6 +316,12 @@ public static class AgentWorkspaceToolAccessMetadata
     {
         ArgumentNullException.ThrowIfNull(settings);
 
+        var profile = Enum.IsDefined(settings.Profile)
+            ? settings.Profile
+            : AgentWorkspaceToolProfileKind.Custom;
+        var profileSettings = profile == AgentWorkspaceToolProfileKind.Custom
+            ? new AgentWorkspaceToolAccessSettings { CanReadFiles = false }
+            : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
         var allowedExternalAliases = settings.AllowedExternalTargetAliases
             .Select(NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
@@ -140,16 +336,118 @@ public static class AgentWorkspaceToolAccessMetadata
             .OrderBy(storageId => storageId)
             .ToList();
 
+        var canManageWorkspacePaths = settings.CanManageWorkspacePaths || profileSettings.CanManageWorkspacePaths;
+        var canScaffoldProjects = settings.CanScaffoldProjects || profileSettings.CanScaffoldProjects;
+        var canTransformArtifacts = settings.CanTransformArtifacts || profileSettings.CanTransformArtifacts;
+        var canWriteFiles = settings.CanWriteFiles ||
+                            profileSettings.CanWriteFiles ||
+                            canManageWorkspacePaths ||
+                            canScaffoldProjects ||
+                            canTransformArtifacts;
+        var canRunValidationCommands = settings.CanRunValidationCommands || profileSettings.CanRunValidationCommands;
+        var canRunLocalScripts = settings.CanRunLocalScripts || profileSettings.CanRunLocalScripts;
+
         return new AgentWorkspaceToolAccessSettings
         {
-            CanReadFiles = settings.CanReadFiles || settings.CanWriteFiles || allowedExternalAliases.Count > 0,
-            CanWriteFiles = settings.CanWriteFiles,
+            Profile = profile,
+            CanReadFiles = settings.CanReadFiles ||
+                           profileSettings.CanReadFiles ||
+                           canWriteFiles ||
+                           canRunValidationCommands ||
+                           canRunLocalScripts ||
+                           allowedExternalAliases.Count > 0,
+            CanWriteFiles = canWriteFiles,
+            CanRunValidationCommands = canRunValidationCommands,
+            CanRunLocalScripts = canRunLocalScripts,
+            CanScaffoldProjects = canScaffoldProjects,
+            CanManageWorkspacePaths = canManageWorkspacePaths,
+            CanTransformArtifacts = canTransformArtifacts,
             AllowedExternalTargetAliases = allowedExternalAliases,
             CanReadStorage = settings.CanReadStorage || settings.CanWriteStorage,
             CanWriteStorage = settings.CanWriteStorage,
             AllowAllStorageCatalogs = settings.AllowAllStorageCatalogs,
             AllowedStorageCatalogIds = allowedStorageIds
         };
+    }
+
+    public static bool IsWorkspaceToolAllowed(
+        AgentWorkspaceToolAccessSettings settings,
+        string? toolName)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        if (!TryResolveWorkspaceToolPermission(toolName, out var permission))
+        {
+            return true;
+        }
+
+        var normalized = Normalize(settings);
+        return permission switch
+        {
+            AgentWorkspaceToolPermissionKind.ReadFiles => normalized.CanReadFiles,
+            AgentWorkspaceToolPermissionKind.WriteFiles => normalized.CanWriteFiles,
+            AgentWorkspaceToolPermissionKind.ManagePaths => normalized.CanManageWorkspacePaths,
+            AgentWorkspaceToolPermissionKind.RunValidationCommands => normalized.CanRunValidationCommands,
+            AgentWorkspaceToolPermissionKind.ScaffoldProjects => normalized.CanScaffoldProjects,
+            AgentWorkspaceToolPermissionKind.RunLocalScripts => normalized.CanRunLocalScripts,
+            AgentWorkspaceToolPermissionKind.TransformArtifacts => normalized.CanTransformArtifacts,
+            _ => false
+        };
+    }
+
+    public static bool TryResolveWorkspaceToolPermission(
+        string? toolName,
+        out AgentWorkspaceToolPermissionKind permission)
+    {
+        permission = AgentWorkspaceToolPermissionKind.ReadFiles;
+        var normalizedToolName = NormalizeWorkspaceToolName(toolName);
+        if (string.IsNullOrWhiteSpace(normalizedToolName))
+        {
+            return false;
+        }
+
+        switch (normalizedToolName)
+        {
+            case "workspace_execution_boundary":
+            case "workspace_list_files":
+            case "workspace_search":
+            case "workspace_read_file":
+            case "workspace_stat_path":
+            case "workspace_diff_text":
+            case "workspace_git_status":
+            case "workspace_git_diff":
+            case "workspace_inspect_spreadsheet":
+                permission = AgentWorkspaceToolPermissionKind.ReadFiles;
+                return true;
+            case "workspace_create_directory":
+            case "workspace_write_file":
+            case "workspace_append_file":
+                permission = AgentWorkspaceToolPermissionKind.WriteFiles;
+                return true;
+            case "workspace_copy_path":
+            case "workspace_move_path":
+            case "workspace_delete_path":
+                permission = AgentWorkspaceToolPermissionKind.ManagePaths;
+                return true;
+            case "workspace_dotnet_restore":
+            case "workspace_dotnet_build":
+            case "workspace_dotnet_test":
+            case "workspace_dotnet_run":
+                permission = AgentWorkspaceToolPermissionKind.RunValidationCommands;
+                return true;
+            case "workspace_dotnet_new":
+                permission = AgentWorkspaceToolPermissionKind.ScaffoldProjects;
+                return true;
+            case "workspace_python_run_file":
+            case "workspace_pwsh_run_script":
+                permission = AgentWorkspaceToolPermissionKind.RunLocalScripts;
+                return true;
+            case "workspace_convert_document":
+                permission = AgentWorkspaceToolPermissionKind.TransformArtifacts;
+                return true;
+            default:
+                return false;
+        }
     }
 
     public static string? NormalizeExternalTargetAlias(string? pathOrAlias)
@@ -248,8 +546,14 @@ public static class AgentWorkspaceToolAccessMetadata
 
     private static bool IsDefault(AgentWorkspaceToolAccessSettings settings)
     {
-        return settings.CanReadFiles &&
+        return settings.Profile == AgentWorkspaceToolProfileKind.Custom &&
+               settings.CanReadFiles &&
                !settings.CanWriteFiles &&
+               !settings.CanRunValidationCommands &&
+               !settings.CanRunLocalScripts &&
+               !settings.CanScaffoldProjects &&
+               !settings.CanManageWorkspacePaths &&
+               !settings.CanTransformArtifacts &&
                settings.AllowedExternalTargetAliases.Count == 0 &&
                !settings.CanReadStorage &&
                !settings.CanWriteStorage &&
@@ -262,6 +566,25 @@ public static class AgentWorkspaceToolAccessMetadata
         return node[propertyName] is JsonValue value && value.TryGetValue<bool>(out var parsedValue)
             ? parsedValue
             : defaultValue;
+    }
+
+    private static AgentWorkspaceToolProfileKind TryReadProfile(JsonObject node)
+    {
+        if (node[ProfilePropertyName] is not JsonValue value ||
+            !value.TryGetValue<string>(out var profileKey) ||
+            !AgentWorkspaceToolAccessProfiles.TryParseProfileKey(profileKey, out var profile))
+        {
+            return AgentWorkspaceToolProfileKind.Custom;
+        }
+
+        return profile;
+    }
+
+    private static string NormalizeWorkspaceToolName(string? toolName)
+    {
+        return string.IsNullOrWhiteSpace(toolName)
+            ? string.Empty
+            : toolName.Trim().Replace('-', '_');
     }
 
     private static JsonObject ParseObject(string? configurationJson)

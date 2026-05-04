@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
@@ -92,15 +93,16 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
 
             if (party is null)
             {
+                var projectedPartyId = partyId ?? Guid.NewGuid();
                 party = new Party
                 {
-                    Id = partyId ?? Guid.NewGuid(),
+                    Id = projectedPartyId,
                     PartyType = PartyType.AiAgent,
                     LifecycleStatus = projectedLifecycleStatus,
                     DisplayName = projectedDisplayName,
                     Summary = projectedSummary,
                     ExtendedDataJson = "{}",
-                    TagsJson = "[]",
+                    TagsJson = BuildProjectedPartyTagsJson("[]", agent.Tags, projectedPartyId),
                     LastChangedBy = "agent-framework-sync",
                     CreatedAtUtc = timestamp,
                     UpdatedAtUtc = timestamp
@@ -127,6 +129,13 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 if (party.LifecycleStatus != projectedLifecycleStatus)
                 {
                     party.LifecycleStatus = projectedLifecycleStatus;
+                    partyChanged = true;
+                }
+
+                var projectedTagsJson = BuildProjectedPartyTagsJson(party.TagsJson, agent.Tags, party.Id);
+                if (!string.Equals(party.TagsJson, projectedTagsJson, StringComparison.Ordinal))
+                {
+                    party.TagsJson = projectedTagsJson;
                     partyChanged = true;
                 }
 
@@ -283,6 +292,44 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         if (changed)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static string BuildProjectedPartyTagsJson(
+        string existingTagsJson,
+        IReadOnlyList<string> agentTags,
+        Guid partyId)
+    {
+        var tags = DeserializeProjectedPartyTags(existingTagsJson, partyId)
+            .Concat(agentTags)
+            .Append(AgentFrameworkCrmHrMetadata.BuildPartyTag(partyId))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return JsonSerializer.Serialize(tags);
+    }
+
+    private static IReadOnlyList<string> DeserializeProjectedPartyTags(
+        string existingTagsJson,
+        Guid partyId)
+    {
+        if (string.IsNullOrWhiteSpace(existingTagsJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(existingTagsJson) ?? [];
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"AI agent party '{partyId:D}' contains invalid tags JSON.",
+                exception);
         }
     }
 

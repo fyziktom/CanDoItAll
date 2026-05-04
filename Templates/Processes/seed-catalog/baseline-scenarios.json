@@ -96,7 +96,7 @@
       {
         "StepKey": "qa-validation",
         "TargetStatus": "Completed",
-        "SelectedBranchOutcomeKey": "",
+        "SelectedBranchOutcomeKey": "quality-accepted",
         "Reason": "Regression and browser proof accepted for changed surfaces.",
         "DecidedBy": "Klára QA"
       },

@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -63,8 +64,11 @@ public sealed partial class ProcessesService
             return Result.Failure(Error.Validation("Launch plan is required.", "processes.launch.plan-required"));
         }
 
-        // Keep projection repair outside the launch-plan transaction to avoid self-blocking SQLite writes.
-        await aiAgentService.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        logger.LogInformation(
+            "Starting HR staffing match for launch plan {LaunchPlanId}. RequestedBy={RequestedBy}.",
+            launchPlanId,
+            requestedBy);
+        await SynchronizeAiDirectoryProjectionForProcessAsync("launch-plan HR matching", cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
@@ -122,14 +126,15 @@ public sealed partial class ProcessesService
                 project,
                 projectStructureContext,
                 cancellationToken);
-            var aiFactsByPartyId = (await aiAgentService.ListAgentStaffingFactsSnapshotAsync(
-                    candidates
-                        .Where(item => item.PartyId.HasValue)
-                        .Select(item => item.PartyId!.Value)
-                        .Distinct()
-                        .ToList(),
-                    cancellationToken))
-                .ToDictionary(item => item.PartyId);
+            var aiDirectorySnapshot = await LoadLaunchAiDirectorySnapshotAsync(dbContext, cancellationToken);
+            var aiDirectoryByPartyId = aiDirectorySnapshot.Directory.ToDictionary(item => item.PartyId);
+            var aiFactsByPartyId = aiDirectorySnapshot.StaffingFactsByPartyId;
+            logger.LogInformation(
+                "HR staffing match for launch plan {LaunchPlanId} loaded {RoleCount} roles, {CandidateCount} candidates, and {AiResourceCount} projected AI resources.",
+                launchPlanId,
+                roles.Count,
+                candidates.Count,
+                aiDirectorySnapshot.Directory.Count);
 
             foreach (var role in roles)
             {
@@ -147,6 +152,7 @@ public sealed partial class ProcessesService
                     role,
                     requiredSkillIds,
                     roleCandidates,
+                    aiDirectoryByPartyId,
                     cancellationToken);
                 if (supplementalCandidates.Count > 0)
                 {
@@ -211,6 +217,12 @@ public sealed partial class ProcessesService
             plan.Status = ProcessLaunchPlanStatus.Draft;
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            logger.LogInformation(
+                "Completed HR staffing match for launch plan {LaunchPlanId}. ChangedRoleCount={ChangedRoleCount} ResolvedRoleCount={ResolvedRoleCount} RequestedBy={RequestedBy}.",
+                launchPlanId,
+                changedRoleIds.Count,
+                roles.Count(item => item.IsResolved),
+                requestedBy);
             return Result.Success();
         }
         catch (DbUpdateConcurrencyException)
@@ -228,6 +240,7 @@ public sealed partial class ProcessesService
         ProcessLaunchPlanRole role,
         IReadOnlyList<Guid> requiredSkillIds,
         IReadOnlyList<ProcessLaunchCandidate> existingCandidates,
+        IReadOnlyDictionary<Guid, AiAgentListItemModel> aiDirectoryByPartyId,
         CancellationToken cancellationToken)
     {
         if (IsAiRoleFromLaunchRole(role))
@@ -248,8 +261,6 @@ public sealed partial class ProcessesService
             .Where(item => item.PartyId.HasValue)
             .Select(item => item.PartyId!.Value)
             .ToHashSet();
-        var aiDirectoryByPartyId = (await aiAgentService.ListAgentDirectorySnapshotAsync(dbContext, cancellationToken))
-            .ToDictionary(item => item.PartyId);
         var broaderStaffingCandidates = await hrService.SearchStaffingCandidatesAsync(
             null,
             searchText,

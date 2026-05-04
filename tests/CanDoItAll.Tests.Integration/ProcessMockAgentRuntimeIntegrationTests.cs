@@ -76,15 +76,24 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         var technicalAgentBridge = scope.ServiceProvider.GetRequiredService<IAiTechnicalAgentBridge>();
         var partyIds = ProcessMockAgentCatalog.Roles.Select(item => item.PartyId).ToList();
         var staffingFacts = await technicalAgentBridge.GetStaffingFactsAsync(partyIds);
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var projectedFacts = (await aiAgentService.ListAgentStaffingFactsProjectionAsync(dbContext, partyIds))
+            .ToDictionary(item => item.PartyId);
 
         Assert.Equal(ProcessMockAgentCatalog.Roles.Count, staffingFacts.Count);
         foreach (var role in ProcessMockAgentCatalog.Roles)
         {
             var fact = staffingFacts[role.PartyId];
+            var projectedFact = projectedFacts[role.PartyId];
+            var roleTag = ProcessMockAgentCatalog.CreateRoleTag(role.RoleKey);
+
             Assert.Equal(AiResourceBindingStatus.Bound, fact.BindingStatus);
             Assert.True(fact.TechnicalAgentId.HasValue);
             Assert.Equal(ProcessMockAgentCatalog.ProviderName, fact.ProviderName);
             Assert.Equal(ProcessMockAgentCatalog.Model, fact.DefaultModel);
+            Assert.Contains(roleTag, projectedFact.Tags, StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -454,6 +463,51 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.Contains(
             artifactRecords,
             artifact => string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.QaApproval, StringComparison.Ordinal));
+
+        var reviewStep = Assert.Single(
+            stepRuns,
+            stepRun => stepRun.StepDefinitionId == fixture.StepId(ProcessMockThreeAgentArtifactHandoffFixture.StepKeys.Review));
+        var implementationStep = Assert.Single(
+            stepRuns,
+            stepRun => stepRun.StepDefinitionId == fixture.StepId(ProcessMockThreeAgentArtifactHandoffFixture.StepKeys.Implementation));
+        var implementationArtifactPaths = artifactRecords
+            .Where(artifact => artifact.StepRunId == implementationStep.Id)
+            .Where(artifact =>
+                string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.ImplementationChangeSet, StringComparison.Ordinal) ||
+                string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.MigrationRolloutChecklist, StringComparison.Ordinal))
+            .Select(artifact => artifact.ManagedStoragePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        Assert.True(implementationArtifactPaths.Length >= 2);
+
+        var reviewExecutionRuns = await workspaceService.ListExecutionRunsAsync(new ExecutionRunQuery(
+            SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
+            Take: 20,
+            ProcessRunId: runId.ToString("D")));
+        var reviewExecutionRun = Assert.Single(
+            reviewExecutionRuns,
+            executionRun => string.Equals(executionRun.ProcessStepId, reviewStep.Id.ToString("D"), StringComparison.OrdinalIgnoreCase));
+        var implementationExecutionRun = Assert.Single(
+            reviewExecutionRuns,
+            executionRun => string.Equals(executionRun.ProcessStepId, implementationStep.Id.ToString("D"), StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, ExecutionInvocationMetadata.ResolveProcessCooperationMode(implementationExecutionRun));
+        Assert.Equal(AgentWorkspaceToolProfileKind.SoftwareDevelopment, ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(implementationExecutionRun));
+        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, ExecutionInvocationMetadata.ResolveProcessCooperationMode(reviewExecutionRun));
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(reviewExecutionRun));
+
+        var reviewExecutionDetail = await workspaceService.GetExecutionRunDetailAsync(reviewExecutionRun.Id);
+        Assert.Contains(
+            reviewExecutionDetail.ExecutionLog,
+            log => string.Equals(log.Phase, "Process cooperation", StringComparison.Ordinal) &&
+                   log.Message.Contains("quality-validation", StringComparison.OrdinalIgnoreCase));
+        AssertSessionStateContainsProcessCooperation(
+            reviewExecutionRun,
+            AgentProcessCooperationMode.ProcessArtifactHandoff,
+            AgentWorkspaceToolProfileKind.QualityValidation);
+        AssertSessionStateContainsWorkspaceArtifactInspections(reviewExecutionRun, implementationArtifactPaths);
     }
 
     [Fact]
@@ -671,7 +725,9 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
             var run = await processesService.GetRunAsync(runId);
             if (run?.Status == ProcessRunStatus.Completed) {
-                return;
+                if (outboxRecords.All(item => item.Status == ProcessOutboxRecordStatus.Completed)) {
+                    return;
+                }
             }
 
             if (run?.Status == ProcessRunStatus.Failed) {
@@ -733,6 +789,98 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.Contains(
             ProcessMockAgentCatalog.Roles,
             role => string.Equals(role.RoleKey, roleKey, StringComparison.Ordinal));
+    }
+
+    private static void AssertSessionStateContainsWorkspaceArtifactInspections(
+        ExecutionRunRecord executionRun,
+        IReadOnlyList<string> expectedPaths) {
+        using var sessionState = JsonDocument.Parse(executionRun.SerializedSessionStateJson ?? "{}");
+        var statPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var readPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var content in EnumerateSessionContents(sessionState.RootElement)) {
+            if (!content.TryGetProperty("$type", out var typeElement) ||
+                !string.Equals(typeElement.GetString(), "functionCall", StringComparison.Ordinal)) {
+                continue;
+            }
+
+            var toolName = content.TryGetProperty("name", out var nameElement)
+                ? nameElement.GetString()
+                : null;
+            if (string.IsNullOrWhiteSpace(toolName) ||
+                !content.TryGetProperty("arguments", out var arguments) ||
+                !arguments.TryGetProperty("path", out var pathElement)) {
+                continue;
+            }
+
+            var path = pathElement.GetString();
+            if (string.IsNullOrWhiteSpace(path)) {
+                continue;
+            }
+
+            if (string.Equals(toolName, "workspace_stat_path", StringComparison.Ordinal)) {
+                statPaths.Add(path);
+            }
+            else if (string.Equals(toolName, "workspace_read_file", StringComparison.Ordinal)) {
+                readPaths.Add(path);
+            }
+        }
+
+        foreach (var expectedPath in expectedPaths) {
+            Assert.Contains(expectedPath, statPaths);
+            Assert.Contains(expectedPath, readPaths);
+        }
+    }
+
+    private static void AssertSessionStateContainsProcessCooperation(
+        ExecutionRunRecord executionRun,
+        AgentProcessCooperationMode expectedMode,
+        AgentWorkspaceToolProfileKind expectedProfile) {
+        using var sessionState = JsonDocument.Parse(executionRun.SerializedSessionStateJson ?? "{}");
+        Assert.True(
+            sessionState.RootElement.TryGetProperty("processCooperationMode", out var modeElement),
+            "Process mock session state should record the current runtime cooperation mode.");
+        Assert.Equal(expectedMode.ToString(), modeElement.GetString());
+
+        Assert.True(
+            sessionState.RootElement.TryGetProperty("workspaceToolProfileOverride", out var profileElement),
+            "Process mock session state should record the current workspace profile override.");
+        Assert.Equal(AgentWorkspaceToolAccessProfiles.GetProfileKey(expectedProfile), profileElement.GetString());
+    }
+
+    private static IEnumerable<JsonElement> EnumerateSessionContents(JsonElement root) {
+        if (!root.TryGetProperty("stateBag", out var stateBag) ||
+            !TryGetPropertyCaseInsensitive(stateBag, "InMemoryChatHistoryProvider", out var historyProvider) ||
+            !historyProvider.TryGetProperty("messages", out var messages) ||
+            messages.ValueKind != JsonValueKind.Array) {
+            yield break;
+        }
+
+        foreach (var message in messages.EnumerateArray()) {
+            if (!message.TryGetProperty("contents", out var contents) ||
+                contents.ValueKind != JsonValueKind.Array) {
+                continue;
+            }
+
+            foreach (var content in contents.EnumerateArray()) {
+                yield return content;
+            }
+        }
+    }
+
+    private static bool TryGetPropertyCaseInsensitive(
+        JsonElement element,
+        string propertyName,
+        out JsonElement propertyValue) {
+        foreach (var property in element.EnumerateObject()) {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase)) {
+                propertyValue = property.Value;
+                return true;
+            }
+        }
+
+        propertyValue = default;
+        return false;
     }
 
     private static async Task<IReadOnlyList<ProcessOutboxRecord>> ListRunOutboxRecordsAsync(

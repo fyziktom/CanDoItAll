@@ -17,6 +17,8 @@ Evidence pack is decision-ready with open defects and residual risk clearly stat
 
 ## Checks
 - Covered behaviors and uncovered behaviors are both explicit.
+- QA directly inspected the inherited implementation artifact paths before making the quality disposition.
+- QA recommendation cites the exact implementation artifacts, build outputs, screenshots, or test records it accepted or rejected.
 - Automated evidence is reproducible and linked to the reviewed build or artifact set.
 - Manual or exploratory findings are captured with severity and follow-up.
 - Environment limitations affecting confidence are disclosed.

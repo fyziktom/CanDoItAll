@@ -444,38 +444,45 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        objectReference ??= DotNetObjectReference.Create(this);
-        var bridge = new JsInteropBridge(JsRuntime);
-        if (sceneHost.ShouldCreate())
+        try
         {
-            var created = await bridge.InvokeAsync<bool>(
-                "CanDoItAll.canvasWorkbench.create",
+            objectReference ??= DotNetObjectReference.Create(this);
+            var bridge = new JsInteropBridge(JsRuntime);
+            if (sceneHost.ShouldCreate())
+            {
+                var created = await bridge.InvokeAsync<bool>(
+                    "CanDoItAll.canvasWorkbench.create",
+                    host,
+                    objectReference,
+                    Surface,
+                    lastSelectionDispatchId,
+                    lastStateDispatchId,
+                    BuildRenderOptions(includeAutoFit: true));
+                if (created)
+                {
+                    MarkSurfaceApplied();
+                }
+
+                return;
+            }
+
+            if (!sceneHost.ShouldUpdate())
+            {
+                return;
+            }
+
+            var updated = await bridge.InvokeAsync<bool>(
+                "CanDoItAll.canvasWorkbench.update",
                 host,
-                objectReference,
                 Surface,
-                lastSelectionDispatchId,
-                lastStateDispatchId,
-                BuildRenderOptions(includeAutoFit: true));
-            if (created)
+                BuildRenderOptions(includeAutoFit: false));
+            if (updated)
             {
                 MarkSurfaceApplied();
             }
-            return;
         }
-
-        if (!sceneHost.ShouldUpdate())
+        catch (Exception exception) when (IsExpectedJsInteropCancellation(exception))
         {
-            return;
-        }
-
-        var updated = await bridge.InvokeAsync<bool>(
-            "CanDoItAll.canvasWorkbench.update",
-            host,
-            Surface,
-            BuildRenderOptions(includeAutoFit: false));
-        if (updated)
-        {
-            MarkSurfaceApplied();
         }
     }
 
@@ -829,6 +836,9 @@
     private void MarkSurfaceApplied()
         => sceneHost.MarkApplied();
 
+    private static bool IsExpectedJsInteropCancellation(Exception exception)
+        => exception is OperationCanceledException or JSDisconnectedException;
+
     private CanvasWorkbenchRenderOptions BuildRenderOptions(bool includeAutoFit)
         => new(
             isMaximized,
@@ -926,6 +936,9 @@
                 await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
             }
             catch (JSDisconnectedException)
+            {
+            }
+            catch (OperationCanceledException)
             {
             }
             catch (JSException)

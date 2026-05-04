@@ -185,7 +185,7 @@ public sealed record ProjectStructureProcessStartDialogState(
         ProjectStructureProcessStartStage.Staffing =>
             "Required process roles must be paired before the launch can continue. Select the resources manually or ask the HR manager to match them from CRM-HR and the AI agent directory.",
         _ =>
-            "This creates, approves, provisions, and starts a new process run. Because the full delivery flow can run for a while, confirm before continuing."
+            "This prepares a launch plan for the selected project node. You will review HR role assignments before anything is approved, provisioned, or started."
     };
 
     public string SubmitLabel => Stage switch

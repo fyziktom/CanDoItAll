@@ -206,6 +206,27 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         }
     }
 
+    public async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (CanReadExecutionDetailsWithoutWorkspaceLock())
+        {
+            return await executionSliceStore.ListRunsAsync(cancellationToken);
+        }
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+            return await executionSliceStore.ListRunsAsync(cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     public async Task<ExecutionRunDetail> SaveExecutionRunDetailAsync(
         ExecutionRunDetail detail,
         CancellationToken cancellationToken = default)
@@ -442,7 +463,6 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             }
 
             await EnsureWorkspaceIndexCoreAsync(cancellationToken);
-            await PersistNormalizedWorkspaceDocumentCoreAsync(cancellationToken);
             return;
         }
 

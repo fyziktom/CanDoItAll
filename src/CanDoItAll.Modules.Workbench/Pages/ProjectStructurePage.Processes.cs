@@ -10,6 +10,7 @@ public partial class ProjectStructurePage
     private const string ProjectStructureHrManagerName = "HR Staffing Manager";
     private static readonly TimeSpan ProcessStartLaunchPlanCreateTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan ProcessStartLaunchPlanCreateRecoveryTimeout = TimeSpan.FromSeconds(90);
+    private static readonly TimeSpan ProcessStartHrManagerMatchTimeout = TimeSpan.FromSeconds(45);
 
     [Inject]
     private ProcessesService ProcessesService { get; set; } = default!;
@@ -543,16 +544,30 @@ public partial class ProjectStructurePage
 
         try
         {
+            var launchPlanId = processStartDialog.LaunchPlanId.Value;
             processStartDialog = processStartDialog with
             {
                 IsBusy = true,
+                StatusMessage = $"{ProjectStructureHrManagerName} is matching roles from CRM-HR and the projected AI agent directory.",
                 Error = string.Empty
             };
             await InvokeAsync(StateHasChanged);
 
-            var result = await ProcessesService.MatchLaunchPlanWithHrManagerAsync(
-                processStartDialog.LaunchPlanId.Value,
-                "project-structure");
+            using var matchTimeout = new CancellationTokenSource(ProcessStartHrManagerMatchTimeout);
+            Result result;
+            try
+            {
+                result = await ProcessesService.MatchLaunchPlanWithHrManagerAsync(
+                    launchPlanId,
+                    "project-structure",
+                    matchTimeout.Token);
+            }
+            catch (OperationCanceledException exception) when (matchTimeout.IsCancellationRequested)
+            {
+                await SetHrManagerMatchTimeoutAsync(exception, launchPlanId);
+                return;
+            }
+
             if (result.IsFailure)
             {
                 await SetProcessActionErrorAsync(result.Errors);
@@ -560,7 +575,7 @@ public partial class ProjectStructurePage
             }
 
             await ReloadProcessStartLaunchPlanAsync(
-                processStartDialog.LaunchPlanId.Value,
+                launchPlanId,
                 $"{ProjectStructureHrManagerName} refreshed the staffing suggestions.");
         }
         catch (Exception exception)
@@ -703,6 +718,31 @@ public partial class ProjectStructurePage
             processStartDialog?.ProcessDefinitionId,
             processStartDialog?.LaunchPlanId,
             processStartDialog?.Stage);
+        workflowFeedback = message;
+        workflowFeedbackTone = "warn";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetHrManagerMatchTimeoutAsync(Exception exception, Guid launchPlanId)
+    {
+        var message = $"{ProjectStructureHrManagerName} did not finish matching roles within {ProcessStartHrManagerMatchTimeout.TotalSeconds:0} seconds. The process has not started. Try the HR match again after Agent Framework catalog recovery settles.";
+        if (processStartDialog is not null)
+        {
+            processStartDialog = processStartDialog with
+            {
+                IsBusy = false,
+                ConfirmHrManagerMatch = false,
+                Error = message
+            };
+        }
+
+        Logger.LogWarning(
+            exception,
+            "Project structure HR manager matching timed out. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId} TimeoutSeconds={TimeoutSeconds}",
+            ProjectId,
+            processStartDialog?.ProcessDefinitionId,
+            launchPlanId,
+            ProcessStartHrManagerMatchTimeout.TotalSeconds);
         workflowFeedback = message;
         workflowFeedbackTone = "warn";
         return InvokeAsync(StateHasChanged);

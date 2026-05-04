@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using System.Text;
 
 namespace CanDoItAll.Modules.Processes;
@@ -37,11 +39,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return null;
         }
 
-        return ResolveSelectedBranchOutcomeId(
+        var selectedBranchOutcomeId = ResolveSelectedBranchOutcomeId(
             candidate,
             completionStatus,
             declaredOutcome.BranchOutcomeKey,
             declaredOutcome.BranchOutcomeTitle);
+        if (selectedBranchOutcomeId.HasValue)
+        {
+            return selectedBranchOutcomeId;
+        }
+
+        if (declaredOutcome.Status == ProcessStepRunStatus.Blocked &&
+            TryResolveRepairBranchOutcome(candidate, out var repairBranchOutcome) &&
+            IsRepairableBlockedBranchDispositionReason(declaredOutcome.Reason, responseText))
+        {
+            return repairBranchOutcome.Id;
+        }
+
+        return null;
     }
 
     private static Guid? ResolveSelectedBranchOutcomeId(
@@ -145,6 +160,312 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Where(char.IsLetterOrDigit)
             .Select(char.ToLowerInvariant)
             .ToArray());
+    }
+
+    private static bool TryResolveRepairBranchCompletionFromBlockedOutcome(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DeclaredStepOutcome declaredOutcome,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        CarriedImplementationProof carriedImplementationProof,
+        out DispatchBranchOutcome repairBranchOutcome)
+    {
+        repairBranchOutcome = null!;
+        if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
+            !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            !TryResolveRepairBranchOutcome(candidate, out repairBranchOutcome) ||
+            missingRequiredTools.Count > 0 ||
+            ResolveUnresolvedCriticalToolFailures(detail).Count > 0)
+        {
+            return false;
+        }
+
+        var inspectionText = ResolveOutputInspectionText(responseText);
+        if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) ||
+            !string.IsNullOrWhiteSpace(ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText)) ||
+            !string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail)) ||
+            !string.IsNullOrWhiteSpace(ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText)) ||
+            !string.IsNullOrWhiteSpace(ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText)))
+        {
+            return false;
+        }
+
+        return IsRepairableBlockedBranchDispositionReason(declaredOutcome.Reason, inspectionText);
+    }
+
+    private static bool TryResolveTerminalEscalationCompletionFromBlockedOutcome(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DeclaredStepOutcome declaredOutcome,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        out string escalationDispositionTitle)
+    {
+        escalationDispositionTitle = string.Empty;
+        if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
+            !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            candidate.BranchOutcomes.Count > 0 ||
+            missingRequiredTools.Count > 0 ||
+            ResolveUnresolvedCriticalToolFailures(detail).Count > 0 ||
+            !IsTerminalEscalationStep(candidate))
+        {
+            return false;
+        }
+
+        var inspectionText = ResolveOutputInspectionText(responseText);
+        if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) ||
+            !string.IsNullOrWhiteSpace(ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText)) ||
+            !string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail)) ||
+            !string.IsNullOrWhiteSpace(ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText)) ||
+            !string.IsNullOrWhiteSpace(ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText)))
+        {
+            return false;
+        }
+
+        if (!IsTerminalEscalationDispositionReason(declaredOutcome.Reason, inspectionText))
+        {
+            return false;
+        }
+
+        escalationDispositionTitle = ResolveTerminalEscalationDispositionTitle(candidate);
+        return true;
+    }
+
+    private static bool TryResolveRepairBranchOutcome(
+        DispatchCandidate candidate,
+        out DispatchBranchOutcome repairBranchOutcome)
+    {
+        repairBranchOutcome = candidate.BranchOutcomes.FirstOrDefault(outcome =>
+            IsRepairBranchOutcomeCandidate(outcome, IsPrimaryRepairBranchOutcomeToken))!;
+        if (repairBranchOutcome is not null)
+        {
+            return true;
+        }
+
+        repairBranchOutcome = candidate.BranchOutcomes.FirstOrDefault(outcome =>
+            IsRepairBranchOutcomeCandidate(outcome, IsSecondaryRepairBranchOutcomeToken))!;
+        return repairBranchOutcome is not null;
+    }
+
+    private static bool IsRepairBranchOutcomeCandidate(
+        DispatchBranchOutcome outcome,
+        Func<string, bool> tokenMatcher)
+    {
+        var keyTitleToken = NormalizeBranchOutcomeToken($"{outcome.Key} {outcome.Title}");
+        if (IsAcceptingBranchOutcomeToken(keyTitleToken))
+        {
+            return false;
+        }
+
+        if (tokenMatcher(keyTitleToken))
+        {
+            return true;
+        }
+
+        var fullToken = NormalizeBranchOutcomeToken($"{outcome.Key} {outcome.Title} {outcome.Description}");
+        return !IsAcceptingBranchOutcomeToken(fullToken) && tokenMatcher(fullToken);
+    }
+
+    private static bool IsAcceptingBranchOutcomeToken(string token)
+    {
+        return token.Contains("accepted", StringComparison.Ordinal) ||
+               token.Contains("approved", StringComparison.Ordinal) ||
+               token.Contains("approval", StringComparison.Ordinal) ||
+               token.Contains("sufficient", StringComparison.Ordinal) ||
+               token.Contains("ready", StringComparison.Ordinal) ||
+               token.Contains("passed", StringComparison.Ordinal) ||
+               token.Contains("pass", StringComparison.Ordinal) ||
+               token.Contains("continue", StringComparison.Ordinal) ||
+               token.Contains("releasegovernance", StringComparison.Ordinal) ||
+               token.Contains("release-ready", StringComparison.Ordinal) ||
+               token.Contains("releaseready", StringComparison.Ordinal);
+    }
+
+    private static bool IsPrimaryRepairBranchOutcomeToken(string token)
+    {
+        return token.Contains("repair", StringComparison.Ordinal) ||
+               token.Contains("remediation", StringComparison.Ordinal) ||
+               token.Contains("remediate", StringComparison.Ordinal) ||
+               token.Contains("rework", StringComparison.Ordinal) ||
+               token.Contains("changerequired", StringComparison.Ordinal) ||
+               token.Contains("changesrequired", StringComparison.Ordinal) ||
+               token.Contains("requiredchanges", StringComparison.Ordinal) ||
+               token.Contains("needschanges", StringComparison.Ordinal) ||
+               token.Contains("fixrequired", StringComparison.Ordinal) ||
+               token.Contains("fixesrequired", StringComparison.Ordinal);
+    }
+
+    private static bool IsSecondaryRepairBranchOutcomeToken(string token)
+    {
+        return token.Contains("qualityrejected", StringComparison.Ordinal) ||
+               token.Contains("validationrejected", StringComparison.Ordinal) ||
+               token.Contains("rejectedvalidation", StringComparison.Ordinal) ||
+               token.Contains("defectsfound", StringComparison.Ordinal) ||
+               token.Contains("failedvalidation", StringComparison.Ordinal);
+    }
+
+    private static bool IsRepairableBlockedBranchDispositionReason(string reason, string? inspectionText)
+    {
+        var normalizedText = NormalizeBranchDispositionText($"{reason} {inspectionText}");
+        if (string.IsNullOrWhiteSpace(normalizedText) ||
+            ContainsAnyBranchDispositionToken(
+                normalizedText,
+                "requiredinput",
+                "missingupstream",
+                "upstreamartifactmissing",
+                "requiredartifactmissing",
+                "toolunavailable",
+                "toolpolicydenied",
+                "deniedbypolicy",
+                "permission",
+                "credential",
+                "secret",
+                "authority",
+                "browsercannotbereached",
+                "cannotreachbrowser",
+                "cannotlaunch",
+                "cannotbelaunched",
+                "appcannotbelaunched",
+                "nowritabletarget",
+                "safeexecutionboundary",
+                "environmentunavailable",
+                "projectstructureread",
+                "workspacewritefilefailed"))
+        {
+            return false;
+        }
+
+        return ContainsAnyBranchDispositionToken(
+            normalizedText,
+            "defect",
+            "bug",
+            "error",
+            "console",
+            "runtime",
+            "validation",
+            "proofrisk",
+            "proofgap",
+            "missingimplemented",
+            "missingbehavior",
+            "requiredflowmissing",
+            "requiredworkflowmissing",
+            "placeholder",
+            "stockscaffold",
+            "repair",
+            "remediation",
+            "rework",
+            "changesrequired",
+            "unresolved",
+            "notready",
+            "failedassertion",
+            "failedbrowser",
+            "uiflow");
+    }
+
+    private static bool IsTerminalEscalationStep(DispatchCandidate candidate)
+    {
+        var normalizedText = NormalizeBranchDispositionText(string.Join(
+            " ",
+            candidate.StepRun.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            string.Join(" ", candidate.ExpectedArtifacts.Select(item => item.Title))));
+        if (string.IsNullOrWhiteSpace(normalizedText))
+        {
+            return false;
+        }
+
+        return ContainsAnyBranchDispositionToken(
+            normalizedText,
+            "escalate",
+            "escalation",
+            "nogo",
+            "scopereset",
+            "replan",
+            "unresolvedrepair",
+            "repairfindings",
+            "repairescalationrecord",
+            "postrepairqaescalation");
+    }
+
+    private static string ResolveTerminalEscalationDispositionTitle(DispatchCandidate candidate)
+    {
+        var expectedArtifactTitle = candidate.ExpectedArtifacts
+            .Select(item => item.Title.Trim())
+            .FirstOrDefault(title => !string.IsNullOrWhiteSpace(title) &&
+                                     NormalizeBranchDispositionText(title).Contains("escalation", StringComparison.Ordinal));
+        if (!string.IsNullOrWhiteSpace(expectedArtifactTitle))
+        {
+            return expectedArtifactTitle;
+        }
+
+        return string.IsNullOrWhiteSpace(candidate.StepRun.Title)
+            ? "Escalation"
+            : candidate.StepRun.Title.Trim();
+    }
+
+    private static bool IsTerminalEscalationDispositionReason(string reason, string? inspectionText)
+    {
+        var normalizedText = NormalizeBranchDispositionText($"{reason} {inspectionText}");
+        if (string.IsNullOrWhiteSpace(normalizedText) ||
+            ContainsAnyBranchDispositionToken(
+                normalizedText,
+                "requiredinput",
+                "missingupstream",
+                "upstreamartifactmissing",
+                "requiredartifactmissing",
+                "toolunavailable",
+                "toolpolicydenied",
+                "deniedbypolicy",
+                "permission",
+                "credential",
+                "secret",
+                "authority",
+                "cannotmake",
+                "cannotproduce",
+                "cannotwrite",
+                "cannotread",
+                "cannotinspect",
+                "safeexecutionboundary"))
+        {
+            return false;
+        }
+
+        return ContainsAnyBranchDispositionToken(
+            normalizedText,
+            "unresolved",
+            "notready",
+            "nogo",
+            "releaseblocking",
+            "runtime",
+            "console",
+            "defect",
+            "error",
+            "repair",
+            "escalation",
+            "blocked",
+            "replan",
+            "scopereset");
+    }
+
+    private static string NormalizeBranchDispositionText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
+    }
+
+    private static bool ContainsAnyBranchDispositionToken(string text, params string[] tokens)
+    {
+        return tokens.Any(token => text.Contains(token, StringComparison.Ordinal));
     }
 
     private static bool IsRecoverableGovernedOutcomeGap(

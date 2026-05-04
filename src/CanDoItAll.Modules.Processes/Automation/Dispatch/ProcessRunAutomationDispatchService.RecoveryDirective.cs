@@ -75,6 +75,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary))
         {
             builder.AppendLine($"Current-attempt implementation proof is invalid: {missingConcreteImplementationProofSummary}.");
+            builder.AppendLine("Reading only markdown evidence, implementation summaries, change-set notes, rollout checklists, or migration notes does not recover an implementation step.");
+            builder.AppendLine("If the product root currently contains only those evidence files, treat the root as unimplemented: scaffold or create the concrete deliverable first, validate it, then write the required evidence artifacts.");
         }
 
         if (!string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary))
@@ -149,14 +151,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine("This retry is still the implementation step. Do not report that implementation or code artifacts are missing before you attempt the bootstrap or scaffold yourself.");
             builder.AppendLine("Bootstrap or repair the concrete deliverable now, inspect the files or artifacts you created, and rerun every required validation tool after the latest mutation before you conclude.");
+            builder.AppendLine("If the prior attempt only inspected markdown, notes, checklists, logs, or README markers and then wrote handoff artifacts, it did not attempt implementation. On this retry, attempt the concrete scaffold or product-file mutation before writing final evidence artifacts or returning Blocked.");
+            builder.AppendLine("Do not recover by submitting Completed for pre-existing markdown artifacts, even when their titles match required output artifacts. Those files are evidence only until this retry creates or repairs concrete product files.");
             builder.AppendLine("After the final concrete product mutation in this retry, read at least one representative changed source, project, document, workbook, deck, or deliverable file before writing final evidence artifacts or submitting the governed outcome. If you mutate another product file after that read, repeat the read and rerun required validation.");
+            builder.AppendLine("If the prior attempt changed product files after a failed validation but did not rerun that validation, inspect the changed file and rerun the failed build, test, run, browser, lint, or validation tool before writing final artifacts. If it still fails, repair the diagnostic and rerun the same validation again.");
             builder.AppendLine("When the requested deliverable is an application or service, produce a runnable host/project, not only libraries, loose files, or static fragments.");
+            builder.AppendLine("For Blazor compile failures around `@bind`, inspect the bound model types: inputs require settable properties or explicit get/set wrappers. Do not keep positional records or init-only properties as bound form state.");
             if (!string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary))
             {
                 builder.AppendLine("This retry must start the concrete runnable host after the latest implementation changes. For .NET hosts, use workspace_dotnet_run against the host project so startup URL, process id, stdout log, stderr log, and receipt evidence are recorded; for other stacks, use the matching launch tool with equivalent evidence.");
             }
 
             builder.AppendLine("If a required validation failed, rerun that exact validation against the same concrete target after every repair. A later unrelated validation does not recover the failed one by itself.");
+            builder.AppendLine("If a .NET startup smoke failed after build/test passed, inspect the captured stdout/stderr or startup receipt and repair the concrete runtime cause before returning Blocked. Common repair targets include missing dependency-injection registrations, `Program.cs` service wiring, routing, appsettings, launch settings, static assets, and startup initialization.");
             if (HasScaffoldOverwriteConflict(detail, responseText))
             {
                 builder.AppendLine("The scaffold command appears to have stopped because files already existed. Reuse the existing scaffold: inspect it, repair it in place, and validate that concrete project instead of rerunning the same scaffold command.");
@@ -220,12 +227,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             builder.AppendLine("Do not assume the app must be reachable at `http://localhost:5000/`. Derive the real launch URL from the reviewed host project, `launchSettings.json`, prior run diagnostics, or the URL reported by the launch command.");
-            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. For .NET hosts, prefer `workspace_dotnet_run` so the retry records URL, process id, stdout log, stderr log, and startup receipt evidence. For other technologies, use the launch tool or task-specific skill that matches the delivered stack and records equivalent evidence.");
+            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. For .NET hosts, prefer `workspace_dotnet_run` with `keepAlive: true` so the retry records URL, process id, stdout log, stderr log, and startup receipt evidence while Playwright can reach the app; after browser evidence is captured, stop it with the recorded `startup.json` `stopCommand` before finalizing. For other technologies, use the launch tool or task-specific skill that matches the delivered stack and records equivalent evidence.");
             builder.AppendLine("For external targets, keep `external-target/<drive>/...` with workspace file and run tools. Do not write a one-off path-translation launch helper when a reviewed generic launch tool is available; missing launch-tool access is a platform blocker to report explicitly.");
             builder.AppendLine("Do not repeat successful unchanged validations while browser proof is missing. Launch plus browser evidence is the recovery path.");
             builder.AppendLine("Use the UI as an end user would: navigate to the delivered entry point, fill or change representative controls, trigger representative actions, and verify the visible result changes.");
-            builder.AppendLine("Capture fresh browser evidence with `browser_take_screenshot`, `browser_snapshot`, and `browser_console_messages` before you conclude this retry.");
-            builder.AppendLine("Inspect the saved `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, irrelevant content, or non-interactive behavior instead of the requested product behavior, treat it as a routing, rendering, static-content, or client-interaction defect and repair or block instead of returning Completed.");
+            builder.AppendLine("Capture fresh bounded browser evidence with `browser_take_screenshot`, `browser_snapshot`, and `browser_console_messages` before you conclude this retry. Use `browser_snapshot` depth 4 or less with boxes disabled, preferably depth 2, and use viewport screenshot capture instead of full-page capture.");
+            builder.AppendLine("Provider-native browser files are written before managed scope aliasing. Inspect the browser tool result itself and cite the returned filename; do not block only because `workspace_read_file` cannot read a provider-native `artifacts/process-runs/...` browser file.");
+            builder.AppendLine("Inspect the bounded `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, irrelevant content, or non-interactive behavior instead of the requested product behavior, treat it as a routing, rendering, static-content, or client-interaction defect and repair or block instead of returning Completed.");
+            builder.AppendLine("If a screenshot call fails, retry once with viewport capture. If bounded snapshot, console diagnostics, and visible-state checks prove the workflow and no exact screenshot artifact is required, do not block solely on the screenshot failure.");
             AppendDomainBrowserRecoveryGuidance(
                 builder,
                 candidate,

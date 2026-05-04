@@ -6,7 +6,7 @@ public sealed class AgentProviderModelParameterPolicyTests
 {
     [Theory]
     [InlineData("gpt-5")]
-    [InlineData("gpt-5-mini")]
+    [InlineData("gpt-5.4-mini")]
     [InlineData("gpt-5.2")]
     [InlineData("o1-mini")]
     [InlineData("o3")]

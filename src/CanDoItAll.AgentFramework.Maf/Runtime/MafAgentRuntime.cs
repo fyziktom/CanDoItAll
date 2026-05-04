@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -1010,10 +1012,16 @@ public sealed partial class MafAgentRuntime(
         text = text.ReplaceLineEndings(" ").Trim();
         if (text.Length > 120)
         {
-            text = text[..120] + "...";
+            text = text[..120] + $"...#{ComputeStableHash(text)}";
         }
 
         return $"\"{text}\"";
+    }
+
+    private static string ComputeStableHash(string text)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(bytes, 0, 6).ToLowerInvariant();
     }
 
     private static Dictionary<string, object?> DeserializeArguments(string? argumentsJson)
