@@ -212,7 +212,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         bool waitForHttp = true,
         string? workingDirectory = null,
         int startupTimeoutSeconds = 45,
-        int timeoutSeconds = 120)
+        int timeoutSeconds = 120,
+        bool keepAlive = false)
     {
         var target = BuildDotnetRunnableTarget(targetPath, workingDirectory);
         var urls = ResolveDotnetRunUrls(url);
@@ -270,7 +271,8 @@ internal sealed class WorkspaceCommandPlanBuilder
             artifactPaths.StdoutLogFullPath,
             artifactPaths.StderrLogFullPath,
             artifactPaths.StartupReceiptFullPath,
-            boundedStartupTimeoutSeconds);
+            boundedStartupTimeoutSeconds,
+            keepAlive);
         var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
         var planTimeoutSeconds = Math.Max(timeoutSeconds, boundedStartupTimeoutSeconds + 10);
 
@@ -766,7 +768,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         string stdoutLogPath,
         string stderrLogPath,
         string startupReceiptPath,
-        int startupTimeoutSeconds)
+        int startupTimeoutSeconds,
+        bool keepAlive)
     {
         var builder = new StringBuilder();
         builder.AppendLine("$ErrorActionPreference = 'Stop'");
@@ -781,6 +784,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("$startupReceipt = " + ToPowerShellSingleQuotedString(startupReceiptPath));
         builder.AppendLine("$startupTimeoutSeconds = " + startupTimeoutSeconds.ToString());
         builder.AppendLine("$noBuild = " + (noBuild ? "$true" : "$false"));
+        builder.AppendLine("$keepAlive = " + (keepAlive ? "$true" : "$false"));
         builder.AppendLine("$appProcess = $null");
         builder.AppendLine("function Read-LogTail {");
         builder.AppendLine("    param([string]$Path)");
@@ -797,8 +801,39 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    if ($Value.IndexOfAny([char[]](\" `\"`t`r`n\")) -lt 0) { return $Value }");
         builder.AppendLine("    return '\"' + $Value.Replace('\"', '\\\"') + '\"'");
         builder.AppendLine("}");
+        builder.AppendLine("function Resolve-ProcessTreeIds {");
+        builder.AppendLine("    param([int]$RootProcessId)");
+        builder.AppendLine("    $orderedIds = [System.Collections.Generic.List[int]]::new()");
+        builder.AppendLine("    function Add-DescendantProcessIds {");
+        builder.AppendLine("        param([int]$ParentProcessId)");
+        builder.AppendLine("        $children = @()");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $children = Get-CimInstance Win32_Process -Filter \"ParentProcessId = $ParentProcessId\" -ErrorAction Stop");
+        builder.AppendLine("        } catch {");
+        builder.AppendLine("            $children = @()");
+        builder.AppendLine("        }");
+        builder.AppendLine("        foreach ($childProcess in $children) {");
+        builder.AppendLine("            $childProcessId = [int]$childProcess.ProcessId");
+        builder.AppendLine("            Add-DescendantProcessIds $childProcessId");
+        builder.AppendLine("            if (-not $orderedIds.Contains($childProcessId)) { [void]$orderedIds.Add($childProcessId) }");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    Add-DescendantProcessIds $RootProcessId");
+        builder.AppendLine("    if (-not $orderedIds.Contains($RootProcessId)) { [void]$orderedIds.Add($RootProcessId) }");
+        builder.AppendLine("    return @($orderedIds)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Stop-AppProcessTree {");
+        builder.AppendLine("    param([int[]]$ProcessIds)");
+        builder.AppendLine("    foreach ($processIdToStop in $ProcessIds) {");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            Stop-Process -Id $processIdToStop -Force -ErrorAction SilentlyContinue");
+        builder.AppendLine("            Wait-Process -Id $processIdToStop -Timeout 5 -ErrorAction SilentlyContinue");
+        builder.AppendLine("        } catch { }");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
         builder.AppendLine("function Write-StartupReceipt {");
-        builder.AppendLine("    param([bool]$Succeeded, [string]$Message)");
+        builder.AppendLine("    param([bool]$Succeeded, [string]$Message, [bool]$CleanupAttempted = $false, [int[]]$CleanupProcessIds = @())");
+        builder.AppendLine("    $processTreeIds = if ($CleanupProcessIds.Count -gt 0) { @($CleanupProcessIds) } elseif ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
         builder.AppendLine("    $payload = [ordered]@{");
         builder.AppendLine("        succeeded = $Succeeded");
         builder.AppendLine("        message = $Message");
@@ -807,12 +842,16 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        listenUrl = $listenUrl");
         builder.AppendLine("        probeUrl = $probeUrl");
         builder.AppendLine("        appProcessId = if ($appProcess -ne $null) { $appProcess.Id } else { $null }");
+        builder.AppendLine("        appProcessTreeIds = @($processTreeIds)");
+        builder.AppendLine("        keepAlive = $keepAlive");
+        builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
+        builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
         builder.AppendLine("        stdoutLog = $stdoutLog");
         builder.AppendLine("        stderrLog = $stderrLog");
         builder.AppendLine("        stdoutTail = Read-LogTail $stdoutLog");
         builder.AppendLine("        stderrTail = Read-LogTail $stderrLog");
         builder.AppendLine("        capturedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')");
-        builder.AppendLine("        stopCommand = if ($appProcess -ne $null) { \"Stop-Process -Id $($appProcess.Id)\" } else { '' }");
+        builder.AppendLine("        stopCommand = if ($processTreeIds.Count -gt 0) { 'Stop-Process -Id ' + ($processTreeIds -join ',') + ' -Force' } else { '' }");
         builder.AppendLine("    }");
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $startupReceipt) | Out-Null");
         builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 6");
@@ -866,17 +905,19 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        Start-Sleep -Milliseconds 500");
         builder.AppendLine("    }");
         builder.AppendLine("    if (-not $ready) { throw \"Timed out after $startupTimeoutSeconds second(s) waiting for $probeUrl. Last error: $lastError. stderr tail: $(Read-LogTail $stderrLog)\" }");
-        builder.AppendLine("    $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success.\"");
+        builder.AppendLine("    if ($keepAlive) {");
+        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. The process tree is still running for follow-up browser proof; use stopCommand from startup.json when proof is complete.\"");
+        builder.AppendLine("    } else {");
+        builder.AppendLine("        $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
+        builder.AppendLine("        Stop-AppProcessTree $processTreeIds");
+        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. Process tree was stopped after smoke validation.\" ($processTreeIds.Count -gt 0) $processTreeIds");
+        builder.AppendLine("    }");
         builder.AppendLine("    Write-Output $successJson");
         builder.AppendLine("} catch {");
         builder.AppendLine("    $message = $_.Exception.Message");
-        builder.AppendLine("    if ($appProcess -ne $null) {");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $appProcess.Refresh()");
-        builder.AppendLine("            if (-not $appProcess.HasExited) { Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue }");
-        builder.AppendLine("        } catch { }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message");
+        builder.AppendLine("    $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
+        builder.AppendLine("    Stop-AppProcessTree $processTreeIds");
+        builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds");
         builder.AppendLine("    Write-Error $failureJson");
         builder.AppendLine("    exit 1");
         builder.AppendLine("}");

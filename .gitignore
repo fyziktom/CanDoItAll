@@ -9,6 +9,7 @@
 
 output
 .codex-artifacts
+.codex-tmp
 .playwright-mcp
 evidence
 

@@ -100,30 +100,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessRunAssignment? assignment,
         IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts)
     {
+        var primaryRoleText = BuildPrimaryRoleProfileText(stepRun, workBrief, role, assignment, expectedArtifacts);
         var roleText = BuildRoleProfileText(stepRun, workBrief, role, assignment, expectedArtifacts);
-        if (ContainsAny(roleText, "security", "threat", "vulnerability", "compliance"))
-        {
-            return AgentWorkspaceToolProfileKind.SecurityReview;
-        }
-
-        if (ContainsAny(roleText, "architect", "architecture", "design", "adr", "technical decision"))
-        {
-            return AgentWorkspaceToolProfileKind.ArchitectureReview;
-        }
-
-        if (stepRun.StepKind != ProcessStepKind.Review &&
-            ContainsAny(roleText, "developer", "engineer", "implementation", "implement", "build", "code", "software", "blazor", ".net", "dotnet", "c#"))
+        if (stepRun.StepKind == ProcessStepKind.Work && ContainsDevelopmentProfileSignal(primaryRoleText))
         {
             return AgentWorkspaceToolProfileKind.SoftwareDevelopment;
         }
 
+        if (ContainsAny(primaryRoleText, "security", "threat", "vulnerability", "compliance"))
+        {
+            return AgentWorkspaceToolProfileKind.SecurityReview;
+        }
+
+        if (ContainsAny(primaryRoleText, "architect", "architecture", "design", "adr", "technical decision"))
+        {
+            return AgentWorkspaceToolProfileKind.ArchitectureReview;
+        }
+
         if (stepRun.StepKind == ProcessStepKind.Review ||
-            ContainsAny(roleText, "qa", "quality", "test", "tests", "validation", "verify", "proof", "review", "approval", "readiness"))
+            ContainsAny(primaryRoleText, "qa", "quality", "test", "tests", "validation", "verify", "proof", "review", "approval", "readiness"))
         {
             return AgentWorkspaceToolProfileKind.QualityValidation;
         }
 
-        if (ContainsAny(roleText, "developer", "engineer", "implementation", "implement", "build", "code", "software", "blazor", ".net", "dotnet", "c#"))
+        if (ContainsDevelopmentProfileSignal(roleText))
         {
             return AgentWorkspaceToolProfileKind.SoftwareDevelopment;
         }
@@ -136,6 +136,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return stepRun.StepKind == ProcessStepKind.Work
             ? AgentWorkspaceToolProfileKind.BusinessAnalysis
             : AgentWorkspaceToolProfileKind.ReadOnly;
+    }
+
+    private static bool ContainsDevelopmentProfileSignal(string text)
+    {
+        return ContainsAny(
+            text,
+            "developer",
+            "engineer",
+            "implementation",
+            "implement",
+            "build",
+            "code",
+            "blazor",
+            ".net",
+            "dotnet",
+            "c#");
     }
 
     private static string BuildCooperationSummary(
@@ -189,6 +205,38 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     stepRun.CurrentExecutorName,
                     workBrief?.Title,
                     workBrief?.WorkBriefText,
+                    workBrief?.ExpectedOutcome,
+                    workBrief?.EvidenceExpectationSummary,
+                    role?.Key,
+                    role?.DisplayName,
+                    role?.Purpose,
+                    role?.StaffingIntent,
+                    role?.PreferredExecutorKind,
+                    role?.SnapshotSummary,
+                    assignment?.ExecutorKind,
+                    assignment?.BindingReason,
+                    string.Join(' ', expectedArtifacts.Select(item => item.Title)),
+                    string.Join(' ', expectedArtifacts.Select(item => item.ValidationRequirementSummary))
+                }
+                .Where(item => !string.IsNullOrWhiteSpace(item)))
+            .ToLowerInvariant();
+    }
+
+    private static string BuildPrimaryRoleProfileText(
+        ProcessStepRun stepRun,
+        ProcessWorkBrief? workBrief,
+        ProcessRoleRequirement? role,
+        ProcessRunAssignment? assignment,
+        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts)
+    {
+        return string.Join(
+                ' ',
+                new[]
+                {
+                    stepRun.Title,
+                    stepRun.RoleSnapshotSummary,
+                    stepRun.CurrentExecutorName,
+                    workBrief?.Title,
                     workBrief?.ExpectedOutcome,
                     workBrief?.EvidenceExpectationSummary,
                     role?.Key,

@@ -76,15 +76,24 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         var technicalAgentBridge = scope.ServiceProvider.GetRequiredService<IAiTechnicalAgentBridge>();
         var partyIds = ProcessMockAgentCatalog.Roles.Select(item => item.PartyId).ToList();
         var staffingFacts = await technicalAgentBridge.GetStaffingFactsAsync(partyIds);
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var projectedFacts = (await aiAgentService.ListAgentStaffingFactsProjectionAsync(dbContext, partyIds))
+            .ToDictionary(item => item.PartyId);
 
         Assert.Equal(ProcessMockAgentCatalog.Roles.Count, staffingFacts.Count);
         foreach (var role in ProcessMockAgentCatalog.Roles)
         {
             var fact = staffingFacts[role.PartyId];
+            var projectedFact = projectedFacts[role.PartyId];
+            var roleTag = ProcessMockAgentCatalog.CreateRoleTag(role.RoleKey);
+
             Assert.Equal(AiResourceBindingStatus.Bound, fact.BindingStatus);
             Assert.True(fact.TechnicalAgentId.HasValue);
             Assert.Equal(ProcessMockAgentCatalog.ProviderName, fact.ProviderName);
             Assert.Equal(ProcessMockAgentCatalog.Model, fact.DefaultModel);
+            Assert.Contains(roleTag, projectedFact.Tags, StringComparer.OrdinalIgnoreCase);
         }
     }
 

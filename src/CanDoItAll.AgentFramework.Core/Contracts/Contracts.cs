@@ -31,6 +31,9 @@ public interface ISandboxWorkspaceExecutionStore
 
 public interface ISandboxWorkspaceExecutionRunStore
 {
+    Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+        CancellationToken cancellationToken = default);
+
     Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default);

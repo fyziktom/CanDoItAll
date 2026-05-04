@@ -6,6 +6,17 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService {
+    private const int ManualRerunContextMaxLength = 1_200;
+    private const int ManualRerunDecisionContextMaxLength = 600;
+
+    private static readonly string[] RecursiveManualRerunContextMarkers =
+    [
+        " Recovery directive:",
+        "Recovery directive:",
+        "Typed recovery decision:",
+        "Recovery details:"
+    ];
+
     public async Task<Result> RerunAgentStepAsync(
         ProcessAgentStepRerunRequest request,
         CancellationToken cancellationToken = default)
@@ -193,10 +204,20 @@ public sealed partial class ProcessesService {
         ProcessAgentStepRerunRequest request,
         string recoveryDirective)
     {
-        var operatorReason = string.IsNullOrWhiteSpace(request.OperatorReason)
+        var operatorReason = NormalizeManualRerunContext(
+            string.IsNullOrWhiteSpace(request.OperatorReason)
             ? "Operator requested the agent to do the job again with explicit recovery instructions."
-            : request.OperatorReason.Trim();
-        return $"{operatorReason} Recovery directive: {recoveryDirective}";
+            : request.OperatorReason,
+            ManualRerunDecisionContextMaxLength);
+        if (string.IsNullOrWhiteSpace(operatorReason))
+        {
+            operatorReason = "Operator requested the agent to do the job again with explicit recovery instructions.";
+        }
+
+        var directiveSummary = string.IsNullOrWhiteSpace(recoveryDirective)
+            ? "Recovery directive was not rendered; inspect the manual rerun journal."
+            : "Recovery directive was recorded in the manual rerun journal.";
+        return $"{operatorReason} {directiveSummary}";
     }
 
     private static string BuildManualRerunDirective(
@@ -218,22 +239,25 @@ public sealed partial class ProcessesService {
             .Append(stepRun.Title)
             .Append("'. Start a fresh attempt and preserve all previous execution runs and artifacts.");
 
-        if (!string.IsNullOrWhiteSpace(request.OperatorReason))
+        var operatorReason = NormalizeManualRerunContext(request.OperatorReason, ManualRerunContextMaxLength);
+        if (!string.IsNullOrWhiteSpace(operatorReason))
         {
             builder.Append(" Operator reason: ")
-                .Append(request.OperatorReason.Trim());
+                .Append(operatorReason);
         }
 
-        if (!string.IsNullOrWhiteSpace(stepRun.BlockedReason))
+        var blockedReason = NormalizeManualRerunContext(stepRun.BlockedReason, ManualRerunContextMaxLength);
+        if (!string.IsNullOrWhiteSpace(blockedReason))
         {
             builder.Append(" Prior blocked reason: ")
-                .Append(stepRun.BlockedReason.Trim());
+                .Append(blockedReason);
         }
 
-        if (!string.IsNullOrWhiteSpace(stepRun.ExceptionSummary))
+        var exceptionSummary = NormalizeManualRerunContext(stepRun.ExceptionSummary, ManualRerunContextMaxLength);
+        if (!string.IsNullOrWhiteSpace(exceptionSummary))
         {
             builder.Append(" Prior failure: ")
-                .Append(stepRun.ExceptionSummary.Trim());
+                .Append(exceptionSummary);
         }
 
         if (missingArtifacts.Count > 0)
@@ -244,7 +268,8 @@ public sealed partial class ProcessesService {
         }
 
         var decisionSummaries = latestDecisions
-            .Select(item => item.Reason)
+            .Where(IsUsefulManualRerunDecisionSummary)
+            .Select(BuildManualRerunDecisionSummary)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Take(2)
             .ToList();
@@ -257,6 +282,78 @@ public sealed partial class ProcessesService {
 
         builder.Append(" Do not mark the step complete until governed process completion, required tool proof, branch selection, and required artifacts are satisfied.");
         return builder.ToString();
+    }
+
+    private static bool IsUsefulManualRerunDecisionSummary(ProcessDecisionRecord decision)
+    {
+        return decision.DecisionKind is not ProcessDecisionKind.Assignment and
+            not ProcessDecisionKind.DirectMessage &&
+            !string.IsNullOrWhiteSpace(decision.Reason);
+    }
+
+    private static string BuildManualRerunDecisionSummary(ProcessDecisionRecord decision)
+    {
+        var reason = NormalizeManualRerunContext(decision.Reason, ManualRerunDecisionContextMaxLength);
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return string.Empty;
+        }
+
+        return $"{decision.DecisionKind}: {reason}";
+    }
+
+    private static string NormalizeManualRerunContext(
+        string? context,
+        int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(context))
+        {
+            return string.Empty;
+        }
+
+        var normalized = CollapseManualRerunWhitespace(context);
+        foreach (var marker in RecursiveManualRerunContextMarkers)
+        {
+            var markerIndex = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                continue;
+            }
+
+            normalized = normalized[..markerIndex].TrimEnd(' ', '.', ';', ':');
+            break;
+        }
+
+        if (normalized.Length <= maxLength)
+        {
+            return normalized;
+        }
+
+        return normalized[..maxLength].TrimEnd(' ', '.', ';', ':') + "...";
+    }
+
+    private static string CollapseManualRerunWhitespace(string context)
+    {
+        var builder = new System.Text.StringBuilder(context.Length);
+        var previousWasWhitespace = false;
+        foreach (var character in context.Trim())
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                if (!previousWasWhitespace)
+                {
+                    builder.Append(' ');
+                }
+
+                previousWasWhitespace = true;
+                continue;
+            }
+
+            builder.Append(character);
+            previousWasWhitespace = false;
+        }
+
+        return builder.ToString().Trim();
     }
 
     private static bool SatisfiesManualRerunArtifactExpectation(

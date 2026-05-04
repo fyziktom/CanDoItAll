@@ -377,6 +377,41 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void ResolveToolInvocationSignature_distinguishes_long_write_content_with_same_visible_prefix()
+    {
+        var signatureMethod = typeof(MafAgentRuntime).GetMethod(
+                                  "ResolveToolInvocationSignature",
+                                  BindingFlags.NonPublic | BindingFlags.Static)
+                              ?? throw new InvalidOperationException("Tool invocation signature method was not found.");
+        var prefix = new string('x', 180);
+        var firstCall = new FunctionCallContent(
+            "call-1",
+            "workspace_write_file",
+            new Dictionary<string, object?>
+            {
+                ["path"] = "external-target/C/programovani/dotnet/output/Components/Pages/Home.razor",
+                ["content"] = prefix + "first build fix",
+                ["overwrite"] = true
+            });
+        var secondCall = new FunctionCallContent(
+            "call-2",
+            "workspace_write_file",
+            new Dictionary<string, object?>
+            {
+                ["path"] = "external-target/C/programovani/dotnet/output/Components/Pages/Home.razor",
+                ["content"] = prefix + "second build fix",
+                ["overwrite"] = true
+            });
+
+        var firstSignature = Assert.IsType<string>(signatureMethod.Invoke(null, [firstCall]));
+        var secondSignature = Assert.IsType<string>(signatureMethod.Invoke(null, [secondCall]));
+
+        Assert.NotEqual(firstSignature, secondSignature);
+        Assert.Contains("#", firstSignature, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_file|", firstSignature, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveProviderNetworkTimeout_honors_provider_timeout_metadata()
     {
         var timeoutMethod = typeof(MafAgentRuntime).GetMethod(
@@ -800,6 +835,208 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task WorkspaceRuntimePlugin_allows_dotnet_new_parent_when_parent_and_name_resolve_to_grounded_external_target()
+    {
+        var workspaceRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-workspace-{Guid.NewGuid():N}")).FullName;
+        var externalParent = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-external-{Guid.NewGuid():N}")).FullName;
+        var projectName = "UnitConverterApp";
+        var externalRoot = Path.Combine(externalParent, projectName);
+        var externalParentAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalParent)
+                                  ?? throw new InvalidOperationException("External parent alias could not be normalized.");
+        var externalRootAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)
+                               ?? throw new InvalidOperationException("External root alias could not be normalized.");
+
+        try
+        {
+            var agent = CreateToolAgent() with
+            {
+                ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                    "{}",
+                    AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment))
+            };
+            var provider = CreateProvider("{}");
+            var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+                "{}",
+                $"""implement a Blazor app in "{externalRoot}" """,
+                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+            var run = CreateExecutionRunForAuditScope(agent, provider, metadataJson);
+            var pluginType = typeof(MafAgentRuntime).GetNestedType("WorkspaceRuntimePlugin", BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("WorkspaceRuntimePlugin type was not found.");
+            var processHost = new CapturingWorkspaceProcessHost();
+            var commandService = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+            var artifactService = new WorkspaceArtifactToolService(workspaceRoot, commandService);
+            var plugin = Activator.CreateInstance(
+                             pluginType,
+                             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                             binder: null,
+                             args:
+                             [
+                                 new WorkspaceFileService(workspaceRoot),
+                                 commandService,
+                                 artifactService,
+                                 workspaceRoot,
+                                 AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+                             ],
+                             culture: null)
+                         ?? throw new InvalidOperationException("WorkspaceRuntimePlugin could not be created.");
+            var dotnetNewMethod = pluginType.GetMethod("DotnetWorkspaceNew", BindingFlags.Public | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("DotnetWorkspaceNew method was not found.");
+
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var invocation = dotnetNewMethod.Invoke(plugin, ["blazor", projectName, externalParentAlias, false, 300]);
+                var task = Assert.IsAssignableFrom<Task<WorkspaceCommandExecutionResult>>(invocation);
+                var result = await task;
+
+                Assert.True(result.Succeeded, result.Message);
+                Assert.Equal(externalParentAlias, result.WorkingDirectory);
+                Assert.Contains(externalRootAlias, result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+            }
+
+            var request = processHost.LastRequest ?? throw new InvalidOperationException("workspace_dotnet_new did not invoke the process host.");
+            Assert.Equal("workspace_dotnet_new", request.ToolName);
+            Assert.Equal("dotnet_new", request.RecipeId);
+            Assert.Equal(Path.GetFullPath(externalParent), Path.GetFullPath(request.WorkingDirectory));
+            Assert.Contains("-n", request.Arguments);
+            Assert.Contains(projectName, request.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+            Directory.Delete(externalParent, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WorkspaceRuntimePlugin_denies_dotnet_new_parent_when_requested_scaffold_root_is_not_grounded()
+    {
+        var workspaceRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-workspace-{Guid.NewGuid():N}")).FullName;
+        var externalParent = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-external-{Guid.NewGuid():N}")).FullName;
+        var externalRoot = Path.Combine(externalParent, "UnitConverterApp");
+        var externalParentAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalParent)
+                                  ?? throw new InvalidOperationException("External parent alias could not be normalized.");
+
+        try
+        {
+            var agent = CreateToolAgent() with
+            {
+                ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                    "{}",
+                    AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment))
+            };
+            var provider = CreateProvider("{}");
+            var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+                "{}",
+                $"""implement a Blazor app in "{externalRoot}" """,
+                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+            var run = CreateExecutionRunForAuditScope(agent, provider, metadataJson);
+            var pluginType = typeof(MafAgentRuntime).GetNestedType("WorkspaceRuntimePlugin", BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("WorkspaceRuntimePlugin type was not found.");
+            var commandService = new WorkspaceCommandExecutionService(workspaceRoot, new CapturingWorkspaceProcessHost());
+            var artifactService = new WorkspaceArtifactToolService(workspaceRoot, commandService);
+            var plugin = Activator.CreateInstance(
+                             pluginType,
+                             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                             binder: null,
+                             args:
+                             [
+                                 new WorkspaceFileService(workspaceRoot),
+                                 commandService,
+                                 artifactService,
+                                 workspaceRoot,
+                                 AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+                             ],
+                             culture: null)
+                         ?? throw new InvalidOperationException("WorkspaceRuntimePlugin could not be created.");
+            var dotnetNewMethod = pluginType.GetMethod("DotnetWorkspaceNew", BindingFlags.Public | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("DotnetWorkspaceNew method was not found.");
+
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var exception = Assert.Throws<TargetInvocationException>(() =>
+                    dotnetNewMethod.Invoke(plugin, ["blazor", "OtherApp", externalParentAlias, false, 300]));
+                var innerException = Assert.IsType<InvalidOperationException>(exception.InnerException);
+
+                Assert.Contains("allowed external workspace roots", innerException.Message, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+            Directory.Delete(externalParent, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WorkspaceRuntimePlugin_denies_recursive_delete_of_grounded_external_product_root_and_tests()
+    {
+        var workspaceRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-workspace-{Guid.NewGuid():N}")).FullName;
+        var externalRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-external-product-{Guid.NewGuid():N}")).FullName;
+        var testsRoot = Directory.CreateDirectory(Path.Combine(externalRoot, "tests")).FullName;
+        File.WriteAllText(Path.Combine(externalRoot, "Program.cs"), "var builder = WebApplication.CreateBuilder(args);");
+        File.WriteAllText(Path.Combine(testsRoot, "UnitTests.csproj"), "<Project />");
+        var externalRootAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)
+                               ?? throw new InvalidOperationException("External root alias could not be normalized.");
+
+        try
+        {
+            var agent = CreateToolAgent() with
+            {
+                ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                    "{}",
+                    new AgentWorkspaceToolAccessSettings
+                    {
+                        Profile = AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+                        CanReadFiles = true,
+                        CanWriteFiles = true,
+                        CanManageWorkspacePaths = true,
+                        AllowedExternalTargetAliases = [externalRootAlias]
+                    })
+            };
+            var provider = CreateProvider("{}");
+            var run = CreateExecutionRunForAuditScope(agent, provider, "{}");
+            var pluginType = typeof(MafAgentRuntime).GetNestedType("WorkspaceRuntimePlugin", BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("WorkspaceRuntimePlugin type was not found.");
+            var commandService = new WorkspaceCommandExecutionService(workspaceRoot, new CapturingWorkspaceProcessHost());
+            var artifactService = new WorkspaceArtifactToolService(workspaceRoot, commandService);
+            var plugin = Activator.CreateInstance(
+                             pluginType,
+                             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                             binder: null,
+                             args:
+                             [
+                                 new WorkspaceFileService(workspaceRoot),
+                                 commandService,
+                                 artifactService,
+                                 workspaceRoot,
+                                 AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+                             ],
+                             culture: null)
+                         ?? throw new InvalidOperationException("WorkspaceRuntimePlugin could not be created.");
+            var deleteMethod = pluginType.GetMethod("DeleteWorkspacePath", BindingFlags.Public | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("DeleteWorkspacePath method was not found.");
+
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var rootException = Assert.Throws<TargetInvocationException>(() =>
+                    deleteMethod.Invoke(plugin, [externalRootAlias, true]));
+                var rootInnerException = Assert.IsType<InvalidOperationException>(rootException.InnerException);
+                Assert.Contains("Refusing to delete grounded external target root", rootInnerException.Message, StringComparison.OrdinalIgnoreCase);
+
+                var testsException = Assert.Throws<TargetInvocationException>(() =>
+                    deleteMethod.Invoke(plugin, [$"{externalRootAlias}/tests", true]));
+                var testsInnerException = Assert.IsType<InvalidOperationException>(testsException.InnerException);
+                Assert.Contains("protected external product directory", testsInnerException.Message, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task CreateCapabilityState_attaches_configured_storage_driver_tools_and_wraps_writes()
     {
         var services = new ServiceCollection()
@@ -1120,6 +1357,78 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task Browser_mcp_wrapper_omits_screenshot_image_payload_from_model_result()
+    {
+        var wrapperType = typeof(MafAgentRuntime)
+            .GetNestedType("McpCapabilityBuilder", BindingFlags.NonPublic)
+            ?.GetNestedType("BrowserMcpModelContextBoundedAIFunction", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Browser MCP context-bounding wrapper was not found.");
+        var imagePayload = new string('A', 18000);
+        var innerFunction = AIFunctionFactory.Create(
+            (string filename) => new BrowserMcpResult(
+            [
+                new BrowserMcpContent(Text: null, Data: imagePayload),
+                new BrowserMcpContent(Text: "Screenshot captured.", Data: null)
+            ]),
+            "browser_take_screenshot",
+            "Captures a screenshot.");
+        var wrapper = Assert.IsAssignableFrom<AIFunction>(Activator.CreateInstance(
+            wrapperType,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            args: [innerFunction],
+            culture: null));
+
+        var result = await wrapper.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["filename"] = "proof/browser-home.png"
+            }));
+        var compactResult = Assert.IsType<string>(result);
+
+        Assert.Contains("Saved artifact: proof/browser-home.png", compactResult, StringComparison.Ordinal);
+        Assert.Contains("Screenshot image content was omitted from model context.", compactResult, StringComparison.Ordinal);
+        Assert.Contains("Screenshot captured.", compactResult, StringComparison.Ordinal);
+        Assert.DoesNotContain(imagePayload[..200], compactResult, StringComparison.Ordinal);
+        Assert.True(compactResult.Length < 2600);
+    }
+
+    [Fact]
+    public async Task Browser_mcp_wrapper_preserves_bounded_snapshot_text()
+    {
+        var wrapperType = typeof(MafAgentRuntime)
+            .GetNestedType("McpCapabilityBuilder", BindingFlags.NonPublic)
+            ?.GetNestedType("BrowserMcpModelContextBoundedAIFunction", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Browser MCP context-bounding wrapper was not found.");
+        var longSnapshotText = "heading Basic App Converter" + Environment.NewLine + new string('x', 20000);
+        var innerFunction = AIFunctionFactory.Create(
+            (string filename) => new BrowserMcpResult(
+            [
+                new BrowserMcpContent(Text: longSnapshotText, Data: null)
+            ]),
+            "browser_snapshot",
+            "Captures an accessibility snapshot.");
+        var wrapper = Assert.IsAssignableFrom<AIFunction>(Activator.CreateInstance(
+            wrapperType,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            args: [innerFunction],
+            culture: null));
+
+        var result = await wrapper.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["filename"] = "proof/browser-snapshot.md"
+            }));
+        var compactResult = Assert.IsType<string>(result);
+
+        Assert.Contains("Saved artifact: proof/browser-snapshot.md", compactResult, StringComparison.Ordinal);
+        Assert.Contains("heading Basic App Converter", compactResult, StringComparison.Ordinal);
+        Assert.Contains("[truncated]", compactResult, StringComparison.Ordinal);
+        Assert.InRange(compactResult.Length, 11000, 12500);
+    }
+
+    [Fact]
     public async Task Workspace_plugin_mutation_tools_remain_available_when_approval_requirements_are_suppressed()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -1360,6 +1669,43 @@ public sealed class MafAgentRuntimeTests
         public IDictionary<string, object?> Arguments { get; } = arguments;
     }
 
+    private sealed class CapturingWorkspaceProcessHost : IWorkspaceProcessHost
+    {
+        public WorkspaceProcessExecutionRequest? LastRequest { get; private set; }
+
+        public ExecutionBoundaryDescriptor DescribeBoundary()
+        {
+            return new ExecutionBoundaryDescriptor(
+                Mode: "Test",
+                FilesystemScope: "Test workspace.",
+                NetworkScope: "None.",
+                CredentialScope: "None.",
+                HostLabel: "Capturing process host",
+                IsEnforcedByHost: true,
+                Notes: "Captures command requests without starting a process.");
+        }
+
+        public Task<WorkspaceProcessExecutionResult> ExecuteAsync(
+            WorkspaceProcessExecutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            var now = DateTimeOffset.UtcNow;
+            return Task.FromResult(new WorkspaceProcessExecutionResult(
+                Started: true,
+                ExitCode: 0,
+                Stdout: "ok",
+                Stderr: string.Empty,
+                StdoutTruncated: false,
+                StderrTruncated: false,
+                StartedAtUtc: now,
+                CompletedAtUtc: now,
+                TimedOut: false,
+                Boundary: DescribeBoundary(),
+                FailureMessage: string.Empty));
+        }
+    }
+
     private static ProviderProfile CreateProvider(string configurationJson)
     {
         return new ProviderProfile(
@@ -1591,6 +1937,10 @@ public sealed class MafAgentRuntimeTests
         public IStorageDriver Resolve(StorageProviderKind providerKind)
             => throw new InvalidOperationException("No storage drivers are registered for this test.");
     }
+
+    private sealed record BrowserMcpResult(IReadOnlyList<object> Content);
+
+    private sealed record BrowserMcpContent(string? Text, string? Data);
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(
         MafAgentRuntime runtime,

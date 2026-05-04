@@ -375,7 +375,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Final product-validation order")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never make validation pass by writing fake package")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications")
-                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "leave `keepAlive` false unless this same step immediately needs browser tools")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds");
         }
 
@@ -412,6 +413,7 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "waitForHttp: false")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Leave `keepAlive` false for startup proof")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds");
         }
 
@@ -427,6 +429,9 @@ internal static class SandboxWorkspaceSeedNormalizer
             string.Equals(seededCapability.Key, "workspace-dotnet-run", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.Description.Contains("grounded external-target alias", StringComparison.OrdinalIgnoreCase)
+                   || (string.Equals(seededCapability.Key, "workspace-dotnet-run", StringComparison.OrdinalIgnoreCase) &&
+                       (!existingCapability.Description.Contains("stops the launched process tree by default", StringComparison.OrdinalIgnoreCase) ||
+                        !existingCapability.Description.Contains("keepAlive true", StringComparison.OrdinalIgnoreCase)))
                    || (string.Equals(seededCapability.Key, "workspace-list-files", StringComparison.OrdinalIgnoreCase) &&
                        (!existingCapability.Description.Contains("broad managed-root browsing is denied", StringComparison.OrdinalIgnoreCase) ||
                         !existingCapability.Description.Contains("recursive globstar patterns", StringComparison.OrdinalIgnoreCase)))

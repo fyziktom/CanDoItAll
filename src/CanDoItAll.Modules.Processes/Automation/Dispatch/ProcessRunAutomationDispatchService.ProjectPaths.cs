@@ -146,6 +146,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
             focusNodeIds.Add(descendant.Id);
         }
 
+        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTarget(
+                     nodesById,
+                     nodesByParentId,
+                     targetNodeId,
+                     selectedProcessNodeId))
+        {
+            focusNodeIds.Add(planningNode.Id);
+            foreach (var descendant in ResolveProjectStructureDescendants(planningNode.Id, nodesByParentId, maxDepth: 3))
+            {
+                focusNodeIds.Add(descendant.Id);
+            }
+        }
+
         return focusNodeIds
             .Where(nodesById.ContainsKey)
             .Select(id => nodesById[id])
@@ -156,6 +169,77 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ThenBy(hint => hint.SourceNodeTitle, StringComparer.OrdinalIgnoreCase)
             .Take(4)
             .ToList();
+    }
+
+    private static IReadOnlyList<ProjectStructureGroundingNodeData> ResolveProjectLevelPlanningNodesForTarget(
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById,
+        IReadOnlyDictionary<string, IReadOnlyList<ProjectStructureGroundingNodeData>> nodesByParentId,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
+        if (string.IsNullOrWhiteSpace(targetNodeId) ||
+            !nodesById.TryGetValue(targetNodeId, out var targetNode) ||
+            string.IsNullOrWhiteSpace(targetNode.ParentId) ||
+            !nodesByParentId.TryGetValue(NormalizeProjectStructureNodeId(targetNode.ParentId), out var siblings))
+        {
+            return [];
+        }
+
+        return siblings
+            .Where(node =>
+                !string.Equals(node.Id, targetNode.Id, StringComparison.Ordinal) &&
+                !string.Equals(node.Id, selectedProcessNodeId, StringComparison.Ordinal) &&
+                IsProjectLevelPlanningContextNode(node))
+            .Select(node => new
+            {
+                Node = node,
+                SignalScore = GetProjectStructureGroundingSignalScore(node)
+            })
+            .Where(item => item.SignalScore > 0 || !string.IsNullOrWhiteSpace(item.Node.Title))
+            .OrderByDescending(item => item.SignalScore)
+            .ThenBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .Select(item => item.Node)
+            .ToList();
+    }
+
+    private static string ResolveProjectStructureGroundingTargetNodeId(
+        ProcessProjectStructureContext context,
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(nodesById);
+
+        var resolvedTargetNodeId = NormalizeProjectStructureNodeId(context.ResolveTargetNodeId());
+        var selectedNodeId = NormalizeProjectStructureNodeId(context.NodeId);
+        var parentNodeId = NormalizeProjectStructureNodeId(context.ParentNodeId);
+
+        if (!string.IsNullOrWhiteSpace(selectedNodeId) &&
+            nodesById.ContainsKey(selectedNodeId) &&
+            (IsProcessDefinitionNodeId(resolvedTargetNodeId) || !nodesById.ContainsKey(resolvedTargetNodeId)))
+        {
+            return selectedNodeId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(resolvedTargetNodeId) &&
+            nodesById.ContainsKey(resolvedTargetNodeId))
+        {
+            return resolvedTargetNodeId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(parentNodeId) &&
+            nodesById.ContainsKey(parentNodeId))
+        {
+            return parentNodeId;
+        }
+
+        return resolvedTargetNodeId;
+    }
+
+    private static bool IsProcessDefinitionNodeId(string? nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+               nodeId.Trim().StartsWith("process-definition:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveExternalTargetHintsFromProjectStructureNode(
@@ -282,6 +366,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var stripped = Regex.Replace(
             value,
             @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        stripped = Regex.Replace(
+            stripped,
+            @"(?i)\.[\\/]+n(?:all|generated|app(?:lication)?|source|code|files?|root|directory)\b.*$",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        stripped = Regex.Replace(
+            stripped,
+            @"(?i)\.\s+(?:all|generated|app(?:lication)?|source|code|files?|root|directory)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         return stripped.Trim();

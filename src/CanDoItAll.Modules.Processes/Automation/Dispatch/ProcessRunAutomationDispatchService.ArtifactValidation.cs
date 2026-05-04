@@ -185,8 +185,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var missingRequiredArtifacts = candidate.ExpectedArtifacts
             .Where(item => item.IsRequired)
-            .Where(item => !HasRecordedExpectedArtifact(candidate, detail, item))
-            .Where(item => !CanAutoSatisfyRequiredArtifact(candidate, detail, item, responseText))
+            .Where(item => !HasSatisfiedRequiredArtifact(candidate, detail, item, responseText))
             .Select(item => item.Title.Trim())
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -198,12 +197,109 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : string.Join(", ", missingRequiredArtifacts);
     }
 
+    private static bool HasSatisfiedRequiredArtifact(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DispatchArtifactExpectation expectedArtifact,
+        string? responseText)
+    {
+        if (HasRecordedExpectedArtifact(candidate, detail, expectedArtifact) &&
+            !HasSuccessfulConcreteProductMutation(candidate, detail))
+        {
+            return true;
+        }
+
+        if (CanProjectProcessMockArtifact(candidate, detail, expectedArtifact))
+        {
+            return true;
+        }
+
+        if (RequiresFreshCurrentAttemptImplementationArtifact(candidate, expectedArtifact))
+        {
+            return HasFreshCurrentAttemptImplementationArtifact(candidate, detail, expectedArtifact);
+        }
+
+        return HasRecordedExpectedArtifact(candidate, detail, expectedArtifact) ||
+               CanAutoSatisfyRequiredArtifact(candidate, detail, expectedArtifact, responseText);
+    }
+
+    private static bool RequiresFreshCurrentAttemptImplementationArtifact(
+        DispatchCandidate candidate,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        return RequiresConcreteImplementationProof(candidate) &&
+               expectedArtifact.IsRequired &&
+               expectedArtifact.ArtifactKind != ProcessArtifactKind.Decision;
+    }
+
+    private static bool HasFreshCurrentAttemptImplementationArtifact(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        var successfulReceipts = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .ToList();
+        var latestConcreteMutation = successfulReceipts
+            .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
+            .Where(receipt => IsConcreteProductMutationReceipt(candidate, receipt))
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .ThenByDescending(receipt => receipt.StartedAtUtc)
+            .FirstOrDefault();
+        var latestValidation = ResolveLatestRequiredImplementationValidationReceipt(candidate, successfulReceipts);
+        var artifactReceipts = successfulReceipts
+            .Where(IsSuccessfulWorkspaceFileMutationReceipt)
+            .Where(receipt => WorkspaceMutationReceiptMatchesExpectedArtifact(candidate, expectedArtifact, receipt))
+            .ToList();
+        if (latestConcreteMutation is null)
+        {
+            var latestConcreteRead = ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts);
+            if (latestConcreteRead is null ||
+                latestValidation is null)
+            {
+                return false;
+            }
+
+            return artifactReceipts.Any(receipt =>
+                !IsReceiptAfter(latestConcreteRead, receipt) &&
+                !IsReceiptAfter(latestValidation, receipt));
+        }
+
+        return artifactReceipts.Any(receipt =>
+            !IsReceiptAfter(latestConcreteMutation, receipt) &&
+            (latestValidation is null || !IsReceiptAfter(latestValidation, receipt)));
+    }
+
+    private static bool WorkspaceMutationReceiptMatchesExpectedArtifact(
+        DispatchCandidate candidate,
+        DispatchArtifactExpectation expectedArtifact,
+        ToolExecutionReceiptRecord receipt)
+    {
+        return ResolveManagedWorkspacePathsFromReceipt(receipt)
+            .Any(path => WorkspaceWrittenFileMatchesExpectedArtifact(
+                candidate.ExpectedArtifacts,
+                expectedArtifact,
+                path,
+                content: string.Empty));
+    }
+
     private static bool HasRecordedExpectedArtifact(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact)
     {
-        return detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id);
+        return candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+               detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id);
+    }
+
+    private static bool HasRecordedOrExecutionArtifactForExpectedArtifact(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        return HasRecordedExpectedArtifact(candidate, detail, expectedArtifact) ||
+               CanProjectProcessMockArtifact(candidate, detail, expectedArtifact) ||
+               CanProjectWorkspaceWrittenArtifact(candidate, detail, expectedArtifact);
     }
 
     private static bool CanAutoSatisfyRequiredArtifact(
@@ -227,14 +323,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return true;
         }
 
+        var projectableResponseText = ResolveProjectableResponseArtifactText(responseText);
         if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var declaredRelativePath))
         {
             return !string.IsNullOrWhiteSpace(ResolveProviderNativeBrowserToolName(declaredRelativePath)) ||
-                   (IsUsableProjectedResponseArtifactContent(expectedArtifact, responseText) &&
+                   (IsUsableProjectedResponseArtifactContent(expectedArtifact, projectableResponseText) &&
                     IsResponseProjectableTextArtifact(declaredRelativePath));
         }
 
-        return IsUsableProjectedResponseArtifactContent(expectedArtifact, responseText) &&
+        return IsUsableProjectedResponseArtifactContent(expectedArtifact, projectableResponseText) &&
                CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact);
     }
 
@@ -321,7 +418,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         string? responseText)
     {
-        if (ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run).Count == 0)
+        var allowedExternalTargetAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run);
+        if (allowedExternalTargetAliases.Count == 0)
         {
             return string.Empty;
         }
@@ -330,7 +428,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         foreach (var file in ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson)
                      .Concat(ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)))
         {
-            AddShallowSharedManagedArtifactPath(shallowPaths, file.Path);
+            AddShallowSharedManagedArtifactPath(shallowPaths, file.Path, allowedExternalTargetAliases);
             if (shallowPaths.Count >= 3)
             {
                 break;
@@ -341,7 +439,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             foreach (Match match in ManagedWorkspacePathRegex.Matches(responseText))
             {
-                AddShallowSharedManagedArtifactPath(shallowPaths, match.Groups["path"].Value);
+                AddShallowSharedManagedArtifactPath(shallowPaths, match.Groups["path"].Value, allowedExternalTargetAliases);
                 if (shallowPaths.Count >= 3)
                 {
                     break;
@@ -356,15 +454,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static void AddShallowSharedManagedArtifactPath(
         ISet<string> shallowPaths,
-        string path)
+        string path,
+        IReadOnlyList<string> allowedExternalTargetAliases)
     {
-        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        var normalizedPath = NormalizeManagedPathReference(path);
         if (!IsShallowSharedManagedArtifactPath(normalizedPath))
         {
             return;
         }
 
+        if (IsLikelyProductFileRelativeToAllowedExternalTargetLeaf(normalizedPath, allowedExternalTargetAliases))
+        {
+            return;
+        }
+
         shallowPaths.Add(normalizedPath);
+    }
+
+    private static string NormalizeManagedPathReference(string path)
+    {
+        return WorkspaceScopeDescriptor.NormalizeRelativePath(path)
+            .Trim('`', '\'', '"', ',', ';', '.', ':', ')', ']', '}');
     }
 
     internal static bool IsShallowSharedManagedArtifactPath(string path)
@@ -395,6 +505,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
                string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(segment, "integration-map", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(segment, "data", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLikelyProductFileRelativeToAllowedExternalTargetLeaf(
+        string path,
+        IReadOnlyList<string> allowedExternalTargetAliases)
+    {
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        var segments = normalizedPath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length != 2 ||
+            !IsManagedEvidenceRootSegment(segments[0]) ||
+            !IsLikelyProductSourceOrProjectFileName(segments[1]))
+        {
+            return false;
+        }
+
+        return allowedExternalTargetAliases
+            .Select(alias => WorkspaceScopeDescriptor.NormalizeRelativePath(alias))
+            .Any(alias =>
+            {
+                var aliasSegments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                return aliasSegments.Length > 0 &&
+                       string.Equals(aliasSegments[^1], segments[0], StringComparison.OrdinalIgnoreCase);
+            });
+    }
+
+    private static bool IsLikelyProductSourceOrProjectFileName(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        return string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".razor", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".cshtml", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".csproj", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".fsproj", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".vbproj", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".css", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".js", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".ts", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".tsx", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".jsx", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".html", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAllowedExternalTargetReference(
@@ -530,6 +684,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        if (ShouldIgnoreProductSourceForNarrativeExpectation(expectedArtifact, normalizedPath))
+        {
+            return false;
+        }
+
         var syntheticArtifact = new ExecutionArtifactRecord(
             Guid.Empty,
             Guid.Empty,
@@ -542,6 +701,53 @@ internal sealed partial class ProcessRunAutomationDispatchService
             DateTimeOffset.MinValue);
         var matchedExpectationId = MatchExpectedArtifactId(expectedArtifacts, syntheticArtifact, content);
         return matchedExpectationId == expectedArtifact.Id;
+    }
+
+    private static bool ExpectedArtifactExplicitlyTargetsPath(
+        DispatchArtifactExpectation expectedArtifact,
+        string normalizedPath)
+    {
+        return TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath) &&
+               string.Equals(
+                   NormalizeManagedRelativePathForComparison(expectedRelativePath),
+                   NormalizeManagedRelativePathForComparison(normalizedPath),
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldIgnoreProductSourceForNarrativeExpectation(
+        DispatchArtifactExpectation expectedArtifact,
+        string normalizedPath)
+    {
+        return IsLikelyProductSourceOrProjectFileName(ResolvePromptFileName(normalizedPath)) &&
+               IsNarrativeEvidenceArtifactExpectation(expectedArtifact) &&
+               !ExpectedArtifactExplicitlyTargetsPath(expectedArtifact, normalizedPath);
+    }
+
+    private static string ResolvePromptFileName(string path)
+    {
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return string.Empty;
+        }
+
+        var segments = normalizedPath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length == 0 ? string.Empty : segments[^1];
+    }
+
+    private static bool IsNarrativeEvidenceArtifactExpectation(DispatchArtifactExpectation expectedArtifact)
+    {
+        var text = CollapsePromptWhitespace($"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}");
+        return text.Contains("change set", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("checklist", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("summary", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("brief", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("report", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("notes", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("evidence", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("rollout", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("migration", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsSuccessfulWorkspaceFileMutationReceipt(ToolExecutionReceiptRecord receipt)
@@ -570,6 +776,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        foreach (var path in ResolveWorkspacePathsFromToolRequest(text))
+        {
+            paths.Add(path);
+        }
+
         return paths.ToList();
     }
 
@@ -594,6 +805,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return HasExpectedArtifactContentSignals(expectedArtifact, responseText, normalizedResponse);
+    }
+
+    private static string ResolveProjectableResponseArtifactText(string? responseText)
+    {
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return string.Empty;
+        }
+
+        if (!TryReadProcessStepOutcome(responseText, out var outcome, out _))
+        {
+            return responseText.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(outcome.HumanReadableSummaryMarkdown))
+        {
+            return outcome.HumanReadableSummaryMarkdown.Trim();
+        }
+
+        return outcome.Reason?.Trim() ?? string.Empty;
     }
 
     private static bool HasExpectedArtifactContentSignals(
@@ -836,6 +1067,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return true;
         }
 
+        if (ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure(detail, receipt))
+        {
+            return true;
+        }
+
         if (!receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase))
         {
             return false;
@@ -899,6 +1135,57 @@ internal sealed partial class ProcessRunAutomationDispatchService
         });
     }
 
+    private static bool ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure(
+        ExecutionRunDetail detail,
+        ToolExecutionReceiptRecord receipt)
+    {
+        var normalizedToolName = NormalizeToolToken(receipt.ToolName);
+        if (normalizedToolName is not ("workspace_read_file" or "workspace_stat_path") ||
+            !receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) ||
+            !receipt.ExitSummary.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
+        if (string.IsNullOrWhiteSpace(browserWorkingDirectory) ||
+            !TryResolveRequestedManagedPath(receipt.RequestSummary, out var requestedPath))
+        {
+            return false;
+        }
+
+        var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
+        foreach (var outputFileName in browserOutputsByToolName.Values.SelectMany(item => item))
+        {
+            if (MatchesExpectedBrowserOutputFile(requestedPath, outputFileName) &&
+                TryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFileName, out var fullPath) &&
+                File.Exists(fullPath))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveRequestedManagedPath(string requestSummary, out string path)
+    {
+        path = string.Empty;
+        if (string.IsNullOrWhiteSpace(requestSummary))
+        {
+            return false;
+        }
+
+        var match = ManagedWorkspacePathRegex.Match(requestSummary);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        path = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
+        return !string.IsNullOrWhiteSpace(path);
+    }
+
     private static bool IsPlaceholderCriticalToolRequestSummary(
         string normalizedToolName,
         string? requestSummary)
@@ -949,7 +1236,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveProviderNativeBrowserToolName(string expectedRelativePath)
     {
-        return Path.GetExtension(expectedRelativePath).ToLowerInvariant() switch
+        var extension = Path.GetExtension(expectedRelativePath).ToLowerInvariant();
+        if (string.Equals(extension, ".md", StringComparison.Ordinal))
+        {
+            var fileName = Path.GetFileName(expectedRelativePath);
+            return fileName.Contains("browser", StringComparison.OrdinalIgnoreCase) ||
+                   fileName.Contains("snapshot", StringComparison.OrdinalIgnoreCase)
+                ? "browser_snapshot"
+                : string.Empty;
+        }
+
+        return extension switch
         {
             ".png" => "browser_take_screenshot",
             ".yml" or ".yaml" => "browser_snapshot",
@@ -1642,6 +1939,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedContent = CollapsePromptWhitespace(artifactTextContent);
         var contentMatches = expectedArtifacts
             .Where(item => !TryExtractExpectedArtifactRelativePath(item.ValidationRequirementSummary, out _))
+            .Where(item => !ShouldIgnoreProductSourceForNarrativeExpectation(item, artifact.RelativePath))
             .Where(item => HasExpectedArtifactContentSignals(item, artifactTextContent, normalizedContent))
             .ToList();
         if (contentMatches.Count == 1)
@@ -1670,6 +1968,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string displaySlug,
         string fileSlug)
     {
+        if (ShouldIgnoreProductSourceForNarrativeExpectation(expectedArtifact, relativePath))
+        {
+            return false;
+        }
+
         if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath))
         {
             return string.Equals(
@@ -2343,6 +2646,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactTrustRequirement.HumanApproved => ProcessArtifactTrustStatus.Approved,
             _ => ProcessArtifactTrustStatus.ReviewRequired
         };
+    }
+
+    internal static ProcessArtifactTrustStatus ResolveProjectedArtifactTrustStatus(
+        DispatchArtifactExpectation expectedArtifact,
+        ProcessStepRunStatus completionStatus)
+    {
+        return completionStatus == ProcessStepRunStatus.Completed &&
+               expectedArtifact.ArtifactKind == ProcessArtifactKind.Decision
+            ? ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement)
+            : ProcessArtifactTrustStatus.ReviewRequired;
     }
 
     private static string BuildCompletedDecisionArtifactProvenanceSummary(

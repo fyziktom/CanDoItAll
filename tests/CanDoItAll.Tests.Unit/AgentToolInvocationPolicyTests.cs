@@ -1,3 +1,4 @@
+using System.Globalization;
 using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Tests.Unit;
@@ -665,6 +666,33 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_distinct_long_mutations_with_same_visible_prefix()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var prefix = new string('x', 220);
+
+        for (var index = 0; index < DefaultAgentToolInvocationPolicy.MaxRepeatedMutationOrValidationInvocations + 1; index++)
+        {
+            var arguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            [
+                new KeyValuePair<string, object?>("path", "artifacts/result.md"),
+                new KeyValuePair<string, object?>("content", prefix + index.ToString(CultureInfo.InvariantCulture))
+            ]);
+            var context = CreateContext(
+                "workspace_write_file",
+                ToolInvocationClassification.Mutation,
+                isKnownTool: true,
+                autoApprovalAllowed: true,
+                approvalWrapperAvailable: false,
+                arguments: arguments);
+
+            var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+            Assert.NotEqual(ToolInvocationDecisionKind.Deny, decision.Kind);
+        }
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_product_file_mutation_when_external_target_is_read_only()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -837,6 +865,70 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
         Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName));
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_unbounded_governed_browser_snapshot()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "browser_snapshot",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["depth"] = "20",
+                ["boxes"] = "True"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("depth", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_bounded_governed_browser_snapshot()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "browser_snapshot",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["depth"] = "2",
+                ["boxes"] = "False"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_full_page_governed_browser_screenshot()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "browser_take_screenshot",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["fullPage"] = "True"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("viewport", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     public static TheoryData<string> ProcessMutationTools()

@@ -113,6 +113,19 @@ public sealed class ProcessesTools(IProcessesCoordinator coordinator, ILogger<Pr
             });
     }
 
+    [McpServerTool(Name = "processes_agent_step_rerun", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Queues a governed rerun for a blocked or failed agent-owned process step, including a typed rework packet and automation dispatch.")]
+    public Task<McpToolEnvelope<Guid>> ProcessesAgentStepRerunAsync(ProcessAgentStepRerunRequest request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            "processes_agent_step_rerun",
+            async () =>
+            {
+                await coordinator.RerunAgentStepAsync(request, cancellationToken);
+                return request.StepRunId;
+            });
+    }
+
     [McpServerTool(Name = "processes_assignment_resolve", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
     [Description("Resolves or updates a runtime role assignment for a process run.")]
     public Task<McpToolEnvelope<Guid>> ProcessesAssignmentResolveAsync(ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken = default)

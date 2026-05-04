@@ -151,8 +151,44 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
             Assert.Contains("http://127.0.0.1:5123", script, StringComparison.Ordinal);
             Assert.Contains("'--urls'", script, StringComparison.Ordinal);
+            Assert.Contains("$keepAlive = $false", script, StringComparison.Ordinal);
+            Assert.Contains("Stop-AppProcessTree $processTreeIds", script, StringComparison.Ordinal);
+            Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
             Assert.DoesNotContain("workflow", script, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("converter", script, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_http_smoke_can_keep_process_alive_for_browser_follow_up()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb/SampleWeb.csproj",
+                url: "http://127.0.0.1:5125/",
+                startupTimeoutSeconds: 5,
+                timeoutSeconds: 20,
+                keepAlive: true);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            var encodedIndex = processHost.LastRequest!.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
+            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
+            Assert.Contains("The process tree is still running for follow-up browser proof", script, StringComparison.Ordinal);
+            Assert.Contains("stopCommand", script, StringComparison.Ordinal);
         }
         finally
         {
@@ -208,6 +244,9 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("Inspect captured diagnostics before editing or retrying", result.Message, StringComparison.Ordinal);
             Assert.Contains("stdout.txt", result.Message, StringComparison.Ordinal);
             Assert.Contains("stderr.txt", result.Message, StringComparison.Ordinal);
+            Assert.Contains("Captured diagnostics preview", result.Message, StringComparison.Ordinal);
+            Assert.Contains("Build failed", result.Message, StringComparison.Ordinal);
+            Assert.Contains("CS0246 missing reference", result.Message, StringComparison.Ordinal);
             Assert.Contains("dotnet_test stdout", result.DiagnosticArtifactSummary, StringComparison.Ordinal);
             Assert.Contains(
                 result.ArtifactReferences,

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
@@ -180,6 +181,81 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
         Assert.Contains("implementation-report.md", rerunStep.Health.ActionableReason, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(ProcessOutboxHealthStatus.Pending, dispatchRecord.HealthStatus);
         Assert.Equal(ProcessRuntimeEventTypes.ManualAgentStepRerun, dispatchRecord.Trigger);
+    }
+
+    [Fact]
+    public void Manual_rerun_directive_filters_previous_recovery_directive_text()
+    {
+        var buildDirective = typeof(ProcessesService).GetMethod("BuildManualRerunDirective", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildManualRerunDirective method was not found.");
+        var stepRun = new ProcessStepRun
+        {
+            Title = "Implement feature, tests, and migration notes",
+            BlockedReason = "AgentFramework run 'New exploration thread' blocked step: validation incomplete. Recovery directive: Typed recovery decision: mode=ReworkContinuation; category=HumanRequestedRerun. Target artifacts/files: output/Program.cs.",
+            ExceptionSummary = "Finalizer tool was not called. Recovery details: old packet text that must not be replayed."
+        };
+        var request = new ProcessAgentStepRerunRequest
+        {
+            OperatorReason = "Operator requested a governed agent rerun from Process Workspace. Recovery directive: Typed recovery decision: old nested packet."
+        };
+        var decisions = new[]
+        {
+            new ProcessDecisionRecord
+            {
+                DecisionKind = ProcessDecisionKind.Assignment,
+                Reason = "Operator requested a governed agent rerun from Process Workspace. Recovery directive: Typed recovery decision: previous packet."
+            },
+            new ProcessDecisionRecord
+            {
+                DecisionKind = ProcessDecisionKind.Exception,
+                Reason = "AgentFramework run 'New exploration thread' failed: required finalizer was missing."
+            }
+        };
+
+        var directive = buildDirective.Invoke(
+            null,
+            [
+                request,
+                stepRun,
+                Array.Empty<ProcessArtifactExpectation>(),
+                Array.Empty<ProcessArtifactRecord>(),
+                decisions
+            ]) as string;
+
+        Assert.NotNull(directive);
+        Assert.Contains("Operator requested a governed agent rerun", directive, StringComparison.Ordinal);
+        Assert.Contains("Prior blocked reason: AgentFramework run", directive, StringComparison.Ordinal);
+        Assert.Contains("Exception: AgentFramework run 'New exploration thread' failed", directive, StringComparison.Ordinal);
+        Assert.DoesNotContain("Typed recovery decision", directive, StringComparison.Ordinal);
+        Assert.DoesNotContain("Recovery directive:", directive, StringComparison.Ordinal);
+        Assert.DoesNotContain("Recovery details:", directive, StringComparison.Ordinal);
+        Assert.DoesNotContain("Target artifacts/files:", directive, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assignment:", directive, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Manual_rerun_transition_reason_does_not_store_rendered_recovery_directive()
+    {
+        var buildTransitionReason = typeof(ProcessesService).GetMethod("BuildManualRerunTransitionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildManualRerunTransitionReason method was not found.");
+        var request = new ProcessAgentStepRerunRequest
+        {
+            OperatorReason = "Operator requested a governed agent rerun from Process Workspace."
+        };
+
+        var reason = buildTransitionReason.Invoke(
+            null,
+            [
+                request,
+                "Typed recovery decision: mode=ReworkContinuation; category=HumanRequestedRerun. Rework packet id: e99862ce-4713-4c9b-b590-6c9f024daa54."
+            ]) as string;
+
+        Assert.NotNull(reason);
+        Assert.Contains("Operator requested a governed agent rerun", reason, StringComparison.Ordinal);
+        Assert.Contains("manual rerun journal", reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("Typed recovery decision", reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("Recovery directive:", reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("e99862ce-4713-4c9b-b590-6c9f024daa54", reason, StringComparison.Ordinal);
     }
 
     [Fact]

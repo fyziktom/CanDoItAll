@@ -504,7 +504,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var recoveryExecutionRunId = ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns);
-            var reusableChatSessionId = ResolveReusableAutomationChatSessionId(executionRuns);
+            Guid? reusableChatSessionId = null;
             var manualRecoveryDirective = await LoadLatestManualRecoveryDirectiveAsync(
                 dbContext,
                 run.Id,
@@ -546,6 +546,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ? null
                 : roleRequirementsById.GetValueOrDefault(currentAssignment.RoleRequirementId);
             var expectedArtifacts = await LoadExpectedArtifactsAsync(dbContext, stepRun.StepDefinitionId, cancellationToken);
+            var recordedArtifactExpectationIds = existingArtifacts
+                .Where(item => item.StepRunId == stepRun.Id && item.ArtifactExpectationId.HasValue)
+                .Select(item => item.ArtifactExpectationId!.Value)
+                .ToHashSet();
             var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
                 BuildResolvedArtifactInputs(
                     configuredArtifactInputs ?? [],
@@ -562,6 +566,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                 technicalAgentSummary.TechnicalAgentId.Value,
                 expectedArtifacts,
+                recordedArtifactExpectationIds,
                 preparedArtifactInputs,
                 externalReferenceKeys,
                 reusableChatSessionId,

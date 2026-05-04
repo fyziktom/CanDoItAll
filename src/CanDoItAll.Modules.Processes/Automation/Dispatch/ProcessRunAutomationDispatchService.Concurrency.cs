@@ -80,15 +80,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         ArgumentNullException.ThrowIfNull(executionRuns);
 
-        return executionRuns
-            .Where(executionRun =>
-                string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase) &&
-                executionRun.ChatSessionId.HasValue &&
-                executionRun.State is ExecutionState.Completed or ExecutionState.Failed)
-            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc)
-            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
-            .Select(executionRun => executionRun.ChatSessionId)
-            .FirstOrDefault();
+        return null;
     }
 
     private async Task<ConcurrentAutomationExecution?> TryAdoptConcurrentAutomationExecutionAsync(
@@ -322,7 +314,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var inspectionText = ResolveOutputInspectionText(responseText);
         if (HasValidNonCompletedDeclaredOutcome(candidate, detail, responseText, inspectionText))
         {
-            return false;
+            return ShouldRetryRepairableImplementationBlockedOutcome(
+                candidate,
+                detail,
+                responseText,
+                missingRequiredTools,
+                attemptNumber,
+                maxExecutionAttempts);
         }
 
         if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) &&
@@ -337,6 +335,65 @@ internal sealed partial class ProcessRunAutomationDispatchService
                && run.PendingApprovals.Count == 0
                && run.Outcome == RunOutcome.Succeeded
                 && ResolveIncompleteSuccessfulRunRetryReasons(candidate, detail, responseText, missingRequiredTools).Count > 0;
+    }
+
+    private static bool ShouldRetryRepairableImplementationBlockedOutcome(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        int attemptNumber,
+        int maxExecutionAttempts)
+    {
+        if (attemptNumber >= maxExecutionAttempts ||
+            detail.Run.State != ExecutionState.Completed ||
+            detail.Run.PendingApprovals.Count > 0 ||
+            detail.Run.Outcome != RunOutcome.Succeeded ||
+            !RequiresConcreteImplementationProof(candidate) ||
+            !TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) ||
+            declaredOutcome.Status != ProcessStepRunStatus.Blocked)
+        {
+            return false;
+        }
+
+        if (IsRecoverableImplementationPunt(candidate, responseText))
+        {
+            return true;
+        }
+
+        if (!HasSuccessfulConcreteProductMutation(candidate, detail) &&
+            !HasRepairableImplementationValidationFailure(candidate, detail))
+        {
+            return false;
+        }
+
+        return missingRequiredTools.Count > 0 ||
+               ResolveUnresolvedCriticalToolFailures(detail).Count > 0 ||
+               !string.IsNullOrWhiteSpace(ResolveMissingConcreteImplementationProofSummary(candidate, detail)) ||
+               !string.IsNullOrWhiteSpace(ResolveMissingRunnableApplicationProofSummary(candidate, detail));
+    }
+
+    private static bool HasRepairableImplementationValidationFailure(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        if (!unresolvedCriticalToolFailures.Any(IsImplementationValidationFailure))
+        {
+            return false;
+        }
+
+        var successfulReceipts = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .ToList();
+        return ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts) is not null;
+    }
+
+    private static bool IsImplementationValidationFailure(ToolExecutionReceiptRecord receipt)
+    {
+        var toolName = NormalizeToolToken(receipt.ToolName);
+        return IsBuildValidationToolName(toolName) ||
+               IsRunValidationToolName(toolName);
     }
 
     private static IReadOnlyList<string> ResolveIncompleteSuccessfulRunRetryReasons(
@@ -470,7 +527,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         interruptionSummary = string.Empty;
         var run = detail.Run;
-        if (run.State != ExecutionState.Failed || run.Outcome != RunOutcome.Cancelled)
+        if (run.State != ExecutionState.Failed ||
+            run.Outcome is not (RunOutcome.Cancelled or RunOutcome.Failed))
         {
             return false;
         }
@@ -522,6 +580,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> missingRequiredTools,
         string? responseText)
     {
+        return BuildCompletionReasonCoreWithCarryForward(
+            candidate,
+            detail,
+            stepTitle,
+            missingRequiredTools,
+            responseText,
+            CarriedImplementationProof.None);
+    }
+
+    private static string BuildCompletionReasonCoreWithCarryForward(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string stepTitle,
+        IReadOnlyList<string> missingRequiredTools,
+        string? responseText,
+        CarriedImplementationProof carriedImplementationProof)
+    {
         var run = detail.Run;
         if (run.State == ExecutionState.WaitingOnTool || run.PendingApprovals.Count > 0)
         {
@@ -539,12 +614,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var hasDeclaredOutcome = TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome, out var processOutcome);
         if (hasDeclaredOutcome)
         {
-            var contextValidation = ValidateProcessStepOutcomeContext(
+            var contextValidation = ValidateProcessStepOutcomeContextWithCarryForward(
                 candidate,
                 detail,
                 processOutcome,
                 declaredOutcome,
-                inspectionText);
+                inspectionText,
+                carriedImplementationProof);
             if (!contextValidation.IsValid)
             {
                 var branchOutcomeSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
@@ -560,6 +636,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
             else if (declaredOutcome.Status != ProcessStepRunStatus.Completed)
             {
+                if (TryResolveRepairBranchCompletionFromBlockedOutcome(
+                    candidate,
+                    detail,
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    carriedImplementationProof,
+                    out var repairBranchOutcome))
+                {
+                    return string.IsNullOrWhiteSpace(declaredOutcome.Reason)
+                        ? $"AgentFramework run '{run.Title}' completed '{stepTitle}' with repair disposition '{repairBranchOutcome.Title}'."
+                        : $"AgentFramework run '{run.Title}' completed '{stepTitle}' with repair disposition '{repairBranchOutcome.Title}': {declaredOutcome.Reason}";
+                }
+
+                if (TryResolveTerminalEscalationCompletionFromBlockedOutcome(
+                    candidate,
+                    detail,
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    out var escalationDispositionTitle))
+                {
+                    return string.IsNullOrWhiteSpace(declaredOutcome.Reason)
+                        ? $"AgentFramework run '{run.Title}' completed '{stepTitle}' with escalation disposition '{escalationDispositionTitle}'."
+                        : $"AgentFramework run '{run.Title}' completed '{stepTitle}' with escalation disposition '{escalationDispositionTitle}': {declaredOutcome.Reason}";
+                }
+
                 return BuildDeclaredStepOutcomeReason(run.Title, stepTitle, declaredOutcome);
             }
         }
@@ -580,22 +683,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return $"AgentFramework run '{run.Title}' failed because the assigned provider could not produce a usable response: {providerFailureSummary}";
         }
 
-        if (missingRequiredTools.Count > 0)
-        {
-            var missingImplementationProofForRequiredTools = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
-            if (!string.IsNullOrWhiteSpace(missingImplementationProofForRequiredTools))
-            {
-                return $"AgentFramework run '{run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}. Current-attempt implementation proof is also invalid: {missingImplementationProofForRequiredTools}";
-            }
-
-            return $"AgentFramework run '{run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}";
-        }
-
         var missingUpstreamArtifactInputSummary = ResolveMissingUpstreamArtifactInputSummary(candidate);
         var missingConcreteProofSummary = ResolveMissingConcreteProofSummary(candidate, inspectionText);
         var incompleteImplementationSummary = ResolveIncompleteImplementationSummary(candidate, inspectionText);
-        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
-        var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
+        var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummaryWithCarryForward(
+            candidate,
+            detail,
+            carriedImplementationProof);
+        var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummaryWithCarryForward(
+            candidate,
+            detail,
+            carriedImplementationProof);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
@@ -607,6 +705,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (!string.IsNullOrWhiteSpace(branchOutcomeSelectionFailure))
             {
                 return branchOutcomeSelectionFailure;
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                HasUnrecoverableMissingRequiredTool(missingRequiredTools))
+            {
+                return BuildMissingRequiredToolsReason(candidate, detail, missingRequiredTools);
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
@@ -667,6 +771,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
             {
                 return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but generated evidence used shared managed artifact paths that can be overwritten by concurrent runs: {shallowSharedManagedArtifactReferenceSummary}";
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                missingRequiredTools.Count > 0)
+            {
+                return BuildMissingRequiredToolsReason(candidate, detail, missingRequiredTools);
             }
 
             return BuildDeclaredStepOutcomeReason(run.Title, stepTitle, declaredOutcome);
@@ -732,7 +842,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return $"AgentFramework run '{run.Title}' did not return a valid structured ProcessStepOutcomeResult for governed step '{stepTitle}'.";
         }
 
+        if (missingRequiredTools.Count > 0)
+        {
+            return BuildMissingRequiredToolsReason(candidate, detail, missingRequiredTools);
+        }
+
         return $"AgentFramework run '{run.Title}' completed successfully.";
+    }
+
+    private static string BuildMissingRequiredToolsReason(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<string> missingRequiredTools)
+    {
+        var missingImplementationProofForRequiredTools = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
+        if (!string.IsNullOrWhiteSpace(missingImplementationProofForRequiredTools))
+        {
+            return $"AgentFramework run '{detail.Run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}. Current-attempt implementation proof is also invalid: {missingImplementationProofForRequiredTools}";
+        }
+
+        return $"AgentFramework run '{detail.Run.Title}' did not execute the required step tools successfully: {string.Join(", ", missingRequiredTools)}";
     }
 
     private static bool HasValidNonCompletedDeclaredOutcome(

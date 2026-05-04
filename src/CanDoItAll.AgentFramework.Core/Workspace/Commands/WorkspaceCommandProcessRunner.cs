@@ -152,7 +152,7 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.MutatesWorkspace,
             message,
             effectiveProcessResult);
-        var resultMessage = AppendFailureDiagnosticHint(message, receipt, succeeded);
+        var resultMessage = AppendFailureDiagnosticHint(message, receipt, effectiveProcessResult, succeeded);
 
         return new WorkspaceCommandExecutionResult(
             Succeeded: succeeded,
@@ -175,6 +175,7 @@ internal sealed class WorkspaceCommandProcessRunner
     private static string AppendFailureDiagnosticHint(
         string message,
         WorkspaceToolReceipt receipt,
+        WorkspaceProcessExecutionResult processResult,
         bool succeeded)
     {
         if (succeeded)
@@ -186,12 +187,48 @@ internal sealed class WorkspaceCommandProcessRunner
             item.DisplayName.Contains("stdout", StringComparison.OrdinalIgnoreCase))?.RelativePath;
         var stderrPath = receipt.ArtifactReferences.FirstOrDefault(item =>
             item.DisplayName.Contains("stderr", StringComparison.OrdinalIgnoreCase))?.RelativePath;
-        if (string.IsNullOrWhiteSpace(stdoutPath) && string.IsNullOrWhiteSpace(stderrPath))
+        var diagnosticPreview = BuildFailureDiagnosticPreview(processResult);
+        if (string.IsNullOrWhiteSpace(stdoutPath) && string.IsNullOrWhiteSpace(stderrPath) &&
+            string.IsNullOrWhiteSpace(diagnosticPreview))
         {
             return message;
         }
 
-        return $"{message} Inspect captured diagnostics before editing or retrying. stdout: {stdoutPath ?? "(none)"}; stderr: {stderrPath ?? "(none)"}.";
+        var diagnosticHint = $"Inspect captured diagnostics before editing or retrying. stdout: {stdoutPath ?? "(none)"}; stderr: {stderrPath ?? "(none)"}.";
+        return string.IsNullOrWhiteSpace(diagnosticPreview)
+            ? $"{message} {diagnosticHint}"
+            : $"{message} {diagnosticHint}{Environment.NewLine}{diagnosticPreview}";
+    }
+
+    private static string BuildFailureDiagnosticPreview(WorkspaceProcessExecutionResult processResult)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(processResult.Stderr))
+        {
+            parts.Add(BuildPreviewBlock("stderr", processResult.Stderr, processResult.StderrTruncated));
+        }
+
+        if (!string.IsNullOrWhiteSpace(processResult.Stdout))
+        {
+            parts.Add(BuildPreviewBlock("stdout", processResult.Stdout, processResult.StdoutTruncated));
+        }
+
+        return parts.Count == 0
+            ? string.Empty
+            : "Captured diagnostics preview:" + Environment.NewLine + string.Join(Environment.NewLine, parts);
+    }
+
+    private static string BuildPreviewBlock(string label, string text, bool truncated)
+    {
+        const int MaxPreviewCharacters = 4000;
+        var trimmed = text.Trim();
+        var preview = trimmed.Length <= MaxPreviewCharacters
+            ? trimmed
+            : trimmed[^MaxPreviewCharacters..];
+        var truncationNote = truncated || trimmed.Length > MaxPreviewCharacters
+            ? " tail"
+            : string.Empty;
+        return $"{label}{truncationNote}:{Environment.NewLine}{preview}";
     }
 
     private static WorkspaceProcessExecutionResult NormalizeProcessResult(

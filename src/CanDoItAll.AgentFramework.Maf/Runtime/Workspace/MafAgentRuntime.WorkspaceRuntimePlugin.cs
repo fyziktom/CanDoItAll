@@ -18,6 +18,21 @@ public sealed partial class MafAgentRuntime
         private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
         private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
         private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+        private static readonly HashSet<string> ProtectedExternalTargetDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "components",
+            "domain",
+            "features",
+            "models",
+            "pages",
+            "properties",
+            "services",
+            "source",
+            "src",
+            "test",
+            "tests",
+            "wwwroot"
+        };
 
         public WorkspaceFileListResult ListWorkspaceFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
         {
@@ -78,6 +93,7 @@ public sealed partial class MafAgentRuntime
         public WorkspaceFileMutationResult DeleteWorkspacePath(string path, bool recursive = false)
         {
             var allowedPath = PrepareFileWritePath(path) ?? path;
+            EnsureDeleteAllowed(allowedPath, recursive);
             return fileService.DeletePath(allowedPath, recursive);
         }
 
@@ -125,16 +141,16 @@ public sealed partial class MafAgentRuntime
             return commandExecutionService.DotnetTest(allowedTargetPath, configuration, filter, noBuild, noRestore, allowedWorkingDirectory, timeoutSeconds);
         }
 
-        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120)
+        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false)
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath) ?? targetPath;
             var allowedWorkingDirectory = PrepareValidationCommandPath(workingDirectory);
-            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds);
+            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
         {
-            var allowedParentDirectory = PrepareScaffoldPath(parentDirectory);
+            var allowedParentDirectory = PrepareScaffoldPath(parentDirectory, name);
             return commandExecutionService.DotnetNew(template, name, allowedParentDirectory, force, timeoutSeconds);
         }
 
@@ -187,9 +203,9 @@ public sealed partial class MafAgentRuntime
             return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
-        private string? PrepareScaffoldPath(string? path)
+        private string? PrepareScaffoldPath(string? path, string? scaffoldName)
         {
-            EnsureScaffoldAllowed(path);
+            EnsureScaffoldAllowed(path, scaffoldName);
             return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
@@ -246,11 +262,16 @@ public sealed partial class MafAgentRuntime
             EnsureFileReadAllowed(path);
         }
 
-        private void EnsureScaffoldAllowed(string? path)
+        private void EnsureScaffoldAllowed(string? path, string? scaffoldName)
         {
             if (!accessSettings.CanScaffoldProjects)
             {
                 throw new InvalidOperationException($"This agent is not allowed to scaffold workspace projects. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant project scaffolding; implementation process steps must use a software-development workspace-tool profile.");
+            }
+
+            if (IsAllowedScaffoldParentAlias(path, scaffoldName))
+            {
+                return;
             }
 
             EnsureFileWriteAllowed(path);
@@ -319,6 +340,38 @@ public sealed partial class MafAgentRuntime
             }
         }
 
+        private void EnsureDeleteAllowed(string path, bool recursive)
+        {
+            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
+            if (string.IsNullOrWhiteSpace(normalizedAlias))
+            {
+                return;
+            }
+
+            var allowedAliases = ResolveAllowedExternalTargetAliases()
+                .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+                .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                .Select(alias => TrimExternalTargetAlias(alias!))
+                .ToArray();
+            var normalizedDeleteAlias = TrimExternalTargetAlias(normalizedAlias);
+
+            foreach (var allowedAlias in allowedAliases)
+            {
+                if (string.Equals(normalizedDeleteAlias, allowedAlias, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Refusing to delete grounded external target root '{normalizedDeleteAlias}'. Repair the scaffold in place or delete only explicit generated evidence files.");
+                }
+
+                if (recursive &&
+                    IsProtectedExternalTargetDirectoryDelete(normalizedDeleteAlias, allowedAlias))
+                {
+                    throw new InvalidOperationException(
+                        $"Refusing to recursively delete protected external product directory '{normalizedDeleteAlias}'. Repair source and test files in place instead.");
+                }
+            }
+        }
+
         private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) ||
@@ -355,6 +408,78 @@ public sealed partial class MafAgentRuntime
             return AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
                 normalizedAlias,
                 allowedAliases);
+        }
+
+        private bool IsAllowedScaffoldParentAlias(string? parentDirectory, string? scaffoldName)
+        {
+            var normalizedParentDirectory = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(parentDirectory);
+            if (string.IsNullOrWhiteSpace(normalizedParentDirectory))
+            {
+                return false;
+            }
+
+            var normalizedScaffoldName = NormalizeExternalTargetChildName(scaffoldName);
+            if (string.IsNullOrWhiteSpace(normalizedScaffoldName))
+            {
+                return false;
+            }
+
+            var requestedScaffoldRoot = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                $"{normalizedParentDirectory}/{normalizedScaffoldName}");
+            if (string.IsNullOrWhiteSpace(requestedScaffoldRoot))
+            {
+                return false;
+            }
+
+            return ResolveAllowedExternalTargetAliases()
+                .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+                .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                .Any(alias => string.Equals(requestedScaffoldRoot, alias, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string NormalizeExternalTargetChildName(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return string.Empty;
+            }
+
+            var normalizedName = name
+                .Replace('\\', '/')
+                .Trim()
+                .Trim('`', '"', '\'')
+                .Trim('/');
+            var segments = normalizedName.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return segments.Any(segment => string.Equals(segment, ".", StringComparison.Ordinal) || string.Equals(segment, "..", StringComparison.Ordinal))
+                ? string.Empty
+                : normalizedName;
+        }
+
+        private static bool IsProtectedExternalTargetDirectoryDelete(string normalizedDeleteAlias, string allowedAlias)
+        {
+            var allowedAliasPrefix = EnsureExternalAliasTrailingSlash(allowedAlias);
+            if (!normalizedDeleteAlias.StartsWith(allowedAliasPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var relativePath = normalizedDeleteAlias[allowedAliasPrefix.Length..].Trim('/');
+            var firstSegment = relativePath
+                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+            return !string.IsNullOrWhiteSpace(firstSegment) &&
+                   ProtectedExternalTargetDirectoryNames.Contains(firstSegment);
+        }
+
+        private static string TrimExternalTargetAlias(string alias)
+            => alias.Trim().TrimEnd('/');
+
+        private static string EnsureExternalAliasTrailingSlash(string alias)
+        {
+            var trimmedAlias = TrimExternalTargetAlias(alias);
+            return trimmedAlias.EndsWith('/')
+                ? trimmedAlias
+                : trimmedAlias + "/";
         }
 
         private bool IsManagedWorkspaceAbsolutePath(string path)

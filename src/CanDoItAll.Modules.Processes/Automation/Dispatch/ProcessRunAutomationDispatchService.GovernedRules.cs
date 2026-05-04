@@ -61,6 +61,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (RequiresConcreteImplementationProof(candidate))
         {
             requiredToolNames.AddRange(ImplementationProofToolNames);
+            requiredToolNames.Add("workspace_write_file");
+
+            if (ContainsRunnableApplicationContractSignal(candidate))
+            {
+                requiredToolNames.Add("workspace_dotnet_build");
+                requiredToolNames.Add("workspace_dotnet_run");
+            }
+
+            if (ImplementationContractMentionsTests(candidate))
+            {
+                requiredToolNames.Add("workspace_dotnet_test");
+            }
         }
 
         if (RequiresConcreteBrowserProof(candidate))

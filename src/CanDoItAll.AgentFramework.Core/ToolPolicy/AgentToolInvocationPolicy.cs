@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -235,6 +237,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"Tool '{context.ToolName}' has no registered invocation policy classification."));
         }
 
+        var governedBrowserDecision = EvaluateGovernedBrowserToolBounds(context, signature);
+        if (governedBrowserDecision is not null)
+        {
+            return ValueTask.FromResult(governedBrowserDecision);
+        }
+
         var externalTargetDecision = EvaluateGovernedExternalTargetIsolation(context, signature);
         if (externalTargetDecision is not null)
         {
@@ -294,6 +302,52 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return ValueTask.FromResult(ToolInvocationPolicyDecision.Allow(signature));
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedBrowserToolBounds(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context))
+        {
+            return null;
+        }
+
+        if (string.Equals(context.ToolName, "browser_snapshot", StringComparison.OrdinalIgnoreCase))
+        {
+            var depthAllowed = context.RedactedArguments.TryGetValue("depth", out var depthValue) &&
+                               int.TryParse(depthValue, out var depth) &&
+                               depth <= 4;
+            if (!depthAllowed)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    "Governed process browser snapshots must set depth to 4 or less. Retry with a bounded snapshot such as depth=2.");
+            }
+
+            if (context.RedactedArguments.TryGetValue("boxes", out var boxesValue) &&
+                bool.TryParse(boxesValue, out var boxes) &&
+                boxes)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    "Governed process browser snapshots must not request element boxes because they can produce oversized tool output. Retry with boxes=false.");
+            }
+
+            return null;
+        }
+
+        if (string.Equals(context.ToolName, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase) &&
+            context.RedactedArguments.TryGetValue("fullPage", out var fullPageValue) &&
+            bool.TryParse(fullPageValue, out var fullPage) &&
+            fullPage)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                "Governed process browser screenshots must be viewport-bounded. Retry with fullPage=false or omit fullPage.");
+        }
+
+        return null;
     }
 
     public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)
@@ -985,7 +1039,13 @@ public static class AgentToolInvocationPolicyMetadata
         };
 
         text = text.ReplaceLineEndings(" ").Trim();
-        return text.Length <= 160 ? text : text[..160] + "...";
+        return text.Length <= 160 ? text : text[..160] + $"...#{ComputeStableHash(text)}";
+    }
+
+    private static string ComputeStableHash(string text)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(bytes, 0, 6).ToLowerInvariant();
     }
 
     private static AgentToolPolicyMetadata Mutation(string name)

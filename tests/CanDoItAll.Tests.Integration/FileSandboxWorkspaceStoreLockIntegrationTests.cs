@@ -100,6 +100,107 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
         Assert.Single(resolvedDetail.ExecutionLog);
     }
 
+    [Fact]
+    public async Task ListExecutionRunsAsync_reads_run_summaries_when_workspace_lock_is_held()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var store = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+        Assert.NotEmpty(agents);
+        var agent = agents[0];
+        var executionRunId = Guid.NewGuid();
+        var createdAtUtc = DateTimeOffset.UtcNow;
+
+        await store.SaveExecutionRunDetailAsync(
+            new ExecutionRunDetail(
+                new ExecutionRunRecord(
+                    executionRunId,
+                    agent.Id,
+                    null,
+                    "Run summary validation",
+                    "manual",
+                    "run-list-regression",
+                    Guid.NewGuid().ToString("N"),
+                    string.Empty,
+                    "integration-test",
+                    "integration-test",
+                    "{}",
+                    "Verify run summary listing does not need the full execution state.",
+                    "Completed",
+                    "OpenAI default",
+                    "gpt-4.1",
+                    ExecutionState.Completed,
+                    RunOutcome.Succeeded,
+                    createdAtUtc,
+                    createdAtUtc,
+                    createdAtUtc,
+                    createdAtUtc,
+                    string.Empty,
+                    null,
+                    []),
+                null,
+                [
+                    new ExecutionLogEntry(
+                        Guid.NewGuid(),
+                        agent.Id,
+                        null,
+                        createdAtUtc,
+                        ExecutionState.Completed,
+                        "validation",
+                        "Run summary listing should not read the full execution state.")
+                    {
+                        ExecutionRunId = executionRunId
+                    }
+                ],
+                []));
+
+        var lockPath = BuildWorkspaceLockPath(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        await using var workspaceLock = OpenExclusiveWorkspaceLock(lockPath);
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        ISandboxWorkspaceExecutionRunStore readStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+
+        var runs = await readStore.ListExecutionRunsAsync(cancellationTokenSource.Token);
+
+        Assert.Contains(runs, run => run.Id == executionRunId);
+    }
+
+    [Fact]
+    public async Task SaveExecutionRunDetailAsync_does_not_load_unrelated_run_slices_in_split_storage()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var store = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var layout = new FileSandboxWorkspaceStorageLayout(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+        Assert.NotEmpty(agents);
+        var agent = agents[0];
+
+        var unrelatedRunId = Guid.NewGuid();
+        await store.SaveExecutionRunDetailAsync(CreateRunDetail(unrelatedRunId, agent.Id, "Unrelated run"));
+
+        var unrelatedReceiptsRoot = layout.RunReceiptsRoot(unrelatedRunId);
+        Directory.CreateDirectory(unrelatedReceiptsRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(unrelatedReceiptsRoot, "corrupt-receipt.json"),
+            "{ this is not valid json",
+            CancellationToken.None);
+
+        var targetRunId = Guid.NewGuid();
+        await store.SaveExecutionRunDetailAsync(CreateRunDetail(targetRunId, agent.Id, "Target run"));
+
+        var savedDetail = await store.GetExecutionRunDetailAsync(targetRunId);
+
+        Assert.NotNull(savedDetail);
+        Assert.Equal(targetRunId, savedDetail!.Run.Id);
+    }
+
     private static FileStream OpenExclusiveWorkspaceLock(string lockPath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
@@ -118,5 +219,51 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
             workspaceRoot,
             scope.DataRootRelativePath.Replace('/', Path.DirectorySeparatorChar),
             "workspace.lock");
+    }
+
+    private static ExecutionRunDetail CreateRunDetail(Guid executionRunId, Guid agentId, string title)
+    {
+        var createdAtUtc = DateTimeOffset.UtcNow;
+        return new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                executionRunId,
+                agentId,
+                null,
+                title,
+                "manual",
+                "run-slice-regression",
+                Guid.NewGuid().ToString("N"),
+                string.Empty,
+                "integration-test",
+                "integration-test",
+                "{}",
+                "Verify run-detail saves do not load unrelated run slices.",
+                "Completed",
+                "OpenAI default",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                createdAtUtc,
+                createdAtUtc,
+                createdAtUtc,
+                createdAtUtc,
+                string.Empty,
+                null,
+                []),
+            null,
+            [
+                new ExecutionLogEntry(
+                    Guid.NewGuid(),
+                    agentId,
+                    null,
+                    createdAtUtc,
+                    ExecutionState.Completed,
+                    "validation",
+                    "Run detail should save without inspecting unrelated runs.")
+                {
+                    ExecutionRunId = executionRunId
+                }
+            ],
+            []);
     }
 }

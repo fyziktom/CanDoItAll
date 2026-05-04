@@ -17,6 +17,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("Prompt is required.");
         }
 
+        if (!request.ChatSessionId.HasValue && TryGetExecutionRunStore() is not null)
+        {
+            var catalogOnly = await store.LoadCatalogAsync(cancellationToken);
+            var agentOnly = EnsureAgentExists(catalogOnly, request.AgentId);
+            var providerOnly = await ResolveProviderForAgentAsync(agentOnly, catalogOnly, cancellationToken);
+
+            return await ExecuteRunCoreAsync(
+                agentOnly,
+                providerOnly,
+                catalogOnly,
+                SandboxWorkspaceExecutionState.Empty,
+                session: null,
+                request,
+                persistTranscript: false,
+                cancellationToken);
+        }
+
         var document = await store.LoadAsync(cancellationToken);
         var catalog = document.ToCatalog();
         var executionState = document.ToExecutionState();
@@ -343,8 +360,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var executionState = await store.LoadExecutionAsync(cancellationToken);
-        var runs = executionState.ExecutionRuns.AsEnumerable();
+        var executionState = query.ApprovalStatus.HasValue
+            ? await store.LoadExecutionAsync(cancellationToken)
+            : null;
+        var runs = executionState is not null
+            ? executionState.ExecutionRuns.AsEnumerable()
+            : TryGetExecutionRunStore() is { } executionRunStore
+                ? (await executionRunStore.ListExecutionRunsAsync(cancellationToken)).AsEnumerable()
+                : (await store.LoadExecutionAsync(cancellationToken)).ExecutionRuns.AsEnumerable();
 
         if (query.AgentId.HasValue)
         {
@@ -423,6 +446,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         if (query.ApprovalStatus.HasValue)
         {
+            executionState ??= await store.LoadExecutionAsync(cancellationToken);
             runs = runs.Where(item => ExecutionRunStateTransitions.MatchesApprovalStatus(executionState.ExecutionApprovals, item, query.ApprovalStatus.Value));
         }
 
@@ -780,18 +804,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 $"Execution run failed for {provider.Name}: {exception.Message}",
                 cancellationToken);
 
-            if (session is not null)
-            {
-                throw new AgentChatRunFailedException(
+            throw session is not null
+                ? new AgentChatRunFailedException(
                     agent.Id,
                     run.Id,
                     session.Id,
                     provider.Name,
                     ResolveModel(agent, provider),
+                    exception)
+                : new AgentRunFailedException(
+                    agent.Id,
+                    run.Id,
+                    run.ChatSessionId,
+                    provider.Name,
+                    ResolveModel(agent, provider),
                     exception);
-            }
-
-            throw;
         }
     }
 

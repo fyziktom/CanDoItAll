@@ -562,7 +562,7 @@ ORDER BY "CreatedAtUtc", "Title";
                 group => group.Key,
                 group => (IReadOnlyList<ProjectStructureGroundingNodeData>)group.ToList(),
                 StringComparer.Ordinal);
-        var targetNodeId = NormalizeProjectStructureNodeId(context.ResolveTargetNodeId());
+        var targetNodeId = ResolveProjectStructureGroundingTargetNodeId(context, nodesById);
         var selectedProcessNodeId = NormalizeProjectStructureNodeId(context.NodeId);
         var builder = new StringBuilder();
         builder.AppendLine($"Dispatcher fetched the live project structure for `{projectName}` and focused this prompt on the selected work branch.");

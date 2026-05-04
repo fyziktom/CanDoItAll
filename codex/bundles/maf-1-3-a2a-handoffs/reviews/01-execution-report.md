@@ -2,12 +2,36 @@
 
 ## Status
 
-- Execution state: `Subbundles 01-12 completed; live tool-profile regression repair completed`
+- Execution state: `Subbundles 01-12 completed; live tool-profile, manual-rerun prompt recursion, implementation retry proof/artifact, browser-artifact, branch-disposition, and terminal escalation repairs completed`
 
 ## Live Regression Repair
 
 - `2026-05-03`: Reopened the bundle after process run `cf086486-2424-487b-bd29-bfc3c111f307` blocked during implementation with scaffold/build validation tool denials and an invalid test-project repair path.
 - Root cause addressed in this pass: MAF tool construction used persisted agent workspace settings for configured tools and exposed broad catalog `workspace-plugin` functions, while the runtime plugin enforced the effective process-scoped workspace profile. The tool surface and enforcement now use the same effective access settings, and host-denial exceptions now name the effective workspace profile.
+- Follow-up live rerun failure: the process step reached a final failed state after automatic recovery attempt 5 because manual rerun assignment reasons recursively embedded earlier rendered recovery directives. The prompt grew with nested `Typed recovery decision` and `Recovery directive` text until the final agent attempt no longer called the required `submit_process_step_outcome` finalizer.
+- Root cause addressed in this pass: manual rerun directives now sanitize operator reasons, blocked reasons, exception summaries, and recent decision summaries; assignment/direct-message decisions are excluded from recent rerun context; rendered recovery directives are recorded in the journal instead of being copied into the next assignment decision reason.
+- Follow-up implementation-step failure: valid current-step artifacts and implementation proof could be recorded by an earlier attempt, then a finalizer-only retry could still block because the dispatcher required the newest attempt to re-read concrete product source. Current-step artifact records also were not considered when validating required artifacts for the same step.
+- Root cause addressed in this pass: dispatch candidates now carry recorded artifact expectation IDs; implementation proof is carried across attempts only until a fresh concrete product mutation occurs; governed outcome validation, required-tool validation, completion status, and completion reasons all honor the carried proof for finalizer-only retries.
+- Agent-by-agent live failure: Harbor run `ce0da97a-ece3-46ec-b0b2-c443271d8d8d` exposed invalid product-root annotations, provider-native browser artifacts that were not projected to durable process evidence, QA blocked outcomes that should have selected repair/escalation branches, and a terminal escalation agent that blocked because the product was not release-ready.
+- Root cause addressed in this pass: product root normalization strips escaped annotation suffixes; browser MCP calls are bounded and screenshot image payloads are removed from model context; provider-native browser outputs are projected and typed as process evidence; repairable QA blocked outcomes are converted into the modeled branch outcome; terminal escalation/no-go steps are instructed and normalized to complete when the decision artifact is written.
+
+## Live Agent-By-Agent Validation
+
+| Topic | Run | Final status | Terminal proof |
+| --- | --- | --- | --- |
+| Basic App | `908bfd0f-4039-432e-914b-b8a7c35f17ae` | `Completed` | Repair escalation record approved at `artifacts/scopes/organization/dc8abe5458cd4a8798ab5a14de6f846b/process-runs/908bfd0f-4039-432e-914b-b8a7c35f17ae/repair-escalation-record.md` |
+| Harbor Shift Scheduler | `ce0da97a-ece3-46ec-b0b2-c443271d8d8d` | `Completed` | Repair escalation record approved as artifact `610cda0d-462b-4b61-a666-e38fe4df7447` at `artifacts/scopes/organization/dc8abe5458cd4a8798ab5a14de6f846b/process-runs/ce0da97a-ece3-46ec-b0b2-c443271d8d8d/repair-escalation-record.md` |
+
+Harbor step outcomes after the final repair:
+
+| Step range | Outcome |
+| --- | --- |
+| Scope, architecture, implementation, peer review | Completed with required artifacts satisfied |
+| First QA | Completed with branch `Repair required` |
+| Repair | Completed with `Quality repair change set` |
+| Re-run QA | Completed with branch `Repair escalation` and `Repaired regression evidence pack` |
+| Escalation | Completed with explicit no-go repair escalation record |
+| Security/release/rollout/learning paths | Skipped by modeled branch dependencies |
 
 ## Commands
 
@@ -59,10 +83,22 @@
 - `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests" --no-restore -m:1`: failed on existing process-mock launch-plan fixture drift and temp workspace cleanup locking; recorded as a process-mock fixture/proof reliability gap.
 - `dotnet build src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj --no-restore -m:1`: passed with existing NU1902 and NU1904 warnings after live regression repair.
 - `dotnet build src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj --no-restore -m:1`: passed again with existing NU1902 and NU1904 warnings after improving scaffold/validation denial messages.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessRuntimeOperatorReadModelTests|FullyQualifiedName~MafAgentRuntimeTests" --no-restore -m:1`: passed; 46 tests after manual rerun prompt recursion repair and prior tool-profile repair tests.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ResolveCompletionStatusWithCarryForward_allows_finalizer_only_retry|FullyQualifiedName~ResolveMissingRequiredToolExecutionsWithCarryForward_allows_prefetched" --no-restore -m:1 -p:BaseOutputPath=C:\repositories\CanDoItAll\.codex-tmp\test-bin\`: passed; 3 tests using isolated output because a live `CanDoItAll.Web` process locked the normal Web bin directory.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessRuntimeOperatorReadModelTests" --no-restore -m:1 -p:BaseOutputPath=C:\repositories\CanDoItAll\.codex-tmp\test-bin\`: passed; 189 tests proving generic finalizer-only retry, fresh-mutation invalidation, recorded-artifact satisfaction, and existing operator rerun behavior.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ResolveCompletionStatus_routes_repaired_qa_blocked_product_defect_to_escalation_branch|FullyQualifiedName~ResolveCompletionStatus_routes_branched_qa_blocked_product_defect_to_repair_branch|FullyQualifiedName~ResolveSuccessfulBrowserToolOutputFiles|FullyQualifiedName~ResolveProviderNativeBrowserOutputDirectoryPaths" --artifacts-path C:\repositories\CanDoItAll\.codex-tmp\artifacts-proof-browser-branch4 --logger "console;verbosity=minimal"`: passed; 4 tests proving repair-branch routing and provider-native browser output discovery.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~BuildExecutionPrompt_treats_escalation_no_go_steps_as_completable_decisions|FullyQualifiedName~ResolveCompletionStatus_completes_escalation_step_when_blocked_no_go_record_is_written|FullyQualifiedName~ResolveCompletionStatus_routes_repaired_qa_blocked_product_defect_to_escalation_branch|FullyQualifiedName~ResolveCompletionStatus_routes_branched_qa_blocked_product_defect_to_repair_branch" --artifacts-path C:\repositories\CanDoItAll\.codex-tmp\artifacts-proof-escalation2 --logger "console;verbosity=minimal"`: passed; 4 tests proving escalation/no-go completion and repair branch routing.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ResolveCompletionStatus_fails_when_required_step_tools_were_not_executed|FullyQualifiedName~ResolveCompletionStatus_allows_process_mock_implementation_with_db_free_rollout_checklist|FullyQualifiedName~ResolveCompletionStatus_keeps_failed_workspace_dotnet_build_as_a_critical_tool_failure|FullyQualifiedName~ResolveCompletionStatus_blocks_work_step_when_response_lists_next_required_actions|FullyQualifiedName~ResolveCompletionStatus_returns_failed_for_non_governed_step_when_provider_failure_is_detected|FullyQualifiedName~ResolveCompletionStatus_blocks_completed_dotnet_web_implementation_without_runtime_startup_proof|FullyQualifiedName~ResolveCompletionStatus_fails_work_step_without_declared_outcome" --artifacts-path C:\repositories\CanDoItAll\.codex-tmp\artifacts-proof-final-integration7-focused --logger "console;verbosity=minimal"`: passed; 7 tests proving hard failures, blocked proof gaps, provider failures, no-outcome failures, and process-mock artifact satisfaction remain distinct.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~MafAgentRuntimeTests" --artifacts-path C:\repositories\CanDoItAll\.codex-tmp\artifacts-proof-final-integration8 --logger "console;verbosity=minimal"`: passed; 265 tests after final agent-contract fixes.
+- `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj -c Debug --nologo -v:minimal`: passed with existing NU1902, NU1904, and nullable warnings.
+- Live host restart: stopped old `CanDoItAll.Web` process on ports `7271`/`5032`, started repaired host PID `7584`, and confirmed it listens on `https://localhost:7271` with PostgreSQL workspace profile `dc8abe54-58cd-4a87-98ab-5a14de6f846b`.
+- Live Harbor recovery: transitioned blocked step `4ff3bd22-5f80-40cd-b090-d4abe78f851f` from `Blocked` to `Ready`; dispatcher ran it under execution run `0bb8aa02-d274-4d41-ad21-4356a93ba313`, wrote `repair-escalation-record.md`, submitted `Completed`, and the process run reached `Completed` at `2026-05-04T10:17:12Z`.
+- PostgreSQL run-status query for `908bfd0f-4039-432e-914b-b8a7c35f17ae` and `ce0da97a-ece3-46ec-b0b2-c443271d8d8d`: both rows returned `Completed` with completed timestamps `2026-05-04T08:28:46Z` and `2026-05-04T10:17:12Z`.
 
 ## Browser Artifacts
 
-- Not required. No visible Blazor UI changed in subbundle 11.
+- No CanDoItAll UI browser validation was required because this pass changed runtime contracts, process dispatch, templates, and tests rather than visible Blazor UI.
+- Process browser validation was required and performed in the live Harbor run. The remaining browser console defects belong to the generated Harbor product, not the process runner; the process now records the no-go instead of dead-ending.
 
 ## Subbundle Gate Results
 
@@ -82,16 +118,20 @@
 | `12-final-architecture-review-and-closure` | `Subbundle 11 validation proof complete` | `Final architecture review recorded and completed bundle validator passed` | `Initiative closed` | `Completed` | Decision: Proceed to closure. Live provider/A2A interoperability remains an explicit operator acceptance risk. |
 | `06-tool-availability-profiles` live repair | `Live run contradicted old tool-profile proof` | `Maf runtime tests passed after effective access was used for configured tools and workspace-plugin filtering` | `Subbundle 09 live repair may rely on aligned tool attachment/enforcement` | `Completed` | Prevents agents from seeing scaffold/build/test/run tools that the runtime profile will deny, and allows trusted process software-development overrides to attach those tools. |
 | `09-process-flow-integration` live repair | `Subbundle 06 live repair passed` | `Maf runtime tests proved trusted governed process metadata changes tool attachment` | `Operators may rerun implementation steps with a coherent developer tool surface` | `Completed with process-mock fixture gap` | Broader process-mock tests need separate fixture repair; targeted runtime/process metadata path is proven. |
+| `11-validation-and-operator-proof` live repair | `Manual rerun recursion repair passed; live implementation step still had retry/finalizer proof risk` | `189 targeted dispatch/runtime tests passed with isolated output` | `Implementation steps may advance after valid earlier proof/artifacts, but new product writes still require fresh proof` | `Completed` | Generic app topics covered recipe cost explorer, campus room booking, and route capacity planner scenarios. |
+| `11-validation-and-operator-proof` agent-by-agent repair | `Live process still failed after implementation and repair paths` | `Basic App and Harbor Shift Scheduler live runs completed with durable scoped artifacts; 265 dispatch/runtime tests passed` | `Operators may run the software-delivery chain through QA repair and explicit no-go escalation without dead-ending on artifact/tool-contract confusion` | `Completed` | Generic topics covered Basic App and Harbor Shift Scheduler. Harbor final run `ce0da97a-ece3-46ec-b0b2-c443271d8d8d` completed with blocked count `0`. |
 
 ## Browser Validation Analytics
 
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
-| UI-impacting subbundle if any | Not applicable | Not applicable | Not required | Not required | No visible UI changed |
+| CanDoItAll UI | Not applicable | Not applicable | Not required | Not required | No visible UI changed |
+| Harbor process QA proof | `/`, `/shifts` | Desktop and mobile | Provider-native browser snapshots, screenshots, and console logs under `artifacts/process-runs/ce0da97a-ece3-46ec-b0b2-c443271d8d8d` | Captured by browser tools; release-blocking console errors remained | Correctly routed to repair escalation and explicit no-go |
 
 ## Analytics Review
 
-- No browser validation required because the bundle changed runtime contracts, process dispatch, template data, and tests without visible Blazor UI changes.
+- No CanDoItAll UI browser validation was required because this pass changed runtime contracts, process dispatch, template data, and tests without visible Blazor UI changes.
+- Process browser validation was required and performed in the live Harbor run. The remaining browser console defects belong to the generated Harbor product, not the process runner; the process now records the no-go instead of dead-ending.
 
 ## Raw Note Closure
 
@@ -113,5 +153,5 @@
 - A2A hosting packages are currently preview in the 1.3 package line; keep preview SDK types behind the MAF infrastructure boundary unless subbundle 03 proves a stable package is available.
 - Process dispatch classifies role profiles from persisted role/step text and selected agent configuration; future process-editor metadata should expose explicit overrides if operators need to pin a non-obvious role profile.
 - Live OpenAI/A2A provider interoperability was not exercised in this validation pass; run an operator acceptance test before enabling remote A2A endpoints in production.
-- Process-mock fixture proof currently has drift: the launch-plan tests selected seeded .NET agents instead of process-mock agents, and one failed run left a temp workspace locked. Repair this separately before using that group as final proof for process-template matching.
+- Process-mock fixture proof previously had drift: launch-plan tests selected seeded .NET agents instead of process-mock agents, and one failed run left a temp workspace locked. Keep those fixtures under watch, but the live process validation now covers the operator path directly.
 - Existing NU1902 and NU1904 package vulnerability warnings predate this bundle and remain unresolved.
