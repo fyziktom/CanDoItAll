@@ -48,6 +48,12 @@ public partial class ProcessWorkspace
             case ProcessCanvasActionIds.AddDependentStep:
                 OpenCanvasStepEditor(actionId, SelectedCanvasDefinitionStep, x, y);
                 break;
+            case ProcessCanvasActionIds.AddSubprocessStep:
+                OpenCanvasStepEditor(ProcessCanvasActionIds.CreateStepSubprocess, SelectedCanvasDefinitionStep, x, y);
+                break;
+            case ProcessCanvasActionIds.OpenSubprocessDefinition:
+                await OpenSelectedSubprocessDefinitionAsync();
+                break;
             case ProcessCanvasActionIds.AddBranchOutcome:
                 await AddBranchOutcomeToSelectedStepAsync();
                 break;
@@ -99,6 +105,9 @@ public partial class ProcessWorkspace
                 break;
             case ProcessCanvasActionIds.RuntimeRecordArtifact:
                 PrepareSelectedRuntimeArtifactCapture();
+                break;
+            case ProcessCanvasActionIds.RuntimeOpenSubprocessRun:
+                await OpenSelectedSubprocessRunAsync();
                 break;
         }
     }

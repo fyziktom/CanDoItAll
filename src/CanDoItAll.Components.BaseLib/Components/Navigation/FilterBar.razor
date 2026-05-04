@@ -1,5 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/90 px-3.5 py-2.5">
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("rounded-[1.2rem] border border-slate-200 bg-slate-50/90 px-3.5 py-2.5")'>
     <Split Breakpoint="LayoutBreakpoint.Lg"
            Gap="LayoutGap.Small"
            AlignItems="AlignItems.Center"

@@ -25,6 +25,13 @@ public sealed partial class ProcessCanvasSurfaceFactory
 
     private static string ResolveDefinitionLeadText(ProcessStepEditorModel step, IReadOnlyList<string> dependencyOutcomeTitles)
     {
+        if (step.StepKind == ProcessStepKind.Subprocess &&
+            string.IsNullOrWhiteSpace(step.OutputContractSummary) &&
+            !string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName))
+        {
+            return $"Runs and observes {step.SubprocessDefinitionSnapshotName}.";
+        }
+
         if (dependencyOutcomeTitles.Count == 0)
         {
             return step.OutputContractSummary;
@@ -36,6 +43,126 @@ public sealed partial class ProcessCanvasSurfaceFactory
         return string.IsNullOrWhiteSpace(step.OutputContractSummary)
             ? $"Continues when one of these paths is selected: {dependencyOutcomeSummary}."
             : $"{step.OutputContractSummary} Paths: {dependencyOutcomeSummary}.";
+    }
+
+    private static string ResolveDefinitionSubtitle(ProcessStepEditorModel step)
+    {
+        if (step.StepKind == ProcessStepKind.Subprocess &&
+            !string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName))
+        {
+            return $"Subprocess: {step.SubprocessDefinitionSnapshotName}";
+        }
+
+        return string.IsNullOrWhiteSpace(step.Subtitle) ? step.StepKind.ToString() : step.Subtitle;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionNodeChips(ProcessStepEditorModel step)
+    {
+        var chips = new List<CanvasWorkbenchChip>();
+        if (step.StepKind == ProcessStepKind.Subprocess)
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = step.SubprocessDefinitionId.HasValue ? "target linked" : "target missing",
+                Tone = step.SubprocessDefinitionId.HasValue ? "info" : "danger"
+            });
+        }
+
+        chips.Add(new CanvasWorkbenchChip
+        {
+            Text = $"{step.RoleAssignments.Count} roles",
+            Tone = step.RoleAssignments.Count == 0 ? "danger" : "neutral"
+        });
+        chips.Add(new CanvasWorkbenchChip
+        {
+            Text = $"{step.ArtifactExpectations.Count} artifacts",
+            Tone = step.ArtifactExpectations.Count == 0 ? "neutral" : "info"
+        });
+        chips.Add(new CanvasWorkbenchChip
+        {
+            Text = $"{step.BranchOutcomes.Count} branches",
+            Tone = step.BranchOutcomes.Count == 0 ? "neutral" : "accent"
+        });
+
+        return chips;
+    }
+
+    private static List<CanvasWorkbenchAction> BuildDefinitionStepContextActions(ProcessStepEditorModel step)
+    {
+        var actions = new List<CanvasWorkbenchAction>();
+        if (step.StepKind == ProcessStepKind.Subprocess && step.SubprocessDefinitionId.HasValue)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.OpenSubprocessDefinition,
+                Label = "Open subprocess",
+                MenuLabel = "Open subprocess definition",
+                Icon = "open_in_new",
+                Tone = "info"
+            });
+        }
+
+        actions.AddRange(
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.EditDefinitionStep,
+                Label = "Edit step",
+                MenuLabel = "Edit step",
+                Icon = "draw",
+                Tone = "accent"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.AddDependentStep,
+                Label = "Add dependent step",
+                MenuLabel = "Add dependent step",
+                Icon = "add_circle",
+                Tone = "info"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.AddSubprocessStep,
+                Label = "Add subprocess",
+                MenuLabel = "Add subprocess step",
+                Icon = "account_tree",
+                Tone = "info"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.AddBranchOutcome,
+                Label = "Add branch outcome",
+                MenuLabel = "Add branch outcome",
+                Icon = "call_split",
+                Tone = "accent"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.AddRoleBinding,
+                Label = "Add role binding",
+                MenuLabel = "Add role binding",
+                Icon = "people",
+                Tone = "neutral"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.AddArtifactExpectation,
+                Label = "Add artifact expectation",
+                MenuLabel = "Add artifact expectation",
+                Icon = "description",
+                Tone = "neutral"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.RemoveDefinitionStep,
+                Label = "Remove step",
+                MenuLabel = "Remove step",
+                Icon = "delete",
+                Tone = "danger"
+            }
+        ]);
+
+        return actions;
     }
 
     private static List<CanvasWorkbenchChip> BuildDefinitionFooterChips(string status, IReadOnlyList<string> dependencyOutcomeTitles)
@@ -99,6 +226,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             ProcessStepKind.Decision => "branch",
             ProcessStepKind.Approval => "check",
             ProcessStepKind.Review => "search",
+            ProcessStepKind.Subprocess => "account_tree",
             ProcessStepKind.Delivery => "send",
             ProcessStepKind.End => "stop",
             _ => "task"
@@ -112,9 +240,120 @@ public sealed partial class ProcessCanvasSurfaceFactory
             ProcessStepKind.Start => "#0284c7",
             ProcessStepKind.Approval => "#d97706",
             ProcessStepKind.Decision => "#7c3aed",
+            ProcessStepKind.Subprocess => "#0f766e",
             ProcessStepKind.End => "#059669",
             _ => "#475569"
         };
+    }
+
+    private static string ResolveRunSubtitle(ProcessStepRunViewModel stepRun)
+    {
+        if (stepRun.StepKind == ProcessStepKind.Subprocess)
+        {
+            return stepRun.SubprocessRun is null
+                ? "Subprocess pending"
+                : $"Subprocess run: {stepRun.SubprocessRun.Status}";
+        }
+
+        return string.IsNullOrWhiteSpace(stepRun.CurrentExecutorName)
+            ? "Unassigned"
+            : stepRun.CurrentExecutorName;
+    }
+
+    private static string ResolveRunLeadText(ProcessStepRunViewModel stepRun)
+    {
+        if (stepRun.SubprocessRun is not null)
+        {
+            return $"{stepRun.SubprocessRun.RunName}: {stepRun.SubprocessRun.CompletedStepCount} of {stepRun.SubprocessRun.TotalStepCount} steps complete.";
+        }
+
+        return !string.IsNullOrWhiteSpace(stepRun.BlockedReason)
+            ? stepRun.BlockedReason
+            : !string.IsNullOrWhiteSpace(stepRun.RefusalReason)
+                ? stepRun.RefusalReason
+                : !string.IsNullOrWhiteSpace(stepRun.SelectedBranchOutcomeTitle)
+                    ? $"Selected branch: {stepRun.SelectedBranchOutcomeTitle}"
+                    : stepRun.DecisionSummary;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildRunNodeChips(ProcessStepRunViewModel stepRun)
+    {
+        var chips = new List<CanvasWorkbenchChip>();
+        if (stepRun.SubprocessRun is not null)
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = $"{stepRun.SubprocessRun.CompletedStepCount}/{stepRun.SubprocessRun.TotalStepCount} child steps",
+                Tone = stepRun.SubprocessRun.BlockedStepCount > 0 ? "danger" : "info"
+            });
+        }
+
+        chips.Add(new CanvasWorkbenchChip
+        {
+            Text = $"{stepRun.WaitMinutes} m wait",
+            Tone = "neutral"
+        });
+        chips.Add(new CanvasWorkbenchChip
+        {
+            Text = $"{stepRun.ReworkCount} rework",
+            Tone = stepRun.ReworkCount > 0 ? "warn" : "neutral"
+        });
+
+        return chips;
+    }
+
+    private static List<CanvasWorkbenchAction> BuildRuntimeStepContextActions(ProcessStepRunViewModel stepRun)
+    {
+        var actions = new List<CanvasWorkbenchAction>();
+        if (stepRun.SubprocessRun is not null)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.RuntimeOpenSubprocessRun,
+                Label = "Open subprocess",
+                MenuLabel = "Open subprocess run",
+                Icon = "open_in_new",
+                Tone = "info"
+            });
+        }
+
+        actions.AddRange(
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.RuntimeStart,
+                Label = "Start",
+                MenuLabel = "Start",
+                Icon = "play",
+                Tone = "info"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.RuntimeComplete,
+                Label = "Complete",
+                MenuLabel = "Complete",
+                Icon = "check",
+                Tone = "accent"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.RuntimeBlock,
+                Label = "Block",
+                MenuLabel = "Block",
+                Icon = "block",
+                Tone = "danger"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.RuntimeRecordArtifact,
+                Label = "Record artifact",
+                MenuLabel = "Record artifact",
+                Icon = "note_add",
+                Tone = "neutral"
+            }
+        ]);
+
+        return actions;
     }
 
     private static string ResolveRunTone(ProcessStepRunStatus status)

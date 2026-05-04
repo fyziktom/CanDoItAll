@@ -30,6 +30,46 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessRunListItem> Runs => workspace.runs;
 
+        public IReadOnlyList<ProcessRunListItem> FilteredRuns => workspace.FilterRuns(workspace.runHistoryFilter);
+
+        public string RunHistorySearch
+        {
+            get => workspace.runHistoryFilter.Search;
+            set => workspace.runHistoryFilter.Search = value ?? string.Empty;
+        }
+
+        public ProcessRunStatus? RunHistoryStatusFilter
+        {
+            get => workspace.runHistoryFilter.Status;
+            set => workspace.runHistoryFilter.Status = value;
+        }
+
+        public ProcessOperatingMode? RunHistoryOperatingModeFilter
+        {
+            get => workspace.runHistoryFilter.OperatingMode;
+            set => workspace.runHistoryFilter.OperatingMode = value;
+        }
+
+        public ProcessRunUpdatedTimeFilter RunHistoryUpdatedTimeFilter
+        {
+            get => workspace.runHistoryFilter.UpdatedTime;
+            set => workspace.runHistoryFilter.UpdatedTime = value;
+        }
+
+        public string RunHistoryTagFilter
+        {
+            get => workspace.runHistoryFilter.Tag;
+            set => workspace.runHistoryFilter.Tag = value ?? string.Empty;
+        }
+
+        public IReadOnlyList<ProcessRunStatus> RunStatusFilterOptions => ProcessRunStatusFilterOptions;
+
+        public IReadOnlyList<ProcessOperatingMode> RunOperatingModeFilterOptions => ProcessOperatingModeFilterOptions;
+
+        public IReadOnlyList<ProcessRunUpdatedTimeFilter> RunUpdatedTimeFilterOptions => ProcessRunUpdatedTimeFilterOptions;
+
+        public string RunHistoryResultText => BuildRunFilterResultText(FilteredRuns.Count, Runs.Count);
+
         public ProcessRunListItem? SelectedRun => workspace.SelectedRun;
 
         public IReadOnlyList<ProcessLaunchPlanListItem> LaunchPlans => workspace.launchPlans;
@@ -174,6 +214,12 @@ public partial class ProcessWorkspace
         {
             get => workspace.operatorReworkDirective;
             set => workspace.operatorReworkDirective = value ?? string.Empty;
+        }
+
+        public string OperatorManagerDirective
+        {
+            get => workspace.operatorManagerDirective;
+            set => workspace.operatorManagerDirective = value ?? string.Empty;
         }
 
         public string OperatorEscalationOwner
@@ -349,6 +395,11 @@ public partial class ProcessWorkspace
             return workspace.StopBlockedRunAsync(runId);
         }
 
+        public void ClearRunHistoryFilters()
+        {
+            workspace.runHistoryFilter.Clear();
+        }
+
         public string BuildLaunchPlanSummary(ProcessLaunchPlanListItem plan)
         {
             return ProcessWorkspace.BuildLaunchPlanSummary(plan);
@@ -379,9 +430,29 @@ public partial class ProcessWorkspace
             return ProcessWorkspace.BuildRunSummary(run);
         }
 
+        public string BuildRunUpdatedText(ProcessRunListItem run)
+        {
+            return ProcessWorkspace.BuildRunUpdatedText(run);
+        }
+
+        public string BuildRunCostText(ProcessRunListItem run)
+        {
+            return ProcessWorkspace.BuildRunCostText(run);
+        }
+
+        public IReadOnlyList<ProcessWorkspaceTagViewModel> BuildRunTags(ProcessRunListItem run)
+        {
+            return ProcessWorkspace.BuildRunTags(run);
+        }
+
         public string ResolveRunTone(ProcessRunStatus status)
         {
             return ProcessWorkspace.ResolveRunTone(status);
+        }
+
+        public string ResolveRunUpdatedTimeFilterText(ProcessRunUpdatedTimeFilter filter)
+        {
+            return ProcessWorkspace.ResolveRunUpdatedTimeFilterText(filter);
         }
 
         public Guid? ResolveSelectedBranchOutcomeId(Guid stepRunId)
@@ -432,6 +503,11 @@ public partial class ProcessWorkspace
         public Task RequestManualReworkAsync()
         {
             return workspace.RequestManualReworkAsync();
+        }
+
+        public Task SendManagerDirectiveAsync()
+        {
+            return workspace.SendManagerDirectiveAsync();
         }
 
         public Task DecideOperatorApprovalAsync(

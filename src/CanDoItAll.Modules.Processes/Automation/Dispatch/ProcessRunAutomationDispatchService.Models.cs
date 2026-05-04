@@ -26,6 +26,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessRun Run,
         ProcessDefinition Definition,
         ProcessStepRun StepRun,
+        ProcessStepDefinition StepDefinition,
         ProcessWorkBrief? WorkBrief,
         Guid TechnicalAgentId,
         IReadOnlyList<DispatchArtifactExpectation> ExpectedArtifacts,

@@ -7,10 +7,16 @@ public sealed record ProcessRunListItem(
     Guid Id,
     Guid ProcessDefinitionId,
     Guid ProcessDefinitionVersionId,
+    Guid? ParentRunId,
+    Guid? ParentStepRunId,
+    Guid RootRunId,
+    int HierarchyDepth,
     Guid? ProjectId,
     string Name,
     ProcessRunStatus Status,
     ProcessOperatingMode OperatingMode,
+    Guid? ManagerAgentId,
+    string ManagerAgentName,
     int CompletedStepCount,
     int TotalStepCount,
     int BlockedStepCount,
@@ -192,6 +198,17 @@ public sealed record ProcessStepRunArtifactPortViewModel(
     string Title,
     bool IsRequired);
 
+public sealed record ProcessSubprocessRunSummaryViewModel(
+    Guid RunId,
+    Guid ProcessDefinitionId,
+    Guid? ProjectId,
+    string RunName,
+    ProcessRunStatus Status,
+    int CompletedStepCount,
+    int TotalStepCount,
+    int BlockedStepCount,
+    DateTimeOffset UpdatedAtUtc);
+
 public sealed record ProcessStepRunViewModel(
     Guid Id,
     Guid StepDefinitionId,
@@ -230,6 +247,8 @@ public sealed record ProcessStepRunViewModel(
     public IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> ArtifactExpectations { get; init; } = [];
 
     public ProcessStepRunHealthViewModel Health { get; init; } = ProcessStepRunHealthViewModel.Empty;
+
+    public ProcessSubprocessRunSummaryViewModel? SubprocessRun { get; init; }
 }
 
 public sealed record ProcessDecisionViewModel(
@@ -558,6 +577,10 @@ public sealed class ProcessRunStartRequest
     public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
 
     public Guid? LaunchPlanId { get; set; }
+
+    public Guid? ParentRunId { get; set; }
+
+    public Guid? ParentStepRunId { get; set; }
 }
 
 public sealed class ProcessRunStopRequest
@@ -567,6 +590,15 @@ public sealed class ProcessRunStopRequest
     public string Reason { get; set; } = string.Empty;
 
     public string StoppedBy { get; set; } = "process-workspace";
+}
+
+public sealed class ProcessManagerDirectiveRequest
+{
+    public Guid ProcessRunId { get; set; }
+
+    public string Directive { get; set; } = string.Empty;
+
+    public string InstructedBy { get; set; } = "process-workspace";
 }
 
 public sealed class ProcessLaunchCreateRequest

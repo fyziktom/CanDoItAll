@@ -2959,6 +2959,14 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ManagerAgentOverrideId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManagerAgentOverrideName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("OperatingModeSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -2990,6 +2998,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ManagerAgentOverrideId");
 
                     b.HasIndex("ProcessDefinitionId")
                         .IsUnique()
@@ -3746,6 +3756,17 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("HierarchyDepth")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ManagerAgentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManagerAgentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -3754,6 +3775,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<string>("OperatingMode")
                         .IsRequired()
                         .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParentRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParentStepRunId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PolicySnapshot")
@@ -3772,6 +3799,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<string>("ReplayPackageKey")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RootRunId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("SlaAttainmentPercent")
@@ -3794,9 +3824,20 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ManagerAgentId");
+
+                    b.HasIndex("ParentRunId");
+
+                    b.HasIndex("ParentStepRunId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessRuns_ParentStepRun")
+                        .HasFilter("\"ParentStepRunId\" IS NOT NULL");
+
                     b.HasIndex("ProcessDefinitionId");
 
                     b.HasIndex("ProjectId");
+
+                    b.HasIndex("RootRunId");
 
                     b.HasIndex("Status");
 
@@ -4016,6 +4057,14 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(48)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SubprocessDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubprocessDefinitionSnapshotName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Subtitle")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -4032,6 +4081,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DecisionRoleRequirementId");
+
+                    b.HasIndex("SubprocessDefinitionId");
 
                     b.HasIndex("ProcessDefinitionVersionId", "Key")
                         .IsUnique();
@@ -6159,6 +6210,16 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ParentRunId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("ParentStepRunId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
                         .WithMany()
                         .HasForeignKey("ProcessDefinitionId")
@@ -6229,6 +6290,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasForeignKey("ProcessDefinitionVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("SubprocessDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>

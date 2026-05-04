@@ -332,7 +332,8 @@ public partial class ProcessWorkspace
     private async Task HandleDetailTabChanged(int index)
     {
         detailTab = ResolveDetailTabKey(index);
-        if (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))
+        if (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) ||
+            string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal))
         {
             await LoadRuntimePaneDataAsync();
         }

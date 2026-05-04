@@ -634,10 +634,16 @@ public sealed partial class ProcessRuntimeReadQueryService
         Guid Id,
         Guid ProcessDefinitionId,
         Guid ProcessDefinitionVersionId,
+        Guid? ParentRunId,
+        Guid? ParentStepRunId,
+        Guid RootRunId,
+        int HierarchyDepth,
         Guid? ProjectId,
         string Name,
         ProcessRunStatus Status,
         ProcessOperatingMode OperatingMode,
+        Guid? ManagerAgentId,
+        string ManagerAgentName,
         decimal EstimatedCost,
         decimal ActualCost,
         DateTimeOffset UpdatedAtUtc);
@@ -664,6 +670,15 @@ public sealed partial class ProcessRuntimeReadQueryService
     private sealed record ProcessBranchOutcomeProjection(
         Guid StepDefinitionId,
         ProcessStepBranchOutcomeOptionViewModel BranchOutcome);
+
+    private sealed record ProcessSubprocessRunProjection(
+        Guid Id,
+        Guid ProcessDefinitionId,
+        Guid? ProjectId,
+        Guid ParentStepRunId,
+        string Name,
+        ProcessRunStatus Status,
+        DateTimeOffset UpdatedAtUtc);
 
     private sealed record ProcessAnalyticsRunProjection(
         Guid Id,

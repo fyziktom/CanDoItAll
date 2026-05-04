@@ -26,12 +26,6 @@ public sealed partial class ProcessesService
         }
 
         var incoming = ProcessDependencyCompatibilityBridge.ToEditorModel(envelope.Definition);
-        if (ProcessDefinitionSyncComparer.AreEquivalent(current, incoming))
-        {
-            return Result<bool>.Success(false);
-        }
-
-        PrepareImportedDefinitionForSave(incoming);
         incoming.Id = current.Id;
         incoming.ProjectId = current.ProjectId;
         incoming.WorkingVersionId = current.WorkingVersionId;
@@ -39,6 +33,18 @@ public sealed partial class ProcessesService
         incoming.WorkingVersionConcurrencyToken = current.WorkingVersionConcurrencyToken;
         incoming.WorkingVersionNumber = current.WorkingVersionNumber;
         incoming.Status = current.Status;
+        var subprocessResolution = await ResolveImportedSubprocessReferencesAsync(incoming, cancellationToken);
+        if (subprocessResolution.IsFailure)
+        {
+            return Result<bool>.Failure(subprocessResolution.Errors);
+        }
+
+        if (ProcessDefinitionSyncComparer.AreEquivalent(current, incoming))
+        {
+            return Result<bool>.Success(false);
+        }
+
+        PrepareImportedDefinitionForSave(incoming);
 
         var saveResult = await SaveAsync(
             incoming,
@@ -107,6 +113,8 @@ internal static class ProcessDefinitionSyncComparer
             model.ConstitutionRuleSummary,
             model.OperatingModeSummary,
             model.SimulationReadinessSummary,
+            ManagerAgentOverrideId = model.ManagerAgentOverrideId?.ToString("D") ?? string.Empty,
+            model.ManagerAgentOverrideName,
             model.Criticality,
             model.AutonomyLevel,
             Roles = model.Roles
@@ -157,6 +165,8 @@ internal static class ProcessDefinitionSyncComparer
                     step.Subtitle,
                     step.Notes,
                     step.StepKind,
+                    SubprocessDefinitionId = step.SubprocessDefinitionId?.ToString("D") ?? string.Empty,
+                    step.SubprocessDefinitionSnapshotName,
                     step.AllowsManualSkip,
                     step.AllowsSafeRefusal,
                     step.RequiresApproval,

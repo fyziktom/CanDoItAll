@@ -1,5 +1,6 @@
 using CanDoItAll.Components.CanvasLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -268,6 +269,20 @@ public partial class ProcessWorkspace
     private async Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
         selectedCanvasNodeId = nodeId;
+        if (IsDefinitionCanvasActive &&
+            SelectedCanvasDefinitionStep is { StepKind: ProcessStepKind.Subprocess } &&
+            SelectedCanvasDefinitionStep.SubprocessDefinitionId.HasValue)
+        {
+            await OpenSelectedSubprocessDefinitionAsync();
+            return;
+        }
+
+        if (IsRuntimeCanvasActive && SelectedCanvasRuntimeStep?.SubprocessRun is not null)
+        {
+            await OpenSelectedSubprocessRunAsync();
+            return;
+        }
+
         if (IsDefinitionCanvasActive && SelectedCanvasDefinitionRole is not null)
         {
             OpenDefinitionRoleEditor();
@@ -276,6 +291,56 @@ public partial class ProcessWorkspace
         }
 
         await OpenCanvasActionDialogAsync();
+    }
+
+    private async Task OpenSelectedSubprocessDefinitionAsync()
+    {
+        if (SelectedCanvasDefinitionStep?.SubprocessDefinitionId is not Guid definitionId)
+        {
+            SetError("Select a subprocess step with a linked definition first.");
+            return;
+        }
+
+        await OpenRouteInNewTabAsync(BuildProcessDefinitionRoute(definitionId));
+    }
+
+    private async Task OpenSelectedSubprocessRunAsync()
+    {
+        if (SelectedCanvasRuntimeStep?.SubprocessRun is not { } subprocessRun)
+        {
+            SetError("Select a subprocess runtime step with an active child run first.");
+            return;
+        }
+
+        await OpenRouteInNewTabAsync(BuildProcessRunRoute(subprocessRun));
+    }
+
+    private ValueTask OpenRouteInNewTabAsync(string route)
+    {
+        var absoluteUri = Navigation.ToAbsoluteUri(route).ToString();
+        return JsRuntime.InvokeVoidAsync("open", absoluteUri, "_blank", "noopener,noreferrer");
+    }
+
+    private string BuildProcessDefinitionRoute(Guid definitionId)
+    {
+        var targetDefinition = definitions.FirstOrDefault(item => item.Id == definitionId);
+        if (targetDefinition is not null)
+        {
+            return targetDefinition.ProjectId.HasValue
+                ? $"/projects/{targetDefinition.ProjectId.Value:D}/processes?processId={definitionId:D}"
+                : $"/processes?processId={definitionId:D}";
+        }
+
+        return ProjectId.HasValue
+            ? $"/projects/{ProjectId.Value:D}/processes?processId={definitionId:D}"
+            : $"/processes?processId={definitionId:D}";
+    }
+
+    private static string BuildProcessRunRoute(ProcessSubprocessRunSummaryViewModel subprocessRun)
+    {
+        return subprocessRun.ProjectId.HasValue
+            ? $"/projects/{subprocessRun.ProjectId.Value:D}/processes?processId={subprocessRun.ProcessDefinitionId:D}&runId={subprocessRun.RunId:D}"
+            : $"/processes?processId={subprocessRun.ProcessDefinitionId:D}&runId={subprocessRun.RunId:D}";
     }
 
     private async Task HandleCanvasNodeEditedAsync(CanvasWorkbenchNodeEditRequest request)

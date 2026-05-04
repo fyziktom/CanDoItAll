@@ -12,6 +12,8 @@ internal static class ProcessPersistenceConstraintNames
 
     public const string StepRunPerDefinitionUniqueIndex = "UX_ProcessStepRuns_RunStep";
 
+    public const string SubprocessRunPerParentStepUniqueIndex = "UX_ProcessRuns_ParentStepRun";
+
     public const string RunAssignmentRunScopedUniqueIndex = "UX_ProcessRunAssignments_RunScoped";
 
     public const string RunAssignmentStepScopedUniqueIndex = "UX_ProcessRunAssignments_StepScoped";

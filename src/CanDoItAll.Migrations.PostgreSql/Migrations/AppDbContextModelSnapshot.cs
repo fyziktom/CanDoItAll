@@ -2964,6 +2964,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("ManagerAgentOverrideId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ManagerAgentOverrideName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("OperatingModeSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -2995,6 +3003,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ManagerAgentOverrideId");
 
                     b.HasIndex("ProcessDefinitionId")
                         .IsUnique()
@@ -3751,6 +3761,17 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("HierarchyDepth")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ManagerAgentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ManagerAgentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -3760,6 +3781,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(48)
                         .HasColumnType("character varying(48)");
+
+                    b.Property<Guid?>("ParentRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ParentStepRunId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("PolicySnapshot")
                         .IsRequired()
@@ -3778,6 +3805,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("RootRunId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("SlaAttainmentPercent")
                         .HasColumnType("integer");
@@ -3799,9 +3829,20 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ManagerAgentId");
+
+                    b.HasIndex("ParentRunId");
+
+                    b.HasIndex("ParentStepRunId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProcessRuns_ParentStepRun")
+                        .HasFilter("\"ParentStepRunId\" IS NOT NULL");
+
                     b.HasIndex("ProcessDefinitionId");
 
                     b.HasIndex("ProjectId");
+
+                    b.HasIndex("RootRunId");
 
                     b.HasIndex("Status");
 
@@ -4021,6 +4062,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(48)
                         .HasColumnType("character varying(48)");
 
+                    b.Property<Guid?>("SubprocessDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SubprocessDefinitionSnapshotName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Subtitle")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -4037,6 +4086,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DecisionRoleRequirementId");
+
+                    b.HasIndex("SubprocessDefinitionId");
 
                     b.HasIndex("ProcessDefinitionVersionId", "Key")
                         .IsUnique();
@@ -6166,6 +6217,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ParentRunId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("ParentStepRunId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
                         .WithMany()
                         .HasForeignKey("ProcessDefinitionId")
@@ -6236,6 +6297,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasForeignKey("ProcessDefinitionVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("SubprocessDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>

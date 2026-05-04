@@ -135,6 +135,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             ProcessStepKind.Start => "sky",
             ProcessStepKind.Approval => "amber",
             ProcessStepKind.Decision => "violet",
+            ProcessStepKind.Subprocess => "info",
             ProcessStepKind.End => "mint",
             _ => "neutral"
         };
@@ -143,10 +144,10 @@ public sealed partial class ProcessCanvasSurfaceFactory
         {
             Id = BuildDefinitionNodeId(step),
             Kind = ProcessCanvasCatalog.NodeKinds.DefinitionStep,
-            Family = "process-definition",
+            Family = step.StepKind == ProcessStepKind.Subprocess ? "process-subprocess" : "process-definition",
             Icon = ResolveStepIcon(step.StepKind),
             Title = step.Title,
-            Subtitle = string.IsNullOrWhiteSpace(step.Subtitle) ? step.StepKind.ToString() : step.Subtitle,
+            Subtitle = ResolveDefinitionSubtitle(step),
             LeadText = ResolveDefinitionLeadText(step, dependencyOutcomeTitles),
             Status = status,
             StatusPill = step.StepKind.ToString(),
@@ -155,76 +156,9 @@ public sealed partial class ProcessCanvasSurfaceFactory
             DurationLabel = step.TargetLeadHours > 0 ? $"{step.TargetLeadHours} h" : "Unbounded",
             X = step.CanvasX != 0 ? step.CanvasX : 140 + (index * 280),
             Y = step.CanvasY != 0 ? step.CanvasY : 180,
-            Chips =
-            [
-                new CanvasWorkbenchChip
-                {
-                    Text = $"{step.RoleAssignments.Count} roles",
-                    Tone = step.RoleAssignments.Count == 0 ? "danger" : "neutral"
-                },
-                new CanvasWorkbenchChip
-                {
-                    Text = $"{step.ArtifactExpectations.Count} artifacts",
-                    Tone = step.ArtifactExpectations.Count == 0 ? "neutral" : "info"
-                },
-                new CanvasWorkbenchChip
-                {
-                    Text = $"{step.BranchOutcomes.Count} branches",
-                    Tone = step.BranchOutcomes.Count == 0 ? "neutral" : "accent"
-                }
-            ],
+            Chips = BuildDefinitionNodeChips(step),
             FooterChips = BuildDefinitionFooterChips(status, dependencyOutcomeTitles),
-            ContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.EditDefinitionStep,
-                    Label = "Edit step",
-                    MenuLabel = "Edit step",
-                    Icon = "draw",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.AddDependentStep,
-                    Label = "Add dependent step",
-                    MenuLabel = "Add dependent step",
-                    Icon = "add_circle",
-                    Tone = "info"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.AddBranchOutcome,
-                    Label = "Add branch outcome",
-                    MenuLabel = "Add branch outcome",
-                    Icon = "call_split",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.AddRoleBinding,
-                    Label = "Add role binding",
-                    MenuLabel = "Add role binding",
-                    Icon = "people",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.AddArtifactExpectation,
-                    Label = "Add artifact expectation",
-                    MenuLabel = "Add artifact expectation",
-                    Icon = "description",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.RemoveDefinitionStep,
-                    Label = "Remove step",
-                    MenuLabel = "Remove step",
-                    Icon = "delete",
-                    Tone = "danger"
-                }
-            ],
+            ContextActions = BuildDefinitionStepContextActions(step),
             InputPorts = DecorateProcessPorts(BuildDefinitionStepInputPorts(step, rolesById, profile)),
             OutputPorts = DecorateProcessPorts(BuildDefinitionStepOutputPorts(step, profile))
         };
@@ -402,19 +336,11 @@ public sealed partial class ProcessCanvasSurfaceFactory
         {
             Id = BuildRunNodeId(stepRun.Id),
             Kind = ProcessCanvasCatalog.NodeKinds.RuntimeStep,
-            Family = "process-runtime",
+            Family = stepRun.StepKind == ProcessStepKind.Subprocess ? "process-subprocess-runtime" : "process-runtime",
             Icon = ResolveStepIcon(stepRun.StepKind),
             Title = stepRun.Title,
-            Subtitle = string.IsNullOrWhiteSpace(stepRun.CurrentExecutorName)
-                ? "Unassigned"
-                : stepRun.CurrentExecutorName,
-            LeadText = !string.IsNullOrWhiteSpace(stepRun.BlockedReason)
-                ? stepRun.BlockedReason
-                : !string.IsNullOrWhiteSpace(stepRun.RefusalReason)
-                    ? stepRun.RefusalReason
-                    : !string.IsNullOrWhiteSpace(stepRun.SelectedBranchOutcomeTitle)
-                        ? $"Selected branch: {stepRun.SelectedBranchOutcomeTitle}"
-                    : stepRun.DecisionSummary,
+            Subtitle = ResolveRunSubtitle(stepRun),
+            LeadText = ResolveRunLeadText(stepRun),
             Status = stepRun.Status.ToString().ToLowerInvariant(),
             StatusPill = stepRun.Status.ToString(),
             PaletteKey = tone,
@@ -424,19 +350,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
                 : $"{stepRun.WaitMinutes} m wait",
             X = 140 + ((stepRun.Sequence - 1) * 280),
             Y = stepRun.Status == ProcessStepRunStatus.Blocked ? 260 : 180,
-            Chips =
-            [
-                new CanvasWorkbenchChip
-                {
-                    Text = $"{stepRun.WaitMinutes} m wait",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchChip
-                {
-                    Text = $"{stepRun.ReworkCount} rework",
-                    Tone = stepRun.ReworkCount > 0 ? "warn" : "neutral"
-                }
-            ],
+            Chips = BuildRunNodeChips(stepRun),
             FooterChips =
             [
                 new CanvasWorkbenchChip
@@ -445,41 +359,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     Tone = stepRun.CapabilityGapSeverity == ProcessCapabilityGapSeverity.None ? "neutral" : "danger"
                 }
             ],
-            ContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.RuntimeStart,
-                    Label = "Start",
-                    MenuLabel = "Start",
-                    Icon = "play",
-                    Tone = "info"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.RuntimeComplete,
-                    Label = "Complete",
-                    MenuLabel = "Complete",
-                    Icon = "check",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.RuntimeBlock,
-                    Label = "Block",
-                    MenuLabel = "Block",
-                    Icon = "block",
-                    Tone = "danger"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.RuntimeRecordArtifact,
-                    Label = "Record artifact",
-                    MenuLabel = "Record artifact",
-                    Icon = "note_add",
-                    Tone = "neutral"
-                }
-            ],
+            ContextActions = BuildRuntimeStepContextActions(stepRun),
             InputPorts = DecorateProcessPorts(BuildRunStepInputPorts(stepRun, profile)),
             OutputPorts = DecorateProcessPorts(BuildRunStepOutputPorts(stepRun, profile))
         };

@@ -22,6 +22,14 @@
   },
   "Processes": [
     {
+      "Key": "dotnet-blazor-ssr-solution-setup",
+      "RelativePath": "processes/dotnet-blazor-ssr-solution-setup"
+    },
+    {
+      "Key": "dotnet-development-slice",
+      "RelativePath": "processes/dotnet-development-slice"
+    },
+    {
       "Key": "software-delivery",
       "RelativePath": "processes/software-delivery"
     },

@@ -105,6 +105,8 @@ internal sealed class ProcessDefinitionDraftCloneEngine
                 Subtitle = step.Subtitle,
                 Notes = step.Notes,
                 StepKind = step.StepKind,
+                SubprocessDefinitionId = step.SubprocessDefinitionId,
+                SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
                 AllowsManualSkip = step.AllowsManualSkip,
                 AllowsSafeRefusal = step.AllowsSafeRefusal,
                 RequiresApproval = step.RequiresApproval,

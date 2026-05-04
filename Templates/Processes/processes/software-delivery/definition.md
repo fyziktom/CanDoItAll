@@ -92,14 +92,14 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Validations: validate-architecture-boundaries
 - Prompts: prompt-architecture-review
 
-### 3. Implement feature, tests, and migration notes (`implementation`)
-- Step kind: Work
+### 3. Run atomic implementation slice (`implementation`)
+- Step kind: Subprocess
 - Depends on: architecture-review
-- Inputs: Approved architecture path, scope packet, and unresolved technical questions.
-- Outputs: Review-ready implementation with tests, migration notes, and rollout checklist inputs.
-- Evidence: Change set, test outputs, migration steps, and touched-surface inventory.
-- Decision rights: Lead engineer can implement but cannot silently alter the approved architecture or reduce proof depth.
-- Exception policy: Pause when migration impact, performance risk, or dependency scope grows beyond the approved path.
+- Inputs: Approved architecture path, scope packet, unresolved technical questions, and implementation-slice start criteria.
+- Outputs: Completed child implementation slice with tests, migration notes, blockers, and rollout checklist inputs visible from the parent process.
+- Evidence: Child run journal, implementation change set, test outputs, migration steps, and touched-surface inventory.
+- Decision rights: Parent delivery manager can instruct the child manager, but implementation changes remain owned by the child slice roles.
+- Exception policy: Do not complete the parent implementation step until the child implementation slice reaches a completed terminal state.
 - Artifact expectations:
   - `implementation-change-set` => `implementation-change-set` / Implementation change set
   - `migration-rollout-preparation-checklist` => `rollback-plan` / Migration and rollout preparation checklist

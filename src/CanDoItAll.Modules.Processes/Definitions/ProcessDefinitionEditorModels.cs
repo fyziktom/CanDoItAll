@@ -28,6 +28,20 @@ public sealed record ProcessRuntimeTileModel(
     decimal EstimatedCost,
     decimal ActualCost);
 
+public sealed record ProcessManagerAgentOption(
+    Guid PartyId,
+    Guid? TechnicalAgentId,
+    string DisplayName,
+    string ProviderName,
+    string DefaultModel,
+    string BindingSummary);
+
+public sealed record ProcessSubprocessDefinitionOption(
+    Guid DefinitionId,
+    string Name,
+    ProcessDefinitionStatus Status,
+    string ScopeLabel);
+
 public sealed class ProcessDefinitionEditorModel
 {
     public Guid? Id { get; set; }
@@ -65,6 +79,10 @@ public sealed class ProcessDefinitionEditorModel
     public string OperatingModeSummary { get; set; } = string.Empty;
 
     public string SimulationReadinessSummary { get; set; } = string.Empty;
+
+    public Guid? ManagerAgentOverrideId { get; set; }
+
+    public string ManagerAgentOverrideName { get; set; } = string.Empty;
 
     public ProcessCriticality Criticality { get; set; } = ProcessCriticality.Standard;
 
@@ -147,6 +165,10 @@ public sealed class ProcessStepEditorModel
     public string Notes { get; set; } = string.Empty;
 
     public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
+
+    public Guid? SubprocessDefinitionId { get; set; }
+
+    public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
 
     public bool AllowsManualSkip { get; set; }
 

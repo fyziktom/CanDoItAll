@@ -16,11 +16,19 @@ internal sealed class ProcessRunConfiguration : IEntityTypeConfiguration<Process
         builder.Property(run => run.GovernanceSnapshot).HasColumnType("TEXT");
         builder.Property(run => run.PolicySnapshot).HasColumnType("TEXT");
         builder.Property(run => run.ExecutorSnapshotSummary).HasColumnType("TEXT");
+        builder.Property(run => run.ManagerAgentName).HasMaxLength(200);
         builder.Property(run => run.ReplayPackageKey).HasMaxLength(200);
         builder.Property(run => run.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(run => run.ProcessDefinitionId);
         builder.HasIndex(run => run.ProjectId);
         builder.HasIndex(run => run.Status);
+        builder.HasIndex(run => run.ParentRunId);
+        builder.HasIndex(run => run.ParentStepRunId)
+            .HasDatabaseName(ProcessPersistenceConstraintNames.SubprocessRunPerParentStepUniqueIndex)
+            .HasFilter("\"ParentStepRunId\" IS NOT NULL")
+            .IsUnique();
+        builder.HasIndex(run => run.RootRunId);
+        builder.HasIndex(run => run.ManagerAgentId);
         builder.HasOne<ProcessDefinition>()
             .WithMany()
             .HasForeignKey(run => run.ProcessDefinitionId)
@@ -29,6 +37,14 @@ internal sealed class ProcessRunConfiguration : IEntityTypeConfiguration<Process
             .WithMany()
             .HasForeignKey(run => new { run.ProcessDefinitionId, run.ProcessDefinitionVersionId })
             .HasPrincipalKey(version => new { version.ProcessDefinitionId, version.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(run => run.ParentRunId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(run => run.ParentStepRunId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

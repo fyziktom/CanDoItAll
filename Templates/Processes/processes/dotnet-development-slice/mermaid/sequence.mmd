@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant Parent
+    participant SliceManager
+    participant SetupSubprocess
+    participant Engineer
+    Parent->>SliceManager: Start implementation slice
+    SliceManager->>SetupSubprocess: Start solution setup if needed
+    SetupSubprocess-->>SliceManager: Setup status and evidence
+    SliceManager->>Engineer: Implement bounded change
+    Engineer-->>SliceManager: Change set and test evidence
+    SliceManager-->>Parent: Handoff blockers and proof

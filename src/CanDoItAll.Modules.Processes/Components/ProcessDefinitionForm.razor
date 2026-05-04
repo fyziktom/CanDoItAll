@@ -71,6 +71,26 @@
             </FormField>
         </Grid>
 
+        <FormField Text="Manager agent override">
+            @if (ManagerAgentOptions.Count == 0)
+            {
+                <p class="text-sm leading-6 text-slate-600">Default process manager</p>
+            }
+            else
+            {
+                <select class="cda-input"
+                        value="@SelectedManagerAgentValue"
+                        @onchange="HandleManagerAgentChanged"
+                        data-testid="processes-manager-agent-select">
+                    <option value="">Default process manager</option>
+                    @foreach (var agent in ManagerAgentOptions)
+                    {
+                        <option value="@agent.PartyId">@BuildManagerAgentLabel(agent)</option>
+                    }
+                </select>
+            }
+        </FormField>
+
         <FormField Text="Interface contract summary">
             <InputTextArea @bind-Value="Model.InterfaceContractSummary"
                            class="cda-input cda-input--textarea min-h-24" />
@@ -134,6 +154,9 @@
     public string ScopeLabel { get; set; } = string.Empty;
 
     [Parameter]
+    public IReadOnlyList<ProcessManagerAgentOption> ManagerAgentOptions { get; set; } = [];
+
+    [Parameter]
     public bool ShowActions { get; set; } = true;
 
     [Parameter]
@@ -144,4 +167,32 @@
 
     [Parameter]
     public EventCallback Delete { get; set; }
+
+    private string SelectedManagerAgentValue => Model.ManagerAgentOverrideId?.ToString("D") ?? string.Empty;
+
+    private void HandleManagerAgentChanged(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue) ||
+            !Guid.TryParse(rawValue, out var selectedAgentId))
+        {
+            Model.ManagerAgentOverrideId = null;
+            Model.ManagerAgentOverrideName = string.Empty;
+            return;
+        }
+
+        var selectedAgent = ManagerAgentOptions.FirstOrDefault(item => item.PartyId == selectedAgentId);
+        Model.ManagerAgentOverrideId = selectedAgentId;
+        Model.ManagerAgentOverrideName = selectedAgent?.DisplayName ?? string.Empty;
+    }
+
+    private static string BuildManagerAgentLabel(ProcessManagerAgentOption agent)
+    {
+        if (string.IsNullOrWhiteSpace(agent.ProviderName) && string.IsNullOrWhiteSpace(agent.DefaultModel))
+        {
+            return agent.DisplayName;
+        }
+
+        return $"{agent.DisplayName} / {agent.ProviderName} {agent.DefaultModel}".Trim();
+    }
 }

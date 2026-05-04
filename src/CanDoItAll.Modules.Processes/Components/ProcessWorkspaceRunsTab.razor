@@ -44,6 +44,13 @@
                         <StatusBadge Tone="neutral"
                                      Text="@($"{selectedRun.TotalStepCount} steps")" />
                         <StatusBadge Tone="info"
+                                     Text="@(string.IsNullOrWhiteSpace(selectedRun.ManagerAgentName) ? "manager: default" : $"manager: {selectedRun.ManagerAgentName}")" />
+                        @if (selectedRun.HierarchyDepth > 0)
+                        {
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"subprocess depth {selectedRun.HierarchyDepth}")" />
+                        }
+                        <StatusBadge Tone="info"
                                      Text="@($"{Presenter.SelectedRunHealth.LatestAttemptCount} attempts")" />
                         @if (Presenter.SelectedRunHealth.PendingApprovalCount > 0)
                         {

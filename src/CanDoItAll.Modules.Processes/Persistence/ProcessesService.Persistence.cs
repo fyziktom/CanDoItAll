@@ -117,6 +117,8 @@ public sealed partial class ProcessesService
                 workingVersion.ConstitutionRuleSummary = model.ConstitutionRuleSummary.Trim();
                 workingVersion.OperatingModeSummary = model.OperatingModeSummary.Trim();
                 workingVersion.SimulationReadinessSummary = model.SimulationReadinessSummary.Trim();
+                workingVersion.ManagerAgentOverrideId = model.ManagerAgentOverrideId;
+                workingVersion.ManagerAgentOverrideName = model.ManagerAgentOverrideName.Trim();
                 if (importMetadata is not null)
                 {
                     workingVersion.ImportedFrom = importMetadata.SourceFormat;

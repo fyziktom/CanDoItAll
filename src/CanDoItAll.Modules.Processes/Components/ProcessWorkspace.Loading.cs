@@ -66,6 +66,7 @@ public partial class ProcessWorkspace
         selectedProcessId = nextSelectedProcessId;
         editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId);
         executorOptions = await ProcessesService.ListExecutorOptionsAsync();
+        managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync();
         analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
         improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId);
 
@@ -107,9 +108,19 @@ public partial class ProcessWorkspace
             return;
         }
 
-        launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId, cancellationToken);
-        selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
-        await LoadLaunchPlanDetailsAsync();
+        if (ShouldLoadLaunchPlanData())
+        {
+            launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId, cancellationToken);
+            selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
+            await LoadLaunchPlanDetailsAsync();
+        }
+        else
+        {
+            launchPlans = [];
+            selectedLaunchPlanId = null;
+            selectedLaunchPlan = null;
+        }
+
         runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId, cancellationToken);
         activeRunSummaries = string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal)
             ? await RunDetailsLoader.LoadActiveRunSummariesAsync(runs, cancellationToken)
@@ -147,13 +158,24 @@ public partial class ProcessWorkspace
     {
         return selectedProcessId.HasValue &&
             (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) ||
+                string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal) ||
                 RunIdQuery.HasValue ||
+                LaunchPlanIdQuery.HasValue);
+    }
+
+    private bool ShouldLoadLaunchPlanData()
+    {
+        return selectedProcessId.HasValue &&
+            (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) ||
                 LaunchPlanIdQuery.HasValue);
     }
 
     private bool ShouldLoadSelectedRunDetails()
     {
-        return selectedRunId.HasValue && ShouldLoadRuntimePaneData();
+        return selectedRunId.HasValue &&
+            (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) ||
+                RunIdQuery.HasValue ||
+                LaunchPlanIdQuery.HasValue);
     }
 
     private async Task LoadRunDetailsAsync(CancellationToken cancellationToken = default)
@@ -231,6 +253,7 @@ public partial class ProcessWorkspace
         artifactStepRunId = null;
         operatorReworkStepRunId = null;
         operatorReworkDirective = string.Empty;
+        operatorManagerDirective = string.Empty;
         operatorEscalationResolution = string.Empty;
         operatorApprovalDecisionSummary = string.Empty;
         assignmentAllowsDirectMessaging = true;
@@ -259,6 +282,13 @@ public partial class ProcessWorkspace
         if (RunIdQuery.HasValue && runs.Any(run => run.Id == RunIdQuery.Value))
         {
             return RunIdQuery.Value;
+        }
+
+        if (string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal) &&
+            selectedRunId.HasValue &&
+            runs.Any(run => run.Id == selectedRunId.Value))
+        {
+            return selectedRunId.Value;
         }
 
         if (!string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))

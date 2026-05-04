@@ -176,6 +176,26 @@ public sealed partial class ProcessesService
                     cancellationToken);
             }
 
+            if (ShouldNotifyParentSubprocessStep(transitionContext.Run.Status) &&
+                transitionContext.Run.ParentRunId.HasValue &&
+                transitionContext.Run.ParentStepRunId.HasValue)
+            {
+                var parentRun = await dbContext.Set<ProcessRun>()
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(item => item.Id == transitionContext.Run.ParentRunId.Value, cancellationToken);
+                if (parentRun is not null)
+                {
+                    await processOutboxService.EnqueueAutomationDispatchAsync(
+                        dbContext,
+                        parentRun.ProjectId,
+                        parentRun.ProcessDefinitionId,
+                        parentRun.Id,
+                        transitionContext.Run.ParentStepRunId,
+                        $"subprocess-run:{transitionContext.Run.Status}",
+                        cancellationToken);
+                }
+            }
+
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
@@ -362,6 +382,14 @@ public sealed partial class ProcessesService
             ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
             _ => false
         };
+    }
+
+    private static bool ShouldNotifyParentSubprocessStep(ProcessRunStatus status)
+    {
+        return status is ProcessRunStatus.Blocked or
+            ProcessRunStatus.Completed or
+            ProcessRunStatus.Cancelled or
+            ProcessRunStatus.Failed;
     }
 
     private static void ApplyStepRunTransitionState(

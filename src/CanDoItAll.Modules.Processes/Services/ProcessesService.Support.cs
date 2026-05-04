@@ -65,6 +65,21 @@ public sealed partial class ProcessesService
             .Where(step => step.Id.HasValue)
             .ToDictionary(step => step.Id!.Value);
         foreach (var step in model.Steps) {
+            if (step.StepKind == ProcessStepKind.Subprocess &&
+                (!step.SubprocessDefinitionId.HasValue || step.SubprocessDefinitionId.Value == Guid.Empty)) {
+                return Error.Validation(
+                    $"Subprocess step '{step.Title}' must reference a process definition.",
+                    "processes.subprocess-target-required");
+            }
+
+            if (step.StepKind == ProcessStepKind.Subprocess &&
+                model.Id.HasValue &&
+                step.SubprocessDefinitionId == model.Id.Value) {
+                return Error.Validation(
+                    $"Subprocess step '{step.Title}' cannot reference its own process definition.",
+                    "processes.subprocess-self-reference");
+            }
+
             if (step.BranchOutcomes.Any(outcome => string.IsNullOrWhiteSpace(outcome.Title))) {
                 return Error.Validation("Every branch outcome requires a title.", "processes.branch-outcome-title-required");
             }
@@ -119,6 +134,89 @@ public sealed partial class ProcessesService
 
     private static void NormalizeDefinitionEditorForSave(ProcessDefinitionEditorModel model) {
         ProcessCanvasBranching.NormalizeDefinitionEditor(model);
+        model.ManagerAgentOverrideName = model.ManagerAgentOverrideName.Trim();
+        if (!model.ManagerAgentOverrideId.HasValue || model.ManagerAgentOverrideId.Value == Guid.Empty) {
+            model.ManagerAgentOverrideId = null;
+            model.ManagerAgentOverrideName = string.Empty;
+        }
+
+        foreach (var step in model.Steps) {
+            if (step.StepKind != ProcessStepKind.Subprocess) {
+                step.SubprocessDefinitionId = null;
+                step.SubprocessDefinitionSnapshotName = string.Empty;
+                continue;
+            }
+
+            step.SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName.Trim();
+        }
+    }
+
+    private async Task<Result> ResolveImportedSubprocessReferencesAsync(
+        ProcessDefinitionEditorModel model,
+        CancellationToken cancellationToken)
+    {
+        var unresolvedSteps = model.Steps
+            .Where(step =>
+                step.StepKind == ProcessStepKind.Subprocess &&
+                (!step.SubprocessDefinitionId.HasValue || step.SubprocessDefinitionId.Value == Guid.Empty) &&
+                !string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName))
+            .ToList();
+        if (unresolvedSteps.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var candidates = await dbContext.Set<ProcessDefinition>()
+            .AsNoTracking()
+            .Where(definition => definition.ProjectId == model.ProjectId || definition.ProjectId == null)
+            .Select(definition => new
+            {
+                definition.Id,
+                definition.ProjectId,
+                definition.Name,
+                definition.Slug
+            })
+            .ToListAsync(cancellationToken);
+
+        foreach (var step in unresolvedSteps)
+        {
+            var reference = step.SubprocessDefinitionSnapshotName.Trim();
+            var matches = candidates
+                .Where(definition =>
+                    string.Equals(definition.Name, reference, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(definition.Slug, reference, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var preferredMatches = matches
+                .Where(definition => model.ProjectId.HasValue && definition.ProjectId == model.ProjectId)
+                .ToList();
+            if (preferredMatches.Count == 0)
+            {
+                preferredMatches = matches
+                    .Where(definition => definition.ProjectId == null)
+                    .ToList();
+            }
+
+            if (preferredMatches.Count == 0)
+            {
+                return Result.Failure(Error.Validation(
+                    $"Subprocess step '{step.Title}' references '{reference}', but no matching process definition exists in the current scope.",
+                    "processes.subprocess-import-target-not-found"));
+            }
+
+            if (preferredMatches.Count > 1)
+            {
+                return Result.Failure(Error.Validation(
+                    $"Subprocess step '{step.Title}' references '{reference}', but multiple process definitions match that reference.",
+                    "processes.subprocess-import-target-ambiguous"));
+            }
+
+            var resolvedDefinition = preferredMatches[0];
+            step.SubprocessDefinitionId = resolvedDefinition.Id;
+            step.SubprocessDefinitionSnapshotName = resolvedDefinition.Name;
+        }
+
+        return Result.Success();
     }
 
     private static bool HasConcurrencyTokenMismatch(Guid? expectedToken, Guid actualToken) {
@@ -278,6 +376,20 @@ public sealed partial class ProcessesService
 
         if (steps.Any(step => !stepRoleRequirements.Any(requirement => requirement.StepDefinitionId == step.Id))) {
             return Error.Validation("Every step must have at least one explicit role requirement before publication.", "processes.publish-step-role-required");
+        }
+
+        if (steps.Any(step => step.StepKind == ProcessStepKind.Subprocess &&
+                              (!step.SubprocessDefinitionId.HasValue || step.SubprocessDefinitionId.Value == Guid.Empty))) {
+            return Error.Validation(
+                "Publishing requires every subprocess step to reference a process definition.",
+                "processes.publish-subprocess-target-required");
+        }
+
+        if (steps.Any(step => step.StepKind == ProcessStepKind.Subprocess &&
+                              step.SubprocessDefinitionId == definition.Id)) {
+            return Error.Validation(
+                "Publishing requires subprocess steps to reference a different process definition.",
+                "processes.publish-subprocess-self-reference");
         }
 
         var branchOutcomesByStepId = branchOutcomes

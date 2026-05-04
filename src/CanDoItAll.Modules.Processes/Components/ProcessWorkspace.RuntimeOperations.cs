@@ -306,6 +306,33 @@ public partial class ProcessWorkspace
         await RerunAgentStepAsync(operatorReworkStepRunId.Value);
     }
 
+    private async Task SendManagerDirectiveAsync()
+    {
+        if (!selectedRunId.HasValue)
+        {
+            SetError("Select a run before instructing its manager.");
+            return;
+        }
+
+        var result = await ProcessesService.RecordManagerDirectiveAsync(
+            new ProcessManagerDirectiveRequest
+            {
+                ProcessRunId = selectedRunId.Value,
+                Directive = operatorManagerDirective,
+                InstructedBy = "process-workspace"
+            });
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        operatorManagerDirective = string.Empty;
+        detailTab = DetailTabRuns;
+        await LoadWorkspaceAsync();
+        SetMessage("Manager directive recorded.");
+    }
+
     private async Task DecideOperatorApprovalAsync(
         ProcessOperatorApprovalViewModel approval,
         ProcessOperatorApprovalStatus status)

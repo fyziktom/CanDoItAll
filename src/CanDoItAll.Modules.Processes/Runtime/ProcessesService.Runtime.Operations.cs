@@ -376,6 +376,64 @@ public sealed partial class ProcessesService
         };
     }
 
+    public async Task<Result> RecordManagerDirectiveAsync(
+        ProcessManagerDirectiveRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.ProcessRunId == Guid.Empty)
+        {
+            return Result.Failure(Error.Validation("Select a process run before instructing its manager.", "processes.manager-directive-run-required"));
+        }
+
+        var directive = request.Directive.Trim();
+        if (string.IsNullOrWhiteSpace(directive))
+        {
+            return Result.Failure(Error.Validation("Manager directive cannot be empty.", "processes.manager-directive-required"));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var run = await dbContext.Set<ProcessRun>()
+            .SingleOrDefaultAsync(item => item.Id == request.ProcessRunId, cancellationToken);
+        if (run is null)
+        {
+            return Result.Failure(Error.Validation("Process run was not found.", "processes.manager-directive-run-not-found"));
+        }
+
+        var directiveActor = ResolveManagerDirectiveActor(run.ManagerAgentName, request.InstructedBy);
+        await dbContext.Set<ProcessJournalEntry>().AddAsync(
+            BuildJournalEntry(
+                run.Id,
+                null,
+                ProcessRuntimeEventTypes.ManagerDirectiveRecorded,
+                "Manager directive recorded",
+                directive,
+                run.OperatingMode,
+                $"definition-version:{run.ProcessDefinitionVersionId:D}",
+                directiveActor),
+            cancellationToken);
+        run.UpdatedAtUtc = clock.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+
+    private static string ResolveManagerDirectiveActor(string managerAgentName, string instructedBy)
+    {
+        if (!string.IsNullOrWhiteSpace(managerAgentName))
+        {
+            return managerAgentName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(instructedBy))
+        {
+            return instructedBy.Trim();
+        }
+
+        return "process-workspace";
+    }
+
     public async Task<Result<Guid>> ImportAsync(ProcessImportExportEnvelope envelope, CancellationToken cancellationToken = default)
     {
         var importMetadata = new ProcessImportMetadata(
@@ -383,11 +441,32 @@ public sealed partial class ProcessesService
             string.Join(Environment.NewLine, envelope.Warnings));
         var editor = ProcessDependencyCompatibilityBridge.ToEditorModel(envelope.Definition);
         PrepareImportedDefinitionForSave(editor);
+        var subprocessResolution = await ResolveImportedSubprocessReferencesAsync(editor, cancellationToken);
+        if (subprocessResolution.IsFailure)
+        {
+            return Result<Guid>.Failure(subprocessResolution.Errors);
+        }
+
         return await SaveAsync(editor, importMetadata, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default)
     {
         return await executorRegistryBridge.ListOptionsAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProcessManagerAgentOption>> ListManagerAgentOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var agents = await aiAgentService.ListAgentDirectoryAsync(cancellationToken);
+        return agents
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new ProcessManagerAgentOption(
+                item.PartyId,
+                item.TechnicalAgentId,
+                item.DisplayName,
+                item.ProviderName,
+                item.DefaultModel,
+                item.BindingSummary))
+            .ToList();
     }
 }

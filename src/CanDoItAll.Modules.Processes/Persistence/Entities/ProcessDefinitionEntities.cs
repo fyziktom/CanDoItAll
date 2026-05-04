@@ -62,6 +62,10 @@ public sealed class ProcessDefinitionVersion : IHasConcurrencyToken
 
     public string SimulationReadinessSummary { get; set; } = string.Empty;
 
+    public Guid? ManagerAgentOverrideId { get; set; }
+
+    public string ManagerAgentOverrideName { get; set; } = string.Empty;
+
     public string ImportedFrom { get; set; } = string.Empty;
 
     public string ImportWarnings { get; set; } = string.Empty;
@@ -157,6 +161,10 @@ public sealed class ProcessStepDefinition
     public string Notes { get; set; } = string.Empty;
 
     public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
+
+    public Guid? SubprocessDefinitionId { get; set; }
+
+    public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
 
     public bool AllowsManualSkip { get; set; }
 

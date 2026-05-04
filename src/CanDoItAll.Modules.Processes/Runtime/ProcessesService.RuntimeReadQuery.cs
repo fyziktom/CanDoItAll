@@ -203,6 +203,54 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                 .Where(item => roleRequirementIds.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
         var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
+        var subprocessRuns = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(item => item.ParentStepRunId.HasValue && stepRunIds.Contains(item.ParentStepRunId.Value))
+            .Select(
+                item => new ProcessSubprocessRunProjection(
+                    item.Id,
+                    item.ProcessDefinitionId,
+                    item.ProjectId,
+                    item.ParentStepRunId!.Value,
+                    item.Name,
+                    item.Status,
+                    item.UpdatedAtUtc))
+            .ToListAsync(cancellationToken);
+        var subprocessRunIds = subprocessRuns
+            .Select(item => item.Id)
+            .ToList();
+        var subprocessStepRunSummariesByRunId = subprocessRunIds.Count == 0
+            ? new Dictionary<Guid, ProcessRunStepSummaryProjection>()
+            : await dbContext.Set<ProcessStepRun>()
+                .AsNoTracking()
+                .Where(item => subprocessRunIds.Contains(item.ProcessRunId))
+                .GroupBy(item => item.ProcessRunId)
+                .Select(
+                    group => new ProcessRunStepSummaryProjection(
+                        group.Key,
+                        group.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Completed),
+                        group.Count(),
+                        group.Count(stepRun => stepRun.Status == ProcessStepRunStatus.Blocked),
+                        group.Count(stepRun => stepRun.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None)))
+                .ToDictionaryAsync(item => item.ProcessRunId, cancellationToken);
+        var subprocessRunSummariesByStepRunId = subprocessRuns.ToDictionary(
+            item => item.ParentStepRunId,
+            item =>
+            {
+                var summary = subprocessStepRunSummariesByRunId.GetValueOrDefault(item.Id) ??
+                    ProcessRunStepSummaryProjection.Empty(item.Id);
+
+                return new ProcessSubprocessRunSummaryViewModel(
+                    item.Id,
+                    item.ProcessDefinitionId,
+                    item.ProjectId,
+                    item.Name,
+                    item.Status,
+                    summary.CompletedCount,
+                    summary.TotalCount,
+                    summary.BlockedCount,
+                    item.UpdatedAtUtc);
+            });
 
         return stepRuns
             .Select(
@@ -260,7 +308,8 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                         Health = BuildInitialStepHealth(
                             item,
                             artifactLedger,
-                            manualRecoveryDirectivesByStepRunId.GetValueOrDefault(item.Id) ?? string.Empty)
+                            manualRecoveryDirectivesByStepRunId.GetValueOrDefault(item.Id) ?? string.Empty),
+                        SubprocessRun = subprocessRunSummariesByStepRunId.GetValueOrDefault(item.Id)
                     };
                 })
             .ToList();
@@ -375,10 +424,16 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                         run.Id,
                         run.ProcessDefinitionId,
                         run.ProcessDefinitionVersionId,
+                        run.ParentRunId,
+                        run.ParentStepRunId,
+                        run.RootRunId ?? run.Id,
+                        run.HierarchyDepth,
                         run.ProjectId,
                         run.Name,
                         run.Status,
                         run.OperatingMode,
+                        run.ManagerAgentId,
+                        run.ManagerAgentName,
                         run.EstimatedCost,
                         run.ActualCost,
                         run.UpdatedAtUtc))
@@ -416,10 +471,16 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
                         run.Id,
                         run.ProcessDefinitionId,
                         run.ProcessDefinitionVersionId,
+                        run.ParentRunId,
+                        run.ParentStepRunId,
+                        run.RootRunId,
+                        run.HierarchyDepth,
                         run.ProjectId,
                         run.Name,
                         run.Status,
                         run.OperatingMode,
+                        run.ManagerAgentId,
+                        run.ManagerAgentName,
                         stepRunSummary.CompletedCount,
                         stepRunSummary.TotalCount,
                         stepRunSummary.BlockedCount,

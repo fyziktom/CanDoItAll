@@ -3,11 +3,27 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
+internal sealed record ProcessSubprocessRunStartResult(
+    Guid RunId,
+    string RunName,
+    ProcessRunStatus Status);
+
 public sealed partial class ProcessesService
 {
+    private const int MaxProcessRunHierarchyDepth = 12;
+    private const string DefaultProcessManagerName = "Default process manager";
+    private const string ConfiguredProcessManagerName = "Configured process manager";
+    private static readonly HashSet<string> ProcessManagerRoleTokens = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "manager",
+        "lead",
+        "orchestrator"
+    };
+
     public async Task<Result<Guid>> StartRunAsync(ProcessRunStartRequest request, CancellationToken cancellationToken = default)
     {
         if (request.ProcessDefinitionId == Guid.Empty && !request.LaunchPlanId.HasValue)
@@ -32,11 +48,28 @@ public sealed partial class ProcessesService
             }
 
             var context = contextResult.Value!;
+            if (context.ExistingSubprocessRunId.HasValue)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return Result<Guid>.Success(context.ExistingSubprocessRunId.Value);
+            }
+
             var now = clock.GetUtcNow();
+            var runId = Guid.NewGuid();
+            var managerSnapshot = ResolveRunManagerSnapshot(context);
             run = new ProcessRun
             {
+                Id = runId,
                 ProcessDefinitionId = context.Definition.Id,
                 ProcessDefinitionVersionId = context.PublishedVersion.Id,
+                ParentRunId = context.ParentRun?.Id,
+                ParentStepRunId = context.ParentStepRun?.Id,
+                RootRunId = context.ParentRun is null
+                    ? runId
+                    : context.ParentRun.RootRunId ?? context.ParentRun.Id,
+                HierarchyDepth = context.ParentRun is null
+                    ? 0
+                    : context.ParentRun.HierarchyDepth + 1,
                 ProjectId = context.ProjectId,
                 Name = string.IsNullOrWhiteSpace(request.RunName)
                     ? context.DefaultRunName
@@ -47,6 +80,8 @@ public sealed partial class ProcessesService
                 GovernanceSnapshot = context.PublishedVersion.GovernancePolicySummary,
                 PolicySnapshot = context.PublishedVersion.ConstitutionRuleSummary,
                 ExecutorSnapshotSummary = context.PublishedVersion.OperatingModeSummary,
+                ManagerAgentId = managerSnapshot.AgentId,
+                ManagerAgentName = managerSnapshot.DisplayName,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,
                 StartedAtUtc = now,
@@ -163,6 +198,21 @@ public sealed partial class ProcessesService
                     $"v{context.PublishedVersion.VersionNumber}",
                     run.TriggerReason),
                 cancellationToken);
+
+            if (context.ParentStepRun is not null)
+            {
+                await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                    BuildJournalEntry(
+                        run.Id,
+                        null,
+                        ProcessRuntimeEventTypes.SubprocessRunCreated,
+                        "Created subprocess run",
+                        $"Started as subprocess for parent step '{context.ParentStepRun.Title}' in run '{context.ParentRun!.Name}'.",
+                        run.OperatingMode,
+                        $"parent-run:{context.ParentRun.Id:D};parent-step:{context.ParentStepRun.Id:D}",
+                        run.TriggerReason),
+                    cancellationToken);
+            }
 
             if (context.LaunchPlan is not null)
             {
@@ -390,6 +440,18 @@ public sealed partial class ProcessesService
             : await dbContext.Set<ProcessArtifactExpectation>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ToListAsync(cancellationToken);
+        var parentContextResult = await LoadParentRunStartContextAsync(dbContext, request, definition, cancellationToken);
+        if (parentContextResult.IsFailure)
+        {
+            return Result<RunStartContext>.Failure(parentContextResult.Errors);
+        }
+
+        var parentContext = parentContextResult.Value!;
+        if (parentContext.ParentRun is not null)
+        {
+            projectId = parentContext.ParentRun.ProjectId;
+            operatingMode = parentContext.ParentRun.OperatingMode;
+        }
 
         if (projectId.HasValue)
         {
@@ -432,7 +494,256 @@ public sealed partial class ProcessesService
                 defaultRunName,
                 selectedCandidatesByRoleRequirementId ?? [],
                 directAiCandidatesByRoleRequirementId,
-                projectAssignmentLookup ?? []));
+                projectAssignmentLookup ?? [],
+                parentContext.ParentRun,
+                parentContext.ParentStepRun,
+                parentContext.ExistingSubprocessRunId));
+    }
+
+    private async Task<Result<ParentRunStartContext>> LoadParentRunStartContextAsync(
+        AppDbContext dbContext,
+        ProcessRunStartRequest request,
+        ProcessDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        var hasParentRun = request.ParentRunId.HasValue && request.ParentRunId.Value != Guid.Empty;
+        var hasParentStepRun = request.ParentStepRunId.HasValue && request.ParentStepRunId.Value != Guid.Empty;
+        if (!hasParentRun && !hasParentStepRun)
+        {
+            return Result<ParentRunStartContext>.Success(ParentRunStartContext.Empty);
+        }
+
+        if (hasParentRun != hasParentStepRun)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation(
+                    "Subprocess runs require both parent run and parent step run identifiers.",
+                    "processes.subprocess-parent-incomplete"));
+        }
+
+        if (request.LaunchPlanId.HasValue)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation(
+                    "Subprocess runs must start from their parent subprocess step, not from a launch plan.",
+                    "processes.subprocess-launch-plan-not-supported"));
+        }
+
+        var parentRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == request.ParentRunId!.Value, cancellationToken);
+        if (parentRun is null)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation("Parent process run was not found.", "processes.subprocess-parent-run-not-found"));
+        }
+
+        if (parentRun.Status is ProcessRunStatus.Completed or ProcessRunStatus.Cancelled or ProcessRunStatus.Failed)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation(
+                    $"Parent process run '{parentRun.Name}' is {parentRun.Status} and cannot start subprocesses.",
+                    "processes.subprocess-parent-run-terminal"));
+        }
+
+        if (parentRun.HierarchyDepth + 1 > MaxProcessRunHierarchyDepth)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation(
+                    $"Subprocess hierarchy depth cannot exceed {MaxProcessRunHierarchyDepth}.",
+                    "processes.subprocess-depth-limit"));
+        }
+
+        var parentStepRun = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == request.ParentStepRunId!.Value, cancellationToken);
+        if (parentStepRun is null || parentStepRun.ProcessRunId != parentRun.Id)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation("Parent subprocess step run was not found for the parent run.", "processes.subprocess-parent-step-not-found"));
+        }
+
+        if (parentStepRun.StepKind != ProcessStepKind.Subprocess)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation("Parent step must be a subprocess step.", "processes.subprocess-parent-step-kind"));
+        }
+
+        var parentStepDefinition = await dbContext.Set<ProcessStepDefinition>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == parentStepRun.StepDefinitionId, cancellationToken);
+        if (parentStepDefinition is null || parentStepDefinition.ProcessDefinitionVersionId != parentRun.ProcessDefinitionVersionId)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation("Parent subprocess step definition no longer matches the parent run version.", "processes.subprocess-parent-step-definition-mismatch"));
+        }
+
+        if (!parentStepDefinition.SubprocessDefinitionId.HasValue ||
+            parentStepDefinition.SubprocessDefinitionId.Value != definition.Id)
+        {
+            return Result<ParentRunStartContext>.Failure(
+                Error.Validation(
+                    $"Parent subprocess step '{parentStepRun.Title}' does not target process definition '{definition.Name}'.",
+                    "processes.subprocess-definition-mismatch"));
+        }
+
+        var cycleError = await ValidateSubprocessDefinitionCycleAsync(dbContext, parentRun, definition.Id, cancellationToken);
+        if (cycleError is not null)
+        {
+            return Result<ParentRunStartContext>.Failure(cycleError);
+        }
+
+        var existingSubprocessRunId = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(item => item.ParentStepRunId == parentStepRun.Id)
+            .Select(item => (Guid?)item.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return Result<ParentRunStartContext>.Success(
+            new ParentRunStartContext(parentRun, parentStepRun, existingSubprocessRunId));
+    }
+
+    private static ProcessRunManagerSnapshot ResolveRunManagerSnapshot(RunStartContext context)
+    {
+        if (context.PublishedVersion.ManagerAgentOverrideId.HasValue)
+        {
+            return new ProcessRunManagerSnapshot(
+                context.PublishedVersion.ManagerAgentOverrideId,
+                string.IsNullOrWhiteSpace(context.PublishedVersion.ManagerAgentOverrideName)
+                    ? ConfiguredProcessManagerName
+                    : context.PublishedVersion.ManagerAgentOverrideName.Trim());
+        }
+
+        if (context.ParentRun is not null &&
+            (context.ParentRun.ManagerAgentId.HasValue || !string.IsNullOrWhiteSpace(context.ParentRun.ManagerAgentName)))
+        {
+            return new ProcessRunManagerSnapshot(
+                context.ParentRun.ManagerAgentId,
+                string.IsNullOrWhiteSpace(context.ParentRun.ManagerAgentName)
+                    ? DefaultProcessManagerName
+                    : context.ParentRun.ManagerAgentName.Trim());
+        }
+
+        return new ProcessRunManagerSnapshot(null, DefaultProcessManagerName);
+    }
+
+    private async Task<Error?> ValidateSubprocessDefinitionCycleAsync(
+        AppDbContext dbContext,
+        ProcessRun parentRun,
+        Guid childDefinitionId,
+        CancellationToken cancellationToken)
+    {
+        var currentRun = parentRun;
+        while (true)
+        {
+            if (currentRun.ProcessDefinitionId == childDefinitionId)
+            {
+                return Error.Validation(
+                    "Subprocess hierarchy cannot contain the same process definition as one of its ancestors.",
+                    "processes.subprocess-definition-cycle");
+            }
+
+            if (!currentRun.ParentRunId.HasValue)
+            {
+                return null;
+            }
+
+            var nextRun = await dbContext.Set<ProcessRun>()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == currentRun.ParentRunId.Value, cancellationToken);
+            if (nextRun is null)
+            {
+                return Error.Validation(
+                    $"Parent run chain for run '{parentRun.Name}' is incomplete.",
+                    "processes.subprocess-parent-chain-broken");
+            }
+
+            currentRun = nextRun;
+        }
+    }
+
+    internal async Task<Result<ProcessSubprocessRunStartResult>> EnsureSubprocessRunForStepAsync(
+        Guid stepRunId,
+        CancellationToken cancellationToken = default)
+    {
+        if (stepRunId == Guid.Empty)
+        {
+            return Result<ProcessSubprocessRunStartResult>.Failure(
+                Error.Validation("Process step run is required before starting a subprocess.", "processes.subprocess.step-run-required"));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var parentStepRun = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == stepRunId, cancellationToken);
+        if (parentStepRun is null)
+        {
+            return Result<ProcessSubprocessRunStartResult>.Failure(
+                Error.Validation("Process step run was not found.", "processes.step-run-not-found"));
+        }
+
+        if (parentStepRun.StepKind != ProcessStepKind.Subprocess)
+        {
+            return Result<ProcessSubprocessRunStartResult>.Failure(
+                Error.Validation("Only subprocess steps can start subprocess runs.", "processes.subprocess.step-kind-required"));
+        }
+
+        var parentRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == parentStepRun.ProcessRunId, cancellationToken);
+        var parentStepDefinition = await dbContext.Set<ProcessStepDefinition>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == parentStepRun.StepDefinitionId, cancellationToken);
+        if (!parentStepDefinition.SubprocessDefinitionId.HasValue || parentStepDefinition.SubprocessDefinitionId.Value == Guid.Empty)
+        {
+            return Result<ProcessSubprocessRunStartResult>.Failure(
+                Error.Validation(
+                    $"Subprocess step '{parentStepRun.Title}' does not reference a process definition.",
+                    "processes.subprocess.definition-required"));
+        }
+
+        var existingRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(item => item.ParentStepRunId == parentStepRun.Id)
+            .Select(item => new ProcessSubprocessRunStartResult(item.Id, item.Name, item.Status))
+            .SingleOrDefaultAsync(cancellationToken);
+        if (existingRun is not null)
+        {
+            return Result<ProcessSubprocessRunStartResult>.Success(existingRun);
+        }
+
+        var startResult = await StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = parentStepDefinition.SubprocessDefinitionId.Value,
+                ProjectId = parentRun.ProjectId,
+                RunName = $"{parentStepRun.Title} / {clock.GetUtcNow():yyyy-MM-dd HH:mm}",
+                OperatingMode = parentRun.OperatingMode,
+                TriggerReason = $"Subprocess step '{parentStepRun.Title}' from parent run '{parentRun.Name}'.",
+                ParentRunId = parentRun.Id,
+                ParentStepRunId = parentStepRun.Id
+            },
+            cancellationToken);
+        if (startResult.IsFailure)
+        {
+            existingRun = await dbContext.Set<ProcessRun>()
+                .AsNoTracking()
+                .Where(item => item.ParentStepRunId == parentStepRun.Id)
+                .Select(item => new ProcessSubprocessRunStartResult(item.Id, item.Name, item.Status))
+                .SingleOrDefaultAsync(cancellationToken);
+            return existingRun is not null
+                ? Result<ProcessSubprocessRunStartResult>.Success(existingRun)
+                : Result<ProcessSubprocessRunStartResult>.Failure(startResult.Errors);
+        }
+
+        var startedRunId = startResult.Value;
+        var startedRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(item => item.Id == startedRunId)
+            .Select(item => new ProcessSubprocessRunStartResult(item.Id, item.Name, item.Status))
+            .SingleAsync(cancellationToken);
+
+        return Result<ProcessSubprocessRunStartResult>.Success(startedRun);
     }
 
     private static ProcessRunAssignment ResolveRunAssignment(
@@ -519,7 +830,22 @@ public sealed partial class ProcessesService
         string DefaultRunName,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> SelectedLaunchCandidatesByRoleRequirementId,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> DirectAiCandidatesByRoleRequirementId,
-        IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup);
+        IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup,
+        ProcessRun? ParentRun,
+        ProcessStepRun? ParentStepRun,
+        Guid? ExistingSubprocessRunId);
+
+    private sealed record ParentRunStartContext(
+        ProcessRun? ParentRun,
+        ProcessStepRun? ParentStepRun,
+        Guid? ExistingSubprocessRunId)
+    {
+        public static ParentRunStartContext Empty { get; } = new(null, null, null);
+    }
+
+    private sealed record ProcessRunManagerSnapshot(
+        Guid? AgentId,
+        string DisplayName);
 
     private async Task<IReadOnlyDictionary<Guid, ProcessLaunchCandidate>> BuildDirectRunAiCandidateAssignmentsAsync(
         AppDbContext dbContext,
@@ -604,6 +930,18 @@ public sealed partial class ProcessesService
         foreach (var role in assignableRoles)
         {
             var requiredSkillIds = requiredSkillIdsByRoleId.GetValueOrDefault(role.Id) ?? [];
+            var managerOverrideCandidate = TryBuildDirectRunManagerOverrideCandidate(
+                publishedVersion,
+                role,
+                requiredSkillIds,
+                aiDirectory,
+                aiMatchedSkillsByPartyId);
+            if (managerOverrideCandidate is not null)
+            {
+                selectedCandidatesByRoleId[role.Id] = managerOverrideCandidate;
+                continue;
+            }
+
             var selectedCandidate = aiDirectory
                 .Select(aiResource => BuildDirectRunAiCandidate(aiResource, requiredSkillIds, aiMatchedSkillsByPartyId))
                 .OrderByDescending(candidate => ScoreCandidateForHrManager(
@@ -623,6 +961,60 @@ public sealed partial class ProcessesService
         }
 
         return selectedCandidatesByRoleId;
+    }
+
+    private ProcessLaunchCandidate? TryBuildDirectRunManagerOverrideCandidate(
+        ProcessDefinitionVersion publishedVersion,
+        ProcessRoleRequirement role,
+        IReadOnlyList<Guid> requiredSkillIds,
+        IReadOnlyList<AiAgentListItemModel> aiDirectory,
+        IReadOnlyDictionary<Guid, HashSet<Guid>> aiMatchedSkillsByPartyId)
+    {
+        if (!publishedVersion.ManagerAgentOverrideId.HasValue || !IsProcessManagerRole(role))
+        {
+            return null;
+        }
+
+        var overrideId = publishedVersion.ManagerAgentOverrideId.Value;
+        var aiResource = aiDirectory.FirstOrDefault(item =>
+            item.PartyId == overrideId ||
+            item.TechnicalAgentId == overrideId);
+        if (aiResource is null)
+        {
+            logger.LogWarning(
+                "Process definition version {VersionId} has manager override {ManagerAgentOverrideId}, but no bound AI resource with that party or technical agent id was found for manager role {RoleId}.",
+                publishedVersion.Id,
+                overrideId,
+                role.Id);
+            return null;
+        }
+
+        var candidate = BuildDirectRunAiCandidate(aiResource, requiredSkillIds, aiMatchedSkillsByPartyId);
+        candidate.Score = Math.Max(candidate.Score, 1_000m);
+        candidate.RecommendationSummary = $"Configured manager override for process role '{role.DisplayName}'.";
+        candidate.SourceRegistryKey = $"process-manager-override:{overrideId:D}";
+
+        return candidate;
+    }
+
+    private static bool IsProcessManagerRole(ProcessRoleRequirement role)
+    {
+        return ContainsProcessManagerRoleToken(role.Key) ||
+            ContainsProcessManagerRoleToken(role.DisplayName);
+    }
+
+    private static bool ContainsProcessManagerRoleToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var tokens = value.Split(
+            ['-', '_', ' ', '/', '\\', ':'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return tokens.Any(ProcessManagerRoleTokens.Contains);
     }
 
     private ProcessLaunchCandidate BuildDirectRunAiCandidate(

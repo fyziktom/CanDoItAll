@@ -1,0 +1,8 @@
+{
+  "ProcessKey": "dotnet-blazor-ssr-solution-setup",
+  "Status": "Compatible",
+  "Notes": [
+    "Uses only current process-template fields and shared role/artifact resources.",
+    "No migration-only fields are required."
+  ]
+}

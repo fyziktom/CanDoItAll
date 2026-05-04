@@ -5,6 +5,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -69,6 +70,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     [Inject]
     private ProcessCatalogWarmupService CatalogWarmupService { get; set; } = default!;
 
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = default!;
+
     [Parameter]
     public Guid? ProjectId { get; set; }
 
@@ -95,6 +102,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
+    private IReadOnlyList<ProcessManagerAgentOption> managerAgentOptions = [];
 
     private ProcessRuntimeStateOverview runtimeStateOverview = ProcessRuntimeStateOverview.Empty(null);
     private ProcessAnalyticsSummary analytics = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -110,6 +118,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? selectedAssignmentId;
     private string detailTab = DetailTabDefinition;
     private string definitionSearch = string.Empty;
+    private readonly ProcessRunListFilterState runHistoryFilter = new();
+    private readonly ProcessRunListFilterState analyticsRunFilter = new();
+    private readonly ProcessImprovementFilterState improvementFilter = new();
     private string runNameDraft = string.Empty;
     private ProcessOperatingMode runOperatingMode = ProcessOperatingMode.AssistedExecution;
     private Guid? artifactStepRunId;
@@ -131,6 +142,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string directMessageBody = string.Empty;
     private Guid? operatorReworkStepRunId;
     private string operatorReworkDirective = string.Empty;
+    private string operatorManagerDirective = string.Empty;
     private string operatorEscalationOwner = "process-workspace";
     private string operatorEscalationResolution = string.Empty;
     private string operatorApprovalDecisionSummary = string.Empty;
@@ -169,6 +181,17 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         => selectedAssignmentId.HasValue
             ? assignments.FirstOrDefault(item => item.Id == selectedAssignmentId.Value)
             : null;
+
+    private IReadOnlyList<ProcessSubprocessDefinitionOption> SubprocessDefinitionOptions
+        => definitions
+            .Where(definition => editor.Id != definition.Id)
+            .OrderBy(definition => definition.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(definition => new ProcessSubprocessDefinitionOption(
+                definition.Id,
+                definition.Name,
+                definition.Status,
+                string.IsNullOrWhiteSpace(definition.ProjectName) ? "Global" : definition.ProjectName))
+            .ToList();
 
     private IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments
         => assignments
