@@ -34,12 +34,18 @@ public partial class ProcessWorkspace
     private bool ShouldAutoRefreshRuntime()
     {
         if (!selectedProcessId.HasValue ||
-            !string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))
+            (!string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) &&
+                !string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal)))
         {
             return false;
         }
 
-        return runs.Any(run => run.Status == ProcessRunStatus.Active) ||
+        if (runs.Any(run => run.Status == ProcessRunStatus.Active))
+        {
+            return true;
+        }
+
+        return string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) &&
                launchPlans.Any(plan => plan.Status is ProcessLaunchPlanStatus.PendingApproval
                    or ProcessLaunchPlanStatus.Approved
                    or ProcessLaunchPlanStatus.Provisioning

@@ -110,6 +110,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? selectedAssignmentId;
     private string detailTab = DetailTabDefinition;
     private string definitionSearch = string.Empty;
+    private readonly ProcessRunListFilterState runHistoryFilter = new();
+    private readonly ProcessRunListFilterState analyticsRunFilter = new();
+    private readonly ProcessImprovementFilterState improvementFilter = new();
     private string runNameDraft = string.Empty;
     private ProcessOperatingMode runOperatingMode = ProcessOperatingMode.AssistedExecution;
     private Guid? artifactStepRunId;

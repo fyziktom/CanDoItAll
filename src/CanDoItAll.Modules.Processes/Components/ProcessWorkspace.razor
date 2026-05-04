@@ -253,74 +253,7 @@
 
                         </TabsItem>
                         <TabsItem Text="Analytics">
-                        <SummaryTiles GapScale="LayoutGap.Small"
-                                      ColumnsMd="4">
-                            <SummaryTile Label="Runs"
-                                         Value="@analytics.TotalRuns.ToString()"
-                                         HelperText="@($"{analytics.ActiveRuns} active / {analytics.CompletedRuns} completed")"
-                                         Badge="true"
-                                         Compact="true"
-                                         ShowHelperTextAsTooltip="true" />
-                            <SummaryTile Label="Capability gaps"
-                                         Value="@analytics.CapabilityGapCount.ToString()"
-                                         HelperText="Assignments or execution capacity gaps detected."
-                                         Badge="true"
-                                         Compact="true"
-                                         Tone="danger"
-                                         ShowHelperTextAsTooltip="true" />
-                            <SummaryTile Label="Conformance"
-                                         Value="@analytics.ConformanceObservationCount.ToString()"
-                                         HelperText="@($"{analytics.SafeNonActionCount} safe non-actions recorded")"
-                                         Badge="true"
-                                         Compact="true"
-                                         Tone="warning"
-                                         ShowHelperTextAsTooltip="true" />
-                            <SummaryTile Label="Actual cost"
-                                         Value="@analytics.ActualCost.ToString("C")"
-                                         HelperText="@($"{analytics.EstimatedCost:C} estimated in scope")"
-                                         Badge="true"
-                                         Compact="true"
-                                         Tone="info"
-                                         ShowHelperTextAsTooltip="true" />
-                        </SummaryTiles>
-
-                        <SectionCard Title="Improvement candidates"
-                                     Description=""
-                                     HelpText="Persist improvement opportunities, training signals, and governance review needs instead of leaving them as loose notes after runtime defects appear.">
-                            @if (improvements.Count == 0)
-                            {
-                                <EmptyState Eyebrow="No improvement candidates"
-                                            Title="Nothing recorded yet"
-                                            Description="Improvement candidates populate when runtime blocking, refusal, or conformance issues reveal process design weaknesses." />
-                            }
-                            else
-                            {
-                                <Stack GapScale="LayoutGap.Medium">
-                                    @foreach (var improvement in improvements)
-                                    {
-                                        <SurfaceCard>
-                                            <Split Gap="LayoutGap.Medium">
-                                                <div>
-                                                    <p class="text-sm font-semibold text-slate-950">@improvement.Title</p>
-                                                    <p class="tracking-[0.18em] mt-1 text-xs uppercase text-slate-500">@improvement.Category / @improvement.Status</p>
-                                                </div>
-                                                <Cluster Gap="LayoutGap.Small">
-                                                    @if (improvement.IsTrainingOpportunity)
-                                                    {
-                                                        <StatusBadge Tone="info" Text="Training" />
-                                                    }
-                                                    @if (improvement.RequiresGovernanceReview)
-                                                    {
-                                                        <StatusBadge Tone="warning" Text="Governance review" />
-                                                    }
-                                                </Cluster>
-                                            </Split>
-                                            <p class="mt-3 text-sm leading-6 text-slate-600">@improvement.ProblemSummary</p>
-                                        </SurfaceCard>
-                                    }
-                                </Stack>
-                            }
-                        </SectionCard>
+                        <ProcessWorkspaceAnalyticsTab Presenter="@AnalyticsTabPresenter" />
                         </TabsItem>
                         <TabsItem Text="Exchange">
                         <SectionCard Title="Definition exchange"

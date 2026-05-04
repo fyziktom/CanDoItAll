@@ -1,5 +1,7 @@
 @namespace CanDoItAll.Modules.Processes
 
+@using CanDoItAll.Components.Common
+
 <SectionCard Title="Run history"
              Description=""
              HelpText="Launch planning creates runs only after staffing, approval, and provisioning are satisfied. Runtime execution, assignments, and evidence stay attached to the same durable process identity after launch execution.">
@@ -27,15 +29,75 @@
         }
         else
         {
-            <Stack GapScale="LayoutGap.Medium"
-                   Class="mt-5">
-                @foreach (var run in Presenter.Runs)
+            var filteredRuns = Presenter.FilteredRuns;
+            <FilterBar ResultText="@Presenter.RunHistoryResultText"
+                       Class="processes-run-filter-bar mt-5">
+                <input @bind="Presenter.RunHistorySearch"
+                       @bind:event="oninput"
+                       class="cda-input processes-run-filter-input"
+                       placeholder="Search run name"
+                       data-testid="processes-run-history-search" />
+                <InputSelect TValue="ProcessRunStatus?"
+                             @bind-Value="Presenter.RunHistoryStatusFilter"
+                             class="cda-input processes-run-filter-select"
+                             data-testid="processes-run-history-state-filter">
+                    <option value="">Any state</option>
+                    @foreach (var status in Presenter.RunStatusFilterOptions)
+                    {
+                        <option value="@status">@status</option>
+                    }
+                </InputSelect>
+                <InputSelect TValue="ProcessOperatingMode?"
+                             @bind-Value="Presenter.RunHistoryOperatingModeFilter"
+                             class="cda-input processes-run-filter-select"
+                             data-testid="processes-run-history-mode-filter">
+                    <option value="">Any mode</option>
+                    @foreach (var mode in Presenter.RunOperatingModeFilterOptions)
+                    {
+                        <option value="@mode">@mode</option>
+                    }
+                </InputSelect>
+                <InputSelect TValue="ProcessWorkspace.ProcessRunUpdatedTimeFilter"
+                             @bind-Value="Presenter.RunHistoryUpdatedTimeFilter"
+                             class="cda-input processes-run-filter-select"
+                             data-testid="processes-run-history-time-filter">
+                    @foreach (var filter in Presenter.RunUpdatedTimeFilterOptions)
+                    {
+                        <option value="@filter">@Presenter.ResolveRunUpdatedTimeFilterText(filter)</option>
+                    }
+                </InputSelect>
+                <input @bind="Presenter.RunHistoryTagFilter"
+                       @bind:event="oninput"
+                       class="cda-input processes-run-filter-input"
+                       placeholder="Filter tags"
+                       data-testid="processes-run-history-tag-filter" />
+                <Button Text="Clear"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="Presenter.ClearRunHistoryFilters" />
+            </FilterBar>
+
+            @if (filteredRuns.Count == 0)
+            {
+                <EmptyState Eyebrow="No matching runs"
+                            Title="Adjust the filters"
+                            Description="Run summaries are loaded for the selected process, but none match the current name, state, time, mode, and tag filters." />
+            }
+            else
+            {
+                <Grid Gap="LayoutGap.Small"
+                      ColumnTemplate="repeat(auto-fill,minmax(15.5rem,20rem))"
+                      JustifyContent="JustifyContent.Start"
+                      Class="processes-run-history-grid mt-5">
+                @foreach (var run in filteredRuns)
                 {
                     <SelectionListItem Title="@run.Name"
                                        Eyebrow="@run.OperatingMode.ToString()"
                                        Meta="@Presenter.BuildRunSummary(run)"
-                                       Summary="@($"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual")"
+                                       Summary="@Presenter.BuildRunCostText(run)"
                                        DataTestId="@($"processes-run-history-item-{run.Id}")"
+                                       Dense="true"
+                                       Class="processes-run-history-card"
                                        IsSelected="@(Presenter.SelectedRun?.Id == run.Id)"
                                        OnSelect="@(() => Presenter.OpenRunStepsDialogAsync(run.Id))">
                         <Status>
@@ -57,9 +119,21 @@
                                 }
                             </Cluster>
                         </Status>
+                        <ChildContent>
+                            <Cluster Gap="LayoutGap.Small"
+                                     Class="processes-run-card-tags">
+                                @foreach (var tag in Presenter.BuildRunTags(run))
+                                {
+                                    <StatusBadge Tone="@tag.Tone"
+                                                 Text="@tag.Text" />
+                                }
+                            </Cluster>
+                            <p class="processes-run-card-updated">@Presenter.BuildRunUpdatedText(run)</p>
+                        </ChildContent>
                     </SelectionListItem>
                 }
-            </Stack>
+                </Grid>
+            }
         }
     }
 </SectionCard>

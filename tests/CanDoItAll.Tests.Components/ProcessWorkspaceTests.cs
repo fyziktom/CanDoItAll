@@ -162,6 +162,59 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Run_history_filters_by_state_name_and_tags()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Run history filters project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Filter-visible active run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test run history filters."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        await ActivateRunsTabAsync(cut);
+        var itemSelector = $"[data-testid='processes-run-history-item-{runResult.Value}']";
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(itemSelector)));
+
+        cut.Find("[data-testid='processes-run-history-state-filter']").Change(ProcessRunStatus.Completed.ToString());
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(itemSelector)));
+
+        cut.Find("[data-testid='processes-run-history-state-filter']").Change(ProcessRunStatus.Active.ToString());
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(itemSelector)));
+
+        cut.Find("[data-testid='processes-run-history-search']").Input("missing run name");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(itemSelector)));
+
+        cut.Find("[data-testid='processes-run-history-search']").Input("Filter-visible");
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(itemSelector)));
+
+        cut.Find("[data-testid='processes-run-history-tag-filter']").Input("running");
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(itemSelector)));
+
+        cut.Find("[data-testid='processes-run-history-tag-filter']").Input("governance");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(itemSelector)));
+    }
+
+    [Fact]
     public async Task Runs_operator_console_surfaces_escalation_rework_and_timeline_controls()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

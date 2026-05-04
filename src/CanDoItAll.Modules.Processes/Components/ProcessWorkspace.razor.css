@@ -105,6 +105,118 @@
     font-weight: 700;
 }
 
+.processes-workspace-root ::deep .processes-run-filter-input {
+    min-width: min(16rem, 100%);
+    flex: 1 1 14rem;
+}
+
+.processes-workspace-root ::deep .processes-run-filter-select {
+    min-width: min(12rem, 100%);
+    flex: 0 1 12rem;
+}
+
+.processes-workspace-root ::deep .processes-run-filter-bar,
+.processes-workspace-root ::deep .processes-run-history-grid,
+.processes-workspace-root ::deep .processes-improvement-grid {
+    width: 100%;
+    align-self: stretch;
+    align-items: stretch;
+}
+
+.processes-workspace-root ::deep .processes-run-history-card,
+.processes-workspace-root ::deep .processes-run-analytics-card {
+    width: min(100%, 20rem);
+    min-height: 12rem;
+    max-height: 15.5rem;
+    overflow: hidden;
+}
+
+.processes-workspace-root ::deep .processes-run-history-card > .flex,
+.processes-workspace-root ::deep .processes-run-analytics-card > .flex {
+    height: 100%;
+    align-items: stretch;
+}
+
+.processes-workspace-root ::deep .processes-run-history-card button,
+.processes-workspace-root ::deep .processes-run-analytics-card button {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.processes-workspace-root ::deep .processes-run-history-card .truncate,
+.processes-workspace-root ::deep .processes-run-analytics-card .truncate {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.processes-workspace-root ::deep .processes-run-history-card button > p,
+.processes-workspace-root ::deep .processes-run-analytics-card button > p {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.processes-workspace-root ::deep .processes-run-card-tags {
+    max-height: 4.75rem;
+    overflow: hidden;
+}
+
+.processes-workspace-root ::deep .processes-run-card-updated {
+    margin-top: 0.55rem;
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    overflow-wrap: anywhere;
+}
+
+.processes-workspace-root ::deep .processes-improvement-card {
+    width: min(100%, 28rem);
+    min-height: 10.5rem;
+    max-height: 15rem;
+    overflow: hidden;
+}
+
+.processes-workspace-root ::deep .processes-improvement-card__title {
+    display: -webkit-box;
+    overflow: hidden;
+    color: rgb(15 23 42);
+    font-size: 0.9rem;
+    font-weight: 650;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.processes-workspace-root ::deep .processes-improvement-card__category {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    line-height: 1.2rem;
+    overflow-wrap: anywhere;
+}
+
+.processes-workspace-root ::deep .processes-improvement-card__badges {
+    max-width: 100%;
+}
+
+.processes-workspace-root ::deep .processes-improvement-card__summary {
+    display: -webkit-box;
+    margin-top: 0.75rem;
+    overflow: hidden;
+    color: rgb(71 85 105);
+    font-size: 0.875rem;
+    line-height: 1.45rem;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
 @media (min-width: 1280px) {
     .processes-workspace-root ::deep .processes-command-strip__actions {
         justify-content: flex-end;

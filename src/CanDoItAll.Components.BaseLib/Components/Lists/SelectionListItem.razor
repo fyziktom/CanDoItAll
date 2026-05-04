@@ -1,5 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="@ResolveContainerClass()">
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(ResolveContainerClass())'>
     <Cluster AlignItems="AlignItems.Start"
              Wrap="FlexWrap.NoWrap"
              Gap="@(Dense ? LayoutGap.Small : LayoutGap.Medium)">
