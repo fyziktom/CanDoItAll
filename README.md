@@ -1,5 +1,5 @@
 # CanDoItAll
-
+ 
 CanDoItAll is a local-first .NET 10 Blazor Web App for project delivery work. It combines project structure, process templates and runs, workbench views, prompts, resources, validation, test evidence, activity, automation, CRM/HR staffing, and AgentFramework-backed AI agents in one workspace.
 
 The current architecture is modular: `CanDoItAll.Web` hosts the app, `CanDoItAll.Composition` wires the runtime, `CanDoItAll.Infrastructure` owns data/storage/control-plane concerns, `CanDoItAll.Modules.*` own product behavior, `CanDoItAll.AgentFramework.*` owns technical agent execution, and `CanDoItAll.Mcp.*` exposes selected capabilities to local agents.
