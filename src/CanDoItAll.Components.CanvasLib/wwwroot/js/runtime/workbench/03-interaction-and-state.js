@@ -171,9 +171,9 @@
         }, delayMs ?? 280);
     }
 
-    function publishNodesMoved(state, movedIds) {
+    function publishNodesMoved(state, movedIds, resolvedPositions) {
         const payload = movedIds.map(nodeId => {
-            const position = state.ui.manualPositions[nodeId] || { x: 0, y: 0 };
+            const position = resolvedPositions?.[nodeId] || state.ui.manualPositions[nodeId] || { x: 0, y: 0 };
             return {
                 nodeId,
                 x: round(position.x),
@@ -338,6 +338,7 @@
 
         workbenchInternals.sceneLayout.ensureLayoutPositions(state, visibleNodes);
         workbenchInternals.sceneLayout.applySceneTransform(state);
+        shared.clearSceneHotZones?.(state);
         workbenchInternals.scenePatching.renderGroupFrames(state, projectedNodes);
         workbenchInternals.scenePatching.renderLinks(state, projectedNodes);
         workbenchInternals.overlayRenderer.renderSnapGuides(state);
