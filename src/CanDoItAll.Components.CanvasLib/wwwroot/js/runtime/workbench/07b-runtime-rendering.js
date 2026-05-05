@@ -12,7 +12,6 @@
         }
 
         surface.clear();
-        clearSceneHotZones(state);
         state.sceneGeometry = {
             nodes: new Map(),
             frames: state.sceneGeometry?.frames || new Map()
@@ -106,6 +105,7 @@
         const visibleNodes = getVisibleNodes(state);
         const projectedNodes = getProjectedNodes(state, visibleNodes);
         applySceneTransform(state);
+        clearSceneHotZones(state);
         renderGroupFrames(state, projectedNodes);
         renderLinks(state, projectedNodes);
         renderSnapGuides(state);
@@ -474,8 +474,32 @@
         }
     }
 
-    function applyMarqueeSelection(state) {
+    function buildLocalMarqueeRect(state, interaction) {
+        if (interaction &&
+            Number.isFinite(interaction.startX) &&
+            Number.isFinite(interaction.startY) &&
+            Number.isFinite(interaction.currentX) &&
+            Number.isFinite(interaction.currentY)) {
+            const left = Math.min(interaction.startX, interaction.currentX);
+            const top = Math.min(interaction.startY, interaction.currentY);
+            return buildRect(
+                left,
+                top,
+                Math.abs(interaction.currentX - interaction.startX),
+                Math.abs(interaction.currentY - interaction.startY));
+        }
+
+        const hostRect = state.host.getBoundingClientRect();
         const marqueeRect = state.marquee.getBoundingClientRect();
+        return buildRect(
+            marqueeRect.left - hostRect.left,
+            marqueeRect.top - hostRect.top,
+            marqueeRect.width,
+            marqueeRect.height);
+    }
+
+    function applyMarqueeSelection(state, interaction) {
+        const marqueeRect = buildLocalMarqueeRect(state, interaction);
         const selectionMode = state.surface?.chrome?.marqueeSelection?.selectionMode || "intersect";
         const selected = [];
         for (const node of state.sceneGeometry?.nodes?.values?.() || []) {

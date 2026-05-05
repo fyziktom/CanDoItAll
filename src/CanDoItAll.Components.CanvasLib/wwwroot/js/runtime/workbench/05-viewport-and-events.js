@@ -41,6 +41,10 @@
             return;
         }
 
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+
         clearSnapGuides(state);
         const point = getHostPoint(state, event.clientX, event.clientY);
         state.interaction = {
@@ -105,7 +109,50 @@
             return;
         }
 
+        setSelection(state, renderedFrame.nodeIds, true);
         startDragForNodeIds(state, event, renderedFrame.nodeIds, { kind: "frame-drag", frameId });
+    }
+
+    function captureResolvedDragPositions(state, interaction) {
+        const resolvedPositions = {};
+        if (!interaction?.nodeIds?.length) {
+            return resolvedPositions;
+        }
+
+        state.layoutPositions = null;
+        state.layoutKey = "";
+        const resolvedLayout = ensureLayoutPositions(state, getVisibleNodes(state));
+        for (const nodeId of interaction.nodeIds) {
+            const position = resolvedLayout.get(nodeId);
+            if (!position) {
+                continue;
+            }
+
+            resolvedPositions[nodeId] = {
+                x: round(position.x),
+                y: round(position.y)
+            };
+        }
+
+        return resolvedPositions;
+    }
+
+    function applyResolvedDragPositions(state, interaction) {
+        const resolvedPositions = interaction?.resolvedPositions || {};
+        for (const nodeId of interaction?.nodeIds || []) {
+            const resolved = resolvedPositions[nodeId];
+            if (!resolved) {
+                continue;
+            }
+
+            state.ui.manualPositions[nodeId] = {
+                x: resolved.x,
+                y: resolved.y
+            };
+        }
+
+        state.layoutPositions = null;
+        state.layoutKey = "";
     }
 
     function updateMarquee(state, event) {
@@ -173,6 +220,7 @@
             };
         }
 
+        state.interaction.resolvedPositions = captureResolvedDragPositions(state, state.interaction);
         workbenchInternals.scenePatching.renderActiveDrag(state);
     }
 
@@ -190,7 +238,6 @@
         }
 
         const interaction = state.interaction;
-        state.interaction = null;
         workbenchInternals.overlayRenderer.clearSnapGuides(state);
         if (state.metrics) {
             state.metrics.lastReleasedInteractionKind = interaction.kind || "";
@@ -202,13 +249,17 @@
             case "frame-drag":
             case "dependency-drag":
                 if (interaction.moved) {
-                    await publishNodesMoved(state, interaction.nodeIds);
+                    interaction.resolvedPositions ||= captureResolvedDragPositions(state, interaction);
+                    applyResolvedDragPositions(state, interaction);
+                    state.interaction = null;
+                    await publishNodesMoved(state, interaction.nodeIds, interaction.resolvedPositions);
                     publishState(state);
                 }
                 else if (interaction.kind === "dependency-drag" &&
                     interaction.sourceNodeId &&
                     interaction.targetNodeId &&
                     state.dotNetRef?.invokeMethodAsync) {
+                    state.interaction = null;
                     await state.dotNetRef.invokeMethodAsync(
                         "OnContextActionRequest",
                         JSON.stringify({
@@ -222,14 +273,22 @@
                             linkKind: "DependsOn"
                         }));
                 }
+                else {
+                    state.interaction = null;
+                }
                 break;
             case "pan":
+                state.interaction = null;
                 if (interaction.moved) {
                     publishState(state);
                 }
                 break;
             case "marquee":
-                applyMarqueeSelection(state);
+                state.interaction = null;
+                (shared.applyMarqueeSelection || legacyApplyMarqueeSelection)(state, interaction);
+                break;
+            default:
+                state.interaction = null;
                 break;
         }
 

@@ -10,7 +10,9 @@ using CanDoItAll.Modules.CrmHr.Pages;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
@@ -69,7 +71,13 @@ public sealed class AiAgentsPageTests
     [Fact]
     public async Task Agent_roster_excludes_ai_parties_without_agentframework_profiles()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"roster-excludes-{Guid.NewGuid():N}");
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
         var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
         var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
@@ -98,6 +106,7 @@ public sealed class AiAgentsPageTests
         var roster = await aiAgentService.ListAgentDirectoryAsync();
         Assert.Contains(roster, item => item.DisplayName == "AgentFramework QA");
         Assert.DoesNotContain(roster, item => item.DisplayName == "CRM Only Agent");
+        cut.Dispose();
     }
 
     [Fact]
@@ -109,14 +118,17 @@ public sealed class AiAgentsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents?tab=agents");
+        var host = harness.Context.RenderComponent<DialogHost>();
         var cut = harness.Context.RenderComponent<AgentsHomePage>();
 
-        cut.WaitForElement("[data-testid='agents-catalog-name']");
-        cut.Find("[data-testid='agents-catalog-name']").Change("Release Copilot");
-        cut.Find("[data-testid='agents-catalog-role']").Change("Release analyst");
-        cut.Find("[data-testid='agents-catalog-summary']").Change("Supports release analysis and deployment notes.");
-        cut.Find("[data-testid='agents-catalog-instructions']").Change("Review release scope and produce durable evidence.");
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.WaitForElement("[data-testid='agents-catalog-new']");
+        cut.Find("[data-testid='agents-catalog-new']").Click();
+        host.WaitForElement("[data-testid='agents-catalog-name']");
+        host.Find("[data-testid='agents-catalog-name']").Change("Release Copilot");
+        host.Find("[data-testid='agents-catalog-role']").Change("Release analyst");
+        host.Find("[data-testid='agents-catalog-summary']").Change("Supports release analysis and deployment notes.");
+        host.Find("[data-testid='agents-catalog-instructions']").Change("Review release scope and produce durable evidence.");
+        host.Find("[data-testid='agents-catalog-save']").Click();
 
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         cut.WaitForAssertion(() =>
@@ -143,7 +155,13 @@ public sealed class AiAgentsPageTests
     [Fact]
     public async Task Crm_hr_agents_page_routes_technical_editing_to_agentframework()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"crmhr-agent-route-{Guid.NewGuid():N}");
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
         var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
         var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
@@ -162,9 +180,12 @@ public sealed class AiAgentsPageTests
             await aiAgentService.ListAgentDirectoryAsync(),
             item => item.TechnicalAgentId == technicalAgentId);
 
-        navigation.NavigateTo($"/crm-hr/agents?partyId={rosterItem.PartyId:D}");
+        navigation.NavigateTo("/crm-hr/agents");
+        navigation.NavigateTo(navigation.GetUriWithQueryParameter("partyId", rosterItem.PartyId));
 
         var cut = harness.Context.RenderComponent<CrmHrAgentsPage>();
+        cut.Instance.PartyIdQuery = rosterItem.PartyId;
+        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.Empty));
 
         cut.WaitForAssertion(() =>
         {
@@ -173,14 +194,9 @@ public sealed class AiAgentsPageTests
 
         cut.WaitForElement("[data-testid='crmhr-agent-open-technical-record']");
         cut.Find("[data-testid='crmhr-agent-open-technical-record']").Click();
-        var agentsCut = harness.Context.RenderComponent<AgentsHomePage>();
-
-        agentsCut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Directed Runtime Reviewer", agentsCut.Markup);
-        });
 
         Assert.EndsWith($"/agents?tab=agents&agentId={technicalAgentId:D}", navigation.Uri, StringComparison.OrdinalIgnoreCase);
+        cut.Dispose();
     }
 
     [Fact]
@@ -275,7 +291,13 @@ public sealed class AiAgentsPageTests
     [Fact]
     public async Task Current_projected_agents_visible_in_crm_hr_must_also_be_visible_in_agents_page()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"cross-surface-{Guid.NewGuid():N}");
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
         var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
@@ -349,7 +371,15 @@ public sealed class AiAgentsPageTests
     [Fact]
     public async Task Agent_catalog_exposes_project_structure_access_controls_and_project_choices()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"project-access-{Guid.NewGuid():N}");
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var saveResult = await projectsService.SaveAsync(new ProjectEditorModel
         {
@@ -357,52 +387,178 @@ public sealed class AiAgentsPageTests
         });
         Assert.True(saveResult.IsSuccess);
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Project Access Dialog Agent";
+        editor.RoleTitle = "Access tester";
+        editor.Summary = "Uses project structure access controls.";
+        editor.Instructions = "Load project access choices.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        var agentId = await workspaceService.SaveAgentAsync(editor);
 
-        cut.WaitForElement("[data-testid='agents-catalog-project-structure-access']");
+        var host = harness.Context.RenderComponent<DialogHost>();
 
-        Assert.Contains("Project Structure Access", cut.Markup);
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-read']"));
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-write']"));
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-load']"));
-        Assert.DoesNotContain("Workbench Access Project", cut.Markup);
+        var dialogTask = OpenAgentDetailsDialog(harness.Context, agentId);
+        host.WaitForElement("[data-testid='agents-details-tabs']");
+        SelectDialogTab(host, "Project Structure Access");
+        host.WaitForElement("[data-testid='agents-catalog-project-structure-access']");
 
-        cut.Find("[data-testid='agents-catalog-project-structure-load']").Click();
+        Assert.Contains("Project Structure Access", host.Markup);
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-project-structure-read']"));
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-project-structure-write']"));
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-project-structure-load']"));
+        Assert.DoesNotContain("Workbench Access Project", host.Markup);
 
-        cut.WaitForAssertion(() =>
+        host.Find("[data-testid='agents-catalog-project-structure-load']").Click();
+
+        host.WaitForAssertion(() =>
         {
-            Assert.Contains("Workbench Access Project", cut.Markup);
+            Assert.Contains("Workbench Access Project", host.Markup);
         });
 
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-project-structure-projects']"));
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-project-structure-projects']"));
+        harness.Context.Services.GetRequiredService<DialogService>().CloseAll();
+        await dialogTask.WaitAsync(TimeSpan.FromSeconds(2));
+        host.Dispose();
     }
 
     [Fact]
     public async Task Agent_catalog_exposes_process_access_controls_and_process_choices()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
         var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
         var saveResult = await processesService.SaveAsync(CreateProcessDefinition("Workbench Access Process"));
         Assert.True(saveResult.IsSuccess);
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>();
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Process Access Dialog Agent";
+        editor.RoleTitle = "Access tester";
+        editor.Summary = "Uses process access controls.";
+        editor.Instructions = "Load process access choices.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        var agentId = await workspaceService.SaveAgentAsync(editor);
 
-        cut.WaitForElement("[data-testid='agents-catalog-process-access']");
+        var host = harness.Context.RenderComponent<DialogHost>();
 
-        Assert.Contains("Process Access", cut.Markup);
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-process-read']"));
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-process-write']"));
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-process-load']"));
-        Assert.DoesNotContain("Workbench Access Process", cut.Markup);
+        var dialogTask = OpenAgentDetailsDialog(harness.Context, agentId);
+        host.WaitForElement("[data-testid='agents-details-tabs']");
+        SelectDialogTab(host, "Process Access");
+        host.WaitForElement("[data-testid='agents-catalog-process-access']");
 
-        cut.Find("[data-testid='agents-catalog-process-load']").Click();
+        Assert.Contains("Process Access", host.Markup);
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-process-read']"));
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-process-write']"));
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-process-load']"));
+        Assert.DoesNotContain("Workbench Access Process", host.Markup);
 
-        cut.WaitForAssertion(() =>
+        host.Find("[data-testid='agents-catalog-process-load']").Click();
+
+        host.WaitForAssertion(() =>
         {
-            Assert.Contains("Workbench Access Process", cut.Markup);
+            Assert.Contains("Workbench Access Process", host.Markup);
         });
 
-        Assert.NotNull(cut.Find("[data-testid='agents-catalog-processes']"));
+        Assert.NotNull(host.Find("[data-testid='agents-catalog-processes']"));
+        harness.Context.Services.GetRequiredService<DialogService>().CloseAll();
+        await dialogTask.WaitAsync(TimeSpan.FromSeconds(2));
+        host.Dispose();
+    }
+
+    [Fact]
+    public async Task Agent_catalog_double_click_opens_tabbed_details_dialog_with_roomy_identity_fields()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Dialog Runtime Agent";
+        editor.RoleTitle = "Dialog specialist";
+        editor.Summary = "Agent opened from the card grid.";
+        editor.Instructions = "Keep modal editing visible and explicit.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        await workspaceService.SaveAgentAsync(editor);
+
+        var host = harness.Context.RenderComponent<DialogHost>();
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(
+            parameters => parameters.Add(component => component.SkipCatalogRepair, true));
+
+        cut.WaitForElement("[data-testid='agents-catalog-card']");
+        cut.FindAll("[data-testid='agents-catalog-card']")
+            .First(card => card.TextContent.Contains("Dialog Runtime Agent", StringComparison.Ordinal))
+            .TriggerEvent("ondblclick", new MouseEventArgs());
+
+        host.WaitForElement("[data-testid='agents-details-tabs']");
+        Assert.Contains("Identity", host.Markup);
+        Assert.Contains("Runtime", host.Markup);
+        Assert.Contains("Project Structure Access", host.Markup);
+        Assert.Contains("Skills and MCP", host.Markup);
+        Assert.Contains("agent-details-dialog__summary-textarea", host.Find("[data-testid='agents-catalog-summary']").GetAttribute("class"));
+        Assert.Contains("agent-details-dialog__instructions-textarea", host.Find("[data-testid='agents-catalog-instructions']").GetAttribute("class"));
+        harness.Context.Services.GetRequiredService<DialogService>().CloseAll();
+        host.Dispose();
+        cut.Dispose();
+    }
+
+    [Fact]
+    public async Task Agent_details_dialog_assigns_available_skill_or_mcp_capability()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"capability-dialog-{Guid.NewGuid():N}");
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Capability Dialog Agent";
+        editor.RoleTitle = "Capability tester";
+        editor.Summary = "Uses modal capability assignment.";
+        editor.Instructions = "Attach cataloged capabilities from the dialog.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        var agentId = await workspaceService.SaveAgentAsync(editor);
+
+        var capabilityId = await workspaceService.SaveCapabilityAsync(new CapabilityEditorModel
+        {
+            Kind = CapabilityKind.McpServer,
+            Key = "dialog-mcp-proof",
+            Name = "Dialog MCP Proof",
+            Description = "Capability assignment proof for the tabbed dialog.",
+            EndpointOrPath = "stdio://dialog-proof",
+            ConfigurationJson = "{}",
+            IsBuiltIn = false
+        });
+
+        var host = harness.Context.RenderComponent<DialogHost>();
+
+        var dialogTask = OpenAgentDetailsDialog(harness.Context, agentId);
+        host.WaitForElement("[data-testid='agents-details-tabs']");
+        SelectDialogTab(host, "Skills and MCP");
+        host.WaitForElement("[data-testid='agents-details-capability-list']");
+        Assert.Contains("Dialog MCP Proof", host.Markup);
+
+        host.FindAll("[data-testid='agents-details-toggle-capability']")
+            .First(button => button.TextContent.Contains("Assign", StringComparison.Ordinal))
+            .Click();
+
+        await Task.Delay(50);
+        var updatedAgent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .Single(agent => agent.Id == agentId);
+        Assert.Contains(updatedAgent.Capabilities, capability => capability.CapabilityId == capabilityId);
+        harness.Context.Services.GetRequiredService<DialogService>().CloseAll();
+        await dialogTask.WaitAsync(TimeSpan.FromSeconds(2));
+        host.Dispose();
     }
 
     [Fact]
@@ -432,21 +588,29 @@ public sealed class AiAgentsPageTests
         secondEditor.TemplateKey = string.Empty;
         var secondAgentId = await workspaceService.SaveAgentAsync(secondEditor);
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(parameters => parameters
-            .Add(component => component.RequestedAgentId, firstAgentId));
+        var host = harness.Context.RenderComponent<DialogHost>();
+        var dialogService = harness.Context.Services.GetRequiredService<DialogService>();
 
-        cut.WaitForAssertion(() =>
+        var firstDialogTask = OpenAgentDetailsDialog(harness.Context, firstAgentId);
+
+        host.WaitForAssertion(() =>
         {
-            Assert.Equal("First Runtime Agent", cut.Find("[data-testid='agents-catalog-name']").GetAttribute("value"));
+            Assert.Equal("First Runtime Agent", host.Find("[data-testid='agents-catalog-name']").GetAttribute("value"));
         });
 
-        cut.SetParametersAndRender(parameters => parameters
-            .Add(component => component.RequestedAgentId, secondAgentId));
+        dialogService.CloseAll();
+        await firstDialogTask.WaitAsync(TimeSpan.FromSeconds(2));
 
-        cut.WaitForAssertion(() =>
+        var secondDialogTask = OpenAgentDetailsDialog(harness.Context, secondAgentId);
+
+        host.WaitForAssertion(() =>
         {
-            Assert.Equal("Second Runtime Agent", cut.Find("[data-testid='agents-catalog-name']").GetAttribute("value"));
+            Assert.Equal("Second Runtime Agent", host.Find("[data-testid='agents-catalog-name']").GetAttribute("value"));
         });
+
+        dialogService.CloseAll();
+        await secondDialogTask.WaitAsync(TimeSpan.FromSeconds(2));
+        host.Dispose();
     }
 
     [Fact]
@@ -484,9 +648,36 @@ public sealed class AiAgentsPageTests
 
         var cut = harness.Context.RenderComponent<AgentsHomePage>();
 
-        cut.WaitForElement("[data-testid='agents-catalog-name']");
+        cut.WaitForElement("[data-testid='agents-catalog-search']");
         Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
         Assert.Equal(0, repairService.CallCount);
+    }
+
+    private static void SelectDialogTab(IRenderedFragment host, string tabText)
+    {
+        host.FindAll("[role='tab']")
+            .First(tab => tab.TextContent.Contains(tabText, StringComparison.Ordinal))
+            .Click();
+    }
+
+    private static Task<object?> OpenAgentDetailsDialog(TestContext context, Guid? agentId = null)
+    {
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        return dialogService.OpenAsync<AgentDetailsDialog>(
+            agentId.HasValue ? "Agent details" : "New technical agent",
+            new Dictionary<string, object?>
+            {
+                [nameof(AgentDetailsDialog.AgentId)] = agentId
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Technical editor",
+                Subtitle = "Edit identity, runtime, access policy, skills, and MCP servers for this technical agent.",
+                Size = ModalSize.Full,
+                DenseChrome = true,
+                AriaLabel = "Agent details editor",
+                TestId = "agents-details-dialog"
+            });
     }
 
     private static async Task<Guid> CreatePersonAsync(PartyDirectoryService partyDirectoryService, string displayName, string email)

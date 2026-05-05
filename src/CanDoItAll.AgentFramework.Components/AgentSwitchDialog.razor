@@ -59,61 +59,20 @@
                         var isSelected = agent.Id == SelectedAgentId;
                         var isFavorite = IsFavorite(agent);
 
-                        <article class="agent-switch-dialog__card @(isSelected ? "agent-switch-dialog__card--selected" : string.Empty)"
-                                 data-testid="agent-switch-card-shell">
-                            <button type="button"
-                                    class="agent-switch-dialog__favorite @(isFavorite ? "agent-switch-dialog__favorite--active" : string.Empty)"
-                                    aria-label="@(isFavorite ? "Remove favorite" : "Mark favorite")"
-                                    aria-pressed="@(isFavorite ? "true" : "false")"
-                                    disabled="@(favoriteBusyAgentId == agent.Id || FavoriteToggled is null)"
-                                    @onclick="@(() => ToggleFavoriteAsync(agent))"
-                                    data-testid="agent-favorite-toggle">
-                                <Icon Name="star" />
-                            </button>
-
-                            <button type="button"
-                                    class="agent-switch-dialog__select"
-                                    @onclick="() => SelectAgentAsync(agent.Id)"
-                                    data-testid="agent-switch-card">
-                                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Center">
-                                    <Avatar Alt="@agent.Name"
-                                            ImageUrl="@agent.AvatarImageUrl"
-                                            FallbackText="@ResolveAgentInitials(agent)"
-                                            DefaultImageSeed="@agent.Name"
-                                            Size="AvatarSize.Large"
-                                            Shape="AvatarShape.Rounded" />
-
-                                    <Stack GapScale="LayoutGap.Tiny" AlignItems="AlignItems.Center" Class="min-w-0 text-center">
-                                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap" Class="justify-center">
-                                            <StatusBadge Tone="@ResolveAgentTone(agent.Status)" Text="@agent.Status.ToString()" />
-                                            <TooltipTarget Text="@BuildAgentDetails(agent)"
-                                                           Position="TooltipPosition.Bottom"
-                                                           TriggerClass="items-center">
-                                                <span class="agent-switch-dialog__info"
-                                                      aria-label="Show agent details">
-                                                    <Icon Name="circle_info" />
-                                                </span>
-                                            </TooltipTarget>
-                                        </Cluster>
-                                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@agent.Name" />
-                                        <TextBlock TextStyle="TextStyle.Caption" Value="@ResolveAgentRole(agent)" />
-                                    </Stack>
-
-                                    <p class="agent-switch-dialog__summary">@ResolveShortInfo(agent)</p>
-
-                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="justify-center">
-                                        @if (isSelected)
-                                        {
-                                            <StatusBadge Tone="info" Text="Current agent" />
-                                        }
-                                        @foreach (var tag in VisibleTags(agent).Take(3))
-                                        {
-                                            <StatusBadge Tone="neutral" Text="@tag" />
-                                        }
-                                    </Cluster>
-                                </Stack>
-                            </button>
-                        </article>
+                        <AgentSelectionCard Agent="@agent"
+                                            IsSelected="@isSelected"
+                                            Compact="true"
+                                            CenterContent="true"
+                                            ShowFavorite="true"
+                                            IsFavorite="@isFavorite"
+                                            FavoriteDisabled="@(favoriteBusyAgentId == agent.Id || FavoriteToggled is null)"
+                                            ShowDetailsTooltip="true"
+                                            ShowWorkload="false"
+                                            ShowUpdatedAt="false"
+                                            ShellTestId="agent-switch-card-shell"
+                                            SelectTestId="agent-switch-card"
+                                            OnSelect="@(() => SelectAgentAsync(agent.Id))"
+                                            OnFavoriteToggle="@(() => ToggleFavoriteAsync(agent))" />
                     }
                 </Grid>
             }
@@ -243,66 +202,4 @@
             .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private static string ResolveAgentRole(AgentDefinition agent)
-    {
-        return string.IsNullOrWhiteSpace(agent.RoleTitle)
-            ? "Technical agent"
-            : agent.RoleTitle;
-    }
-
-    private static string ResolveShortInfo(AgentDefinition agent)
-    {
-        var summary = string.IsNullOrWhiteSpace(agent.Summary)
-            ? "No short summary is configured yet."
-            : agent.Summary.Trim();
-
-        const int maxLength = 96;
-        return summary.Length <= maxLength
-            ? summary
-            : $"{summary[..maxLength].TrimEnd()}...";
-    }
-
-    private static string BuildAgentDetails(AgentDefinition agent)
-    {
-        var provider = string.IsNullOrWhiteSpace(agent.Model)
-            ? "No model configured"
-            : agent.Model;
-        var capabilityText = agent.Capabilities.Count == 1
-            ? "1 capability"
-            : $"{agent.Capabilities.Count} capabilities";
-        var tags = VisibleTags(agent);
-        var tagText = tags.Count == 0
-            ? "No visible tags."
-            : $"Tags: {string.Join(", ", tags)}.";
-
-        return $"{ResolveAgentRole(agent)}. {provider}. {agent.Workload}. {capabilityText}. {tagText} {agent.Summary}";
-    }
-
-    private static string ResolveAgentInitials(AgentDefinition agent)
-    {
-        var name = string.IsNullOrWhiteSpace(agent.Name)
-            ? agent.RoleTitle
-            : agent.Name;
-
-        var initials = name
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Take(2)
-            .Select(static item => char.ToUpperInvariant(item[0]))
-            .ToArray();
-
-        return initials.Length == 0
-            ? "AI"
-            : new string(initials);
-    }
-
-    private static string ResolveAgentTone(AgentLifecycleStatus status)
-    {
-        return status switch
-        {
-            AgentLifecycleStatus.Active => "success",
-            AgentLifecycleStatus.Suspended => "warning",
-            AgentLifecycleStatus.Archived => "neutral",
-            _ => "info"
-        };
-    }
 }

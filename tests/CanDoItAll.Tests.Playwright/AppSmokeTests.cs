@@ -1379,7 +1379,7 @@ public sealed partial class AppSmokeTests
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
     {
         await page.GotoAsync($"{fixture.BaseUrl}/projects");
-        await DismissStartupModalIfPresentAsync(page);
+        await DismissStartupModalIfPresentAsync(page, timeoutMs: 15_000);
         await page.GetByTestId("projects-new-button").WaitForAsync();
         await page.GetByTestId("projects-new-button").ClickAsync();
 

@@ -883,6 +883,11 @@
     }
 
     function getNodeMobility(state, node) {
+        if (Array.isArray(state.interaction?.nodeIds) &&
+            state.interaction.nodeIds.includes(node.id)) {
+            return 1;
+        }
+
         if ((node.family || "").toLowerCase() === "root") {
             return 0.04;
         }
@@ -892,7 +897,7 @@
         }
 
         if (state.ui.manualPositions?.[node.id]) {
-            return 0;
+            return 0.08;
         }
 
         return 1;
@@ -901,13 +906,19 @@
     function buildResolvedLayoutKey(state, visibleNodes) {
         return visibleNodes.map(node => {
             const base = getBaseNodePosition(state, node);
+            const size = getNodeSize(state, node);
+            const isActiveDragNode = Array.isArray(state.interaction?.nodeIds) &&
+                state.interaction.nodeIds.includes(node.id);
             return [
                 node.id,
                 node.parentId || "",
                 round(base.x),
                 round(base.y),
+                round(size.width),
+                round(size.height),
                 node.family || "",
-                node.isInlineTextNode ? "1" : "0"
+                node.isInlineTextNode ? "1" : "0",
+                isActiveDragNode ? "1" : "0"
             ].join("|");
         }).join(";");
     }
@@ -933,7 +944,9 @@
                 depth: getNodeDepth(state, node.id, depthCache),
                 preferredSideX: horizontalDelta >= 0 ? 1 : -1,
                 preferredSideY: Math.abs(verticalDelta) > 4 ? Math.sign(verticalDelta) : 1,
-                mobility: getNodeMobility(state, node)
+                mobility: getNodeMobility(state, node),
+                isActiveDragNode: Array.isArray(state.interaction?.nodeIds) &&
+                    state.interaction.nodeIds.includes(node.id)
             };
         });
     }
@@ -1018,11 +1031,20 @@
             return false;
         }
 
-        const totalMobility = Math.max(0.001, first.mobility + second.mobility);
-        const firstShare = second.mobility <= 0 ? 0 : (first.mobility / totalMobility);
-        const secondShare = first.mobility <= 0 ? 0 : (second.mobility / totalMobility);
-        const firstDelta = amount * (secondShare || 0);
-        const secondDelta = amount * (firstShare || 0);
+        const firstActive = !!first.isActiveDragNode;
+        const secondActive = !!second.isActiveDragNode;
+        let firstDelta = 0;
+        let secondDelta = 0;
+
+        if (firstActive !== secondActive) {
+            firstDelta = firstActive ? amount : 0;
+            secondDelta = secondActive ? amount : 0;
+        }
+        else {
+            const totalMobility = Math.max(0.001, first.mobility + second.mobility);
+            firstDelta = amount * (first.mobility / totalMobility);
+            secondDelta = amount * (second.mobility / totalMobility);
+        }
 
         if (axis === "x") {
             if (first.mobility > 0) {
@@ -1044,6 +1066,30 @@
         }
 
         return firstDelta > 0 || secondDelta > 0;
+    }
+
+    function separateOverlappingPairs(items, positions) {
+        let moved = false;
+
+        for (let index = 0; index < items.length; index++) {
+            for (let compareIndex = index + 1; compareIndex < items.length; compareIndex++) {
+                const first = items[index];
+                const second = items[compareIndex];
+                const firstPosition = positions.get(first.id);
+                const secondPosition = positions.get(second.id);
+                const overlap = getOverlapDelta(first, second, firstPosition, secondPosition);
+                if (overlap.overlapX <= 0 || overlap.overlapY <= 0) {
+                    continue;
+                }
+
+                const axis = chooseCollisionAxis(first, second, overlap);
+                const direction = resolveCollisionDirection(first, second, axis, overlap);
+                const amount = (axis === "x" ? overlap.overlapX : overlap.overlapY) + 10;
+                moved = applyCollisionSeparation(first, second, firstPosition, secondPosition, axis, amount, direction) || moved;
+            }
+        }
+
+        return moved;
     }
 
     function enforceParentClearance(itemsById, positions) {
@@ -1167,36 +1213,13 @@
     function computeResolvedNodePositions(state, visibleNodes) {
         const items = buildLayoutItems(state, visibleNodes);
         const positions = new Map(items.map(item => [item.id, { x: item.base.x, y: item.base.y }]));
-        const hasInProgressManualPositions = items.some(item => !!state.ui.manualPositions?.[item.id]);
-        if (!hasInProgressManualPositions) {
-            return positions;
-        }
-
         const itemsById = new Map(items.map(item => [item.id, item]));
 
         for (let iteration = 0; iteration < 14; iteration++) {
             let moved = false;
             moved = enforceParentClearance(itemsById, positions) || moved;
             moved = enforceSiblingSpacing(itemsById, positions) || moved;
-
-            for (let index = 0; index < items.length; index++) {
-                for (let compareIndex = index + 1; compareIndex < items.length; compareIndex++) {
-                    const first = items[index];
-                    const second = items[compareIndex];
-                    const firstPosition = positions.get(first.id);
-                    const secondPosition = positions.get(second.id);
-                    const overlap = getOverlapDelta(first, second, firstPosition, secondPosition);
-                    if (overlap.overlapX <= 0 || overlap.overlapY <= 0) {
-                        continue;
-                    }
-
-                    const axis = chooseCollisionAxis(first, second, overlap);
-                    const direction = resolveCollisionDirection(first, second, axis, overlap);
-                    const amount = (axis === "x" ? overlap.overlapX : overlap.overlapY) + 10;
-                    moved = applyCollisionSeparation(first, second, firstPosition, secondPosition, axis, amount, direction) || moved;
-                }
-            }
-
+            moved = separateOverlappingPairs(items, positions) || moved;
             moved = relaxTowardBase(items, positions) || moved;
             if (!moved) {
                 break;
@@ -1205,6 +1228,12 @@
 
         enforceParentClearance(itemsById, positions);
         enforceSiblingSpacing(itemsById, positions);
+        for (let iteration = 0; iteration < 6; iteration++) {
+            if (!separateOverlappingPairs(items, positions)) {
+                break;
+            }
+        }
+
         return positions;
     }
 
