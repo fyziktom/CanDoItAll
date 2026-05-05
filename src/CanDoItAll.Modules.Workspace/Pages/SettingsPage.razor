@@ -1,6 +1,7 @@
 @page "/settings"
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Security
+@using CanDoItAll.Modules.Workspace.ApiAccess
 @using CanDoItAll.Modules.Workspace.Pages.Components
 @using Microsoft.AspNetCore.Components
 @inject WorkspaceService WorkspaceService
@@ -324,6 +325,77 @@
                     </EditForm>
                 </DetailContent>
             </ListDetailShell>
+        }
+        else if (string.Equals(settingsTab, "api-access", StringComparison.Ordinal))
+        {
+            <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                <FormSection Title="Development API access" Description="Control the local development API surface and create JWT bearer tokens when authorization is active.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <Stack GapScale="LayoutGap.Small">
+                            <p class="cda-eyebrow">API</p>
+                            <StatusBadge Tone="@(developmentApiStatus?.ApiEnabled == true ? "success" : "warning")" Text="@(developmentApiStatus?.ApiEnabled == true ? "Enabled" : "Disabled")" />
+                            <p class="cda-body-muted break-all">OpenAPI: @(developmentApiStatus?.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
+                        </Stack>
+                        <Stack GapScale="LayoutGap.Small">
+                            <p class="cda-eyebrow">Authorization</p>
+                            <StatusBadge Tone="@(developmentApiStatus?.AuthorizationEnabled == true ? "warning" : "info")" Text="@(developmentApiStatus?.AuthorizationEnabled == true ? "JWT required" : "JWT disabled")" />
+                            <p class="cda-body-muted break-all">@FormatDevelopmentApiAudience()</p>
+                        </Stack>
+                    </Grid>
+
+                    @if (developmentApiStatus?.AuthorizationEnabled != true)
+                    {
+                        <Alert AlertStyle="AlertStyle.Info">
+                            <p>JWT authorization is disabled in configuration. API requests do not need bearer tokens until DevelopmentApi:Authorization:Enabled is set to true.</p>
+                        </Alert>
+                    }
+                    else if (developmentApiStatus.SigningKeyConfigured)
+                    {
+                        <EditForm Model="apiTokenModel" OnValidSubmit="IssueDevelopmentApiTokenAsync">
+                            <Stack GapScale="LayoutGap.Large">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <div>
+                                        <label class="cda-field-label">Subject</label>
+                                        <InputText @bind-Value="apiTokenModel.Subject" class="cda-input" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Display name</label>
+                                        <InputText @bind-Value="apiTokenModel.DisplayName" class="cda-input" />
+                                    </div>
+                                </Grid>
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <div>
+                                        <label class="cda-field-label">Lifetime minutes</label>
+                                        <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="cda-input" />
+                                        <p class="cda-body-muted mt-1">Maximum: @developmentApiStatus.MaxTokenLifetimeMinutes minutes</p>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Scopes</label>
+                                        <InputText @bind-Value="apiScopesText" class="cda-input" />
+                                        <p class="cda-body-muted mt-1">Separate scopes with spaces or commas.</p>
+                                    </div>
+                                </Grid>
+                                <Button Text="Create token" Type="submit" />
+                            </Stack>
+                        </EditForm>
+
+                        @if (issuedApiToken is not null)
+                        {
+                            <Alert AlertStyle="AlertStyle.Success">
+                                <p class="font-semibold">Token created for @issuedApiToken.DisplayName.</p>
+                                <p class="mt-1">Expires: @FormatTimestamp(issuedApiToken.ExpiresAtUtc)</p>
+                                <textarea readonly class="cda-input cda-input--textarea mt-3 min-h-32">@issuedApiToken.Token</textarea>
+                            </Alert>
+                        }
+                    }
+                    else
+                    {
+                        <Alert AlertStyle="AlertStyle.Warning">
+                            <p>JWT authorization is enabled, but no signing key is configured. Set DevelopmentApi:Authorization:SigningKey to at least 32 UTF-8 bytes before creating tokens.</p>
+                        </Alert>
+                    }
+                </FormSection>
+            </Stack>
         }
         else
         {

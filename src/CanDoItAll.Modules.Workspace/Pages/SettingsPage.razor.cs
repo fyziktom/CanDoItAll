@@ -1,5 +1,6 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using Microsoft.AspNetCore.Components;
 
@@ -13,15 +14,22 @@ public partial class SettingsPage
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject]
+    public IDevelopmentApiTokenService DevelopmentApiTokenService { get; set; } = default!;
+
     private WorkspaceSettingsModel settingsModel = new();
     private SecretEditorModel secretModel = NewSecret();
     private ProviderProfileEditorModel providerModel = NewProvider();
+    private DevelopmentApiTokenIssueRequest apiTokenModel = NewApiToken();
+    private DevelopmentApiAccessStatus? developmentApiStatus;
+    private DevelopmentApiTokenIssueResult? issuedApiToken;
     private IReadOnlyList<ProviderProfileSummary> providers = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ConnectorPluginManifest> providerManifests = [];
     private string settingsTab = "workspace";
     private string secretSearch = string.Empty;
     private string providerSearch = string.Empty;
+    private string apiScopesText = "development-api";
 
     private ConnectorPluginManifest? SelectedProviderManifest => providerManifests.FirstOrDefault(manifest =>
             string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
@@ -36,6 +44,7 @@ public partial class SettingsPage
         new("storage", "Storage"),
         new("secrets", "Secrets", secrets.Count.ToString()),
         new("providers", "Providers", providers.Count.ToString()),
+        new("api-access", "API Access", developmentApiStatus?.AuthorizationEnabled == true ? "JWT" : "Open"),
         new("project-structure", "Project Structure MCP")
     ];
 
@@ -73,6 +82,8 @@ public partial class SettingsPage
         settingsModel = await WorkspaceService.GetSettingsAsync();
         providers = await WorkspaceService.ListProviderProfilesAsync();
         secrets = await WorkspaceService.ListSecretsAsync();
+        developmentApiStatus = DevelopmentApiTokenService.GetStatus();
+        apiTokenModel = NewApiToken(developmentApiStatus?.DefaultTokenLifetimeMinutes);
         NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
         ApplyRequestedTab();
     }
@@ -236,6 +247,23 @@ public partial class SettingsPage
         return Task.CompletedTask;
     }
 
+    private Task IssueDevelopmentApiTokenAsync()
+    {
+        try
+        {
+            apiTokenModel.Scopes = ParseApiScopes(apiScopesText);
+            issuedApiToken = DevelopmentApiTokenService.IssueToken(apiTokenModel);
+            NotificationService.Success("Development API token created", $"Token expires at {FormatTimestamp(issuedApiToken.ExpiresAtUtc)}.");
+        }
+        catch (Exception exception)
+        {
+            issuedApiToken = null;
+            NotificationService.Error("Development API token failed", exception.Message);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private void ApplyRequestedTab()
     {
         if (string.Equals(RequestedTab, "providers", StringComparison.Ordinal))
@@ -258,7 +286,7 @@ public partial class SettingsPage
 
     private static bool IsValidSettingsTab(string? key)
     {
-        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "project-structure";
+        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "api-access" or "project-structure";
     }
 
     private static string BuildSettingsRoute(string key)
@@ -283,10 +311,41 @@ public partial class SettingsPage
         return timestamp.LocalDateTime.ToString("g");
     }
 
+    private string FormatDevelopmentApiAudience()
+    {
+        if (developmentApiStatus is null)
+        {
+            return "Development API status is not loaded.";
+        }
+
+        return developmentApiStatus.AuthorizationEnabled
+            ? $"Issuer: {developmentApiStatus.Issuer} / Audience: {developmentApiStatus.Audience}"
+            : "Bearer tokens are not required.";
+    }
+
+    private static List<string> ParseApiScopes(string value)
+    {
+        var scopes = value
+            .Split([' ', ',', ';', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return scopes.Count == 0 ? ["development-api"] : scopes;
+    }
+
     private static SecretEditorModel NewSecret() => new()
     {
         Kind = SecretKind.ApiKey,
         Scope = "workspace"
+    };
+
+    private static DevelopmentApiTokenIssueRequest NewApiToken(int? lifetimeMinutes = null) => new()
+    {
+        Subject = "development-api-client",
+        DisplayName = "Development API client",
+        LifetimeMinutes = lifetimeMinutes,
+        Scopes = ["development-api"]
     };
 
     private static ProviderProfileEditorModel NewProvider(string? connectorPluginKey = null)

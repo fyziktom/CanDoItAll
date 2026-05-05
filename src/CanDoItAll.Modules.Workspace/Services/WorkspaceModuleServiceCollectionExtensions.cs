@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 
 namespace CanDoItAll.Modules.Workspace;
 
@@ -9,6 +10,8 @@ public static class WorkspaceModuleServiceCollectionExtensions
     public static IServiceCollection AddWorkspaceModule(this IServiceCollection services)
     {
         services.AddHttpClient();
+        services.AddOptions<DevelopmentApiAccessOptions>();
+        services.TryAddSingleton<IDevelopmentApiTokenService, DevelopmentApiTokenService>();
         services.AddScoped<IProviderAdapter, OpenAiProviderAdapter>();
         services.AddScoped<IProviderAdapter, ScenarioHarnessProviderAdapter>();
         services.AddScoped<IProviderAdapter, ProcessMockProviderAdapter>();

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -12,6 +13,7 @@ public static class ProjectStructureAgentApi
     public static IEndpointRouteBuilder MapProjectStructureAgentApi(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/project-structure-mcp");
+        group.ApplyDevelopmentApiAuthorization(endpoints);
 
         group.MapGet("/projects", async (
             HttpContext httpContext,

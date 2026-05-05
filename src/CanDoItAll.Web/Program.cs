@@ -29,8 +29,11 @@ using CanDoItAll.Web.Components;
 using CanDoItAll.Web.Composition;
 using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Web;
+using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +50,7 @@ builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
 builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
+builder.Services.AddCanDoItAllDevelopmentApi(builder.Configuration);
 builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
@@ -70,9 +74,27 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+var developmentApiOptions = app.Services.GetRequiredService<IOptions<DevelopmentApiAccessOptions>>().Value;
+if (developmentApiOptions.Authorization.Enabled)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapCanDoItAllManagedFiles();
+
+if (developmentApiOptions.OpenApiEnabled)
+{
+    var openApiEndpoint = app.MapOpenApi();
+    var swaggerJsonEndpoint = app.MapOpenApi("/swagger/{documentName}/swagger.json");
+    if (developmentApiOptions.Authorization.Enabled)
+    {
+        openApiEndpoint.RequireAuthorization();
+        swaggerJsonEndpoint.RequireAuthorization();
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -787,6 +809,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapProjectStructureAgentApi();
+app.MapCanDoItAllDevelopmentApi();
 app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(CanDoItAll.Web.Composition.ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();
