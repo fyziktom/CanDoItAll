@@ -498,6 +498,23 @@ internal static class ProcessesApi
             Results.Ok(catalogService.ListProcessTemplates()))
             .WithName("ListProcessTemplates");
 
+        processes.MapGet("/templates/baseline-scenarios", (
+                ProcessTemplatePackLoader packLoader) =>
+        {
+            var pack = packLoader.Load();
+            return Results.Ok(pack.BaselineScenarios
+                .Select(item => new ProcessTemplateBaselineScenarioSummary(
+                    item.Key,
+                    item.ProcessTemplateKey,
+                    item.RunName,
+                    item.OperatingMode,
+                    item.Assignments.Count,
+                    item.Transitions.Count,
+                    item.Artifacts.Count))
+                .ToList());
+        })
+        .WithName("ListProcessTemplateBaselineScenarios");
+
         processes.MapGet("/templates/{processKey}", (
                 string processKey,
                 ProcessTemplatePackLoader packLoader) =>
@@ -508,6 +525,41 @@ internal static class ProcessesApi
                 : ApiEndpointResults.NotFound($"Process template '{processKey}' was not found.", "processes.template-not-found");
         })
         .WithName("GetProcessTemplate");
+
+        processes.MapGet("/templates/{processKey}/detail", (
+                string processKey,
+                ProcessTemplatePackLoader packLoader,
+                ProcessTemplateCatalogService catalogService,
+                ProcessTemplateProjectionService projectionService,
+                ProcessTemplateMermaidExporter mermaidExporter) =>
+        {
+            try
+            {
+                var pack = packLoader.Load();
+                if (!pack.Processes.TryGetValue(processKey, out var template))
+                {
+                    return ApiEndpointResults.NotFound($"Process template '{processKey}' was not found.", "processes.template-not-found");
+                }
+
+                var summary = catalogService.ListProcessTemplates()
+                    .FirstOrDefault(item => string.Equals(item.Key, processKey, StringComparison.OrdinalIgnoreCase));
+                if (summary is null)
+                {
+                    return ApiEndpointResults.NotFound($"Process template '{processKey}' was not found in the template catalog.", "processes.template-not-found");
+                }
+
+                return Results.Ok(new ProcessTemplateDetailApiResponse(
+                    summary,
+                    template,
+                    projectionService.GetCompatibilityReportMarkdown(processKey),
+                    mermaidExporter.Export(processKey).SupportingFiles));
+            }
+            catch (InvalidOperationException exception)
+            {
+                return ApiEndpointResults.BadRequest(exception.Message, "processes.template-detail-failed");
+            }
+        })
+        .WithName("GetProcessTemplateDetail");
 
         processes.MapGet("/templates/{processKey}/envelope", (
                 string processKey,
@@ -980,6 +1032,12 @@ internal sealed record ProcessRunDetail(
 internal sealed record ProcessTemplateImportApiRequest(
     Guid? ProjectId,
     string? DefinitionName);
+
+internal sealed record ProcessTemplateDetailApiResponse(
+    ProcessTemplateCatalogItem Summary,
+    ProcessTemplateDefinition Template,
+    string CompatibilityReportMarkdown,
+    IReadOnlyList<string> SupportingFiles);
 
 internal sealed record ProcessManagerDirectiveApiRequest(
     string Directive,

@@ -55,8 +55,7 @@
       "tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
       "tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
       "tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj",
-      "tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj",
-      "tests/CanDoItAll.Mcp.ProjectStructure.Tests/CanDoItAll.Mcp.ProjectStructure.Tests.csproj"
+      "tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj"
     ]
   },
   "Bridge": {

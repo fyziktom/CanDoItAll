@@ -27,9 +27,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
-        services.AddScoped<IDatabaseTransferHandler, ProjectStructureMcpDatabaseTransferHandler>();
         services.AddScoped<IDatabaseTransferHandler, AiProvidersDatabaseTransferHandler>();
-        services.AddScoped<ProjectStructureAgentAdministrationService>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();
         return services;

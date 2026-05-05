@@ -64,39 +64,8 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
         app.MapProjectStructureAgentApi();
-        var clientToken = string.Empty;
 
         await TestApplicationBootstrap.InitializeSchemaAsync(app.Services, TestSchemaBootstrapModules.Full);
-
-        await using (var scope = app.Services.CreateAsyncScope())
-        {
-            var administrationService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentAdministrationService>();
-            await administrationService.SaveSettingsAsync(
-                new ProjectStructureAgentWorkspaceSettingsModel
-                {
-                    CentralBaseUrl = "http://127.0.0.1",
-                    InstallScriptPath = @"tools\Install-CanDoItAllProjectStructureMcp.ps1",
-                    SetupReadmePath = @"docs\project-structure-mcp-setup.md"
-                },
-                CancellationToken.None);
-
-            var profileResult = await administrationService.SaveProfileAsync(
-                new ProjectStructureAgentProfileEditorModel
-                {
-                    Name = "API Test Agent",
-                    Description = "Integration host agent profile",
-                    CapabilityMask = ProjectStructureAgentCapability.All,
-                    GenerateNewToken = true
-                },
-                CancellationToken.None);
-            if (!profileResult.IsSuccess)
-            {
-                throw new InvalidOperationException(string.Join(" ", profileResult.Errors.Select(error => error.Message)));
-            }
-
-            var seededProfile = await administrationService.GetProfileAsync(profileResult.Value, CancellationToken.None);
-            clientToken = seededProfile.TokenValue;
-        }
 
         await app.StartAsync();
         var server = app.Services.GetRequiredService<IServer>();
@@ -113,7 +82,6 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.RepositoryRoot, IntegrationTestPaths.RepositoryRoot);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.BranchName, "tests/project-structure");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.SessionId, Guid.NewGuid().ToString("N"));
-        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentToken, clientToken);
 
         return new ProjectStructureAgentApiTestHost(testEnvironment, activeProfile, app, client);
     }

@@ -123,6 +123,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             capabilities,
             item => item.Kind == CapabilityKind.McpServer &&
                     string.Equals(item.EndpointOrPath, "CanDoItAll.Mcp.Processes", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            capabilities,
+            item => item.Kind == CapabilityKind.McpServer &&
+                    string.Equals(item.EndpointOrPath, "CanDoItAll.Mcp.ProjectStructure", StringComparison.OrdinalIgnoreCase));
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         foreach (var agentName in new[]
@@ -585,7 +589,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("use `workspace_dotnet_run` for a bounded loopback startup smoke", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("use `workspace_dotnet_run` with `keepAlive: true` for a bounded loopback startup smoke", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("missing generic run capability", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);

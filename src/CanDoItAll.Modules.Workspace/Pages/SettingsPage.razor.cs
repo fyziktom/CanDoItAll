@@ -44,8 +44,7 @@ public partial class SettingsPage
         new("storage", "Storage"),
         new("secrets", "Secrets", secrets.Count.ToString()),
         new("providers", "Providers", providers.Count.ToString()),
-        new("api-access", "API Access", apiStatus?.AuthorizationEnabled == true ? "JWT" : "Open"),
-        new("project-structure", "Project Structure MCP")
+        new("api-access", "API Access", apiStatus?.AuthorizationEnabled == true ? "JWT" : "Open")
     ];
 
     private IReadOnlyList<SecretListItem> FilteredSecrets => secrets
@@ -286,7 +285,7 @@ public partial class SettingsPage
 
     private static bool IsValidSettingsTab(string? key)
     {
-        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "api-access" or "project-structure";
+        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "api-access";
     }
 
     private static string BuildSettingsRoute(string key)

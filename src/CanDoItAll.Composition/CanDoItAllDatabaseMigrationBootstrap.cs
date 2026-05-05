@@ -44,7 +44,6 @@ public static class CanDoItAllDatabaseMigrationBootstrap
             "Reconciling legacy SQLite schema and baselining migration history from {MigrationId}.",
             baselineMigrationId);
 
-        await WorkspaceSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await ProjectsSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await PromptFactorySchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);

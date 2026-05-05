@@ -13,7 +13,7 @@ public static class ProjectStructureAgentApi
 {
     public static IEndpointRouteBuilder MapProjectStructureAgentApi(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/project-structure-mcp");
+        var group = endpoints.MapGroup("/api/project-structure");
         group.ApplyApiAuthorization(endpoints);
 
         group.MapGet("/projects", async (
@@ -50,9 +50,7 @@ public static class ProjectStructureAgentApi
                 request,
                 (agent, cancellationToken) => agentService.SaveProjectAsync(null, request, agent, cancellationToken),
                 cancellationToken,
-                response => response.Id,
-                ProjectStructureAgentCapability.MutateStructure,
-                true));
+                response => response.Id));
 
         group.MapPut("/projects/{projectId:guid}", async (
             Guid projectId,
@@ -71,9 +69,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.SaveProjectAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapGet("/projects/{projectId:guid}/hierarchy", async (
             Guid projectId,
@@ -114,9 +110,7 @@ public static class ProjectStructureAgentApi
                     await agentService.ChangeSubprojectAsync(parentProjectId, request, agent, cancellationToken);
                     return new { Ok = true };
                 },
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/structure/read", async (
             Guid projectId,
@@ -154,9 +148,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateNodeAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPut("/projects/{projectId:guid}/nodes/{nodeId}", async (
             Guid projectId,
@@ -176,9 +168,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/type", async (
             Guid projectId,
@@ -198,9 +188,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeTypeAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/metadata", async (
             Guid projectId,
@@ -220,9 +208,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/statuses", async (
             Guid projectId,
@@ -241,9 +227,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeStatusesAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/status", async (
             Guid projectId,
@@ -267,9 +251,7 @@ public static class ProjectStructureAgentApi
                     new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/progress", async (
             Guid projectId,
@@ -288,9 +270,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeProgressAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/progress", async (
             Guid projectId,
@@ -314,9 +294,7 @@ public static class ProjectStructureAgentApi
                     new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/markers", async (
             Guid projectId,
@@ -335,9 +313,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeMarkerAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/markers", async (
             Guid projectId,
@@ -357,9 +333,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.ChangeNodeMarkerAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/priorities", async (
             Guid projectId,
@@ -378,9 +352,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodePriorityAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/priority", async (
             Guid projectId,
@@ -404,9 +376,7 @@ public static class ProjectStructureAgentApi
                     new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/move", async (
             Guid projectId,
@@ -429,9 +399,7 @@ public static class ProjectStructureAgentApi
                     await agentService.MoveNodeAsync(projectId, request, agent, cancellationToken);
                     return new { Ok = true };
                 },
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/recompose", async (
             Guid projectId,
@@ -450,9 +418,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.RecomposeNodeAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/reparent", async (
             Guid projectId,
@@ -476,9 +442,7 @@ public static class ProjectStructureAgentApi
                     new ProjectStructureNodeReparentInput(nodeId, request.ParentNodeKey, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/reparent", async (
             Guid projectId,
@@ -497,9 +461,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.ReparentNodeAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/move-descendants-to-project", async (
             Guid projectId,
@@ -519,9 +481,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.MoveDescendantsToProjectAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/command", async (
             Guid projectId,
@@ -541,9 +501,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.ExecuteNodeCommandAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/process-definition", async (
             Guid projectId,
@@ -563,9 +521,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.LinkProcessDefinitionAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/process/start", async (
             Guid projectId,
@@ -585,9 +541,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.StartProcessNodeAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/delete", async (
             Guid projectId,
@@ -607,9 +561,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.DeleteNodeAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/approvals/request", async (
             Guid projectId,
@@ -628,8 +580,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateApprovalRequestAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/checklists/query", async (
             Guid projectId,
@@ -686,9 +637,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.LinkNodesAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/links/unlink", async (
             Guid projectId,
@@ -707,9 +656,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UnlinkNodesAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/dependencies/link", async (
             Guid projectId,
@@ -732,9 +679,7 @@ public static class ProjectStructureAgentApi
                     request with { Kind = ProjectObjectLinkKind.DependsOn },
                     agent,
                     cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/dependencies/unlink", async (
             Guid projectId,
@@ -757,9 +702,7 @@ public static class ProjectStructureAgentApi
                     request with { Kind = ProjectObjectLinkKind.DependsOn },
                     agent,
                     cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapGet("/projects/{projectId:guid}/assets/{nodeId}", async (
             Guid projectId,
@@ -816,9 +759,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateAssetAsync(projectId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/assets/{nodeId}/revisions", async (
             Guid projectId,
@@ -838,9 +779,7 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateAssetRevisionAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/imports", async (
             HttpContext httpContext,
@@ -858,9 +797,7 @@ public static class ProjectStructureAgentApi
                 request.ProjectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.ImportAsync(request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.MutateStructure | ProjectStructureAgentCapability.ImportStructure,
-                enforceMutationApproval: true));
+                cancellationToken));
 
         group.MapPost("/knowledge/query", async (
             HttpContext httpContext,
@@ -897,8 +834,7 @@ public static class ProjectStructureAgentApi
                             entry.IsMissionAnchor))
                         .ToList());
                 },
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.ReadKnowledge));
+                cancellationToken));
 
         group.MapPost("/leases/acquire", async (
             HttpContext httpContext,
@@ -916,8 +852,7 @@ public static class ProjectStructureAgentApi
                 request.ScopeKey,
                 request,
                 (agent, cancellationToken) => leaseService.AcquireAsync(request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.ManageLeases));
+                cancellationToken));
 
         group.MapPost("/leases/renew", async (
             HttpContext httpContext,
@@ -935,8 +870,7 @@ public static class ProjectStructureAgentApi
                 request.ScopeKey,
                 request,
                 (agent, cancellationToken) => leaseService.RenewAsync(request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.ManageLeases));
+                cancellationToken));
 
         group.MapPost("/leases/release", async (
             HttpContext httpContext,
@@ -954,8 +888,7 @@ public static class ProjectStructureAgentApi
                 request.ScopeKey,
                 request,
                 (agent, cancellationToken) => leaseService.ReleaseAsync(request, agent, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.ManageLeases));
+                cancellationToken));
 
         group.MapGet("/leases/current", async (
             HttpContext httpContext,
@@ -974,8 +907,7 @@ public static class ProjectStructureAgentApi
                 scopeKey,
                 new { scopeKind, scopeKey },
                 (_, cancellationToken) => leaseService.GetActiveLeaseAsync(scopeKind, scopeKey, cancellationToken),
-                cancellationToken,
-                requiredCapability: ProjectStructureAgentCapability.ManageLeases));
+                cancellationToken));
 
         group.MapPost("/analytics/query", async (
             HttpContext httpContext,
@@ -1008,24 +940,13 @@ public static class ProjectStructureAgentApi
         object? requestSummary,
         Func<ProjectStructureAgentContext, CancellationToken, Task<T>> action,
         CancellationToken cancellationToken,
-        Func<T, Guid?>? projectIdSelector = null,
-        ProjectStructureAgentCapability requiredCapability = ProjectStructureAgentCapability.ReadStructure,
-        bool enforceMutationApproval = false)
+        Func<T, Guid?>? projectIdSelector = null)
     {
         var agent = ResolveAgentContext(httpContext);
-        var administrationService = httpContext.RequestServices.GetRequiredService<ProjectStructureAgentAdministrationService>();
-        var estimatedMinutes = ReadEstimatedMinutes(httpContext.Request.Headers);
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            await administrationService.AuthorizeAsync(
-                ReadOptionalHeader(httpContext.Request.Headers, ProjectStructureAgentHttpHeaders.AgentToken),
-                requiredCapability,
-                projectId,
-                estimatedMinutes,
-                enforceMutationApproval,
-                cancellationToken);
             var response = await action(agent, cancellationToken);
             stopwatch.Stop();
             var warnings = ExtractWarnings(response);
@@ -1047,35 +968,6 @@ public static class ProjectStructureAgentApi
                     ProjectStructureAnalyticsService.SerializeSummary(response)),
                 cancellationToken);
             return Results.Ok(response);
-        }
-        catch (ProjectStructureAuthorizationException ex)
-        {
-            stopwatch.Stop();
-            await analyticsService.RecordAsync(
-                new ProjectStructureAnalyticsWriteRequest(
-                    operationName,
-                    projectId,
-                    nodeId,
-                    scopeKind,
-                    scopeKey,
-                    agent,
-                    false,
-                    stopwatch.ElapsedMilliseconds,
-                    [],
-                    ex.ErrorCode,
-                    ex.Message,
-                    ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                    ProjectStructureAnalyticsService.SerializeSummary(ex.Details)),
-                cancellationToken);
-            return Results.Json(new
-            {
-                Error = new
-                {
-                    ex.ErrorCode,
-                    ex.Message,
-                    ex.Details
-                }
-            }, statusCode: ex.StatusCode);
         }
         catch (ProjectStructureAgentException ex)
         {
@@ -1130,7 +1022,7 @@ public static class ProjectStructureAgentApi
                 Error = new
                 {
                     ErrorCode = "UnhandledError",
-                    Message = "The project-structure MCP API request failed unexpectedly."
+                    Message = "The project-structure API request failed unexpectedly."
                 }
             }, statusCode: StatusCodes.Status500InternalServerError);
         }
@@ -1159,41 +1051,6 @@ public static class ProjectStructureAgentApi
         return string.IsNullOrWhiteSpace(value) ? fallback : value;
     }
 
-    private static string? ReadOptionalHeader(IHeaderDictionary headers, string name)
-    {
-        if (!headers.TryGetValue(name, out var values))
-        {
-            return null;
-        }
-
-        var value = values.ToString().Trim();
-        return string.IsNullOrWhiteSpace(value) ? null : value;
-    }
-
-    private static int? ReadEstimatedMinutes(IHeaderDictionary headers)
-    {
-        var value = ReadOptionalHeader(headers, ProjectStructureAgentHttpHeaders.EstimatedMinutes);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        if (!int.TryParse(value, out var estimatedMinutes) || estimatedMinutes < 0)
-        {
-            throw new ProjectStructureAuthorizationException(
-                400,
-                "InvalidEstimatedMinutes",
-                "Estimated minutes must be a non-negative integer.",
-                new
-                {
-                    Header = ProjectStructureAgentHttpHeaders.EstimatedMinutes,
-                    Value = value
-                });
-        }
-
-        return estimatedMinutes;
-    }
-
     private static IReadOnlyList<string> ExtractWarnings<T>(T response)
     {
         return response switch
@@ -1216,3 +1073,4 @@ public static class ProjectStructureAgentApi
         return (ProjectManagementGuidanceCategory)(int)category;
     }
 }
+

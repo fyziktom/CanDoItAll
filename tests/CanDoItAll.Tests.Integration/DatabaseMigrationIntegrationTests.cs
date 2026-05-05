@@ -111,7 +111,6 @@ public sealed class MigrationBootstrapIntegrationTests
 
         await using var dbContext = new AppDbContext(optionsBuilder.Options);
         await dbContext.Database.EnsureCreatedAsync();
-        await WorkspaceSchemaInitializer.EnsureAsync(dbContext);
         await ProjectsSchemaInitializer.EnsureAsync(dbContext);
         await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);

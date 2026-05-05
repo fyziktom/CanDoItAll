@@ -21,8 +21,6 @@ Project references:
 - `../CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj`
 - `../../src/CanDoItAll.Web/CanDoItAll.Web.csproj`
 - `../../src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../../src/CanDoItAll.Mcp.Processes/CanDoItAll.Mcp.Processes.csproj`
-- `../../src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj`
 - `../../src/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../../src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../../src/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`
@@ -40,7 +38,6 @@ Direct package references:
 - `coverlet.collector (6.0.4)`
 - `Microsoft.Data.Sqlite (10.0.0)`
 - `Microsoft.NET.Test.Sdk (17.14.1)`
-- `ModelContextProtocol (1.1.0)`
 - `xunit (2.9.3)`
 - `xunit.runner.visualstudio (3.1.4)`
 

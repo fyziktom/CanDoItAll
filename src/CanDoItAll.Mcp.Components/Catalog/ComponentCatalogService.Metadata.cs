@@ -879,7 +879,6 @@ public sealed partial class ComponentCatalogService
         "CanDoItAll.Mcp.Core",
         "CanDoItAll.Mcp.DotNetWatch",
         "CanDoItAll.Mcp.LocalRuntime",
-        "CanDoItAll.Mcp.ProjectStructure",
         "CanDoItAll.Mcp.SshOps"
     };
 }

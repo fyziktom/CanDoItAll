@@ -30,7 +30,6 @@ internal static class SandboxWorkspaceSeedBuilder
         var openAiChatProviderId = CreateStableGuid("providers/openai-chat-completions");
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
 
-        var projectStructureCapabilityId = CreateStableGuid("capabilities/project-structure-central");
         var playwrightLocalMcpCapabilityId = CreateStableGuid("capabilities/playwright-local-mcp");
         var bundleWorkflowCapabilityId = CreateStableGuid("capabilities/candoitall-bundle-workflow");
         var aspNetCoreCapabilityId = CreateStableGuid("capabilities/aspnet-core-skill");
@@ -108,54 +107,8 @@ internal static class SandboxWorkspaceSeedBuilder
         var financialStrategistAgentId = CreateStableGuid("agents/financial-strategist");
         var marketingSpecialistAgentId = CreateStableGuid("agents/marketing-specialist");
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
-        var projectStructureReadToolNames = new[]
-        {
-            "project_structure_projects_list",
-            "project_structure_hierarchy_get",
-            "project_structure_read",
-            "project_structure_checklist",
-            "project_structure_dependencies_query",
-            "project_structure_asset_get",
-            "project_structure_knowledge_query",
-            "project_structure_analytics_query",
-            "project_structure_project_lease_acquire",
-            "project_structure_repo_branch_lease_acquire",
-            "project_structure_lease_get",
-            "project_structure_lease_release",
-            "project_structure_approval_request"
-        };
-
         var capabilities = new List<CapabilityCatalogItem>
         {
-            new(
-                projectStructureCapabilityId,
-                CapabilityKind.McpServer,
-                "project-structure-central",
-                "Project Structure Central",
-                "Local MCP bridge for reading CanDoItAll project structure, dependency state, leases, and approval-request context from the active workspace.",
-                "dotnet",
-                SerializeConfiguration(new
-                {
-                    transport = "stdio",
-                    serverName = "candoitall-project-structure",
-                    command = "dotnet",
-                    arguments = new[]
-                    {
-                        "run",
-                        "--project",
-                        "src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj",
-                        "--",
-                        "--settings",
-                        "CanDoItAll.Mcp.ProjectStructure.settings.local.json"
-                    },
-                    workingDirectory = ".",
-                    allowedTools = projectStructureReadToolNames,
-                    approvalMode = "NeverRequire"
-                }),
-                CapabilityProofStatus.NotRun,
-                "Seeded as a local stdio MCP bridge against the repo project-structure settings file. Live proof should confirm read access, lease flow, and approval-request creation from real agent runs.",
-                null,
-                true),
             new(
                 playwrightLocalMcpCapabilityId,
                 CapabilityKind.McpServer,

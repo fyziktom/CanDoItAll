@@ -148,9 +148,11 @@ public sealed class ApiIntegrationTests
         using var payload = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
         var paths = payload.RootElement.GetProperty("paths");
 
-        Assert.True(paths.TryGetProperty("/api/project-structure-mcp/projects/{projectId}/nodes/{nodeId}/type", out _));
-        Assert.True(paths.TryGetProperty("/api/project-structure-mcp/projects/{projectId}/nodes/{nodeId}/process/start", out _));
-        Assert.True(paths.TryGetProperty("/api/project-structure-mcp/projects/{projectId}/assets/{nodeId}/content", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/type", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/process/start", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/assets/{nodeId}/content", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/detail", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/templates/baseline-scenarios", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/steps/{stepRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/manager-directives", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
