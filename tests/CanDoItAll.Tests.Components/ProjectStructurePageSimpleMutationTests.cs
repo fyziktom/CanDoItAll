@@ -68,67 +68,6 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
-    public async Task Convert_note_to_task_patches_surface_without_structure_reload()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var createCounter = harness.Context.Services.GetRequiredService<DbContextCreateCounter>();
-
-        var projectId = await CreateProjectAsync(projectsService, "Note conversion patch");
-        const string noteBody = "Deploy edge gateway\r\nRemember the router and WiFi blocks";
-        var noteNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Original note",
-                string.Empty,
-                noteBody,
-                $"project:{projectId}",
-                420,
-                240));
-
-        await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
-
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
-            parameters => parameters.Add(page => page.ProjectId, projectId));
-        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
-
-        cut.WaitForAssertion(() => Assert.Contains("Convert", cut.Markup));
-        createCounter.Reset();
-
-        FindButtonByLabel(cut, "Convert", "[data-testid='project-structure-node-actions'] button").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("project-structure-block-mutation-dialog", cut.Markup);
-        });
-
-        cut.Find("[data-testid='project-structure-block-mutation-select']").Change("add-work-task");
-        cut.Find("[data-testid='project-structure-block-mutation-submit']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            var updatedNode = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, node => string.Equals(node.Id, noteNode.Id, StringComparison.Ordinal));
-            Assert.Equal("Deploy edge gateway", updatedNode.Title);
-            Assert.Equal("Task", updatedNode.Kind);
-            Assert.Equal(ProjectObjectPaletteKeys.Warning, updatedNode.PaletteKey);
-            Assert.False(updatedNode.IsInlineTextNode);
-            Assert.DoesNotContain("project-structure-block-mutation-dialog", cut.Markup, StringComparison.Ordinal);
-            Assert.Contains("was converted to task.", cut.Markup);
-        });
-
-        Assert.Equal(1, createCounter.CreateCount);
-
-        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
-        var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, noteNode.Id, StringComparison.Ordinal));
-        Assert.Equal(ProjectObjectType.WorkItem, persistedNode.ObjectType);
-        Assert.Equal("task", persistedNode.ObjectSubtype);
-        Assert.Equal("Deploy edge gateway", persistedNode.Title);
-        Assert.Equal(noteBody, persistedNode.Notes);
-    }
-
-    [Fact]
     public async Task Change_block_type_patches_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);

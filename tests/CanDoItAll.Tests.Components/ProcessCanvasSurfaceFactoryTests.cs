@@ -13,6 +13,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
         "process-step.intake",
         "process-step.architecture",
         "process-step.implementation",
+        "process-step.subprocess",
         "process-step.qa",
         "process-step.release-approval"
     ];
@@ -20,6 +21,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
     [
         "process-definition.edit-step",
         "process-definition.add-dependent-step",
+        "process-definition.add-subprocess-step",
         "process-definition.add-role-binding",
         "process-definition.add-artifact-expectation",
         "process-definition.remove-step"

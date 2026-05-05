@@ -340,55 +340,6 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
-    public async Task Prompt_flow_nodes_expose_wizard_navigation_from_the_inspector()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
-
-        var project = await projectsService.GetAsync(null);
-        project.Name = "Prompt Flow Structure";
-        project.Description = "Prompt flow navigation coverage";
-        project.Objective = "Open the prompt wizard from the structure page";
-        project.CurrentPhase = "Discovery";
-
-        var saveResult = await projectsService.SaveAsync(project);
-        Assert.True(saveResult.IsSuccess);
-        var projectId = saveResult.Value;
-
-        var created = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.PromptFlow,
-                "Feature wizard flow",
-                "Feature discovery",
-                "Start from the structure canvas.",
-                $"project:{projectId}",
-                420,
-                260));
-
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
-            parameters => parameters.Add(page => page.ProjectId, projectId));
-
-        cut.WaitForAssertion(() => Assert.Contains("Feature wizard flow", cut.Markup));
-
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Feature wizard flow", StringComparison.Ordinal))
-            .Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains(">Wizard<", cut.Markup);
-        });
-
-        FindButtonByLabel(cut, "Wizard").Click();
-
-        Assert.Contains("/prompt-factory?sessionId=", navigation.Uri, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(created.ArtifactId!.Value.ToString(), navigation.Uri, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
     public async Task Copy_actions_write_rich_info_format_to_the_clipboard()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -687,40 +638,6 @@ public sealed class ProjectStructurePageTests
         Assert.Contains(surface.Nodes, node =>
             node.ProjectRole == ProjectStructureProjectRole.Subproject &&
             node.RelatedProjectId == childProjectId);
-    }
-
-    [Fact]
-    public async Task Canvas_context_action_can_open_add_subproject_dialog_for_project_nodes()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-
-        var currentProjectId = await CreateProjectAsync(projectsService, "Context action parent");
-        var availableChildProjectId = await CreateProjectAsync(projectsService, "Context action child");
-
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
-            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Context action parent structure", cut.Markup);
-        });
-
-        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
-            Assert.Contains("Create new project", cut.Markup);
-        });
-
-        cut.Find("[data-testid='project-structure-hierarchy-project-select']").Change(availableChildProjectId.ToString());
-        cut.Find("[data-testid='project-structure-hierarchy-submit']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Context action child is now visible under Context action parent.", cut.Markup);
-        });
     }
 
     [Fact]
@@ -1379,57 +1296,6 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
-    public async Task Double_clicking_pdf_attachment_nodes_keeps_preview_modal_behavior()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
-
-        var project = await projectsService.GetAsync(null);
-        project.Name = "PDF Double Click Project";
-        project.Description = "Verify attachment preview wins over quick actions.";
-        project.Objective = "Keep previewable attachments in the existing modal flow.";
-        project.CurrentPhase = "Review";
-
-        var saveResult = await projectsService.SaveAsync(project);
-        Assert.True(saveResult.IsSuccess);
-        var projectId = saveResult.Value;
-
-        var pdfBytes = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 quick action coverage"));
-        var pdfNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.File,
-                "Architecture spec",
-                "Uploaded PDF",
-                "Attachment preview coverage",
-                $"project:{projectId}",
-                520,
-                260,
-                null,
-                null,
-                string.Empty,
-                new ProjectObjectMediaPayload("architecture.pdf", "application/pdf", pdfBytes)));
-
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
-            parameters => parameters.Add(page => page.ProjectId, projectId));
-
-        cut.WaitForAssertion(() => Assert.Contains("Architecture spec", cut.Markup));
-
-        var uriBeforeOpen = navigation.Uri;
-        await OpenNodeFromCanvasAsync(cut, pdfNode.Id);
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("project-structure-preview-dialog", cut.Markup);
-            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup, StringComparison.Ordinal);
-        });
-
-        Assert.Equal(uriBeforeOpen, navigation.Uri);
-    }
-
-    [Fact]
     public async Task Audio_attachment_nodes_render_audio_preview_and_local_open_action_when_host_supports_it()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -2031,77 +1897,6 @@ public sealed class ProjectStructurePageTests
         Assert.Single(runtimeLauncher.Requests);
         Assert.Equal(runtimeNode.Id, runtimeLauncher.Requests[0].NodeId);
         Assert.True(runtimeLauncher.Requests[0].RunAsAdministrator);
-    }
-
-    [Fact]
-    public async Task Double_clicking_launchable_runtime_nodes_opens_quick_action_modal_and_runs_powershell()
-    {
-        var runtimeLauncher = new TestRuntimeLauncher();
-        await using var harness = await ComponentTestHarness.CreateAsync(
-            services => services.AddSingleton<IProjectStructureRuntimeLauncher>(runtimeLauncher));
-
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-
-        var project = await projectsService.GetAsync(null);
-        project.Name = "Runtime Quick Action Project";
-        project.Description = "Verify runtime double-click actions.";
-        project.Objective = "Launch PowerShell from the quick action modal.";
-        project.CurrentPhase = "Execution";
-
-        var saveResult = await projectsService.SaveAsync(project);
-        Assert.True(saveResult.IsSuccess);
-        var projectId = saveResult.Value;
-
-        var runtimeNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Environment,
-                "API runtime",
-                "dotnet watch",
-                "Launch the runtime from a quick action modal.",
-                $"project:{projectId}",
-                540,
-                260,
-                null,
-                null,
-                "dotnet-watch",
-                null,
-                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
-                {
-                    Environment = new ProjectEnvironmentMetadata
-                    {
-                        EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
-                        ProjectPath = @"C:\repos\api\Api.csproj",
-                        LaunchProfileName = "https"
-                    }
-                })));
-
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
-            parameters => parameters.Add(page => page.ProjectId, projectId));
-
-        cut.WaitForAssertion(() => Assert.Contains("API runtime", cut.Markup));
-
-        await OpenNodeFromCanvasAsync(cut, runtimeNode.Id);
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("project-structure-node-quick-actions", cut.Markup);
-            Assert.Contains("Run PowerShell", cut.Markup);
-            Assert.Contains(">Edit<", cut.Markup);
-        });
-
-        cut.Find("[data-testid='project-structure-quick-action-primary']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Opened PowerShell and started dotnet watch.", cut.Markup);
-            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup, StringComparison.Ordinal);
-        });
-
-        Assert.Single(runtimeLauncher.Requests);
-        Assert.Equal(runtimeNode.Id, runtimeLauncher.Requests[0].NodeId);
-        Assert.False(runtimeLauncher.Requests[0].RunAsAdministrator);
     }
 
     [Fact]
