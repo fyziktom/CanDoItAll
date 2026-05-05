@@ -12,7 +12,7 @@ Expose project, process, launch-plan, and agent API groups that reuse existing s
 
 - N001 API access to projects, processes, and agents.
 - N002 Unify existing logic and avoid duplicated behavior.
-- N003 Development API access when MCP ports differ.
+- N003 API access when MCP ports differ.
 - N004 Map helpful project/process development controls.
 - N005 Process run detail, manager chat/direct message, and edit processes.
 - N006 Project-structure node process flow and HR resource matching.
@@ -36,9 +36,9 @@ Expose project, process, launch-plan, and agent API groups that reuse existing s
 
 ## Deliverables
 
-- `/api/dev/projects` group.
-- `/api/dev/processes` group with definitions, runs, filtered detail, runtime operations, templates, launch plans, HR matching, and direct messages.
-- `/api/dev/agents` group with catalog/editor/chat/execution history operations.
+- `/api/projects` group.
+- `/api/processes` group with definitions, runs, filtered detail, runtime operations, templates, launch plans, HR matching, and direct messages.
+- `/api/agents` group with catalog/editor/chat/execution history operations.
 - Shared HTTP result mapping for `Result` failures and deterministic errors.
 - Existing `/api/project-structure-mcp` remains active and covered by auth helper.
 
@@ -62,7 +62,7 @@ Expose project, process, launch-plan, and agent API groups that reuse existing s
 
 ## Scope Exceptions
 
-- Existing project-structure API is not duplicated under `/api/dev/projects`; it remains at `/api/project-structure-mcp` to preserve current clients.
+- Existing project-structure API is not duplicated under `/api/projects`; it remains at `/api/project-structure-mcp` to preserve current clients.
 
 ## Do Not Do
 

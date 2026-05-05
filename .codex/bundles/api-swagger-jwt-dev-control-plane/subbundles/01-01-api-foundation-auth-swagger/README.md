@@ -27,7 +27,7 @@ Add the API foundation: OpenAPI/Swagger metadata, optional JWT bearer authorizat
 
 ## Deliverables
 
-- `DevelopmentApiOptions` and validation.
+- `ApiOptions` and validation.
 - JWT bearer registration only when authorization is enabled.
 - Token issuer service for Settings UI.
 - OpenAPI mapping.
@@ -47,7 +47,7 @@ Add the API foundation: OpenAPI/Swagger metadata, optional JWT bearer authorizat
 2. Add options and token issuer types.
 3. Register services and middleware in `Program.cs` with correct auth ordering.
 4. Map OpenAPI metadata.
-5. Add default `DevelopmentApi` configuration with auth disabled.
+5. Add default `Api` configuration with auth disabled.
 
 ## Scope Exceptions
 

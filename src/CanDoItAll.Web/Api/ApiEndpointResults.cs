@@ -2,18 +2,18 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Web.Api;
 
-internal sealed record DevelopmentApiAck(bool Ok);
+internal sealed record ApiAck(bool Ok);
 
-internal sealed record DevelopmentApiErrorResponse(IReadOnlyList<DevelopmentApiErrorItem> Errors);
+internal sealed record ApiErrorResponse(IReadOnlyList<ApiErrorItem> Errors);
 
-internal sealed record DevelopmentApiErrorItem(string Code, string Message, ErrorSeverity Severity);
+internal sealed record ApiErrorItem(string Code, string Message, ErrorSeverity Severity);
 
-internal static class DevelopmentApiEndpointResults
+internal static class ApiEndpointResults
 {
     public static IResult FromResult(Result result)
     {
         return result.IsSuccess
-            ? Results.Ok(new DevelopmentApiAck(true))
+            ? Results.Ok(new ApiAck(true))
             : Results.BadRequest(MapErrors(result.Errors));
     }
 
@@ -36,14 +36,14 @@ internal static class DevelopmentApiEndpointResults
 
     public static IResult FromException(Exception exception)
     {
-        return Results.BadRequest(MapErrors([Error.Failure(exception.Message, "development-api.request-failed")]));
+        return Results.BadRequest(MapErrors([Error.Failure(exception.Message, "api.request-failed")]));
     }
 
-    private static DevelopmentApiErrorResponse MapErrors(IReadOnlyList<Error> errors)
+    private static ApiErrorResponse MapErrors(IReadOnlyList<Error> errors)
     {
-        return new DevelopmentApiErrorResponse(
+        return new ApiErrorResponse(
             errors
-                .Select(error => new DevelopmentApiErrorItem(error.Code, error.Message, error.Severity))
+                .Select(error => new ApiErrorItem(error.Code, error.Message, error.Severity))
                 .ToList());
     }
 }

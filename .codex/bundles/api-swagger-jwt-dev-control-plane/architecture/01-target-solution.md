@@ -4,13 +4,13 @@
 
 - Add `CanDoItAll.Web.Api` feature files under `C:\repositories\CanDoItAll\src\CanDoItAll.Web\Api`.
 - Register OpenAPI with the same framework package used by `CanDoItAll.Manager`.
-- Add `DevelopmentApiOptions` with `SectionName = "DevelopmentApi"` and nested JWT settings. Default `Enabled = true` for the API surface and `Authorization.Enabled = false`.
+- Add `ApiOptions` with `SectionName = "Api"` and nested JWT settings. Default `Enabled = true` for the API surface and `Authorization.Enabled = false`.
 - Add a token issuer service that signs JWTs only when authorization is enabled and the signing key passes validation.
 - Add a route-group helper that applies `.RequireAuthorization()` only when optional JWT is active.
 - Add typed route groups:
-  - `/api/dev/projects`
-  - `/api/dev/processes`
-  - `/api/dev/agents`
+  - `/api/projects`
+  - `/api/processes`
+  - `/api/agents`
   - existing `/api/project-structure-mcp`
 - Keep `ProjectStructureAgentApi` mapped and included in the auth/OpenAPI story.
 

@@ -4,19 +4,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
 
-internal static class DevelopmentProcessesApi
+internal static class ProcessesApi
 {
-    public static RouteGroupBuilder MapDevelopmentProcessesApi(this RouteGroupBuilder group)
+    public static RouteGroupBuilder MapProcessesApi(this RouteGroupBuilder group)
     {
         var processes = group.MapGroup("/processes")
-            .WithTags("Development Processes");
+            .WithTags("Processes");
 
         processes.MapGet("/definitions", async (
                 Guid? projectId,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.ListDefinitionsAsync(projectId, cancellationToken)))
-            .WithName("ListDevelopmentProcessDefinitions");
+            .WithName("ListProcessDefinitions");
 
         processes.MapGet("/definitions/{definitionId:guid}", async (
                 Guid definitionId,
@@ -24,14 +24,14 @@ internal static class DevelopmentProcessesApi
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.GetEditorAsync(definitionId, projectId, cancellationToken)))
-            .WithName("GetDevelopmentProcessDefinitionEditor");
+            .WithName("GetProcessDefinitionEditor");
 
         processes.MapPost("/definitions", async (
                 ProcessDefinitionEditorModel request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.SaveAsync(request, cancellationToken)))
-            .WithName("SaveDevelopmentProcessDefinition");
+            ApiEndpointResults.FromResult(await processesService.SaveAsync(request, cancellationToken)))
+            .WithName("SaveProcessDefinition");
 
         processes.MapPost("/definitions/{definitionId:guid}/publish", async (
                 Guid definitionId,
@@ -39,7 +39,7 @@ internal static class DevelopmentProcessesApi
                 Guid? draftVersionConcurrencyToken,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.PublishAsync(
+            ApiEndpointResults.FromResult(await processesService.PublishAsync(
                 new ProcessDefinitionPublishRequest
                 {
                     DefinitionId = definitionId,
@@ -47,7 +47,7 @@ internal static class DevelopmentProcessesApi
                     DraftVersionConcurrencyToken = draftVersionConcurrencyToken
                 },
                 cancellationToken)))
-            .WithName("PublishDevelopmentProcessDefinition");
+            .WithName("PublishProcessDefinition");
 
         processes.MapDelete("/definitions/{definitionId:guid}", async (
                 Guid definitionId,
@@ -55,23 +55,23 @@ internal static class DevelopmentProcessesApi
                 CancellationToken cancellationToken) =>
             {
                 await processesService.DeleteAsync(definitionId, cancellationToken);
-                return Results.Ok(new DevelopmentApiAck(true));
+                return Results.Ok(new ApiAck(true));
             })
-            .WithName("DeleteDevelopmentProcessDefinition");
+            .WithName("DeleteProcessDefinition");
 
         processes.MapGet("/definitions/{definitionId:guid}/export", async (
                 Guid definitionId,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.ExportAsync(definitionId, cancellationToken)))
-            .WithName("ExportDevelopmentProcessDefinition");
+            .WithName("ExportProcessDefinition");
 
         processes.MapPost("/definitions/import", async (
                 ProcessImportExportEnvelope request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.ImportAsync(request, cancellationToken)))
-            .WithName("ImportDevelopmentProcessDefinition");
+            ApiEndpointResults.FromResult(await processesService.ImportAsync(request, cancellationToken)))
+            .WithName("ImportProcessDefinition");
 
         processes.MapGet("/runs", async (
                 [AsParameters] ProcessRunListApiQuery query,
@@ -81,7 +81,7 @@ internal static class DevelopmentProcessesApi
                 var runs = await processesService.ListRunsAsync(query.DefinitionId, query.ProjectId, cancellationToken);
                 return Results.Ok(FilterRuns(runs, query));
             })
-            .WithName("ListDevelopmentProcessRuns");
+            .WithName("ListProcessRuns");
 
         processes.MapGet("/runs/{runId:guid}", async (
                 Guid runId,
@@ -93,13 +93,13 @@ internal static class DevelopmentProcessesApi
                 var run = await processesService.GetRunAsync(runId, cancellationToken);
                 if (run is null)
                 {
-                    return DevelopmentApiEndpointResults.NotFound("Process run was not found.", "processes.run-not-found");
+                    return ApiEndpointResults.NotFound("Process run was not found.", "processes.run-not-found");
                 }
 
                 var details = await runDetailsLoader.LoadAsync(runId, cancellationToken);
                 return Results.Ok(BuildFilteredRunDetail(run, details, query));
             })
-            .WithName("GetDevelopmentProcessRunDetail");
+            .WithName("GetProcessRunDetail");
 
         processes.MapGet("/runs/{runId:guid}/steps", async (
                 Guid runId,
@@ -107,7 +107,7 @@ internal static class DevelopmentProcessesApi
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(FilterStepRuns(await processesService.ListStepRunsAsync(runId, cancellationToken), query)))
-            .WithName("ListDevelopmentProcessRunSteps");
+            .WithName("ListProcessRunSteps");
 
         processes.MapGet("/runs/{runId:guid}/artifacts", async (
                 Guid runId,
@@ -115,7 +115,7 @@ internal static class DevelopmentProcessesApi
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(FilterArtifacts(await processesService.ListArtifactsAsync(runId, cancellationToken), query)))
-            .WithName("ListDevelopmentProcessRunArtifacts");
+            .WithName("ListProcessRunArtifacts");
 
         processes.MapGet("/runs/{runId:guid}/assignments", async (
                 Guid runId,
@@ -123,7 +123,66 @@ internal static class DevelopmentProcessesApi
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(FilterAssignments(await processesService.ListAssignmentsAsync(runId, cancellationToken), query)))
-            .WithName("ListDevelopmentProcessRunAssignments");
+            .WithName("ListProcessRunAssignments");
+
+        processes.MapGet("/runs/{runId:guid}/steps/{stepRunId:guid}", async (
+                Guid runId,
+                Guid stepRunId,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                var stepRun = await FindStepRunAsync(runId, stepRunId, processesService, cancellationToken);
+                return stepRun is null
+                    ? ApiEndpointResults.NotFound("Process step run was not found.", "processes.step-run-not-found")
+                    : Results.Ok(stepRun);
+            })
+            .WithName("GetProcessRunStep");
+
+        processes.MapGet("/runs/{runId:guid}/steps/{stepRunId:guid}/artifacts", async (
+                Guid runId,
+                Guid stepRunId,
+                [AsParameters] ProcessRunDetailApiQuery query,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                query.StepRunId = stepRunId;
+                return Results.Ok(FilterArtifacts(await processesService.ListArtifactsAsync(runId, cancellationToken), query));
+            })
+            .WithName("ListProcessRunStepArtifacts");
+
+        processes.MapGet("/runs/{runId:guid}/steps/{stepRunId:guid}/assignments", async (
+                Guid runId,
+                Guid stepRunId,
+                [AsParameters] ProcessRunDetailApiQuery query,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                var stepRun = await FindStepRunAsync(runId, stepRunId, processesService, cancellationToken);
+                if (stepRun is null)
+                {
+                    return ApiEndpointResults.NotFound("Process step run was not found.", "processes.step-run-not-found");
+                }
+
+                query.StepDefinitionId = stepRun.StepDefinitionId;
+                return Results.Ok(FilterAssignments(await processesService.ListAssignmentsAsync(runId, cancellationToken), query));
+            })
+            .WithName("ListProcessRunStepAssignments");
+
+        processes.MapGet("/runs/{runId:guid}/artifacts/{artifactId:guid}", async (
+                Guid runId,
+                Guid artifactId,
+                [AsParameters] ProcessRunDetailApiQuery query,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                query.ArtifactId = artifactId;
+                var artifact = FilterArtifacts(await processesService.ListArtifactsAsync(runId, cancellationToken), query)
+                    .SingleOrDefault();
+                return artifact is null
+                    ? ApiEndpointResults.NotFound("Process artifact was not found.", "processes.artifact-not-found")
+                    : Results.Ok(artifact);
+            })
+            .WithName("GetProcessRunArtifact");
 
         processes.MapGet("/analytics", async (
                 Guid? definitionId,
@@ -131,63 +190,200 @@ internal static class DevelopmentProcessesApi
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.GetAnalyticsAsync(definitionId, projectId, cancellationToken)))
-            .WithName("GetDevelopmentProcessAnalytics");
+            .WithName("GetProcessAnalytics");
 
         processes.MapPost("/runs/start", async (
                 ProcessRunStartRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.StartRunAsync(request, cancellationToken)))
-            .WithName("StartDevelopmentProcessRun");
+            ApiEndpointResults.FromResult(await processesService.StartRunAsync(request, cancellationToken)))
+            .WithName("StartProcessRun");
 
         processes.MapPost("/runs/stop", async (
                 ProcessRunStopRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.StopBlockedRunAsync(request, cancellationToken)))
-            .WithName("StopDevelopmentProcessRun");
+            ApiEndpointResults.FromResult(await processesService.StopBlockedRunAsync(request, cancellationToken)))
+            .WithName("StopProcessRun");
 
         processes.MapPost("/runs/manager-directives", async (
                 ProcessManagerDirectiveRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.RecordManagerDirectiveAsync(request, cancellationToken)))
-            .WithName("RecordDevelopmentProcessManagerDirective");
+            ApiEndpointResults.FromResult(await processesService.RecordManagerDirectiveAsync(request, cancellationToken)))
+            .WithName("RecordProcessManagerDirective");
+
+        processes.MapPost("/runs/{runId:guid}/manager-directives", async (
+                Guid runId,
+                ProcessManagerDirectiveApiRequest request,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            ApiEndpointResults.FromResult(await processesService.RecordManagerDirectiveAsync(
+                new ProcessManagerDirectiveRequest
+                {
+                    ProcessRunId = runId,
+                    Directive = request.Directive,
+                    InstructedBy = NormalizeActor(request.InstructedBy)
+                },
+                cancellationToken)))
+            .WithName("RecordProcessRunManagerDirective");
 
         processes.MapPost("/steps/transition", async (
                 ProcessStepTransitionRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.TransitionStepAsync(request, cancellationToken)))
-            .WithName("TransitionDevelopmentProcessStep");
+            ApiEndpointResults.FromResult(await processesService.TransitionStepAsync(request, cancellationToken)))
+            .WithName("TransitionProcessStep");
+
+        processes.MapPost("/runs/{runId:guid}/steps/{stepRunId:guid}/transition", async (
+                Guid runId,
+                Guid stepRunId,
+                ProcessStepTransitionApiRequest request,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                var stepRun = await FindStepRunAsync(runId, stepRunId, processesService, cancellationToken);
+                if (stepRun is null)
+                {
+                    return ApiEndpointResults.NotFound("Process step run was not found.", "processes.step-run-not-found");
+                }
+
+                return ApiEndpointResults.FromResult(await processesService.TransitionStepAsync(
+                    new ProcessStepTransitionRequest
+                    {
+                        StepRunId = stepRunId,
+                        StepRunConcurrencyToken = request.StepRunConcurrencyToken,
+                        TargetStatus = request.TargetStatus,
+                        Reason = request.Reason,
+                        SelectedBranchOutcomeId = request.SelectedBranchOutcomeId,
+                        DecidedBy = NormalizeActor(request.DecidedBy),
+                        SuppressAutomationDispatch = request.SuppressAutomationDispatch
+                    },
+                    cancellationToken));
+            })
+            .WithName("TransitionProcessRunStep");
 
         processes.MapPost("/steps/rerun-agent", async (
                 ProcessAgentStepRerunRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.RerunAgentStepAsync(request, cancellationToken)))
-            .WithName("RerunDevelopmentProcessAgentStep");
+            ApiEndpointResults.FromResult(await processesService.RerunAgentStepAsync(request, cancellationToken)))
+            .WithName("RerunProcessAgentStep");
+
+        processes.MapPost("/runs/{runId:guid}/steps/{stepRunId:guid}/rerun-agent", async (
+                Guid runId,
+                Guid stepRunId,
+                ProcessAgentStepRerunApiRequest request,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                var stepRun = await FindStepRunAsync(runId, stepRunId, processesService, cancellationToken);
+                if (stepRun is null)
+                {
+                    return ApiEndpointResults.NotFound("Process step run was not found.", "processes.step-run-not-found");
+                }
+
+                return ApiEndpointResults.FromResult(await processesService.RerunAgentStepAsync(
+                    new ProcessAgentStepRerunRequest
+                    {
+                        StepRunId = stepRunId,
+                        StepRunConcurrencyToken = request.StepRunConcurrencyToken,
+                        OperatorReason = request.OperatorReason
+                    },
+                    cancellationToken));
+            })
+            .WithName("RerunProcessRunAgentStep");
 
         processes.MapPost("/assignments/resolve", async (
                 ProcessAssignmentResolutionRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.ResolveAssignmentAsync(request, cancellationToken)))
-            .WithName("ResolveDevelopmentProcessAssignment");
+            ApiEndpointResults.FromResult(await processesService.ResolveAssignmentAsync(request, cancellationToken)))
+            .WithName("ResolveProcessAssignment");
+
+        processes.MapPost("/runs/{runId:guid}/assignments/resolve", async (
+                Guid runId,
+                ProcessAssignmentResolutionApiRequest request,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            ApiEndpointResults.FromResult(await processesService.ResolveAssignmentAsync(
+                new ProcessAssignmentResolutionRequest
+                {
+                    ProcessRunId = runId,
+                    RoleRequirementId = request.RoleRequirementId,
+                    StepDefinitionId = request.StepDefinitionId,
+                    PartyId = request.PartyId,
+                    DisplayName = request.DisplayName,
+                    ExecutorKind = request.ExecutorKind,
+                    BindingReason = request.BindingReason,
+                    IsFallback = request.IsFallback,
+                    AllowsDirectMessaging = request.AllowsDirectMessaging
+                },
+                cancellationToken)))
+            .WithName("ResolveProcessRunAssignment");
 
         processes.MapPost("/artifacts", async (
                 ProcessArtifactRecordRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.RecordArtifactAsync(request, cancellationToken)))
-            .WithName("RecordDevelopmentProcessArtifact");
+            ApiEndpointResults.FromResult(await processesService.RecordArtifactAsync(request, cancellationToken)))
+            .WithName("RecordProcessArtifact");
+
+        processes.MapPost("/runs/{runId:guid}/steps/{stepRunId:guid}/artifacts", async (
+                Guid runId,
+                Guid stepRunId,
+                ProcessArtifactRecordApiRequest request,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            {
+                var stepRun = await FindStepRunAsync(runId, stepRunId, processesService, cancellationToken);
+                if (stepRun is null)
+                {
+                    return ApiEndpointResults.NotFound("Process step run was not found.", "processes.step-run-not-found");
+                }
+
+                return ApiEndpointResults.FromResult(await processesService.RecordArtifactAsync(
+                    new ProcessArtifactRecordRequest
+                    {
+                        ProcessRunId = runId,
+                        StepRunId = stepRunId,
+                        ArtifactExpectationId = request.ArtifactExpectationId,
+                        ArtifactKind = request.ArtifactKind,
+                        Title = request.Title,
+                        TrustStatus = request.TrustStatus,
+                        SensitivityLevel = request.SensitivityLevel,
+                        ProvenanceSummary = request.ProvenanceSummary,
+                        AllowedFutureUsageSummary = request.AllowedFutureUsageSummary,
+                        ReviewSummary = request.ReviewSummary,
+                        ManagedStoragePath = request.ManagedStoragePath,
+                        ExternalReferenceKey = request.ExternalReferenceKey
+                    },
+                    cancellationToken));
+            })
+            .WithName("RecordProcessRunStepArtifact");
 
         processes.MapPost("/direct-messages", async (
                 ProcessDirectMessageRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.SendDirectMessageAsync(request, cancellationToken)))
-            .WithName("SendDevelopmentProcessDirectMessage");
+            ApiEndpointResults.FromResult(await processesService.SendDirectMessageAsync(request, cancellationToken)))
+            .WithName("SendProcessDirectMessage");
+
+        processes.MapPost("/runs/{runId:guid}/direct-messages", async (
+                Guid runId,
+                ProcessDirectMessageApiRequest request,
+                ProcessesService processesService,
+                CancellationToken cancellationToken) =>
+            ApiEndpointResults.FromResult(await processesService.SendDirectMessageAsync(
+                new ProcessDirectMessageRequest
+                {
+                    ProcessRunId = runId,
+                    SourceRoleRequirementId = request.SourceRoleRequirementId,
+                    TargetRoleRequirementId = request.TargetRoleRequirementId,
+                    MessageBody = request.MessageBody
+                },
+                cancellationToken)))
+            .WithName("SendProcessRunDirectMessage");
 
         MapLaunchPlanEndpoints(processes);
         MapTemplateEndpoints(processes);
@@ -219,7 +415,7 @@ internal static class DevelopmentProcessesApi
                     .Take(NormalizeTake(take))
                     .ToList());
             })
-            .WithName("ListDevelopmentProcessLaunchPlans");
+            .WithName("ListProcessLaunchPlans");
 
         processes.MapGet("/launch-plans/{launchPlanId:guid}", async (
                 Guid launchPlanId,
@@ -228,71 +424,71 @@ internal static class DevelopmentProcessesApi
         {
             var launchPlan = await processesService.GetLaunchPlanAsync(launchPlanId, cancellationToken);
             return launchPlan is null
-                ? DevelopmentApiEndpointResults.NotFound("Launch plan was not found.", "processes.launch.not-found")
+                ? ApiEndpointResults.NotFound("Launch plan was not found.", "processes.launch.not-found")
                 : Results.Ok(launchPlan);
         })
-        .WithName("GetDevelopmentProcessLaunchPlan");
+        .WithName("GetProcessLaunchPlan");
 
         processes.MapPost("/launch-plans", async (
                 ProcessLaunchCreateRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.CreateLaunchPlanAsync(request, cancellationToken)))
-            .WithName("CreateDevelopmentProcessLaunchPlan");
+            ApiEndpointResults.FromResult(await processesService.CreateLaunchPlanAsync(request, cancellationToken)))
+            .WithName("CreateProcessLaunchPlan");
 
         processes.MapPost("/launch-plans/{launchPlanId:guid}/hr-match", async (
                 Guid launchPlanId,
                 string? requestedBy,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.MatchLaunchPlanWithHrManagerAsync(
+            ApiEndpointResults.FromResult(await processesService.MatchLaunchPlanWithHrManagerAsync(
                 launchPlanId,
                 NormalizeActor(requestedBy),
                 cancellationToken)))
-            .WithName("MatchDevelopmentProcessLaunchPlanWithHr");
+            .WithName("MatchProcessLaunchPlanWithHr");
 
         processes.MapPost("/launch-plans/{launchPlanId:guid}/submit-approval", async (
                 Guid launchPlanId,
                 string? requestedBy,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.SubmitLaunchPlanForApprovalAsync(
+            ApiEndpointResults.FromResult(await processesService.SubmitLaunchPlanForApprovalAsync(
                 launchPlanId,
                 NormalizeActor(requestedBy),
                 cancellationToken)))
-            .WithName("SubmitDevelopmentProcessLaunchPlanApproval");
+            .WithName("SubmitProcessLaunchPlanApproval");
 
         processes.MapPost("/launch-plans/approval-decisions", async (
                 ProcessLaunchApprovalDecisionRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.DecideLaunchPlanApprovalAsync(request, cancellationToken)))
-            .WithName("DecideDevelopmentProcessLaunchPlanApproval");
+            ApiEndpointResults.FromResult(await processesService.DecideLaunchPlanApprovalAsync(request, cancellationToken)))
+            .WithName("DecideProcessLaunchPlanApproval");
 
         processes.MapPost("/launch-plans/{launchPlanId:guid}/provision", async (
                 Guid launchPlanId,
                 string? requestedBy,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.ProvisionLaunchPlanAsync(
+            ApiEndpointResults.FromResult(await processesService.ProvisionLaunchPlanAsync(
                 launchPlanId,
                 NormalizeActor(requestedBy),
                 cancellationToken)))
-            .WithName("ProvisionDevelopmentProcessLaunchPlan");
+            .WithName("ProvisionProcessLaunchPlan");
 
         processes.MapPost("/launch-plans/execute", async (
                 ProcessLaunchExecutionRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.ExecuteLaunchPlanAsync(request, cancellationToken)))
-            .WithName("ExecuteDevelopmentProcessLaunchPlan");
+            ApiEndpointResults.FromResult(await processesService.ExecuteLaunchPlanAsync(request, cancellationToken)))
+            .WithName("ExecuteProcessLaunchPlan");
 
         processes.MapPost("/launch-plans/candidate-selections", async (
                 ProcessLaunchCandidateSelectionRequest request,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
-            DevelopmentApiEndpointResults.FromResult(await processesService.SelectLaunchCandidateAsync(request, cancellationToken)))
-            .WithName("SelectDevelopmentProcessLaunchCandidate");
+            ApiEndpointResults.FromResult(await processesService.SelectLaunchCandidateAsync(request, cancellationToken)))
+            .WithName("SelectProcessLaunchCandidate");
     }
 
     private static void MapTemplateEndpoints(RouteGroupBuilder processes)
@@ -300,7 +496,7 @@ internal static class DevelopmentProcessesApi
         processes.MapGet("/templates", (
                 ProcessTemplateCatalogService catalogService) =>
             Results.Ok(catalogService.ListProcessTemplates()))
-            .WithName("ListDevelopmentProcessTemplates");
+            .WithName("ListProcessTemplates");
 
         processes.MapGet("/templates/{processKey}", (
                 string processKey,
@@ -309,9 +505,9 @@ internal static class DevelopmentProcessesApi
             var pack = packLoader.Load();
             return pack.Processes.TryGetValue(processKey, out var template)
                 ? Results.Ok(template)
-                : DevelopmentApiEndpointResults.NotFound($"Process template '{processKey}' was not found.", "processes.template-not-found");
+                : ApiEndpointResults.NotFound($"Process template '{processKey}' was not found.", "processes.template-not-found");
         })
-        .WithName("GetDevelopmentProcessTemplate");
+        .WithName("GetProcessTemplate");
 
         processes.MapGet("/templates/{processKey}/envelope", (
                 string processKey,
@@ -325,10 +521,10 @@ internal static class DevelopmentProcessesApi
             }
             catch (InvalidOperationException exception)
             {
-                return DevelopmentApiEndpointResults.BadRequest(exception.Message, "processes.template-projection-failed");
+                return ApiEndpointResults.BadRequest(exception.Message, "processes.template-projection-failed");
             }
         })
-        .WithName("ProjectDevelopmentProcessTemplateEnvelope");
+        .WithName("ProjectProcessTemplateEnvelope");
 
         processes.MapGet("/templates/{processKey}/mermaid", (
                 string processKey,
@@ -340,10 +536,10 @@ internal static class DevelopmentProcessesApi
             }
             catch (InvalidOperationException exception)
             {
-                return DevelopmentApiEndpointResults.BadRequest(exception.Message, "processes.template-mermaid-failed");
+                return ApiEndpointResults.BadRequest(exception.Message, "processes.template-mermaid-failed");
             }
         })
-        .WithName("ExportDevelopmentProcessTemplateMermaid");
+        .WithName("ExportProcessTemplateMermaid");
 
         processes.MapPost("/templates/{processKey}/import", async (
                 string processKey,
@@ -358,14 +554,14 @@ internal static class DevelopmentProcessesApi
                     processKey,
                     request.ProjectId,
                     request.DefinitionName);
-                return DevelopmentApiEndpointResults.FromResult(await processesService.ImportAsync(envelope, cancellationToken));
+                return ApiEndpointResults.FromResult(await processesService.ImportAsync(envelope, cancellationToken));
             }
             catch (InvalidOperationException exception)
             {
-                return DevelopmentApiEndpointResults.BadRequest(exception.Message, "processes.template-import-failed");
+                return ApiEndpointResults.BadRequest(exception.Message, "processes.template-import-failed");
             }
         })
-        .WithName("ImportDevelopmentProcessTemplate");
+        .WithName("ImportProcessTemplate");
     }
 
     private static void MapRegistryEndpoints(RouteGroupBuilder processes)
@@ -374,20 +570,20 @@ internal static class DevelopmentProcessesApi
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.ListExecutorOptionsAsync(cancellationToken)))
-            .WithName("ListDevelopmentProcessExecutorOptions");
+            .WithName("ListProcessExecutorOptions");
 
         processes.MapGet("/manager-agent-options", async (
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.ListManagerAgentOptionsAsync(cancellationToken)))
-            .WithName("ListDevelopmentProcessManagerAgentOptions");
+            .WithName("ListProcessManagerAgentOptions");
 
         processes.MapGet("/party-options/{projectId:guid}", async (
                 Guid projectId,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await processesService.ListPartyOptionsAsync(projectId, cancellationToken)))
-            .WithName("ListDevelopmentProcessPartyOptions");
+            .WithName("ListProcessPartyOptions");
     }
 
     private static IReadOnlyList<ProcessRunListItem> FilterRuns(
@@ -417,12 +613,12 @@ internal static class DevelopmentProcessesApi
             .ToList();
     }
 
-    private static DevelopmentProcessRunDetail BuildFilteredRunDetail(
+    private static ProcessRunDetail BuildFilteredRunDetail(
         ProcessRunListItem run,
         ProcessWorkspaceRunDetails details,
         ProcessRunDetailApiQuery query)
     {
-        return new DevelopmentProcessRunDetail(
+        return new ProcessRunDetail(
             run,
             FilterStepRuns(details.StepRuns, query),
             ShouldInclude(query.IncludeDecisions) ? details.Decisions : [],
@@ -437,6 +633,17 @@ internal static class DevelopmentProcessesApi
             ShouldInclude(query.IncludeOperatorApprovals) ? details.OperatorApprovals : [],
             ShouldInclude(query.IncludeAttemptTimeline) ? details.AttemptTimeline : [],
             details.Health);
+    }
+
+    private static async Task<ProcessStepRunViewModel?> FindStepRunAsync(
+        Guid runId,
+        Guid stepRunId,
+        ProcessesService processesService,
+        CancellationToken cancellationToken)
+    {
+        var query = new ProcessRunDetailApiQuery { StepRunId = stepRunId };
+        return FilterStepRuns(await processesService.ListStepRunsAsync(runId, cancellationToken), query)
+            .SingleOrDefault();
     }
 
     private static IReadOnlyList<ProcessStepRunViewModel> FilterStepRuns(
@@ -685,7 +892,7 @@ internal static class DevelopmentProcessesApi
     private static string NormalizeActor(string? requestedBy)
     {
         return string.IsNullOrWhiteSpace(requestedBy)
-            ? "development-api"
+            ? "api"
             : requestedBy.Trim();
     }
 }
@@ -754,7 +961,7 @@ internal sealed class ProcessRunDetailApiQuery
     public bool? IncludeAttemptTimeline { get; set; } = true;
 }
 
-internal sealed record DevelopmentProcessRunDetail(
+internal sealed record ProcessRunDetail(
     ProcessRunListItem Run,
     IReadOnlyList<ProcessStepRunViewModel> StepRuns,
     IReadOnlyList<ProcessDecisionViewModel> Decisions,
@@ -773,3 +980,76 @@ internal sealed record DevelopmentProcessRunDetail(
 internal sealed record ProcessTemplateImportApiRequest(
     Guid? ProjectId,
     string? DefinitionName);
+
+internal sealed record ProcessManagerDirectiveApiRequest(
+    string Directive,
+    string? InstructedBy);
+
+internal sealed record ProcessDirectMessageApiRequest(
+    Guid SourceRoleRequirementId,
+    Guid TargetRoleRequirementId,
+    string MessageBody);
+
+internal sealed class ProcessStepTransitionApiRequest
+{
+    public Guid? StepRunConcurrencyToken { get; set; }
+
+    public ProcessStepRunStatus TargetStatus { get; set; } = ProcessStepRunStatus.InProgress;
+
+    public string Reason { get; set; } = string.Empty;
+
+    public Guid? SelectedBranchOutcomeId { get; set; }
+
+    public string? DecidedBy { get; set; }
+
+    public bool SuppressAutomationDispatch { get; set; }
+}
+
+internal sealed class ProcessAgentStepRerunApiRequest
+{
+    public Guid? StepRunConcurrencyToken { get; set; }
+
+    public string OperatorReason { get; set; } = string.Empty;
+}
+
+internal sealed class ProcessAssignmentResolutionApiRequest
+{
+    public Guid RoleRequirementId { get; set; }
+
+    public Guid? StepDefinitionId { get; set; }
+
+    public Guid? PartyId { get; set; }
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public string BindingReason { get; set; } = string.Empty;
+
+    public bool IsFallback { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; } = true;
+}
+
+internal sealed class ProcessArtifactRecordApiRequest
+{
+    public Guid? ArtifactExpectationId { get; set; }
+
+    public ProcessArtifactKind ArtifactKind { get; set; } = ProcessArtifactKind.Evidence;
+
+    public string Title { get; set; } = string.Empty;
+
+    public ProcessArtifactTrustStatus TrustStatus { get; set; } = ProcessArtifactTrustStatus.ReviewRequired;
+
+    public ProcessSensitivityLevel SensitivityLevel { get; set; } = ProcessSensitivityLevel.Internal;
+
+    public string ProvenanceSummary { get; set; } = string.Empty;
+
+    public string AllowedFutureUsageSummary { get; set; } = string.Empty;
+
+    public string ReviewSummary { get; set; } = string.Empty;
+
+    public string ManagedStoragePath { get; set; } = string.Empty;
+
+    public string ExternalReferenceKey { get; set; } = string.Empty;
+}

@@ -19,16 +19,16 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class DevelopmentApiIntegrationTests
+public sealed class ApiIntegrationTests
 {
     [Fact]
-    public async Task DevelopmentApi_allows_project_access_without_bearer_token_when_jwt_is_disabled()
+    public async Task Api_allows_project_access_without_bearer_token_when_jwt_is_disabled()
     {
-        await using var host = await DevelopmentApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
 
-        var projectResponse = await host.Client.GetAsync("/api/dev/projects");
+        var projectResponse = await host.Client.GetAsync("/api/projects");
         var openApiResponse = await host.Client.GetAsync("/openapi/v1.json");
-        var agentExecutionRunsResponse = await host.Client.GetAsync("/api/dev/agents/execution-runs");
+        var agentExecutionRunsResponse = await host.Client.GetAsync("/api/agents/execution-runs");
 
         Assert.Equal(HttpStatusCode.OK, projectResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, openApiResponse.StatusCode);
@@ -36,29 +36,29 @@ public sealed class DevelopmentApiIntegrationTests
     }
 
     [Fact]
-    public async Task DevelopmentApi_requires_bearer_token_when_jwt_is_enabled()
+    public async Task Api_requires_bearer_token_when_jwt_is_enabled()
     {
-        await using var host = await DevelopmentApiTestHost.CreateAsync(jwtEnabled: true);
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true);
 
-        var unauthorizedResponse = await host.Client.GetAsync("/api/dev/projects");
-        var statusResponse = await host.Client.GetAsync("/api/dev/access/status");
+        var unauthorizedResponse = await host.Client.GetAsync("/api/projects");
+        var statusResponse = await host.Client.GetAsync("/api/access/status");
 
         Assert.Equal(HttpStatusCode.Unauthorized, unauthorizedResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
 
-        var tokenService = host.App.Services.GetRequiredService<IDevelopmentApiTokenService>();
-        var token = tokenService.IssueToken(new DevelopmentApiTokenIssueRequest
+        var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
+        var token = tokenService.IssueToken(new ApiTokenIssueRequest
         {
             Subject = "integration-test",
             DisplayName = "Integration test",
             LifetimeMinutes = 30,
-            Scopes = ["development-api"]
+            Scopes = ["api"]
         });
 
         using var authorizedClient = host.CreateClient();
         authorizedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
 
-        var authorizedResponse = await authorizedClient.GetAsync("/api/dev/projects");
+        var authorizedResponse = await authorizedClient.GetAsync("/api/projects");
         var authorizedOpenApiResponse = await authorizedClient.GetAsync("/swagger/v1/swagger.json");
 
         Assert.Equal(HttpStatusCode.OK, authorizedResponse.StatusCode);
@@ -66,11 +66,12 @@ public sealed class DevelopmentApiIntegrationTests
     }
 
     [Fact]
-    public async Task DevelopmentApi_filters_process_run_artifacts_by_artifact_id()
+    public async Task Api_filters_process_run_artifacts_by_artifact_id()
     {
-        await using var host = await DevelopmentApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
 
         Guid seededRunId;
+        Guid seededStepRunId;
         ProcessArtifactViewModel expectedArtifact;
         await using (var scope = host.App.Services.CreateAsyncScope())
         {
@@ -84,7 +85,7 @@ public sealed class DevelopmentApiIntegrationTests
             var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
             {
                 ProcessDefinitionId = definitionResult.Value,
-                RunName = "Development API filtering run",
+                RunName = "API filtering run",
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
                 TriggerReason = "Integration test"
             });
@@ -92,6 +93,7 @@ public sealed class DevelopmentApiIntegrationTests
             seededRunId = runResult.Value;
 
             var stepRun = Assert.Single(await processesService.ListStepRunsAsync(seededRunId));
+            seededStepRunId = stepRun.Id;
             var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
             {
                 ProcessRunId = seededRunId,
@@ -100,7 +102,7 @@ public sealed class DevelopmentApiIntegrationTests
                 Title = "Focused API artifact",
                 TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
                 SensitivityLevel = ProcessSensitivityLevel.Internal,
-                ProvenanceSummary = "Created by DevelopmentApiIntegrationTests.",
+                ProvenanceSummary = "Created by ApiIntegrationTests.",
                 AllowedFutureUsageSummary = "Regression validation."
             });
             Assert.True(artifactResult.IsSuccess, string.Join(" | ", artifactResult.Errors.Select(error => error.Message)));
@@ -109,7 +111,7 @@ public sealed class DevelopmentApiIntegrationTests
         }
 
         var response = await host.Client.GetAsync(
-            $"/api/dev/processes/runs/{seededRunId:D}?artifactId={expectedArtifact.Id:D}&includeWorkBriefs=false&includeExecutionRuns=false&includeDirectMessages=false");
+            $"/api/processes/runs/{seededRunId:D}?artifactId={expectedArtifact.Id:D}&includeWorkBriefs=false&includeExecutionRuns=false&includeDirectMessages=false");
 
         var responseBody = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, responseBody);
@@ -120,6 +122,39 @@ public sealed class DevelopmentApiIntegrationTests
         Assert.Single(artifacts);
         Assert.Equal(expectedArtifact.Id, artifacts[0].GetProperty("id").GetGuid());
         Assert.Empty(workBriefs);
+
+        var stepArtifactsResponse = await host.Client.GetAsync(
+            $"/api/processes/runs/{seededRunId:D}/steps/{seededStepRunId:D}/artifacts?artifactId={expectedArtifact.Id:D}");
+        var stepArtifactsBody = await stepArtifactsResponse.Content.ReadAsStringAsync();
+        Assert.True(stepArtifactsResponse.IsSuccessStatusCode, stepArtifactsBody);
+        using var stepArtifactsPayload = JsonDocument.Parse(stepArtifactsBody);
+        var stepArtifacts = stepArtifactsPayload.RootElement.EnumerateArray().ToList();
+        Assert.Single(stepArtifacts);
+        Assert.Equal(expectedArtifact.Id, stepArtifacts[0].GetProperty("id").GetGuid());
+
+        var artifactResponse = await host.Client.GetAsync(
+            $"/api/processes/runs/{seededRunId:D}/artifacts/{expectedArtifact.Id:D}");
+        var artifactBody = await artifactResponse.Content.ReadAsStringAsync();
+        Assert.True(artifactResponse.IsSuccessStatusCode, artifactBody);
+        using var artifactPayload = JsonDocument.Parse(artifactBody);
+        Assert.Equal(expectedArtifact.Id, artifactPayload.RootElement.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task Api_openapi_exposes_focused_control_plane_routes()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        using var payload = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
+        var paths = payload.RootElement.GetProperty("paths");
+
+        Assert.True(paths.TryGetProperty("/api/project-structure-mcp/projects/{projectId}/nodes/{nodeId}/type", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure-mcp/projects/{projectId}/nodes/{nodeId}/process/start", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure-mcp/projects/{projectId}/assets/{nodeId}/content", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/steps/{stepRunId}/artifacts", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/manager-directives", out _));
+        Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
+        Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/log", out _));
     }
 
     private static ProcessDefinitionEditorModel BuildFilterTestDefinition()
@@ -128,10 +163,10 @@ public sealed class DevelopmentApiIntegrationTests
         var stepId = Guid.NewGuid();
         return new ProcessDefinitionEditorModel
         {
-            Name = "Development API filter definition",
+            Name = "API filter definition",
             Summary = "Small definition for API filtering validation.",
             ValueStatement = "Expose focused process run evidence without loading unrelated slices.",
-            CustomerName = "Development",
+            CustomerName = "Engineering",
             OwnerName = "Integration tests",
             GovernancePolicySummary = "Generated only for local test coverage.",
             ChangeSummary = "Initial test definition.",
@@ -148,7 +183,7 @@ public sealed class DevelopmentApiIntegrationTests
                     Purpose = "Own the focused API filtering test.",
                     StaffingIntent = "A deterministic local role for process runtime validation.",
                     PreferredExecutorKind = "person",
-                    SnapshotSummary = "Development API integration test role."
+                    SnapshotSummary = "API integration test role."
                 }
             ],
             Steps =
@@ -190,9 +225,9 @@ public sealed class DevelopmentApiIntegrationTests
     }
 }
 
-internal sealed class DevelopmentApiTestHost : IAsyncDisposable
+internal sealed class ApiTestHost : IAsyncDisposable
 {
-    private DevelopmentApiTestHost(
+    private ApiTestHost(
         CanDoItAllTestEnvironment testEnvironment,
         TestDatabaseProfile activeProfile,
         WebApplication app,
@@ -215,22 +250,22 @@ internal sealed class DevelopmentApiTestHost : IAsyncDisposable
 
     public HttpClient Client { get; }
 
-    public static async Task<DevelopmentApiTestHost> CreateAsync(bool jwtEnabled)
+    public static async Task<ApiTestHost> CreateAsync(bool jwtEnabled)
     {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-development-api-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("development-api-host");
+        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
+        var activeProfile = testEnvironment.CreateManagedSqliteProfile("api-host");
         var configurationOverrides = new Dictionary<string, string?>
         {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
             [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind,
-            ["DevelopmentApi:Enabled"] = "true",
-            ["DevelopmentApi:OpenApiEnabled"] = "true",
-            ["DevelopmentApi:Authorization:Enabled"] = jwtEnabled.ToString(),
-            ["DevelopmentApi:Authorization:Issuer"] = "CanDoItAll.DevelopmentApi.Tests",
-            ["DevelopmentApi:Authorization:Audience"] = "CanDoItAll.DevelopmentApi.Tests",
-            ["DevelopmentApi:Authorization:SigningKey"] = "development-api-test-signing-key-32-bytes-minimum",
-            ["DevelopmentApi:Authorization:DefaultTokenLifetimeMinutes"] = "30",
-            ["DevelopmentApi:Authorization:MaxTokenLifetimeMinutes"] = "120"
+            ["Api:Enabled"] = "true",
+            ["Api:OpenApiEnabled"] = "true",
+            ["Api:Authorization:Enabled"] = jwtEnabled.ToString(),
+            ["Api:Authorization:Issuer"] = "CanDoItAll.Api.Tests",
+            ["Api:Authorization:Audience"] = "CanDoItAll.Api.Tests",
+            ["Api:Authorization:SigningKey"] = "api-test-signing-key-32-bytes-minimum",
+            ["Api:Authorization:DefaultTokenLifetimeMinutes"] = "30",
+            ["Api:Authorization:MaxTokenLifetimeMinutes"] = "120"
         };
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -246,12 +281,12 @@ internal sealed class DevelopmentApiTestHost : IAsyncDisposable
             builder.Configuration,
             builder.Environment,
             registerTestHostApplicationLifetime: false);
-        builder.Services.AddCanDoItAllDevelopmentApi(builder.Configuration);
+        builder.Services.AddCanDoItAllApi(builder.Configuration);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
 
-        var options = app.Services.GetRequiredService<IOptions<DevelopmentApiAccessOptions>>().Value;
+        var options = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
         if (options.Authorization.Enabled)
         {
             app.UseAuthentication();
@@ -270,13 +305,13 @@ internal sealed class DevelopmentApiTestHost : IAsyncDisposable
         }
 
         app.MapProjectStructureAgentApi();
-        app.MapCanDoItAllDevelopmentApi();
+        app.MapCanDoItAllApi();
 
         await TestApplicationBootstrap.InitializeSchemaAsync(app.Services, TestSchemaBootstrapModules.Full);
         await app.StartAsync();
 
         var client = CreateClient(app);
-        return new DevelopmentApiTestHost(testEnvironment, activeProfile, app, client);
+        return new ApiTestHost(testEnvironment, activeProfile, app, client);
     }
 
     public HttpClient CreateClient()
@@ -296,7 +331,7 @@ internal sealed class DevelopmentApiTestHost : IAsyncDisposable
     {
         var server = app.Services.GetRequiredService<IServer>();
         var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses
-            ?? throw new InvalidOperationException("The development API test host did not expose any server addresses.");
+            ?? throw new InvalidOperationException("The API test host did not expose any server addresses.");
         return new HttpClient
         {
             BaseAddress = new Uri(addresses.Single()),

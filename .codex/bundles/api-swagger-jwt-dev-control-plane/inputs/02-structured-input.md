@@ -2,7 +2,7 @@
 
 ## Core Objective
 
-- Expose a stable HTTP development API for projects, project structure, processes, launch plans, and agents.
+- Expose a stable HTTP API for projects, project structure, processes, launch plans, and agents.
 
 ## Hard Constraints
 

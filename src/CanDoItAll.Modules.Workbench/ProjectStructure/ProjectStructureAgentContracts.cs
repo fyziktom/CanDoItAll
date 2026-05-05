@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using System.Text.Json.Serialization;
 
@@ -214,8 +215,17 @@ public sealed record ProjectStructureStatusBatchInput(
     string Status,
     string? LeaseToken = null);
 
+public sealed record ProjectStructureStatusInput(
+    string Status,
+    string? LeaseToken = null);
+
 public sealed record ProjectStructureProgressBatchInput(
     IReadOnlyList<string> NodeIds,
+    string ProgressMode,
+    int ProgressPercent,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureProgressInput(
     string ProgressMode,
     int ProgressPercent,
     string? LeaseToken = null);
@@ -227,9 +237,34 @@ public sealed record ProjectStructureMarkerBatchInput(
     string MarkerLabel,
     string? LeaseToken = null);
 
+public enum ProjectStructureMarkerMutationMode
+{
+    Replace,
+    Add,
+    Toggle,
+    Remove,
+    Clear
+}
+
+public sealed record ProjectStructureMarkerInput(
+    ProjectStructureMarkerMutationMode Mode = ProjectStructureMarkerMutationMode.Replace,
+    string MarkerIcon = "",
+    string MarkerTone = "",
+    string MarkerLabel = "",
+    string? LeaseToken = null);
+
 public sealed record ProjectStructurePriorityBatchInput(
     IReadOnlyList<string> NodeIds,
     int Priority,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructurePriorityInput(
+    int Priority,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureNodeTypeInput(
+    ProjectObjectType ObjectType,
+    string? ObjectSubtype = null,
     string? LeaseToken = null);
 
 public sealed record ProjectStructureNodeMoveInput(
@@ -247,7 +282,44 @@ public sealed record ProjectStructureNodeReparentInput(
     string? ParentNodeKey,
     string? LeaseToken = null);
 
+public sealed record ProjectStructureNodeParentInput(
+    string? ParentNodeKey,
+    string? LeaseToken = null);
+
 public sealed record ProjectStructureNodeDeleteInput(
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureLinkInput(
+    string SourceNodeId,
+    string TargetNodeId,
+    ProjectObjectLinkKind Kind = ProjectObjectLinkKind.DependsOn,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureLinkChangeResult(
+    bool Changed,
+    ProjectStructureLinkSummary Link);
+
+public sealed record ProjectStructureProcessDefinitionLinkInput(
+    Guid ProcessDefinitionId,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureNodeCommandInput(
+    ProjectStructureCommandKind CommandKind,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureSubtreeTransferInput(
+    Guid TargetProjectId,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureAssetCreateInput(
+    ProjectObjectType ObjectType,
+    string Title,
+    string Subtitle,
+    string Notes,
+    ProjectObjectMediaPayload Media,
+    string? ParentNodeKey = null,
+    string? ObjectSubtype = null,
+    string? MetadataJson = null,
     string? LeaseToken = null);
 
 public sealed record ProjectStructureApprovalRequestCreateInput(
@@ -274,6 +346,11 @@ public sealed record ProjectStructureAssetDescriptor(
     string MetadataJson,
     bool IsReadonly,
     string RevisionParentNodeId);
+
+public sealed record ProjectStructureAssetContentDescriptor(
+    ProjectStructureAssetDescriptor Asset,
+    long ContentLength,
+    string Base64Data);
 
 public sealed record ProjectStructureAssetRevisionRequest(
     string Title,
@@ -360,6 +437,25 @@ public sealed record ProjectStructureDependencyResponse(
     string ProjectName,
     int DefaultDurationSeconds,
     IReadOnlyList<ProjectStructureDependencyItem> Items,
+    IReadOnlyList<string> Warnings);
+
+public sealed record ProjectStructureProcessNodeStartInput(
+    Guid? ProcessDefinitionId = null,
+    bool RunHrMatch = true,
+    bool Execute = false,
+    bool IncludeLaunchPlan = false,
+    string RequestedBy = "project-structure-api",
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureProcessNodeStartResult(
+    Guid ProjectId,
+    string NodeId,
+    Guid ProcessDefinitionId,
+    Guid LaunchPlanId,
+    Guid? RunId,
+    string Stage,
+    string Route,
+    ProcessLaunchPlanDetails? LaunchPlan,
     IReadOnlyList<string> Warnings);
 
 public enum ProjectStructureImportSourceKind

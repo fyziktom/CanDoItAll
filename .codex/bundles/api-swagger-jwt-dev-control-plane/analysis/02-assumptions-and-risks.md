@@ -2,7 +2,7 @@
 
 ## Assumptions
 
-- The development API belongs in the web host because it must track whichever port the web app is started under.
+- The API belongs in the web host because it must track whichever port the web app is started under.
 - Existing services are thread-safe at their public boundary because they create their own EF contexts or are scoped appropriately.
 - The first token UI can issue self-contained JWTs without database-backed token revocation.
 
@@ -10,7 +10,7 @@
 
 - A broad API can become a second product surface with duplicated behavior. Mitigation: route handlers must call existing services and use shared result/error helpers only at the HTTP boundary.
 - Swagger/OpenAPI support can accidentally expose development endpoints in production. Mitigation: map docs based on explicit configuration/environment, and keep auth independent of environment.
-- Optional auth can be misread as weak auth. Mitigation: disabled means intentionally anonymous local API; enabled means all development API groups require bearer tokens.
+- Optional auth can be misread as weak auth. Mitigation: disabled means intentionally anonymous local API; enabled means all API groups require bearer tokens.
 - Process run detail payloads can overload clients. Mitigation: add typed include/filter query object.
 
 ## Critical Path Risks

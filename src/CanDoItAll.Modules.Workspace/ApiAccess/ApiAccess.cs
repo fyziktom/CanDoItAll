@@ -7,33 +7,33 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Workspace.ApiAccess;
 
-public sealed class DevelopmentApiAccessOptions
+public sealed class ApiAccessOptions
 {
-    public const string SectionName = "DevelopmentApi";
+    public const string SectionName = "Api";
     public const int MinimumSigningKeyBytes = 32;
 
     public bool Enabled { get; set; } = true;
 
     public bool OpenApiEnabled { get; set; } = true;
 
-    public DevelopmentApiAuthorizationOptions Authorization { get; set; } = new();
+    public ApiAuthorizationOptions Authorization { get; set; } = new();
 
-    public static IReadOnlyList<string> Validate(DevelopmentApiAccessOptions options)
+    public static IReadOnlyList<string> Validate(ApiAccessOptions options)
     {
         var errors = new List<string>();
         if (options.Authorization.DefaultTokenLifetimeMinutes <= 0)
         {
-            errors.Add("DevelopmentApi:Authorization:DefaultTokenLifetimeMinutes must be greater than zero.");
+            errors.Add("Api:Authorization:DefaultTokenLifetimeMinutes must be greater than zero.");
         }
 
         if (options.Authorization.MaxTokenLifetimeMinutes <= 0)
         {
-            errors.Add("DevelopmentApi:Authorization:MaxTokenLifetimeMinutes must be greater than zero.");
+            errors.Add("Api:Authorization:MaxTokenLifetimeMinutes must be greater than zero.");
         }
 
         if (options.Authorization.DefaultTokenLifetimeMinutes > options.Authorization.MaxTokenLifetimeMinutes)
         {
-            errors.Add("DevelopmentApi:Authorization:DefaultTokenLifetimeMinutes cannot exceed MaxTokenLifetimeMinutes.");
+            errors.Add("Api:Authorization:DefaultTokenLifetimeMinutes cannot exceed MaxTokenLifetimeMinutes.");
         }
 
         if (!options.Authorization.Enabled)
@@ -43,31 +43,31 @@ public sealed class DevelopmentApiAccessOptions
 
         if (string.IsNullOrWhiteSpace(options.Authorization.Issuer))
         {
-            errors.Add("DevelopmentApi:Authorization:Issuer is required when authorization is enabled.");
+            errors.Add("Api:Authorization:Issuer is required when authorization is enabled.");
         }
 
         if (string.IsNullOrWhiteSpace(options.Authorization.Audience))
         {
-            errors.Add("DevelopmentApi:Authorization:Audience is required when authorization is enabled.");
+            errors.Add("Api:Authorization:Audience is required when authorization is enabled.");
         }
 
         var signingKeyLength = Encoding.UTF8.GetByteCount(options.Authorization.SigningKey ?? string.Empty);
         if (signingKeyLength < MinimumSigningKeyBytes)
         {
-            errors.Add($"DevelopmentApi:Authorization:SigningKey must be at least {MinimumSigningKeyBytes} UTF-8 bytes when authorization is enabled.");
+            errors.Add($"Api:Authorization:SigningKey must be at least {MinimumSigningKeyBytes} UTF-8 bytes when authorization is enabled.");
         }
 
         return errors;
     }
 }
 
-public sealed class DevelopmentApiAuthorizationOptions
+public sealed class ApiAuthorizationOptions
 {
     public bool Enabled { get; set; }
 
-    public string Issuer { get; set; } = "CanDoItAll.DevelopmentApi";
+    public string Issuer { get; set; } = "CanDoItAll.Api";
 
-    public string Audience { get; set; } = "CanDoItAll.DevelopmentApi";
+    public string Audience { get; set; } = "CanDoItAll.Api";
 
     public string SigningKey { get; set; } = string.Empty;
 
@@ -76,7 +76,7 @@ public sealed class DevelopmentApiAuthorizationOptions
     public int MaxTokenLifetimeMinutes { get; set; } = 1440;
 }
 
-public sealed record DevelopmentApiAccessStatus(
+public sealed record ApiAccessStatus(
     bool ApiEnabled,
     bool OpenApiEnabled,
     bool AuthorizationEnabled,
@@ -86,18 +86,18 @@ public sealed record DevelopmentApiAccessStatus(
     int DefaultTokenLifetimeMinutes,
     int MaxTokenLifetimeMinutes);
 
-public sealed class DevelopmentApiTokenIssueRequest
+public sealed class ApiTokenIssueRequest
 {
-    public string Subject { get; set; } = "development-api-client";
+    public string Subject { get; set; } = "api-client";
 
-    public string DisplayName { get; set; } = "Development API client";
+    public string DisplayName { get; set; } = "API client";
 
     public int? LifetimeMinutes { get; set; }
 
-    public List<string> Scopes { get; set; } = ["development-api"];
+    public List<string> Scopes { get; set; } = ["api"];
 }
 
-public sealed record DevelopmentApiTokenIssueResult(
+public sealed record ApiTokenIssueResult(
     string Token,
     string TokenType,
     DateTimeOffset ExpiresAtUtc,
@@ -105,26 +105,26 @@ public sealed record DevelopmentApiTokenIssueResult(
     string DisplayName,
     IReadOnlyList<string> Scopes);
 
-public interface IDevelopmentApiTokenService
+public interface IApiTokenService
 {
-    DevelopmentApiAccessStatus GetStatus();
+    ApiAccessStatus GetStatus();
 
-    DevelopmentApiTokenIssueResult IssueToken(DevelopmentApiTokenIssueRequest request);
+    ApiTokenIssueResult IssueToken(ApiTokenIssueRequest request);
 }
 
-public sealed class DevelopmentApiTokenService(
-    IOptions<DevelopmentApiAccessOptions> options,
-    IClock clock) : IDevelopmentApiTokenService
+public sealed class ApiTokenService(
+    IOptions<ApiAccessOptions> options,
+    IClock clock) : IApiTokenService
 {
     private static readonly JsonSerializerOptions JwtJsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public DevelopmentApiAccessStatus GetStatus()
+    public ApiAccessStatus GetStatus()
     {
         var value = options.Value;
-        return new DevelopmentApiAccessStatus(
+        return new ApiAccessStatus(
             value.Enabled,
             value.OpenApiEnabled,
             value.Authorization.Enabled,
@@ -135,12 +135,12 @@ public sealed class DevelopmentApiTokenService(
             value.Authorization.MaxTokenLifetimeMinutes);
     }
 
-    public DevelopmentApiTokenIssueResult IssueToken(DevelopmentApiTokenIssueRequest request)
+    public ApiTokenIssueResult IssueToken(ApiTokenIssueRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var value = options.Value;
-        var configurationErrors = DevelopmentApiAccessOptions.Validate(value);
+        var configurationErrors = ApiAccessOptions.Validate(value);
         if (configurationErrors.Count > 0)
         {
             throw new InvalidOperationException(string.Join(" ", configurationErrors));
@@ -148,7 +148,7 @@ public sealed class DevelopmentApiTokenService(
 
         if (!value.Authorization.Enabled)
         {
-            throw new InvalidOperationException("Development API authorization is not enabled.");
+            throw new InvalidOperationException("API authorization is not enabled.");
         }
 
         var subject = NormalizeSubject(request.Subject);
@@ -182,7 +182,7 @@ public sealed class DevelopmentApiTokenService(
         var unsignedToken = $"{encodedHeader}.{encodedPayload}";
         var signature = Sign(unsignedToken, value.Authorization.SigningKey);
 
-        return new DevelopmentApiTokenIssueResult(
+        return new ApiTokenIssueResult(
             $"{unsignedToken}.{signature}",
             "Bearer",
             expiresAt,
@@ -193,7 +193,7 @@ public sealed class DevelopmentApiTokenService(
 
     private static int ResolveLifetimeMinutes(
         int? requestedLifetimeMinutes,
-        DevelopmentApiAuthorizationOptions options)
+        ApiAuthorizationOptions options)
     {
         var requested = requestedLifetimeMinutes.GetValueOrDefault(options.DefaultTokenLifetimeMinutes);
         if (requested <= 0)
@@ -224,7 +224,7 @@ public sealed class DevelopmentApiTokenService(
     {
         var normalized = value.Trim();
         return string.IsNullOrWhiteSpace(normalized)
-            ? "Development API client"
+            ? "API client"
             : normalized;
     }
 
@@ -237,7 +237,7 @@ public sealed class DevelopmentApiTokenService(
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return scopes.Count == 0 ? ["development-api"] : scopes;
+        return scopes.Count == 0 ? ["api"] : scopes;
     }
 
     private static long ToUnixTimeSeconds(DateTimeOffset value)

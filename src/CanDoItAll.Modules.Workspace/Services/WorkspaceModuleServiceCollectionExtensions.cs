@@ -10,8 +10,8 @@ public static class WorkspaceModuleServiceCollectionExtensions
     public static IServiceCollection AddWorkspaceModule(this IServiceCollection services)
     {
         services.AddHttpClient();
-        services.AddOptions<DevelopmentApiAccessOptions>();
-        services.TryAddSingleton<IDevelopmentApiTokenService, DevelopmentApiTokenService>();
+        services.AddOptions<ApiAccessOptions>();
+        services.TryAddSingleton<IApiTokenService, ApiTokenService>();
         services.AddScoped<IProviderAdapter, OpenAiProviderAdapter>();
         services.AddScoped<IProviderAdapter, ScenarioHarnessProviderAdapter>();
         services.AddScoped<IProviderAdapter, ProcessMockProviderAdapter>();

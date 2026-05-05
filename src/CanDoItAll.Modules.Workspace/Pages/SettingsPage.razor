@@ -329,29 +329,29 @@
         else if (string.Equals(settingsTab, "api-access", StringComparison.Ordinal))
         {
             <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                <FormSection Title="Development API access" Description="Control the local development API surface and create JWT bearer tokens when authorization is active.">
+                <FormSection Title="API access" Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                         <Stack GapScale="LayoutGap.Small">
                             <p class="cda-eyebrow">API</p>
-                            <StatusBadge Tone="@(developmentApiStatus?.ApiEnabled == true ? "success" : "warning")" Text="@(developmentApiStatus?.ApiEnabled == true ? "Enabled" : "Disabled")" />
-                            <p class="cda-body-muted break-all">OpenAPI: @(developmentApiStatus?.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
+                            <StatusBadge Tone="@(apiStatus?.ApiEnabled == true ? "success" : "warning")" Text="@(apiStatus?.ApiEnabled == true ? "Enabled" : "Disabled")" />
+                            <p class="cda-body-muted break-all">OpenAPI: @(apiStatus?.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
                         </Stack>
                         <Stack GapScale="LayoutGap.Small">
                             <p class="cda-eyebrow">Authorization</p>
-                            <StatusBadge Tone="@(developmentApiStatus?.AuthorizationEnabled == true ? "warning" : "info")" Text="@(developmentApiStatus?.AuthorizationEnabled == true ? "JWT required" : "JWT disabled")" />
-                            <p class="cda-body-muted break-all">@FormatDevelopmentApiAudience()</p>
+                            <StatusBadge Tone="@(apiStatus?.AuthorizationEnabled == true ? "warning" : "info")" Text="@(apiStatus?.AuthorizationEnabled == true ? "JWT required" : "JWT disabled")" />
+                            <p class="cda-body-muted break-all">@FormatApiAudience()</p>
                         </Stack>
                     </Grid>
 
-                    @if (developmentApiStatus?.AuthorizationEnabled != true)
+                    @if (apiStatus?.AuthorizationEnabled != true)
                     {
                         <Alert AlertStyle="AlertStyle.Info">
-                            <p>JWT authorization is disabled in configuration. API requests do not need bearer tokens until DevelopmentApi:Authorization:Enabled is set to true.</p>
+                            <p>JWT authorization is disabled in configuration. API requests do not need bearer tokens until Api:Authorization:Enabled is set to true.</p>
                         </Alert>
                     }
-                    else if (developmentApiStatus.SigningKeyConfigured)
+                    else if (apiStatus.SigningKeyConfigured)
                     {
-                        <EditForm Model="apiTokenModel" OnValidSubmit="IssueDevelopmentApiTokenAsync">
+                        <EditForm Model="apiTokenModel" OnValidSubmit="IssueApiTokenAsync">
                             <Stack GapScale="LayoutGap.Large">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
@@ -367,7 +367,7 @@
                                     <div>
                                         <label class="cda-field-label">Lifetime minutes</label>
                                         <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="cda-input" />
-                                        <p class="cda-body-muted mt-1">Maximum: @developmentApiStatus.MaxTokenLifetimeMinutes minutes</p>
+                                        <p class="cda-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Scopes</label>
@@ -391,7 +391,7 @@
                     else
                     {
                         <Alert AlertStyle="AlertStyle.Warning">
-                            <p>JWT authorization is enabled, but no signing key is configured. Set DevelopmentApi:Authorization:SigningKey to at least 32 UTF-8 bytes before creating tokens.</p>
+                            <p>JWT authorization is enabled, but no signing key is configured. Set Api:Authorization:SigningKey to at least 32 UTF-8 bytes before creating tokens.</p>
                         </Alert>
                     }
                 </FormSection>
