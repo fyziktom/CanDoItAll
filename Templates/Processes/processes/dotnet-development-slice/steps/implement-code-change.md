@@ -1,3 +1,3 @@
-# Implement bounded code change
+# Implement bounded code change through feature/function subprocess
 
-Make the minimal production and UI/application changes required by the slice, following existing project conventions.
+Launch the feature/function implementation subprocess for the bounded behavior in this slice. Keep the parent step focused on observing the child run status, change-set artifact, targeted validation evidence, blockers, and manager rework directives.

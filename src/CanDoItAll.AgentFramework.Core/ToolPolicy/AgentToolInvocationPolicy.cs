@@ -368,7 +368,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
         var normalizedTemplate = NormalizeToolArgument(template);
-        if (string.IsNullOrWhiteSpace(scaffoldRoot) ||
+        if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
+            string.IsNullOrWhiteSpace(scaffoldRoot) ||
             string.IsNullOrWhiteSpace(normalizedTemplate))
         {
             return null;
@@ -395,7 +396,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
         var normalizedTemplate = NormalizeToolArgument(template);
-        if (string.IsNullOrWhiteSpace(scaffoldRoot) ||
+        if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
+            string.IsNullOrWhiteSpace(scaffoldRoot) ||
             string.IsNullOrWhiteSpace(normalizedTemplate))
         {
             return;
@@ -403,6 +405,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         dotnetNewTemplatesByScaffoldRoot[scaffoldRoot] = normalizedTemplate;
     }
+
+    private static bool IsSolutionDotnetNewTemplate(string template)
+        => string.Equals(template, "sln", StringComparison.OrdinalIgnoreCase);
 
     private static ToolInvocationPolicyDecision? EvaluateGovernedExternalTargetIsolation(
         ToolInvocationPolicyContext context,

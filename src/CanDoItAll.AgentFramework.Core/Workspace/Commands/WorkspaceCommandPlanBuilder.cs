@@ -15,6 +15,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         "mvc",
         "nunit",
         "razor",
+        "sln",
         "web",
         "webapi",
         "worker",
@@ -309,7 +310,8 @@ internal sealed class WorkspaceCommandPlanBuilder
             throw new InvalidOperationException("Provide a template name.");
         }
 
-        if (!ApprovedDotnetTemplates.Contains(template.Trim()))
+        var normalizedTemplate = template.Trim();
+        if (!ApprovedDotnetTemplates.Contains(normalizedTemplate))
         {
             throw new InvalidOperationException($"Template '{template}' is not approved. Allowed templates: {string.Join(", ", ApprovedDotnetTemplates.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
         }
@@ -338,6 +340,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         var targetRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, trimmedName));
+        var targetPaths = BuildDotnetNewTargetPaths(normalizedTemplate, workingDirectoryRelative, trimmedName, targetRelativePath);
         var targetFullPath = Path.Combine(workingDirectoryResolution.FullPath, trimmedName);
         if (Directory.Exists(targetFullPath) && ContainsProjectFile(targetFullPath))
         {
@@ -356,7 +359,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         var arguments = new List<string>
         {
             "new",
-            template.Trim(),
+            normalizedTemplate,
             "-n",
             trimmedName
         };
@@ -372,7 +375,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             approvalRequired: true,
             networkAllowed: false,
             mutatesWorkspace: true,
-            targetPaths: [targetRelativePath],
+            targetPaths: targetPaths,
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
             executableCandidates: ["dotnet"],
@@ -380,6 +383,25 @@ internal sealed class WorkspaceCommandPlanBuilder
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 64 * 1024);
+    }
+
+    private static IReadOnlyList<string> BuildDotnetNewTargetPaths(
+        string template,
+        string workingDirectoryRelative,
+        string trimmedName,
+        string defaultTargetRelativePath)
+    {
+        if (!string.Equals(template, "sln", StringComparison.OrdinalIgnoreCase))
+        {
+            return [defaultTargetRelativePath];
+        }
+
+        var solutionBasePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, trimmedName));
+        return
+        [
+            WorkspacePathPolicy.NormalizeRelativePath(solutionBasePath + ".slnx"),
+            WorkspacePathPolicy.NormalizeRelativePath(solutionBasePath + ".sln")
+        ];
     }
 
     private static bool ContainsProjectFile(string directory)

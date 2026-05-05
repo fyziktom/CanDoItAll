@@ -23,12 +23,14 @@ public partial class ProcessWorkspace
 
     public void Dispose()
     {
+        AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
         StopRuntimeRefreshLoop();
         CancelPendingDefinitionCanvasPersistence();
     }
 
     public async ValueTask DisposeAsync()
     {
+        AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
         StopRuntimeRefreshLoop();
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
     }
@@ -96,6 +98,11 @@ public partial class ProcessWorkspace
         }
 
         RefreshCanvasSurface();
+        if (string.Equals(detailTab, DetailTabManagerChat, StringComparison.Ordinal))
+        {
+            await LoadManagerChatAsync();
+        }
+
         UpdateRuntimeRefreshLoop();
         StateHasChanged();
     }

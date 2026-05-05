@@ -340,6 +340,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
+        if (terminalStatus.Value == ProcessStepRunStatus.Completed) {
+            await ProjectCompletedSubprocessArtifactsAsync(candidate, subprocessRun, cancellationToken);
+        }
+
         var transitionResult = await TransitionStepAsync(
             new ProcessStepTransitionRequest
             {
@@ -359,6 +363,186 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 subprocessRun.RunId,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
         }
+    }
+
+    private async Task ProjectCompletedSubprocessArtifactsAsync(
+        DispatchCandidate candidate,
+        ProcessSubprocessRunStartResult subprocessRun,
+        CancellationToken cancellationToken) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var expectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(item =>
+                item.StepDefinitionId == candidate.StepRun.StepDefinitionId &&
+                item.IsRequired)
+            .OrderBy(item => item.Title)
+            .ToListAsync(cancellationToken);
+        if (expectations.Count == 0) {
+            return;
+        }
+
+        var parentArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item =>
+                item.ProcessRunId == candidate.Run.Id &&
+                item.StepRunId == candidate.StepRun.Id)
+            .ToListAsync(cancellationToken);
+        var missingProjectableExpectations = expectations
+            .Where(IsSubprocessCompletionProjectionAllowed)
+            .Where(expectation => !parentArtifacts.Any(artifact => SatisfiesArtifactExpectation(artifact, expectation)))
+            .ToList();
+        if (missingProjectableExpectations.Count == 0) {
+            return;
+        }
+
+        var childArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == subprocessRun.RunId)
+            .ToListAsync(cancellationToken);
+        childArtifacts = childArtifacts
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToList();
+        var now = clock.GetUtcNow();
+
+        foreach (var expectation in missingProjectableExpectations) {
+            var sourceArtifact = ResolveSubprocessSourceArtifact(childArtifacts, expectation);
+            var artifact = new ProcessArtifactRecord {
+                ProcessRunId = candidate.Run.Id,
+                StepRunId = candidate.StepRun.Id,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = expectation.ArtifactKind,
+                Title = expectation.Title,
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = ResolveProjectedSubprocessSensitivity(expectation, sourceArtifact),
+                ProvenanceSummary = BuildSubprocessArtifactProjectionProvenance(candidate, subprocessRun, sourceArtifact),
+                AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
+                ReviewSummary = BuildSubprocessArtifactProjectionReviewSummary(subprocessRun, sourceArtifact),
+                ManagedStoragePath = BoundProjectedSubprocessStoragePath(sourceArtifact?.ManagedStoragePath ?? string.Empty),
+                ExternalReferenceKey = BuildSubprocessArtifactProjectionReferenceKey(subprocessRun.RunId, expectation.Id),
+                CreatedAtUtc = now
+            };
+            await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry {
+                    ProcessRunId = candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    EventType = "artifact-recorded",
+                    Title = "Recorded process artifact",
+                    Description = artifact.Title,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    OperatingMode = candidate.Run.OperatingMode,
+                    PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
+                    EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                    ReplayContextJson = JsonSerializer.Serialize(new {
+                        RunId = candidate.Run.Id,
+                        StepRunId = candidate.StepRun.Id,
+                        SubprocessRunId = subprocessRun.RunId,
+                        SourceArtifactId = sourceArtifact?.Id,
+                        Summary = artifact.ProvenanceSummary
+                    }),
+                    OccurredAtUtc = now
+                },
+                cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool IsSubprocessCompletionProjectionAllowed(ProcessArtifactExpectation expectation) {
+        return expectation.TrustRequirement is
+            ProcessArtifactTrustRequirement.None or
+            ProcessArtifactTrustRequirement.ReviewRequired;
+    }
+
+    private static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
+        IReadOnlyList<ProcessArtifactRecord> childArtifacts,
+        ProcessArtifactExpectation expectation) {
+        return childArtifacts
+            .Where(artifact =>
+                artifact.ArtifactKind == expectation.ArtifactKind &&
+                artifact.SensitivityLevel >= expectation.SensitivityLevel &&
+                SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
+            .OrderByDescending(artifact => artifact.ArtifactExpectationId.HasValue)
+            .ThenByDescending(artifact => string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(artifact => artifact.CreatedAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static bool SatisfiesArtifactExpectation(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectation expectation) {
+        if (artifact.ArtifactKind != expectation.ArtifactKind) {
+            return false;
+        }
+
+        if (artifact.SensitivityLevel < expectation.SensitivityLevel) {
+            return false;
+        }
+
+        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement)) {
+            return false;
+        }
+
+        return artifact.ArtifactExpectationId.HasValue
+            ? artifact.ArtifactExpectationId.Value == expectation.Id
+            : string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool SatisfiesTrustRequirement(
+        ProcessArtifactTrustStatus trustStatus,
+        ProcessArtifactTrustRequirement trustRequirement) {
+        return trustRequirement switch {
+            ProcessArtifactTrustRequirement.None => true,
+            ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
+                ProcessArtifactTrustStatus.ReviewRequired or
+                ProcessArtifactTrustStatus.Approved or
+                ProcessArtifactTrustStatus.TrustedSource,
+            ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
+            _ => false
+        };
+    }
+
+    private static ProcessSensitivityLevel ResolveProjectedSubprocessSensitivity(
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord? sourceArtifact) {
+        if (sourceArtifact is null || sourceArtifact.SensitivityLevel < expectation.SensitivityLevel) {
+            return expectation.SensitivityLevel;
+        }
+
+        return sourceArtifact.SensitivityLevel;
+    }
+
+    private static string BuildSubprocessArtifactProjectionProvenance(
+        DispatchCandidate candidate,
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessArtifactRecord? sourceArtifact) {
+        var sourceSummary = sourceArtifact is null
+            ? "No child artifact with the same kind was available; inspect the child run ledger for detailed evidence."
+            : $"Source subprocess artifact '{sourceArtifact.Title}' ({sourceArtifact.Id:D}).";
+        return $"Auto-projected from completed subprocess run '{subprocessRun.RunName}' ({subprocessRun.RunId:D}) for parent subprocess step '{candidate.StepRun.Title}'. {sourceSummary}";
+    }
+
+    private static string BuildSubprocessArtifactProjectionReviewSummary(
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessArtifactRecord? sourceArtifact) {
+        if (sourceArtifact is null) {
+            return $"Subprocess run '{subprocessRun.RunName}' completed. Review the child run artifact ledger before reusing this parent evidence outside the process.";
+        }
+
+        return string.IsNullOrWhiteSpace(sourceArtifact.ReviewSummary)
+            ? $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}."
+            : $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}. {sourceArtifact.ReviewSummary}";
+    }
+
+    private static string BoundProjectedSubprocessStoragePath(string value) {
+        const int maxManagedStoragePathLength = 500;
+        var normalized = value.Trim();
+        return normalized.Length <= maxManagedStoragePathLength
+            ? normalized
+            : normalized[..maxManagedStoragePathLength];
+    }
+
+    private static string BuildSubprocessArtifactProjectionReferenceKey(Guid subprocessRunId, Guid expectationId) {
+        return $"subprocess-run:{subprocessRunId:D}:artifact:{expectationId:D}";
     }
 
     private static ProcessStepRunStatus? ResolveSubprocessParentStepStatus(ProcessRunStatus subprocessStatus)

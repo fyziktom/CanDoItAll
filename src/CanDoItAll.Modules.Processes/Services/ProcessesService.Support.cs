@@ -175,7 +175,8 @@ public sealed partial class ProcessesService
                 definition.Id,
                 definition.ProjectId,
                 definition.Name,
-                definition.Slug
+                definition.Slug,
+                definition.ActivePublishedVersionId
             })
             .ToListAsync(cancellationToken);
 
@@ -202,6 +203,28 @@ public sealed partial class ProcessesService
                 return Result.Failure(Error.Validation(
                     $"Subprocess step '{step.Title}' references '{reference}', but no matching process definition exists in the current scope.",
                     "processes.subprocess-import-target-not-found"));
+            }
+
+            if (preferredMatches.Count > 1)
+            {
+                var exactSlugMatches = preferredMatches
+                    .Where(definition => string.Equals(definition.Slug, BuildSlug(reference), StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (exactSlugMatches.Count == 1)
+                {
+                    preferredMatches = exactSlugMatches;
+                }
+            }
+
+            if (preferredMatches.Count > 1)
+            {
+                var publishedMatches = preferredMatches
+                    .Where(definition => definition.ActivePublishedVersionId.HasValue)
+                    .ToList();
+                if (publishedMatches.Count == 1)
+                {
+                    preferredMatches = publishedMatches;
+                }
             }
 
             if (preferredMatches.Count > 1)

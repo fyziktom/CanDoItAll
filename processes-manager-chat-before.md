@@ -1,0 +1,189 @@
+- generic [ref=e344] [box=0,0,1440,1000]:
+  - complementary [ref=e345] [box=20,12,256,976]:
+    - generic [ref=e346] [box=37,29,207,515]:
+      - generic [ref=e347] [box=37,29,207,152]:
+        - paragraph [ref=e348] [box=37,29,95,16]: CanDoItAll
+        - heading "Local delivery workbench" [active] [level=1] [ref=e349] [box=37,49,207,56]
+        - paragraph [ref=e350] [box=37,109,207,72]: Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.
+      - generic [ref=e351] [box=37,197,207,347]:
+        - paragraph [ref=e352] [box=50,210,74,13]: Workspace
+        - button "Delivery Workspace Project authoring, structure, calendars, and prompt sessions." [ref=e353] [box=50,231,181,108]:
+          - generic [ref=e354] [box=62,243,157,20]: Delivery Workspace
+          - generic [ref=e355] [box=62,267,157,60]: Project authoring, structure, calendars, and prompt sessions.
+        - button "Quality Desk Validation runs, test plans, and evidence review." [ref=e356] [box=50,347,181,88]:
+          - generic [ref=e357] [box=62,359,157,20]: Quality Desk
+          - generic [ref=e358] [box=62,383,157,40]: Validation runs, test plans, and evidence review.
+        - button "Automation Ops Activity, automation status, and environment settings." [ref=e359] [box=50,443,181,88]:
+          - generic [ref=e360] [box=62,455,157,20]: Automation Ops
+          - generic [ref=e361] [box=62,479,157,40]: Activity, automation status, and environment settings.
+    - navigation [ref=e362] [box=37,544,207,1700]:
+      - button "Dashboard Operational summary, provider health, and recent work." [ref=e363] [box=37,544,207,108]:
+        - generic [ref=e365] [box=59,568,16,16]: DB
+        - generic [ref=e366] [box=97,556,135,84]:
+          - generic [ref=e368] [box=97,556,69,20]: Dashboard
+          - generic [ref=e369] [box=97,580,135,60]: Operational summary, provider health, and recent work.
+      - button "Projects Project setup, phases, stack profile, and delivery context." [ref=e370] [box=37,660,207,108]:
+        - generic [ref=e372] [box=60,684,14,16]: PR
+        - generic [ref=e373] [box=97,672,135,84]:
+          - generic [ref=e375] [box=97,672,50,20]: Projects
+          - generic [ref=e376] [box=97,696,135,60]: Project setup, phases, stack profile, and delivery context.
+      - button "Processes Role-first process definitions, runtime orchestration, evidence, and improvement signals." [ref=e377] [box=37,776,207,148]:
+        - generic [ref=e379] [box=58,800,18,16]: PM
+        - generic [ref=e380] [box=97,788,135,124]:
+          - generic [ref=e382] [box=97,788,61,20]: Processes
+          - generic [ref=e383] [box=97,812,135,100]: Role-first process definitions, runtime orchestration, evidence, and improvement signals.
+      - button "Collaboration 99+ Human escalation, inbox, and process-scoped conversations." [ref=e384] [box=37,932,207,112]:
+        - generic [ref=e386] [box=59,956,16,16]: CO
+        - generic [ref=e387] [box=97,944,135,88]:
+          - generic [ref=e388] [box=97,944,135,24]:
+            - generic [ref=e389] [box=97,944,86,20]: Collaboration
+            - generic [ref=e390] [box=191,944,45,24]: 99+
+          - generic [ref=e391] [box=97,972,135,60]: Human escalation, inbox, and process-scoped conversations.
+      - button "CRM / HR Unified party directory, CRM, workforce, recruiting, agents, and assignments." [ref=e392] [box=37,1052,207,128]:
+        - generic [ref=e394] [box=59,1076,16,16]: CH
+        - generic [ref=e395] [box=97,1064,135,104]:
+          - generic [ref=e397] [box=97,1064,63,20]: CRM / HR
+          - generic [ref=e398] [box=97,1088,135,80]: Unified party directory, CRM, workforce, recruiting, agents, and assignments.
+      - button "Agents Integrated AgentFramework foundation, imported tabs, and runtime governance." [ref=e399] [box=37,1188,207,148]:
+        - generic [ref=e401] [box=59,1212,16,16]: AG
+        - generic [ref=e402] [box=97,1200,135,124]:
+          - generic [ref=e404] [box=97,1200,45,20]: Agents
+          - generic [ref=e405] [box=97,1224,135,100]: Integrated AgentFramework foundation, imported tabs, and runtime governance.
+      - button "Resources Typed resources, connectors, and validation status." [ref=e406] [box=37,1344,207,108]:
+        - generic [ref=e408] [box=60,1368,14,16]: RS
+        - generic [ref=e409] [box=97,1356,135,84]:
+          - generic [ref=e411] [box=97,1356,64,20]: Resources
+          - generic [ref=e412] [box=97,1380,135,60]: Typed resources, connectors, and validation status.
+      - button "Prompt Gallery Prompt library, collections, versions, and usage." [ref=e413] [box=37,1460,207,108]:
+        - generic [ref=e415] [box=59,1484,15,16]: PG
+        - generic [ref=e416] [box=97,1472,135,84]:
+          - generic [ref=e418] [box=97,1472,96,20]: Prompt Gallery
+          - generic [ref=e419] [box=97,1496,135,60]: Prompt library, collections, versions, and usage.
+      - button "Prompt Factory Guided prompt assembly with flow templates and blueprints." [ref=e420] [box=37,1576,207,108]:
+        - generic [ref=e422] [box=60,1600,13,16]: PF
+        - generic [ref=e423] [box=97,1588,135,84]:
+          - generic [ref=e425] [box=97,1588,98,20]: Prompt Factory
+          - generic [ref=e426] [box=97,1612,135,60]: Guided prompt assembly with flow templates and blueprints.
+      - button "Validation Center Checklists, findings, review decisions, and coverage." [ref=e427] [box=37,1692,207,108]:
+        - generic [ref=e429] [box=60,1716,15,16]: VC
+        - generic [ref=e430] [box=97,1704,135,84]:
+          - generic [ref=e432] [box=97,1704,109,20]: Validation Center
+          - generic [ref=e433] [box=97,1728,135,60]: Checklists, findings, review decisions, and coverage.
+      - button "Test Lab Plans, evidence, linked tests, and execution records." [ref=e434] [box=37,1808,207,108]:
+        - generic [ref=e436] [box=61,1832,12,16]: TL
+        - generic [ref=e437] [box=97,1820,135,84]:
+          - generic [ref=e439] [box=97,1820,51,20]: Test Lab
+          - generic [ref=e440] [box=97,1844,135,60]: Plans, evidence, linked tests, and execution records.
+      - button "Activity Timeline and cross-entity search for recent work." [ref=e441] [box=37,1924,207,88]:
+        - generic [ref=e443] [box=59,1948,15,16]: AC
+        - generic [ref=e444] [box=97,1936,135,64]:
+          - generic [ref=e446] [box=97,1936,48,20]: Activity
+          - generic [ref=e447] [box=97,1960,135,40]: Timeline and cross-entity search for recent work.
+      - button "Automation Background jobs, exports, sends, and operational diagnostics." [ref=e448] [box=37,2020,207,108]:
+        - generic [ref=e450] [box=59,2044,16,16]: AU
+        - generic [ref=e451] [box=97,2032,135,84]:
+          - generic [ref=e453] [box=97,2032,76,20]: Automation
+          - generic [ref=e454] [box=97,2056,135,60]: Background jobs, exports, sends, and operational diagnostics.
+      - button "Settings Workspace defaults, providers, secrets, and environment settings." [ref=e455] [box=37,2136,207,108]:
+        - generic [ref=e457] [box=60,2160,13,16]: ST
+        - generic [ref=e458] [box=97,2148,135,84]:
+          - generic [ref=e460] [box=97,2148,51,20]: Settings
+          - generic [ref=e461] [box=97,2172,135,60]: Workspace defaults, providers, secrets, and environment settings.
+  - main [ref=e462] [box=288,12,1132,976]:
+    - generic [ref=e463] [box=288,12,1132,42]:
+      - generic [ref=e467] [box=292,14,329,30]:
+        - button "Dashboard" [ref=e469] [box=301,19,85,20]:
+          - generic [ref=e470] [box=301,21,59,16]: Dashboard
+          - generic [ref=e472] [box=366,19,20,20]: push_pin
+        - button "Processes" [ref=e474] [box=410,21,53,16]:
+          - generic [ref=e475] [box=410,21,53,16]: Processes
+        - button "Projects" [ref=e477] [box=486,21,43,16]:
+          - generic [ref=e478] [box=486,21,43,16]: Projects
+      - generic [ref=e480] [box=633,12,787,42]:
+        - generic [ref=e481] [box=633,15,356,36]:
+          - generic [ref=e482] [box=634,26,110,13]: Active database
+          - generic [ref=e483] [box=751,25,124,16]: PostgreSQL workspace
+          - generic [ref=e484] [box=880,20,85,26]: PostgreSQL
+          - button "Show db details" [ref=e486] [cursor=pointer] [box=971,25,17,17]:
+            - generic [ref=e487] [box=977,28,4,10]: "?"
+        - button "Switch database" [ref=e488] [box=997,12,140,42]:
+          - generic [ref=e489] [box=1010,21,114,24]: Switch database
+        - generic [ref=e490] [box=1145,20,117,26]: Interactive Server
+        - generic [ref=e491] [box=1270,20,86,26]: Live items 0
+        - generic [ref=e492] [box=1364,20,56,26]: Tabs 3
+    - generic [ref=e496] [box=288,62,1132,872]:
+      - generic [ref=e499] [box=302,73,1104,60]:
+        - generic [ref=e500] [box=302,73,647,60]:
+          - paragraph [ref=e501] [box=302,78,85,16]: Processes
+          - generic [ref=e502] [box=394,73,90,26]: 0 definitions
+          - generic [ref=e503] [box=492,73,66,26]: 0 visible
+          - generic [ref=e504] [box=566,73,91,26]: 0 active runs
+          - generic [ref=e505] [box=665,73,102,26]: 0 blocked runs
+          - generic [ref=e506] [box=775,73,89,26]: 0 failed runs
+          - generic [ref=e507] [box=302,107,111,26]: 0 improvements
+        - generic [ref=e508] [box=959,82,447,42]:
+          - button "Feed defaults" [ref=e509] [box=959,82,148,42]:
+            - generic [ref=e510] [box=972,93,20,20]: sync
+            - generic [ref=e511] [box=1000,91,94,24]: Feed defaults
+          - button "New definition" [ref=e512] [box=1116,82,158,42]:
+            - generic [ref=e513] [box=1129,93,20,20]: add
+            - generic [ref=e514] [box=1157,91,104,24]: New definition
+          - button "Templates" [ref=e515] [box=1281,82,125,42]:
+            - generic [ref=e516] [box=1294,93,20,20]: category
+            - generic [ref=e517] [box=1322,91,71,24]: Templates
+      - generic [ref=e520] [box=288,161,1132,773]:
+        - generic [ref=e521] [box=288,161,448,773]:
+          - generic [ref=e523] [box=301,172,422,110]:
+            - generic [ref=e526] [box=301,172,375,38]:
+              - generic [ref=e527] [box=301,177,178,28]:
+                - heading "Process definitions" [level=2] [ref=e528] [box=301,177,153,28]
+                - button "Show help for Process definitions" [ref=e530] [cursor=pointer] [box=462,182,17,17]
+              - generic [ref=e533] [box=500,179,163,24]: 0 definition(s)
+            - generic [ref=e537] [box=316,229,381,42]:
+              - textbox "Search name, summary, or value statement" [ref=e538] [box=316,229,196,42]
+              - button "Clear search" [ref=e539] [box=520,229,112,42]:
+                - generic [ref=e540] [box=533,238,86,24]: Clear search
+              - button "New" [ref=e541] [box=639,229,58,42]:
+                - generic [ref=e542] [box=652,238,32,24]: New
+          - generic [ref=e545] [box=301,303,407,284]:
+            - paragraph [ref=e546] [box=322,336,365,16]: No definitions
+            - heading "Create the first process definition" [level=3] [ref=e547] [box=322,360,365,28]
+            - paragraph [ref=e548] [box=322,396,365,96]: Role-first process definitions appear here after they have been saved. Use the detail pane to define the contract, roles, steps, runtime expectations, and import-export envelope.
+            - generic [ref=e549] [box=322,512,365,42]:
+              - button "New definition" [ref=e550] [box=379,512,138,42]:
+                - generic [ref=e551] [box=396,521,104,24]: New definition
+              - button "Templates" [ref=e552] [box=525,512,105,42]:
+                - generic [ref=e553] [box=542,521,71,24]: Templates
+        - generic [ref=e554] [box=748,161,672,773]:
+          - generic [ref=e558] [box=778,185,481,56]:
+            - generic [ref=e559] [box=778,185,481,22]:
+              - paragraph [ref=e560] [box=778,188,67,16]: Process
+              - heading "New process definition" [level=2] [ref=e561] [box=853,185,173,22]
+              - button "Show process help" [ref=e563] [cursor=pointer] [box=1034,187,17,17]:
+                - generic [ref=e564] [box=1040,191,4,10]: "?"
+            - generic [ref=e565] [box=778,214,200,26]:
+              - generic [ref=e566] [box=778,214,50,26]: Draft
+              - generic [ref=e567] [box=836,214,66,26]: 0 role(s)
+              - generic [ref=e568] [box=910,214,68,26]: 0 step(s)
+          - generic [ref=e570] [box=761,274,646,649]:
+            - tablist "Process workspace detail panels" [ref=e571] [box=761,274,646,58]:
+              - tab "Definition" [selected] [ref=e572] [box=765,275,100,43]:
+                - generic [ref=e573] [box=780,285,69,24]: Definition
+              - tab "Roles" [ref=e574] [box=873,274,68,43]:
+                - generic [ref=e575] [box=888,284,38,24]: Roles
+              - tab "Steps" [ref=e576] [box=949,274,69,43]:
+                - generic [ref=e577] [box=965,284,38,24]: Steps
+              - tab "Runs" [ref=e578] [box=1026,274,65,43]:
+                - generic [ref=e579] [box=1041,284,34,24]: Runs
+              - tab "Analytics" [ref=e580] [box=1099,274,93,43]:
+                - generic [ref=e581] [box=1115,284,63,24]: Analytics
+              - tab "Exchange" [ref=e582] [box=1201,274,98,43]:
+                - generic [ref=e583] [box=1216,284,67,24]: Exchange
+              - tab "Manager chat" [ref=e584] [box=1306,274,128,43]:
+                - generic [ref=e585] [box=1322,284,97,24]: Manager chat
+            - tabpanel "Definition" [ref=e587] [box=761,331,646,592]:
+              - generic [ref=e588] [box=776,346,600,1401]:
+                - generic [ref=e589] [box=776,346,600,505]
+                - generic [ref=e627] [box=776,867,600,880]
+    - group [ref=e698] [box=288,942,1132,46]:
+      - generic "Workbench utilities" [ref=e699] [cursor=pointer] [box=305,955,1098,20]

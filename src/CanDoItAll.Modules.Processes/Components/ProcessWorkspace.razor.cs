@@ -21,6 +21,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private const string DetailTabRuns = "runs";
     private const string DetailTabAnalytics = "analytics";
     private const string DetailTabExchange = "exchange";
+    private const string DetailTabManagerChat = "manager-chat";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -34,7 +35,8 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         new(DetailTabSteps, "Steps", Description: "Typed workflow steps, bindings, artifacts, and authoring canvas."),
         new(DetailTabRuns, "Runs", Description: "Runtime state, assignments, work briefs, and evidence capture."),
         new(DetailTabAnalytics, "Analytics", Description: "Economics, conformance, capability gaps, and improvement signals."),
-        new(DetailTabExchange, "Exchange", Description: "Import, export, and future executor-registry seam review.")
+        new(DetailTabExchange, "Exchange", Description: "Import, export, and future executor-registry seam review."),
+        new(DetailTabManagerChat, "Manager chat", Description: "Conversation with the responsible process manager agent.")
     ];
 
     [Inject]

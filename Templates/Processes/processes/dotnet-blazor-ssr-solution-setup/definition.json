@@ -105,15 +105,15 @@
       "Key": "scaffold-contract",
       "Title": "Capture solution scaffold contract",
       "Subtitle": "Names before files",
-      "Notes": "Record solution name, app project name, test project name, target framework, repository path, and allowed template switches.",
+      "Notes": "Record solution name, app project name, app project directory, test project name, test project directory, target framework, product root, and allowed template switches. Use a grounded external product root when present; otherwise use the dispatcher-provided current-run managed output root and do not invent an external-target path. For greenfield Blazor SSR, keep the solution file at the product root, the app project under productRoot/src, and the test project under productRoot/tests unless the parent contract says otherwise.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Parent process request with target repository, solution name, project names, and framework constraints.",
-      "OutputContractSummary": "Unambiguous scaffold contract ready for execution.",
-      "EvidenceContractSummary": "Recorded names, project paths, target framework, and assumptions.",
+      "InputContractSummary": "Parent process request with target product root, solution name, project names, and framework constraints.",
+      "OutputContractSummary": "Unambiguous scaffold contract ready for execution, including solution file candidates and app/test project directories.",
+      "EvidenceContractSummary": "Recorded names, product root, solution file candidates, project paths, target framework, and assumptions.",
       "DecisionRightsSummary": "Setup manager can clarify names but cannot invent externally visible project identity when the parent contract is explicit.",
       "ExceptionPolicySummary": "Block when naming or repository target is ambiguous enough to create the wrong files.",
       "TargetLeadHours": 1,
@@ -145,7 +145,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 180,
           "AllowedFutureUsageSummary": "Used by child and parent managers to verify generated names and paths.",
-          "ValidationRequirementSummary": "Must name the solution, app project, test project, target framework, and repository path."
+          "ValidationRequirementSummary": "Must name the solution, solution file candidates, app project and directory, test project and directory, target framework, product root, and whether the root is external or current-run managed output."
         }
       ],
       "ArtifactInputs": [],
@@ -162,7 +162,7 @@
       "Key": "create-blazor-ssr-app",
       "Title": "Create solution and Blazor SSR app",
       "Subtitle": "Solution skeleton",
-      "Notes": "Create the solution file and Blazor SSR project with the agreed names and paths.",
+      "Notes": "Create the solution file and Blazor SSR project with the agreed names and paths. Use workspace_dotnet_new with template sln for the solution at the product root, inspect the resulting .slnx or .sln file, then create the app parent directory under productRoot/src and scaffold the app there with template blazor. Use only the product root from the scaffold contract; do not switch to guessed external-target paths.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -170,7 +170,7 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Scaffold contract with names, paths, and template constraints.",
       "OutputContractSummary": "Solution file and Blazor SSR application project are present and added to the solution.",
-      "EvidenceContractSummary": "Command output, created file list, and solution project list.",
+      "EvidenceContractSummary": "Command output, created file list, solution file path, app project path, and solution project list.",
       "DecisionRightsSummary": "Scaffold engineer may adjust command syntax but not the agreed project identity.",
       "ExceptionPolicySummary": "Block on template failure, unexpected project layout, or generated names that do not match the contract.",
       "TargetLeadHours": 2,
@@ -207,7 +207,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 180,
           "AllowedFutureUsageSummary": "Used by the implementation slice as the baseline solution structure.",
-          "ValidationRequirementSummary": "Must include the solution file, Blazor SSR project, and solution membership proof."
+          "ValidationRequirementSummary": "Must include the .slnx or .sln solution file, Blazor SSR project under the agreed app directory, and solution membership proof."
         }
       ],
       "ArtifactInputs": [

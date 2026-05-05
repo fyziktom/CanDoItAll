@@ -113,6 +113,17 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(ProcessRunStatus.Completed, subprocessStep.SubprocessRun.Status);
         Assert.Equal(2, subprocessStep.SubprocessRun.CompletedStepCount);
 
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var projectedSubprocessArtifact = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
+            .SingleAsync(item =>
+                item.ProcessRunId == parentRunId &&
+                item.StepRunId == subprocessStep.Id &&
+                item.Title == "Child subprocess completion evidence");
+
+        Assert.StartsWith($"subprocess-run:{childRunId:D}:artifact:", projectedSubprocessArtifact.ExternalReferenceKey);
+        Assert.Contains(childRunId.ToString("D"), projectedSubprocessArtifact.ProvenanceSummary, StringComparison.Ordinal);
+
         var directiveResult = await processesService.RecordManagerDirectiveAsync(
             new ProcessManagerDirectiveRequest
             {
@@ -122,7 +133,6 @@ public sealed class ProcessSubprocessIntegrationTests
             });
 
         Assert.True(directiveResult.IsSuccess, ToErrorMessage(directiveResult.Errors));
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var directive = await dbContext.Set<ProcessJournalEntry>()
             .AsNoTracking()
             .SingleAsync(entry =>
@@ -131,6 +141,96 @@ public sealed class ProcessSubprocessIntegrationTests
 
         Assert.Contains("Integration subprocess manager", directive.ReplayContextJson, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("subprocess blockers", directive.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Subprocess_run_inherits_parent_role_bindings_by_role_template()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Subprocess assignment inheritance validation");
+        var managerPartyId = await CreateAiManagerAsync(partyDirectoryService, "Parent delivery manager");
+        var engineerPartyId = await CreateAiManagerAsync(partyDirectoryService, "Parent lead engineer");
+        var childDefinition = BuildChildDefinitionWithInheritedRoles(projectId);
+        var childDefinitionId = await SaveAndPublishAsync(processesService, childDefinition.Definition);
+        var parentDefinition = BuildParentDefinitionWithInheritedRoles(projectId, childDefinitionId);
+        var parentDefinitionId = await SaveAndPublishAsync(processesService, parentDefinition.Definition);
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = parentDefinitionId,
+                ProjectId = projectId,
+                RunName = "Subprocess assignment inheritance run",
+                OperatingMode = ProcessOperatingMode.Development,
+                TriggerReason = "Integration validation of subprocess assignment inheritance."
+            });
+
+        Assert.True(runResult.IsSuccess, ToErrorMessage(runResult.Errors));
+        var parentRunId = runResult.Value;
+        await ResolveRunAssignmentAsync(
+            processesService,
+            parentRunId,
+            parentDefinition.ManagerRoleId,
+            managerPartyId,
+            "Parent delivery manager");
+        await ResolveRunAssignmentAsync(
+            processesService,
+            parentRunId,
+            parentDefinition.LeadEngineerRoleId,
+            engineerPartyId,
+            "Parent lead engineer");
+
+        var parentSteps = await processesService.ListStepRunsAsync(parentRunId);
+        await CompleteStepAsync(
+            processesService,
+            parentRunId,
+            Assert.Single(parentSteps, step => step.Title == "Capture inherited parent intake").Id);
+
+        parentSteps = await processesService.ListStepRunsAsync(parentRunId);
+        var subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run inherited assignment subprocess");
+        await dispatchService.DispatchAsync(parentRunId, subprocessStep.Id, "integration-subprocess-inheritance");
+
+        var subprocessResult = await processesService.EnsureSubprocessRunForStepAsync(subprocessStep.Id);
+
+        Assert.True(subprocessResult.IsSuccess, ToErrorMessage(subprocessResult.Errors));
+        var childRunId = subprocessResult.Value!.RunId;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var childAssignments = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == childRunId)
+            .ToListAsync();
+
+        var childManagerAssignment = Assert.Single(childAssignments, item => item.RoleRequirementId == childDefinition.ManagerRoleId);
+        var childEngineerAssignment = Assert.Single(childAssignments, item => item.RoleRequirementId == childDefinition.EngineerRoleId);
+
+        Assert.Equal(managerPartyId, childManagerAssignment.PartyId);
+        Assert.Equal("Parent delivery manager", childManagerAssignment.DisplayName);
+        Assert.False(childManagerAssignment.IsCapabilityGap);
+        Assert.Contains("Inherited subprocess role binding", childManagerAssignment.BindingReason, StringComparison.Ordinal);
+        Assert.Contains("matching role template", childManagerAssignment.BindingReason, StringComparison.Ordinal);
+
+        Assert.Equal(engineerPartyId, childEngineerAssignment.PartyId);
+        Assert.Equal("Parent lead engineer", childEngineerAssignment.DisplayName);
+        Assert.False(childEngineerAssignment.IsCapabilityGap);
+        Assert.Contains("Inherited subprocess role binding", childEngineerAssignment.BindingReason, StringComparison.Ordinal);
+        Assert.Contains("matching role template", childEngineerAssignment.BindingReason, StringComparison.Ordinal);
+
+        var childSteps = await processesService.ListStepRunsAsync(childRunId);
+        var childStep = Assert.Single(childSteps, step => step.Title == "Capture inherited child work");
+        var persistedChildStep = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == childStep.Id);
+
+        Assert.Equal(ProcessStepRunStatus.Ready, childStep.Status);
+        Assert.Equal("Parent lead engineer", childStep.CurrentExecutorName);
+        Assert.Equal(engineerPartyId, persistedChildStep.CurrentExecutorPartyId);
     }
 
     [Fact]
@@ -149,6 +249,29 @@ public sealed class ProcessSubprocessIntegrationTests
             projectionService,
             "dotnet-blazor-ssr-solution-setup",
             projectId);
+        var duplicateSetupImport = await processesService.ImportAsync(
+            projectionService.GetProjectedEnvelope(
+                "dotnet-blazor-ssr-solution-setup",
+                projectId,
+                ".NET Blazor SSR solution setup subprocess"));
+
+        Assert.True(duplicateSetupImport.IsSuccess, ToErrorMessage(duplicateSetupImport.Errors));
+        Assert.True((await processesService.PublishAsync(duplicateSetupImport.Value)).IsSuccess);
+
+        var featureImplementationDefinitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-feature-function-implementation",
+            projectId);
+        var duplicateFeatureImplementationImport = await processesService.ImportAsync(
+            projectionService.GetProjectedEnvelope(
+                "dotnet-feature-function-implementation",
+                projectId,
+                ".NET feature/function implementation subprocess"));
+
+        Assert.True(duplicateFeatureImplementationImport.IsSuccess, ToErrorMessage(duplicateFeatureImplementationImport.Errors));
+        Assert.True((await processesService.PublishAsync(duplicateFeatureImplementationImport.Value)).IsSuccess);
+
         var sliceDefinitionId = await ImportAndPublishTemplateAsync(
             processesService,
             projectionService,
@@ -162,14 +285,71 @@ public sealed class ProcessSubprocessIntegrationTests
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var sliceSubprocessStep = await LoadPublishedStepAsync(dbContext, sliceDefinitionId, "prepare-solution-skeleton");
+        var sliceFeatureSubprocessStep = await LoadPublishedStepAsync(dbContext, sliceDefinitionId, "implement-code-change");
         var softwareDeliverySubprocessStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "implementation");
 
         Assert.Equal(ProcessStepKind.Subprocess, sliceSubprocessStep.StepKind);
         Assert.Equal(setupDefinitionId, sliceSubprocessStep.SubprocessDefinitionId);
         Assert.Equal(".NET Blazor SSR solution setup subprocess", sliceSubprocessStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(ProcessStepKind.Subprocess, sliceFeatureSubprocessStep.StepKind);
+        Assert.Equal(featureImplementationDefinitionId, sliceFeatureSubprocessStep.SubprocessDefinitionId);
+        Assert.Equal(".NET feature/function implementation subprocess", sliceFeatureSubprocessStep.SubprocessDefinitionSnapshotName);
         Assert.Equal(ProcessStepKind.Subprocess, softwareDeliverySubprocessStep.StepKind);
         Assert.Equal(sliceDefinitionId, softwareDeliverySubprocessStep.SubprocessDefinitionId);
         Assert.Equal(".NET implementation slice with atomic validation", softwareDeliverySubprocessStep.SubprocessDefinitionSnapshotName);
+    }
+
+    [Fact]
+    public async Task Default_template_synchronization_preserves_existing_definition_identity()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Default subprocess template sync validation");
+        await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-blazor-ssr-solution-setup",
+            projectId);
+        var featureDefinitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-feature-function-implementation",
+            projectId);
+        var oldSliceEnvelope = projectionService.GetProjectedEnvelope("dotnet-development-slice", projectId);
+        var oldImplementationStep = oldSliceEnvelope.Definition.Steps
+            .Single(step => step.Key == "implement-code-change");
+
+        oldImplementationStep.Title = "Implement bounded code change";
+        oldImplementationStep.StepKind = ProcessStepKind.Work;
+        oldImplementationStep.SubprocessDefinitionId = null;
+        oldImplementationStep.SubprocessDefinitionSnapshotName = string.Empty;
+
+        var importResult = await processesService.ImportAsync(oldSliceEnvelope);
+        Assert.True(importResult.IsSuccess, ToErrorMessage(importResult.Errors));
+        Assert.True((await processesService.PublishAsync(importResult.Value)).IsSuccess);
+
+        var synchronizeResult = await processesService.SynchronizeImportedDefinitionAsync(
+            importResult.Value,
+            projectionService.GetProjectedEnvelope("dotnet-development-slice", projectId));
+
+        Assert.True(synchronizeResult.IsSuccess, ToErrorMessage(synchronizeResult.Errors));
+        Assert.True(synchronizeResult.Value);
+        Assert.True((await processesService.PublishAsync(importResult.Value)).IsSuccess);
+
+        var definitions = await processesService.ListDefinitionsAsync(projectId);
+        Assert.Single(definitions, definition => definition.Name == ".NET implementation slice with atomic validation");
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var implementationStep = await LoadPublishedStepAsync(dbContext, importResult.Value, "implement-code-change");
+
+        Assert.Equal(ProcessStepKind.Subprocess, implementationStep.StepKind);
+        Assert.Equal(featureDefinitionId, implementationStep.SubprocessDefinitionId);
+        Assert.Equal(".NET feature/function implementation subprocess", implementationStep.SubprocessDefinitionSnapshotName);
     }
 
     private static async Task<Guid> ImportAndPublishTemplateAsync(
@@ -246,6 +426,28 @@ public sealed class ProcessSubprocessIntegrationTests
             });
 
         Assert.True(completeResult.IsSuccess, ToErrorMessage(completeResult.Errors));
+    }
+
+    private static async Task ResolveRunAssignmentAsync(
+        ProcessesService processesService,
+        Guid runId,
+        Guid roleId,
+        Guid partyId,
+        string displayName)
+    {
+        var result = await processesService.ResolveAssignmentAsync(
+            new ProcessAssignmentResolutionRequest
+            {
+                ProcessRunId = runId,
+                RoleRequirementId = roleId,
+                PartyId = partyId,
+                DisplayName = displayName,
+                ExecutorKind = "AI agent",
+                BindingReason = "Approved parent run assignment for subprocess inheritance validation.",
+                AllowsDirectMessaging = true
+            });
+
+        Assert.True(result.IsSuccess, ToErrorMessage(result.Errors));
     }
 
     private static ProcessDefinitionEditorModel BuildChildDefinition(Guid projectId)
@@ -331,6 +533,19 @@ public sealed class ProcessSubprocessIntegrationTests
                     [
                         CreateDependency(intakeStepId)
                     ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Title = "Child subprocess completion evidence",
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            IsRequired = true,
+                            TrustRequirement = ProcessArtifactTrustRequirement.ReviewRequired,
+                            SensitivityLevel = ProcessSensitivityLevel.Internal,
+                            AllowedFutureUsageSummary = "Parent process may use this projection to continue after the child subprocess completes.",
+                            ValidationRequirementSummary = "Must point at the completed child subprocess run instead of duplicating child runtime state."
+                        }
+                    ],
                     RoleAssignments =
                     [
                         CreateRoleAssignment(roleId)
@@ -341,6 +556,171 @@ public sealed class ProcessSubprocessIntegrationTests
         definition.ManagerAgentOverrideId = managerPartyId;
         definition.ManagerAgentOverrideName = "Integration subprocess manager";
         return definition;
+    }
+
+    private static (
+        ProcessDefinitionEditorModel Definition,
+        Guid ManagerRoleId,
+        Guid EngineerRoleId) BuildChildDefinitionWithInheritedRoles(Guid projectId)
+    {
+        var managerRoleId = Guid.NewGuid();
+        var engineerRoleId = Guid.NewGuid();
+        var childStepId = Guid.NewGuid();
+
+        return (
+            new ProcessDefinitionEditorModel
+            {
+                ProjectId = projectId,
+                Name = "Child subprocess with inherited assignments",
+                Summary = "Validates that subprocess runs snapshot compatible parent role bindings.",
+                ValueStatement = "Subprocesses inherit compatible runtime role bindings without sharing mutable assignment state.",
+                CustomerName = "Integration customer",
+                OwnerName = "Integration owner",
+                GovernancePolicySummary = "Child run owns its durable assignment records after creation.",
+                ChangeSummary = "Subprocess assignment inheritance validation.",
+                ConstitutionRuleSummary = "Do not leave subprocess agent roles unassigned when parent roles already have compatible bindings.",
+                OperatingModeSummary = "Development mode with parent-run assignment inheritance.",
+                SimulationReadinessSummary = "Safe deterministic test definition.",
+                Roles =
+                [
+                    CreateTemplateRole(
+                        managerRoleId,
+                        "delivery-manager",
+                        "Child delivery manager",
+                        "process-role-template/delivery-manager",
+                        "Delivery manager / template-pack v1",
+                        ProjectPartyAssignmentRole.Manager),
+                    CreateTemplateRole(
+                        engineerRoleId,
+                        "software-engineer",
+                        "Child implementation engineer",
+                        "process-role-template/software-engineer",
+                        "Software engineer / template-pack v1",
+                        null)
+                ],
+                Steps =
+                [
+                    new ProcessStepEditorModel
+                    {
+                        Id = childStepId,
+                        Key = "child-work",
+                        Title = "Capture inherited child work",
+                        StepKind = ProcessStepKind.Start,
+                        TargetLeadHours = 1,
+                        RoleAssignments =
+                        [
+                            CreateRoleAssignment(engineerRoleId)
+                        ]
+                    }
+                ]
+            },
+            managerRoleId,
+            engineerRoleId);
+    }
+
+    private static (
+        ProcessDefinitionEditorModel Definition,
+        Guid ManagerRoleId,
+        Guid LeadEngineerRoleId) BuildParentDefinitionWithInheritedRoles(
+        Guid projectId,
+        Guid childDefinitionId)
+    {
+        var managerRoleId = Guid.NewGuid();
+        var leadEngineerRoleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var subprocessStepId = Guid.NewGuid();
+
+        return (
+            new ProcessDefinitionEditorModel
+            {
+                ProjectId = projectId,
+                Name = "Parent process with inherited subprocess assignments",
+                Summary = "Runs a subprocess that should inherit compatible parent role bindings.",
+                ValueStatement = "Parent launch bindings become child-run snapshots by stable role template identity.",
+                CustomerName = "Integration customer",
+                OwnerName = "Integration owner",
+                GovernancePolicySummary = "Parent and child runs retain separate assignment tables.",
+                ChangeSummary = "Subprocess assignment inheritance validation.",
+                ConstitutionRuleSummary = "Subprocess dispatch must not depend on mutable parent assignment lookup.",
+                OperatingModeSummary = "Development mode with explicit parent assignments.",
+                SimulationReadinessSummary = "Safe deterministic test definition.",
+                Roles =
+                [
+                    CreateTemplateRole(
+                        managerRoleId,
+                        "delivery-manager",
+                        "Parent delivery manager",
+                        "process-role-template/delivery-manager",
+                        "Delivery manager / template-pack v1",
+                        ProjectPartyAssignmentRole.Manager),
+                    CreateTemplateRole(
+                        leadEngineerRoleId,
+                        "lead-engineer",
+                        "Parent lead engineer",
+                        "process-role-template/software-engineer",
+                        "Software engineer / template-pack v1",
+                        ProjectPartyAssignmentRole.TeamMember)
+                ],
+                Steps =
+                [
+                    new ProcessStepEditorModel
+                    {
+                        Id = intakeStepId,
+                        Key = "parent-intake",
+                        Title = "Capture inherited parent intake",
+                        StepKind = ProcessStepKind.Start,
+                        TargetLeadHours = 1,
+                        RoleAssignments =
+                        [
+                            CreateRoleAssignment(managerRoleId)
+                        ]
+                    },
+                    new ProcessStepEditorModel
+                    {
+                        Id = subprocessStepId,
+                        Key = "inherited-subprocess",
+                        Title = "Run inherited assignment subprocess",
+                        StepKind = ProcessStepKind.Subprocess,
+                        SubprocessDefinitionId = childDefinitionId,
+                        SubprocessDefinitionSnapshotName = "Child subprocess with inherited assignments",
+                        TargetLeadHours = 1,
+                        Dependencies =
+                        [
+                            CreateDependency(intakeStepId)
+                        ],
+                        RoleAssignments =
+                        [
+                            CreateRoleAssignment(leadEngineerRoleId)
+                        ]
+                    }
+                ]
+            },
+            managerRoleId,
+            leadEngineerRoleId);
+    }
+
+    private static ProcessRoleEditorModel CreateTemplateRole(
+        Guid roleId,
+        string key,
+        string displayName,
+        string templateSourceKey,
+        string templateSnapshotName,
+        ProjectPartyAssignmentRole? preferredProjectAssignmentRole)
+    {
+        return new ProcessRoleEditorModel
+        {
+            Id = roleId,
+            Key = key,
+            DisplayName = displayName,
+            Purpose = $"Own {displayName} responsibilities.",
+            StaffingIntent = $"Use the bound {displayName} assignment.",
+            PreferredExecutorKind = "agent",
+            PreferredProjectAssignmentRole = preferredProjectAssignmentRole,
+            DefaultAllocationPercent = 100,
+            RoleTemplateSourceKey = templateSourceKey,
+            RoleTemplateSnapshotName = templateSnapshotName,
+            SnapshotSummary = $"{displayName} template summary."
+        };
     }
 
     private static ProcessDefinitionEditorModel BuildBaseDefinition(

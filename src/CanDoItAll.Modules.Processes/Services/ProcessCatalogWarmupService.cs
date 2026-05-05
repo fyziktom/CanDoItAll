@@ -14,6 +14,7 @@ internal sealed class ProcessCatalogWarmupService(
     private static readonly string[] DefaultProcessKeys =
     [
         "dotnet-blazor-ssr-solution-setup",
+        "dotnet-feature-function-implementation",
         "dotnet-development-slice",
         "software-delivery",
         "ai-assisted-change-delivery",

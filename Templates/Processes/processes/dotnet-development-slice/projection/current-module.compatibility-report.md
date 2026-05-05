@@ -1,3 +1,3 @@
 # Compatibility report
 
-This template uses current process definition fields and one subprocess reference resolved by definition name during import.
+This template uses current process definition fields and subprocess references resolved by definition name during import.

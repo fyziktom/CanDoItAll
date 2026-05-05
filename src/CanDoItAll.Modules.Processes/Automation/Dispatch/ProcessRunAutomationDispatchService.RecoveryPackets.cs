@@ -158,6 +158,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return AgentFailureCategory.Timeout;
         }
 
+        if (TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out var finalizerFailureSummary))
+        {
+            return finalizerFailureSummary.Contains("not called", StringComparison.OrdinalIgnoreCase)
+                ? AgentFailureCategory.FinalizerMissing
+                : AgentFailureCategory.FinalizerInvalid;
+        }
+
         if (MentionsQaRejection(responseText) || MentionsQaRejection(detail.Run.ResultSummary))
         {
             return AgentFailureCategory.QaRejected;
@@ -226,6 +233,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (TryResolveRecoverableExecutionInterruption(detail, responseText, out var interruptionSummary))
         {
             return interruptionSummary;
+        }
+
+        if (TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out var finalizerFailureSummary))
+        {
+            return finalizerFailureSummary;
         }
 
         if (missingRequiredTools.Count > 0)

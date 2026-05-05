@@ -102,6 +102,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        if (missing.Contains("workspace_dotnet_new", StringComparer.Ordinal) &&
+            CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(detail))
+        {
+            missing = missing
+                .Where(toolName => !string.Equals(toolName, "workspace_dotnet_new", StringComparison.Ordinal))
+                .ToList();
+        }
+
         return CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof)
             ? missing
                 .Where(toolName =>
@@ -111,6 +119,47 @@ internal sealed partial class ProcessRunAutomationDispatchService
                       CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail)))
                 .ToList()
             : missing;
+    }
+
+    private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(ExecutionRunDetail detail)
+    {
+        var successfulReceipts = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .ToList();
+        if (successfulReceipts.Count == 0)
+        {
+            return false;
+        }
+
+        var inspectedScaffoldFile = successfulReceipts.Any(IsDotnetScaffoldInspectionReceipt);
+        if (!inspectedScaffoldFile)
+        {
+            return false;
+        }
+
+        return successfulReceipts.Any(receipt =>
+        {
+            var toolName = NormalizeToolToken(receipt.ToolName);
+            return toolName is "workspace_dotnet_build" or "workspace_dotnet_test" or "workspace_dotnet_run";
+        });
+    }
+
+    private static bool IsDotnetScaffoldInspectionReceipt(ToolExecutionReceiptRecord receipt)
+    {
+        var toolName = NormalizeToolToken(receipt.ToolName);
+        if (toolName is not "workspace_stat_path" and not "workspace_read_file")
+        {
+            return false;
+        }
+
+        var inspectedText = string.Join(
+            " ",
+            receipt.RequestSummary,
+            receipt.WorkingDirectory,
+            receipt.ExitSummary);
+        return inspectedText.Contains(".csproj", StringComparison.OrdinalIgnoreCase) ||
+               inspectedText.Contains(".slnx", StringComparison.OrdinalIgnoreCase) ||
+               inspectedText.Contains(".sln", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool CanSatisfyImplementationProofToolsWithCarriedProof(

@@ -298,6 +298,119 @@
                             </Grid>
                         </SectionCard>
                         </TabsItem>
+                        <TabsItem Text="Manager chat">
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="h-full min-h-0"
+                               data-testid="processes-manager-chat-tab">
+                            <SurfaceCard Soft="true"
+                                         data-testid="processes-manager-chat-context">
+                                <Split Gap="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Center"
+                                       Wrap="FlexWrap.Wrap">
+                                    <Stack GapScale="LayoutGap.Tiny">
+                                        <p class="cda-eyebrow">Process manager</p>
+                                        <h3 class="text-lg font-semibold text-slate-950">@ManagerChatManagerLabel</h3>
+                                        <Cluster Gap="LayoutGap.Small"
+                                                 Wrap="FlexWrap.Wrap">
+                                            <StatusBadge Tone="info"
+                                                         Text="@ManagerChatSelectedRunLabel" />
+                                            @if (managerChatAgent is not null)
+                                            {
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@managerChatAgent.Model" />
+                                            }
+                                        </Cluster>
+                                    </Stack>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Wrap="FlexWrap.Wrap">
+                                        <Button Text="Choose run"
+                                                Icon="history"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenManagerChatRunSelectorAsync"
+                                                data-testid="processes-manager-chat-choose-run" />
+                                        <Button Text="Reload"
+                                                Icon="refresh"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@managerChatIsLoading"
+                                                IsBusy="@managerChatIsLoading"
+                                                Click="@(() => LoadManagerChatAsync())"
+                                                data-testid="processes-manager-chat-reload" />
+                                    </Cluster>
+                                </Split>
+                            </SurfaceCard>
+
+                            @if (managerChatIsLoading)
+                            {
+                                <LoadingState Title="Loading manager chat"
+                                              Description="Resolving the responsible manager agent and chat workspace." />
+                            }
+                            else if (!string.IsNullOrWhiteSpace(managerChatLoadError))
+                            {
+                                <EmptyState Eyebrow="Manager chat unavailable"
+                                            Title="Connect a manager agent before chatting"
+                                            Description="@managerChatLoadError">
+                                    <Actions>
+                                        <Button Text="Reload"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Click="@(() => LoadManagerChatAsync())" />
+                                        <Button Text="Choose run"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Click="OpenManagerChatRunSelectorAsync" />
+                                    </Actions>
+                                </EmptyState>
+                            }
+                            else if (managerChatAgent is null)
+                            {
+                                <EmptyState Eyebrow="Manager chat"
+                                            Title="No manager agent is open"
+                                            Description="Resolve a bound process manager agent before starting a manager conversation.">
+                                    <Actions>
+                                        <Button Text="Reload"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Click="@(() => LoadManagerChatAsync())" />
+                                    </Actions>
+                                </EmptyState>
+                            }
+                            else
+                            {
+                                <ChatWorkspacePanel Agent="@managerChatAgent"
+                                                    Session="@managerChatWorkspace?.SelectedSession"
+                                                    ActiveRun="@managerChatWorkspace?.SelectedRun"
+                                                    ExecutionLog="@managerChatExecutionLog"
+                                                    DraftPrompt="@managerChatDraftPrompt"
+                                                    DraftPromptChanged="HandleManagerChatDraftPromptChangedAsync"
+                                                    IsBusy="@managerChatIsBusy"
+                                                    ComposerKey="@managerChatComposerKey"
+                                                    RunStateText="@managerChatRunStateText"
+                                                    RunStateTone="@managerChatRunStateTone"
+                                                    PendingUserPrompt="@managerChatPendingPrompt"
+                                                    DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                                    SendRequested="SendManagerChatMessageAsync"
+                                                    ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
+                                                    ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
+                                                    AttachmentRequested="StageManagerChatRunArtifactsAsync"
+                                                    SessionTitleChanged="RenameManagerChatSessionAsync">
+                                    <HeaderActions>
+                                        <Button Icon="history"
+                                                Text="Run"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenManagerChatRunSelectorAsync"
+                                                data-testid="processes-manager-chat-header-run" />
+                                        <Button Icon="runtime"
+                                                Text="Runtime details"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!CanOpenManagerChatRuntimeDetails)"
+                                                Click="OpenManagerChatRuntimeDetailsAsync"
+                                                data-testid="processes-manager-chat-runtime-details" />
+                                    </HeaderActions>
+                                </ChatWorkspacePanel>
+                            }
+                        </Stack>
+                        </TabsItem>
                     </TabItems>
                     </Tabs>
                 </DetailContent>
@@ -392,6 +505,83 @@
                     <Button Text="Remove step"
                             ButtonStyle="ButtonStyle.Light"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RemoveDefinitionStep))" />
+                }
+            </Stack>
+        </ChildContent>
+    </Dialog>
+}
+
+@if (managerChatRunSelectorOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Manager chat"
+            Title="Select process run"
+            Subtitle="Choose the run the manager should discuss in this chat."
+            Size="ModalSize.Wide"
+            TestId="processes-manager-chat-run-selector"
+            OnClose="CloseManagerChatRunSelectorAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.Wrap">
+                    <Button Text="No specific run"
+                            ButtonStyle="@(managerChatSelectedRunId.HasValue ? ButtonStyle.Light : ButtonStyle.Primary)"
+                            Click="@(() => SelectManagerChatRunAsync(null))"
+                            data-testid="processes-manager-chat-run-none" />
+                    <Button Text="Refresh runs"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@managerChatIsLoading"
+                            IsBusy="@managerChatIsLoading"
+                            Click="@(() => LoadManagerChatAsync())" />
+                </Cluster>
+
+                @if (runs.Count == 0)
+                {
+                    <EmptyState Eyebrow="No runs"
+                                Title="No runs are available for this process"
+                                Description="Start a run from the Runs tab, then return here to discuss it with the manager." />
+                }
+                else
+                {
+                    <div class="max-h-[60vh] overflow-y-auto pr-1"
+                         style="scrollbar-gutter:stable;"
+                         data-testid="processes-manager-chat-run-list">
+                        <Stack GapScale="LayoutGap.Small">
+                            @foreach (var run in runs.OrderByDescending(item => item.UpdatedAtUtc))
+                            {
+                                var isSelectedManagerChatRun = managerChatSelectedRunId == run.Id;
+                                <SelectionListItem Title="@run.Name"
+                                                   Eyebrow="@run.Status.ToString()"
+                                                   Meta="@BuildRunSummary(run)"
+                                                   Summary="@(string.IsNullOrWhiteSpace(run.ManagerAgentName) ? "Default process manager" : run.ManagerAgentName)"
+                                                   Dense="true"
+                                                   IsSelected="@isSelectedManagerChatRun"
+                                                   OnSelect="@(() => SelectManagerChatRunAsync(run.Id))">
+                                    <Status>
+                                        <Cluster Gap="LayoutGap.Small"
+                                                 Wrap="FlexWrap.Wrap">
+                                            <StatusBadge Tone="@ResolveRunTone(run.Status)"
+                                                         Text="@run.Status.ToString()" />
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@($"{run.CompletedStepCount}/{run.TotalStepCount} steps")" />
+                                            @if (run.BlockedStepCount > 0)
+                                            {
+                                                <StatusBadge Tone="warning"
+                                                             Text="@($"{run.BlockedStepCount} blocked")" />
+                                            }
+                                            @if (run.CapabilityGapCount > 0)
+                                            {
+                                                <StatusBadge Tone="danger"
+                                                             Text="@($"{run.CapabilityGapCount} gaps")" />
+                                            }
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@run.UpdatedAtUtc.LocalDateTime.ToString("g")" />
+                                        </Cluster>
+                                    </Status>
+                                </SelectionListItem>
+                            }
+                        </Stack>
+                    </div>
                 }
             </Stack>
         </ChildContent>
