@@ -1111,28 +1111,45 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        var responseText = ResolveRecoveredExecutionResponseText(detail);
-        if (!TryResolveDeclaredStepOutcome(responseText, out var declaredOutcome) ||
-            declaredOutcome.Status != ProcessStepRunStatus.Completed)
+        if (!HasCompletedDeclaredStepOutcome(detail))
         {
             return false;
         }
 
-        return detail.ToolReceipts.Any(item =>
+        var successfulReceipts = detail.ToolReceipts
+            .Where(item =>
+            {
+                if (ReferenceEquals(item, receipt) || IsFailedToolReceipt(item))
+                {
+                    return false;
+                }
+
+                var normalizedToolName = NormalizeToolToken(item.ToolName);
+                return !IsPlaceholderCriticalToolRequestSummary(normalizedToolName, item.RequestSummary);
+            })
+            .ToList();
+        var hasProductCreationOrMutation = successfulReceipts.Any(item =>
+            IsConcreteProductMutationToolName(NormalizeToolToken(item.ToolName)));
+        var hasValidationOrProof = successfulReceipts.Any(item =>
         {
-            if (ReferenceEquals(item, receipt) || IsFailedToolReceipt(item))
-            {
-                return false;
-            }
-
-            if (item.CompletedAtUtc < receipt.CompletedAtUtc ||
-                item.CompletedAtUtc == receipt.CompletedAtUtc && item.StartedAtUtc < receipt.StartedAtUtc)
-            {
-                return false;
-            }
-
-            return ImplementationProofToolNames.Contains(NormalizeToolToken(item.ToolName));
+            var normalizedToolName = NormalizeToolToken(item.ToolName);
+            return ImplementationProofToolNames.Contains(normalizedToolName) ||
+                   IsImplementationValidationToolName(normalizedToolName);
         });
+
+        return hasProductCreationOrMutation && hasValidationOrProof;
+    }
+
+    private static bool HasCompletedDeclaredStepOutcome(ExecutionRunDetail detail)
+    {
+        return IsCompletedDeclaredStepOutcome(detail.Run.ResultSummary) ||
+               IsCompletedDeclaredStepOutcome(ResolveRecoveredExecutionResponseText(detail));
+    }
+
+    private static bool IsCompletedDeclaredStepOutcome(string? responseText)
+    {
+        return TryResolveDeclaredStepOutcome(responseText, out var declaredOutcome) &&
+               declaredOutcome.Status == ProcessStepRunStatus.Completed;
     }
 
     private static bool ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure(
@@ -2515,6 +2532,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return WorkspaceScopeDescriptor.NormalizeRelativePath(
             Path.Combine(
                 "artifacts",
+                "process-runs",
+                candidate.Run.Id.ToString("D")));
+    }
+
+    private static string BuildCurrentRunManagedOutputRoot(DispatchCandidate candidate)
+    {
+        return WorkspaceScopeDescriptor.NormalizeRelativePath(
+            Path.Combine(
+                "output",
                 "process-runs",
                 candidate.Run.Id.ToString("D")));
     }

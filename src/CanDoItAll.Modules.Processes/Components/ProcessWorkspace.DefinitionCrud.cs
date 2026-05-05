@@ -337,6 +337,11 @@ public partial class ProcessWorkspace
         {
             await LoadRuntimePaneDataAsync();
         }
+        else if (string.Equals(detailTab, DetailTabManagerChat, StringComparison.Ordinal))
+        {
+            ClearRunDetails();
+            await LoadManagerChatAsync();
+        }
         else
         {
             ClearRunDetails();

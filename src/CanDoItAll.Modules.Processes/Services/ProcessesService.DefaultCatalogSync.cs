@@ -44,7 +44,7 @@ public sealed partial class ProcessesService
             return Result<bool>.Success(false);
         }
 
-        PrepareImportedDefinitionForSave(incoming);
+        PrepareImportedDefinitionForSave(incoming, resetDefinitionIdentity: false);
 
         var saveResult = await SaveAsync(
             incoming,

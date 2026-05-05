@@ -46,6 +46,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             out var groundedExternalParentAlias,
             out var groundedExternalLeafName);
         var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
+        var currentRunManagedOutputRoot = BuildCurrentRunManagedOutputRoot(candidate);
         var summarizedTriggerReason = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
         var builder = new StringBuilder();
         builder.AppendLine("You are executing a CanDoItAll process step.");
@@ -64,6 +65,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("Current-run managed artifact root:");
         builder.AppendLine($"- `{currentRunManagedArtifactRoot}`");
         builder.AppendLine("- Use this root for discretionary evidence, notes, logs, and required text artifacts that do not have an explicit governed path.");
+        builder.AppendLine();
+        builder.AppendLine("Current-run managed output root:");
+        builder.AppendLine($"- `{currentRunManagedOutputRoot}`");
+        builder.AppendLine("- Use this root only for concrete generated deliverables when no grounded external product root is provided by the current run.");
         builder.AppendLine();
         builder.AppendLine("Run objective:");
         builder.AppendLine(string.IsNullOrWhiteSpace(summarizedTriggerReason)
@@ -116,6 +121,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 builder.AppendLine("- Do not use files discovered only from broad managed workspace browsing as product requirements, app source, launch scripts, or validation helpers for this run.");
                 builder.AppendLine("- Do not list, read, cite, copy, or infer implementation patterns from sibling external-target applications on the same host. Framework examples must come from loaded skills, tool descriptions, official templates, or current-run artifacts, not from unrelated local apps.");
                 builder.AppendLine("- Never write `contextual example files`, `source files reviewed`, or similar evidence claims unless the exact files were inspected by current-run tool calls and are inside the grounded product root, current-run artifact root, or an explicitly grounded upstream input.");
+            }
+            else
+            {
+                builder.AppendLine($"- The dispatcher did not ground an external product root for this run. Do not invent, create, retry, or cite any `external-target/...` path unless a current-run project_structure_read result names an exact absolute local path.");
+                builder.AppendLine($"- If the current step must create a concrete greenfield deliverable and no external product root is found after project_structure_read, use `{currentRunManagedOutputRoot}` as the product root and `{currentRunManagedArtifactRoot}` for evidence.");
+                builder.AppendLine($"- For .NET scaffolding without an external product root, use `workspace_dotnet_new` under `{currentRunManagedOutputRoot}`; do not use the bare managed workspace root, shared `src/`, shared `tests/`, or guessed host folders.");
             }
             builder.AppendLine();
         }
@@ -255,8 +266,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("- Complete the actual work described in the work brief and expected outcome before writing summary artifacts.");
         builder.AppendLine("- Required output artifacts are evidence of completed work. They do not replace code changes, runnable outputs, tests, screenshots, or other concrete deliverables.");
         builder.AppendLine("- Do not execute helper scripts, app launches, browser proof, release rollout, or other side actions unless the current step contract or required artifacts explicitly call for them.");
-        builder.AppendLine($"- Use `{currentRunManagedArtifactRoot}` for current-run managed evidence, drafts, logs, and required text artifacts that do not have an explicit governed path.");
-        builder.AppendLine("- Paths under `artifacts/`, `output/`, `integration-map/`, and `data/` are managed workspace aliases. Do not write shallow shared scope files directly under `artifacts/scopes/<scope>/<id>/`, `output/scopes/<scope>/<id>/`, `integration-map/scopes/<scope>/<id>/`, or `data/scopes/<scope>/<id>/`; concurrent runs can overwrite those files. Use the current-run root unless a required artifact input or output gives an exact deeper managed path.");
+            builder.AppendLine($"- Use `{currentRunManagedArtifactRoot}` for current-run managed evidence, drafts, logs, and required text artifacts that do not have an explicit governed path.");
+            builder.AppendLine($"- Use `{currentRunManagedOutputRoot}` for generated product files only when this run has no grounded external product root. Keep generated source, tests, scripts, and project files under that run-specific output root.");
+            builder.AppendLine("- Paths under `artifacts/`, `output/`, `integration-map/`, and `data/` are managed workspace aliases. Do not write shallow shared scope files directly under `artifacts/scopes/<scope>/<id>/`, `output/scopes/<scope>/<id>/`, `integration-map/scopes/<scope>/<id>/`, or `data/scopes/<scope>/<id>/`; concurrent runs can overwrite those files. Use the current-run root unless a required artifact input or output gives an exact deeper managed path.");
         builder.AppendLine("- Treat run-level paths and planned solution targets as context unless the current step contract explicitly tells you to create, inspect, build, test, launch, or review them. Only then must that concrete output exist before you conclude.");
         builder.AppendLine("- If the current step contract describes greenfield implementation or gives you a bootstrap or init script, missing solution or project files are expected pre-bootstrap state, not a blocker. Run the bootstrap or init step first, then inspect the scaffolded files and continue.");
         builder.AppendLine("- Do not claim that planned scaffold targets are missing deliverables when the current step contract explicitly tells you to create, bootstrap, or scaffold them in this step.");

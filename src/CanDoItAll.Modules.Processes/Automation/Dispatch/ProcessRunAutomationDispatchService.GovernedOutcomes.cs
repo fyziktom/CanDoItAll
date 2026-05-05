@@ -84,12 +84,45 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedBranchOutcomeTitle = NormalizeBranchOutcomeToken(branchOutcomeTitle);
         if (string.IsNullOrWhiteSpace(normalizedBranchOutcomeTitle))
         {
-            return null;
+            return ResolveImplicitCompletedDefaultBranchOutcomeId(candidate);
         }
 
         var matchByTitle = candidate.BranchOutcomes.FirstOrDefault(
             item => NormalizeBranchOutcomeToken(item.Title).Equals(normalizedBranchOutcomeTitle, StringComparison.Ordinal));
         return matchByTitle?.Id;
+    }
+
+    private static Guid? ResolveImplicitCompletedDefaultBranchOutcomeId(DispatchCandidate candidate)
+    {
+        if (!candidate.RequiresExplicitBranchOutcomeSelection)
+        {
+            return null;
+        }
+
+        var nonErrorOutcomes = candidate.BranchOutcomes
+            .Where(outcome => !IsErrorBranchOutcome(outcome))
+            .ToList();
+        if (nonErrorOutcomes.Count != 1)
+        {
+            return null;
+        }
+
+        var defaultOutcome = nonErrorOutcomes[0];
+        return IsDefaultBranchOutcome(defaultOutcome)
+            ? defaultOutcome.Id
+            : null;
+    }
+
+    private static bool IsDefaultBranchOutcome(DispatchBranchOutcome outcome)
+    {
+        return string.Equals(NormalizeBranchOutcomeToken(outcome.Key), "default", StringComparison.Ordinal) ||
+               string.Equals(NormalizeBranchOutcomeToken(outcome.Title), "default", StringComparison.Ordinal);
+    }
+
+    private static bool IsErrorBranchOutcome(DispatchBranchOutcome outcome)
+    {
+        return string.Equals(NormalizeBranchOutcomeToken(outcome.Key), "error", StringComparison.Ordinal) ||
+               string.Equals(NormalizeBranchOutcomeToken(outcome.Title), "error", StringComparison.Ordinal);
     }
 
     private static string? ResolveBranchOutcomeSelectionFailure(

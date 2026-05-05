@@ -370,6 +370,58 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_does_not_record_solution_template_as_project_scaffold_root()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var solutionContext = CreateContext(
+            "workspace_dotnet_new",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
+                ["name"] = "PocketMeetingCostPlanner",
+                ["template"] = "sln"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+        var appContext = CreateContext(
+            "workspace_dotnet_new",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
+                ["name"] = "PocketMeetingCostPlanner",
+                ["template"] = "blazor"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+        var conflictingProjectContext = appContext with
+        {
+            RedactedArguments = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
+                ["name"] = "PocketMeetingCostPlanner",
+                ["template"] = "xunit"
+            }
+        };
+
+        var solutionDecision = await policy.EvaluateAsync(solutionContext, CancellationToken.None);
+        policy.RecordSuccessfulInvocation(solutionContext);
+        var appDecision = await policy.EvaluateAsync(appContext, CancellationToken.None);
+        policy.RecordSuccessfulInvocation(appContext);
+        var conflictingProjectDecision = await policy.EvaluateAsync(conflictingProjectContext, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, solutionDecision.Kind);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, appDecision.Kind);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, conflictingProjectDecision.Kind);
+        Assert.Contains("already scaffolded", conflictingProjectDecision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_dotnet_new_template_switch_when_previous_attempt_was_not_successful()
     {
         var policy = new DefaultAgentToolInvocationPolicy();

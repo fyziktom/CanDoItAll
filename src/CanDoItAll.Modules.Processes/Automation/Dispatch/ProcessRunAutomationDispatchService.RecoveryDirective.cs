@@ -44,6 +44,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             ResolveOutputInspectionText(responseText));
         var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText);
+        var recoverableFinalizerValidationFailure = TryResolveRecoverableFinalizerValidationFailure(
+            candidate,
+            detail,
+            responseText,
+            out var finalizerFailureSummary);
         var recoverableExecutionInterruption = TryResolveRecoverableExecutionInterruption(
             detail,
             responseText,
@@ -120,6 +125,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             unresolvedCriticalToolFailures.Count == 0)
         {
             builder.AppendLine("The previous attempt did not provide a valid governed step outcome. Inspect the existing concrete outputs and validation evidence, then return the required governed outcome instead of regenerating unrelated work.");
+        }
+
+        if (recoverableFinalizerValidationFailure)
+        {
+            builder.AppendLine($"{finalizerFailureSummary} On this retry, call `{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}` exactly once with a valid ProcessStepOutcomeResult before concluding.");
+            builder.AppendLine("Do not answer only in prose, markdown, or a JSON snippet; the process source of truth is the required finalizer call.");
         }
 
         if (recoverableExecutionInterruption)

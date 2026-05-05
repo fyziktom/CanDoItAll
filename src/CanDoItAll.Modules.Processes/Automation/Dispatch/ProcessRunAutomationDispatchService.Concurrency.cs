@@ -447,6 +447,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             reasons.Add($"recoverable provider failure: {providerFailureSummary}");
         }
 
+        if (TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out var finalizerFailureSummary))
+        {
+            reasons.Add($"recoverable finalizer validation failure: {finalizerFailureSummary}");
+        }
+
         if (TryResolveRecoverableExecutionInterruption(detail, responseText, out var interruptionSummary))
         {
             reasons.Add($"recoverable execution interruption: {interruptionSummary}");
@@ -483,6 +488,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var run = detail.Run;
         var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText);
         var recoverableProviderFailure = TryResolveRecoverableProviderFailure(detail, responseText, out _);
+        var recoverableFinalizerValidationFailure = TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out _);
         var recoverableExecutionInterruption = TryResolveRecoverableExecutionInterruption(detail, responseText, out _);
         var recoverableRepeatedToolInvocation =
             MentionsRepeatedToolInvocation(responseText) ||
@@ -497,13 +503,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!RequiresConcreteImplementationProof(candidate) &&
             !RequiresConcreteBrowserProof(candidate) &&
             !recoverableProviderFailure &&
+            !recoverableFinalizerValidationFailure &&
             !recoverableExecutionInterruption &&
             !recoverableRepeatedToolInvocation)
         {
             return false;
         }
 
-        if (HasValidNonCompletedDeclaredOutcome(
+        if (!recoverableFinalizerValidationFailure &&
+            HasValidNonCompletedDeclaredOutcome(
                 candidate,
                 detail,
                 responseText,
@@ -516,8 +524,73 @@ internal sealed partial class ProcessRunAutomationDispatchService
                unresolvedCriticalToolFailures.Count > 0 ||
                recoverableGovernedOutcomeGap ||
                recoverableProviderFailure ||
+               recoverableFinalizerValidationFailure ||
                recoverableExecutionInterruption ||
                recoverableRepeatedToolInvocation;
+    }
+
+    private static bool TryResolveRecoverableFinalizerValidationFailure(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        out string failureSummary)
+    {
+        failureSummary = string.Empty;
+        if (!RequiresGovernedStepOutcome(candidate.StepRun))
+        {
+            return false;
+        }
+
+        var candidateTexts = new[]
+        {
+            responseText,
+            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant)?.Content,
+            ResolveLatestAssistantErrorSummary(detail.Run.SerializedSessionStateJson),
+            ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson),
+            detail.Run.ResultSummary
+        };
+
+        foreach (var candidateText in candidateTexts)
+        {
+            if (MentionsProcessStepOutcomeFinalizerMissing(candidateText))
+            {
+                failureSummary = $"Required finalizer tool '{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}' was not called.";
+                return true;
+            }
+
+            if (MentionsProcessStepOutcomeFinalizerInvalid(candidateText))
+            {
+                failureSummary = $"Required finalizer tool '{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}' failed validation.";
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MentionsProcessStepOutcomeFinalizerMissing(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains(ProcessStepOutcomeFinalizerMissingErrorCode, StringComparison.OrdinalIgnoreCase) ||
+               (text.Contains(AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, StringComparison.OrdinalIgnoreCase) &&
+                text.Contains("was not called", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool MentionsProcessStepOutcomeFinalizerInvalid(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains(ProcessStepOutcomeFinalizerMultipleCallsErrorCode, StringComparison.OrdinalIgnoreCase) ||
+               (text.Contains(AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, StringComparison.OrdinalIgnoreCase) &&
+                text.Contains("finalizer", StringComparison.OrdinalIgnoreCase) &&
+                text.Contains("failed validation", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool TryResolveRecoverableExecutionInterruption(

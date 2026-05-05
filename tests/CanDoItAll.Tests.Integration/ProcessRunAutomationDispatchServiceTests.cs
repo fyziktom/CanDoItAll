@@ -4700,6 +4700,140 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
+    public void ResolveUnresolvedCriticalToolFailures_ignores_redundant_denied_bootstrap_after_tool_backed_validation_succeeds()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveFailures = serviceType.GetMethod("ResolveUnresolvedCriticalToolFailures", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveUnresolvedCriticalToolFailures method was not found.");
+
+        var now = DateTimeOffset.UtcNow;
+        var runId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+        var chatSession = new ChatSessionRecord(
+            Guid.NewGuid(),
+            agentId,
+            "Recovered scaffold run",
+            now,
+            now,
+            [
+                new ChatMessageRecord(
+                    Guid.NewGuid(),
+                    ChatMessageRole.Assistant,
+                    "The existing solution skeleton was inspected and validated.",
+                    now.AddSeconds(5),
+                    56)
+            ]);
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                runId,
+                agentId,
+                chatSession.Id,
+                "Recovered scaffold run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "The existing solution skeleton was inspected, built, and smoke-tested."),
+                "OpenAI chat completions",
+                "gpt-4o-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            chatSession,
+            [],
+            [])
+        {
+            ToolReceipts =
+            [
+                CreateToolReceipt("workspace-process", "workspace_dotnet_new", "dotnet_new sln", ".", "Succeeded (exit 0)", now),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_new", "dotnet_new blazor", ".", "Succeeded (exit 0)", now.AddMilliseconds(500)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_build", "build external-target/C/app/App.csproj", ".", "Succeeded (exit 0)", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_run", "run external-target/C/app/App.csproj", ".", "Succeeded (exit 0)", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-file", "workspace_read_file", "external-target/C/app/App.csproj", ".", "Succeeded: Read file.", now.AddSeconds(3)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_new", "dotnet_new blazor", ".", "Denied", now.AddSeconds(4))
+            ]
+        };
+
+        var failures = Assert.IsAssignableFrom<IReadOnlyList<ToolExecutionReceiptRecord>>(
+            resolveFailures.Invoke(null, [detail]));
+
+        Assert.Empty(failures);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredToolExecutions_accepts_validated_existing_dotnet_scaffold_without_dotnet_new()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingTools = serviceType.GetMethod("ResolveMissingRequiredToolExecutions", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredToolExecutions method was not found.");
+
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Create solution and Blazor SSR app",
+            "Use workspace_dotnet_new when the scaffold is absent. If an existing scaffold is present, inspect it and prove it with workspace_dotnet_build, workspace_dotnet_test, and workspace_dotnet_run.",
+            ProcessStepKind.Work);
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Existing scaffold validation run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                StructuredOutcome(
+                    ProcessStepOutcomeStatus.Completed,
+                    "Existing .NET scaffold was inspected, built, tested, and smoke-tested."),
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            [])
+        {
+            ToolReceipts =
+            [
+                CreateToolReceipt("workspace-file", "workspace_stat_path", "external-target/C/app/PocketPantry.MenuPlanner.slnx", ".", "Succeeded: Path exists.", now),
+                CreateToolReceipt("workspace-file", "workspace_read_file", "external-target/C/app/src/PocketPantry.MenuPlanner/PocketPantry.MenuPlanner.csproj", ".", "Succeeded: Read file.", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_build", "build external-target/C/app/src/PocketPantry.MenuPlanner/PocketPantry.MenuPlanner.csproj", ".", "Succeeded (exit 0)", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_test", "test external-target/C/app/tests/PocketPantry.MenuPlanner.Tests/PocketPantry.MenuPlanner.Tests.csproj", ".", "Succeeded (exit 0)", now.AddSeconds(3)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_run", "run external-target/C/app/src/PocketPantry.MenuPlanner/PocketPantry.MenuPlanner.csproj", ".", "Succeeded (exit 0)", now.AddSeconds(4))
+            ]
+        };
+
+        var missingTools = Assert.IsAssignableFrom<IReadOnlyList<string>>(
+            resolveMissingTools.Invoke(null, [candidate, detail]));
+
+        Assert.DoesNotContain("workspace_dotnet_new", missingTools);
+        Assert.Empty(missingTools);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_ignores_suggested_browser_input_tools_when_browser_proof_succeeds()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -5373,6 +5507,39 @@ Requirements from project-level planning context:
             prompt,
             StringComparison.Ordinal);
         Assert.DoesNotContain("runnable app", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_uses_run_scoped_output_root_when_no_external_target_is_grounded()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildExecutionPromptCore = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var projectId = Guid.NewGuid();
+        var candidate = CreateProjectStructureDispatchCandidate(
+            "Implement the requested Blazor app and prove the build passes.",
+            new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "project-root",
+                NodeTitle = "Tool lending checkout"
+            });
+        const string projectStructureGrounding = """
+Dispatcher fetched the live project structure for `Tool lending checkout` and focused this prompt on the selected work branch.
+Ancestor path to the target work node:
+- Tool lending checkout (project-root); type: ProjectRoot/default; status: Active; notes: Build a small checkout app for shared tools.
+""";
+
+        var prompt = buildExecutionPromptCore.Invoke(null, [candidate, null, projectStructureGrounding, null]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Current-run managed output root:", prompt, StringComparison.Ordinal);
+        Assert.Contains("output/process-runs/", prompt, StringComparison.Ordinal);
+        Assert.Contains("The dispatcher did not ground an external product root for this run", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not invent, create, retry, or cite any `external-target/...` path", prompt, StringComparison.Ordinal);
+        Assert.Contains("use `workspace_dotnet_new` under `output/process-runs/", prompt, StringComparison.Ordinal);
+        Assert.Contains("shared `src/`, shared `tests/`, or guessed host folders", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -7886,6 +8053,61 @@ Requirements from project-level planning context:
     }
 
     [Fact]
+    public void ResolveCompletionStatus_uses_synthetic_default_branch_when_it_is_only_success_path()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var resolveSelectedBranchOutcomeId = ResolveSelectedBranchOutcomeIdMethod(serviceType);
+        var candidate = CreateDispatchCandidateWithBranchOutcomes(
+            "Review architecture impact and continue on the default path when no issue is found.",
+            true,
+            ("__default__", "Default", "Continue when no explicit branch outcome is selected."),
+            ("__error__", "Error", "Handle exceptions, failed validations, or explicit error escalation."));
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Architecture review found no source-of-truth conflict.");
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Architecture review run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists.")),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete."))),
+                []),
+            null,
+            [],
+            []);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var selectedBranchOutcomeId = (Guid?)resolveSelectedBranchOutcomeId.Invoke(null, [candidate, ProcessStepRunStatus.Completed, responseText]);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, status);
+        Assert.Equal(ResolveBranchOutcomeId(candidate, "__default__"), selectedBranchOutcomeId);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_allows_completed_branching_step_with_valid_branch_outcome_selection()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -8421,6 +8643,7 @@ Requirements from project-level planning context:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The implementation was updated and tests passed, but the governed finalizer was not emitted.";
+        const string finalizerFailureSummary = "Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing: Required finalizer tool 'submit_process_step_outcome' was not called.";
         var detail = new ExecutionRunDetail(
             new ExecutionRunRecord(
                 Guid.NewGuid(),
@@ -8435,7 +8658,7 @@ Requirements from project-level planning context:
                 "system",
                 "{}",
                 "Prompt",
-                responseText,
+                finalizerFailureSummary,
                 "OpenAI default",
                 "gpt-4.1",
                 ExecutionState.Failed,
@@ -8444,7 +8667,7 @@ Requirements from project-level planning context:
                 now,
                 now,
                 now,
-                "Finalizer tool 'submit_process_step_outcome' in Required mode failed validation.",
+                string.Empty,
                 BuildSerializedSessionStateWithMessages(
                     ("assistant", [CreateTextContent(responseText)])
                 ),
@@ -8463,6 +8686,69 @@ Requirements from project-level planning context:
                 Array.Empty<ToolExecutionReceiptRecord>(),
                 1,
                 5
+            ]);
+
+        Assert.IsType<bool>(shouldRetryResult);
+        Assert.True((bool)shouldRetryResult);
+    }
+
+    [Fact]
+    public void ShouldRetryRecoverableFailedRun_returns_true_for_missing_finalizer_on_decision_step()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var shouldRetry = serviceType.GetMethod("ShouldRetryRecoverableFailedRun", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ShouldRetryRecoverableFailedRun method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Decide technical approach",
+            "Choose the architecture path and record the decision.",
+            ProcessStepKind.Decision,
+            (ProcessArtifactKind.Decision, "Implementation approach decision", true, "Must summarize selected approach and risks."));
+
+        var now = DateTimeOffset.UtcNow;
+        const string responseText = "The approach decision was drafted, but the governed finalizer was not emitted.";
+        const string finalizerFailureSummary = "Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing: Required finalizer tool 'submit_process_step_outcome' was not called.";
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Approach decision run",
+                "process-step",
+                "step-2",
+                "corr-2",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                finalizerFailureSummary,
+                "OpenAI default",
+                "gpt-4.1",
+                ExecutionState.Failed,
+                RunOutcome.Failed,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionStateWithMessages(
+                    ("assistant", [CreateTextContent(responseText)])
+                ),
+                []),
+            null,
+            [],
+            []);
+
+        var shouldRetryResult = shouldRetry.Invoke(
+            null,
+            [
+                candidate,
+                detail,
+                responseText,
+                Array.Empty<string>(),
+                Array.Empty<ToolExecutionReceiptRecord>(),
+                1,
+                3
             ]);
 
         Assert.IsType<bool>(shouldRetryResult);
@@ -9195,7 +9481,7 @@ Requirements from project-level planning context:
         }
 
         var constructor = candidateType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .Single(candidateConstructor => candidateConstructor.GetParameters().Length == 15);
+            .Single(candidateConstructor => candidateConstructor.GetParameters().Length == 16);
         return constructor.Invoke(
                     [
                         new ProcessRun
@@ -9212,6 +9498,16 @@ Requirements from project-level planning context:
                            Title = stepTitle,
                            CurrentExecutorName = "Showcase Lead Engineer",
                            StepKind = stepKind
+                       },
+                       new ProcessStepDefinition
+                       {
+                           Title = stepTitle,
+                           StepKind = stepKind,
+                           InputContractSummary = "Use the available process context and artifacts.",
+                           OutputContractSummary = "Buildable implementation.",
+                           EvidenceContractSummary = expectedArtifactDefinitions.Length == 0
+                               ? "Implementation change set"
+                               : string.Join(", ", expectedArtifactDefinitions.Select(item => item.Title))
                        },
                        new ProcessWorkBrief
                        {

@@ -44,6 +44,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
 {
     private const string AutomationActor = "process-automation-dispatch";
     private const string ExternalTargetAliasRoot = "external-target";
+    private const string ProcessStepOutcomeFinalizerMissingErrorCode = "agent.finalizer.missing";
+    private const string ProcessStepOutcomeFinalizerMultipleCallsErrorCode = "agent.finalizer.multiple_calls";
     private const int DefaultMaxExecutionAttempts = 3;
     private const int ConcreteImplementationMaxExecutionAttempts = 5;
     private const int MaxBrowserSnapshotInspectionCharacters = 262_144;

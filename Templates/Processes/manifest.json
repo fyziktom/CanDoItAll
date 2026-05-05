@@ -26,6 +26,10 @@
       "RelativePath": "processes/dotnet-blazor-ssr-solution-setup"
     },
     {
+      "Key": "dotnet-feature-function-implementation",
+      "RelativePath": "processes/dotnet-feature-function-implementation"
+    },
+    {
       "Key": "dotnet-development-slice",
       "RelativePath": "processes/dotnet-development-slice"
     },

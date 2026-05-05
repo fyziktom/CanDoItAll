@@ -265,6 +265,7 @@ public sealed partial class ProcessesService
         Dictionary<Guid, ProcessLaunchCandidate>? selectedCandidatesByRoleRequirementId = null;
         Dictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>>? projectAssignmentLookup = null;
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> directAiCandidatesByRoleRequirementId = new Dictionary<Guid, ProcessLaunchCandidate>();
+        IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate> inheritedAssignmentsByRoleRequirementId = new Dictionary<Guid, InheritedRunAssignmentCandidate>();
         ProcessDefinition? definition;
         ProcessDefinitionVersion? publishedVersion;
         Guid? projectId;
@@ -451,6 +452,11 @@ public sealed partial class ProcessesService
         {
             projectId = parentContext.ParentRun.ProjectId;
             operatingMode = parentContext.ParentRun.OperatingMode;
+            inheritedAssignmentsByRoleRequirementId = await BuildInheritedSubprocessAssignmentsAsync(
+                dbContext,
+                roles,
+                parentContext.ParentRun.Id,
+                cancellationToken);
         }
 
         if (projectId.HasValue)
@@ -460,7 +466,8 @@ public sealed partial class ProcessesService
                 .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.IsPrimary).ToList());
         }
 
-        if (launchPlan is null && RequiresTechnicalAgentBinding(operatingMode))
+        if (launchPlan is null &&
+            (RequiresTechnicalAgentBinding(operatingMode) || publishedVersion.ManagerAgentOverrideId.HasValue))
         {
             directAiCandidatesByRoleRequirementId = await BuildDirectRunAiCandidateAssignmentsAsync(
                 dbContext,
@@ -494,6 +501,7 @@ public sealed partial class ProcessesService
                 defaultRunName,
                 selectedCandidatesByRoleRequirementId ?? [],
                 directAiCandidatesByRoleRequirementId,
+                inheritedAssignmentsByRoleRequirementId,
                 projectAssignmentLookup ?? [],
                 parentContext.ParentRun,
                 parentContext.ParentStepRun,
@@ -797,6 +805,27 @@ public sealed partial class ProcessesService
             };
         }
 
+        if (context.InheritedAssignmentsByRoleRequirementId.TryGetValue(role.Id, out var inheritedCandidate))
+        {
+            var parentAssignment = inheritedCandidate.Assignment;
+            return new ProcessRunAssignment
+            {
+                ProcessRunId = processRunId,
+                RoleRequirementId = role.Id,
+                PartyId = parentAssignment.PartyId,
+                DisplayName = parentAssignment.DisplayName,
+                ExecutorKind = parentAssignment.ExecutorKind,
+                BindingReason = BuildInheritedAssignmentReason(inheritedCandidate),
+                SourceRegistryKey = string.IsNullOrWhiteSpace(parentAssignment.SourceRegistryKey)
+                    ? $"parent-run-assignment:{parentAssignment.Id:D}"
+                    : parentAssignment.SourceRegistryKey,
+                SnapshotSummary = role.SnapshotSummary,
+                IsFallback = parentAssignment.IsFallback,
+                IsCapabilityGap = parentAssignment.IsCapabilityGap,
+                AllowsDirectMessaging = parentAssignment.AllowsDirectMessaging && !parentAssignment.IsCapabilityGap
+            };
+        }
+
         return new ProcessRunAssignment
         {
             ProcessRunId = processRunId,
@@ -830,6 +859,7 @@ public sealed partial class ProcessesService
         string DefaultRunName,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> SelectedLaunchCandidatesByRoleRequirementId,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> DirectAiCandidatesByRoleRequirementId,
+        IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate> InheritedAssignmentsByRoleRequirementId,
         IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup,
         ProcessRun? ParentRun,
         ProcessStepRun? ParentStepRun,
@@ -846,6 +876,195 @@ public sealed partial class ProcessesService
     private sealed record ProcessRunManagerSnapshot(
         Guid? AgentId,
         string DisplayName);
+
+    private sealed record InheritedRunAssignmentCandidate(
+        ProcessRunAssignment Assignment,
+        ProcessRoleRequirement ParentRole,
+        string MatchReason);
+
+    private sealed record InheritedRoleAssignmentSource(
+        ProcessRunAssignment Assignment,
+        ProcessRoleRequirement ParentRole);
+
+    private async Task<IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate>> BuildInheritedSubprocessAssignmentsAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<ProcessRoleRequirement> childRoles,
+        Guid parentRunId,
+        CancellationToken cancellationToken)
+    {
+        if (childRoles.Count == 0)
+        {
+            return new Dictionary<Guid, InheritedRunAssignmentCandidate>();
+        }
+
+        var parentAssignments = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == parentRunId && !item.IsCapabilityGap)
+            .ToListAsync(cancellationToken);
+        parentAssignments = parentAssignments
+            .Where(item =>
+                !string.IsNullOrWhiteSpace(item.DisplayName) &&
+                !string.Equals(item.DisplayName, "Unassigned role", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (parentAssignments.Count == 0)
+        {
+            return new Dictionary<Guid, InheritedRunAssignmentCandidate>();
+        }
+
+        var parentRoleIds = parentAssignments
+            .Select(item => item.RoleRequirementId)
+            .Distinct()
+            .ToList();
+        var parentRolesById = await dbContext.Set<ProcessRoleRequirement>()
+            .AsNoTracking()
+            .Where(item => parentRoleIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        var parentSources = parentAssignments
+            .GroupBy(item => item.RoleRequirementId)
+            .Select(SelectInheritableParentAssignment)
+            .Where(item => item is not null)
+            .Select(item => item!)
+            .Where(item => parentRolesById.ContainsKey(item.RoleRequirementId))
+            .Select(item => new InheritedRoleAssignmentSource(item, parentRolesById[item.RoleRequirementId]))
+            .ToList();
+        if (parentSources.Count == 0)
+        {
+            return new Dictionary<Guid, InheritedRunAssignmentCandidate>();
+        }
+
+        var inheritedAssignmentsByRoleId = new Dictionary<Guid, InheritedRunAssignmentCandidate>();
+        foreach (var childRole in childRoles)
+        {
+            var match = ResolveInheritedAssignmentForRole(childRole, parentSources);
+            if (match is not null)
+            {
+                inheritedAssignmentsByRoleId[childRole.Id] = match;
+            }
+        }
+
+        return inheritedAssignmentsByRoleId;
+    }
+
+    private static ProcessRunAssignment? SelectInheritableParentAssignment(
+        IGrouping<Guid, ProcessRunAssignment> assignmentsByRole)
+    {
+        var runScopedAssignments = assignmentsByRole
+            .Where(item => !item.StepDefinitionId.HasValue)
+            .ToList();
+        if (runScopedAssignments.Count == 1)
+        {
+            return runScopedAssignments[0];
+        }
+
+        if (runScopedAssignments.Count > 1)
+        {
+            return null;
+        }
+
+        var stepScopedAssignments = assignmentsByRole.ToList();
+        return stepScopedAssignments.Count == 1 ? stepScopedAssignments[0] : null;
+    }
+
+    private static InheritedRunAssignmentCandidate? ResolveInheritedAssignmentForRole(
+        ProcessRoleRequirement childRole,
+        IReadOnlyList<InheritedRoleAssignmentSource> parentSources)
+    {
+        var matches = parentSources
+            .Select(source => new
+            {
+                Source = source,
+                Match = ScoreInheritedAssignmentMatch(childRole, source.ParentRole)
+            })
+            .Where(item => item.Match.Score > 0)
+            .OrderByDescending(item => item.Match.Score)
+            .ThenBy(item => item.Source.ParentRole.DisplayOrder)
+            .ToList();
+        if (matches.Count == 0)
+        {
+            return null;
+        }
+
+        var bestScore = matches[0].Match.Score;
+        var bestMatches = matches
+            .Where(item => item.Match.Score == bestScore)
+            .ToList();
+        if (bestMatches.Count != 1)
+        {
+            return null;
+        }
+
+        var bestMatch = bestMatches[0];
+        return new InheritedRunAssignmentCandidate(
+            bestMatch.Source.Assignment,
+            bestMatch.Source.ParentRole,
+            bestMatch.Match.Reason);
+    }
+
+    private static (int Score, string Reason) ScoreInheritedAssignmentMatch(
+        ProcessRoleRequirement childRole,
+        ProcessRoleRequirement parentRole)
+    {
+        if (EqualsNonEmpty(childRole.RoleTemplateSourceKey, parentRole.RoleTemplateSourceKey))
+        {
+            return (300, $"matching role template '{childRole.RoleTemplateSourceKey.Trim()}'");
+        }
+
+        if (EqualsNonEmpty(childRole.Key, parentRole.Key))
+        {
+            return (250, $"matching role key '{childRole.Key.Trim()}'");
+        }
+
+        if (EqualsNonEmpty(childRole.RoleTemplateSnapshotName, parentRole.RoleTemplateSnapshotName))
+        {
+            return (200, $"matching role template snapshot '{childRole.RoleTemplateSnapshotName.Trim()}'");
+        }
+
+        if (EqualsNormalizedText(childRole.DisplayName, parentRole.DisplayName))
+        {
+            return (150, $"matching role display name '{childRole.DisplayName.Trim()}'");
+        }
+
+        return (0, string.Empty);
+    }
+
+    private static bool EqualsNonEmpty(string left, string right)
+    {
+        return !string.IsNullOrWhiteSpace(left) &&
+            !string.IsNullOrWhiteSpace(right) &&
+            string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool EqualsNormalizedText(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return false;
+        }
+
+        return string.Equals(
+            NormalizeRoleText(left),
+            NormalizeRoleText(right),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeRoleText(string value)
+    {
+        var tokens = value.Split(
+            ['-', '_', ' ', '/', '\\', ':'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return string.Join(" ", tokens);
+    }
+
+    private static string BuildInheritedAssignmentReason(InheritedRunAssignmentCandidate inheritedCandidate)
+    {
+        var parentAssignment = inheritedCandidate.Assignment;
+        var parentBinding = string.IsNullOrWhiteSpace(parentAssignment.BindingReason)
+            ? "Parent binding did not provide a reason."
+            : parentAssignment.BindingReason.Trim();
+
+        return $"Inherited subprocess role binding from parent role '{inheritedCandidate.ParentRole.DisplayName}' by {inheritedCandidate.MatchReason}. Parent binding: {parentBinding}";
+    }
 
     private async Task<IReadOnlyDictionary<Guid, ProcessLaunchCandidate>> BuildDirectRunAiCandidateAssignmentsAsync(
         AppDbContext dbContext,

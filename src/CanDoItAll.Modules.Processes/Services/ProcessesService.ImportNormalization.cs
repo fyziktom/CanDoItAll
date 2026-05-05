@@ -2,13 +2,18 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService
 {
-    private static void PrepareImportedDefinitionForSave(ProcessDefinitionEditorModel model)
+    private static void PrepareImportedDefinitionForSave(
+        ProcessDefinitionEditorModel model,
+        bool resetDefinitionIdentity = true)
     {
-        model.Id = null;
-        model.WorkingVersionId = null;
-        model.DefinitionConcurrencyToken = null;
-        model.WorkingVersionConcurrencyToken = null;
-        model.WorkingVersionNumber = 1;
+        if (resetDefinitionIdentity)
+        {
+            model.Id = null;
+            model.WorkingVersionId = null;
+            model.DefinitionConcurrencyToken = null;
+            model.WorkingVersionConcurrencyToken = null;
+            model.WorkingVersionNumber = 1;
+        }
 
         var roleIdMap = new Dictionary<Guid, Guid>();
         foreach (var role in model.Roles)

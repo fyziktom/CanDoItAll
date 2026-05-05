@@ -2,8 +2,8 @@
   "Kind": "process-template-definition",
   "Key": "dotnet-development-slice",
   "DisplayName": ".NET implementation slice with atomic validation",
-  "Summary": "Reusable software-development child process that breaks implementation into intake, architecture, optional solution setup, code change, unit tests, and evidence handoff.",
-  "ValueStatement": "Keeps a large implementation lane observable and manager-reportable by using small process steps and a nested scaffold subprocess when a new Blazor SSR solution is needed.",
+  "Summary": "Reusable software-development child process that breaks implementation into intake, architecture, optional solution setup, feature/function implementation, unit tests, and evidence handoff.",
+  "ValueStatement": "Keeps a large implementation lane observable and manager-reportable by using small process steps plus nested setup and feature/function implementation subprocesses.",
   "CustomerName": "Software delivery process",
   "OwnerName": "Engineering manager",
   "InterfaceContractSummary": "The parent process supplies the change scope, repository target, architecture decision, and validation bar; this subprocess returns implementation and test evidence.",
@@ -319,19 +319,21 @@
     {
       "Order": 3,
       "Key": "implement-code-change",
-      "Title": "Implement bounded code change",
-      "Subtitle": "Small production change",
-      "Notes": "Make the minimal production and UI/application changes required by the slice, following existing project conventions.",
-      "StepKind": "Work",
+      "Title": "Implement bounded code change through subprocess",
+      "Subtitle": "Observed feature run",
+      "Notes": "Launch the feature/function implementation subprocess for the bounded behavior in this slice. Observe the child run status, change-set artifact, validation evidence, blockers, and manager-directed rework without duplicating child runtime state in this parent step.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-feature-function-implementation",
+      "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Slice scope, architecture decision, and solution skeleton evidence.",
-      "OutputContractSummary": "Reviewable code change with touched-surface inventory.",
-      "EvidenceContractSummary": "Changed files, rationale, and known risks.",
-      "DecisionRightsSummary": "Implementation engineer can choose local implementation details but cannot widen behavior beyond the slice boundary.",
-      "ExceptionPolicySummary": "Block on architectural mismatch, missing dependency, or scope growth that needs another slice.",
+      "InputContractSummary": "Slice scope, architecture decision, solution skeleton evidence, and one bounded feature or function request.",
+      "OutputContractSummary": "Observed child run that returns a reviewable code change, focused validation evidence, blockers, and residual risks.",
+      "EvidenceContractSummary": "Child run status, implementation change set, validation evidence, manager rework directives, and unresolved blockers.",
+      "DecisionRightsSummary": "Slice manager can request targeted child-run repair but cannot widen behavior beyond the slice boundary.",
+      "ExceptionPolicySummary": "Block the slice when the child implementation run blocks, fails, or reports missing change-set or validation proof.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "prepare-solution-skeleton",
       "DependsOnBranchOutcomeKey": "",
@@ -352,11 +354,11 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "software-engineer",
-          "ResponsibilityKind": "Responsible",
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Accountable",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Rebind only to a .NET-capable implementer familiar with the touched stack."
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can observe child implementation runs and request targeted rework."
         }
       ],
       "ArtifactExpectations": [
@@ -370,7 +372,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by tests, peer review, and parent QA.",
-          "ValidationRequirementSummary": "Must include changed files, behavioral intent, and touched-surface inventory."
+          "ValidationRequirementSummary": "Must point to the observed child implementation run and include changed files, behavioral intent, touched-surface inventory, and proof summary."
         }
       ],
       "ArtifactInputs": [
