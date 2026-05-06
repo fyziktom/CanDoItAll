@@ -339,6 +339,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             @"\\{2,}",
             "\\",
             RegexOptions.CultureInvariant);
+        trimmed = StripEscapedLineBreakPathAnnotations(trimmed);
         trimmed = StripInlinePathAnnotations(trimmed);
         trimmed = Regex.Replace(
             trimmed,
@@ -354,6 +355,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         normalizedPath = trimmed;
         return true;
+    }
+
+    private static string StripEscapedLineBreakPathAnnotations(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(
+                value,
+                @"(?i)(?:\\|/)n(?:Acceptance|Accepted|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+                string.Empty,
+                RegexOptions.CultureInvariant)
+            .Trim();
     }
 
     private static string StripInlinePathAnnotations(string value)

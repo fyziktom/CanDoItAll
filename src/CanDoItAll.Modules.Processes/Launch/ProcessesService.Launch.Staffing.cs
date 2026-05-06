@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -570,32 +571,41 @@ public sealed partial class ProcessesService
                                     RoleMentions(roleSpecificText, "software-engineer") ||
                                     RoleMentions(roleSpecificText, "implementation") ||
                                     RoleMentions(roleSpecificText, "build-capable"));
-        var workMentionsBlazor = RoleMentions(workText, "blazor") ||
-                                 RoleMentions(workText, "razor");
-        var workMentionsDotNet = RoleMentions(workText, ".net") ||
-                                 RoleMentions(workText, "dotnet") ||
-                                 RoleMentions(workText, "c#") ||
-                                 RoleMentions(workText, "csharp");
-        var workMentionsJavaScript = RoleMentions(workText, "javascript") ||
-                                     RoleMentions(workText, "typescript");
-        var agentMentionsBlazor = RoleMentions(aiFact.DisplayName, "blazor") ||
-                                  RoleMentions(aiFact.RoleTitle, "blazor") ||
-                                  RoleMentions(aiFact.TemplateKey, "blazor") ||
-                                  RoleMentions(agentText, "blazor");
-        var agentMentionsDotNet = RoleMentions(aiFact.DisplayName, ".net") ||
-                                  RoleMentions(aiFact.DisplayName, "dotnet") ||
-                                  RoleMentions(aiFact.RoleTitle, ".net") ||
-                                  RoleMentions(aiFact.RoleTitle, "dotnet") ||
-                                  RoleMentions(aiFact.TemplateKey, "dotnet") ||
-                                  RoleMentions(agentText, ".net") ||
-                                  RoleMentions(agentText, "dotnet") ||
-                                  RoleMentions(agentText, "c#") ||
-                                  RoleMentions(agentText, "csharp");
-        var agentMentionsJavaScript = RoleMentions(aiFact.DisplayName, "javascript") ||
-                                      RoleMentions(aiFact.RoleTitle, "javascript") ||
-                                      RoleMentions(aiFact.TemplateKey, "javascript") ||
-                                      RoleMentions(agentText, "javascript") ||
-                                      RoleMentions(agentText, "typescript");
+        var workMentionsBlazor = MentionsBlazorStack(workText);
+        var workMentionsDotNet = MentionsDotNetStack(workText);
+        var workMentionsJavaScript = MentionsJavaScriptStack(workText);
+        var selectedWorkIsJavaScript = ContextHasExclusiveStackSignal(
+                                           additionalRoleContext,
+                                           MentionsJavaScriptStack,
+                                           MentionsBlazorStack,
+                                           MentionsDotNetStack) ||
+                                       (MentionsJavaScriptStack(roleSpecificText) &&
+                                        !MentionsBlazorStack(roleSpecificText) &&
+                                        !MentionsDotNetStack(roleSpecificText));
+        var agentHasDirectBlazorIdentity = MentionsBlazorStack(aiFact.DisplayName) ||
+                                           MentionsBlazorStack(aiFact.RoleTitle) ||
+                                           MentionsBlazorStack(aiFact.TemplateKey) ||
+                                           aiFact.Tags.Any(MentionsBlazorStack);
+        var agentHasDirectDotNetIdentity = MentionsDotNetStack(aiFact.DisplayName) ||
+                                           MentionsDotNetStack(aiFact.RoleTitle) ||
+                                           MentionsDotNetStack(aiFact.TemplateKey) ||
+                                           aiFact.Tags.Any(MentionsDotNetStack);
+        var agentHasDirectJavaScriptIdentity = MentionsJavaScriptStack(aiFact.DisplayName) ||
+                                               MentionsJavaScriptStack(aiFact.RoleTitle) ||
+                                               MentionsJavaScriptStack(aiFact.TemplateKey) ||
+                                               aiFact.Tags.Any(MentionsJavaScriptStack);
+        var agentMentionsBlazor = MentionsBlazorStack(aiFact.DisplayName) ||
+                                  MentionsBlazorStack(aiFact.RoleTitle) ||
+                                  MentionsBlazorStack(aiFact.TemplateKey) ||
+                                  MentionsBlazorStack(agentText);
+        var agentMentionsDotNet = MentionsDotNetStack(aiFact.DisplayName) ||
+                                  MentionsDotNetStack(aiFact.RoleTitle) ||
+                                  MentionsDotNetStack(aiFact.TemplateKey) ||
+                                  MentionsDotNetStack(agentText);
+        var agentMentionsJavaScript = MentionsJavaScriptStack(aiFact.DisplayName) ||
+                                      MentionsJavaScriptStack(aiFact.RoleTitle) ||
+                                      MentionsJavaScriptStack(aiFact.TemplateKey) ||
+                                      MentionsJavaScriptStack(agentText);
 
         if (TextEqualsNormalized(aiFact.DisplayName, displayName) ||
             TextEqualsNormalized(aiFact.RoleTitle, displayName))
@@ -605,22 +615,26 @@ public sealed partial class ProcessesService
 
         if (isImplementationRole)
         {
-            if (HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
+            if (!selectedWorkIsJavaScript &&
+                HasCapability(capabilityNames, WorkspaceDotnetBuildCapability))
             {
                 score += 72m;
             }
 
-            if (HasCapability(capabilityNames, WorkspaceDotnetTestCapability))
+            if (!selectedWorkIsJavaScript &&
+                HasCapability(capabilityNames, WorkspaceDotnetTestCapability))
             {
                 score += 16m;
             }
 
-            if (HasCapability(capabilityNames, WorkspaceDotnetRunCapability))
+            if (!selectedWorkIsJavaScript &&
+                HasCapability(capabilityNames, WorkspaceDotnetRunCapability))
             {
                 score += 12m;
             }
 
-            if (HasCapability(capabilityNames, WorkspaceDotnetNewCapability))
+            if (!selectedWorkIsJavaScript &&
+                HasCapability(capabilityNames, WorkspaceDotnetNewCapability))
             {
                 score += 14m;
             }
@@ -633,9 +647,7 @@ public sealed partial class ProcessesService
 
             if (workMentionsBlazor)
             {
-                if (RoleMentions(aiFact.DisplayName, "blazor") ||
-                    RoleMentions(aiFact.RoleTitle, "blazor") ||
-                    RoleMentions(aiFact.TemplateKey, "blazor"))
+                if (agentHasDirectBlazorIdentity)
                 {
                     score += 220m;
                 }
@@ -651,16 +663,36 @@ public sealed partial class ProcessesService
 
             if (workMentionsDotNet)
             {
-                if (RoleMentions(aiFact.DisplayName, ".net") ||
-                    RoleMentions(aiFact.DisplayName, "dotnet") ||
-                    RoleMentions(aiFact.RoleTitle, ".net") ||
-                    RoleMentions(aiFact.TemplateKey, "dotnet"))
+                if (agentHasDirectDotNetIdentity)
                 {
                     score += 45m;
                 }
                 else if (agentMentionsDotNet)
                 {
                     score += 24m;
+                }
+            }
+
+            if (workMentionsJavaScript || selectedWorkIsJavaScript)
+            {
+                if (agentHasDirectJavaScriptIdentity)
+                {
+                    score += selectedWorkIsJavaScript ? 560m : 70m;
+                }
+                else if (agentMentionsJavaScript &&
+                         !agentHasDirectBlazorIdentity &&
+                         !agentHasDirectDotNetIdentity)
+                {
+                    score += selectedWorkIsJavaScript ? 220m : 45m;
+                }
+
+                if (selectedWorkIsJavaScript &&
+                    !agentHasDirectJavaScriptIdentity &&
+                    (agentHasDirectDotNetIdentity ||
+                     agentHasDirectBlazorIdentity ||
+                     HasCapability(capabilityNames, WorkspaceDotnetBuildCapability)))
+                {
+                    score -= 260m;
                 }
             }
 
@@ -813,10 +845,31 @@ public sealed partial class ProcessesService
                 }
             }
 
-            if (workMentionsJavaScript &&
-                !workMentionsBlazor &&
-                !workMentionsDotNet &&
-                agentMentionsJavaScript)
+            if (selectedWorkIsJavaScript)
+            {
+                if (agentHasDirectJavaScriptIdentity)
+                {
+                    score += 560m;
+                }
+                else if (agentMentionsJavaScript &&
+                         !agentHasDirectBlazorIdentity &&
+                         !agentHasDirectDotNetIdentity)
+                {
+                    score += 220m;
+                }
+
+                if (!agentHasDirectJavaScriptIdentity &&
+                    (agentHasDirectDotNetIdentity ||
+                     agentHasDirectBlazorIdentity ||
+                     HasCapability(capabilityNames, WorkspaceDotnetBuildCapability)))
+                {
+                    score -= 260m;
+                }
+            }
+            else if (workMentionsJavaScript &&
+                     !workMentionsBlazor &&
+                     !workMentionsDotNet &&
+                     agentMentionsJavaScript)
             {
                 score += 65m;
             }
@@ -843,10 +896,9 @@ public sealed partial class ProcessesService
                RoleMentions(agentText, "developer") ||
                RoleMentions(agentText, "engineer") ||
                RoleMentions(agentText, "implements") ||
-               RoleMentions(agentText, "blazor") ||
-               RoleMentions(agentText, "dotnet") ||
-               RoleMentions(agentText, ".net") ||
-               RoleMentions(agentText, "javascript");
+               MentionsBlazorStack(agentText) ||
+               MentionsDotNetStack(agentText) ||
+               MentionsJavaScriptStack(agentText);
     }
 
     private async Task<IReadOnlyList<string?>> BuildLaunchRoleContextAsync(
@@ -993,6 +1045,59 @@ public sealed partial class ProcessesService
     {
         return !string.IsNullOrWhiteSpace(text) &&
                text.Contains(value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MentionsBlazorStack(string text)
+    {
+        return RoleMentions(text, "blazor") ||
+               RoleMentions(text, "razor");
+    }
+
+    private static bool MentionsDotNetStack(string text)
+    {
+        return RoleMentions(text, ".net") ||
+               RoleMentions(text, "dotnet") ||
+               RoleMentions(text, "c#") ||
+               RoleMentions(text, "csharp");
+    }
+
+    private static bool MentionsJavaScriptStack(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return RoleMentions(text, "javascript") ||
+               RoleMentions(text, "typescript") ||
+               Regex.IsMatch(
+                   text,
+                   @"(?:^|[^a-z0-9])(?:js|mjs|cjs|node\.?js|npm|vite|react|vue|svelte)(?:[^a-z0-9]|$)",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContextHasExclusiveStackSignal(
+        IReadOnlyList<string?> additionalRoleContext,
+        Func<string, bool> includedStack,
+        params Func<string, bool>[] excludedStacks)
+    {
+        foreach (var contextItem in additionalRoleContext)
+        {
+            if (string.IsNullOrWhiteSpace(contextItem) ||
+                !includedStack(contextItem))
+            {
+                continue;
+            }
+
+            if (excludedStacks.Any(excludedStack => excludedStack(contextItem)))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private static bool HasCapability(IReadOnlyCollection<string> capabilityNames, string capabilityKey)

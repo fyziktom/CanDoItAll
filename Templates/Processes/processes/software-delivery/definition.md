@@ -93,13 +93,13 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Prompts: prompt-architecture-review
 
 ### 3. Run atomic implementation slice (`implementation`)
-- Step kind: Subprocess
+- Step kind: Work
 - Depends on: architecture-review
 - Inputs: Approved architecture path, scope packet, unresolved technical questions, and implementation-slice start criteria.
-- Outputs: Completed child implementation slice with tests, migration notes, blockers, and rollout checklist inputs visible from the parent process.
-- Evidence: Child run journal, implementation change set, test outputs, migration steps, and touched-surface inventory.
-- Decision rights: Parent delivery manager can instruct the child manager, but implementation changes remain owned by the child slice roles.
-- Exception policy: Do not complete the parent implementation step until the child implementation slice reaches a completed terminal state.
+- Outputs: Completed implementation slice with validation notes, blockers, and rollout checklist inputs visible from the parent process.
+- Evidence: Implementation journal, change set, validation outputs, migration steps, and touched-surface inventory.
+- Decision rights: Parent delivery manager owns sequencing and escalation, while the selected implementation role owns the concrete changes.
+- Exception policy: Do not complete the implementation step until the selected implementation role records a completed terminal disposition with validation evidence or explicit blockers.
 - Artifact expectations:
   - `implementation-change-set` => `implementation-change-set` / Implementation change set
   - `migration-rollout-preparation-checklist` => `rollback-plan` / Migration and rollout preparation checklist
