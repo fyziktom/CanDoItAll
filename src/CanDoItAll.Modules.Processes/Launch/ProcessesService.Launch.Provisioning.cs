@@ -222,6 +222,13 @@ public sealed partial class ProcessesService
                 return Result<LaunchProvisioningOutcome>.Failure(createPartyResult.Errors);
             }
 
+            if (createPartyResult.Value is null)
+            {
+                return Result<LaunchProvisioningOutcome>.Failure(Error.Validation(
+                    "Provisioning candidate party creation completed without a party id.",
+                    "processes.launch.provisioning-party-create-empty"));
+            }
+
             partyId = createPartyResult.Value.PartyId;
         }
 

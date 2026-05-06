@@ -284,6 +284,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Replace('\\', '/')
             .Trim()
             .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
+        normalizedAlias = StripEscapedLineBreakPathAnnotations(normalizedAlias)
+            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
         normalizedAlias = StripInlinePathAnnotations(normalizedAlias)
             .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
 

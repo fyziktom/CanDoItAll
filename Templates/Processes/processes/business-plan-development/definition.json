@@ -2,7 +2,7 @@
   "Kind": "process-template-definition",
   "Key": "business-plan-development",
   "DisplayName": "Business plan development",
-  "Summary": "Turn a project idea or strategy request into a grounded business plan with financial assumptions, marketing plan, risks, and explicit next actions.",
+  "Summary": "Turn a project idea, existing app, or strategy request into a grounded business plan with financial assumptions, marketing plan, risks, and explicit next actions.",
   "ValueStatement": "Support non-code planning work with the same governed artifact handoffs used by software delivery processes.",
   "CustomerName": "Business planning",
   "OwnerName": "Strategy governance board",
@@ -24,6 +24,7 @@
   "SharedPromptRefs": [],
   "Metrics": [
     "Business plans with explicit assumption inventory.",
+    "Existing app or product evidence reviewed before business-case synthesis.",
     "Forecasts that identify drivers, formulas, and confidence.",
     "Marketing plans tied to named customer segments and experiments.",
     "Strategy reviews blocked because critical facts are missing.",
@@ -36,6 +37,7 @@
     "Final plan blends assumptions, hypotheses, and facts without labels."
   ],
   "TailoringRules": [
+    "For existing apps, include a product evidence review before drafting the plan.",
     "For internal projects, marketing work may focus on change-management messaging instead of external channels.",
     "For early ideas, finance should produce ranges and break-even drivers instead of detailed forecasts.",
     "If source data includes spreadsheets, the financial strategist must inspect them before modeling."
@@ -152,21 +154,21 @@
     },
     {
       "Order": 1,
-      "Key": "business-plan-draft",
-      "Title": "Draft business plan",
-      "Subtitle": "Customer, offer, model, and risk framing",
-      "Notes": "Create a concise business plan with target segment, problem, offer, differentiation, operating model, risks, and validation plan.",
+      "Key": "product-evidence-review",
+      "Title": "Review product evidence",
+      "Subtitle": "Existing app, workflow, or product-context assessment",
+      "Notes": "Inspect available product evidence such as an existing app folder, screenshots, README, demo notes, logs, user workflow notes, or generated validation output before drafting the business case.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Strategy brief and assumption inventory.",
-      "OutputContractSummary": "Business plan ready for financial and marketing specialization.",
-      "EvidenceContractSummary": "Plan contains strategy spine, assumptions, risks, and open questions.",
-      "DecisionRightsSummary": "Business strategist owns plan draft but flags unsupported market claims.",
-      "ExceptionPolicySummary": "Do not fabricate customers, competitors, pricing, or market size.",
-      "TargetLeadHours": 4,
+      "InputContractSummary": "Strategy brief, source app or product evidence path, screenshots, validation notes, and known operating constraints.",
+      "OutputContractSummary": "Product evidence assessment ready for business-plan, finance, and marketing work.",
+      "EvidenceContractSummary": "Assessment separates observed product capabilities, user value hypotheses, limitations, proof gaps, and assumptions.",
+      "DecisionRightsSummary": "Business strategist owns synthesis and must label what was directly observed versus inferred.",
+      "ExceptionPolicySummary": "Block when the source app or product evidence cannot be inspected and the plan depends on it.",
+      "TargetLeadHours": 3,
       "DependsOnStepKey": "strategy-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
@@ -177,6 +179,82 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "strategy-intake",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Strategy owner remains accountable for separating observed product facts from inferred market claims."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "product-assessment",
+          "TemplateKey": "product-assessment",
+          "Title": "Product evidence assessment",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for business-plan, financial, marketing, and future product-improvement decisions.",
+          "ValidationRequirementSummary": "Must separate observed product behavior, source paths, assumptions, limitations, and validation gaps."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "strategy-brief",
+          "SourceStepKey": "strategy-intake"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "product-evidence-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-assumptions-grounded",
+        "validate-product-evidence"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/business-plan-development/steps/product-evidence-review.md"
+      ]
+    },
+    {
+      "Order": 2,
+      "Key": "business-plan-draft",
+      "Title": "Draft business plan",
+      "Subtitle": "Customer, offer, model, and risk framing",
+      "Notes": "Create a concise business plan with target segment, problem, offer, differentiation, operating model, risks, validation plan, and explicit links to source product evidence when present.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Strategy brief, assumption inventory, and product evidence assessment.",
+      "OutputContractSummary": "Business plan ready for financial and marketing specialization.",
+      "EvidenceContractSummary": "Plan contains strategy spine, observed product evidence, assumptions, risks, and open questions.",
+      "DecisionRightsSummary": "Business strategist owns plan draft but flags unsupported market claims.",
+      "ExceptionPolicySummary": "Do not fabricate customers, competitors, pricing, or market size.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "product-evidence-review",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 120,
+      "CanvasY": 620,
+      "BranchCanvasX": 0.0,
+      "BranchCanvasY": 0.0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "strategy-intake",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "product-evidence-review",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -207,6 +285,10 @@
         {
           "ArtifactExpectationKey": "strategy-brief",
           "SourceStepKey": "strategy-intake"
+        },
+        {
+          "ArtifactExpectationKey": "product-assessment",
+          "SourceStepKey": "product-evidence-review"
         }
       ],
       "BranchOutcomes": [],
@@ -214,7 +296,8 @@
         "business-plan-completeness-checklist"
       ],
       "ValidationRefs": [
-        "validate-assumptions-grounded"
+        "validate-assumptions-grounded",
+        "validate-product-evidence"
       ],
       "PromptRefs": [
         "prompt-business-plan"
@@ -224,7 +307,7 @@
       ]
     },
     {
-      "Order": 2,
+      "Order": 3,
       "Key": "financial-modeling",
       "Title": "Model financial assumptions",
       "Subtitle": "Unit economics, budget, and sensitivity",
@@ -244,7 +327,7 @@
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 420,
-      "CanvasY": 300,
+      "CanvasY": 620,
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
@@ -297,7 +380,7 @@
       ]
     },
     {
-      "Order": 3,
+      "Order": 4,
       "Key": "marketing-plan",
       "Title": "Prepare marketing plan",
       "Subtitle": "Positioning, channels, and experiments",
@@ -317,7 +400,7 @@
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 720,
-      "CanvasY": 300,
+      "CanvasY": 620,
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
@@ -378,7 +461,7 @@
       ]
     },
     {
-      "Order": 4,
+      "Order": 5,
       "Key": "integrated-review",
       "Title": "Review integrated business plan",
       "Subtitle": "Decision-ready synthesis and handoff",
@@ -398,7 +481,7 @@
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "business-strategist",
       "CanvasX": 420,
-      "CanvasY": 470,
+      "CanvasY": 790,
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
@@ -492,7 +575,7 @@
       ]
     },
     {
-      "Order": 5,
+      "Order": 6,
       "Key": "approved-execution-handoff",
       "Title": "Publish approved plan handoff",
       "Subtitle": "Decision-ready package for execution",
@@ -512,7 +595,7 @@
       "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
       "CanvasX": 720,
-      "CanvasY": 640,
+      "CanvasY": 960,
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [
@@ -560,7 +643,7 @@
       "DocRefs": []
     },
     {
-      "Order": 6,
+      "Order": 7,
       "Key": "blocked-correction-plan",
       "Title": "Capture blocked-plan corrections",
       "Subtitle": "Specific fixes before another review",
@@ -580,7 +663,7 @@
       "DependsOnBranchOutcomeKey": "blocked",
       "DecisionRoleKey": "",
       "CanvasX": 720,
-      "CanvasY": 760,
+      "CanvasY": 1080,
       "BranchCanvasX": 0.0,
       "BranchCanvasY": 0.0,
       "Dependencies": [

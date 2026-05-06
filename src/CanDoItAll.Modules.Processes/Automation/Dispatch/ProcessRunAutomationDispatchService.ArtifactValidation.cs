@@ -395,7 +395,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     : string.Empty;
             if (string.IsNullOrWhiteSpace(referencedAlias) ||
                 IsAllowedExternalTargetReference(referencedAlias, normalizedAllowedAliases) ||
-                IsDocumentedScaffoldParentReference(text, match.Index, referencedAlias, normalizedAllowedAliases))
+                IsDocumentedScaffoldParentReference(text, match.Index, referencedAlias, normalizedAllowedAliases) ||
+                IsProhibitedExternalTargetReference(text, match.Index))
             {
                 continue;
             }
@@ -578,6 +579,43 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var context = text.Substring(start, length);
         return context.Contains("scaffold parent", StringComparison.OrdinalIgnoreCase) ||
                context.Contains("parentDirectory", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsProhibitedExternalTargetReference(string text, int referenceIndex)
+    {
+        var start = Math.Max(0, referenceIndex - 180);
+        var length = Math.Min(text.Length - start, 380);
+        var context = CollapsePromptWhitespace(text.Substring(start, length)).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(context))
+        {
+            return false;
+        }
+
+        var hasProhibition = context.Contains("do not", StringComparison.Ordinal) ||
+                             context.Contains("don't", StringComparison.Ordinal) ||
+                             context.Contains("must not", StringComparison.Ordinal) ||
+                             context.Contains("should not", StringComparison.Ordinal) ||
+                             context.Contains("never", StringComparison.Ordinal) ||
+                             context.Contains("prohibited", StringComparison.Ordinal) ||
+                             context.Contains("forbidden", StringComparison.Ordinal) ||
+                             context.Contains("no-go", StringComparison.Ordinal) ||
+                             context.Contains("out of scope", StringComparison.Ordinal) ||
+                             context.Contains("excluded", StringComparison.Ordinal);
+        if (!hasProhibition)
+        {
+            return false;
+        }
+
+        return context.Contains("inspect", StringComparison.Ordinal) ||
+               context.Contains("copy", StringComparison.Ordinal) ||
+               context.Contains("read", StringComparison.Ordinal) ||
+               context.Contains("cite", StringComparison.Ordinal) ||
+               context.Contains("use", StringComparison.Ordinal) ||
+               context.Contains("reuse", StringComparison.Ordinal) ||
+               context.Contains("modify", StringComparison.Ordinal) ||
+               context.Contains("write", StringComparison.Ordinal) ||
+               context.Contains("target", StringComparison.Ordinal) ||
+               context.Contains("sibling", StringComparison.Ordinal);
     }
 
     private static bool IsLikelyOutOfScopeExternalProductReference(

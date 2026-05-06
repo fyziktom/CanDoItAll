@@ -37,6 +37,9 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 .artifacts/
+!Templates/Processes/processes/business-plan-development/artifacts/
+!Templates/Processes/processes/business-plan-development/artifacts/*.json
+!Templates/Processes/processes/business-plan-development/artifacts/*.md
 .vs/
 
 # ASP.NET Scaffolding

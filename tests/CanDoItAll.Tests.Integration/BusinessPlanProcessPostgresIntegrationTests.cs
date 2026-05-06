@@ -12,6 +12,30 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     private const string RepositoryRoot = @"C:\repositories\CanDoItAll";
 
     [Fact]
+    public async Task Business_plan_template_includes_atomic_product_evidence_review()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var envelope = projectionService.GetProjectedEnvelope(
+            "business-plan-development",
+            definitionName: "Business plan product evidence validation");
+        Assert.NotNull(envelope.Definition);
+        var definition = envelope.Definition!;
+
+        var intake = Assert.Single(definition.Steps, step => step.Key == "strategy-intake");
+        var productReview = Assert.Single(definition.Steps, step => step.Key == "product-evidence-review");
+        var businessPlan = Assert.Single(definition.Steps, step => step.Key == "business-plan-draft");
+
+        Assert.Equal(ProcessStepKind.Work, productReview.StepKind);
+        Assert.Contains(productReview.Dependencies, dependency => dependency.DependsOnStepId == intake.Id);
+        var productArtifact = Assert.Single(productReview.ArtifactExpectations, artifact => artifact.Title == "Product evidence assessment");
+        Assert.Contains(businessPlan.Dependencies, dependency => dependency.DependsOnStepId == productReview.Id);
+        Assert.Contains(businessPlan.ArtifactInputs, input => input.ArtifactExpectationId == productArtifact.Id);
+    }
+
+    [Fact]
     public async Task Business_plan_process_projects_and_runs_on_postgresql()
     {
         var availability = await PostgresTestAvailability.EnsureAvailableAsync(RepositoryRoot);
@@ -64,6 +88,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
 
             await CompleteStepAsync(processesService, runResult.Value, "strategy-intake");
+            await CompleteStepAsync(processesService, runResult.Value, "product-evidence-review");
             await CompleteStepAsync(processesService, runResult.Value, "business-plan-draft");
             await CompleteStepAsync(processesService, runResult.Value, "financial-modeling");
             await CompleteStepAsync(processesService, runResult.Value, "marketing-plan");
@@ -77,7 +102,8 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             Assert.Equal(
                 ProcessStepRunStatus.Skipped,
                 Assert.Single(runDetails.StepRuns, step => step.Title == "Capture blocked-plan corrections").Status);
-            Assert.Equal(5, runDetails.Artifacts.Count);
+            Assert.Equal(6, runDetails.Artifacts.Count);
+            Assert.Contains(runDetails.Artifacts, artifact => artifact.Title == "Product evidence assessment");
             Assert.Contains(runDetails.Artifacts, artifact => artifact.Title == "Financial model and sensitivity note");
             Assert.Contains(runDetails.Artifacts, artifact => artifact.Title == "Go-to-market and experiment plan");
             Assert.Contains(
@@ -176,6 +202,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
         return stepKey switch
         {
             "strategy-intake" => "Capture strategy intake",
+            "product-evidence-review" => "Review product evidence",
             "business-plan-draft" => "Draft business plan",
             "financial-modeling" => "Model financial assumptions",
             "marketing-plan" => "Prepare marketing plan",
@@ -191,6 +218,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
         return title switch
         {
             "Business strategy intake brief" => ProcessArtifactKind.Brief,
+            "Product evidence assessment" => ProcessArtifactKind.Evidence,
             "Business plan" => ProcessArtifactKind.Deliverable,
             "Financial model and sensitivity note" => ProcessArtifactKind.Dataset,
             "Go-to-market and experiment plan" => ProcessArtifactKind.Deliverable,

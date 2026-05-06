@@ -6,9 +6,10 @@
   "ProcessKey": "business-plan-development",
   "AudienceRoleKey": "business-strategist",
   "Phase": "Business plan draft",
-  "Summary": "Creates a concise business plan from the strategy brief and source materials.",
+  "Summary": "Creates a concise business plan from the strategy brief, product evidence assessment, and source materials.",
   "RequiredInputs": [
     "Strategy brief",
+    "Product evidence assessment",
     "Source materials",
     "Known constraints"
   ],
@@ -18,6 +19,7 @@
     "Offer",
     "Differentiation",
     "Operating model",
+    "Product evidence implications",
     "Risks",
     "Validation plan"
   ],

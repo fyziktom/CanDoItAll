@@ -699,10 +699,17 @@
         "DecidedBy": "Business Strategist Agent"
       },
       {
+        "StepKey": "product-evidence-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Product evidence review captured observed capabilities, limitations, and business-case implications.",
+        "DecidedBy": "Business Strategist Agent"
+      },
+      {
         "StepKey": "business-plan-draft",
         "TargetStatus": "Completed",
         "SelectedBranchOutcomeKey": "",
-        "Reason": "Business plan drafted with target segment, offer, operating model, risks, and validation plan.",
+        "Reason": "Business plan drafted with product evidence implications, target segment, offer, operating model, risks, and validation plan.",
         "DecidedBy": "Business Strategist Agent"
       },
       {
@@ -739,12 +746,22 @@
         "ReviewSummary": "Facts, assumptions, and open questions separated."
       },
       {
+        "StepKey": "product-evidence-review",
+        "ArtifactKind": "Evidence",
+        "Title": "AI-assisted field-service product evidence assessment",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from app notes, workflow observations, and source product assumptions.",
+        "AllowedFutureUsageSummary": "Reusable by business, finance, and marketing specialists.",
+        "ReviewSummary": "Observed product behavior, limitations, and inferred claims separated."
+      },
+      {
         "StepKey": "business-plan-draft",
         "ArtifactKind": "Deliverable",
         "Title": "AI-assisted field-service business plan",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Prepared from strategy brief and planning assumptions.",
+        "ProvenanceSummary": "Prepared from strategy brief, product evidence assessment, and planning assumptions.",
         "AllowedFutureUsageSummary": "Reusable for finance, marketing, and execution planning.",
         "ReviewSummary": "Offer, audience, model, risks, and validation plan captured."
       },

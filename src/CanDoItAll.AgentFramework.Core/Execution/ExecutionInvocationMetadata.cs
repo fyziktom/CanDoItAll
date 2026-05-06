@@ -317,7 +317,9 @@ public static class ExecutionInvocationMetadata
                 .Where(item => item.ValueKind == JsonValueKind.String)
                 .Select(item => item.GetString())
                 .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => item!.Replace('\\', '/').Trim().TrimEnd('/', '.', ',', ';', ':', ')', ']', '}'))
+                .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Cast<string>()
                 .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();

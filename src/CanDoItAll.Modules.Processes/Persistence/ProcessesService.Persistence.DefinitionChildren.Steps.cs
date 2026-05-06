@@ -18,7 +18,7 @@ public sealed partial class ProcessesService
             }
 
             var reusesExistingEntity = context.StepsById.TryGetValue(stepId, out var step);
-            if (!reusesExistingEntity)
+            if (!reusesExistingEntity || step is null)
             {
                 step = new ProcessStepDefinition
                 {

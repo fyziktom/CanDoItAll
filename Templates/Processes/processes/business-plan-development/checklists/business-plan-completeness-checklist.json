@@ -7,10 +7,11 @@
   "OwnerRoleKey": "business-strategist",
   "Phase": "Business plan draft",
   "Summary": "Verifies that the strategy draft is usable by finance and marketing.",
-  "EntryCriteria": "Strategy brief exists.",
+  "EntryCriteria": "Strategy brief and product evidence assessment exist.",
   "ExitCriteria": "Business plan has enough structure for downstream specialists.",
   "Checks": [
     "Customer segment and problem are explicit.",
+    "Observed product evidence is referenced separately from assumptions.",
     "Offer, differentiation, and operating model are described.",
     "Facts and assumptions are labeled.",
     "Risks and validation actions are named."

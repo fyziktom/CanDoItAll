@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -659,17 +660,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static string NormalizeExternalTargetAlias(string? alias)
     {
-        if (string.IsNullOrWhiteSpace(alias))
-        {
-            return string.Empty;
-        }
-
-        var normalizedAlias = alias
-            .Replace('\\', '/')
-            .Trim()
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-
-        return ConsecutiveSlashRegex.Replace(normalizedAlias, "/");
+        return AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(alias) ?? string.Empty;
     }
 
     private static string NormalizeExternalTargetChildName(string? name)

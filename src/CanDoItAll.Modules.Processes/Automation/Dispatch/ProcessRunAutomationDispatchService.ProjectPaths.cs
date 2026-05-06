@@ -366,7 +366,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return Regex.Replace(
                 value,
-                @"(?i)(?:\\|/)n(?:Acceptance|Accepted|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+                @"(?i)(?:\\|/)n(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Code|Directory|Files?|Generated|Mapped|Mapping|Node|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
                 string.Empty,
                 RegexOptions.CultureInvariant)
             .Trim();
@@ -392,6 +392,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         stripped = Regex.Replace(
             stripped,
             @"(?i)\.\s+(?:all|generated|app(?:lication)?|source|code|files?|root|directory)\b.*$",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        stripped = Regex.Replace(
+            stripped,
+            @"(?i)\s+(?:Workspace\s+alias|Mapped\s+alias|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         return stripped.Trim();

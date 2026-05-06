@@ -307,6 +307,31 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_strips_escaped_line_break_annotations_in_allowed_external_target_alias()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_stat_path",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp"
+            },
+            allowedExternalTargetAliases:
+            [
+                "external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp/nWorkspace alias: external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp/nAll generated app source belongs under",
+                "external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp Workspace alias: external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp All generated app source belongs under"
+            ]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_dotnet_new_support_library_under_grounded_external_target_root()
     {
         var policy = new DefaultAgentToolInvocationPolicy();

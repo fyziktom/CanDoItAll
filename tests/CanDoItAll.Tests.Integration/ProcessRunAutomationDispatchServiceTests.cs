@@ -315,6 +315,19 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_escaped_newline_mapped_label()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-dev-output/raincheck-cards-js/nMapped alias for C:\\programovani\\candoitall-dev-output\\raincheck-cards-js.",
+            "external-target/C/programovani/candoitall-dev-output/raincheck-cards-js Workspace alias: external-target/C/programovani/candoitall-dev-output/raincheck-cards-js All generated app source belongs under"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-output/raincheck-cards-js", alias);
+    }
+
+    [Fact]
     public void TryMapAbsoluteExternalPathToAlias_strips_inline_generated_source_sentence()
     {
         var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
@@ -331,6 +344,25 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         Assert.True(mapped);
         Assert.Equal("external-target/C/programovani/dotnet/HarborShiftScheduler", arguments[1]);
+    }
+
+    [Fact]
+    public void TryMapAbsoluteExternalPathToAlias_strips_escaped_newline_mapped_label()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "TryMapAbsoluteExternalPathToAlias",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryMapAbsoluteExternalPathToAlias method was not found.");
+        object?[] arguments =
+        [
+            @"C:\programovani\candoitall-dev-output\raincheck-cards-js\nMapped alias: external-target/C/programovani/candoitall-dev-output/raincheck-cards-js.",
+            string.Empty
+        ];
+
+        var mapped = (bool)method.Invoke(null, arguments)!;
+
+        Assert.True(mapped);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-output/raincheck-cards-js", arguments[1]);
     }
 
     [Fact]
@@ -398,6 +430,20 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             Product root: external-target/C/programovani/dotnet/ReadingTimeBudgeter.
             """,
             ["external-target/C/programovani/dotnet/ReadingTimeBudgeter"]);
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveOutOfScopeExternalTargetReferenceSummary_allows_prohibited_sibling_parent_reference()
+    {
+        var summary = ProcessRunAutomationDispatchService.ResolveOutOfScopeExternalTargetReferenceSummary(
+            """
+            Absolute output root: C:\programovani\candoitall-dev-output\receipt-radar-csharp
+            Workspace tool alias: external-target/C/programovani/candoitall-dev-output/receipt-radar-csharp
+            Do not inspect or copy sibling apps in C:\programovani\candoitall-dev-output.
+            """,
+            ["external-target/C/programovani/candoitall-dev-output/receipt-radar-csharp"]);
 
         Assert.Equal(string.Empty, summary);
     }
@@ -5444,6 +5490,53 @@ Grounded external target paths from the selected project structure:
         Assert.DoesNotContain("call the scaffold tool with parent directory", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("For this implementation, create and edit the deliverable", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_dotnet_new", prompt, StringComparison.Ordinal);
+        Assert.Contains("an absent greenfield deliverable is not a blocker by itself", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("If the concrete deliverable required by this step does not exist", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_does_not_require_greenfield_deliverable_for_architecture_steps()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildExecutionPromptCore = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var projectId = Guid.NewGuid();
+        var projectStructureContext = new ProcessProjectStructureContext
+        {
+            ProjectId = projectId,
+            NodeId = "process-definition:software-delivery",
+            NodeTitle = "Multi-team software delivery and release governance",
+            ParentNodeId = "task:create-main-application",
+            ParentNodeTitle = "Create main application"
+        };
+        var candidate = CreateDispatchCandidateCore(
+            "Validate application, workspace, data, integration, and operational boundaries before implementation starts.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [
+                (ProcessArtifactKind.Brief, "Project structure context brief", true, "Must capture the originating project-structure node, resolved working directory, touched modules or routes, dependency boundaries, and downstream artifact expectations."),
+                (ProcessArtifactKind.Decision, "Architecture decision record", true, "Must capture selected option, rejected options, source-of-truth choice, and migration ownership.")
+            ],
+            [],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver the generated application showcase.",
+                projectStructureContext),
+            "Review architecture and canonical-model impact");
+        const string projectStructureGrounding = """
+Dispatcher fetched the live project structure for `Workflow` and focused this prompt on the selected work branch.
+Grounded external target paths from the selected project structure:
+- `C:\programovani\dotnet\WorkflowBoard` mapped to `external-target/C/programovani/dotnet/WorkflowBoard` from Workflow
+""";
+
+        var prompt = buildExecutionPromptCore.Invoke(null, [candidate, null, projectStructureGrounding, null]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("A greenfield external product root can be absent during scope, architecture, research, or planning steps", prompt, StringComparison.Ordinal);
+        Assert.Contains("an absent greenfield deliverable is not a blocker by itself", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("For this implementation, create and edit the deliverable", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("If the concrete deliverable required by this step does not exist", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
