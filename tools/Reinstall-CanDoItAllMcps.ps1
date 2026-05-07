@@ -317,7 +317,7 @@ function Remove-TomlSection {
     $pattern = "(?ms)^\[$([regex]::Escape($SectionName))\]\r?\n.*?(?=^\[|\z)"
     $updated = [regex]::Replace($text, $pattern, "", 1)
     if ($updated -ne $text) {
-        Set-Content -LiteralPath $Path -Value $updated.TrimEnd() + "`r`n"
+        Set-Content -LiteralPath $Path -Value ($updated.TrimEnd() + "`r`n")
     }
 }
 
