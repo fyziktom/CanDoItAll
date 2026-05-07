@@ -97,6 +97,182 @@ internal sealed partial class ProcessRunAutomationDispatchService
                normalizedResponse.Contains("route shows an application error", StringComparison.Ordinal);
     }
 
+    private static string ResolveInvalidQualityValidationProofSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? inspectionText)
+    {
+        if (!RequiresQualityValidationEvidence(candidate))
+        {
+            return string.Empty;
+        }
+
+        var evidenceTexts = ResolveQualityValidationEvidenceTexts(detail, inspectionText);
+        if (evidenceTexts.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (evidenceTexts.Any(ContainsBuildWarningEvidence))
+        {
+            return "build validation output contains warnings; release-quality proof must be warning-free unless the process explicitly accepts the warning";
+        }
+
+        if (evidenceTexts.Any(ContainsZeroTestRunEvidence))
+        {
+            return "test validation output reports zero executed tests; a zero-test success is missing test proof";
+        }
+
+        return string.Empty;
+    }
+
+    private static bool RequiresQualityValidationEvidence(DispatchCandidate candidate)
+    {
+        if (candidate.StepRun.StepKind is ProcessStepKind.Review or ProcessStepKind.Approval or ProcessStepKind.Delivery)
+        {
+            return true;
+        }
+
+        var text = ResolveQualityValidationContractText(candidate);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return ContainsContractWord(text, "qa") ||
+               ContainsContractWord(text, "quality") ||
+               ContainsContractWord(text, "validation") ||
+               ContainsContractWord(text, "validate") ||
+               ContainsContractWord(text, "verification") ||
+               ContainsContractWord(text, "verify") ||
+               ContainsContractWord(text, "regression") ||
+               ContainsContractWord(text, "release") ||
+               ContainsContractWord(text, "build") ||
+               ContainsExplicitImplementationTestRequest(text);
+    }
+
+    private static string ResolveQualityValidationContractText(DispatchCandidate candidate)
+    {
+        var triggerText = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
+        var textParts = new[]
+            {
+                triggerText,
+                candidate.StepRun.Title,
+                candidate.WorkBrief?.Title,
+                candidate.WorkBrief?.WorkBriefText,
+                candidate.WorkBrief?.ExpectedOutcome,
+                candidate.WorkBrief?.EvidenceExpectationSummary
+            }
+            .Concat(candidate.ExpectedArtifacts.Select(item => item.Title))
+            .Concat(candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary));
+        return CollapsePromptWhitespace(string.Join(' ', textParts));
+    }
+
+    private static IReadOnlyList<string> ResolveQualityValidationEvidenceTexts(
+        ExecutionRunDetail detail,
+        string? inspectionText)
+    {
+        var texts = new List<string>();
+        AddQualityValidationEvidenceText(texts, inspectionText);
+        AddQualityValidationEvidenceText(texts, detail.Run.ResultSummary);
+
+        foreach (var receipt in detail.ToolReceipts)
+        {
+            var toolName = NormalizeToolToken(receipt.ToolName);
+            if (!IsQualityValidationEvidenceToolName(toolName))
+            {
+                continue;
+            }
+
+            AddQualityValidationEvidenceText(
+                texts,
+                string.Join(
+                    Environment.NewLine,
+                    receipt.RequestSummary,
+                    receipt.WorkingDirectory,
+                    receipt.ExitSummary));
+        }
+
+        foreach (var resultText in ResolveSuccessfulSessionToolResultTexts(detail.Run.SerializedSessionStateJson))
+        {
+            if (IsQualityValidationEvidenceToolName(resultText.ToolName))
+            {
+                AddQualityValidationEvidenceText(texts, resultText.Text);
+            }
+        }
+
+        return texts;
+    }
+
+    private static bool IsQualityValidationEvidenceToolName(string normalizedToolName)
+    {
+        return !string.IsNullOrWhiteSpace(normalizedToolName) &&
+               (IsImplementationValidationToolName(normalizedToolName) ||
+                string.Equals(normalizedToolName, "workspace_pwsh_run_script", StringComparison.Ordinal));
+    }
+
+    private static void AddQualityValidationEvidenceText(List<string> texts, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            texts.Add(value);
+        }
+    }
+
+    private static bool ContainsBuildWarningEvidence(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = CollapsePromptWhitespace(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+                   normalized,
+                   @"\bwarning\s+(?:CS|NU|MSB|CA|IL|NETSDK|ASP)\d+\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   normalized,
+                   @"(?<!\d)[1-9]\d*\s+(?:warning(?:s|\(s\))?|upozorn\S*)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsZeroTestRunEvidence(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+                   value,
+                   @"(?im)^\s*#?\s*tests\s+0\s*$",
+                   RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\btotal\s+tests\s*:\s*0\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\b(?:ran|run|executed|discovered|found|total)\s+0\s+tests?\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\b0\s+tests?\s+(?:ran|run|executed|discovered|found)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               value.Contains("no tests found", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("no test files found", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("no matching tests", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("no test is available", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("no tests are available", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("nejsou dostupn\u00e9 \u017e\u00e1dn\u00e9 testy", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ResolveIncompleteImplementationSummary(
         DispatchCandidate candidate,
         string? responseText)
@@ -254,15 +430,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (latestConcreteMutation is null)
         {
             var latestConcreteRead = ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts);
-            if (latestConcreteRead is null ||
-                latestValidation is null)
+            if (latestConcreteRead is null)
             {
                 return false;
             }
 
             return artifactReceipts.Any(receipt =>
                 !IsReceiptAfter(latestConcreteRead, receipt) &&
-                !IsReceiptAfter(latestValidation, receipt));
+                (latestValidation is null || !IsReceiptAfter(latestValidation, receipt)));
         }
 
         return artifactReceipts.Any(receipt =>
@@ -959,12 +1134,49 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        var normalized = CollapsePromptWhitespace(value);
+        var normalized = RemoveApplicabilityOnlyBrowserEvidencePhrases(CollapsePromptWhitespace(value));
         return normalized.Contains("browser proof", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains("screenshots", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains("manual qa", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains("ui validation", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string RemoveApplicabilityOnlyBrowserEvidencePhrases(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = CollapsePromptWhitespace(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return string.Empty;
+        }
+
+        var result = Regex.Replace(
+            normalized,
+            @"\bruntime\s*(?:/|\bor\b)\s*(?:api\s*(?:/|\bor\b)\s*)?browser\s+(?:validation|evidence|proof)\s+as\s+applicable\b",
+            " ",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        result = Regex.Replace(
+            result,
+            @"\bruntime\s+or\s+browser\s+proof\b",
+            " ",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        result = Regex.Replace(
+            result,
+            @"\bbrowser\s+(?:validation|evidence|proof)\s+as\s+applicable\b",
+            " ",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        result = Regex.Replace(
+            result,
+            @"\bscreenshots?\s+(?:only\s+)?for\s+ui\s+surfaces?\b",
+            " ",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        return CollapsePromptWhitespace(result);
     }
 
     private static bool IsRecoverableImplementationPunt(
@@ -1954,7 +2166,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var fileSlug = FileSafeSlugBuilder.Build(fileNameWithoutExtension);
         var expectedKind = ResolveExpectedArtifactKind(artifact);
         var strongMatches = expectedArtifacts
-            .Where(item => MatchesExpectedArtifact(item, relativePath, displayName, displaySlug, fileSlug))
+            .Where(item => MatchesExpectedArtifact(item, artifact, relativePath, displayName, displaySlug, fileSlug))
             .ToList();
         if (strongMatches.Count == 1)
         {
@@ -1972,6 +2184,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        var managedNarrativeMatches = expectedArtifacts
+            .Where(item => IsManagedNarrativeArtifactFallbackMatch(
+                expectedArtifacts,
+                item,
+                relativePath,
+                displayName,
+                artifactTextContent))
+            .ToList();
+        if (managedNarrativeMatches.Count == 1)
+        {
+            return managedNarrativeMatches[0].Id;
+        }
+
         return MatchExpectedArtifactIdByTextContent(
             expectedArtifacts,
             artifact,
@@ -1987,6 +2212,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         if (string.IsNullOrWhiteSpace(artifactTextContent) ||
             !CanMatchArtifactByTextContent(artifact))
+        {
+            return null;
+        }
+
+        if (IsProviderNativeBrowserOutputArtifact(artifact))
         {
             return null;
         }
@@ -2018,6 +2248,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool MatchesExpectedArtifact(
         DispatchArtifactExpectation expectedArtifact,
+        ExecutionArtifactRecord artifact,
         string relativePath,
         string displayName,
         string displaySlug,
@@ -2034,6 +2265,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 NormalizeManagedRelativePathForComparison(expectedRelativePath),
                 NormalizeManagedRelativePathForComparison(relativePath),
                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (IsProviderNativeBrowserOutputArtifact(artifact))
+        {
+            return false;
         }
 
         if (string.Equals(expectedArtifact.Title, displayName, StringComparison.OrdinalIgnoreCase))
@@ -2073,6 +2309,88 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var matchedTokenCount = expectedTokens.Count(observedTokens.Contains);
         return matchedTokenCount >= 2;
+    }
+
+    private static bool IsManagedNarrativeArtifactFallbackMatch(
+        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
+        DispatchArtifactExpectation expectedArtifact,
+        string relativePath,
+        string displayName,
+        string? artifactTextContent)
+    {
+        if (!IsNarrativeEvidenceArtifactExpectation(expectedArtifact) ||
+            !IsManagedRunTextArtifactPath(relativePath) ||
+            expectedArtifacts.Count(IsNarrativeEvidenceArtifactExpectation) != 1)
+        {
+            return false;
+        }
+
+        var observedText = CollapsePromptWhitespace($"{relativePath} {displayName} {artifactTextContent}").ToLowerInvariant();
+        if (!ContainsNarrativeArtifactSignal(observedText))
+        {
+            return false;
+        }
+
+        var expectedText = CollapsePromptWhitespace(
+            $"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}").ToLowerInvariant();
+        return SharesNarrativeArtifactPurpose(expectedText, observedText);
+    }
+
+    private static bool IsManagedRunTextArtifactPath(string relativePath)
+    {
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
+        if (string.IsNullOrWhiteSpace(normalizedPath) ||
+            !IsTextReadableManagedArtifactPath(normalizedPath))
+        {
+            return false;
+        }
+
+        var segments = normalizedPath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Any(segment => string.Equals(segment, "process-runs", StringComparison.OrdinalIgnoreCase)) &&
+               segments.Any(IsManagedEvidenceRootSegment);
+    }
+
+    private static bool ContainsNarrativeArtifactSignal(string text)
+    {
+        return text.Contains("artifact", StringComparison.Ordinal) ||
+               text.Contains("evidence", StringComparison.Ordinal) ||
+               text.Contains("proof", StringComparison.Ordinal) ||
+               text.Contains("report", StringComparison.Ordinal) ||
+               text.Contains("review", StringComparison.Ordinal) ||
+               text.Contains("validation", StringComparison.Ordinal) ||
+               text.Contains("recheck", StringComparison.Ordinal) ||
+               text.Contains("regression", StringComparison.Ordinal) ||
+               text.Contains("change set", StringComparison.Ordinal);
+    }
+
+    private static bool SharesNarrativeArtifactPurpose(string expectedText, string observedText)
+    {
+        if (expectedText.Contains("evidence", StringComparison.Ordinal) ||
+            expectedText.Contains("proof", StringComparison.Ordinal) ||
+            expectedText.Contains("regression", StringComparison.Ordinal) ||
+            expectedText.Contains("validation", StringComparison.Ordinal) ||
+            expectedText.Contains("qa", StringComparison.Ordinal))
+        {
+            return observedText.Contains("evidence", StringComparison.Ordinal) ||
+                   observedText.Contains("proof", StringComparison.Ordinal) ||
+                   observedText.Contains("validation", StringComparison.Ordinal) ||
+                   observedText.Contains("qa", StringComparison.Ordinal) ||
+                   observedText.Contains("recheck", StringComparison.Ordinal) ||
+                   observedText.Contains("regression", StringComparison.Ordinal) ||
+                   observedText.Contains("test", StringComparison.Ordinal) ||
+                   observedText.Contains("browser", StringComparison.Ordinal) ||
+                   observedText.Contains("runtime", StringComparison.Ordinal);
+        }
+
+        if (expectedText.Contains("change set", StringComparison.Ordinal))
+        {
+            return observedText.Contains("change", StringComparison.Ordinal) ||
+                   observedText.Contains("repair", StringComparison.Ordinal) ||
+                   observedText.Contains("mutation", StringComparison.Ordinal);
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<string> TokenizeArtifactComparisonText(string value)
@@ -2343,20 +2661,53 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var statPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         var readPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var artifactInput in artifactInputs)
+        foreach (var sourceStepGroup in artifactInputs.GroupBy(input => input.SourceStepTitle, StringComparer.OrdinalIgnoreCase))
         {
-            foreach (var artifact in artifactInput.Artifacts)
+            var sourceStepStatPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sourceStepReadPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sourceStepVisualAttachmentPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var artifactInput in sourceStepGroup)
             {
-                var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.ManagedStoragePath);
-                if (string.IsNullOrWhiteSpace(normalizedPath))
+                foreach (var artifact in artifactInput.Artifacts)
                 {
-                    continue;
-                }
+                    var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.ManagedStoragePath);
+                    if (string.IsNullOrWhiteSpace(normalizedPath))
+                    {
+                        continue;
+                    }
 
-                statPaths.Add(normalizedPath);
-                if (IsTextReadableManagedArtifactPath(normalizedPath))
+                    if (IsTextReadableManagedArtifactPath(normalizedPath))
+                    {
+                        sourceStepStatPaths.Add(normalizedPath);
+                        sourceStepReadPaths.Add(normalizedPath);
+                        continue;
+                    }
+
+                    if (IsVisualEvidenceAttachmentPath(normalizedPath))
+                    {
+                        sourceStepVisualAttachmentPaths.Add(normalizedPath);
+                        continue;
+                    }
+
+                    sourceStepStatPaths.Add(normalizedPath);
+                }
+            }
+
+            foreach (var path in sourceStepStatPaths)
+            {
+                statPaths.Add(path);
+            }
+
+            foreach (var path in sourceStepReadPaths)
+            {
+                readPaths.Add(path);
+            }
+
+            if (sourceStepReadPaths.Count == 0)
+            {
+                foreach (var path in sourceStepVisualAttachmentPaths)
                 {
-                    readPaths.Add(normalizedPath);
+                    statPaths.Add(path);
                 }
             }
         }
@@ -2389,11 +2740,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson));
 
         var missingStatPaths = requiredInspectionPaths.StatPaths
-            .Where(path => !successfulStatPaths.Contains(path))
+            .Where(path => !ContainsEquivalentManagedPath(successfulStatPaths, path))
             .Take(3)
             .ToList();
         var missingReadPaths = requiredInspectionPaths.ReadPaths
-            .Where(path => !successfulReadPaths.Contains(path))
+            .Where(path => !ContainsEquivalentManagedPath(successfulReadPaths, path))
             .Take(3)
             .ToList();
         if (missingStatPaths.Count == 0 && missingReadPaths.Count == 0)
@@ -2413,6 +2764,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return "the review step did not directly inspect inherited upstream artifacts: " + string.Join("; ", parts);
+    }
+
+    private static bool ContainsEquivalentManagedPath(IReadOnlySet<string> paths, string requiredPath)
+    {
+        if (paths.Contains(requiredPath))
+        {
+            return true;
+        }
+
+        var normalizedRequiredPath = NormalizeManagedRelativePathForComparison(requiredPath);
+        return !string.IsNullOrWhiteSpace(normalizedRequiredPath) &&
+               paths.Any(path => string.Equals(
+                   NormalizeManagedRelativePathForComparison(path),
+                   normalizedRequiredPath,
+                   StringComparison.OrdinalIgnoreCase));
     }
 
     private static IReadOnlySet<string> ResolveSuccessfulWorkspaceInspectionPaths(
@@ -2471,6 +2837,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return normalized;
+    }
+
+    private static bool IsVisualEvidenceAttachmentPath(string relativePath)
+    {
+        var extension = Path.GetExtension(relativePath);
+        return IsImageExtension(extension);
     }
 
     private static bool IsResponseProjectableTextArtifact(string relativePath)
@@ -2544,6 +2916,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
         return normalizedTitle.Contains("note", StringComparison.Ordinal) ||
                normalizedTitle.Contains("review", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("evidence pack", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("regression", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("validation evidence", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("runtime/api/browser evidence", StringComparison.Ordinal) ||
                normalizedValidation.Contains("accepted issues", StringComparison.Ordinal) ||
                normalizedValidation.Contains("rejected concerns", StringComparison.Ordinal) ||
                normalizedValidation.Contains("residual risk", StringComparison.Ordinal);
@@ -2607,9 +2983,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return artifact.ContentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
                artifact.ContentType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
-               artifact.ContentType.Contains("xml", StringComparison.OrdinalIgnoreCase) ||
-               artifact.ContentType.Contains("yaml", StringComparison.OrdinalIgnoreCase) ||
-               IsTextReadableManagedArtifactPath(artifact.RelativePath);
+              artifact.ContentType.Contains("xml", StringComparison.OrdinalIgnoreCase) ||
+              artifact.ContentType.Contains("yaml", StringComparison.OrdinalIgnoreCase) ||
+              IsTextReadableManagedArtifactPath(artifact.RelativePath);
+    }
+
+    private static bool IsProviderNativeBrowserOutputArtifact(ExecutionArtifactRecord artifact)
+    {
+        var producedBy = NormalizeToolToken(artifact.ProducedBy);
+        if (RequiredBrowserEvidenceToolNames.Contains(producedBy) ||
+            producedBy.StartsWith("browser_", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.RelativePath);
+        return normalizedPath.Contains("/process-runs/", StringComparison.OrdinalIgnoreCase) &&
+               ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
     }
 
     private static string? TryDecodeTextArtifactContent(

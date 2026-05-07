@@ -87,9 +87,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private readonly record struct CarriedImplementationProof(
         bool HasConcreteImplementationProof,
-        bool HasRunnableApplicationProof)
+        bool HasRunnableApplicationProof,
+        bool HasConcreteProductMutation)
     {
-        public static CarriedImplementationProof None { get; } = new(false, false);
+        public static CarriedImplementationProof None { get; } = new(false, false, false);
     }
 
     private sealed record ProviderFallbackResolution(
@@ -126,6 +127,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string ContentSignalText);
 
     private sealed record SessionToolCall(string ToolName, string OutputFileName);
+
+    private sealed record SessionToolResultText(string ToolName, string Text);
 
     private sealed record SessionFileContent(string Path, string Content);
 }

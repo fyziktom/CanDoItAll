@@ -42,14 +42,17 @@ public sealed class ProjectStructureProcessNodeService(
         }
 
         var processDefinitionId = ResolveProcessDefinitionId(node, request.ProcessDefinitionId);
-        var startContext = CreateStartContext(projectId, node, surface, nodesById);
+        var startContext = CreateStartContext(projectId, node, processDefinitionId, surface, nodesById);
         var requestedBy = ResolveRequestedBy(request.RequestedBy);
+        var launchName = string.Equals(startContext.ResolveTargetNodeId(), node.Id, StringComparison.Ordinal)
+            ? startContext.ResolveTargetNodeTitle()
+            : $"{startContext.ResolveTargetNodeTitle()} / {node.Title}";
         var createResult = await processesService.CreateLaunchPlanAsync(
             new ProcessLaunchCreateRequest
             {
                 ProcessDefinitionId = processDefinitionId,
                 ProjectId = projectId,
-                LaunchName = $"{startContext.ResolveTargetNodeTitle()} / {node.Title}",
+                LaunchName = launchName,
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
                 TriggerReason = "Started from project structure API.",
                 ProjectStructureContext = startContext,
@@ -188,9 +191,24 @@ public sealed class ProjectStructureProcessNodeService(
     private static ProcessProjectStructureContext CreateStartContext(
         Guid projectId,
         ProjectStructureNode node,
+        Guid processDefinitionId,
         ProjectStructureSurface surface,
         IReadOnlyDictionary<string, ProjectStructureNode> nodesById)
     {
+        if (!ProjectStructureProcessNodeKeys.TryParseProcessDefinitionNodeKey(node.Id, out _))
+        {
+            var processNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(processDefinitionId);
+            nodesById.TryGetValue(processNodeId, out var processNode);
+            return new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = processNode?.Id ?? processNodeId,
+                NodeTitle = processNode?.Title ?? "Process definition",
+                ParentNodeId = node.Id,
+                ParentNodeTitle = node.Title
+            };
+        }
+
         var parentNode = ResolveProcessStartTargetNode(projectId, node, surface, nodesById) ??
             (!string.IsNullOrWhiteSpace(node.ParentId) && nodesById.TryGetValue(node.ParentId, out var parent) ? parent : null);
 
@@ -268,9 +286,12 @@ public sealed class ProjectStructureProcessNodeService(
 
     private static T ResolveResult<T>(Result<T> result, string errorCode)
     {
-        return result.IsSuccess
-            ? result.Value
-            : throw CreateResultFailure(result.Errors, errorCode);
+        if (result.IsFailure)
+        {
+            throw CreateResultFailure(result.Errors, errorCode);
+        }
+
+        return result.Value!;
     }
 
     private static void ThrowResultFailure(IReadOnlyCollection<Error> errors, string errorCode)

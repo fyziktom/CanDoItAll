@@ -139,7 +139,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         return;
                     }
 
-                    if (await IsRunTerminalAsync(candidate.Run.Id, cancellationToken))
+                    if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, cancellationToken))
                     {
                         logger.LogInformation(
                             "Skipping automation completion projection for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
@@ -210,7 +210,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         candidate.Run.Id,
                         candidate.StepRun.Id);
 
-                    if (await IsRunTerminalAsync(candidate.Run.Id, cancellationToken))
+                    if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, cancellationToken))
                     {
                         logger.LogInformation(
                             "Skipping automation failure transition for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
@@ -247,18 +247,49 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private async Task<bool> IsRunTerminalAsync(
+    private async Task<bool> IsRunClosedToAutomationAsync(
         Guid processRunId,
+        Guid stepRunId,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var status = await dbContext.Set<ProcessRun>()
+        var state = await dbContext.Set<ProcessRun>()
             .AsNoTracking()
-            .Where(item => item.Id == processRunId)
-            .Select(item => (ProcessRunStatus?)item.Status)
+            .Where(run => run.Id == processRunId)
+            .Join(
+                dbContext.Set<ProcessStepRun>().AsNoTracking().Where(stepRun => stepRun.Id == stepRunId),
+                run => run.Id,
+                stepRun => stepRun.ProcessRunId,
+                (run, stepRun) => new
+                {
+                    RunStatus = (ProcessRunStatus?)run.Status,
+                    StepStatus = (ProcessStepRunStatus?)stepRun.Status
+                })
             .SingleOrDefaultAsync(cancellationToken);
 
-        return status is null or ProcessRunStatus.Completed or ProcessRunStatus.Cancelled or ProcessRunStatus.Failed;
+        return state is null || IsRunClosedToAutomation(state.RunStatus, state.StepStatus);
+    }
+
+    internal static bool IsRunClosedToAutomation(
+        ProcessRunStatus? runStatus,
+        ProcessStepRunStatus? stepStatus)
+    {
+        return runStatus is null or ProcessRunStatus.Completed or ProcessRunStatus.Cancelled ||
+            runStatus == ProcessRunStatus.Failed && stepStatus != ProcessStepRunStatus.InProgress;
+    }
+
+    internal static bool IsRunEligibleForDispatchCandidate(ProcessRunStatus? runStatus)
+    {
+        return runStatus is not null and not ProcessRunStatus.Completed and not ProcessRunStatus.Cancelled;
+    }
+
+    internal static bool IsStepStatusDispatchableForRun(
+        ProcessRunStatus runStatus,
+        ProcessStepRunStatus stepStatus)
+    {
+        return runStatus == ProcessRunStatus.Failed
+            ? stepStatus == ProcessStepRunStatus.InProgress
+            : stepStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.InProgress;
     }
 
     private ProcessAutomationDatabaseRequirementFailure? ResolveAutomationDatabaseRequirementFailure()
@@ -640,7 +671,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var run = await dbContext.Set<ProcessRun>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == processRunId, cancellationToken);
-        if (run is null || run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Cancelled or ProcessRunStatus.Failed)
+        if (run is null || !IsRunEligibleForDispatchCandidate(run.Status))
         {
             return null;
         }
@@ -656,6 +687,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                  item.Status == ProcessStepRunStatus.InProgress))
             .OrderBy(item => item.Sequence)
             .ToListAsync(cancellationToken);
+        dispatchableSteps = dispatchableSteps
+            .Where(item => IsStepStatusDispatchableForRun(run.Status, item.Status))
+            .ToList();
         if (dispatchableSteps.Count == 0)
         {
             return null;

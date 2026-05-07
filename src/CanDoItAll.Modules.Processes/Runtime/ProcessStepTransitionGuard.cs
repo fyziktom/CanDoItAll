@@ -19,7 +19,7 @@ internal static class ProcessStepTransitionGuard
         ArgumentNullException.ThrowIfNull(stepDependenciesByStepId);
         ArgumentNullException.ThrowIfNull(availableBranchOutcomes);
 
-        if (!ProcessStepRunTransitions.IsAllowed(stepRun.Status, request.TargetStatus))
+        if (!IsAllowedTransition(stepRun, request))
         {
             return Result<ProcessStepTransitionResolution>.Failure(
                 Error.Validation(
@@ -65,6 +65,19 @@ internal static class ProcessStepTransitionGuard
         }
 
         return Result<ProcessStepTransitionResolution>.Success(new ProcessStepTransitionResolution(selectedBranchOutcome));
+    }
+
+    private static bool IsAllowedTransition(ProcessStepRun stepRun, ProcessStepTransitionRequest request)
+    {
+        if (ProcessStepRunTransitions.IsAllowed(stepRun.Status, request.TargetStatus))
+        {
+            return true;
+        }
+
+        return request.AllowCompletedAgentRerun &&
+            stepRun.Status == ProcessStepRunStatus.Completed &&
+            request.TargetStatus == ProcessStepRunStatus.InProgress &&
+            stepRun.CurrentExecutorPartyId.HasValue;
     }
 }
 

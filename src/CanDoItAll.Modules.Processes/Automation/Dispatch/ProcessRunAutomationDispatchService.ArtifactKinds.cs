@@ -72,7 +72,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".css", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jsx", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".ts", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".tsx", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".props", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".targets", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".json", StringComparison.OrdinalIgnoreCase);

@@ -31,9 +31,9 @@ internal sealed class ProcessRunRecoveryService(
                 from run in dbContext.Set<ProcessRun>().AsNoTracking()
                 where run.Status != ProcessRunStatus.Completed
                    && run.Status != ProcessRunStatus.Cancelled
-                   && run.Status != ProcessRunStatus.Failed
                 join step in dbContext.Set<ProcessStepRun>().AsNoTracking() on run.Id equals step.ProcessRunId
-                where step.CurrentExecutorPartyId.HasValue &&
+                where (run.Status != ProcessRunStatus.Failed || step.Status == ProcessStepRunStatus.InProgress) &&
+                      step.CurrentExecutorPartyId.HasValue &&
                       (step.Status == ProcessStepRunStatus.Ready ||
                        step.Status == ProcessStepRunStatus.WaitingApproval ||
                        step.Status == ProcessStepRunStatus.InProgress)

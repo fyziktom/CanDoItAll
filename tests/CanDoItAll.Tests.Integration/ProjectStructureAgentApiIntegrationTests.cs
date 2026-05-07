@@ -13,6 +13,25 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProjectStructureAgentApiIntegrationTests
 {
     [Fact]
+    public void ProjectStructureLeaseAcquireRequest_accepts_string_scope_kind()
+    {
+        var request = JsonSerializer.Deserialize<ProjectStructureLeaseAcquireRequest>(
+            """
+            {
+              "scopeKind": "Project",
+              "scopeKey": "project:alpha",
+              "reason": "Agent-authored API lease",
+              "durationMinutes": 15
+            }
+            """,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.NotNull(request);
+        Assert.Equal(ProjectStructureLeaseScopeKind.Project, request.ScopeKind);
+        Assert.Equal("project:alpha", request.ScopeKey);
+    }
+
+    [Fact]
     public async Task ProjectStructureAgentApi_supports_delivery_block_asset_roundtrip_and_records_analytics()
     {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();

@@ -9,7 +9,8 @@ internal static class ProcessesApi
     public static RouteGroupBuilder MapProcessesApi(this RouteGroupBuilder group)
     {
         var processes = group.MapGroup("/processes")
-            .WithTags("Processes");
+            .WithTags("Processes")
+            .DisableAntiforgery();
 
         processes.MapGet("/definitions", async (
                 Guid? projectId,
@@ -47,6 +48,7 @@ internal static class ProcessesApi
                     DraftVersionConcurrencyToken = draftVersionConcurrencyToken
                 },
                 cancellationToken)))
+            .DisableAntiforgery()
             .WithName("PublishProcessDefinition");
 
         processes.MapDelete("/definitions/{definitionId:guid}", async (

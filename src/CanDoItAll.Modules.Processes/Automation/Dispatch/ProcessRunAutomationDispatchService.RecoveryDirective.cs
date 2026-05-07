@@ -37,6 +37,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var missingConcreteImplementationProofSummary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
         var missingRunnableApplicationProofSummary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
+        var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(
+            candidate,
+            detail,
+            ResolveOutputInspectionText(responseText));
+        var implementationMentionsDotNet = ImplementationContractMentionsDotNet(candidate);
+        var implementationMentionsJavaScript = ImplementationContractMentionsJavaScript(candidate);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(
             detail,
             ResolveOutputInspectionText(responseText));
@@ -92,6 +98,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
         {
             builder.AppendLine($"Browser proof is invalid: {invalidBrowserProofSummary}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary))
+        {
+            builder.AppendLine($"Validation proof is invalid: {invalidQualityValidationProofSummary}.");
+            builder.AppendLine("Rerun the concrete validation command after repair and record command output that proves a warning-free build and nonzero executed tests when tests are part of the acceptance contract.");
         }
 
         if (!string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary))
@@ -238,8 +250,29 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             builder.AppendLine("Do not assume the app must be reachable at `http://localhost:5000/`. Derive the real launch URL from the reviewed host project, `launchSettings.json`, prior run diagnostics, or the URL reported by the launch command.");
-            builder.AppendLine("If the app is not already running, start the reviewed host yourself before opening the browser. For .NET hosts, prefer `workspace_dotnet_run` with `keepAlive: true` so the retry records URL, process id, stdout log, stderr log, and startup receipt evidence while Playwright can reach the app; after browser evidence is captured, stop it with the recorded `startup.json` `stopCommand` before finalizing. For other technologies, use the launch tool or task-specific skill that matches the delivered stack and records equivalent evidence.");
-            builder.AppendLine("For external targets, keep `external-target/<drive>/...` with workspace file and run tools. Do not write a one-off path-translation launch helper when a reviewed generic launch tool is available; missing launch-tool access is a platform blocker to report explicitly.");
+            if (implementationMentionsDotNet)
+            {
+                builder.AppendLine("If the app is not already running, start the reviewed .NET host yourself before opening the browser. Prefer `workspace_dotnet_run` with `keepAlive: true` so the retry records URL, process id, stdout log, stderr log, and startup receipt evidence while Playwright can reach the app; after browser evidence is captured, stop it with the recorded `startup.json` `stopCommand` before finalizing.");
+                builder.AppendLine("For external targets, keep `external-target/<drive>/...` with workspace file and run tools. Do not write a one-off path-translation launch helper when a reviewed generic .NET launch tool is available; missing launch-tool access is a platform blocker to report explicitly.");
+            }
+            else if (implementationMentionsJavaScript)
+            {
+                var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
+                builder.AppendLine("If the app is not already running, start the reviewed JavaScript or TypeScript host yourself before opening the browser. Use the reviewed package script, launch tool, or task-specific skill that records URL, logs, exit code, and cleanup evidence.");
+                builder.AppendLine("Do not call `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for JavaScript or TypeScript deliverables unless the current-run requirements explicitly name .NET, C#, ASP.NET, Blazor, Razor, `.csproj`, or `.sln`.");
+                builder.AppendLine($"If only `workspace_pwsh_run_script` is available, first write a helper script under `{currentRunManagedArtifactRoot}` with `workspace_write_file`, then stat or read it before running it. Do not invoke an artifact helper path that has not been created in this current run.");
+                builder.AppendLine("If `workspace_pwsh_run_script` is listed as a missing required tool, do not block from file inspection alone. Create or repair the launch helper and call `workspace_pwsh_run_script`; a missing localhost URL is a valid blocker only after the launch helper ran and its captured diagnostics show no reachable URL.");
+                builder.AppendLine("For external targets, keep `external-target/<drive>/...` with workspace file tools. Convert that alias to a native path inside the controlled helper script before calling native commands such as `Resolve-Path`, `Test-Path`, `Set-Location`, `Start-Process`, `cmd.exe`, `node`, `npm`, `python`, or a static-file launcher.");
+                builder.AppendLine("On Windows, package-script helpers must launch npm through `npm.cmd` or `cmd.exe /d /s /c \"npm run <script>\"`; do not call `Start-Process -FilePath 'npm'`. If the previous helper failed with `%1 is not a valid Win32 application`, rewrite the helper to use `npm.cmd` or `cmd.exe` and rerun browser launch proof.");
+                builder.AppendLine("Never call native PowerShell or process APIs with `external-target/...` directly. In a helper, translate `external-target/C/programovani/app` to `C:\\programovani\\app` before `Resolve-Path`, `Set-Location`, package scripts, or launch commands.");
+            }
+            else
+            {
+                var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
+                builder.AppendLine("If the app is not already running, inspect current-run files, launch settings, package scripts, or upstream artifacts to identify the reviewed host stack before opening the browser. Use the launch tool or task-specific skill that matches that evidence and records URL, logs, exit code, and cleanup evidence.");
+                builder.AppendLine($"If only `workspace_pwsh_run_script` is available, first write a helper script under `{currentRunManagedArtifactRoot}` with `workspace_write_file`, then stat or read it before running it. Do not invoke an artifact helper path that has not been created in this current run.");
+                builder.AppendLine("For external targets, keep `external-target/<drive>/...` with workspace file tools. Convert that alias to a native path only inside a controlled helper script when the reviewed native command requires it.");
+            }
             builder.AppendLine("Do not repeat successful unchanged validations while browser proof is missing. Launch plus browser evidence is the recovery path.");
             builder.AppendLine("Use the UI as an end user would: navigate to the delivered entry point, fill or change representative controls, trigger representative actions, and verify the visible result changes.");
             builder.AppendLine("Capture fresh bounded browser evidence with `browser_take_screenshot`, `browser_snapshot`, and `browser_console_messages` before you conclude this retry. Use `browser_snapshot` depth 4 or less with boxes disabled, preferably depth 2, and use viewport screenshot capture instead of full-page capture.");

@@ -120,12 +120,12 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Artifact inputs:
   - from `implementation` expectation `implementation-change-set`
 
-### 5. Run QA validation and browser proof (`qa-validation`)
+### 5. Run QA validation and runtime or browser proof (`qa-validation`)
 - Step kind: Review
 - Depends on: peer-review
 - Inputs: Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.
-- Outputs: Targeted QA result with screenshots, regressions, residual quality risk, and an explicit accepted or repair-required branch.
-- Evidence: Regression logs, browser proof, screenshots, and defect notes.
+- Outputs: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, residual quality risk, and an explicit accepted or repair-required branch.
+- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, and defect notes.
 - Decision rights: QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.
 - Exception policy: Do not let schedule pressure replace proof with verbal confidence.
 - Branch outcomes:
@@ -151,12 +151,12 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
   - from `peer-review` expectation `peer-review-note`
   - from `qa-validation` expectation `regression-evidence-pack`
 
-### 7. Re-run QA validation and browser proof after repair (`qa-recheck`)
+### 7. Re-run QA validation and runtime or browser proof after repair (`qa-recheck`)
 - Step kind: Review
 - Depends on: quality-repair
 - Inputs: Repair change set, original QA findings, and reviewed implementation package.
-- Outputs: Recheck result with screenshots, regression evidence, and explicit quality disposition.
-- Evidence: Regression logs, browser proof, screenshots, repair verification, and unresolved defects if any.
+- Outputs: Recheck result with warning-free validation, nonzero executed-test proof when tests are expected, runtime/API/browser evidence as applicable, regression evidence, and explicit quality disposition.
+- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, repair verification, and unresolved defects if any.
 - Decision rights: QA lead may accept the repaired evidence or escalate when repair remains insufficient.
 - Exception policy: Do not approve repaired work when the same failing flow, launch, or proof gap remains unresolved.
 - Branch outcomes:

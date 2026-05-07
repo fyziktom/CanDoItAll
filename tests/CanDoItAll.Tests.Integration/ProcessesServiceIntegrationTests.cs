@@ -315,6 +315,197 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task TransitionStepAsync_allows_repair_branch_without_positive_required_artifact()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process repair branch artifact gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Repair Branch");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var definition = BuildRepairBranchArtifactGateDefinitionEditor(projectId, Guid.NewGuid());
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess, FormatErrors(saveResult.Errors));
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Repair branch artifact gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var qaStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Title == "Validate implementation");
+        var acceptedOutcomeId = qaStep.AvailableBranchOutcomes.Single(item => item.Title == "Quality accepted").Id;
+        var repairOutcomeId = qaStep.AvailableBranchOutcomes.Single(item => item.Title == "Repair required").Id;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = qaStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started QA review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var positiveCompletionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = qaStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            SelectedBranchOutcomeId = acceptedOutcomeId,
+            Reason = "Attempting to accept without validation evidence.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(positiveCompletionResult.IsFailure);
+        Assert.Contains(positiveCompletionResult.Errors, error => error.Code == "processes.step-completion-missing-required-artifacts");
+
+        var repairCompletionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = qaStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            SelectedBranchOutcomeId = repairOutcomeId,
+            Reason = "QA found reproducible defects and routes the work to repair.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(repairCompletionResult.IsSuccess, FormatErrors(repairCompletionResult.Errors));
+
+        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        Assert.Equal(ProcessStepRunStatus.Ready, stepRuns.Single(item => item.Title == "Repair implementation").Status);
+        Assert.Equal(ProcessStepRunStatus.Skipped, stepRuns.Single(item => item.Title == "Approve release").Status);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_replaces_pending_decision_record_summary_on_completion()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Decision summary project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Decision");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var definition = BuildDefinitionEditor(projectId, Guid.NewGuid());
+        definition.Steps[1].RequiresDecisionRecord = true;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Decision summary run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        Assert.Equal("Decision record required.", deliveryStep.DecisionSummary);
+
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded for decision summary completion.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence is present."
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started decision step.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Evidence recorded and approved.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var completedDeliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Id == deliveryStep.Id);
+        Assert.Equal(ProcessStepRunStatus.Completed, completedDeliveryStep.Status);
+        Assert.Equal("Evidence recorded and approved.", completedDeliveryStep.DecisionSummary);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_accepts_required_artifact_recorded_by_title_without_explicit_expectation_id()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -688,7 +879,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Single(thread.Messages);
         Assert.Equal("Delivery lead", thread.Messages[0].AuthorName);
         Assert.Equal("Delivery handoff package is ready for review.", thread.Messages[0].Body);
-        var decision = Assert.Single(runDetails.Decisions.Where(item => item.DecisionKind == ProcessDecisionKind.DirectMessage));
+        var decision = Assert.Single(runDetails.Decisions, item => item.DecisionKind == ProcessDecisionKind.DirectMessage);
         Assert.Equal(ProcessDecisionOutcome.Accepted, decision.Outcome);
         Assert.DoesNotContain(runDetails.ConformanceObservations, item => item.Category == "DirectMessagingPolicy");
 
@@ -736,7 +927,7 @@ public sealed class ProcessesServiceIntegrationTests
 
         var runDetails = await processesService.GetRunDetailsAsync(fixture.RunId);
         Assert.Empty(runDetails.DirectMessageThreads);
-        var decision = Assert.Single(runDetails.Decisions.Where(item => item.DecisionKind == ProcessDecisionKind.DirectMessage));
+        var decision = Assert.Single(runDetails.Decisions, item => item.DecisionKind == ProcessDecisionKind.DirectMessage);
         Assert.Equal(ProcessDecisionOutcome.Rejected, decision.Outcome);
         Assert.Contains(runDetails.ConformanceObservations, item =>
             item.Category == "DirectMessagingPolicy" &&
@@ -869,7 +1060,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(softwareDeliveryStepRuns.Count >= 9);
         Assert.Contains(
             softwareDeliveryStepRuns,
-            item => item.Title == "Run QA validation and browser proof" &&
+            item => item.Title == "Run QA validation and runtime or browser proof" &&
                     item.SelectedBranchOutcomeTitle == "Quality accepted");
         Assert.Contains(
             softwareDeliveryStepRuns,
@@ -3002,6 +3193,146 @@ public sealed class ProcessesServiceIntegrationTests
                             ArtifactKind = ProcessArtifactKind.Evidence,
                             Title = "Delivery readiness evidence",
                             ValidationRequirementSummary = "Human review required before final approval."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildRepairBranchArtifactGateDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var intakeStepId = Guid.NewGuid();
+        var qaStepId = Guid.NewGuid();
+        var acceptedOutcomeId = Guid.NewGuid();
+        var repairOutcomeId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Repair branch artifact gate process",
+            Summary = "Validates artifact gates for positive versus repair branch outcomes.",
+            ValueStatement = "Let negative review outcomes route to repair without pretending positive evidence exists.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Acceptance requires proof; repair routing requires an explicit branch decision.",
+            ChangeSummary = "Initial integration definition.",
+            ConstitutionRuleSummary = "Branch outcomes control downstream execution.",
+            OperatingModeSummary = "Assisted execution with explicit review.",
+            SimulationReadinessSummary = "Safe for local integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "quality-owner",
+                    DisplayName = "Quality owner",
+                    Purpose = "Own validation and repair routing decisions.",
+                    StaffingIntent = "Primary review-side owner for the project.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Quality owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "intake",
+                    Title = "Capture intake",
+                    StepKind = ProcessStepKind.Start,
+                    TargetLeadHours = 1,
+                    CanvasX = 140,
+                    CanvasY = 160,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = qaStepId,
+                    Key = "qa-validation",
+                    Title = "Validate implementation",
+                    StepKind = ProcessStepKind.Review,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
+                    DecisionRoleRequirementId = managerRoleId,
+                    TargetLeadHours = 2,
+                    CanvasX = 420,
+                    CanvasY = 160,
+                    BranchOutcomes =
+                    [
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = acceptedOutcomeId,
+                            Key = "quality-accepted",
+                            Title = "Quality accepted",
+                            Description = "Validation proof is sufficient for release approval."
+                        },
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = repairOutcomeId,
+                            Key = "repair-required",
+                            Title = "Repair required",
+                            Description = "Validation found defects or proof gaps that must be repaired."
+                        }
+                    ],
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Validation evidence pack",
+                            ValidationRequirementSummary = "Required before selecting the positive quality-accepted outcome."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Key = "approve-release",
+                    Title = "Approve release",
+                    StepKind = ProcessStepKind.Approval,
+                    Dependencies = CreateDependencies((qaStepId, acceptedOutcomeId)),
+                    TargetLeadHours = 1,
+                    CanvasX = 720,
+                    CanvasY = 100,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Key = "repair-implementation",
+                    Title = "Repair implementation",
+                    StepKind = ProcessStepKind.Work,
+                    Dependencies = CreateDependencies((qaStepId, repairOutcomeId)),
+                    TargetLeadHours = 3,
+                    CanvasX = 720,
+                    CanvasY = 240,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
                         }
                     ]
                 }

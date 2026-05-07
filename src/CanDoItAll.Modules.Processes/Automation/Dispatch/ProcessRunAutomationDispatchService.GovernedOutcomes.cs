@@ -208,15 +208,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
             !RequiresGovernedStepOutcome(candidate.StepRun) ||
             !TryResolveRepairBranchOutcome(candidate, out repairBranchOutcome) ||
-            missingRequiredTools.Count > 0 ||
-            ResolveUnresolvedCriticalToolFailures(detail).Count > 0)
+            HasUnrecoverableMissingRepairDispositionTool(missingRequiredTools) ||
+            ResolveUnresolvedCriticalToolFailures(candidate, detail).Count > 0)
         {
             return false;
         }
 
         var inspectionText = ResolveOutputInspectionText(responseText);
+        if (!IsRepairableBlockedBranchDispositionReason(declaredOutcome.Reason, inspectionText))
+        {
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) ||
-            !string.IsNullOrWhiteSpace(ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText)) ||
             !string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail)) ||
             !string.IsNullOrWhiteSpace(ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText)) ||
             !string.IsNullOrWhiteSpace(ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText)))
@@ -224,7 +228,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        return IsRepairableBlockedBranchDispositionReason(declaredOutcome.Reason, inspectionText);
+        return true;
+    }
+
+    private static bool HasUnrecoverableMissingRepairDispositionTool(IReadOnlyList<string> missingRequiredTools)
+    {
+        return missingRequiredTools.Any(toolName =>
+            !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !IsImplementationValidationToolName(toolName) &&
+            !IsBrowserLaunchOrProofToolName(toolName));
     }
 
     private static bool TryResolveTerminalEscalationCompletionFromBlockedOutcome(
@@ -240,7 +253,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             !RequiresGovernedStepOutcome(candidate.StepRun) ||
             candidate.BranchOutcomes.Count > 0 ||
             missingRequiredTools.Count > 0 ||
-            ResolveUnresolvedCriticalToolFailures(detail).Count > 0 ||
+            ResolveUnresolvedCriticalToolFailures(candidate, detail).Count > 0 ||
             !IsTerminalEscalationStep(candidate))
         {
             return false;
@@ -377,6 +390,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             "console",
             "runtime",
             "validation",
+            "insufficient",
+            "missingproof",
+            "missingevidence",
             "proofrisk",
             "proofgap",
             "missingimplemented",

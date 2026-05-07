@@ -725,6 +725,139 @@ public sealed class ProcessLaunchPlanningIntegrationTests
     }
 
     [Fact]
+    public async Task CreateLaunchPlanAsync_does_not_select_blazor_specialist_from_negated_stack_wording()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Negated Blazor launch proof {suffix}",
+            objective: "Deliver a generic .NET console app without a browser UI.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Harbor Ledger console app",
+                "Implementation",
+                "Build a small C#/.NET console app under C:\\programovani\\candoitall-dev-output\\harbor-ledger-proof. Archetype: console app, not Blazor, not Razor, not browser UI. Validate dotnet build and console runtime output.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Console app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var implementer = GetSelectedCandidate(details!, "Lead engineer");
+        var dotnetDeveloper = GetCandidate(details, "Lead engineer", ".NET Application Developer");
+        var blazorDeveloper = GetCandidate(details, "Lead engineer", "Blazor Application Developer");
+
+        Assert.True(
+            dotnetDeveloper.Score > blazorDeveloper.Score,
+            $".NET score {dotnetDeveloper.Score} should outrank Blazor score {blazorDeveloper.Score} for non-Blazor .NET console work. Selected {implementer.DisplayName} with score {implementer.Score}.");
+        Assert.Equal(".NET Application Developer", implementer.DisplayName);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_ignores_sibling_stack_when_project_structure_context_is_selected()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Sibling stack launch proof {suffix}",
+            objective: "Mixed batch: one C#/.NET console app and one JavaScript browser app. The selected work item decides the staffing stack.");
+        var selectedWorkItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Harbor Ledger console app",
+                "Implementation",
+                "Build a small C#/.NET console app under C:\\programovani\\candoitall-dev-output\\harbor-ledger-proof. Archetype: console app, not Blazor, not Razor, not browser UI, and not JavaScript. Validate dotnet build and console runtime output.",
+                null,
+                ObjectSubtype: "task"));
+        await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Market Mosaic JavaScript app",
+                "Implementation",
+                "Build a small JavaScript browser app under C:\\programovani\\candoitall-dev-output\\market-mosaic-proof. Validate package scripts and browser-visible behavior.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Console app launch with sibling scenario {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = selectedWorkItem.Id,
+                ParentNodeTitle = selectedWorkItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var implementer = GetSelectedCandidate(details!, "Lead engineer");
+        var dotnetDeveloper = GetCandidate(details, "Lead engineer", ".NET Application Developer");
+        var javascriptDeveloper = GetCandidate(details, "Lead engineer", "JavaScript Application Developer");
+
+        Assert.True(
+            dotnetDeveloper.Score > javascriptDeveloper.Score,
+            $".NET score {dotnetDeveloper.Score} should outrank JavaScript score {javascriptDeveloper.Score} when the selected work item is C#/.NET and the JavaScript work is only a sibling. Selected {implementer.DisplayName} with score {implementer.Score}.");
+        Assert.Equal(".NET Application Developer", implementer.DisplayName);
+    }
+
+    [Fact]
     public void ExternalTargetPathNormalization_strips_escaped_line_break_labels()
     {
         var serviceType = typeof(ProcessesService).Assembly.GetType("CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService");

@@ -14,7 +14,8 @@ public static class ApiEndpointRouteBuilderExtensions
         }
 
         var group = endpoints.MapGroup("/api")
-            .WithTags("API");
+            .WithTags("API")
+            .DisableAntiforgery();
         if (options.Authorization.Enabled)
         {
             group.RequireAuthorization();

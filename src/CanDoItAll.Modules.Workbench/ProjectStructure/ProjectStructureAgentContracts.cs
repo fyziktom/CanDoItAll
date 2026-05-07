@@ -1,6 +1,7 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -25,11 +26,54 @@ public sealed record ProjectStructureAgentContext(
     string BranchName,
     string SessionId);
 
+[JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]
 public enum ProjectStructureLeaseScopeKind
 {
     Project,
     ProjectNode,
     RepoBranch
+}
+
+internal sealed class FlexibleProjectStructureLeaseScopeKindJsonConverter : JsonConverter<ProjectStructureLeaseScopeKind>
+{
+    public override ProjectStructureLeaseScopeKind Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Number &&
+            reader.TryGetInt32(out var numericValue) &&
+            Enum.IsDefined(typeof(ProjectStructureLeaseScopeKind), numericValue))
+        {
+            return (ProjectStructureLeaseScopeKind)numericValue;
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var rawValue = reader.GetString();
+            if (int.TryParse(rawValue, out numericValue) &&
+                Enum.IsDefined(typeof(ProjectStructureLeaseScopeKind), numericValue))
+            {
+                return (ProjectStructureLeaseScopeKind)numericValue;
+            }
+
+            if (Enum.TryParse<ProjectStructureLeaseScopeKind>(rawValue, ignoreCase: true, out var parsedValue) &&
+                Enum.IsDefined(parsedValue))
+            {
+                return parsedValue;
+            }
+        }
+
+        throw new JsonException("Invalid project-structure lease scope kind. Use Project, ProjectNode, RepoBranch, or the corresponding numeric value.");
+    }
+
+    public override void Write(
+        Utf8JsonWriter writer,
+        ProjectStructureLeaseScopeKind value,
+        JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue((int)value);
+    }
 }
 
 public sealed record ProjectStructureLeaseAcquireRequest(

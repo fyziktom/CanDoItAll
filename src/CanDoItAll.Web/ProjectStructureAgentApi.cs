@@ -13,7 +13,8 @@ public static class ProjectStructureAgentApi
 {
     public static IEndpointRouteBuilder MapProjectStructureAgentApi(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/project-structure");
+        var group = endpoints.MapGroup("/api/project-structure")
+            .DisableAntiforgery();
         group.ApplyApiAuthorization(endpoints);
 
         group.MapGet("/projects", async (

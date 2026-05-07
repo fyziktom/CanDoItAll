@@ -145,6 +145,57 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task LinkObjectsAsync_allows_work_item_to_parent_projected_process_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench projected process run link");
+        var workItem = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Started app run",
+                "Implementation target",
+                "Process run should appear under this node after API start.",
+                ParentNodeKey: null,
+                ObjectSubtype: "task"));
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Linked projected process run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Projection link validation"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        await workbench.LinkObjectsAsync(
+            projectId,
+            workItem.Id,
+            BuildProcessRunNodeKey(runResult.Value),
+            ProjectObjectLinkKind.Uses);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var runNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal));
+
+        Assert.Equal(workItem.Id, runNode.ParentId);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, workItem.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, runNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+    }
+
+    [Fact]
     public async Task GetStructureAsync_projects_process_run_output_folders_into_the_structure_surface()
     {
         await using var application = await TestApplication.CreateAsync();

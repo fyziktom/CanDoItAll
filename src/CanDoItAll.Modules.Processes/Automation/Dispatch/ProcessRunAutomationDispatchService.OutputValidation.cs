@@ -113,6 +113,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     detail,
                     carriedImplementationProof));
             AddContextGap(errors, "process.step_outcome.context.invalid_browser_proof", ResolveInvalidBrowserProofSummary(candidate, detail));
+            AddContextGap(errors, "process.step_outcome.context.invalid_quality_validation_proof", ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText));
             AddContextGap(errors, "process.step_outcome.context.missing_required_artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
         }
 

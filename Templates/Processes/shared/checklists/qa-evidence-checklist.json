@@ -11,6 +11,10 @@
   "ExitCriteria": "Evidence pack is decision-ready with open defects and residual risk clearly stated.",
   "Checks": [
     "Covered behaviors and uncovered behaviors are both explicit.",
+    "QA directly inspected the inherited implementation artifact paths before making the quality disposition.",
+    "QA recommendation cites the exact implementation artifacts, build outputs, runtime/API/browser records, UI screenshots when applicable, or test records it accepted or rejected.",
+    "Build, publish, lint, or test validation accepted for release is warning-free unless the process explicitly accepts each warning by code and reason.",
+    "Automated test evidence reports a nonzero executed-test count when tests are expected; a zero-test successful command is treated as missing proof.",
     "Automated evidence is reproducible and linked to the reviewed build or artifact set.",
     "Manual or exploratory findings are captured with severity and follow-up.",
     "Environment limitations affecting confidence are disclosed.",
@@ -18,7 +22,7 @@
     "Defects are triaged, not just listed."
   ],
   "EvidenceExpectations": [
-    "Test evidence pack.",
+    "Test and runtime/API/browser evidence pack as applicable, including warning counts and executed-test counts when validation commands run.",
     "Defect triage note.",
     "QA recommendation or sign-off statement."
   ],

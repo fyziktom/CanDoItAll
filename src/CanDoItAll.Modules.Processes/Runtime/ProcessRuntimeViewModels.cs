@@ -660,6 +660,8 @@ public sealed class ProcessStepTransitionRequest
     public string DecidedBy { get; set; } = string.Empty;
 
     public bool SuppressAutomationDispatch { get; set; }
+
+    public bool AllowCompletedAgentRerun { get; internal set; }
 }
 
 public sealed class ProcessAgentStepRerunRequest
