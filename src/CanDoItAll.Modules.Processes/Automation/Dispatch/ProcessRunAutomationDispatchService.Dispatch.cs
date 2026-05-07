@@ -362,6 +362,34 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var terminalStatus = ResolveSubprocessParentStepStatus(subprocessRun.Status);
         if (!terminalStatus.HasValue)
         {
+            var capabilityGapBlockReason = await TryBuildSubprocessCapabilityGapBlockReasonAsync(
+                subprocessRun,
+                cancellationToken);
+            if (capabilityGapBlockReason is not null)
+            {
+                var blockResult = await TransitionStepAsync(
+                    new ProcessStepTransitionRequest
+                    {
+                        StepRunId = stepRunSnapshot.Id,
+                        TargetStatus = ProcessStepRunStatus.Blocked,
+                        Reason = capabilityGapBlockReason,
+                        DecidedBy = AutomationActor,
+                        SuppressAutomationDispatch = true
+                    },
+                    cancellationToken);
+                if (blockResult.IsFailure)
+                {
+                    logger.LogWarning(
+                        "Subprocess step {StepRunId} on run {RunId} could not be blocked after child run {SubprocessRunId} exposed capability gaps. Errors: {Errors}",
+                        stepRunSnapshot.Id,
+                        candidate.Run.Id,
+                        subprocessRun.RunId,
+                        string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+                }
+
+                return;
+            }
+
             logger.LogInformation(
                 "Subprocess step {StepRunId} on run {RunId} is observing child run {SubprocessRunId} with status {SubprocessStatus}.",
                 stepRunSnapshot.Id,
@@ -394,6 +422,68 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 subprocessRun.RunId,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
         }
+    }
+
+    private async Task<string?> TryBuildSubprocessCapabilityGapBlockReasonAsync(
+        ProcessSubprocessRunStartResult subprocessRun,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var activeChildSteps = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessRunId == subprocessRun.RunId &&
+                (item.Status == ProcessStepRunStatus.Ready ||
+                 item.Status == ProcessStepRunStatus.WaitingApproval ||
+                 item.Status == ProcessStepRunStatus.InProgress))
+            .OrderBy(item => item.Sequence)
+            .Select(item => new SubprocessCapabilityGapStep(
+                item.Title,
+                item.Status,
+                item.CapabilityGapSeverity,
+                item.CurrentExecutorPartyId,
+                item.CurrentExecutorName))
+            .ToListAsync(cancellationToken);
+        if (activeChildSteps.Count == 0)
+        {
+            return null;
+        }
+
+        var executableChildStepExists = activeChildSteps.Any(item =>
+            item.CapabilityGapSeverity == ProcessCapabilityGapSeverity.None &&
+            item.CurrentExecutorPartyId.HasValue);
+        if (executableChildStepExists)
+        {
+            return null;
+        }
+
+        var blockingSteps = activeChildSteps
+            .Where(item =>
+                item.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None ||
+                !item.CurrentExecutorPartyId.HasValue)
+            .Take(3)
+            .Select(BuildSubprocessCapabilityGapStepSummary)
+            .ToList();
+        if (blockingSteps.Count == 0)
+        {
+            return null;
+        }
+
+        var additionalCount = activeChildSteps.Count - blockingSteps.Count;
+        var additionalSummary = additionalCount <= 0
+            ? string.Empty
+            : $" and {additionalCount} more active child step(s)";
+
+        return $"Subprocess run '{subprocessRun.RunName}' cannot proceed because active child step(s) have unresolved required role assignments or capability gaps: {string.Join("; ", blockingSteps)}{additionalSummary}. Resolve the subprocess role assignments or rerun with a launch plan that binds the required roles.";
+    }
+
+    private static string BuildSubprocessCapabilityGapStepSummary(SubprocessCapabilityGapStep step)
+    {
+        var executorName = string.IsNullOrWhiteSpace(step.CurrentExecutorName)
+            ? "unassigned"
+            : step.CurrentExecutorName.Trim();
+
+        return $"'{step.Title}' is {step.Status} for executor '{executorName}' ({step.CapabilityGapSeverity})";
     }
 
     private async Task ProjectCompletedSubprocessArtifactsAsync(

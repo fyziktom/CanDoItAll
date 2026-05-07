@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Collaboration;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Processes;
@@ -192,7 +193,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         ProcessArtifactExpectation expectation,
         IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
     {
-        var artifact = stepArtifacts.FirstOrDefault(item => SatisfiesArtifactExpectation(item, expectation));
+        var artifact = ResolveBestArtifactForExpectation(expectation, stepArtifacts);
         if (artifact is not null)
         {
             var sourceKind = ResolveArtifactSourceKind(artifact.ExternalReferenceKey);
@@ -225,6 +226,61 @@ public sealed partial class ProcessRuntimeReadQueryService
             string.Empty,
             string.Empty,
             BuildUnsatisfiedArtifactDiagnostic(stepRun, expectation, status));
+    }
+
+    internal static ProcessArtifactRecord? ResolveBestArtifactForExpectation(
+        ProcessArtifactExpectation expectation,
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+    {
+        return stepArtifacts
+            .Where(item => SatisfiesArtifactExpectation(item, expectation))
+            .OrderBy(item => ResolveArtifactExpectationSpecificityPriority(expectation, item))
+            .ThenBy(ResolveArtifactSourcePriority)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static int ResolveArtifactExpectationSpecificityPriority(
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord artifact)
+    {
+        if (string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        var expectedSlug = FileSafeSlugBuilder.Build(expectation.Title);
+        if (string.IsNullOrWhiteSpace(expectedSlug))
+        {
+            return artifact.ArtifactExpectationId == expectation.Id ? 2 : 3;
+        }
+
+        if (string.Equals(FileSafeSlugBuilder.Build(artifact.Title), expectedSlug, StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        var pathSlug = FileSafeSlugBuilder.Build(Path.GetFileNameWithoutExtension(artifact.ManagedStoragePath));
+        if (string.Equals(pathSlug, expectedSlug, StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        return artifact.ArtifactExpectationId == expectation.Id ? 2 : 3;
+    }
+
+    private static int ResolveArtifactSourcePriority(ProcessArtifactRecord artifact)
+    {
+        return ResolveArtifactSourceKind(artifact.ExternalReferenceKey) switch
+        {
+            ProcessArtifactExpectationSourceKind.ProcessArtifactRecord => 0,
+            ProcessArtifactExpectationSourceKind.AgentExecutionArtifact => 0,
+            ProcessArtifactExpectationSourceKind.ProcessMockArtifact => 1,
+            ProcessArtifactExpectationSourceKind.AssistantResponse => 2,
+            ProcessArtifactExpectationSourceKind.CompletedDecision => 3,
+            ProcessArtifactExpectationSourceKind.ProviderNativeBrowserArtifact => 4,
+            _ => 5
+        };
     }
 
     private static ProcessArtifactExpectationSatisfactionStatus ResolveUnsatisfiedArtifactStatus(

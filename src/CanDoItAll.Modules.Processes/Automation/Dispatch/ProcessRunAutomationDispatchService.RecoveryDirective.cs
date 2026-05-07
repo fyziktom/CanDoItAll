@@ -118,6 +118,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             builder.AppendLine("On this retry, ignore those stale or ungrounded paths unless the current project structure explicitly grounds them.");
             builder.AppendLine("Use only the current grounded product root and current-run artifacts; do not cite sibling external-target applications as evidence.");
+            builder.AppendLine("Remove stale path lists from final artifacts instead of restating them as `provided context`, `ignored context`, or unrelated source-document notes.");
             if (HasProjectStructureContext(candidate))
             {
                 builder.AppendLine("Call project_structure_read now and restate the current grounded target before inspecting, writing, validating, or finalizing evidence.");

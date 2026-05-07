@@ -49,6 +49,14 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(managerPartyId, parentRun.ManagerAgentId);
         Assert.Equal("Integration subprocess manager", parentRun.ManagerAgentName);
 
+        var parentRoleId = await LoadPublishedRoleIdAsync(dbContextFactory, parentDefinitionId, "process-owner");
+        await ResolveRunAssignmentAsync(
+            processesService,
+            parentRunId,
+            parentRoleId,
+            managerPartyId,
+            "Integration subprocess manager");
+
         var parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         var intakeStep = Assert.Single(parentSteps, step => step.Title == "Capture parent intake");
         await CompleteStepAsync(processesService, parentRunId, intakeStep.Id);
@@ -154,6 +162,59 @@ public sealed class ProcessSubprocessIntegrationTests
 
         Assert.Contains("Integration subprocess manager", directive.ReplayContextJson, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("subprocess blockers", directive.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Subprocess_step_blocks_when_child_run_has_only_capability_gap_steps()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Subprocess capability gap validation");
+        var managerPartyId = await CreateAiManagerAsync(partyDirectoryService, "Capability gap subprocess manager");
+        var childDefinitionId = await SaveAndPublishAsync(
+            processesService,
+            BuildChildDefinition(projectId));
+        var parentDefinitionId = await SaveAndPublishAsync(
+            processesService,
+            BuildParentDefinition(projectId, childDefinitionId, managerPartyId));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = parentDefinitionId,
+                ProjectId = projectId,
+                RunName = "Subprocess capability gap validation run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Integration validation of subprocess capability-gap escalation."
+            });
+
+        Assert.True(runResult.IsSuccess, ToErrorMessage(runResult.Errors));
+        var parentRunId = runResult.Value;
+        var parentSteps = await processesService.ListStepRunsAsync(parentRunId);
+        await CompleteStepAsync(
+            processesService,
+            parentRunId,
+            Assert.Single(parentSteps, step => step.Title == "Capture parent intake").Id);
+
+        parentSteps = await processesService.ListStepRunsAsync(parentRunId);
+        var subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run child validation subprocess");
+        await dispatchService.DispatchAsync(parentRunId, subprocessStep.Id, "integration-subprocess-capability-gap");
+
+        parentSteps = await processesService.ListStepRunsAsync(parentRunId);
+        subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run child validation subprocess");
+        var parentRun = await processesService.GetRunAsync(parentRunId);
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, subprocessStep.Status);
+        Assert.Equal(ProcessRunStatus.Blocked, parentRun!.Status);
+        Assert.NotNull(subprocessStep.SubprocessRun);
+        Assert.Equal(ProcessRunStatus.Active, subprocessStep.SubprocessRun.Status);
+        Assert.Contains("capability gaps", subprocessStep.BlockedReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Resolve the subprocess role assignments", subprocessStep.BlockedReason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -439,6 +500,25 @@ public sealed class ProcessSubprocessIntegrationTests
             });
 
         Assert.True(completeResult.IsSuccess, ToErrorMessage(completeResult.Errors));
+    }
+
+    private static async Task<Guid> LoadPublishedRoleIdAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid definitionId,
+        string roleKey)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var definition = await dbContext.Set<ProcessDefinition>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == definitionId);
+
+        Assert.NotNull(definition.ActivePublishedVersionId);
+        return await dbContext.Set<ProcessRoleRequirement>()
+            .AsNoTracking()
+            .Where(item => item.ProcessDefinitionVersionId == definition.ActivePublishedVersionId!.Value)
+            .Where(item => item.Key == roleKey)
+            .Select(item => item.Id)
+            .SingleAsync();
     }
 
     private static async Task ResolveRunAssignmentAsync(

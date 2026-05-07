@@ -13,6 +13,7 @@ output
 .codex/runlogs
 .codex-artifacts
 .codex-tmp
+.codex-temp
 .playwright-mcp
 evidence
 

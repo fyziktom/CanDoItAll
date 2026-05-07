@@ -42,6 +42,30 @@ public sealed class AgentRecoveryModelsTests
     }
 
     [Fact]
+    public void OutOfScopeReference_uses_rework_continuation()
+    {
+        var decision = AgentRecoveryDecisionFactory.Create(
+            AgentFailureCategory.OutOfScopeReference,
+            "Evidence referenced stale external-target paths.",
+            attemptNumber: 2,
+            sourceExecutionRunId: "execution-out-of-scope");
+        var packet = AgentReworkPacketFactory.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            decision,
+            "Remove stale paths from evidence.");
+        var context = AgentRecoveryContextBuilder.Build(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            decision,
+            packet);
+
+        Assert.Equal(AgentRecoveryMode.ReworkContinuation, decision.Mode);
+        Assert.Equal(AgentRecoverySessionStrategy.ReworkSessionWithPacket, context.SessionStrategy);
+        Assert.Equal(AgentFailureCategory.OutOfScopeReference, packet.FailureCategory);
+    }
+
+    [Fact]
     public void ApprovalContinuation_uses_same_compatible_session()
     {
         var decision = AgentRecoveryDecisionFactory.ApprovalContinuation(

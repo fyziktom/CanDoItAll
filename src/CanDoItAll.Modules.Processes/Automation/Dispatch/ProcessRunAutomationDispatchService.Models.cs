@@ -60,9 +60,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string ValidationRequirementSummary,
         string AllowedFutureUsageSummary);
 
-    internal sealed record ProjectStructureRequiredArtifactPath(
-        string FileName,
-        string AliasPath);
+internal sealed record ProjectStructureRequiredArtifactPath(
+    string FileName,
+    string AliasPath);
+
+internal sealed record SubprocessCapabilityGapStep(
+    string Title,
+    ProcessStepRunStatus Status,
+    ProcessCapabilityGapSeverity CapabilityGapSeverity,
+    Guid? CurrentExecutorPartyId,
+    string CurrentExecutorName);
 
     private sealed record DispatchArtifactInput(
         string SourceStepTitle,
