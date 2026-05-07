@@ -290,6 +290,7 @@ $stderrLogPath = Join-Path $logRoot "stderr.log"
 $bindUrl = "http://__BIND_HOST__:__PORT__"
 $launchUrl = $bindUrl
 $healthUrl = "$bindUrl/health"
+$startupTimeoutSeconds = 180
 
 function Show-LauncherError {
     param(
@@ -314,11 +315,48 @@ function Show-LauncherError {
 function Test-Health {
     try {
         $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 2
-        return [int]$response.StatusCode -eq 200
+        return [int]$response.StatusCode -eq 200 -and [string]$response.Content -eq "Healthy"
     }
     catch {
         return $false
     }
+}
+
+function Get-LogTail {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return ""
+    }
+
+    try {
+        return (Get-Content -LiteralPath $Path -Tail 40 -ErrorAction Stop) -join [Environment]::NewLine
+    }
+    catch {
+        return ""
+    }
+}
+
+function Get-StartupFailureMessage {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Summary
+    )
+
+    $stderrTail = Get-LogTail -Path $stderrLogPath
+    if (-not [string]::IsNullOrWhiteSpace($stderrTail)) {
+        return "$Summary`n`nRecent stderr:`n$stderrTail"
+    }
+
+    $stdoutTail = Get-LogTail -Path $stdoutLogPath
+    if (-not [string]::IsNullOrWhiteSpace($stdoutTail)) {
+        return "$Summary`n`nRecent log output:`n$stdoutTail"
+    }
+
+    return $Summary
 }
 
 function Get-InstalledProcess {
@@ -384,6 +422,7 @@ try {
     }
 
     $isHealthy = Test-Health
+    $startedProcess = $null
     if (-not $isHealthy) {
         $runningProcess = Get-InstalledProcess
         if ($null -ne $runningProcess) {
@@ -399,7 +438,7 @@ try {
         $env:Storage__WorkspaceRoot = $workspaceRoot
         $env:Storage__ManagerArtifactsFolder = $managerArtifactsRoot
 
-        $process = Start-Process `
+        $startedProcess = Start-Process `
             -FilePath $appPath `
             -WorkingDirectory $appRoot `
             -WindowStyle Hidden `
@@ -407,10 +446,10 @@ try {
             -RedirectStandardOutput $stdoutLogPath `
             -RedirectStandardError $stderrLogPath
 
-        Set-Content -LiteralPath $pidFilePath -Value $process.Id
+        Set-Content -LiteralPath $pidFilePath -Value $startedProcess.Id
     }
 
-    $deadline = [DateTimeOffset]::UtcNow.AddSeconds(30)
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($startupTimeoutSeconds)
     while ([DateTimeOffset]::UtcNow -lt $deadline) {
         if (Test-Health) {
             if (-not $NoBrowser.IsPresent) {
@@ -420,10 +459,17 @@ try {
             exit 0
         }
 
+        if ($null -ne $startedProcess) {
+            $startedProcess.Refresh()
+            if ($startedProcess.HasExited) {
+                throw (Get-StartupFailureMessage -Summary "CanDoItAll exited before it became ready. Exit code: $($startedProcess.ExitCode). Check logs in $logRoot.")
+            }
+        }
+
         Start-Sleep -Seconds 1
     }
 
-    throw "CanDoItAll did not become ready within 30 seconds. Check logs in $logRoot."
+    throw (Get-StartupFailureMessage -Summary "CanDoItAll did not become ready within $startupTimeoutSeconds seconds. Check logs in $logRoot.")
 }
 catch {
     Show-LauncherError -Message $_.Exception.Message
