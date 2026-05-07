@@ -403,6 +403,31 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_adjacent_business_analysis_label()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box Business-analysis ro"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_keeps_folder_when_keep_file_is_referenced()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-dev-55-output/business-analysis",
+            "external-target/C/programovani/candoitall-dev-55-output/business-analysis/.keep and"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/business-analysis", alias);
+    }
+
+    [Fact]
     public void TryMapAbsoluteExternalPathToAlias_strips_inline_generated_source_sentence()
     {
         var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
@@ -3717,6 +3742,23 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             [candidate, detail, detail.Run.ResultSummary]) as string;
 
         Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveWorkspaceWrittenArtifactSourceRelativePaths_keeps_unscoped_managed_write_as_read_source()
+    {
+        var workspaceScope = WorkspaceScopeDescriptor.Organization("dc8abe5458cd4a8798ab5a14de6f846b");
+        var paths = ProcessRunAutomationDispatchService.ResolveWorkspaceWrittenArtifactSourceRelativePaths(
+            workspaceScope,
+            "artifacts/process-runs/run-001/03-implementation-change-set.md",
+            "artifacts/scopes/organization/dc8abe5458cd4a8798ab5a14de6f846b/process-runs/run-001/03-implementation-change-set.md");
+
+        Assert.Equal(
+            [
+                "artifacts/process-runs/run-001/03-implementation-change-set.md",
+                "artifacts/scopes/organization/dc8abe5458cd4a8798ab5a14de6f846b/process-runs/run-001/03-implementation-change-set.md"
+            ],
+            paths);
     }
 
     [Fact]

@@ -323,7 +323,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
-                    "Governed process browser snapshots must set depth to 4 or less. Retry with a bounded snapshot such as depth=2.");
+                    "Governed process browser snapshots must set depth to 4 or less. Retry once with depth=2 and do not repeat this blocked call.");
             }
 
             if (context.RedactedArguments.TryGetValue("boxes", out var boxesValue) &&
@@ -332,7 +332,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
-                    "Governed process browser snapshots must not request element boxes because they can produce oversized tool output. Retry with boxes=false.");
+                    "Governed process browser snapshots must not request element boxes because they can produce oversized tool output. Retry once with boxes=false and do not repeat this blocked call.");
             }
 
             return null;
@@ -345,7 +345,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         {
             return ToolInvocationPolicyDecision.Deny(
                 signature,
-                "Governed process browser screenshots must be viewport-bounded. Retry with fullPage=false or omit fullPage.");
+                "Governed process browser screenshots must be viewport-bounded. Retry once with fullPage=false or omit fullPage, and do not repeat this blocked call.");
         }
 
         return null;

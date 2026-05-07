@@ -111,12 +111,17 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         }
 
         var secretRecordId = AgentFrameworkProviderMetadata.ResolveSecretRecordId(model, current?.ApiKeySecretId);
-        if (providerAdapter.Manifest.SecretRequirements.Any(item => item.IsRequired) && !secretRecordId.HasValue)
+        if (providerAdapter.Manifest.SecretRequirements.Any(item => item.IsRequired) &&
+            !secretRecordId.HasValue &&
+            !IsEnvironmentVariableSecretReference(model.ApiKeyEnvironmentVariable))
         {
             throw new InvalidOperationException($"{providerAdapter.Manifest.DisplayName} requires a secret reference.");
         }
 
-        var entity = current ?? new WorkspaceProviderProfile();
+        var entity = current ?? new WorkspaceProviderProfile
+        {
+            Id = model.Id ?? Guid.NewGuid()
+        };
         if (current is null)
         {
             dbContext.Set<WorkspaceProviderProfile>().Add(entity);
@@ -305,6 +310,16 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         return mappedKind == AgentFrameworkProviderKind.OpenAi
             ? OpenAiApiKeyEnvironmentVariable
             : string.Empty;
+    }
+
+    private static bool IsEnvironmentVariableSecretReference(string apiKeyEnvironmentVariable)
+    {
+        if (string.IsNullOrWhiteSpace(apiKeyEnvironmentVariable))
+        {
+            return false;
+        }
+
+        return !apiKeyEnvironmentVariable.Trim().StartsWith("secret:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsOpenAiChatCompletionsProvider(

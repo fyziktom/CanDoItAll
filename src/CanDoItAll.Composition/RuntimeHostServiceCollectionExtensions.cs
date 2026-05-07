@@ -103,6 +103,7 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly IReadOnlyList<string> ManagedSqliteOpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        "gpt-5.4-mini",
         "gpt-4.1-mini",
         "gpt-4o-mini",
         "gpt-4.1"
@@ -110,7 +111,7 @@ public sealed class AppDatabaseBootstrapper(
 
     private const string ManagedSqliteBootstrapActor = "managed-sqlite-bootstrap";
     private const string ManagedSqliteSeedMarker = "managedSeedVersion";
-    private const string ManagedSqliteOpenAiProviderName = "OpenAI chat completions";
+    private const string ManagedSqliteOpenAiProviderName = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName;
     private const string ManagedSqliteOpenAiBaseUrl = "https://api.openai.com/v1";
     private const string ManagedSqliteOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string ManagedSqliteOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
@@ -410,10 +411,16 @@ public sealed class AppDatabaseBootstrapper(
                 LastHealthCheckAtUtc = null,
                 ExtraSettingsJson = JsonSerializer.Serialize(new
                 {
-                    history = "framework-managed",
+                    history = "service-managed",
+                    reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
+                    modelParameters = new
+                    {
+                        reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
+                    },
                     apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
                     connectorPluginKey = OpenAiProviderAdapter.PluginKey,
                     configSchemaVersion = ManagedSqliteProviderSchemaVersion,
+                    providerTransport = nameof(ProviderTransportKind.Responses),
                     timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
                 })
             });
@@ -597,10 +604,16 @@ public sealed class AppDatabaseBootstrapper(
 
         var expectedExtraSettingsJson = JsonSerializer.Serialize(new
         {
-            history = "framework-managed",
+            history = "service-managed",
+            reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
+            modelParameters = new
+            {
+                reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
+            },
             apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
             connectorPluginKey = OpenAiProviderAdapter.PluginKey,
             configSchemaVersion = ManagedSqliteProviderSchemaVersion,
+            providerTransport = nameof(ProviderTransportKind.Responses),
             timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
         });
         if (!string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
@@ -621,14 +634,15 @@ public sealed class AppDatabaseBootstrapper(
             ManagedSqliteOpenAiBaseUrl,
             ManagedSqliteOpenAiApiKeyEnvironmentVariable,
             ManagedSqliteOpenAiModel,
-            ProviderTransportKind.ChatCompletions,
-            true,
+            ProviderTransportKind.Responses,
             true,
             true,
             true,
             false,
-            JsonSerializer.Serialize(new { history = "framework-managed", timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds }),
-            "Managed SQLite OpenAI provider for seeded delivery agents.",
+            true,
+            ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
+                JsonSerializer.Serialize(new { history = "service-managed", timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds })),
+            "Managed SQLite OpenAI Responses provider for seeded delivery agents.",
             "OpenAI active",
             null,
             ManagedSqliteOpenAiSuggestedModels);
@@ -669,7 +683,7 @@ public sealed class AppDatabaseBootstrapper(
             true,
             false,
             true,
-            JsonSerializer.Serialize(new { history = "service-managed" }),
+            ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(JsonSerializer.Serialize(new { history = "service-managed" })),
             "Managed SQLite bootstrap credential probe.",
             "Not checked",
             null,

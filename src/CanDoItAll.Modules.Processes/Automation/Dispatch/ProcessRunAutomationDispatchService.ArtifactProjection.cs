@@ -343,14 +343,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            if (!TryResolveArtifactFullPath(workspaceRoot, projectedRelativePath, out var fullPath, out var pathResolutionFailure) ||
-                !File.Exists(fullPath))
+            if (!TryResolveWorkspaceWrittenArtifactSourceFullPath(
+                    workspaceRoot,
+                    workspaceScope,
+                    matchingWrite.Path,
+                    projectedRelativePath,
+                    out var fullPath,
+                    out var sourceRelativePath,
+                    out var pathResolutionFailure))
             {
                 logger.LogDebug(
-                    "Skipping workspace-written artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because path '{RelativePath}' is unavailable. Reason: {Reason}",
+                    "Skipping workspace-written artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because write path '{WrittenPath}' could not be read as projected path '{ProjectedPath}'. Reason: {Reason}",
                     candidate.Run.Id,
                     candidate.StepRun.Id,
                     expectedArtifact.Title,
+                    matchingWrite.Path,
                     projectedRelativePath,
                     string.IsNullOrWhiteSpace(pathResolutionFailure) ? "File does not exist." : pathResolutionFailure);
                 continue;
@@ -379,7 +386,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 projectedRelativePath,
                 GuessContentTypeFromPath(fullPath),
                 "workspace_write_file",
-                $"Projected from workspace file write '{matchingWrite.Path}' for AgentFramework execution run {detail.Run.Id:D}.",
+                $"Projected from workspace file write '{sourceRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
                 DateTimeOffset.UtcNow);
             var placement = await storagePlacementService.PlaceAsync(
                 new StoragePlacementRequest(
@@ -406,7 +413,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                         ? "Process evidence and audit review."
                         : expectedArtifact.AllowedFutureUsageSummary,
-                    ReviewSummary = $"Workspace file write produced '{projectedRelativePath}'.",
+                    ReviewSummary = string.Equals(sourceRelativePath, projectedRelativePath, StringComparison.OrdinalIgnoreCase)
+                        ? $"Workspace file write produced '{projectedRelativePath}'."
+                        : $"Workspace file write produced '{sourceRelativePath}' and was imported as '{projectedRelativePath}'.",
                     ManagedStoragePath = placement.RelativePath,
                     ExternalReferenceKey = externalReferenceKey
                 },

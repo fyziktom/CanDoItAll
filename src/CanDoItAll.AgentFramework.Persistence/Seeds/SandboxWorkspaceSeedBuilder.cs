@@ -15,8 +15,8 @@ internal static class SandboxWorkspaceSeedBuilder
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        "gpt-5.4-mini",
         "gpt-4.1-mini",
-        "gpt-4o-mini",
         "gpt-4.1"
     ];
 
@@ -440,7 +440,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 true,
                 false,
                 true,
-                SerializeConfiguration(new { history = "service-managed" }),
+                CreateOpenAiProviderConfigurationJson("service-managed"),
                 "Responses profile for hosted routes, DevUI, and background-response scenarios.",
                 "Not checked",
                 null,
@@ -497,6 +497,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             false,
+            WithDefaultReasoningEffort(
             WithWorkspaceToolProfile(
                 WithProcessAccess(
                 WithProjectStructureAccess(
@@ -517,7 +518,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ArchitectureReview),
+                AgentWorkspaceToolProfileKind.ArchitectureReview)),
             false,
             "portfolio-architect",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, AutoApproveExternalCallsByDefault = true },
@@ -561,6 +562,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.1d,
             false,
             false,
+            WithDefaultReasoningEffort(
             WithWorkspaceToolProfile(
                 WithProcessAccess(
                 WithProjectStructureAccess(
@@ -576,7 +578,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
+                AgentWorkspaceToolProfileKind.QualityValidation)),
             false,
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
@@ -964,6 +966,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             true,
+            WithDefaultReasoningEffort(
             WithWorkspaceToolProfile(
                 WithProcessAccess(
                 WithProjectStructureAccess(
@@ -980,7 +983,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ReadOnly),
+                AgentWorkspaceToolProfileKind.ReadOnly)),
             false,
             "research-deep-dive-analyst",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
@@ -1618,7 +1621,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             false,
-            configurationJson,
+            WithDefaultReasoningEffort(configurationJson),
             false,
             templateKey,
             permissions,
@@ -1677,6 +1680,57 @@ internal static class SandboxWorkspaceSeedBuilder
         return AgentWorkspaceToolAccessMetadata.Write(
             configurationJson,
             AgentWorkspaceToolAccessProfiles.CreateSettings(profile));
+    }
+
+    private static string WithDefaultReasoningEffort(string configurationJson)
+    {
+        var configuration = ReadConfigurationObject(configurationJson);
+        configuration[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = ManagedSeedProviderFallbacks.DefaultReasoningEffort;
+
+        var modelParameters = configuration.TryGetValue(
+                AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName,
+                out var existingModelParameters) &&
+            existingModelParameters is IDictionary<string, object?> existingModelParameterDictionary
+                ? new Dictionary<string, object?>(existingModelParameterDictionary, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        modelParameters[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = ManagedSeedProviderFallbacks.DefaultReasoningEffort;
+        configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
+        return SerializeConfiguration(configuration);
+    }
+
+    private static string CreateOpenAiProviderConfigurationJson(string history)
+    {
+        return SerializeConfiguration(new
+        {
+            history,
+            reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
+            modelParameters = new
+            {
+                reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
+            }
+        });
+    }
+
+    private static Dictionary<string, object?> ReadConfigurationObject(string configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        using var document = JsonDocument.Parse(configurationJson);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return document.RootElement
+            .EnumerateObject()
+            .ToDictionary(
+                property => property.Name,
+                property => ConvertSeedConfigurationValue(property.Value),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private static string GetSeedSkillRoot(string key)

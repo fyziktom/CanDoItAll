@@ -39,4 +39,70 @@ public sealed class AgentProviderModelParameterPolicyTests
 
         Assert.True(shouldOmit);
     }
+
+    [Fact]
+    public void Openai_reasoning_model_uses_agent_reasoning_effort_over_provider()
+    {
+        var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            "gpt-5.4",
+            "{\"reasoningEffort\":\"low\"}",
+            "{\"reasoningEffort\":\"medium\"}");
+
+        Assert.Equal(AgentReasoningEffortLevel.Medium, effort);
+    }
+
+    [Fact]
+    public void Openai_reasoning_model_reads_nested_provider_reasoning_effort()
+    {
+        var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            "gpt-5.4",
+            "{\"modelParameters\":{\"reasoningEffort\":\"xhigh\"}}",
+            string.Empty);
+
+        Assert.Equal(AgentReasoningEffortLevel.ExtraHigh, effort);
+    }
+
+    [Fact]
+    public void Non_reasoning_model_ignores_reasoning_effort()
+    {
+        var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            "gpt-4.1",
+            "{\"reasoningEffort\":\"medium\"}",
+            "{\"reasoningEffort\":\"high\"}");
+
+        Assert.Null(effort);
+    }
+
+    [Fact]
+    public void Invalid_reasoning_effort_fails_explicitly()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+                ProviderKind.OpenAi,
+                ProviderTransportKind.Responses,
+                "gpt-5.4",
+                "{\"reasoningEffort\":\"aggressive\"}",
+                string.Empty));
+
+        Assert.Contains("Unsupported reasoning effort", exception.Message);
+    }
+
+    [Fact]
+    public void Openai_chat_completions_transport_does_not_apply_reasoning_effort()
+    {
+        var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.ChatCompletions,
+            "gpt-5.4",
+            "{\"reasoningEffort\":\"medium\"}",
+            string.Empty);
+
+        Assert.Null(effort);
+    }
 }

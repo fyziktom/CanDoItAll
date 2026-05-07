@@ -348,7 +348,7 @@ if (app.Environment.IsDevelopment())
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
         var providers = await workspaceService.ListProvidersAsync();
         var provider = providers
-            .FirstOrDefault(item => string.Equals(item.Name, "OpenAI chat completions", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(item => string.Equals(item.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.OrdinalIgnoreCase))
             ?? providers.FirstOrDefault(item => item.Kind is CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi or CanDoItAll.AgentFramework.Models.ProviderKind.AzureOpenAi);
 
         if (provider is null)

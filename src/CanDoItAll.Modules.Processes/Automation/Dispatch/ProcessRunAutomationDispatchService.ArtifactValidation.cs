@@ -3085,6 +3085,107 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : ResolveScopedManagedRelativePath(workspaceScope, normalized);
     }
 
+    private static bool TryResolveWorkspaceWrittenArtifactSourceFullPath(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        string writtenPath,
+        string projectedRelativePath,
+        out string fullPath,
+        out string sourceRelativePath,
+        out string failureReason)
+    {
+        fullPath = string.Empty;
+        sourceRelativePath = string.Empty;
+        failureReason = string.Empty;
+
+        var sourceCandidates = ResolveWorkspaceWrittenArtifactSourceRelativePaths(
+            workspaceScope,
+            writtenPath,
+            projectedRelativePath);
+        foreach (var candidatePath in sourceCandidates)
+        {
+            if (!TryResolveArtifactFullPath(workspaceRoot, candidatePath, out var candidateFullPath, out var candidateFailure))
+            {
+                failureReason = candidateFailure;
+                continue;
+            }
+
+            if (!File.Exists(candidateFullPath))
+            {
+                failureReason = $"File '{candidatePath}' does not exist.";
+                continue;
+            }
+
+            fullPath = candidateFullPath;
+            sourceRelativePath = candidatePath;
+            failureReason = string.Empty;
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static IReadOnlyList<string> ResolveWorkspaceWrittenArtifactSourceRelativePaths(
+        WorkspaceScopeDescriptor workspaceScope,
+        string writtenPath,
+        string projectedRelativePath)
+    {
+        var paths = new List<string>();
+        AddWorkspaceWrittenArtifactSourceRelativePath(paths, writtenPath);
+        AddWorkspaceWrittenArtifactSourceRelativePath(paths, projectedRelativePath);
+
+        var normalizedWrittenPath = WorkspaceScopeDescriptor.NormalizeRelativePath(writtenPath);
+        if (!string.IsNullOrWhiteSpace(normalizedWrittenPath) &&
+            !IsExternalTargetAliasPath(normalizedWrittenPath) &&
+            !TryMapAbsoluteExternalPathToAlias(normalizedWrittenPath, out _) &&
+            IsManagedWorkspaceArtifactPath(normalizedWrittenPath))
+        {
+            AddWorkspaceWrittenArtifactSourceRelativePath(
+                paths,
+                ResolveScopedManagedRelativePath(workspaceScope, normalizedWrittenPath));
+        }
+
+        return paths;
+    }
+
+    private static void AddWorkspaceWrittenArtifactSourceRelativePath(
+        ICollection<string> paths,
+        string path)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            paths.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (TryMapAbsoluteExternalPathToAlias(normalized, out var mappedAlias))
+        {
+            if (!paths.Contains(mappedAlias, StringComparer.OrdinalIgnoreCase))
+            {
+                paths.Add(mappedAlias);
+            }
+
+            return;
+        }
+
+        paths.Add(normalized);
+    }
+
+    private static bool IsManagedWorkspaceArtifactPath(string path)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        var rootSegment = normalized
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        return rootSegment is not null && IsManagedRootSegment(rootSegment);
+    }
+
     private static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
     {
         return expectedArtifact.IsRequired &&

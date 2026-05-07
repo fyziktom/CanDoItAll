@@ -406,7 +406,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
             stripped,
-            @"(?i)\s+(?:Workspace\s+alias|Mapped\s+alias|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Deliverable|Exact|Include|Includes|No-go|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
+            @"(?i)\s+(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Deliverable|Exact|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        stripped = Regex.Replace(
+            stripped,
+            @"(?i)\s+(?:and|or)\s*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(

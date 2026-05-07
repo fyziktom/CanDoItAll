@@ -143,7 +143,15 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         var store = new FileSandboxWorkspaceStore(
             workspaceFactory.GetWorkspaceRoot(),
             workspaceFactory.GetOrganizationScope());
-        if (!string.Equals(openAiProvider.DefaultModel, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.Ordinal))
+        var repairedOpenAiProviderConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
+            openAiProvider.ConfigurationJson,
+            "service-managed");
+        if (!string.Equals(openAiProvider.DefaultModel, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.Ordinal) ||
+            !string.Equals(openAiProvider.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.Ordinal) ||
+            openAiProvider.Transport != ProviderTransportKind.Responses ||
+            openAiProvider.PreferFrameworkManagedChatHistory ||
+            !openAiProvider.SupportsBackgroundResponses ||
+            !string.Equals(openAiProvider.ConfigurationJson, repairedOpenAiProviderConfigurationJson, StringComparison.Ordinal))
         {
             openAiProvider = await RepairManagedSeedOpenAiProviderDefaultAsync(
                 store,
@@ -156,7 +164,11 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .Where(RequiresManagedSeedFallbackRepair)
             .Where(agent =>
                 agent.ProviderProfileId != openAiProvider.Id ||
-                !string.Equals(agent.Model, openAiProvider.DefaultModel, StringComparison.Ordinal))
+                !string.Equals(agent.Model, openAiProvider.DefaultModel, StringComparison.Ordinal) ||
+                !string.Equals(
+                    agent.ConfigurationJson,
+                    ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson),
+                    StringComparison.Ordinal))
             .ToList();
         if (agentsNeedingRepair.Count == 0)
         {
@@ -175,6 +187,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                     {
                         ProviderProfileId = openAiProvider.Id,
                         Model = openAiProvider.DefaultModel,
+                        ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson),
                         UpdatedAtUtc = updatedAtUtc
                     }
                     : agent)
@@ -190,7 +203,14 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     {
         var updatedProvider = openAiProvider with
         {
+            Name = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
             DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            Transport = ProviderTransportKind.Responses,
+            PreferFrameworkManagedChatHistory = false,
+            SupportsBackgroundResponses = true,
+            ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
+                openAiProvider.ConfigurationJson,
+                "service-managed"),
             SuggestedModels =
             [
                 ManagedSeedProviderFallbacks.OpenAiDefaultModel,
@@ -215,7 +235,11 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     {
         return providers.FirstOrDefault(provider =>
                    provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
-                   string.Equals(provider.Name, "OpenAI chat completions", StringComparison.OrdinalIgnoreCase)) ??
+                   provider.Transport == ProviderTransportKind.Responses &&
+                   string.Equals(provider.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.OrdinalIgnoreCase)) ??
+               providers.FirstOrDefault(provider =>
+                   IsManagedSeedOpenAiProvider(provider) &&
+                   provider.Transport == ProviderTransportKind.Responses) ??
                providers.FirstOrDefault(IsManagedSeedOpenAiProvider);
     }
 

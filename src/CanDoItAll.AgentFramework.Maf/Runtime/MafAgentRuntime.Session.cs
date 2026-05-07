@@ -239,7 +239,8 @@ public sealed partial class MafAgentRuntime
             provider,
             model,
             (float)agent.Temperature,
-            forceOmitTemperature);
+            forceOmitTemperature,
+            agent.ConfigurationJson);
         chatOptions.AllowMultipleToolCalls = !hasApprovalTools;
         ApplyStructuredResponseFormat(chatOptions, structuredOutput);
 

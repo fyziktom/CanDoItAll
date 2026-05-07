@@ -454,7 +454,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- Do not assume a fixed URL. Use the actual URL reported by the launch command, host logs, configuration, or reviewed artifacts.");
             builder.AppendLine("- Do not treat an unstarted browser surface, a missing deployment, or unrelated transient output as acceptable proof when this QA step can launch or inspect the reviewed target itself.");
             builder.AppendLine("- Use browser tools after launch for navigation, accessibility or DOM proof, screenshot proof, and console diagnostics when those tools are available to the agent.");
-            builder.AppendLine("- Keep browser evidence bounded: `browser_snapshot` must use depth 4 or less and must not request element boxes; prefer depth 2. `browser_take_screenshot` must be viewport-bounded and must not use full-page capture unless an exact required artifact explicitly demands it.");
+            builder.AppendLine("- Keep browser evidence bounded: call `browser_snapshot` with depth 2 and boxes false unless a specific contract requires depth 3 or 4. Call `browser_take_screenshot` with fullPage false or omit fullPage. Do not retry a policy-denied browser call with the same arguments.");
             builder.AppendLine("- When a browser tool accepts a `filename`, write it under the current-run managed artifact root or an exact required browser artifact path. The dispatcher prepares those raw MCP output directories before the run so browser screenshots, snapshots, and console logs can be persisted and imported.");
             builder.AppendLine("- Provider-native browser files are created by the browser MCP before managed scope aliasing. Review the browser tool result itself and cite the returned filename; do not block only because `workspace_read_file` cannot read a provider-native `artifacts/process-runs/...` browser file.");
             builder.AppendLine("- After browser inspection, review the bounded snapshot, screenshot, or tool-returned content. If it shows placeholder starter content or lacks the requested workflow, return Blocked or repair instead of claiming proof.");
@@ -568,7 +568,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- Start or verify the reviewed browser surface first using the stack identified from current-run files, launch settings, package scripts, or upstream artifacts, then capture the actual URL and cleanup details.");
         }
 
-        builder.AppendLine("- After a reachable URL is known, call `browser_navigate` against that URL, exercise one representative user-visible interaction when the surface is interactive, then call `browser_snapshot`, `browser_take_screenshot`, and `browser_console_messages` in this same attempt.");
+        builder.AppendLine("- After a reachable URL is known, call `browser_navigate` against that URL, exercise one representative user-visible interaction when the surface is interactive, then call `browser_snapshot` with depth 2 and boxes false, `browser_take_screenshot` with fullPage false or no fullPage argument, and `browser_console_messages` in this same attempt.");
         builder.AppendLine("- If launch fails before a URL exists, return Blocked with the exact launch command, logs, and repair target. If launch succeeds, do not return Blocked for missing browser receipts before attempting the browser tools.");
         builder.AppendLine();
     }
