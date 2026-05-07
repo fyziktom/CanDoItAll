@@ -2,23 +2,23 @@
 
 **Process:** `software-delivery` / Multi-team software delivery and release governance  
 **Step key:** `implementation`  
-**Step kind:** Subprocess  
+**Step kind:** Work
 **Target lead hours:** 36
 
 ## Summary
-Observed implementation subprocess
+Observed implementation work
 
 ## Notes
-Launch the `.NET implementation slice with atomic validation` subprocess so implementation, setup, tests, and blockers are observable from this parent delivery run.
+Coordinate the implementation slice selected by the project context so setup, changes, validation, and blockers are observable from this parent delivery run.
 
 ## Contracts
 - Input contract: Approved architecture path, scope packet, unresolved technical questions, and implementation-slice start criteria.
-- Output contract: Completed child implementation slice with tests, migration notes, blockers, and rollout checklist inputs visible from the parent process.
-- Evidence contract: Child run journal, implementation change set, test outputs, migration steps, and touched-surface inventory.
+- Output contract: Completed implementation slice with validation notes, blockers, and rollout checklist inputs visible from the parent process.
+- Evidence contract: Implementation journal, change set, validation outputs, migration steps, and touched-surface inventory.
 
 ## Governance
-- Decision rights: Parent delivery manager can instruct the child manager, but implementation changes remain owned by the child slice roles.
-- Exception policy: Do not complete the parent implementation step until the child implementation slice reaches a completed terminal state.
+- Decision rights: Parent delivery manager owns sequencing and escalation, while the selected implementation role owns the concrete changes.
+- Exception policy: Do not complete the implementation step until the selected implementation role records a completed terminal disposition with validation evidence or explicit blockers.
 - Requires approval: False
 - Requires decision record: True
 

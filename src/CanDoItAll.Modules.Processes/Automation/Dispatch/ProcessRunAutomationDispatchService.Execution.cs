@@ -40,7 +40,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             prefetchedProjectStructureGrounding.SatisfiedToolNames,
             StringComparer.Ordinal);
         successfulToolNamesAcrossAttempts.UnionWith(prefetchedArtifactInspectionGrounding.SatisfiedToolNames);
-        var carriedImplementationProof = CarriedImplementationProof.None;
+        var carriedImplementationProof = await ResolveHistoricalCarriedImplementationProofAsync(candidate, cancellationToken);
         var maxExecutionAttempts = ResolveMaxExecutionAttempts(candidate);
         EnsureProviderNativeBrowserOutputDirectories(candidate);
 
@@ -252,7 +252,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 detail,
                 successfulToolNamesAcrossAttempts,
                 carriedImplementationProof);
-            var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+            var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
             var completionStatus = ResolveCompletionStatusWithCarryForward(
                 candidate,
                 detail,
@@ -422,8 +422,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 providerFallbackCount: 0,
                 cancellationToken);
 
-                        // Start recovery attempts on a fresh run so stale provider-side state
-                        // from the previous attempt does not poison the next governed retry.
+            // Start recovery attempts on a fresh run so stale provider-side state
+            // from the previous attempt does not poison the next governed retry.
             automationChatSessionId = null;
 
             var legacyRecoveryDirective = BuildRecoveryDirective(
@@ -441,6 +441,34 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return finalOutcome
                ?? throw new InvalidOperationException($"No AgentFramework execution outcome was captured for process step '{candidate.StepRun.Id:D}'.");
+    }
+
+    private async Task<CarriedImplementationProof> ResolveHistoricalCarriedImplementationProofAsync(
+        DispatchCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        if (!RequiresCurrentAttemptProductMutation(candidate))
+        {
+            return CarriedImplementationProof.None;
+        }
+
+        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+            new ExecutionRunQuery(
+                ProcessRunId: candidate.Run.Id.ToString("D"),
+                ProcessStepId: candidate.StepRun.Id.ToString("D"),
+                Take: 20),
+            cancellationToken);
+        var historicalDetails = new List<ExecutionRunDetail>();
+        foreach (var executionRun in executionRuns
+                     .Where(IsHistoricalCarryForwardExecutionRun)
+                     .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
+                     .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
+                     .ThenByDescending(executionRun => executionRun.CreatedAtUtc))
+        {
+            historicalDetails.Add(await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+        }
+
+        return ResolveHistoricalCarriedImplementationProof(candidate, historicalDetails);
     }
 
     private static int ResolveMaxExecutionAttempts(DispatchCandidate candidate)

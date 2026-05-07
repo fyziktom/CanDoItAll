@@ -108,9 +108,10 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName, effectiveProvider.Name);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, effectiveProvider.Name);
         Assert.Equal(ManagedSeedProviderFallbacks.OpenAiBaseUrl, effectiveProvider.BaseUrl);
         Assert.Equal(ProviderKind.OpenAi, effectiveProvider.Kind);
+        Assert.Equal(ProviderTransportKind.Responses, effectiveProvider.Transport);
         Assert.Equal("gpt-4.1", effectiveModel);
     }
 
@@ -128,8 +129,9 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName, effectiveProvider.Name);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, effectiveProvider.Name);
         Assert.Equal(ProviderKind.OpenAi, effectiveProvider.Kind);
+        Assert.Equal(ProviderTransportKind.Responses, effectiveProvider.Transport);
         Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, effectiveModel);
     }
 

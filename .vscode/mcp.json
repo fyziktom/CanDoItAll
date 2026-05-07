@@ -45,24 +45,6 @@
       ],
       "cwd": "${workspaceFolder}"
     },
-    "candoitall_projectstructure": {
-      "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260502-174201\\CanDoItAll.Mcp.ProjectStructure.exe",
-      "args": [
-        "--settings",
-        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
-      ],
-      "cwd": "${workspaceFolder}"
-    },
-    "candoitall_processes": {
-      "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.Processes\\current\\CanDoItAll.Mcp.Processes.exe",
-      "args": [
-        "--settings",
-        "${workspaceFolder}\\CanDoItAll.Mcp.Processes.settings.json"
-      ],
-      "cwd": "${workspaceFolder}"
-    },
     "playwright": {
       "type": "stdio",
       "command": "npx",

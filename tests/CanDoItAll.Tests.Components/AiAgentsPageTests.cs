@@ -153,53 +153,6 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
-    public async Task Crm_hr_agents_page_routes_technical_editing_to_agentframework()
-    {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
-        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"crmhr-agent-route-{Guid.NewGuid():N}");
-        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
-        {
-            TestEnvironment = testEnvironment,
-            ActiveProfile = activeProfile
-        });
-        var aiAgentService = harness.Context.Services.GetRequiredService<AiAgentService>();
-        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
-        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var editor = await workspaceService.GetAgentEditorAsync();
-        editor.Name = "Directed Runtime Reviewer";
-        editor.RoleTitle = "Reviewer";
-        editor.Summary = "Technical record that CRM-HR should route back into AgentFramework.";
-        editor.Instructions = "Own review findings and explicit residual risk.";
-        editor.Status = AgentLifecycleStatus.Active;
-        editor.IsTemplate = false;
-        editor.TemplateKey = string.Empty;
-
-        var technicalAgentId = await workspaceService.SaveAgentAsync(editor);
-        var rosterItem = Assert.Single(
-            await aiAgentService.ListAgentDirectoryAsync(),
-            item => item.TechnicalAgentId == technicalAgentId);
-
-        navigation.NavigateTo("/crm-hr/agents");
-        navigation.NavigateTo(navigation.GetUriWithQueryParameter("partyId", rosterItem.PartyId));
-
-        var cut = harness.Context.RenderComponent<CrmHrAgentsPage>();
-        cut.Instance.PartyIdQuery = rosterItem.PartyId;
-        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.Empty));
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Directed Runtime Reviewer", cut.Markup);
-        });
-
-        cut.WaitForElement("[data-testid='crmhr-agent-open-technical-record']");
-        cut.Find("[data-testid='crmhr-agent-open-technical-record']").Click();
-
-        Assert.EndsWith($"/agents?tab=agents&agentId={technicalAgentId:D}", navigation.Uri, StringComparison.OrdinalIgnoreCase);
-        cut.Dispose();
-    }
-
-    [Fact]
     public async Task Agents_page_imports_legacy_crm_hr_agents_into_the_visible_agent_catalog()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

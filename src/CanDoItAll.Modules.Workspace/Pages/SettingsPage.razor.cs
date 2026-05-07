@@ -1,5 +1,6 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using Microsoft.AspNetCore.Components;
 
@@ -13,15 +14,22 @@ public partial class SettingsPage
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject]
+    public IApiTokenService ApiTokenService { get; set; } = default!;
+
     private WorkspaceSettingsModel settingsModel = new();
     private SecretEditorModel secretModel = NewSecret();
     private ProviderProfileEditorModel providerModel = NewProvider();
+    private ApiTokenIssueRequest apiTokenModel = NewApiToken();
+    private ApiAccessStatus? apiStatus;
+    private ApiTokenIssueResult? issuedApiToken;
     private IReadOnlyList<ProviderProfileSummary> providers = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ConnectorPluginManifest> providerManifests = [];
     private string settingsTab = "workspace";
     private string secretSearch = string.Empty;
     private string providerSearch = string.Empty;
+    private string apiScopesText = "api";
 
     private ConnectorPluginManifest? SelectedProviderManifest => providerManifests.FirstOrDefault(manifest =>
             string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
@@ -36,7 +44,7 @@ public partial class SettingsPage
         new("storage", "Storage"),
         new("secrets", "Secrets", secrets.Count.ToString()),
         new("providers", "Providers", providers.Count.ToString()),
-        new("project-structure", "Project Structure MCP")
+        new("api-access", "API Access", apiStatus?.AuthorizationEnabled == true ? "JWT" : "Open")
     ];
 
     private IReadOnlyList<SecretListItem> FilteredSecrets => secrets
@@ -73,6 +81,8 @@ public partial class SettingsPage
         settingsModel = await WorkspaceService.GetSettingsAsync();
         providers = await WorkspaceService.ListProviderProfilesAsync();
         secrets = await WorkspaceService.ListSecretsAsync();
+        apiStatus = ApiTokenService.GetStatus();
+        apiTokenModel = NewApiToken(apiStatus?.DefaultTokenLifetimeMinutes);
         NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
         ApplyRequestedTab();
     }
@@ -236,6 +246,23 @@ public partial class SettingsPage
         return Task.CompletedTask;
     }
 
+    private Task IssueApiTokenAsync()
+    {
+        try
+        {
+            apiTokenModel.Scopes = ParseApiScopes(apiScopesText);
+            issuedApiToken = ApiTokenService.IssueToken(apiTokenModel);
+            NotificationService.Success("API token created", $"Token expires at {FormatTimestamp(issuedApiToken.ExpiresAtUtc)}.");
+        }
+        catch (Exception exception)
+        {
+            issuedApiToken = null;
+            NotificationService.Error("API token failed", exception.Message);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private void ApplyRequestedTab()
     {
         if (string.Equals(RequestedTab, "providers", StringComparison.Ordinal))
@@ -258,7 +285,7 @@ public partial class SettingsPage
 
     private static bool IsValidSettingsTab(string? key)
     {
-        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "project-structure";
+        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "api-access";
     }
 
     private static string BuildSettingsRoute(string key)
@@ -283,10 +310,41 @@ public partial class SettingsPage
         return timestamp.LocalDateTime.ToString("g");
     }
 
+    private string FormatApiAudience()
+    {
+        if (apiStatus is null)
+        {
+            return "API status is not loaded.";
+        }
+
+        return apiStatus.AuthorizationEnabled
+            ? $"Issuer: {apiStatus.Issuer} / Audience: {apiStatus.Audience}"
+            : "Bearer tokens are not required.";
+    }
+
+    private static List<string> ParseApiScopes(string value)
+    {
+        var scopes = value
+            .Split([' ', ',', ';', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return scopes.Count == 0 ? ["api"] : scopes;
+    }
+
     private static SecretEditorModel NewSecret() => new()
     {
         Kind = SecretKind.ApiKey,
         Scope = "workspace"
+    };
+
+    private static ApiTokenIssueRequest NewApiToken(int? lifetimeMinutes = null) => new()
+    {
+        Subject = "api-client",
+        DisplayName = "API client",
+        LifetimeMinutes = lifetimeMinutes,
+        Scopes = ["api"]
     };
 
     private static ProviderProfileEditorModel NewProvider(string? connectorPluginKey = null)

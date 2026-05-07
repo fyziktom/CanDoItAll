@@ -877,19 +877,19 @@ public partial class ProjectStructurePage
             return node.ArtifactId.Value;
         }
 
-        return TryParsePrefixedGuidNodeKey(node.Id, "process-definition:", out var definitionId)
+        return TryParsePrefixedGuidNodeKey(node.Id, ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix, out var definitionId)
             ? definitionId
             : null;
     }
 
     private static string BuildProcessDefinitionNodeKey(Guid definitionId)
     {
-        return $"process-definition:{definitionId:D}";
+        return ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId);
     }
 
     private static string BuildProcessRunNodeKey(Guid runId)
     {
-        return $"process-run:{runId:D}";
+        return ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId);
     }
 
     private static bool TryParsePrefixedGuidNodeKey(string nodeKey, string prefix, out Guid value)

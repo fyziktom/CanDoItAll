@@ -148,9 +148,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
 
         return normalizedAliases
+            .Where(alias => !IsLikelyExternalTargetFileAlias(alias) ||
+                            !normalizedAliases.Any(other =>
+                                !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
+                                IsExternalTargetAliasAncestor(other, alias)))
             .Where(alias => !normalizedAliases.Any(other =>
                 !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
-                IsExternalTargetAliasAncestor(alias, other)))
+                IsExternalTargetAliasAncestor(alias, other) &&
+                !IsLikelyExternalTargetFileAlias(other)))
             .Where(alias => !normalizedAliases.Any(other =>
                 !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
                 IsAmbiguousExternalTargetPrefixAlias(alias, other)))
@@ -171,6 +176,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var suffix = other[alias.Length..];
         return suffix[0] != '/' && suffix.Contains('/', StringComparison.Ordinal);
+    }
+
+    private static bool IsLikelyExternalTargetFileAlias(string alias)
+    {
+        var lastSlashIndex = alias.LastIndexOf('/');
+        if (lastSlashIndex < 0 || lastSlashIndex >= alias.Length - 1)
+        {
+            return false;
+        }
+
+        var leaf = alias[(lastSlashIndex + 1)..];
+        return leaf.StartsWith(".", StringComparison.Ordinal) ||
+               leaf.Contains('.');
     }
 
     private static IEnumerable<string?> EnumerateCurrentRunExternalTargetSources(
@@ -283,6 +301,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedAlias = alias
             .Replace('\\', '/')
             .Trim()
+            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
+        normalizedAlias = StripEscapedLineBreakPathAnnotations(normalizedAlias)
             .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
         normalizedAlias = StripInlinePathAnnotations(normalizedAlias)
             .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');

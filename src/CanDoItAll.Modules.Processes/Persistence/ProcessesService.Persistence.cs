@@ -39,8 +39,8 @@ public sealed partial class ProcessesService
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-            ProcessDefinition definition;
-            ProcessDefinitionVersion workingVersion;
+            ProcessDefinition? definition;
+            ProcessDefinitionVersion? workingVersion;
             Guid outboxId;
             var isNew = false;
             try

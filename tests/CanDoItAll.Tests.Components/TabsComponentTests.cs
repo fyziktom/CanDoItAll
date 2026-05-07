@@ -121,28 +121,26 @@ public sealed class TabsComponentTests : TestContext
     {
         return builder =>
         {
-            var sequence = 0;
-
             foreach (var specification in itemSpecifications)
             {
-                builder.OpenComponent<TabsItem>(sequence++);
+                builder.OpenComponent<TabsItem>(0);
 
                 if (specification.Text is not null)
                 {
-                    builder.AddAttribute(sequence++, nameof(TabsItem.Text), specification.Text);
+                    builder.AddAttribute(1, nameof(TabsItem.Text), specification.Text);
                 }
 
                 if (specification.Disabled)
                 {
-                    builder.AddAttribute(sequence++, nameof(TabsItem.Disabled), true);
+                    builder.AddAttribute(2, nameof(TabsItem.Disabled), true);
                 }
 
                 if (!string.IsNullOrWhiteSpace(specification.ClassName))
                 {
-                    builder.AddAttribute(sequence++, "class", specification.ClassName);
+                    builder.AddAttribute(3, "class", specification.ClassName);
                 }
 
-                builder.AddAttribute(sequence++, nameof(TabsItem.ChildContent), (RenderFragment)(contentBuilder =>
+                builder.AddAttribute(4, nameof(TabsItem.ChildContent), (RenderFragment)(contentBuilder =>
                 {
                     contentBuilder.AddContent(0, specification.Content);
                 }));

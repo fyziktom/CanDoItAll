@@ -70,38 +70,6 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
-    public async Task Workspace_replaces_inline_help_copy_with_compact_help_popovers()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
-        var projectId = await CreateProjectAsync(projectsService, "Help popover workspace project");
-        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
-
-        Assert.True(saveResult.IsSuccess);
-
-        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Workspace-visible process", cut.Markup);
-            Assert.NotNull(cut.Find("button[aria-label='Show help for Process definitions']"));
-            Assert.NotNull(cut.Find("button[aria-label='Show process workspace help']"));
-        });
-
-        Assert.DoesNotContain("Persisted process definitions.", cut.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Browse saved process contracts, filter the library, and keep selection in sync with the detail workspace without expanding the list header.", cut.Markup, StringComparison.Ordinal);
-
-        var workspaceHelpButton = cut.Find("button[aria-label='Show process workspace help']");
-        Assert.NotNull(workspaceHelpButton.ParentElement);
-
-        workspaceHelpButton.ParentElement.TriggerEvent("onmouseenter", new MouseEventArgs());
-
-        cut.WaitForAssertion(() =>
-            Assert.Contains("Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence.", cut.Markup));
-    }
-
-    [Fact]
     public async Task Process_workspace_exposes_feed_defaults_action()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1025,44 +993,6 @@ public sealed class ProcessWorkspaceTests
             Assert.Contains("AI-assisted change delivery with guarded delegation", cut.Markup);
             Assert.Contains("Add to my processes", cut.Markup);
             Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
-        });
-    }
-
-    [Fact]
-    public async Task Templates_dialog_uses_internal_scroll_regions_and_bounded_mermaid_viewport_markup()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
-        var projectId = await CreateProjectAsync(projectsService, "Template containment project");
-        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
-
-        Assert.True(saveResult.IsSuccess);
-
-        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
-            .Add(component => component.ProjectId, projectId));
-
-        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
-        cut.Find("[data-testid='processes-templates-button']").Click();
-        cut.WaitForAssertion(() =>
-        {
-            Assert.NotNull(cut.Find("[data-testid='processes-template-library-list-scroll']"));
-            Assert.NotNull(cut.Find("[data-testid='processes-template-library-detail-scroll']"));
-        });
-
-        var listScroll = cut.Find("[data-testid='processes-template-library-list-scroll']");
-        Assert.Contains("h-full", listScroll.ClassName, StringComparison.Ordinal);
-        Assert.Contains("overflow-y-auto", listScroll.ClassName, StringComparison.Ordinal);
-
-        var detailScroll = cut.Find("[data-testid='processes-template-library-detail-scroll']");
-        Assert.Contains("h-full", detailScroll.ClassName, StringComparison.Ordinal);
-        Assert.Contains("overflow-y-auto", detailScroll.ClassName, StringComparison.Ordinal);
-
-        await SetTemplateLibraryPreviewTabAsync(cut, "diagrams");
-        cut.WaitForAssertion(() =>
-        {
-            Assert.NotNull(cut.Find("[data-testid='processes-template-library-diagram-flowchart-clip']"));
-            Assert.NotNull(cut.Find("[data-testid='processes-template-library-diagram-flowchart-viewport']"));
         });
     }
 

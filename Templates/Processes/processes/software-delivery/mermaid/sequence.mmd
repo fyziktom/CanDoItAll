@@ -16,7 +16,7 @@ sequenceDiagram
     system-->>role_lead_engineer: evidence -> Implementation change set, Migration and rollout preparation checklist
     role_lead_engineer->>system: Complete peer review and integration readiness
     system-->>role_lead_engineer: evidence -> Peer review note
-    role_qa_lead->>system: Run QA validation and browser proof
+    role_qa_lead->>system: Run QA validation and runtime or browser proof
     alt quality accepted
         system-->>role_qa_lead: branch -> quality-accepted
         role_security_reviewer->>system: Perform security and data-handling review
@@ -31,7 +31,7 @@ sequenceDiagram
         system-->>role_qa_lead: branch -> repair-required
         role_lead_engineer->>system: Repair validation findings
         system-->>role_lead_engineer: evidence -> Quality repair change set
-        role_qa_lead->>system: Re-run QA validation and browser proof after repair
+        role_qa_lead->>system: Re-run QA validation and runtime or browser proof after repair
         alt repaired quality accepted
             system-->>role_qa_lead: branch -> quality-accepted
             role_security_reviewer->>system: Perform security review after repair

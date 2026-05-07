@@ -112,7 +112,8 @@ public sealed partial class ProcessesService {
                 DecidedBy = string.IsNullOrWhiteSpace(request.OperatorReason)
                     ? "process-workspace"
                     : "process-workspace",
-                SuppressAutomationDispatch = true
+                SuppressAutomationDispatch = true,
+                AllowCompletedAgentRerun = true
             },
             cancellationToken);
         if (transitionResult.IsFailure)
@@ -182,14 +183,16 @@ public sealed partial class ProcessesService {
 
     private static Result ValidateAgentRerunEligibility(ProcessRun run, ProcessStepRun stepRun)
     {
-        if (run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Cancelled)
+        if (run.Status == ProcessRunStatus.Cancelled)
         {
-            return Result.Failure(Error.Validation("Completed or cancelled process runs cannot rerun agent steps.", "processes.agent-rerun-terminal-run"));
+            return Result.Failure(Error.Validation("Cancelled process runs cannot rerun agent steps.", "processes.agent-rerun-terminal-run"));
         }
 
-        if (stepRun.Status is not ProcessStepRunStatus.Blocked and not ProcessStepRunStatus.Failed)
+        if (stepRun.Status is not ProcessStepRunStatus.Blocked and
+            not ProcessStepRunStatus.Failed and
+            not ProcessStepRunStatus.Completed)
         {
-            return Result.Failure(Error.Validation("Only blocked or failed agent-owned steps can be rerun manually.", "processes.agent-rerun-invalid-status"));
+            return Result.Failure(Error.Validation("Only blocked, failed, or completed agent-owned steps can be rerun manually.", "processes.agent-rerun-invalid-status"));
         }
 
         if (!stepRun.CurrentExecutorPartyId.HasValue)

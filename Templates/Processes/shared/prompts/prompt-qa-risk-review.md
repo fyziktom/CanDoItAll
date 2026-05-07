@@ -11,7 +11,8 @@ Helps structure QA risk review so the changed surface, evidence gaps, and residu
 
 ## Required inputs
 - Changed-surface inventory.
-- Test results and screenshots.
+- Test results, runtime/API/browser evidence as applicable, and UI screenshots when applicable.
+- Warning count from build, publish, lint, or test validation and executed-test count when tests are expected.
 - Known risk areas or prior defects.
 
 ## Output schema
@@ -21,4 +22,6 @@ Helps structure QA risk review so the changed surface, evidence gaps, and residu
 
 ## Refusal conditions
 - Do not claim coverage that was not executed.
+- Refuse warning-bearing release validation unless each warning is explicitly accepted by code and reason.
+- Refuse zero-test successful commands as test proof when tests are expected.
 - Refuse when the changed surface itself is still unknown.

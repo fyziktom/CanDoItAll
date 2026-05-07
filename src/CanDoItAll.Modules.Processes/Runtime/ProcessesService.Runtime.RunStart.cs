@@ -156,7 +156,7 @@ public sealed partial class ProcessesService
                     RoleSnapshotSummary = step.DecisionRightsSummary,
                     CurrentExecutorName = currentAssignment?.DisplayName ?? string.Empty,
                     CurrentExecutorPartyId = currentAssignment?.PartyId,
-                    DecisionSummary = step.RequiresDecisionRecord ? "Decision record required." : string.Empty,
+                    DecisionSummary = step.RequiresDecisionRecord ? PendingDecisionRecordSummary : string.Empty,
                     ReadyAtUtc = status is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval ? now : null,
                     CapabilityGapSeverity = capabilityGapSeverity
                 };

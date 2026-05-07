@@ -45,6 +45,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
     }
 
+    private static IReadOnlyList<ToolExecutionReceiptRecord> ResolveUnresolvedCriticalToolFailures(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        return ResolveUnresolvedCriticalToolFailures(detail)
+            .Where(receipt => !ShouldIgnoreStackInapplicableCriticalToolFailure(candidate, receipt))
+            .ToList();
+    }
+
+    private static bool ShouldIgnoreStackInapplicableCriticalToolFailure(
+        DispatchCandidate candidate,
+        ToolExecutionReceiptRecord receipt)
+    {
+        var toolName = NormalizeToolToken(receipt.ToolName);
+        if (!toolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal) ||
+            ResolveRequiredToolNames(candidate).Contains(toolName, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        return !ImplementationContractMentionsDotNet(candidate) &&
+               (ImplementationContractMentionsJavaScript(candidate) ||
+                ImplementationContractNegatesDotNet(candidate));
+    }
+
     private static IReadOnlyList<string> ResolveMissingRequiredToolExecutions(
         DispatchCandidate candidate,
         ExecutionRunDetail detail)
@@ -322,7 +347,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.Failed;
         }
 
-        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
         var hasDeclaredOutcome = TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome, out var processOutcome);
         if (hasDeclaredOutcome && declaredOutcome.Status != ProcessStepRunStatus.Completed)
         {
@@ -409,6 +434,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             carriedImplementationProof);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
+        var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
@@ -448,13 +474,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
                  !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
                  !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
-                 !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
-                 !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
-                 !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
-                 !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
-                 !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
-                 !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
-                 !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
+                  !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
+                  !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
+                  !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
+                  !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
+                  !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+                  !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
+                  !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
+                  !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
             {
                 return ProcessStepRunStatus.Blocked;
             }
@@ -474,6 +501,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
             !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
+            !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
             !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
             !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
@@ -889,6 +917,177 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             return [];
         }
+    }
+
+    private static IReadOnlyList<SessionToolResultText> ResolveSuccessfulSessionToolResultTexts(string? serializedSessionStateJson)
+    {
+        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(serializedSessionStateJson);
+            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
+                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
+                !historyProvider.TryGetProperty("messages", out var messages) ||
+                messages.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var toolNamesByCallId = new Dictionary<string, string>(StringComparer.Ordinal);
+            var resultTexts = new List<SessionToolResultText>();
+
+            foreach (var message in messages.EnumerateArray())
+            {
+                if (!message.TryGetProperty("contents", out var contents) ||
+                    contents.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var content in contents.EnumerateArray())
+                {
+                    if (!content.TryGetProperty("$type", out var typeElement))
+                    {
+                        continue;
+                    }
+
+                    var contentType = typeElement.GetString();
+                    if (string.Equals(contentType, "functionCall", StringComparison.Ordinal))
+                    {
+                        var callId = content.TryGetProperty("callId", out var callIdElement)
+                            ? callIdElement.GetString()
+                            : null;
+                        var toolName = content.TryGetProperty("name", out var nameElement)
+                            ? NormalizeToolToken(nameElement.GetString() ?? string.Empty)
+                            : string.Empty;
+                        if (!string.IsNullOrWhiteSpace(callId) && !string.IsNullOrWhiteSpace(toolName))
+                        {
+                            toolNamesByCallId[callId] = toolName;
+                        }
+
+                        continue;
+                    }
+
+                    if (!string.Equals(contentType, "functionResult", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
+                        ? resultCallIdElement.GetString()
+                        : null;
+                    if (string.IsNullOrWhiteSpace(resultCallId) ||
+                        !toolNamesByCallId.TryGetValue(resultCallId, out var recordedToolName) ||
+                        !content.TryGetProperty("result", out var resultElement) ||
+                        !IsSuccessfulSessionFunctionResult(resultElement))
+                    {
+                        continue;
+                    }
+
+                    var resultText = ExtractSessionToolResultText(resultElement);
+                    if (!string.IsNullOrWhiteSpace(resultText))
+                    {
+                        resultTexts.Add(new SessionToolResultText(recordedToolName, resultText));
+                    }
+                }
+            }
+
+            return resultTexts;
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static string ExtractSessionToolResultText(JsonElement result)
+    {
+        var builder = new StringBuilder();
+        AppendSessionToolResultText(builder, result, 0);
+        return builder.ToString();
+    }
+
+    private static void AppendSessionToolResultText(StringBuilder builder, JsonElement element, int depth)
+    {
+        if (depth > 4)
+        {
+            return;
+        }
+
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+            {
+                AppendSessionToolResultTextPart(builder, element.GetString());
+                return;
+            }
+            case JsonValueKind.Number:
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+            {
+                AppendSessionToolResultTextPart(builder, element.ToString());
+                return;
+            }
+            case JsonValueKind.Array:
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    AppendSessionToolResultText(builder, item, depth + 1);
+                }
+
+                return;
+            }
+            case JsonValueKind.Object:
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (property.Value.ValueKind == JsonValueKind.String &&
+                        IsDiagnosticSessionToolResultProperty(property.Name))
+                    {
+                        AppendSessionToolResultTextPart(builder, property.Value.GetString());
+                        continue;
+                    }
+
+                    if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+                    {
+                        AppendSessionToolResultText(builder, property.Value, depth + 1);
+                    }
+                }
+
+                return;
+            }
+        }
+    }
+
+    private static bool IsDiagnosticSessionToolResultProperty(string propertyName)
+    {
+        return propertyName.Equals("text", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("content", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("message", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("summary", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("output", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("stdout", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("stderr", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("exitSummary", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AppendSessionToolResultTextPart(StringBuilder builder, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (builder.Length > 0)
+        {
+            builder.AppendLine();
+        }
+
+        builder.Append(value.Trim());
     }
 
     private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson)

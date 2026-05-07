@@ -123,6 +123,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             capabilities,
             item => item.Kind == CapabilityKind.McpServer &&
                     string.Equals(item.EndpointOrPath, "CanDoItAll.Mcp.Processes", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            capabilities,
+            item => item.Kind == CapabilityKind.McpServer &&
+                    string.Equals(item.EndpointOrPath, "CanDoItAll.Mcp.ProjectStructure", StringComparison.OrdinalIgnoreCase));
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         foreach (var agentName in new[]
@@ -585,8 +589,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("use `workspace_dotnet_run` for a bounded loopback startup smoke", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("missing generic run capability", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("If a non-.NET app is not already running and only PowerShell execution is available", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not call `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for non-.NET deliverables", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -630,6 +635,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Single(agents, item => string.Equals(item.Name, "Blazor Application Developer", StringComparison.Ordinal)).Id);
         var javascriptDeveloper = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Application Developer", StringComparison.Ordinal)).Id);
+        var javascriptQa = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "JavaScript QA Review Lead", StringComparison.Ordinal)).Id);
         var businessStrategist = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal)).Id);
         var financialStrategist = await workspaceService.GetAgentEditorAsync(
@@ -650,6 +657,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("browser_navigate", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not submit Completed or Blocked for missing browser receipts from file inspection alone", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("External generated app folders are often not git repositories", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("npm.cmd", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("artifacts/business/<project-slug>/", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("business-plan.md", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("unit economics", financialStrategist.Instructions, StringComparison.OrdinalIgnoreCase);

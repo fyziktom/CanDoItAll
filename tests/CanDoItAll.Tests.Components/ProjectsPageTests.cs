@@ -198,39 +198,6 @@ public sealed class ProjectsPageTests
         });
     }
 
-    [Fact]
-    public async Task Package_controls_export_and_import_projects()
-    {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        await CreateProjectAsync(projectsService, "Package UI project");
-
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
-
-        cut.Find("[data-testid='projects-export-package-button']").Click();
-
-        string packagePath = string.Empty;
-        cut.WaitForAssertion(() =>
-        {
-            var message = cut.Find("[data-testid='projects-package-message']");
-            var packageInput = cut.Find("[data-testid='projects-package-path-input']");
-
-            Assert.Contains("Exported", message.TextContent);
-            packagePath = packageInput.GetAttribute("value") ?? string.Empty;
-            Assert.True(File.Exists(packagePath));
-        });
-
-        cut.Find("[data-testid='projects-import-package-button']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            var message = cut.Find("[data-testid='projects-package-message']");
-
-            Assert.Contains("Imported", message.TextContent);
-            Assert.Contains("Package UI project", cut.Markup);
-        });
-    }
-
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel

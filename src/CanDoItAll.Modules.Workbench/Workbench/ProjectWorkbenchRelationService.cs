@@ -23,7 +23,7 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
-        existingNodes = await AugmentProcessDefinitionNodesAsync(
+        existingNodes = await AugmentProcessProjectionNodesAsync(
             dbContext,
             projectId,
             existingNodes,
@@ -44,7 +44,7 @@ public sealed class ProjectWorkbenchRelationService(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task<IReadOnlyList<ProjectObjectRecord>> AugmentProcessDefinitionNodesAsync(
+    private static async Task<IReadOnlyList<ProjectObjectRecord>> AugmentProcessProjectionNodesAsync(
         AppDbContext dbContext,
         Guid projectId,
         IReadOnlyList<ProjectObjectRecord> existingNodes,
@@ -60,44 +60,82 @@ public sealed class ProjectWorkbenchRelationService(
             .Select(definitionId => definitionId!.Value)
             .Distinct()
             .ToList();
-        if (missingDefinitionIds.Count == 0)
-        {
-            return existingNodes;
-        }
+        var missingRunIds = nodeKeys
+            .Where(nodeKey => !existingNodes.Any(existing => string.Equals(existing.NodeKey, nodeKey, StringComparison.Ordinal)))
+            .Select(TryResolveProcessRunId)
+            .Where(runId => runId.HasValue)
+            .Select(runId => runId!.Value)
+            .Distinct()
+            .ToList();
 
-        var definitions = await dbContext.Set<ProcessDefinition>()
-            .Where(item =>
-                missingDefinitionIds.Contains(item.Id) &&
-                (item.ProjectId == projectId || item.ProjectId == null))
-            .ToListAsync(cancellationToken);
-        if (definitions.Count == 0)
+        if (missingDefinitionIds.Count == 0 && missingRunIds.Count == 0)
         {
             return existingNodes;
         }
 
         var augmentedNodes = existingNodes.ToList();
-        foreach (var definition in definitions)
+        if (missingDefinitionIds.Count > 0)
         {
-            var nodeKey = BuildProcessDefinitionNodeKey(definition.Id);
-            if (augmentedNodes.Any(item => string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal)))
+            var definitions = await dbContext.Set<ProcessDefinition>()
+                .Where(item =>
+                    missingDefinitionIds.Contains(item.Id) &&
+                    (item.ProjectId == projectId || item.ProjectId == null))
+                .ToListAsync(cancellationToken);
+            foreach (var definition in definitions)
             {
-                continue;
-            }
+                var nodeKey = BuildProcessDefinitionNodeKey(definition.Id);
+                if (augmentedNodes.Any(item => string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
 
-            augmentedNodes.Add(new ProjectObjectRecord
+                augmentedNodes.Add(new ProjectObjectRecord
+                {
+                    ProjectId = projectId,
+                    NodeKey = nodeKey,
+                    ObjectType = ProjectObjectType.ProcessDefinition,
+                    Title = definition.Name,
+                    ObjectSubtype = string.Empty,
+                    Status = definition.Status.ToString(),
+                    Notes = definition.Summary ?? string.Empty,
+                    ParentNodeKey = $"project:{projectId}",
+                    IsSystemManaged = true,
+                    CreatedAtUtc = definition.CreatedAtUtc,
+                    UpdatedAtUtc = definition.UpdatedAtUtc
+                });
+            }
+        }
+
+        if (missingRunIds.Count > 0)
+        {
+            var runs = await dbContext.Set<ProcessRun>()
+                .Where(item =>
+                    missingRunIds.Contains(item.Id) &&
+                    item.ProjectId == projectId)
+                .ToListAsync(cancellationToken);
+            foreach (var run in runs)
             {
-                ProjectId = projectId,
-                NodeKey = nodeKey,
-                ObjectType = ProjectObjectType.ProcessDefinition,
-                Title = definition.Name,
-                ObjectSubtype = string.Empty,
-                Status = definition.Status.ToString(),
-                Notes = definition.Summary ?? string.Empty,
-                ParentNodeKey = $"project:{projectId}",
-                IsSystemManaged = true,
-                CreatedAtUtc = definition.CreatedAtUtc,
-                UpdatedAtUtc = definition.UpdatedAtUtc
-            });
+                var nodeKey = BuildProcessRunNodeKey(run.Id);
+                if (augmentedNodes.Any(item => string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                augmentedNodes.Add(new ProjectObjectRecord
+                {
+                    ProjectId = projectId,
+                    NodeKey = nodeKey,
+                    ObjectType = ProjectObjectType.ProcessRun,
+                    Title = run.Name,
+                    ObjectSubtype = string.Empty,
+                    Status = run.Status.ToString(),
+                    Notes = run.TriggerReason,
+                    ParentNodeKey = BuildProcessDefinitionNodeKey(run.ProcessDefinitionId),
+                    IsSystemManaged = true,
+                    CreatedAtUtc = run.CreatedAtUtc,
+                    UpdatedAtUtc = run.UpdatedAtUtc
+                });
+            }
         }
 
         return augmentedNodes;
@@ -128,6 +166,11 @@ public sealed class ProjectWorkbenchRelationService(
     private static string BuildProcessDefinitionNodeKey(Guid definitionId)
     {
         return $"process-definition:{definitionId:D}";
+    }
+
+    private static string BuildProcessRunNodeKey(Guid runId)
+    {
+        return $"process-run:{runId:D}";
     }
 
     public async Task<bool> UnlinkObjectsAsync(

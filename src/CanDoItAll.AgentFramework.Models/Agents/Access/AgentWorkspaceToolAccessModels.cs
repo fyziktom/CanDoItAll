@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -457,7 +458,13 @@ public static class AgentWorkspaceToolAccessMetadata
             return null;
         }
 
-        var trimmed = ExpandPortablePath(pathOrAlias).Replace('\\', '/').Trim().TrimEnd('/');
+        var trimmed = StripEscapedLineBreakPathAnnotations(ExpandPortablePath(pathOrAlias)
+                .Replace('\\', '/')
+                .Trim()
+                .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}'))
+            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
+        trimmed = StripInlineExternalTargetAliasAnnotations(trimmed)
+            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
         while (trimmed.Contains("//", StringComparison.Ordinal))
         {
             trimmed = trimmed.Replace("//", "/", StringComparison.Ordinal);
@@ -618,6 +625,36 @@ public static class AgentWorkspaceToolAccessMetadata
         }
 
         return expanded;
+    }
+
+    private static string StripEscapedLineBreakPathAnnotations(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(
+                value,
+                @"(?i)(?:\\|/)n(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Code|Directory|Files?|Generated|Mapped|Mapping|Node|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+                string.Empty,
+                RegexOptions.CultureInvariant)
+            .Trim();
+    }
+
+    private static string StripInlineExternalTargetAliasAnnotations(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(
+                value,
+                @"(?i)\s+(?:Workspace\s+alias|Mapped\s+alias|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
+                string.Empty,
+                RegexOptions.CultureInvariant)
+            .Trim();
     }
 
     private static string NormalizeAliasCase(string alias)

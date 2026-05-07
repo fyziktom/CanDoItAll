@@ -315,12 +315,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (HasValidNonCompletedDeclaredOutcome(candidate, detail, responseText, inspectionText))
         {
             return ShouldRetryRepairableImplementationBlockedOutcome(
-                candidate,
-                detail,
-                responseText,
-                missingRequiredTools,
-                attemptNumber,
-                maxExecutionAttempts);
+                       candidate,
+                       detail,
+                       responseText,
+                       missingRequiredTools,
+                       attemptNumber,
+                       maxExecutionAttempts) ||
+                   ShouldRetryRecoverableBrowserProofBlockedOutcome(
+                       candidate,
+                       detail,
+                       responseText,
+                       missingRequiredTools,
+                       attemptNumber,
+                       maxExecutionAttempts);
         }
 
         if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) &&
@@ -368,16 +375,79 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return missingRequiredTools.Count > 0 ||
-               ResolveUnresolvedCriticalToolFailures(detail).Count > 0 ||
+            ResolveUnresolvedCriticalToolFailures(candidate, detail).Count > 0 ||
                !string.IsNullOrWhiteSpace(ResolveMissingConcreteImplementationProofSummary(candidate, detail)) ||
                !string.IsNullOrWhiteSpace(ResolveMissingRunnableApplicationProofSummary(candidate, detail));
+    }
+
+    private static bool ShouldRetryRecoverableBrowserProofBlockedOutcome(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        int attemptNumber,
+        int maxExecutionAttempts)
+    {
+        if (attemptNumber >= maxExecutionAttempts ||
+            detail.Run.State != ExecutionState.Completed ||
+            detail.Run.PendingApprovals.Count > 0 ||
+            detail.Run.Outcome != RunOutcome.Succeeded ||
+            !RequiresConcreteBrowserProof(candidate) ||
+            missingRequiredTools.Count == 0 ||
+            !TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) ||
+            declaredOutcome.Status != ProcessStepRunStatus.Blocked)
+        {
+            return false;
+        }
+
+        if (!missingRequiredTools.Any(IsBrowserLaunchOrProofToolName))
+        {
+            return false;
+        }
+
+        return IsRecoverableBrowserProofPunt(responseText);
+    }
+
+    private static bool IsBrowserLaunchOrProofToolName(string toolName)
+    {
+        var normalizedToolName = NormalizeToolToken(toolName);
+        return string.Equals(normalizedToolName, "workspace_pwsh_run_script", StringComparison.Ordinal) ||
+               string.Equals(normalizedToolName, "workspace_dotnet_run", StringComparison.Ordinal) ||
+               RequiredBrowserEvidenceToolNames.Contains(normalizedToolName);
+    }
+
+    private static bool IsRecoverableBrowserProofPunt(string? responseText)
+    {
+        var normalizedResponse = CollapsePromptWhitespace(responseText).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedResponse))
+        {
+            return false;
+        }
+
+        if (normalizedResponse.Contains("tool unavailable", StringComparison.Ordinal) ||
+            normalizedResponse.Contains("tools unavailable", StringComparison.Ordinal) ||
+            normalizedResponse.Contains("approval denied", StringComparison.Ordinal) ||
+            normalizedResponse.Contains("permission denied", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return normalizedResponse.Contains("no reachable localhost url", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("no reachable url", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("no localhost url", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("no url exists", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("no browser receipts", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("browser receipts were captured", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("browser receipts are still missing", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("browser proof could not be completed", StringComparison.Ordinal) ||
+               normalizedResponse.Contains("browser proof remains incomplete", StringComparison.Ordinal);
     }
 
     private static bool HasRepairableImplementationValidationFailure(
         DispatchCandidate candidate,
         ExecutionRunDetail detail)
     {
-        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
         if (!unresolvedCriticalToolFailures.Any(IsImplementationValidationFailure))
         {
             return false;
@@ -408,7 +478,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             reasons.Add($"missing required tools: {string.Join(", ", missingRequiredTools)}");
         }
 
-        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
         if (unresolvedCriticalToolFailures.Count > 0)
         {
             reasons.Add(
@@ -431,6 +501,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         AddRetryReason(reasons, "missing concrete implementation proof", ResolveMissingConcreteImplementationProofSummary(candidate, detail));
         AddRetryReason(reasons, "missing runnable application proof", ResolveMissingRunnableApplicationProofSummary(candidate, detail));
         AddRetryReason(reasons, "invalid browser proof", ResolveInvalidBrowserProofSummary(candidate, detail));
+        AddRetryReason(reasons, "invalid quality validation proof", ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText));
         AddRetryReason(reasons, "missing required artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
         AddRetryReason(reasons, "missing upstream artifact inspection", ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail));
         AddRetryReason(reasons, "stale or ungrounded product path reference", ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText));
@@ -740,7 +811,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        var unresolvedFailures = ResolveUnresolvedCriticalToolFailures(detail);
+        var unresolvedFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
         if (unresolvedFailures.Count > 0)
         {
             var summary = string.Join(
@@ -768,6 +839,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             carriedImplementationProof);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
+        var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
@@ -820,6 +892,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 !string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
             {
                 return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but browser proof is invalid: {invalidBrowserProofSummary}";
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary))
+            {
+                return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but validation proof is invalid: {invalidQualityValidationProofSummary}";
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
@@ -883,6 +961,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(invalidBrowserProofSummary))
         {
             return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because browser proof is invalid: {invalidBrowserProofSummary}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary))
+        {
+            return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because validation proof is invalid: {invalidQualityValidationProofSummary}";
         }
 
         if (!string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))

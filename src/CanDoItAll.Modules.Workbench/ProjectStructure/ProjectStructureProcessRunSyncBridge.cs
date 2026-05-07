@@ -140,8 +140,11 @@ internal sealed class ProjectStructureProcessRunSyncBridge(IClock clock) : IProc
             .ToList();
 
         var relevantNodeKeys = ResolveLaunchContextNodeKeys(nodes, projectStructureContext);
+        var hasScopedLaunchContext = relevantNodeKeys.Count > 0;
         return nodes
-            .Where(item => HasLaunchContextSignal(item) || relevantNodeKeys.Contains(item.NodeKey))
+            .Where(item => hasScopedLaunchContext
+                ? relevantNodeKeys.Contains(item.NodeKey)
+                : HasLaunchContextSignal(item))
             .OrderByDescending(item => relevantNodeKeys.Contains(item.NodeKey))
             .ThenBy(item => item.ObjectType == ProjectObjectType.ProcessDefinition)
             .ThenBy(item => item.CreatedAtUtc)
@@ -235,20 +238,38 @@ internal sealed class ProjectStructureProcessRunSyncBridge(IClock clock) : IProc
         }
 
         var nodesByKey = nodes.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
+        var nodesById = nodes.ToDictionary(item => item.Id.ToString("D"), StringComparer.OrdinalIgnoreCase);
         AddNodeWithAncestors(projectStructureContext.NodeId);
         AddNodeWithAncestors(projectStructureContext.ResolveTargetNodeId());
 
-        var targetNodeId = projectStructureContext.ResolveTargetNodeId();
-        foreach (var child in nodes.Where(item => string.Equals(item.ParentNodeKey, targetNodeId, StringComparison.Ordinal)))
+        var targetNodeKey = ResolveNodeKey(projectStructureContext.ResolveTargetNodeId());
+        foreach (var child in nodes.Where(item => string.Equals(item.ParentNodeKey, targetNodeKey, StringComparison.Ordinal)))
         {
             selectedNodeKeys.Add(child.NodeKey);
         }
 
         return selectedNodeKeys;
 
+        string? ResolveNodeKey(string? nodeKeyOrId)
+        {
+            if (string.IsNullOrWhiteSpace(nodeKeyOrId))
+            {
+                return null;
+            }
+
+            if (nodesByKey.ContainsKey(nodeKeyOrId))
+            {
+                return nodeKeyOrId;
+            }
+
+            return nodesById.TryGetValue(nodeKeyOrId, out var node)
+                ? node.NodeKey
+                : nodeKeyOrId;
+        }
+
         void AddNodeWithAncestors(string? nodeKey)
         {
-            var currentKey = nodeKey;
+            var currentKey = ResolveNodeKey(nodeKey);
             while (!string.IsNullOrWhiteSpace(currentKey) &&
                    nodesByKey.TryGetValue(currentKey, out var node) &&
                    selectedNodeKeys.Add(node.NodeKey))

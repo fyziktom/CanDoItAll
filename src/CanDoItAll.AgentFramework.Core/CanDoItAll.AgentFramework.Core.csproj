@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.3.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
   </ItemGroup>
 
   <ItemGroup>

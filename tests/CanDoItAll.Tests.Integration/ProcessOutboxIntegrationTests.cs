@@ -367,6 +367,38 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
+    public async Task RecoverActiveRunsAsync_queues_reopened_inprogress_step_inside_failed_run()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var recoveryService = scope.ServiceProvider.GetRequiredService<ProcessRunRecoveryService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process recovery failed run reopened step");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runId = await StartDeferredAutomationRunAsync(processesService, saveResult.Value, projectId, "Recovery failed run reopened step");
+        await AssignFirstStepExecutorAsync(dbContextFactory, runId, Guid.NewGuid());
+        await CompleteAutomationDispatchesAsync(dbContextFactory, runId);
+        await MarkRunFailedWithInProgressFirstStepAsync(dbContextFactory, runId);
+
+        Assert.Equal(0, await CountPendingAutomationDispatchesAsync(dbContextFactory, runId));
+
+        Assert.Equal(1, await recoveryService.RecoverActiveRunsAsync());
+        Assert.Equal(0, harness.AutomationDispatch.CallCount);
+
+        var dispatches = await ListAutomationDispatchRecordsAsync(dbContextFactory, runId);
+        Assert.Equal(2, dispatches.Count);
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, dispatches[^1].Status);
+        Assert.Equal(0, dispatches[^1].AttemptCount);
+    }
+
+    [Fact]
     public async Task RecoverActiveRunsAsync_releases_stranded_startup_automation_dispatch_leases()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
@@ -473,6 +505,28 @@ public sealed class ProcessOutboxIntegrationTests
             record.LeaseExpiresAtUtc = null;
         }
 
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task MarkRunFailedWithInProgressFirstStepAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid runId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var now = DateTimeOffset.UtcNow;
+        var run = await dbContext.Set<ProcessRun>()
+            .SingleAsync(item => item.Id == runId);
+        var stepRun = await dbContext.Set<ProcessStepRun>()
+            .Where(item => item.ProcessRunId == runId)
+            .OrderBy(item => item.Sequence)
+            .FirstAsync();
+
+        run.Status = ProcessRunStatus.Failed;
+        run.CompletedAtUtc = now.AddMinutes(-1);
+        run.UpdatedAtUtc = now;
+        stepRun.Status = ProcessStepRunStatus.InProgress;
+        stepRun.StartedAtUtc = now.AddMinutes(-15);
+        stepRun.CompletedAtUtc = null;
         await dbContext.SaveChangesAsync();
     }
 

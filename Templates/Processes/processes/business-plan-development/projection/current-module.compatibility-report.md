@@ -4,6 +4,7 @@
 
 - Roles project to process role requirements.
 - Steps project with dependencies and artifact inputs.
+- Product evidence review projects as an atomic work step before business-plan drafting.
 - Business, finance, and marketing handoffs are represented as artifact expectations and inputs.
 - Approval outcomes route to explicit terminal steps for approved and blocked paths.
 

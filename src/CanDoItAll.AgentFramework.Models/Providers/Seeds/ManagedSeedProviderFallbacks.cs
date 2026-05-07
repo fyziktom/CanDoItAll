@@ -48,15 +48,17 @@ public static class ManagedSeedProviderFallbacks
 
     private static readonly IReadOnlyList<string> ManagedSeedOpenAiSuggestedModels =
     [
+        "gpt-5.4",
         "gpt-5.4-mini",
         "gpt-4.1-mini",
-        "gpt-4o-mini",
         "gpt-4.1"
     ];
 
+    public const string OpenAiDefaultProviderName = "OpenAI default";
     public const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
     public const string OpenAiBaseUrl = "https://api.openai.com/v1";
-    public const string OpenAiDefaultModel = "gpt-5.4-mini";
+    public const string OpenAiDefaultModel = "gpt-5.4";
+    public const string DefaultReasoningEffort = "medium";
     public const string FallbackProviderName = "Remote Ollama";
     public const string FallbackBaseUrl = "http://192.168.10.132:11434";
     public const string FallbackModel = "gptoss32k:latest";
@@ -72,7 +74,7 @@ public static class ManagedSeedProviderFallbacks
 
         if (IsFallbackProvider(provider))
         {
-            return CreateOpenAiChatCompletionsProvider(provider);
+            return CreateOpenAiDefaultProvider(provider);
         }
 
         if (!ShouldUseFallback(agent, provider, openAiApiKeyOverride))
@@ -113,7 +115,7 @@ public static class ManagedSeedProviderFallbacks
 
         if (IsFallbackProvider(provider))
         {
-            return CreateOpenAiChatCompletionsProvider(provider);
+            return CreateOpenAiDefaultProvider(provider);
         }
 
         return provider;
@@ -160,6 +162,23 @@ public static class ManagedSeedProviderFallbacks
         }
 
         return agent.Model;
+    }
+
+    public static string EnsureDefaultReasoningConfigurationJson(
+        string configurationJson,
+        string? history = null)
+    {
+        var configuration = ParseConfigurationObject(configurationJson);
+        if (!string.IsNullOrWhiteSpace(history))
+        {
+            configuration["history"] ??= history;
+        }
+
+        configuration[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = DefaultReasoningEffort;
+        var modelParameters = configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] as JsonObject ?? [];
+        modelParameters[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = DefaultReasoningEffort;
+        configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
+        return configuration.ToJsonString();
     }
 
     public static bool ShouldUseFallback(
@@ -222,23 +241,23 @@ public static class ManagedSeedProviderFallbacks
         return ManagedSeedFallbackSuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static ProviderProfile CreateOpenAiChatCompletionsProvider(ProviderProfile provider)
+    private static ProviderProfile CreateOpenAiDefaultProvider(ProviderProfile provider)
     {
         return provider with
         {
-            Name = OpenAiChatCompletionsProviderName,
+            Name = OpenAiDefaultProviderName,
             Kind = ProviderKind.OpenAi,
             BaseUrl = OpenAiBaseUrl,
             ApiKeyEnvironmentVariable = OpenAiApiKeyVariableName,
             DefaultModel = OpenAiDefaultModel,
-            Transport = ProviderTransportKind.ChatCompletions,
+            Transport = ProviderTransportKind.Responses,
             IsEnabled = true,
             SupportsStreaming = true,
             SupportsTools = true,
-            PreferFrameworkManagedChatHistory = true,
-            SupportsBackgroundResponses = false,
-            ConfigurationJson = "{\"history\":\"framework-managed\"}",
-            Notes = "OpenAI provider selected for managed seed agents.",
+            PreferFrameworkManagedChatHistory = false,
+            SupportsBackgroundResponses = true,
+            ConfigurationJson = CreateOpenAiConfigurationJson("service-managed"),
+            Notes = "OpenAI Responses provider selected for managed seed agents.",
             HealthStatus = "OpenAI active",
             SuggestedModels = ManagedSeedOpenAiSuggestedModels
         };
@@ -256,28 +275,35 @@ public static class ManagedSeedProviderFallbacks
         return configuration.ToJsonString();
     }
 
+    private static string CreateOpenAiConfigurationJson(string history)
+    {
+        return EnsureDefaultReasoningConfigurationJson("{}", history);
+    }
+
     private static string EnsureFallbackTimeout(string configurationJson, string fallbackReason)
     {
-        JsonObject configuration;
-        if (string.IsNullOrWhiteSpace(configurationJson))
-        {
-            configuration = [];
-        }
-        else
-        {
-            try
-            {
-                configuration = JsonNode.Parse(configurationJson) as JsonObject ?? [];
-            }
-            catch (JsonException)
-            {
-                configuration = [];
-            }
-        }
+        var configuration = ParseConfigurationObject(configurationJson);
 
         configuration["history"] ??= "framework-managed";
         configuration["fallback"] ??= fallbackReason;
         configuration["timeoutSeconds"] = FallbackTimeoutSeconds;
         return configuration.ToJsonString();
+    }
+
+    private static JsonObject ParseConfigurationObject(string configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonNode.Parse(configurationJson) as JsonObject ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 }

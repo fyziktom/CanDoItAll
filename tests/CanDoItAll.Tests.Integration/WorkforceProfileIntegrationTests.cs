@@ -68,7 +68,7 @@ public sealed class WorkforceProfileIntegrationTests
         Assert.Equal("Lena Manager", workspace.ManagerName);
 
         var directoryItems = await partyDirectoryService.ListDirectoryAsync();
-        var worker = Assert.Single(directoryItems.Where(item => item.Id == workerId));
+        var worker = Assert.Single(directoryItems, item => item.Id == workerId);
         Assert.Contains(PartyRoleKind.Contractor, worker.Roles);
     }
 

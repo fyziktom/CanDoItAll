@@ -63,13 +63,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requiredToolNames.AddRange(ImplementationProofToolNames);
             requiredToolNames.Add("workspace_write_file");
 
-            if (ContainsRunnableApplicationContractSignal(candidate))
+            var requiresDotNetValidation = ImplementationContractMentionsDotNet(candidate);
+            if (requiresDotNetValidation &&
+                ContainsRunnableApplicationContractSignal(candidate))
             {
                 requiredToolNames.Add("workspace_dotnet_build");
                 requiredToolNames.Add("workspace_dotnet_run");
             }
 
-            if (ImplementationContractMentionsTests(candidate))
+            if (requiresDotNetValidation &&
+                ImplementationContractMentionsTests(candidate))
             {
                 requiredToolNames.Add("workspace_dotnet_test");
             }
@@ -78,6 +81,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (RequiresConcreteBrowserProof(candidate))
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
+            if (ImplementationContractMentionsJavaScript(candidate))
+            {
+                requiredToolNames.Add("workspace_pwsh_run_script");
+            }
         }
 
         if (RequiresDurableTextArtifactWrite(candidate))
@@ -120,7 +127,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        if (ResolveUnresolvedCriticalToolFailures(detail).Count > 0 ||
+        if (ResolveUnresolvedCriticalToolFailures(candidate, detail).Count > 0 ||
             TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
             !string.IsNullOrWhiteSpace(ResolveMissingRequiredArtifactSummary(candidate, detail, responseText)) ||
             !string.IsNullOrWhiteSpace(ResolveIncompleteImplementationSummary(candidate, responseText)) ||
@@ -158,7 +165,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        if (ResolveUnresolvedCriticalToolFailures(detail).Count > 0 ||
+        if (ResolveUnresolvedCriticalToolFailures(candidate, detail).Count > 0 ||
             TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
             !string.IsNullOrWhiteSpace(ResolveMissingConcreteProofSummary(candidate, responseText)) ||
             !string.IsNullOrWhiteSpace(ResolveIncompleteImplementationSummary(candidate, responseText)) ||
@@ -261,13 +268,107 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
-        return ContainsConcreteBrowserProofSignal(candidate.WorkBrief?.Title) ||
-               ContainsConcreteBrowserProofSignal(candidate.WorkBrief?.WorkBriefText) ||
-               ContainsConcreteBrowserProofSignal(candidate.WorkBrief?.ExpectedOutcome) ||
-               ContainsConcreteBrowserProofSignal(candidate.WorkBrief?.EvidenceExpectationSummary) ||
-               candidate.ExpectedArtifacts.Any(item =>
-                   ContainsConcreteBrowserProofSignal(item.Title) ||
-                   ContainsConcreteBrowserProofSignal(item.ValidationRequirementSummary));
+        var triggerText = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
+        var currentRunText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            triggerText,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))));
+        if (string.IsNullOrWhiteSpace(currentRunText))
+        {
+            return false;
+        }
+
+        var browserSurfaceText = RemoveApplicabilityOnlyBrowserEvidencePhrases(currentRunText);
+        var hasConcreteBrowserProofRequest = ContainsConcreteBrowserProofSignal(currentRunText) ||
+                                             ContainsConcreteBrowserProofSignal(triggerText);
+        if (RequiresConcreteImplementationProof(candidate))
+        {
+            return hasConcreteBrowserProofRequest &&
+                   !ContainsNonBrowserValidationTargetSignal(currentRunText);
+        }
+
+        if (!RequiresConcreteBrowserEvidenceStep(currentRunText))
+        {
+            return false;
+        }
+
+        if (ContainsExplicitBrowserSurfaceSignal(browserSurfaceText))
+        {
+            return true;
+        }
+
+        if (!hasConcreteBrowserProofRequest)
+        {
+            return false;
+        }
+
+        return !ContainsNonBrowserValidationTargetSignal(currentRunText);
+    }
+
+    private static bool RequiresConcreteBrowserEvidenceStep(string currentRunText)
+    {
+        if (string.IsNullOrWhiteSpace(currentRunText))
+        {
+            return false;
+        }
+
+        return currentRunText.Contains("qa", StringComparison.OrdinalIgnoreCase) ||
+               currentRunText.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
+               currentRunText.Contains("browser proof", StringComparison.OrdinalIgnoreCase) ||
+               currentRunText.Contains("runtime proof", StringComparison.OrdinalIgnoreCase) ||
+               currentRunText.Contains("screenshot", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsExplicitBrowserSurfaceSignal(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Contains("browser app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("browser-facing", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("browser visible", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("web ui", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("frontend", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("front-end", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("index.html", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains(".html", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("blazor", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("razor component", StringComparison.OrdinalIgnoreCase) ||
+               Regex.IsMatch(
+                   value,
+                   @"(?:^|[^a-z0-9])(?:ui|ux|react|vue|svelte|vite|css|dom)(?:[^a-z0-9]|$)",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsNonBrowserValidationTargetSignal(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Contains("console app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("command-line", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("cli app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("minimal api", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("web api", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("rest api", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("worker service", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("background service", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("class library", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("business plan", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("marketing plan", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("presentation", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("document", StringComparison.OrdinalIgnoreCase);
     }
 
 }

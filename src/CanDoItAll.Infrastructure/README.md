@@ -26,7 +26,7 @@ Framework references:
 
 Direct package references:
 
-- `Microsoft.AspNetCore.DataProtection (10.0.6)`
+- `Microsoft.AspNetCore.DataProtection (10.0.7)`
 - `Microsoft.EntityFrameworkCore (10.0.4)`
 - `Microsoft.EntityFrameworkCore.Design (10.0.4)`
 - `Microsoft.EntityFrameworkCore.InMemory (10.0.4)`

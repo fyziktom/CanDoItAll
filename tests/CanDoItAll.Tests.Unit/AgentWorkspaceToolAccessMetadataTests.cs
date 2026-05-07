@@ -33,6 +33,21 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
+    public void NormalizeExternalTargetAlias_strips_escaped_line_break_annotations()
+    {
+        var workspaceAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            "external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp/nWorkspace alias: external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp");
+        var generatedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            "external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp/nAll generated app source belongs under this directory.");
+        var inlineAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            "external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp Workspace alias: external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp All generated app source belongs under");
+
+        Assert.Equal("external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp", workspaceAlias);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp", generatedAlias);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-output/pantry-pulse-csharp", inlineAlias);
+    }
+
+    [Fact]
     public void IsExternalTargetAliasAllowed_accepts_root_and_children_but_rejects_siblings()
     {
         var allowedAliases = new[]

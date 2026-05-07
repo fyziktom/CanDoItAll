@@ -1,0 +1,16 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "integrated-business-plan",
+  "DisplayName": "Integrated business plan review",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "ArtifactKind": "Decision",
+  "DefaultTrustRequirement": "HumanApproved",
+  "DefaultSensitivityLevel": "Confidential",
+  "DefaultRetentionDays": 365,
+  "Summary": "Final decision artifact reconciling strategy, finance, marketing, risks, blockers, and next actions.",
+  "AllowedFutureUsageSummary": "Reusable for execution planning, budget review, and portfolio decisions.",
+  "ValidationRequirementSummary": "Must identify approved path, blockers, risks, assumptions, and next actions.",
+  "OwnerRoleKey": "business-strategist",
+  "DocPath": "processes/business-plan-development/artifacts/integrated-business-plan.md"
+}

@@ -20,12 +20,27 @@ public sealed partial class MafAgentRuntime
         ProviderProfile provider,
         string model,
         float? requestedTemperature,
-        bool forceOmitTemperature)
+        bool forceOmitTemperature,
+        string? agentConfigurationJson = null)
     {
         var options = new ChatOptions();
         if (!ShouldOmitTemperature(provider, model, forceOmitTemperature))
         {
             options.Temperature = requestedTemperature;
+        }
+
+        var reasoningEffort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            provider.Kind,
+            provider.Transport,
+            model,
+            provider.ConfigurationJson,
+            agentConfigurationJson ?? string.Empty);
+        if (reasoningEffort is not null)
+        {
+            options.Reasoning = new ReasoningOptions
+            {
+                Effort = MapReasoningEffort(reasoningEffort.Value)
+            };
         }
 
         return options;
@@ -59,6 +74,19 @@ public sealed partial class MafAgentRuntime
         return EnumerateExceptionMessages(exception).Any(message =>
             message.Contains(TemperatureParameterName, StringComparison.OrdinalIgnoreCase) &&
             UnsupportedTemperatureErrorSignals.Any(signal => message.Contains(signal, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static ReasoningEffort MapReasoningEffort(AgentReasoningEffortLevel effort)
+    {
+        return effort switch
+        {
+            AgentReasoningEffortLevel.None => ReasoningEffort.None,
+            AgentReasoningEffortLevel.Low => ReasoningEffort.Low,
+            AgentReasoningEffortLevel.Medium => ReasoningEffort.Medium,
+            AgentReasoningEffortLevel.High => ReasoningEffort.High,
+            AgentReasoningEffortLevel.ExtraHigh => ReasoningEffort.ExtraHigh,
+            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unsupported reasoning effort.")
+        };
     }
 
     private static IEnumerable<string> EnumerateExceptionMessages(Exception exception)
@@ -98,5 +126,25 @@ public sealed partial class MafAgentRuntime
     private static string BuildTemperatureOmittedMessage(string model)
     {
         return $"The runtime will omit temperature for model '{model}' and use the provider default.";
+    }
+
+    private static bool IsReasoningEffortConfiguredButTransportUnsupported(
+        ProviderProfile provider,
+        string model,
+        string? agentConfigurationJson)
+    {
+        return AgentProviderModelParameterPolicy.ResolveConfiguredReasoningEffort(
+                   provider.Kind,
+                   model,
+                   provider.ConfigurationJson,
+                   agentConfigurationJson ?? string.Empty) is not null &&
+               !AgentProviderModelParameterPolicy.CanApplyReasoningEffort(provider.Kind, provider.Transport, model);
+    }
+
+    private static string BuildReasoningEffortUnsupportedTransportMessage(
+        ProviderProfile provider,
+        string model)
+    {
+        return $"Provider '{provider.Name}' has reasoning effort configured for model '{model}', but the {provider.Transport} transport cannot apply it. Use the Responses transport for reasoning-capable OpenAI runs.";
     }
 }

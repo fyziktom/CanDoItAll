@@ -17,6 +17,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         "razor",
         "sln",
         "web",
+        "webapp",
         "webapi",
         "worker",
         "xunit"

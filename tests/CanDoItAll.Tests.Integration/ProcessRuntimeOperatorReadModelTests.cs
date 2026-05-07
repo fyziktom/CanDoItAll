@@ -184,6 +184,147 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
     }
 
     [Fact]
+    public async Task Manual_agent_rerun_reopens_completed_agent_step_when_operator_invalidates_proof()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, "Manual rerun completed read model");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var runDetailsLoader = scope.ServiceProvider.GetRequiredService<ProcessWorkspaceRunDetailsLoader>();
+        var stepRun = await StartStepAsync(processesService, fixture);
+        var expectation = Assert.Single(Assert.Single((await processesService.GetRunDetailsAsync(fixture.RunId)).StepRuns).ArtifactExpectations);
+
+        var artifactResult = await processesService.RecordArtifactAsync(
+            new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = fixture.RunId,
+                StepRunId = stepRun.Id,
+                ArtifactExpectationId = expectation.ArtifactExpectationId,
+                ArtifactKind = expectation.ArtifactKind,
+                Title = expectation.Title,
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = ProcessSensitivityLevel.Internal,
+                ProvenanceSummary = "Recorded by integration test before the operator invalidates proof.",
+                AllowedFutureUsageSummary = "Manual rerun validation."
+            });
+        Assert.True(artifactResult.IsSuccess, string.Join(" | ", artifactResult.Errors.Select(error => error.Message)));
+
+        var completionResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                Reason = "Complete with the originally recorded proof.",
+                DecidedBy = "integration-tests"
+            });
+        Assert.True(completionResult.IsSuccess, string.Join(" | ", completionResult.Errors.Select(error => error.Message)));
+        var completedStep = Assert.Single(await processesService.ListStepRunsAsync(fixture.RunId));
+
+        var rerunResult = await processesService.RerunAgentStepAsync(
+            new ProcessAgentStepRerunRequest
+            {
+                StepRunId = completedStep.Id,
+                StepRunConcurrencyToken = completedStep.StepRunConcurrencyToken,
+                OperatorReason = "Observer invalidated the prior proof after completion; rerun the agent step with fresh evidence."
+            });
+
+        Assert.True(rerunResult.IsSuccess, string.Join(" | ", rerunResult.Errors.Select(error => error.Message)));
+
+        var details = await runDetailsLoader.LoadAsync(fixture.RunId);
+        var rerunStep = Assert.Single(details.StepRuns);
+
+        Assert.Equal(ProcessStepRunStatus.InProgress, rerunStep.Status);
+        Assert.Equal(ProcessRecoveryClassification.ManualRerun, rerunStep.Health.RecoveryClassification);
+        Assert.Contains(details.OutboxRecords, item =>
+            item.StepRunId == rerunStep.Id &&
+            item.Trigger == ProcessRuntimeEventTypes.ManualAgentStepRerun &&
+            item.HealthStatus == ProcessOutboxHealthStatus.Pending);
+    }
+
+    [Fact]
+    public async Task Manual_agent_rerun_reopens_blocked_agent_step_inside_failed_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, "Manual rerun blocked failed run");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var runDetailsLoader = scope.ServiceProvider.GetRequiredService<ProcessWorkspaceRunDetailsLoader>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var stepRun = await StartStepAsync(processesService, fixture);
+
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Automation exhausted repair attempts and needs operator rerun.",
+                DecidedBy = "integration-tests"
+            });
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        await MarkRunFailedAsync(dbContextFactory, fixture.RunId);
+        var blockedStep = Assert.Single(await processesService.ListStepRunsAsync(fixture.RunId));
+
+        var rerunResult = await processesService.RerunAgentStepAsync(
+            new ProcessAgentStepRerunRequest
+            {
+                StepRunId = blockedStep.Id,
+                StepRunConcurrencyToken = blockedStep.StepRunConcurrencyToken,
+                OperatorReason = "Operator is reopening a blocked repair step after process-core proof classification was fixed."
+            });
+
+        Assert.True(rerunResult.IsSuccess, string.Join(" | ", rerunResult.Errors.Select(error => error.Message)));
+
+        var details = await runDetailsLoader.LoadAsync(fixture.RunId);
+        var rerunStep = Assert.Single(details.StepRuns);
+
+        Assert.Equal(ProcessStepRunStatus.InProgress, rerunStep.Status);
+        Assert.Equal(ProcessRecoveryClassification.ManualRerun, rerunStep.Health.RecoveryClassification);
+        Assert.Contains(details.OutboxRecords, item =>
+            item.StepRunId == rerunStep.Id &&
+            item.Trigger == ProcessRuntimeEventTypes.ManualAgentStepRerun &&
+            item.HealthStatus == ProcessOutboxHealthStatus.Pending);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_settles_reopened_inprogress_step_inside_failed_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, "Failed run reopened step settlement");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var stepRun = await StartStepAsync(processesService, fixture);
+
+        await MarkRunFailedAsync(dbContextFactory, fixture.RunId);
+
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Automation exhausted governed repair attempts and needs operator review.",
+                DecidedBy = "process-automation-dispatcher"
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetRunDetailsAsync(fixture.RunId);
+        var settledStep = Assert.Single(details.StepRuns);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var runStatus = await dbContext.Set<ProcessRun>()
+            .Where(item => item.Id == fixture.RunId)
+            .Select(item => item.Status)
+            .SingleAsync();
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, settledStep.Status);
+        Assert.Equal(ProcessRunStatus.Blocked, runStatus);
+    }
+
+    [Fact]
     public void Manual_rerun_directive_filters_previous_recovery_directive_text()
     {
         var buildDirective = typeof(ProcessesService).GetMethod("BuildManualRerunDirective", BindingFlags.NonPublic | BindingFlags.Static)
@@ -369,6 +510,19 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
 
         Assert.True(startResult.IsSuccess, string.Join(" | ", startResult.Errors.Select(error => error.Message)));
         return Assert.Single(await processesService.ListStepRunsAsync(fixture.RunId));
+    }
+
+    private static async Task MarkRunFailedAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid runId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var now = DateTimeOffset.UtcNow;
+        var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runId);
+
+        run.Status = ProcessRunStatus.Failed;
+        run.CompletedAtUtc = now;
+        run.UpdatedAtUtc = now;
+
+        await dbContext.SaveChangesAsync();
     }
 
     private static ProcessDefinitionEditorModel BuildDefinition(Guid projectId, Guid roleId, Guid stepId)

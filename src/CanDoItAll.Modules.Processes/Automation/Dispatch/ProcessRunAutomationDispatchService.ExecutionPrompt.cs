@@ -34,6 +34,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var workBrief = candidate.WorkBrief;
         var implementationMentionsTests = ImplementationContractMentionsTests(candidate);
+        var implementationMentionsDotNet = ImplementationContractMentionsDotNet(candidate, projectStructureGroundingSummary);
+        var implementationMentionsJavaScript = ImplementationContractMentionsJavaScript(candidate, projectStructureGroundingSummary);
+        var requiresConcreteProductProof = RequiresConcreteImplementationProof(candidate) ||
+            RequiresConcreteImplementationReview(candidate) ||
+            RequiresConcreteBrowserProof(candidate);
         ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
         var projectStructureProjectId = projectStructureContext?.ProjectId ?? candidate.Run.ProjectId;
         var hasProjectStructureExecutionContext = projectStructureContext is not null || !string.IsNullOrWhiteSpace(projectStructureGroundingSummary);
@@ -47,6 +52,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             out var groundedExternalLeafName);
         var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
         var currentRunManagedOutputRoot = BuildCurrentRunManagedOutputRoot(candidate);
+        var usesGroundedExternalArtifactDestination = hasGroundedExternalTarget &&
+            !requiresConcreteProductProof &&
+            LooksLikeExternalArtifactDestination(candidate, projectStructureGroundingSummary);
+        var requiredArtifactDefaultRoot = usesGroundedExternalArtifactDestination
+            ? groundedExternalMappedAlias ?? currentRunManagedArtifactRoot
+            : currentRunManagedArtifactRoot;
         var summarizedTriggerReason = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
         var builder = new StringBuilder();
         builder.AppendLine("You are executing a CanDoItAll process step.");
@@ -64,7 +75,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine();
         builder.AppendLine("Current-run managed artifact root:");
         builder.AppendLine($"- `{currentRunManagedArtifactRoot}`");
-        builder.AppendLine("- Use this root for discretionary evidence, notes, logs, and required text artifacts that do not have an explicit governed path.");
+        builder.AppendLine("- Use this root for discretionary evidence, notes, logs, and required text artifacts that do not have an explicit governed path or grounded external artifact destination.");
         builder.AppendLine();
         builder.AppendLine("Current-run managed output root:");
         builder.AppendLine($"- `{currentRunManagedOutputRoot}`");
@@ -107,16 +118,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- If the project structure names a concrete output directory outside the managed workspace, do not silently relocate the deliverable. Use a controlled local execution path when necessary, and record the exact external target in the artifacts you write.");
             builder.AppendLine("- Workspace file and execution tools cannot use a raw absolute external path like `C:\\target\\app` directly. Convert it to the mapped alias `external-target/C/target/app` when you call workspace tools that read, write, inspect, validate, or launch files.");
             builder.AppendLine("- Only inspect or modify `external-target/...` paths that are explicitly named by this run's project-structure grounding, work brief, upstream step artifacts, or tool outputs from this run. Do not reuse remembered prior-example paths or external targets from prior runs.");
+            builder.AppendLine("- Paths mentioned inside no-go, prohibited, out-of-scope, or exclusion language are constraints, not grounded targets. Do not stat, list, read, write, launch, or validate those paths unless the same current-run artifact also names them as the accepted product root.");
             builder.AppendLine("- Do not cite a file, path, tool result, example, or source artifact as evidence unless it was grounded by the current-run project structure, inspected by a current execution tool call, provided by an upstream artifact, or loaded from an attached skill/template resource. If source inspection was not performed in this run, say that instead of naming remembered files.");
             builder.AppendLine("- If tool policy denies an `external-target/...` path, treat that denied path as invalid for this run. Abandon it immediately and switch to the current grounded product root or current-run artifacts; do not retry or reason from the denied sample path.");
             builder.AppendLine("- `workspace_pwsh_run_script` executes a script file from the managed workspace. If that script invokes native tools against an external target, convert `external-target/<drive>/...` back to a native path such as `C:\\target\\app` inside the script before passing it to native commands like `Start-Process`, `Test-Path`, or `Resolve-Path`.");
             builder.AppendLine("- The mapped `external-target/<drive>/...` alias resolves to the real external target. Do not create a shadow copy in a different workspace folder.");
             builder.AppendLine("- Treat missing project-structure inspection as incomplete work for this step.");
             builder.AppendLine("- If project_structure_read reveals an exact external output directory for the selected work node, keep that directory as the authoritative product boundary for this run. Create, bootstrap, or implement there only when the current step contract explicitly requires concrete delivery work.");
+            builder.AppendLine("- A greenfield external product root can be absent during scope, architecture, research, or planning steps. If the current step does not require concrete implementation or validation, record the intended root as the boundary and leave creation, source listing, build, run, or test proof to the implementation and validation steps.");
             if (hasGroundedExternalTarget)
             {
                 builder.AppendLine($"- The grounded project structure already identifies the external output root `{groundedExternalAbsolutePath}` mapped to `{groundedExternalMappedAlias}`. Treat that mapped alias as the product root for this run, not as an optional example.");
                 builder.AppendLine($"- With a grounded external product root, treat the managed workspace as evidence and artifact scratch space only, preferably under `{currentRunManagedArtifactRoot}`. Do not inspect managed workspace source, test, tool, or script roots such as `src/`, `tests/`, `tools/`, or `scripts/` unless the current run's project structure, work brief, upstream artifacts, or current-run tool outputs explicitly name those paths.");
+                if (usesGroundedExternalArtifactDestination)
+                {
+                    builder.AppendLine($"- This grounded external root is described as an artifact, report, plan, document, or handoff destination for non-implementation work. Write required generated deliverable artifacts under `{groundedExternalMappedAlias}` when no narrower artifact path is listed, and keep `{currentRunManagedArtifactRoot}` for scratch evidence, logs, or managed handoff copies.");
+                }
+
+                builder.AppendLine($"- In helper scripts that call native commands, use the native path `{groundedExternalAbsolutePath}` or convert `{groundedExternalMappedAlias}` to that native path before `Resolve-Path`, `Test-Path`, `Set-Location`, `Start-Process`, `cmd.exe`, `node`, `npm`, or similar native calls. Never pass an `external-target/...` alias directly to native PowerShell or process APIs.");
                 builder.AppendLine($"- Do not use broad managed-root workspace listing or search to discover launch helpers, source code, or requirements for this external-target run. List or search the grounded external-target alias and `{currentRunManagedArtifactRoot}` instead.");
                 builder.AppendLine("- Do not use files discovered only from broad managed workspace browsing as product requirements, app source, launch scripts, or validation helpers for this run.");
                 builder.AppendLine("- Do not list, read, cite, copy, or infer implementation patterns from sibling external-target applications on the same host. Framework examples must come from loaded skills, tool descriptions, official templates, or current-run artifacts, not from unrelated local apps.");
@@ -126,7 +145,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
             {
                 builder.AppendLine($"- The dispatcher did not ground an external product root for this run. Do not invent, create, retry, or cite any `external-target/...` path unless a current-run project_structure_read result names an exact absolute local path.");
                 builder.AppendLine($"- If the current step must create a concrete greenfield deliverable and no external product root is found after project_structure_read, use `{currentRunManagedOutputRoot}` as the product root and `{currentRunManagedArtifactRoot}` for evidence.");
-                builder.AppendLine($"- For .NET scaffolding without an external product root, use `workspace_dotnet_new` under `{currentRunManagedOutputRoot}`; do not use the bare managed workspace root, shared `src/`, shared `tests/`, or guessed host folders.");
+                if (implementationMentionsDotNet)
+                {
+                    builder.AppendLine($"- For .NET scaffolding without an external product root, use `workspace_dotnet_new` under `{currentRunManagedOutputRoot}`; do not use the bare managed workspace root, shared `src/`, shared `tests/`, or guessed host folders.");
+                }
+                else if (implementationMentionsJavaScript)
+                {
+                    builder.AppendLine($"- For JavaScript or TypeScript greenfield deliverables without an external product root, create files under `{currentRunManagedOutputRoot}` with the package/script toolchain named by the current-run requirements. Do not use `workspace_dotnet_new` unless the current-run requirements explicitly name .NET, C#, ASP.NET, Blazor, Razor, `.csproj`, or `.sln`.");
+                }
+                else
+                {
+                    builder.AppendLine($"- For greenfield deliverables without an external product root, create files under `{currentRunManagedOutputRoot}` with the toolchain explicitly named by the current-run requirements. Do not assume a .NET, JavaScript, Python, document, or other stack without a current-run stack signal.");
+                }
             }
             builder.AppendLine();
         }
@@ -173,6 +203,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             builder.AppendLine();
         }
+
+        AppendMandatoryBrowserProofPlan(
+            builder,
+            candidate,
+            implementationMentionsDotNet,
+            implementationMentionsJavaScript,
+            currentRunManagedArtifactRoot);
 
         AppendRequiredArtifactResponseContract(builder, candidate.ExpectedArtifacts);
         builder.AppendLine("Upstream artifacts:");
@@ -227,6 +264,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 }
 
                 builder.AppendLine("- Use workspace_stat_path and workspace_read_file on the concrete workspace files or durable artifacts you cite as evidence. Do not rely only on summaries, RAG snippets, or prior notes.");
+                builder.AppendLine("- For greenfield scope, architecture, research, or planning steps, a planned product root may not exist yet. Satisfy inspection through current-run project-structure reads and upstream durable artifacts; do not stat, list, read, or fail on an absent product root unless this step explicitly requires implementation, validation, or review of existing product files.");
                 builder.AppendLine("- EvidenceRefs must name only current-run tool-backed paths, durable artifacts, or attached skill/template resources. Do not invent or carry forward source paths from memory.");
                 if (governedInspectionPaths.StatPaths.Count > 0)
                 {
@@ -256,7 +294,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (RequiresDurableTextArtifactWrite(candidate))
             {
-                builder.AppendLine("- Use workspace_write_file to write required markdown or text artifacts at their governed managed paths instead of relying on response projection. If the artifact expectation does not list an exact path, use the suggested current-run path under the current-run managed artifact root.");
+                if (usesGroundedExternalArtifactDestination)
+                {
+                    builder.AppendLine($"- Use workspace_write_file to write required markdown or text artifacts under `{requiredArtifactDefaultRoot}` when no narrower path is listed. If the artifact expectation also lists a managed path, create or reference a managed handoff copy so process artifact history still has the deliverable.");
+                }
+                else
+                {
+                    builder.AppendLine("- Use workspace_write_file to write required markdown or text artifacts at their governed managed paths instead of relying on response projection. If the artifact expectation does not list an exact path, use the suggested current-run path under the current-run managed artifact root.");
+                }
             }
 
             builder.AppendLine();
@@ -266,7 +311,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("- Complete the actual work described in the work brief and expected outcome before writing summary artifacts.");
         builder.AppendLine("- Required output artifacts are evidence of completed work. They do not replace code changes, runnable outputs, tests, screenshots, or other concrete deliverables.");
         builder.AppendLine("- Do not execute helper scripts, app launches, browser proof, release rollout, or other side actions unless the current step contract or required artifacts explicitly call for them.");
-            builder.AppendLine($"- Use `{currentRunManagedArtifactRoot}` for current-run managed evidence, drafts, logs, and required text artifacts that do not have an explicit governed path.");
+            builder.AppendLine($"- Use `{requiredArtifactDefaultRoot}` for required text artifacts that do not have an explicit governed path. Use `{currentRunManagedArtifactRoot}` for current-run managed evidence, drafts, and logs.");
             builder.AppendLine($"- Use `{currentRunManagedOutputRoot}` for generated product files only when this run has no grounded external product root. Keep generated source, tests, scripts, and project files under that run-specific output root.");
             builder.AppendLine("- Paths under `artifacts/`, `output/`, `integration-map/`, and `data/` are managed workspace aliases. Do not write shallow shared scope files directly under `artifacts/scopes/<scope>/<id>/`, `output/scopes/<scope>/<id>/`, `integration-map/scopes/<scope>/<id>/`, or `data/scopes/<scope>/<id>/`; concurrent runs can overwrite those files. Use the current-run root unless a required artifact input or output gives an exact deeper managed path.");
         builder.AppendLine("- Treat run-level paths and planned solution targets as context unless the current step contract explicitly tells you to create, inspect, build, test, launch, or review them. Only then must that concrete output exist before you conclude.");
@@ -275,7 +320,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- If a required build, test, launch, browser check, or artifact import fails, inspect the real diagnostics, fix the underlying problem, and rerun the same required validation before you conclude. Do not treat the first failed validation as acceptable end-state evidence.");
             builder.AppendLine("- After a failed validation tool call, the next tool call must inspect the failing diagnostics or mutate files that directly address the failure. Repeating the same failed build/test/run command without an intervening cause-directed change is no-progress behavior.");
             builder.AppendLine("- Do not make validation pass by writing fake package, framework, runtime, browser, or test-tool shims. Fix real dependencies and project references, or return Blocked with the exact missing dependency or environment issue.");
-            builder.AppendLine("- Do not stop after inspection, reconnaissance, bootstrap confirmation, or a next-steps summary if required tools, concrete deliverables, or required artifacts are still missing.");
+            builder.AppendLine("- Do not stop after inspection, reconnaissance, bootstrap confirmation, or a next-steps summary if required tools, concrete deliverables required by this step, or required artifacts are still missing.");
         if (RequiresConcreteImplementationProof(candidate))
         {
             builder.AppendLine("- Because this is an implementation step, create the real deliverable now. A markdown change set alone is not completed implementation.");
@@ -310,7 +355,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- If the concrete deliverable does not exist yet, create the correct working structure now using the tools and folder conventions that fit this step, its assigned agent, and its domain.");
             builder.AppendLine("- If the inherited requirements describe browser-visible UI, leave a runnable or reviewable browser surface for downstream QA instead of concluding with only service, library, or text output.");
             builder.AppendLine("- If the requested deliverable starts a local host, API, service, interactive UI, or executable workflow, perform a startup smoke with the appropriate run or launch tool after the latest build/test validation before writing final evidence.");
-            builder.AppendLine("- If `workspace_dotnet_run` or another startup smoke fails after build/test passed, treat it as a repairable runtime defect before you return Blocked: inspect the startup diagnostics and repair missing DI registrations, `Program.cs` service wiring, routing, configuration, launch settings, static assets, or app initialization that caused the host or first HTTP request to fail.");
+            if (implementationMentionsDotNet)
+            {
+                builder.AppendLine("- If `workspace_dotnet_run` fails after build/test passed, treat it as a repairable runtime defect before you return Blocked: inspect the startup diagnostics and repair missing DI registrations, `Program.cs` service wiring, routing, configuration, launch settings, static assets, or app initialization that caused the host or first HTTP request to fail.");
+            }
+            else
+            {
+                builder.AppendLine("- If the appropriate startup smoke fails after validation passed, treat it as a repairable runtime defect before you return Blocked: inspect startup diagnostics and repair the real entry point, routing, static assets, package scripts, configuration, or app initialization that caused the failure.");
+            }
+
             builder.AppendLine("- If no concrete deliverable exists yet, do not return Completed.");
             builder.AppendLine("- If no concrete deliverable exists yet and mutation or scaffold tools are available, do not return Blocked before attempting a concrete product mutation or scaffold and inspecting the resulting files or failure diagnostics.");
 
@@ -325,13 +378,28 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 builder.AppendLine($"- For this implementation, create and edit the deliverable under `{groundedExternalMappedAlias}`. Do not build a shadow product in `artifacts/`, `output/`, `data/`, or other managed evidence folders when the grounded output root is external.");
                 builder.AppendLine($"- If `{groundedExternalMappedAlias}` contains only markdown, notes, summaries, checklists, logs, or empty folders, treat it as an unimplemented product root. Scaffold or create the requested application, service, UI, document, analysis, or other concrete deliverable there before final artifacts.");
                 builder.AppendLine($"- If `{groundedExternalMappedAlias}` is an unimplemented product root, the next product action must be a concrete mutation under that root, such as scaffolding a project, writing source/configuration files, or repairing generated content. Do not write final evidence artifacts or submit Blocked before trying that concrete mutation and reading either the changed files or the failure receipt.");
-                if (hasGroundedExternalScaffoldTarget)
+                if (hasGroundedExternalScaffoldTarget && implementationMentionsDotNet)
                 {
                     builder.AppendLine($"- For .NET scaffolding into the grounded external product root, use `workspace_dotnet_new` with `parentDirectory` set to `{groundedExternalParentAlias}` and `name` set to `{groundedExternalLeafName}`. If `{groundedExternalMappedAlias}` already exists, inspect and repair it in place instead of creating a sibling or managed artifact copy.");
+                    builder.AppendLine("- Choose the .NET template and project shape named by the current-run requirements. Do not default to Blazor, Razor, or Web App templates unless the selected work branch explicitly asks for browser UI, Blazor, or Razor; console apps, minimal APIs, workers, services, and libraries must keep their requested archetype.");
                     builder.AppendLine($"- If `{groundedExternalMappedAlias}` has no project or source files, invoke `workspace_dotnet_new` with `parentDirectory` `{groundedExternalParentAlias}`, `name` `{groundedExternalLeafName}`, and `force` false before writing implementation-summary artifacts. Existing markdown, checklist, log, or README files in that directory are not a scaffold and are not a reason to skip project creation.");
                     builder.AppendLine($"- If `workspace_dotnet_new` cannot scaffold into `{groundedExternalMappedAlias}` because the directory already has evidence files, repair the root in place by writing the required project/source files or return Blocked with the exact scaffold diagnostic. Do not recursively delete `{groundedExternalMappedAlias}` to make room.");
                     builder.AppendLine($"- `{groundedExternalParentAlias}` is only the scaffold parent argument for creating `{groundedExternalMappedAlias}`. It is not a product root, evidence root, source corpus, or permission to inspect sibling folders.");
                     builder.AppendLine($"- After scaffolding, all reads, writes, builds, tests, runs, and evidence citations must target `{groundedExternalMappedAlias}` or `{currentRunManagedArtifactRoot}`, not sibling folders under `{groundedExternalParentAlias}`.");
+                }
+                else if (hasGroundedExternalScaffoldTarget && implementationMentionsJavaScript)
+                {
+                    builder.AppendLine($"- For JavaScript or TypeScript scaffolding into the grounded external product root, create or update the real deliverable directly under `{groundedExternalMappedAlias}` using the package/script toolchain named by the current-run requirements.");
+                    builder.AppendLine("- Do not use `workspace_dotnet_new` for JavaScript, static HTML, Python, document, analysis, business, or other non-.NET work unless the current-run requirements explicitly name .NET, C#, ASP.NET, Blazor, Razor, `.csproj`, or `.sln`.");
+                    builder.AppendLine($"- `{groundedExternalParentAlias}` is only the parent of the product root. It is not a product root, evidence root, source corpus, or permission to inspect sibling folders.");
+                    builder.AppendLine($"- After scaffolding or file creation, all reads, writes, builds, tests, runs, and evidence citations must target `{groundedExternalMappedAlias}` or `{currentRunManagedArtifactRoot}`, not sibling folders under `{groundedExternalParentAlias}`.");
+                }
+                else if (hasGroundedExternalScaffoldTarget)
+                {
+                    builder.AppendLine($"- For scaffolding into the grounded external product root, create or update the real deliverable directly under `{groundedExternalMappedAlias}` using the toolchain explicitly named by the current-run requirements.");
+                    builder.AppendLine("- Do not infer a stack only from prior examples, sibling folders, or generic application wording. Use the stack named by the selected work branch, upstream artifacts, or attached skills.");
+                    builder.AppendLine($"- `{groundedExternalParentAlias}` is only the parent of the product root. It is not a product root, evidence root, source corpus, or permission to inspect sibling folders.");
+                    builder.AppendLine($"- After scaffolding or file creation, all reads, writes, builds, tests, runs, and evidence citations must target `{groundedExternalMappedAlias}` or `{currentRunManagedArtifactRoot}`, not sibling folders under `{groundedExternalParentAlias}`.");
                 }
             }
 
@@ -342,8 +410,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 builder.AppendLine("- Do not defer implementation-owned tests to a later QA-only step when this step title, work brief, or expected outcome already says tests are part of the work.");
             }
 
-            builder.AppendLine("- For Blazor forms, bind inputs only to settable properties or explicit get/set wrappers. Positional records and init-only properties are not valid `@bind` targets and must be replaced with mutable form-state classes or properties before rerunning the build.");
-            builder.AppendLine("- For .NET HTTP startup proof that does not need same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and avoids locking later builds. If this same step must run browser tools, set `keepAlive: true`, capture browser evidence, and stop the app with the recorded `startup.json` `stopCommand` before finalizing.");
+            if (implementationMentionsDotNet)
+            {
+                builder.AppendLine("- For Blazor forms, bind inputs only to settable properties or explicit get/set wrappers. Positional records and init-only properties are not valid `@bind` targets and must be replaced with mutable form-state classes or properties before rerunning the build.");
+                builder.AppendLine("- For .NET HTTP startup proof that does not need same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and avoids locking later builds. If this same step must run browser tools, set `keepAlive: true`, capture browser evidence, and stop the app with the recorded `startup.json` `stopCommand` before finalizing.");
+            }
         }
 
         if (RequiresConcreteImplementationReview(candidate))
@@ -361,11 +432,29 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- This step requires runnable browser proof or screenshots, not build-only or file-only evidence.");
             builder.AppendLine("- Before browser proof, inspect the concrete host, launch instructions, prior validation receipts, or reviewed artifacts so you derive the actual target and reachable URL from the implementation.");
             builder.AppendLine("- If no reviewed browser surface is already running, start it using the launch path and toolchain appropriate for the assigned agent and current step contract, then capture the URL and diagnostics.");
-            builder.AppendLine("- For .NET browser proof, call `workspace_dotnet_run` with `keepAlive: true` so Playwright can reach the app. After browser evidence is captured, stop the process tree with the recorded `startup.json` `stopCommand` before finalizing.");
+            if (implementationMentionsDotNet)
+            {
+                builder.AppendLine("- For .NET browser proof, call `workspace_dotnet_run` with `keepAlive: true` so Playwright can reach the app. After browser evidence is captured, stop the process tree with the recorded `startup.json` `stopCommand` before finalizing.");
+            }
+            else if (implementationMentionsJavaScript)
+            {
+                builder.AppendLine("- For JavaScript or TypeScript browser proof, start the app with the reviewed package script or launch path available to the assigned agent, preserve the actual URL and diagnostics, then stop any started process before finalizing.");
+                builder.AppendLine("- Do not use `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for JavaScript or TypeScript deliverables unless the current-run requirements explicitly name .NET, C#, ASP.NET, Blazor, Razor, `.csproj`, or `.sln`.");
+                builder.AppendLine($"- If the available runner is `workspace_pwsh_run_script`, first create a helper script under `{currentRunManagedArtifactRoot}` with `workspace_write_file`, then inspect or stat that script before running it. Do not invoke a helper path that has not been created in this current run.");
+                builder.AppendLine("- A non-.NET helper script must convert an `external-target/<drive>/...` alias back to a native path before calling native commands such as `Resolve-Path`, `Test-Path`, `Set-Location`, `Start-Process`, `cmd.exe`, `node`, `npm`, `python`, or static-file launchers. Capture exit codes, stdout/stderr, the actual URL, and cleanup details in durable evidence.");
+                builder.AppendLine("- On Windows, package-manager launch helpers must invoke the real command shim, for example `npm.cmd run preview`, or use `cmd.exe /d /s /c \"npm run preview\"`. Do not use `Start-Process -FilePath 'npm'`; if a helper reports `%1 is not a valid Win32 application`, rewrite it to use `npm.cmd` or `cmd.exe` and rerun the launch.");
+                builder.AppendLine("- Never write helper code like `Resolve-Path 'external-target/C/...'`; native PowerShell resolves that relative to the managed artifact directory and will fail. Translate the alias to `C:\\...` first.");
+            }
+            else
+            {
+                builder.AppendLine("- For browser proof with an unspecified stack, first inspect the reviewed host, package, launch instructions, or upstream artifacts to determine the actual toolchain. Use .NET, package-script, Python, static-file, or other launch tooling only after that current-run evidence identifies the stack.");
+                builder.AppendLine($"- If the only available launch runner is `workspace_pwsh_run_script`, first create a helper script under `{currentRunManagedArtifactRoot}` with `workspace_write_file`, then inspect or stat that script before running it. Do not invoke a helper path that has not been created in this current run.");
+            }
+
             builder.AppendLine("- Do not assume a fixed URL. Use the actual URL reported by the launch command, host logs, configuration, or reviewed artifacts.");
             builder.AppendLine("- Do not treat an unstarted browser surface, a missing deployment, or unrelated transient output as acceptable proof when this QA step can launch or inspect the reviewed target itself.");
             builder.AppendLine("- Use browser tools after launch for navigation, accessibility or DOM proof, screenshot proof, and console diagnostics when those tools are available to the agent.");
-            builder.AppendLine("- Keep browser evidence bounded: `browser_snapshot` must use depth 4 or less and must not request element boxes; prefer depth 2. `browser_take_screenshot` must be viewport-bounded and must not use full-page capture unless an exact required artifact explicitly demands it.");
+            builder.AppendLine("- Keep browser evidence bounded: call `browser_snapshot` with depth 2 and boxes false unless a specific contract requires depth 3 or 4. Call `browser_take_screenshot` with fullPage false or omit fullPage. Do not retry a policy-denied browser call with the same arguments.");
             builder.AppendLine("- When a browser tool accepts a `filename`, write it under the current-run managed artifact root or an exact required browser artifact path. The dispatcher prepares those raw MCP output directories before the run so browser screenshots, snapshots, and console logs can be persisted and imported.");
             builder.AppendLine("- Provider-native browser files are created by the browser MCP before managed scope aliasing. Review the browser tool result itself and cite the returned filename; do not block only because `workspace_read_file` cannot read a provider-native `artifacts/process-runs/...` browser file.");
             builder.AppendLine("- After browser inspection, review the bounded snapshot, screenshot, or tool-returned content. If it shows placeholder starter content or lacks the requested workflow, return Blocked or repair instead of claiming proof.");
@@ -394,8 +483,94 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("- For an escalation/no-go/replan step with no downstream release branch, `Completed` means the escalation decision was recorded, not that the product became release-ready.");
         builder.AppendLine("- Do not use status Blocked for ambiguity that can be handled by explicit assumptions, `not applicable` entries, exclusions, or later modeled validation while the current step's required artifact or decision can still be completed.");
         builder.AppendLine("- Use status Failed only when tool, execution, or environment failure prevented you from producing a governed step result.");
-        builder.Append($"Before concluding, create one durable workspace artifact for every required output listed above. Do not ask for confirmation, permission, or a follow-up reply before writing required artifacts. If a required artifact is a text or markdown file you can produce now, write it yourself with workspace tools instead of drafting it in chat. If no exact path is listed for that artifact, write it under `{currentRunManagedArtifactRoot}`. If required upstream artifacts are missing or the concrete deliverable does not exist, stop and say so explicitly. Keep the response concise and mention what you completed.");
+        builder.Append($"Before concluding, create one durable workspace artifact for every required output listed above. Do not ask for confirmation, permission, or a follow-up reply before writing required artifacts. If a required artifact is a text or markdown file you can produce now, write it yourself with workspace tools instead of drafting it in chat. If no exact path is listed for that artifact, write it under `{requiredArtifactDefaultRoot}`. If required upstream artifacts are missing, stop and say so explicitly.");
+        if (requiresConcreteProductProof)
+        {
+            builder.Append(" If the concrete deliverable required by this step does not exist, stop and say so explicitly.");
+        }
+        else
+        {
+            builder.Append(" For scope, architecture, research, planning, and other non-delivery steps, an absent greenfield deliverable is not a blocker by itself when the current step can record the intended boundary, assumptions, and downstream validation hooks.");
+        }
+
+        builder.Append(" Keep the response concise and mention what you completed.");
         return builder.ToString();
+    }
+
+    private static bool LooksLikeExternalArtifactDestination(
+        DispatchCandidate candidate,
+        string? projectStructureGroundingSummary)
+    {
+        var context = string.Join(
+            '\n',
+            candidate.Definition.Name,
+            candidate.Definition.Summary,
+            candidate.Definition.ValueStatement,
+            candidate.Run.TriggerReason,
+            candidate.StepRun.Title,
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.StepDefinition.EvidenceContractSummary,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            projectStructureGroundingSummary);
+
+        return ContainsAnyArtifactDestinationSignal(
+            context,
+            [
+                "artifact destination",
+                "deliverable artifact",
+                "document output",
+                "report output",
+                "plan output",
+                "output folder",
+                "handoff folder",
+                "business plan",
+                "marketing plan",
+                "financial model",
+                "strategy brief",
+                "research report",
+                "analysis report",
+                "decision package"
+            ]);
+    }
+
+    private static bool ContainsAnyArtifactDestinationSignal(string text, IReadOnlyCollection<string> needles)
+    {
+        return needles.Any(needle => text.Contains(needle, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void AppendMandatoryBrowserProofPlan(
+        StringBuilder builder,
+        DispatchCandidate candidate,
+        bool implementationMentionsDotNet,
+        bool implementationMentionsJavaScript,
+        string currentRunManagedArtifactRoot)
+    {
+        if (!RequiresConcreteBrowserProof(candidate))
+        {
+            return;
+        }
+
+        builder.AppendLine("Mandatory browser proof execution plan:");
+        builder.AppendLine("- Do not submit the final step outcome from file inspection alone. Current-run browser evidence must come from provider-native browser tools after the reviewed app is reachable.");
+        if (implementationMentionsDotNet)
+        {
+            builder.AppendLine("- Start or verify the reviewed .NET host first. Prefer `workspace_dotnet_run` with `keepAlive: true`, capture the reported URL, and stop the process with the recorded stop command after browser proof.");
+        }
+        else if (implementationMentionsJavaScript)
+        {
+                builder.AppendLine($"- Start or verify the reviewed JavaScript host first. If the only launch runner is `workspace_pwsh_run_script`, create a helper under `{currentRunManagedArtifactRoot}`, create its stdout/stderr directories, convert any `external-target/<drive>/...` alias to a native path inside the helper, invoke package scripts through the Windows shim such as `npm.cmd` or through `cmd.exe /d /s /c \"npm run <script>\"`, and capture the actual localhost URL plus cleanup details.");
+        }
+        else
+        {
+            builder.AppendLine("- Start or verify the reviewed browser surface first using the stack identified from current-run files, launch settings, package scripts, or upstream artifacts, then capture the actual URL and cleanup details.");
+        }
+
+        builder.AppendLine("- After a reachable URL is known, call `browser_navigate` against that URL, exercise one representative user-visible interaction when the surface is interactive, then call `browser_snapshot` with depth 2 and boxes false, `browser_take_screenshot` with fullPage false or no fullPage argument, and `browser_console_messages` in this same attempt.");
+        builder.AppendLine("- If launch fails before a URL exists, return Blocked with the exact launch command, logs, and repair target. If launch succeeds, do not return Blocked for missing browser receipts before attempting the browser tools.");
+        builder.AppendLine();
     }
 
     private static void AppendRequiredArtifactResponseContract(

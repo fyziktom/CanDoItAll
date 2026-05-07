@@ -102,3 +102,12 @@ public enum AgentChatHistoryMode
     FrameworkManaged,
     ProviderManaged
 }
+
+public enum AgentReasoningEffortLevel
+{
+    None,
+    Low,
+    Medium,
+    High,
+    ExtraHigh
+}

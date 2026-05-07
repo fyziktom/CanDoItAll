@@ -9,14 +9,14 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v64";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v72";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        "gpt-5.4-mini",
         "gpt-4.1-mini",
-        "gpt-4o-mini",
         "gpt-4.1"
     ];
 
@@ -30,7 +30,6 @@ internal static class SandboxWorkspaceSeedBuilder
         var openAiChatProviderId = CreateStableGuid("providers/openai-chat-completions");
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
 
-        var projectStructureCapabilityId = CreateStableGuid("capabilities/project-structure-central");
         var playwrightLocalMcpCapabilityId = CreateStableGuid("capabilities/playwright-local-mcp");
         var bundleWorkflowCapabilityId = CreateStableGuid("capabilities/candoitall-bundle-workflow");
         var aspNetCoreCapabilityId = CreateStableGuid("capabilities/aspnet-core-skill");
@@ -108,54 +107,8 @@ internal static class SandboxWorkspaceSeedBuilder
         var financialStrategistAgentId = CreateStableGuid("agents/financial-strategist");
         var marketingSpecialistAgentId = CreateStableGuid("agents/marketing-specialist");
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
-        var projectStructureReadToolNames = new[]
-        {
-            "project_structure_projects_list",
-            "project_structure_hierarchy_get",
-            "project_structure_read",
-            "project_structure_checklist",
-            "project_structure_dependencies_query",
-            "project_structure_asset_get",
-            "project_structure_knowledge_query",
-            "project_structure_analytics_query",
-            "project_structure_project_lease_acquire",
-            "project_structure_repo_branch_lease_acquire",
-            "project_structure_lease_get",
-            "project_structure_lease_release",
-            "project_structure_approval_request"
-        };
-
         var capabilities = new List<CapabilityCatalogItem>
         {
-            new(
-                projectStructureCapabilityId,
-                CapabilityKind.McpServer,
-                "project-structure-central",
-                "Project Structure Central",
-                "Local MCP bridge for reading CanDoItAll project structure, dependency state, leases, and approval-request context from the active workspace.",
-                "dotnet",
-                SerializeConfiguration(new
-                {
-                    transport = "stdio",
-                    serverName = "candoitall-project-structure",
-                    command = "dotnet",
-                    arguments = new[]
-                    {
-                        "run",
-                        "--project",
-                        "src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj",
-                        "--",
-                        "--settings",
-                        "CanDoItAll.Mcp.ProjectStructure.settings.local.json"
-                    },
-                    workingDirectory = ".",
-                    allowedTools = projectStructureReadToolNames,
-                    approvalMode = "NeverRequire"
-                }),
-                CapabilityProofStatus.NotRun,
-                "Seeded as a local stdio MCP bridge against the repo project-structure settings file. Live proof should confirm read access, lease flow, and approval-request creation from real agent runs.",
-                null,
-                true),
             new(
                 playwrightLocalMcpCapabilityId,
                 CapabilityKind.McpServer,
@@ -487,7 +440,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 true,
                 false,
                 true,
-                SerializeConfiguration(new { history = "service-managed" }),
+                CreateOpenAiProviderConfigurationJson("service-managed"),
                 "Responses profile for hosted routes, DevUI, and background-response scenarios.",
                 "Not checked",
                 null,
@@ -544,6 +497,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             false,
+            WithDefaultReasoningEffort(
             WithWorkspaceToolProfile(
                 WithProcessAccess(
                 WithProjectStructureAccess(
@@ -564,7 +518,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ArchitectureReview),
+                AgentWorkspaceToolProfileKind.ArchitectureReview)),
             false,
             "portfolio-architect",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, AutoApproveExternalCallsByDefault = true },
@@ -608,6 +562,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.1d,
             false,
             false,
+            WithDefaultReasoningEffort(
             WithWorkspaceToolProfile(
                 WithProcessAccess(
                 WithProjectStructureAccess(
@@ -623,7 +578,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
+                AgentWorkspaceToolProfileKind.QualityValidation)),
             false,
             "delivery-qa-observer",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
@@ -1011,6 +966,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             true,
+            WithDefaultReasoningEffort(
             WithWorkspaceToolProfile(
                 WithProcessAccess(
                 WithProjectStructureAccess(
@@ -1027,7 +983,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 canRead: true,
                 canWrite: false,
                 allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ReadOnly),
+                AgentWorkspaceToolProfileKind.ReadOnly)),
             false,
             "research-deep-dive-analyst",
             AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
@@ -1665,7 +1621,7 @@ internal static class SandboxWorkspaceSeedBuilder
             0.2d,
             false,
             false,
-            configurationJson,
+            WithDefaultReasoningEffort(configurationJson),
             false,
             templateKey,
             permissions,
@@ -1724,6 +1680,57 @@ internal static class SandboxWorkspaceSeedBuilder
         return AgentWorkspaceToolAccessMetadata.Write(
             configurationJson,
             AgentWorkspaceToolAccessProfiles.CreateSettings(profile));
+    }
+
+    private static string WithDefaultReasoningEffort(string configurationJson)
+    {
+        var configuration = ReadConfigurationObject(configurationJson);
+        configuration[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = ManagedSeedProviderFallbacks.DefaultReasoningEffort;
+
+        var modelParameters = configuration.TryGetValue(
+                AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName,
+                out var existingModelParameters) &&
+            existingModelParameters is IDictionary<string, object?> existingModelParameterDictionary
+                ? new Dictionary<string, object?>(existingModelParameterDictionary, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        modelParameters[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = ManagedSeedProviderFallbacks.DefaultReasoningEffort;
+        configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
+        return SerializeConfiguration(configuration);
+    }
+
+    private static string CreateOpenAiProviderConfigurationJson(string history)
+    {
+        return SerializeConfiguration(new
+        {
+            history,
+            reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
+            modelParameters = new
+            {
+                reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
+            }
+        });
+    }
+
+    private static Dictionary<string, object?> ReadConfigurationObject(string configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        using var document = JsonDocument.Parse(configurationJson);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return document.RootElement
+            .EnumerateObject()
+            .ToDictionary(
+                property => property.Name,
+                property => ConvertSeedConfigurationValue(property.Value),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private static string GetSeedSkillRoot(string key)

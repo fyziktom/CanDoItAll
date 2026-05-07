@@ -13,6 +13,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
         "process-step.intake",
         "process-step.architecture",
         "process-step.implementation",
+        "process-step.subprocess",
         "process-step.qa",
         "process-step.release-approval"
     ];
@@ -20,6 +21,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
     [
         "process-definition.edit-step",
         "process-definition.add-dependent-step",
+        "process-definition.add-subprocess-step",
         "process-definition.add-role-binding",
         "process-definition.add-artifact-expectation",
         "process-definition.remove-step"
@@ -350,21 +352,28 @@ public sealed class ProcessCanvasSurfaceFactoryTests
     [Fact]
     public void Runtime_surface_projects_branch_router_for_routed_steps()
     {
+        var runId = Guid.NewGuid();
         var run = new ProcessRunListItem(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            null,
-            "Branching review run",
-            ProcessRunStatus.Active,
-            ProcessOperatingMode.GovernedLive,
-            0,
-            0,
-            0,
-            0,
-            0m,
-            0m,
-            DateTimeOffset.UtcNow);
+            Id: runId,
+            ProcessDefinitionId: Guid.NewGuid(),
+            ProcessDefinitionVersionId: Guid.NewGuid(),
+            ParentRunId: null,
+            ParentStepRunId: null,
+            RootRunId: runId,
+            HierarchyDepth: 0,
+            ProjectId: null,
+            Name: "Branching review run",
+            Status: ProcessRunStatus.Active,
+            OperatingMode: ProcessOperatingMode.GovernedLive,
+            ManagerAgentId: null,
+            ManagerAgentName: string.Empty,
+            CompletedStepCount: 0,
+            TotalStepCount: 0,
+            BlockedStepCount: 0,
+            CapabilityGapCount: 0,
+            EstimatedCost: 0m,
+            ActualCost: 0m,
+            UpdatedAtUtc: DateTimeOffset.UtcNow);
         var stepDefinitionId = Guid.NewGuid();
         var repairOutcomeId = Guid.NewGuid();
         var stepRuns = new List<ProcessStepRunViewModel>

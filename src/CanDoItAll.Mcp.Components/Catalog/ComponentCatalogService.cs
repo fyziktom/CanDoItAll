@@ -495,7 +495,7 @@ public sealed partial class ComponentCatalogService
         if (groupKeys.Count > 0)
         {
             var primaryGroup = groupLookup[groupKeys[0]];
-            return $"Shared {library} component commonly used in the sandbox {primaryGroup.Title} group. {primaryGroup.Summary}";
+            return $"Shared {library} component aligned with the {primaryGroup.Title} component group. {primaryGroup.Summary}";
         }
 
         if (componentName.Contains("Calendar", StringComparison.Ordinal))
@@ -510,10 +510,10 @@ public sealed partial class ComponentCatalogService
 
         if (examples.Count > 0)
         {
-            return $"Shared {library} component with curated sandbox coverage through {examples[0].Title}.";
+            return $"Shared {library} component with documented usage coverage through {examples[0].Title}.";
         }
 
-        return $"Shared {library} component in the extracted component libraries.";
+        return $"Shared {library} component for reusable UI composition in the {library} library.";
     }
 
     private static IReadOnlyList<string> BuildCssNotes(string componentName, string library, string sourcePath)

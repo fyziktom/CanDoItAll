@@ -660,6 +660,229 @@ public sealed class ProcessLaunchPlanningIntegrationTests
     }
 
     [Fact]
+    public async Task CreateLaunchPlanAsync_uses_selected_project_structure_stack_for_javascript_work()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"JavaScript project-structure launch proof {suffix}",
+            objective: "Mixed batch: one .NET CLI app, one Blazor app, and one JavaScript app. The selected work item decides the stack.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build PantryPalette JS app",
+                "Implementation",
+                "Build a small JavaScript app under C:\\repositories\\CanDoItAll\\output\\process-core-sim-20260506\\pantry-palette-js. Validate package scripts and browser-visible behavior.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildJavaScriptArchitectureAndImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"JavaScript app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var architect = GetSelectedCandidate(details!, "Solution architect");
+        var implementer = GetSelectedCandidate(details, "Lead engineer");
+        var dotnetArchitect = GetCandidate(details, "Solution architect", ".NET Solution Architect");
+        var dotnetDeveloper = GetCandidate(details, "Lead engineer", ".NET Application Developer");
+        var blazorDeveloper = GetCandidate(details, "Lead engineer", "Blazor Application Developer");
+
+        Assert.Equal("JavaScript Solution Architect", architect.DisplayName);
+        Assert.Equal("JavaScript Application Developer", implementer.DisplayName);
+        Assert.True(architect.Score > dotnetArchitect.Score);
+        Assert.True(implementer.Score > dotnetDeveloper.Score);
+        Assert.True(implementer.Score > blazorDeveloper.Score);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_does_not_select_blazor_specialist_from_negated_stack_wording()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Negated Blazor launch proof {suffix}",
+            objective: "Deliver a generic .NET console app without a browser UI.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Harbor Ledger console app",
+                "Implementation",
+                "Build a small C#/.NET console app under C:\\programovani\\candoitall-dev-output\\harbor-ledger-proof. Archetype: console app, not Blazor, not Razor, not browser UI. Validate dotnet build and console runtime output.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Console app launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var implementer = GetSelectedCandidate(details!, "Lead engineer");
+        var dotnetDeveloper = GetCandidate(details, "Lead engineer", ".NET Application Developer");
+        var blazorDeveloper = GetCandidate(details, "Lead engineer", "Blazor Application Developer");
+
+        Assert.True(
+            dotnetDeveloper.Score > blazorDeveloper.Score,
+            $".NET score {dotnetDeveloper.Score} should outrank Blazor score {blazorDeveloper.Score} for non-Blazor .NET console work. Selected {implementer.DisplayName} with score {implementer.Score}.");
+        Assert.Equal(".NET Application Developer", implementer.DisplayName);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_ignores_sibling_stack_when_project_structure_context_is_selected()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Sibling stack launch proof {suffix}",
+            objective: "Mixed batch: one C#/.NET console app and one JavaScript browser app. The selected work item decides the staffing stack.");
+        var selectedWorkItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Harbor Ledger console app",
+                "Implementation",
+                "Build a small C#/.NET console app under C:\\programovani\\candoitall-dev-output\\harbor-ledger-proof. Archetype: console app, not Blazor, not Razor, not browser UI, and not JavaScript. Validate dotnet build and console runtime output.",
+                null,
+                ObjectSubtype: "task"));
+        await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Market Mosaic JavaScript app",
+                "Implementation",
+                "Build a small JavaScript browser app under C:\\programovani\\candoitall-dev-output\\market-mosaic-proof. Validate package scripts and browser-visible behavior.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Console app launch with sibling scenario {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = selectedWorkItem.Id,
+                ParentNodeTitle = selectedWorkItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var implementer = GetSelectedCandidate(details!, "Lead engineer");
+        var dotnetDeveloper = GetCandidate(details, "Lead engineer", ".NET Application Developer");
+        var javascriptDeveloper = GetCandidate(details, "Lead engineer", "JavaScript Application Developer");
+
+        Assert.True(
+            dotnetDeveloper.Score > javascriptDeveloper.Score,
+            $".NET score {dotnetDeveloper.Score} should outrank JavaScript score {javascriptDeveloper.Score} when the selected work item is C#/.NET and the JavaScript work is only a sibling. Selected {implementer.DisplayName} with score {implementer.Score}.");
+        Assert.Equal(".NET Application Developer", implementer.DisplayName);
+    }
+
+    [Fact]
+    public void ExternalTargetPathNormalization_strips_escaped_line_break_labels()
+    {
+        var serviceType = typeof(ProcessesService).Assembly.GetType("CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService");
+        Assert.NotNull(serviceType);
+
+        var method = serviceType!.GetMethod(
+            "TryNormalizeAbsoluteExternalPathCandidate",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        object?[] parameters =
+        [
+            @"C:\repositories\CanDoItAll\output\process-core-sim-20260506\pantry-palette-js\nRequired output directory",
+            null
+        ];
+
+        var normalized = (bool)method!.Invoke(null, parameters)!;
+
+        Assert.True(normalized);
+        Assert.Equal(
+            @"C:\repositories\CanDoItAll\output\process-core-sim-20260506\pantry-palette-js",
+            parameters[1]);
+    }
+
+    [Fact]
     public async Task CreateLaunchPlanAsync_infers_project_structure_context_from_single_process_link()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1224,6 +1447,111 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = leadEngineerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildJavaScriptArchitectureAndImplementationLaunchPlanningDefinition(Guid projectId)
+    {
+        var architectRoleId = Guid.NewGuid();
+        var leadEngineerRoleId = Guid.NewGuid();
+        var architectureStepId = Guid.NewGuid();
+        var buildStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Generic JavaScript delivery launch planning proof process",
+            Summary = "Routes architecture and implementation roles from the selected project-structure stack.",
+            ValueStatement = "Launch planning must choose specialists from selected work context, not unrelated sibling batch context.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "Role matching stays generic and selected-work aware.",
+            ChangeSummary = "JavaScript project-structure launch context integration proof.",
+            ConstitutionRuleSummary = "Do not route JavaScript work to .NET specialists when JavaScript specialists are available.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = architectRoleId,
+                    Key = "solution-architect",
+                    DisplayName = "Solution architect",
+                    Purpose = "Review architecture and canonical-model impact for the selected app.",
+                    StaffingIntent = "Select the architecture specialist that matches the selected implementation stack.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 50
+                },
+                new ProcessRoleEditorModel
+                {
+                    Id = leadEngineerRoleId,
+                    Key = "lead-engineer",
+                    DisplayName = "Lead engineer",
+                    Purpose = "Build the requested application.",
+                    StaffingIntent = "Select an AI implementation specialist with build, run, and browser validation capability.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = architectureStepId,
+                    Key = "architecture-review",
+                    Title = "Review architecture",
+                    StepKind = ProcessStepKind.Review,
+                    InputContractSummary = "Selected work item describes the requested app.",
+                    OutputContractSummary = "Architecture direction recorded.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected architecture resource owns architecture guidance.",
+                    ExceptionPolicySummary = "Fail when selected work stack is ignored.",
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = architectRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = buildStepId,
+                    Key = "build-requested-app",
+                    Title = "Build requested app",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Architecture direction and selected work item.",
+                    OutputContractSummary = "Working app prepared with validation evidence.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected AI resource owns implementation.",
+                    ExceptionPolicySummary = "Fail when selected work stack is ignored.",
+                    TargetLeadHours = 1,
+                    CanvasX = 460,
+                    CanvasY = 180,
+                    Dependencies =
+                    [
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = architectureStepId
+                        }
+                    ],
                     RoleAssignments =
                     [
                         new ProcessStepRoleRequirementEditorModel

@@ -4291,6 +4291,7 @@ public sealed partial class AiAgentService(
         {
             return Result<Guid>.Failure(technicalSaveResult.Errors);
         }
+        var technicalAgentSave = technicalSaveResult.Value!;
 
         var profile = await dbContext.Set<AiAgentProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
@@ -4323,8 +4324,8 @@ public sealed partial class AiAgentService(
                 profile.ValidationStatus,
                 model.ProviderProfileId,
                 profile.OwnerPartyId,
-                TechnicalAgentId = technicalSaveResult.Value.TechnicalAgentId,
-                technicalSaveResult.Value.BindingStatus
+                TechnicalAgentId = technicalAgentSave.TechnicalAgentId,
+                technicalAgentSave.BindingStatus
             },
             party.LastChangedBy,
             party.IsSensitive,

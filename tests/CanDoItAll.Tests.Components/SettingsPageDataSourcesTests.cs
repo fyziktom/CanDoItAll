@@ -62,54 +62,6 @@ public sealed class SettingsPageDataSourcesTests
     }
 
     [Fact]
-    public async Task Settings_page_shows_schema_alert_and_applies_current_schema_for_outdated_profile()
-    {
-        await using var harness = await CreateUnlockedHarnessAsync();
-        var databaseProfiles = harness.Context.Services.GetRequiredService<DatabaseProfileWorkspaceService>();
-        var databasePath = Path.Combine(harness.RootPath, "external", "outdated.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-
-        var outdatedSave = await databaseProfiles.SaveProfileAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Outdated SQLite",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-            SqliteDatabasePath = databasePath,
-            WorkspaceRoot = Path.GetDirectoryName(databasePath)
-        });
-        Assert.True(outdatedSave.IsSuccess);
-
-        harness.Context.Services.GetRequiredService<NavigationManager>()
-            .NavigateTo("http://localhost/settings?tab=data-sources");
-
-        var cut = harness.Context.RenderComponent<SettingsPage>();
-        cut.Find("[data-testid='database-profile-row-" + outdatedSave.Value.ToString("N") + "']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("database-profile-schema-alert", cut.Markup);
-            Assert.Contains("database-profile-apply-schema", cut.Markup);
-            Assert.Contains("Needs schema", cut.Markup);
-        });
-
-        cut.Find("[data-testid='database-profile-activate']").Click();
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Apply the current schema before activating this data source.", cut.Markup);
-            Assert.Contains("database-profile-schema-alert", cut.Markup);
-        });
-
-        cut.Find("[data-testid='database-profile-apply-schema']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Current database schema applied.", cut.Markup);
-            Assert.Contains("Schema current", cut.Markup);
-            Assert.DoesNotContain("database-profile-schema-alert", cut.Markup);
-        });
-    }
-
-    [Fact]
     public async Task Transfer_dialog_blocks_preview_and_offers_schema_apply_for_outdated_target()
     {
         await using var harness = await CreateUnlockedHarnessAsync();

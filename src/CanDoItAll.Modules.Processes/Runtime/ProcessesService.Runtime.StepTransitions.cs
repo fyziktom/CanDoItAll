@@ -6,6 +6,8 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessesService
 {
+    private const string PendingDecisionRecordSummary = "Decision record required.";
+
     public async Task<Result> TransitionStepAsync(ProcessStepTransitionRequest request, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -33,7 +35,8 @@ public sealed partial class ProcessesService
             }
 
             var selectedBranchOutcome = transitionResolutionResult.Value!.SelectedBranchOutcome;
-            if (request.TargetStatus == ProcessStepRunStatus.Completed)
+            if (request.TargetStatus == ProcessStepRunStatus.Completed &&
+                RequiresArtifactsForCompletedBranch(selectedBranchOutcome))
             {
                 var artifactValidationResult = ValidateRequiredArtifactsForCompletion(
                     transitionContext.StepRun,
@@ -241,8 +244,9 @@ public sealed partial class ProcessesService
 
         var run = await dbContext.Set<ProcessRun>()
             .SingleAsync(item => item.Id == stepRun.ProcessRunId, cancellationToken);
-        if (run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Cancelled ||
-            run.Status == ProcessRunStatus.Failed && !IsFailedRunStepRestart(request, stepRun))
+        if (run.Status == ProcessRunStatus.Cancelled ||
+            (run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed &&
+                !IsTerminalRunStepTransitionAllowed(run.Status, request, stepRun)))
         {
             return Result<ProcessRuntimeTransitionContext>.Failure(
                 Error.Validation(
@@ -303,10 +307,73 @@ public sealed partial class ProcessesService
                 stepArtifacts));
     }
 
-    private static bool IsFailedRunStepRestart(ProcessStepTransitionRequest request, ProcessStepRun stepRun)
+    private static bool IsTerminalRunStepRestart(ProcessStepTransitionRequest request, ProcessStepRun stepRun)
     {
-        return stepRun.Status == ProcessStepRunStatus.Failed &&
+        return request.AllowCompletedAgentRerun &&
+            stepRun.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed or ProcessStepRunStatus.Completed &&
             request.TargetStatus == ProcessStepRunStatus.InProgress;
+    }
+
+    private static bool IsTerminalRunStepTransitionAllowed(
+        ProcessRunStatus runStatus,
+        ProcessStepTransitionRequest request,
+        ProcessStepRun stepRun)
+    {
+        return IsTerminalRunStepRestart(request, stepRun) ||
+            runStatus == ProcessRunStatus.Failed && IsFailedRunReopenedStepSettlement(request, stepRun);
+    }
+
+    private static bool IsFailedRunReopenedStepSettlement(
+        ProcessStepTransitionRequest request,
+        ProcessStepRun stepRun)
+    {
+        return stepRun.Status == ProcessStepRunStatus.InProgress &&
+            request.TargetStatus is ProcessStepRunStatus.Completed or
+                ProcessStepRunStatus.WaitingApproval or
+                ProcessStepRunStatus.Blocked or
+                ProcessStepRunStatus.Refused or
+                ProcessStepRunStatus.Failed;
+    }
+
+    private static bool RequiresArtifactsForCompletedBranch(ProcessStepBranchOutcomeDefinition? selectedBranchOutcome)
+    {
+        return selectedBranchOutcome is null ||
+            !IsExceptionRoutingBranchOutcome(selectedBranchOutcome);
+    }
+
+    private static bool IsExceptionRoutingBranchOutcome(ProcessStepBranchOutcomeDefinition selectedBranchOutcome)
+    {
+        var token = NormalizeBranchDispositionToken(
+            $"{selectedBranchOutcome.Key} {selectedBranchOutcome.Title} {selectedBranchOutcome.Description}");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        return token.Contains("repair", StringComparison.Ordinal) ||
+               token.Contains("remediation", StringComparison.Ordinal) ||
+               token.Contains("remediate", StringComparison.Ordinal) ||
+               token.Contains("rework", StringComparison.Ordinal) ||
+               token.Contains("fixrequired", StringComparison.Ordinal) ||
+               token.Contains("fixesrequired", StringComparison.Ordinal) ||
+               token.Contains("changesrequired", StringComparison.Ordinal) ||
+               token.Contains("defect", StringComparison.Ordinal) ||
+               token.Contains("failedvalidation", StringComparison.Ordinal) ||
+               token.Contains("validationrejected", StringComparison.Ordinal) ||
+               token.Contains("qualityrejected", StringComparison.Ordinal) ||
+               token.Contains("unresolved", StringComparison.Ordinal) ||
+               token.Contains("escalation", StringComparison.Ordinal) ||
+               token.Contains("exception", StringComparison.Ordinal) ||
+               token.Contains("nogo", StringComparison.Ordinal) ||
+               token.Contains("blocked", StringComparison.Ordinal);
+    }
+
+    private static string NormalizeBranchDispositionToken(string value)
+    {
+        return new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
     }
 
     private static Result ValidateRequiredArtifactsForCompletion(
@@ -458,6 +525,15 @@ public sealed partial class ProcessesService
         {
             stepRun.DecisionSummary = string.IsNullOrWhiteSpace(trimmedReason)
                 ? "Skipped."
+                : trimmedReason;
+        }
+
+        if (request.TargetStatus == ProcessStepRunStatus.Completed &&
+            selectedBranchOutcome is null &&
+            string.Equals(stepRun.DecisionSummary, PendingDecisionRecordSummary, StringComparison.Ordinal))
+        {
+            stepRun.DecisionSummary = string.IsNullOrWhiteSpace(trimmedReason)
+                ? "Decision recorded."
                 : trimmedReason;
         }
 

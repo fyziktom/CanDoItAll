@@ -13,13 +13,32 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProjectStructureAgentApiIntegrationTests
 {
     [Fact]
+    public void ProjectStructureLeaseAcquireRequest_accepts_string_scope_kind()
+    {
+        var request = JsonSerializer.Deserialize<ProjectStructureLeaseAcquireRequest>(
+            """
+            {
+              "scopeKind": "Project",
+              "scopeKey": "project:alpha",
+              "reason": "Agent-authored API lease",
+              "durationMinutes": 15
+            }
+            """,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.NotNull(request);
+        Assert.Equal(ProjectStructureLeaseScopeKind.Project, request.ScopeKind);
+        Assert.Equal("project:alpha", request.ScopeKey);
+    }
+
+    [Fact]
     public async Task ProjectStructureAgentApi_supports_delivery_block_asset_roundtrip_and_records_analytics()
     {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
 
         var project = await PostAndReadAsync<ProjectSummary>(
             host.Client,
-            "/api/project-structure-mcp/projects",
+            "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
                 "API project",
                 "HTTP roundtrip validation",
@@ -29,7 +48,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
             host.Client,
-            "/api/project-structure-mcp/leases/acquire",
+            "/api/project-structure/leases/acquire",
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString(),
@@ -38,7 +57,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var deliveryBlock = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            $"/api/project-structure/projects/{project.Id}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.ProjectBlock,
                 "Delivery block",
@@ -56,7 +75,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var excelAsset = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            $"/api/project-structure/projects/{project.Id}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.File,
                 "Delivery workbook",
@@ -74,7 +93,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var pdfAsset = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            $"/api/project-structure/projects/{project.Id}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.File,
                 "Delivery packet",
@@ -92,7 +111,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/structure/read",
+            $"/api/project-structure/projects/{project.Id}/structure/read",
             new ProjectStructureReadRequest(
                 IncludeLinks: true,
                 IncludeAssets: true,
@@ -107,7 +126,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var analytics = await PostAndReadAsync<ProjectStructureAnalyticsResponse>(
             host.Client,
-            "/api/project-structure-mcp/analytics/query",
+            "/api/project-structure/analytics/query",
             new ProjectStructureAnalyticsQueryRequest(project.Id, Take: 20));
 
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "projects.create" && entry.Succeeded);
@@ -124,7 +143,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
             host.Client,
-            "/api/project-structure-mcp/leases/acquire",
+            "/api/project-structure/leases/acquire",
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.RepoBranch,
                 scopeKey,
@@ -132,10 +151,8 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                 15));
 
         using var competingClient = CreateClientForAgent(host.Client.BaseAddress!, "other-agent", "Other Agent", "other-machine");
-        var token = host.Client.DefaultRequestHeaders.GetValues(ProjectStructureAgentHttpHeaders.AgentToken).Single();
-        competingClient.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentToken, token);
         var response = await competingClient.PostAsJsonAsync(
-            "/api/project-structure-mcp/leases/acquire",
+            "/api/project-structure/leases/acquire",
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.RepoBranch,
                 scopeKey,
@@ -160,7 +177,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var project = await PostAndReadAsync<ProjectSummary>(
             host.Client,
-            "/api/project-structure-mcp/projects",
+            "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
                 "Dependency API project",
                 "HTTP dependency validation",
@@ -170,7 +187,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
             host.Client,
-            "/api/project-structure-mcp/leases/acquire",
+            "/api/project-structure/leases/acquire",
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString(),
@@ -179,7 +196,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var note = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            $"/api/project-structure/projects/{project.Id}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.Note,
                 "Architect note",
@@ -197,7 +214,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var task = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            $"/api/project-structure/projects/{project.Id}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.WorkItem,
                 "Implement feature",
@@ -222,7 +239,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var dependencies = await PostAndReadAsync<ProjectStructureDependencyResponse>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/dependencies/query",
+            $"/api/project-structure/projects/{project.Id}/dependencies/query",
             new ProjectStructureDependencyQueryRequest(DefaultDurationSeconds: 5400));
 
         var noteItem = Assert.Single(dependencies.Items, item => item.NodeId == note.Id);
@@ -242,7 +259,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var project = await PostAndReadAsync<ProjectSummary>(
             host.Client,
-            "/api/project-structure-mcp/projects",
+            "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
                 "Alias API project",
                 "HTTP alias validation",
@@ -252,7 +269,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
             host.Client,
-            "/api/project-structure-mcp/leases/acquire",
+            "/api/project-structure/leases/acquire",
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString(),
@@ -261,7 +278,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var placeholder = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            $"/api/project-structure/projects/{project.Id}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.Note,
                 "Features",
@@ -279,7 +296,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var updateResponse = await PutAndReadJsonAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes/{placeholder.Id}",
+            $"/api/project-structure/projects/{project.Id}/nodes/{placeholder.Id}",
             """
             {
               "title": "Features",
@@ -295,14 +312,14 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var moveAck = await PostAndReadAsync<OperationAck>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/nodes/move",
+            $"/api/project-structure/projects/{project.Id}/nodes/move",
             new ProjectStructureNodeMoveInput(placeholder.Id, 1040, 560, lease.LeaseToken));
 
         Assert.True(moveAck.Ok);
 
         var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
             host.Client,
-            $"/api/project-structure-mcp/projects/{project.Id}/structure/read",
+            $"/api/project-structure/projects/{project.Id}/structure/read",
             new ProjectStructureReadRequest(
                 NodeIds: [placeholder.Id],
                 IncludeLayout: true,
@@ -316,9 +333,158 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Equal(560d, movedNode.Y);
     }
 
+    [Fact]
+    public async Task ProjectStructureAgentApi_supports_focused_node_dependency_and_asset_commands()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                "Command API project",
+                "Focused node command validation",
+                "Validate narrow project-structure API commands.",
+                "Execution",
+                ProjectStatus.Active));
+
+        var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            host.Client,
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                project.Id.ToString(),
+                "Focused node command validation",
+                15));
+
+        var parent = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                "Parent block",
+                string.Empty,
+                "Parent for focused command validation.",
+                $"project:{project.Id}",
+                360,
+                220,
+                null,
+                null,
+                "delivery",
+                null,
+                null,
+                lease.LeaseToken));
+
+        var child = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Note,
+                "Command target",
+                string.Empty,
+                "Node that will be mutated through focused API calls.",
+                parent.Id,
+                620,
+                340,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lease.LeaseToken));
+
+        var typedChild = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{child.Id}/type",
+            new ProjectStructureNodeTypeInput(ProjectObjectType.WorkItem, "task", lease.LeaseToken));
+        Assert.Equal(ProjectObjectType.WorkItem, typedChild.ObjectType);
+        Assert.Equal("task", typedChild.ObjectSubtype);
+
+        Assert.Equal(1, await PostAndReadAsync<int>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{child.Id}/status",
+            new ProjectStructureStatusInput("blocked", lease.LeaseToken)));
+        Assert.Equal(1, await PostAndReadAsync<int>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{child.Id}/progress",
+            new ProjectStructureProgressInput("manual", 35, lease.LeaseToken)));
+        Assert.Equal(1, await PostAndReadAsync<int>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{child.Id}/markers",
+            new ProjectStructureMarkerInput(
+                ProjectStructureMarkerMutationMode.Replace,
+                "flag",
+                "warning",
+                "Review",
+                lease.LeaseToken)));
+        Assert.Equal(1, await PostAndReadAsync<int>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{child.Id}/priority",
+            new ProjectStructurePriorityInput(6, lease.LeaseToken)));
+
+        var dependency = await PostAndReadAsync<ProjectStructureLinkChangeResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/dependencies/link",
+            new ProjectStructureLinkInput(child.Id, parent.Id, ProjectObjectLinkKind.Uses, lease.LeaseToken));
+        Assert.True(dependency.Changed);
+        Assert.Equal(ProjectObjectLinkKind.DependsOn, dependency.Link.Kind);
+
+        var asset = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/assets",
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.File,
+                "Command evidence",
+                "Attachment",
+                "Attachment created through the focused asset API.",
+                CreateMediaPayload("command-evidence.txt", "text/plain", "asset payload"),
+                child.Id,
+                "text",
+                null,
+                lease.LeaseToken));
+
+        var content = await GetAndReadAsync<ProjectStructureAssetContentDescriptor>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/assets/{asset.Id}/content");
+
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/structure/read",
+            new ProjectStructureReadRequest(
+                IncludeLinks: true,
+                IncludeAssets: true,
+                IncludeNotes: true,
+                IncludeMetadata: true));
+
+        var updatedChild = Assert.Single(readback.Nodes, node => node.Id == child.Id);
+        Assert.Equal(ProjectObjectType.WorkItem, updatedChild.ObjectType);
+        Assert.Equal("task", updatedChild.ObjectSubtype);
+        Assert.Equal("blocked", updatedChild.Status);
+        Assert.Equal("progress", updatedChild.ProgressMode);
+        Assert.Equal(35, updatedChild.ProgressPercent);
+        Assert.Equal("Review", updatedChild.MarkerLabel);
+        Assert.Equal(6, updatedChild.Priority);
+        Assert.Contains(readback.Links, link => link.SourceId == child.Id && link.TargetId == parent.Id && link.Kind == ProjectObjectLinkKind.DependsOn);
+        Assert.Equal("command-evidence.txt", asset.MediaOriginalFileName);
+        Assert.Equal("asset payload", Encoding.UTF8.GetString(Convert.FromBase64String(content.Base64Data)));
+    }
+
     private static async Task<T> PostAndReadAsync<T>(HttpClient client, string path, object request)
     {
         var response = await client.PostAsJsonAsync(path, request);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}). Body: {errorBody}");
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<T>();
+        return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
+    }
+
+    private static async Task<T> GetAndReadAsync<T>(HttpClient client, string path)
+    {
+        var response = await client.GetAsync(path);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync();
@@ -367,3 +533,4 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         return client;
     }
 }
+

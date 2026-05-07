@@ -120,6 +120,11 @@ internal static class ProjectStructureRequestedNodeKindParser
         return (objectType!.Value, objectSubtype);
     }
 
+    public static (ProjectObjectType ObjectType, string? ObjectSubtype) ResolveRequired(JsonElement? rawObjectType, string? rawObjectSubtype)
+    {
+        return ResolveRequired(ResolveObjectTypeText(rawObjectType), rawObjectSubtype);
+    }
+
     public static (ProjectObjectType? ObjectType, string? ObjectSubtype) ResolveOptional(string? rawObjectType, string? rawObjectSubtype)
     {
         if (string.IsNullOrWhiteSpace(rawObjectType))
@@ -135,9 +140,42 @@ internal static class ProjectStructureRequestedNodeKindParser
         return (objectType, objectSubtype);
     }
 
+    public static (ProjectObjectType? ObjectType, string? ObjectSubtype) ResolveOptional(JsonElement? rawObjectType, string? rawObjectSubtype)
+    {
+        return ResolveOptional(ResolveObjectTypeText(rawObjectType), rawObjectSubtype);
+    }
+
     public static string? NormalizeSubtypeForType(ProjectObjectType objectType, string? rawObjectSubtype)
     {
         return NormalizeSubtype(objectType, rawObjectSubtype);
+    }
+
+    private static string? ResolveObjectTypeText(JsonElement? rawObjectType)
+    {
+        if (!rawObjectType.HasValue ||
+            rawObjectType.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        var value = rawObjectType.Value;
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            return value.GetString();
+        }
+
+        if (value.ValueKind == JsonValueKind.Number)
+        {
+            if (!value.TryGetInt32(out var numericValue) ||
+                !Enum.IsDefined(typeof(ProjectObjectType), numericValue))
+            {
+                throw new JsonException($"Unsupported objectType numeric value '{value.GetRawText()}'. Use a defined ProjectObjectType value or canonical type name.");
+            }
+
+            return ((ProjectObjectType)numericValue).ToString();
+        }
+
+        throw new JsonException("objectType must be a string enum name, typed alias, or numeric ProjectObjectType value.");
     }
 
     private static bool TryResolve(
@@ -234,7 +272,7 @@ internal sealed class ProjectStructureNodeCreateInputJsonConverter : JsonConvert
             writer,
             new ProjectStructureNodeCreateJsonModel
             {
-                ObjectType = value.ObjectType.ToString(),
+                ObjectType = JsonSerializer.SerializeToElement(value.ObjectType.ToString(), options),
                 Title = value.Title,
                 Subtitle = value.Subtitle,
                 Notes = value.Notes,
@@ -254,7 +292,7 @@ internal sealed class ProjectStructureNodeCreateInputJsonConverter : JsonConvert
 
     private sealed class ProjectStructureNodeCreateJsonModel
     {
-        public string? ObjectType { get; set; }
+        public JsonElement? ObjectType { get; set; }
 
         public string? Title { get; set; }
 
@@ -314,7 +352,9 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
                 Title = value.Title,
                 Subtitle = value.Subtitle,
                 Notes = value.Notes,
-                ObjectType = value.ObjectType?.ToString(),
+                ObjectType = value.ObjectType.HasValue
+                    ? JsonSerializer.SerializeToElement(value.ObjectType.Value.ToString(), options)
+                    : null,
                 ObjectSubtype = value.ObjectSubtype,
                 StartUtc = value.StartUtc,
                 EndUtc = value.EndUtc,
@@ -333,7 +373,7 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
 
         public string? Notes { get; set; }
 
-        public string? ObjectType { get; set; }
+        public JsonElement? ObjectType { get; set; }
 
         public string? ObjectSubtype { get; set; }
 
