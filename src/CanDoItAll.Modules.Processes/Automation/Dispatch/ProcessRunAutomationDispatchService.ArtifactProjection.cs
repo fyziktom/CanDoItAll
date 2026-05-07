@@ -80,6 +80,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             var matchedExpectation = ResolveArtifactExpectation(
                 candidate,
+                detail.Run.InputSummary,
                 artifact,
                 TryDecodeTextArtifactContent(artifact, fullPath, content));
             var placement = await storagePlacementService.PlaceAsync(
@@ -307,18 +308,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         foreach (var expectedArtifact in candidate.ExpectedArtifacts)
         {
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
-            var matchingWrite = fileWrites
-                .LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
+            var matchingWrite = TryResolveProjectStructureExpectedArtifactPath(
+                    candidate,
+                    expectedArtifact,
+                    detail.Run.InputSummary,
+                    out var governedPath)
+                ? fileWrites.LastOrDefault(file => ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ??
+                  receiptFileWrites.LastOrDefault(file => ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath))
+                : fileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
                     candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
                     file.Content)) ??
-                receiptFileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
+                  receiptFileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
                     candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
@@ -460,7 +467,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         foreach (var expectedArtifact in candidate.ExpectedArtifacts)
         {
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -790,7 +797,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -1028,7 +1035,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }

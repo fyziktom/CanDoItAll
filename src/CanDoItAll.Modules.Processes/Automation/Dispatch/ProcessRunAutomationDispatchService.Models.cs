@@ -60,6 +60,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string ValidationRequirementSummary,
         string AllowedFutureUsageSummary);
 
+    internal sealed record ProjectStructureRequiredArtifactPath(
+        string FileName,
+        string AliasPath);
+
     private sealed record DispatchArtifactInput(
         string SourceStepTitle,
         string ExpectedArtifactTitle,

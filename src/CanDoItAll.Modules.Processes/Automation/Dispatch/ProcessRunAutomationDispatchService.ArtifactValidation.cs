@@ -425,7 +425,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var latestValidation = ResolveLatestRequiredImplementationValidationReceipt(candidate, successfulReceipts);
         var artifactReceipts = successfulReceipts
             .Where(IsSuccessfulWorkspaceFileMutationReceipt)
-            .Where(receipt => WorkspaceMutationReceiptMatchesExpectedArtifact(candidate, expectedArtifact, receipt))
+            .Where(receipt => WorkspaceMutationReceiptMatchesExpectedArtifact(candidate, detail, expectedArtifact, receipt))
             .ToList();
         if (latestConcreteMutation is null)
         {
@@ -447,9 +447,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool WorkspaceMutationReceiptMatchesExpectedArtifact(
         DispatchCandidate candidate,
+        ExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact,
         ToolExecutionReceiptRecord receipt)
     {
+        if (TryResolveProjectStructureExpectedArtifactPath(candidate, expectedArtifact, detail.Run.InputSummary, out var governedPath))
+        {
+            return ResolveManagedWorkspacePathsFromReceipt(receipt)
+                .Any(path => ArtifactPathMatchesGovernedProjectStructurePath(path, governedPath));
+        }
+
         return ResolveManagedWorkspacePathsFromReceipt(receipt)
             .Any(path => WorkspaceWrittenFileMatchesExpectedArtifact(
                 candidate.ExpectedArtifacts,
@@ -464,7 +471,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact)
     {
         return candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-               detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id);
+               detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id);
     }
 
     private static bool HasRecordedOrExecutionArtifactForExpectedArtifact(
@@ -483,6 +490,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact,
         string? responseText)
     {
+        if (TryResolveProjectStructureExpectedArtifactPath(candidate, expectedArtifact, detail.Run.InputSummary, out _))
+        {
+            return CanProjectWorkspaceWrittenArtifact(candidate, detail, expectedArtifact);
+        }
+
         if (CanProjectProcessMockArtifact(candidate, detail, expectedArtifact))
         {
             return true;
@@ -865,6 +877,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact)
     {
+        if (TryResolveProjectStructureExpectedArtifactPath(candidate, expectedArtifact, detail.Run.InputSummary, out var governedPath))
+        {
+            return ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
+                .Any(file => ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ||
+                detail.ToolReceipts
+                    .Where(IsSuccessfulWorkspaceFileMutationReceipt)
+                    .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
+                    .Any(path => ArtifactPathMatchesGovernedProjectStructurePath(path, governedPath));
+        }
+
         if (ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
             .Any(file => WorkspaceWrittenFileMatchesExpectedArtifact(
                 candidate.ExpectedArtifacts,
@@ -2051,7 +2073,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string BuildExpectedArtifactSummary(DispatchCandidate candidate)
+    private static string BuildExpectedArtifactSummary(
+        DispatchCandidate candidate,
+        string? projectStructureGroundingSummary = null)
     {
         var expectedArtifacts = candidate.ExpectedArtifacts;
         if (expectedArtifacts.Count == 0)
@@ -2077,6 +2101,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
             {
                 builder.Append("  Validation: ");
                 builder.AppendLine(TrimForPrompt(expectedArtifact.ValidationRequirementSummary, 240));
+            }
+
+            if (TryResolveProjectStructureExpectedArtifactPath(
+                    candidate,
+                    expectedArtifact,
+                    projectStructureGroundingSummary,
+                    out var governedPath))
+            {
+                builder.Append("  Governed path: ");
+                builder.AppendLine(governedPath);
+                builder.AppendLine("  Contract: this required output must be created at the governed path; an internal-only artifact or wrong-root file does not satisfy it.");
             }
 
             var suggestedManagedPath = ResolveSuggestedManagedArtifactPath(candidate, expectedArtifact);
@@ -2116,6 +2151,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ResolveArtifactExpectation(candidate, artifact)?.Id;
     }
 
+    private static Guid? ResolveArtifactExpectationId(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        ExecutionArtifactRecord artifact)
+    {
+        return ResolveArtifactExpectation(candidate, detail.Run.InputSummary, artifact)?.Id;
+    }
+
     private static DispatchArtifactExpectation? ResolveArtifactExpectation(
         DispatchCandidate candidate,
         ExecutionArtifactRecord artifact)
@@ -2128,6 +2171,52 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionArtifactRecord artifact,
         string? artifactTextContent)
     {
+        return ResolveArtifactExpectation(candidate, null, artifact, artifactTextContent);
+    }
+
+    private static DispatchArtifactExpectation? ResolveArtifactExpectation(
+        DispatchCandidate candidate,
+        string? projectStructureContractText,
+        ExecutionArtifactRecord artifact)
+    {
+        return ResolveArtifactExpectation(candidate, projectStructureContractText, artifact, artifactTextContent: null);
+    }
+
+    private static DispatchArtifactExpectation? ResolveArtifactExpectation(
+        DispatchCandidate candidate,
+        string? projectStructureContractText,
+        ExecutionArtifactRecord artifact,
+        string? artifactTextContent)
+    {
+        var governedArtifacts = ResolveProjectStructureRequiredArtifactPaths(projectStructureContractText);
+        if (governedArtifacts.Count > 0)
+        {
+            foreach (var expectedArtifact in candidate.ExpectedArtifacts)
+            {
+                if (TryResolveProjectStructureExpectedArtifactPath(
+                        expectedArtifact,
+                        governedArtifacts,
+                        out var governedPath) &&
+                    ArtifactPathMatchesGovernedProjectStructurePath(artifact.RelativePath, governedPath))
+                {
+                    return expectedArtifact;
+                }
+            }
+
+            var ungovernedExpectedArtifacts = candidate.ExpectedArtifacts
+                .Where(item => !TryResolveProjectStructureExpectedArtifactPath(item, governedArtifacts, out _))
+                .ToList();
+            if (ungovernedExpectedArtifacts.Count == 0)
+            {
+                return null;
+            }
+
+            var ungovernedMatchedExpectationId = MatchExpectedArtifactId(ungovernedExpectedArtifacts, artifact, artifactTextContent);
+            return ungovernedMatchedExpectationId.HasValue
+                ? ungovernedExpectedArtifacts.FirstOrDefault(item => item.Id == ungovernedMatchedExpectationId.Value)
+                : null;
+        }
+
         var matchedExpectationId = MatchExpectedArtifactId(candidate.ExpectedArtifacts, artifact, artifactTextContent);
         if (!matchedExpectationId.HasValue)
         {
@@ -2188,6 +2277,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Where(item => IsManagedNarrativeArtifactFallbackMatch(
                 expectedArtifacts,
                 item,
+                artifact,
                 relativePath,
                 displayName,
                 artifactTextContent))
@@ -2314,11 +2404,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool IsManagedNarrativeArtifactFallbackMatch(
         IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
         DispatchArtifactExpectation expectedArtifact,
+        ExecutionArtifactRecord artifact,
         string relativePath,
         string displayName,
         string? artifactTextContent)
     {
         if (!IsNarrativeEvidenceArtifactExpectation(expectedArtifact) ||
+            IsProviderNativeBrowserOutputArtifact(artifact) ||
             !IsManagedRunTextArtifactPath(relativePath) ||
             expectedArtifacts.Count(IsNarrativeEvidenceArtifactExpectation) != 1)
         {
@@ -2628,6 +2720,171 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         relativePath = string.Empty;
         return false;
+    }
+
+    internal static IReadOnlyList<ProjectStructureRequiredArtifactPath> ResolveProjectStructureRequiredArtifactPaths(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var artifacts = new List<ProjectStructureRequiredArtifactPath>();
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"Required file\s+`(?<file>[^`]+\.md)`\s+must be written at\s+`(?<path>[^`]+)`",
+                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            AddProjectStructureRequiredArtifactPath(
+                artifacts,
+                match.Groups["file"].Value,
+                match.Groups["path"].Value);
+        }
+
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"Governed path:\s*(?<path>external-target/[^\r\n\s`]+)",
+                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            var path = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
+            AddProjectStructureRequiredArtifactPath(
+                artifacts,
+                Path.GetFileName(path),
+                path);
+        }
+
+        return artifacts
+            .GroupBy(item => item.AliasPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(item => item.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool TryResolveProjectStructureExpectedArtifactPath(
+        DispatchCandidate candidate,
+        DispatchArtifactExpectation expectedArtifact,
+        string? projectStructureContractText,
+        out string governedPath)
+    {
+        return TryResolveProjectStructureExpectedArtifactPath(
+            expectedArtifact,
+            ResolveProjectStructureRequiredArtifactPaths(projectStructureContractText),
+            out governedPath);
+    }
+
+    private static bool TryResolveProjectStructureExpectedArtifactPath(
+        DispatchArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProjectStructureRequiredArtifactPath> requiredArtifactPaths,
+        out string governedPath)
+    {
+        governedPath = string.Empty;
+        if (requiredArtifactPaths.Count == 0)
+        {
+            return false;
+        }
+
+        var bestMatch = requiredArtifactPaths
+            .Select(path => new
+            {
+                Path = path,
+                Score = ScoreProjectStructureArtifactPathMatch(expectedArtifact, path.FileName)
+            })
+            .Where(item => item.Score > 0)
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Path.FileName, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        if (bestMatch is null)
+        {
+            return false;
+        }
+
+        governedPath = bestMatch.Path.AliasPath;
+        return !string.IsNullOrWhiteSpace(governedPath);
+    }
+
+    internal static int ScoreProjectStructureArtifactPathMatch(
+        DispatchArtifactExpectation expectedArtifact,
+        string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return 0;
+        }
+
+        var expectedTokens = TokenizeProjectStructureArtifactName(expectedArtifact.Title);
+        var fileTokens = TokenizeProjectStructureArtifactName(Path.GetFileNameWithoutExtension(fileName));
+        if (expectedTokens.Count == 0 || fileTokens.Count == 0)
+        {
+            return 0;
+        }
+
+        var matchedTokenCount = expectedTokens.Count(fileTokens.Contains);
+        if (matchedTokenCount >= Math.Min(2, expectedTokens.Count))
+        {
+            return matchedTokenCount * 10 + (expectedTokens.Count == matchedTokenCount ? 5 : 0);
+        }
+
+        var expectedSlug = FileSafeSlugBuilder.Build(string.Join('-', expectedTokens));
+        var fileSlug = FileSafeSlugBuilder.Build(string.Join('-', fileTokens));
+        return !string.IsNullOrWhiteSpace(expectedSlug) &&
+               !string.IsNullOrWhiteSpace(fileSlug) &&
+               (fileSlug.Contains(expectedSlug, StringComparison.Ordinal) ||
+                expectedSlug.Contains(fileSlug, StringComparison.Ordinal))
+            ? 1
+            : 0;
+    }
+
+    private static IReadOnlyList<string> TokenizeProjectStructureArtifactName(string value)
+    {
+        return TokenizeArtifactComparisonText(value)
+            .Where(token => !ArtifactTitleNoiseTokens.Contains(token))
+            .Where(token => !ArtifactContentNoiseTokens.Contains(token))
+            .Where(token => !token.All(char.IsDigit))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static void AddProjectStructureRequiredArtifactPath(
+        ICollection<ProjectStructureRequiredArtifactPath> artifacts,
+        string fileName,
+        string aliasPath)
+    {
+        var normalizedFileName = fileName.Trim();
+        var normalizedPath = NormalizeProjectStructureArtifactPathForComparison(aliasPath);
+        if (string.IsNullOrWhiteSpace(normalizedFileName) ||
+            string.IsNullOrWhiteSpace(normalizedPath) ||
+            artifacts.Any(item => string.Equals(item.AliasPath, normalizedPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        artifacts.Add(new ProjectStructureRequiredArtifactPath(normalizedFileName, normalizedPath));
+    }
+
+    private static bool ArtifactPathMatchesGovernedProjectStructurePath(
+        string observedPath,
+        string governedPath)
+    {
+        return string.Equals(
+            NormalizeProjectStructureArtifactPathForComparison(observedPath),
+            NormalizeProjectStructureArtifactPathForComparison(governedPath),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeProjectStructureArtifactPathForComparison(string path)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return string.Empty;
+        }
+
+        if (TryMapAbsoluteExternalPathToAlias(normalized, out var mappedAlias))
+        {
+            normalized = mappedAlias;
+        }
+
+        return NormalizeManagedRelativePathForComparison(normalized);
     }
 
     private static GovernedInspectionPaths ResolveGovernedInspectionPaths(IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts)

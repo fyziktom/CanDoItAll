@@ -103,7 +103,20 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.NotNull(childRun);
         Assert.Equal(ProcessRunStatus.Completed, childRun.Status);
 
+        await using (var staleStatusDbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var staleChildRun = await staleStatusDbContext.Set<ProcessRun>()
+                .SingleAsync(item => item.Id == childRunId);
+            staleChildRun.Status = ProcessRunStatus.Active;
+            staleChildRun.CompletedAtUtc = null;
+            await staleStatusDbContext.SaveChangesAsync();
+        }
+
         await dispatchService.DispatchAsync(parentRunId, subprocessStep.Id, "integration-subprocess-complete");
+
+        childRun = await processesService.GetRunAsync(childRunId);
+        Assert.NotNull(childRun);
+        Assert.Equal(ProcessRunStatus.Completed, childRun.Status);
 
         parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run child validation subprocess");

@@ -2,15 +2,15 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessRunStatusResolver
 {
-    public static ProcessRunStatus Resolve(IReadOnlyList<ProcessStepRun> persistedStepRuns, ProcessStepRun currentStepRun)
+    public static ProcessRunStatus Resolve(IReadOnlyList<ProcessStepRun> stepRuns)
     {
-        ArgumentNullException.ThrowIfNull(persistedStepRuns);
-        ArgumentNullException.ThrowIfNull(currentStepRun);
+        ArgumentNullException.ThrowIfNull(stepRuns);
 
-        var stepRuns = persistedStepRuns
-            .Where(item => item.Id != currentStepRun.Id)
-            .Append(currentStepRun)
-            .ToList();
+        if (stepRuns.Count == 0)
+        {
+            return ProcessRunStatus.Active;
+        }
+
         if (stepRuns.All(item => item.Status == ProcessStepRunStatus.Completed || item.Status == ProcessStepRunStatus.Skipped))
         {
             return ProcessRunStatus.Completed;
@@ -27,5 +27,17 @@ internal static class ProcessRunStatusResolver
         }
 
         return ProcessRunStatus.Active;
+    }
+
+    public static ProcessRunStatus Resolve(IReadOnlyList<ProcessStepRun> persistedStepRuns, ProcessStepRun currentStepRun)
+    {
+        ArgumentNullException.ThrowIfNull(persistedStepRuns);
+        ArgumentNullException.ThrowIfNull(currentStepRun);
+
+        var stepRuns = persistedStepRuns
+            .Where(item => item.Id != currentStepRun.Id)
+            .Append(currentStepRun)
+            .ToList();
+        return Resolve(stepRuns);
     }
 }

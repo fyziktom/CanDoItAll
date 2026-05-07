@@ -1566,6 +1566,106 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveProjectStructureRequiredArtifactPaths_extracts_governed_markdown_paths()
+    {
+        var paths = ProcessRunAutomationDispatchService.ResolveProjectStructureRequiredArtifactPaths(
+            """
+            Project-structure required artifact contract:
+            - Required file `02-business-plan.md` must be written at `external-target/C/programovani/candoitall-dev-55-output/business-analysis/02-business-plan.md`.
+            - Required file `04-go-to-market-experiment-plan.md` must be written at `external-target/C/programovani/candoitall-dev-55-output/business-analysis/04-go-to-market-experiment-plan.md`.
+            """);
+
+        Assert.Collection(
+            paths,
+            first =>
+            {
+                Assert.Equal("02-business-plan.md", first.FileName);
+                Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/business-analysis/02-business-plan.md", first.AliasPath);
+            },
+            second =>
+            {
+                Assert.Equal("04-go-to-market-experiment-plan.md", second.FileName);
+                Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/business-analysis/04-go-to-market-experiment-plan.md", second.AliasPath);
+            });
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_rejects_project_structure_artifact_written_to_wrong_root()
+    {
+        var resolveMissingRequiredArtifactSummary = typeof(ProcessRunAutomationDispatchService)
+            .GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Draft the business plan for the reviewed product.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Business plan", true, "Must include customer segment, offer, risks, and validation plan.")],
+            [],
+            triggerReason: "Analyze the reviewed app as a business case and write the plan outputs.",
+            stepTitle: "Draft business plan",
+            processName: "Business plan development",
+            outputContractSummary: "Decision-ready business plan.");
+        var prompt = """
+            Project-structure required artifact contract:
+            - Required file `02-business-plan.md` must be written at `external-target/C/programovani/candoitall-dev-55-output/business-analysis/02-business-plan.md`.
+            """;
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText: string.Empty,
+            serializedSessionStateJson: BuildSerializedSessionState((
+                "workspace_write_file",
+                new Dictionary<string, object?>
+                {
+                    ["path"] = "external-target/C/programovani/candoitall-dev-55-output/scenario-03-js-rain-barrel-chore-splitter/02-business-plan.md",
+                    ["content"] = "Business plan content with customer segment, offer, risks, and validation plan."
+                },
+                CreateProviderNativeTextResult("File written."))),
+            prompt: prompt);
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, string.Empty]) as string;
+
+        Assert.Equal("Business plan", summary);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_accepts_project_structure_artifact_at_governed_path()
+    {
+        var resolveMissingRequiredArtifactSummary = typeof(ProcessRunAutomationDispatchService)
+            .GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Draft the business plan for the reviewed product.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Business plan", true, "Must include customer segment, offer, risks, and validation plan.")],
+            [],
+            triggerReason: "Analyze the reviewed app as a business case and write the plan outputs.",
+            stepTitle: "Draft business plan",
+            processName: "Business plan development",
+            outputContractSummary: "Decision-ready business plan.");
+        var prompt = """
+            Project-structure required artifact contract:
+            - Required file `02-business-plan.md` must be written at `external-target/C/programovani/candoitall-dev-55-output/business-analysis/02-business-plan.md`.
+            """;
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText: string.Empty,
+            serializedSessionStateJson: BuildSerializedSessionState((
+                "workspace_write_file",
+                new Dictionary<string, object?>
+                {
+                    ["path"] = "external-target/C/programovani/candoitall-dev-55-output/business-analysis/02-business-plan.md",
+                    ["content"] = "Business plan content with customer segment, offer, risks, and validation plan."
+                },
+                CreateProviderNativeTextResult("File written."))),
+            prompt: prompt);
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, string.Empty]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveSuccessfulWorkspaceFileMutationReceiptPaths_extracts_receipt_only_artifact_writes()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -1692,6 +1792,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var prompt = buildExecutionPrompt.Invoke(null, [candidate]) as string;
 
         Assert.NotNull(prompt);
+        Assert.Contains(
+            "Treat the run objective, work brief, required artifacts, grounded project-structure nodes, upstream artifacts, and current-run tool outputs as the scope boundary.",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Do not add optional features, extra documents, new workflows, new agent roles, visual flourishes, or technology changes only because they seem useful.",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Escalate with `Blocked` or `Failed` when the requested result cannot be built inside that boundary",
+            prompt,
+            StringComparison.Ordinal);
         Assert.Contains(
             "Do not execute helper scripts, app launches, browser proof, release rollout, or other side actions unless the current step contract or required artifacts explicitly call for them.",
             prompt,
@@ -1905,6 +2017,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 Dispatcher fetched the live project structure for `Business validation project` and focused this prompt on the selected work branch.
                 Grounded external target paths from the selected project structure:
                 - `C:\programovani\candoitall-dev-output\orchard-shift-board-business-v9` mapped to `external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9` from Artifact destination folder (node-target)
+                Project-structure required artifact contract:
+                - Required file `02-business-plan.md` must be written at `external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9/02-business-plan.md`.
                 """,
                 null
             ]) as string;
@@ -1912,6 +2026,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.NotNull(prompt);
         Assert.Contains("described as an artifact, report, plan, document, or handoff destination", prompt, StringComparison.Ordinal);
         Assert.Contains("Write required generated deliverable artifacts under `external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Governed path: external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9/02-business-plan.md", prompt, StringComparison.Ordinal);
+        Assert.Contains("wrong-root file does not satisfy it", prompt, StringComparison.Ordinal);
         Assert.Contains("write it under `external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9`", prompt, StringComparison.Ordinal);
     }
 
@@ -2035,6 +2151,67 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Contains("Grounded external target paths from the selected project structure:", summary, StringComparison.Ordinal);
         Assert.Contains(@"C:\programovani\dotnet\CommunityGardenMap", summary, StringComparison.Ordinal);
         Assert.Contains("external-target/C/programovani/dotnet/CommunityGardenMap", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildProjectStructureGroundingSummary_includes_required_artifact_contract_from_focus_node()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var groundingNodeType = serviceType.GetNestedType("ProjectStructureGroundingNodeData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ProjectStructureGroundingNodeData type was not found.");
+        var nodes = Array.CreateInstance(groundingNodeType, 1);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "node-target",
+                string.Empty,
+                "ProjectBlock",
+                "business-analysis",
+                "Scenario 05 - Business Analysis",
+                string.Empty,
+                string.Empty,
+                """
+                Business-analysis output root: C:\programovani\candoitall-dev-55-output\business-analysis
+                Required durable files: 00-strategy-intake-brief.md, 01-product-evidence-assessment.md, 02-business-plan.md, 03-financial-model-and-sensitivity.md, 04-go-to-market-experiment-plan.md, 05-integrated-business-plan-review.md, 06-run-summary.md
+                Planning constraints: separate observed facts from assumptions.
+                """,
+                "{}"),
+            0);
+        var method = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate =>
+            {
+                if (candidate.Name != "BuildProjectStructureGroundingSummary")
+                {
+                    return false;
+                }
+
+                var parameters = candidate.GetParameters();
+                return parameters.Length == 3 &&
+                       parameters[0].ParameterType == typeof(string) &&
+                       parameters[2].ParameterType == typeof(ProcessProjectStructureContext);
+            });
+
+        var summary = method.Invoke(
+            null,
+            [
+                "Business validation project",
+                nodes,
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "node-target",
+                    NodeTitle = "Scenario 05 - Business Analysis"
+                }
+            ]) as string;
+
+        Assert.NotNull(summary);
+        Assert.Contains("Project-structure required artifact contract:", summary, StringComparison.Ordinal);
+        Assert.Contains(
+            "Required file `04-go-to-market-experiment-plan.md` must be written at `external-target/C/programovani/candoitall-dev-55-output/business-analysis/04-go-to-market-experiment-plan.md`",
+            summary,
+            StringComparison.Ordinal);
+        Assert.Contains("wrong-root or sibling-root files do not satisfy", summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -5442,7 +5619,10 @@ Downstream artifact expectations: implementation change set, migration checklist
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
-        var resolveFailures = serviceType.GetMethod("ResolveUnresolvedCriticalToolFailures", BindingFlags.NonPublic | BindingFlags.Static)
+        var resolveFailures = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => string.Equals(method.Name, "ResolveUnresolvedCriticalToolFailures", StringComparison.Ordinal) &&
+                              method.GetParameters().Length == 1)
             ?? throw new InvalidOperationException("ResolveUnresolvedCriticalToolFailures method was not found.");
 
         var tempWorkspace = Path.Combine(Path.GetTempPath(), $"candoitall-browser-proof-{Guid.NewGuid():N}");
@@ -5523,7 +5703,10 @@ Downstream artifact expectations: implementation change set, migration checklist
     public void ResolveUnresolvedCriticalToolFailures_ignores_redundant_denied_bootstrap_after_tool_backed_validation_succeeds()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
-        var resolveFailures = serviceType.GetMethod("ResolveUnresolvedCriticalToolFailures", BindingFlags.NonPublic | BindingFlags.Static)
+        var resolveFailures = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => string.Equals(method.Name, "ResolveUnresolvedCriticalToolFailures", StringComparison.Ordinal) &&
+                              method.GetParameters().Length == 1)
             ?? throw new InvalidOperationException("ResolveUnresolvedCriticalToolFailures method was not found.");
 
         var now = DateTimeOffset.UtcNow;
@@ -7572,7 +7755,7 @@ Ancestor path to the target work node:
         Assert.Contains("For JavaScript or TypeScript browser proof", prompt, StringComparison.Ordinal);
         Assert.Contains("Mandatory browser proof execution plan", prompt, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", prompt, StringComparison.Ordinal);
-        Assert.Contains("then call `browser_snapshot`, `browser_take_screenshot`, and `browser_console_messages`", prompt, StringComparison.Ordinal);
+        Assert.Contains("then call `browser_snapshot` with depth 2 and boxes false, `browser_take_screenshot` with fullPage false or no fullPage argument, and `browser_console_messages`", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not use `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for JavaScript or TypeScript deliverables", prompt, StringComparison.Ordinal);
         Assert.Contains("first create a helper script", prompt, StringComparison.Ordinal);
         Assert.Contains("Never write helper code like `Resolve-Path 'external-target/C/...'`", prompt, StringComparison.Ordinal);
@@ -10878,7 +11061,8 @@ Ancestor path to the target work node:
     private static ExecutionRunDetail CreateSuccessfulExecutionDetail(
         string responseText,
         string? serializedSessionStateJson,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
+        string prompt = "Prompt")
     {
         var now = DateTimeOffset.UtcNow;
         return new ExecutionRunDetail(
@@ -10894,7 +11078,7 @@ Ancestor path to the target work node:
                 "process-automation-dispatch",
                 "system",
                 "{}",
-                "Prompt",
+                prompt,
                 responseText,
                 "OpenAI chat completions",
                 "gpt-5.4-mini",

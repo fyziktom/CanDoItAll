@@ -596,6 +596,13 @@ ORDER BY "CreatedAtUtc", "Title";
             }
         }
 
+        var requiredArtifactPaths = ResolveProjectStructureRequiredArtifactPathsForFocus(
+            nodesById,
+            nodesByParentId,
+            targetNodeId,
+            selectedProcessNodeId);
+        AppendProjectStructureRequiredArtifactContract(builder, requiredArtifactPaths);
+
         var ancestorPath = ResolveProjectStructureAncestorPath(targetNodeId, nodesById);
         if (ancestorPath.Count > 0)
         {

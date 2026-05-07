@@ -188,7 +188,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine(workBrief?.EvidenceExpectationSummary ?? "Save any relevant evidence artifacts inside the workspace.");
         builder.AppendLine();
         builder.AppendLine("Required output artifacts:");
-        builder.AppendLine(BuildExpectedArtifactSummary(candidate));
+        builder.AppendLine(BuildExpectedArtifactSummary(candidate, projectStructureGroundingSummary));
         builder.AppendLine();
         var requiredToolNames = ResolveRequiredToolNames(candidate);
         if (requiredToolNames.Count > 0)
@@ -309,6 +309,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         builder.AppendLine("Execution rules:");
         builder.AppendLine("- Complete the actual work described in the work brief and expected outcome before writing summary artifacts.");
+        builder.AppendLine("- Treat the run objective, work brief, required artifacts, grounded project-structure nodes, upstream artifacts, and current-run tool outputs as the scope boundary. Do not add optional features, extra documents, new workflows, new agent roles, visual flourishes, or technology changes only because they seem useful.");
+        builder.AppendLine("- Escalate with `Blocked` or `Failed` when the requested result cannot be built inside that boundary because of missing architecture, unavailable credentials or access, tool policy denial, paid or licensed dependency requirements, destructive migration risk, security constraints, or unexpectedly large development outside the step contract. Name the exact blocker and the smallest decision or input needed.");
         builder.AppendLine("- Required output artifacts are evidence of completed work. They do not replace code changes, runnable outputs, tests, screenshots, or other concrete deliverables.");
         builder.AppendLine("- Do not execute helper scripts, app launches, browser proof, release rollout, or other side actions unless the current step contract or required artifacts explicitly call for them.");
             builder.AppendLine($"- Use `{requiredArtifactDefaultRoot}` for required text artifacts that do not have an explicit governed path. Use `{currentRunManagedArtifactRoot}` for current-run managed evidence, drafts, and logs.");

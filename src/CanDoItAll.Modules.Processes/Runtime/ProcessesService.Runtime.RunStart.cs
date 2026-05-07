@@ -717,7 +717,10 @@ public sealed partial class ProcessesService
             .SingleOrDefaultAsync(cancellationToken);
         if (existingRun is not null)
         {
-            return Result<ProcessSubprocessRunStartResult>.Success(existingRun);
+            return Result<ProcessSubprocessRunStartResult>.Success(await ReconcileExistingSubprocessRunStatusAsync(
+                dbContext,
+                existingRun,
+                cancellationToken));
         }
 
         var startResult = await StartRunAsync(
@@ -752,6 +755,48 @@ public sealed partial class ProcessesService
             .SingleAsync(cancellationToken);
 
         return Result<ProcessSubprocessRunStartResult>.Success(startedRun);
+    }
+
+    private async Task<ProcessSubprocessRunStartResult> ReconcileExistingSubprocessRunStatusAsync(
+        AppDbContext dbContext,
+        ProcessSubprocessRunStartResult existingRun,
+        CancellationToken cancellationToken)
+    {
+        if (existingRun.Status != ProcessRunStatus.Active)
+        {
+            return existingRun;
+        }
+
+        var stepRuns = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == existingRun.RunId)
+            .ToListAsync(cancellationToken);
+        var resolvedStatus = ProcessRunStatusResolver.Resolve(stepRuns);
+        if (resolvedStatus == existingRun.Status)
+        {
+            return existingRun;
+        }
+
+        var run = await dbContext.Set<ProcessRun>()
+            .SingleAsync(item => item.Id == existingRun.RunId, cancellationToken);
+        var now = clock.GetUtcNow();
+        run.Status = resolvedStatus;
+        run.UpdatedAtUtc = now;
+        run.CompletedAtUtc = resolvedStatus is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled
+            ? now
+            : null;
+        run.ConcurrencyToken = Guid.NewGuid();
+
+        logger.LogWarning(
+            "Reconciled stale active subprocess run {RunId} to {Status} from its step ledger.",
+            existingRun.RunId,
+            resolvedStatus);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return existingRun with
+        {
+            Status = resolvedStatus
+        };
     }
 
     private static ProcessRunAssignment ResolveRunAssignment(
