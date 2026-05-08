@@ -487,9 +487,9 @@ public sealed class ProcessWorkspaceTests
         var roleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(role);
         var implementationNodeId = ProcessCanvasBranching.BuildDefinitionStepNodeId(implementationStep);
         var mergeNodeId = ProcessCanvasBranching.BuildDefinitionStepNodeId(mergeStep);
+        var artifactNodeId = ProcessCanvasBranching.BuildDefinitionArtifactNodeId(implementationArtifact);
         var responsibleRolePortId = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Responsible);
         var responsibleStepPortId = ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible);
-        var artifactOutputPortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(implementationArtifact);
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
             new CanvasWorkbenchContextActionRequest(
@@ -520,10 +520,10 @@ public sealed class ProcessWorkspaceTests
                 0,
                 0,
                 "link",
-                implementationNodeId,
+                artifactNodeId,
                 mergeNodeId,
                 "flow",
-                artifactOutputPortId,
+                ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput,
                 ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs))));
 
         cut.WaitForAssertion(() =>
@@ -534,6 +534,22 @@ public sealed class ProcessWorkspaceTests
             var currentArtifact = Assert.Single(currentImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
             Assert.Contains(currentMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == currentArtifact.Id);
             Assert.Contains(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep), dependency => dependency.DependsOnStepId == currentImplementationStep.Id);
+        });
+        var artifactCloneNodeId = string.Empty;
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentImplementationStep = Assert.Single(editor.Steps, step => step.Key == process.ImplementationStepKey);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            var currentArtifact = Assert.Single(currentImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+            var currentArtifactInput = Assert.Single(currentMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == currentArtifact.Id);
+            artifactCloneNodeId = ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(currentArtifact, currentArtifactInput, currentMergeStep);
+            var currentSurface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Contains(currentSurface.Links, link =>
+                link.SourceId == artifactCloneNodeId &&
+                link.TargetId == mergeNodeId &&
+                link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput &&
+                link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
         });
 
         var persistedEditor = await WaitForPersistedEditorAsync(
@@ -589,10 +605,10 @@ public sealed class ProcessWorkspaceTests
                 0,
                 0,
                 "link",
-                implementationNodeId,
+                artifactCloneNodeId,
                 mergeNodeId,
                 "flow",
-                artifactOutputPortId,
+                ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput,
                 ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs))));
 
         cut.WaitForAssertion(() =>

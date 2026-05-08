@@ -5,9 +5,14 @@ public static class ProcessCanvasBranching
     public const string DefinitionStepNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionStep;
     public const string DefinitionBranchNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionBranchRouter;
     public const string DefinitionRoleNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionRole;
+    public const string DefinitionArtifactNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionArtifact;
+    public const string DefinitionArtifactCloneNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionArtifactClone;
     public const string RuntimeStepNodePrefix = ProcessCanvasCatalog.NodePrefixes.RuntimeStep;
     public const string RuntimeBranchNodePrefix = ProcessCanvasCatalog.NodePrefixes.RuntimeBranchRouter;
     public const string DefinitionRoleInstanceSeparator = ":step:";
+    public const string DefinitionArtifactCloneInputSeparator = ":input:";
+    public const string DefinitionArtifactCloneStepSeparator = ":step:";
+    public const string DefinitionArtifactCloneDraftSeparator = ":draft:";
 
     public const string DefaultRouteKey = "__default__";
     public const string ErrorRouteKey = "__error__";
@@ -153,6 +158,34 @@ public static class ProcessCanvasBranching
         return $"{BuildDefinitionRoleNodeId(role)}{DefinitionRoleInstanceSeparator}{BuildNodeToken(step.Id, step.Key, step.Title, "step")}";
     }
 
+    public static string BuildDefinitionArtifactNodeId(ProcessArtifactExpectationEditorModel artifact)
+    {
+        ArgumentNullException.ThrowIfNull(artifact);
+
+        return $"{DefinitionArtifactNodePrefix}{BuildNodeToken(artifact.Id, string.Empty, artifact.Title, "artifact")}";
+    }
+
+    public static string BuildDefinitionArtifactCloneNodeId(
+        ProcessArtifactExpectationEditorModel artifact,
+        ProcessStepArtifactInputEditorModel artifactInput,
+        ProcessStepEditorModel targetStep)
+    {
+        ArgumentNullException.ThrowIfNull(artifact);
+        ArgumentNullException.ThrowIfNull(artifactInput);
+        ArgumentNullException.ThrowIfNull(targetStep);
+
+        var artifactToken = BuildNodeToken(artifact.Id, string.Empty, artifact.Title, "artifact");
+        var cloneToken = artifactInput.Id.HasValue && artifactInput.Id.Value != Guid.Empty
+            ? $"{DefinitionArtifactCloneInputSeparator}{artifactInput.Id.Value:D}"
+            : $"{DefinitionArtifactCloneStepSeparator}{BuildNodeToken(targetStep.Id, targetStep.Key, targetStep.Title, "step")}";
+        return $"{DefinitionArtifactCloneNodePrefix}{artifactToken}{cloneToken}";
+    }
+
+    public static string BuildDefinitionArtifactDraftCloneNodeId(Guid artifactExpectationId, Guid draftId)
+    {
+        return $"{DefinitionArtifactCloneNodePrefix}{artifactExpectationId:D}{DefinitionArtifactCloneDraftSeparator}{draftId:D}";
+    }
+
     public static string BuildRuntimeStepNodeId(Guid stepRunId)
     {
         return $"{RuntimeStepNodePrefix}{stepRunId:D}";
@@ -250,6 +283,47 @@ public static class ProcessCanvasBranching
         }
 
         return true;
+    }
+
+    public static bool TryResolveDefinitionArtifactToken(string? nodeId, out string token)
+    {
+        token = string.Empty;
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return false;
+        }
+
+        if (nodeId.StartsWith(DefinitionArtifactNodePrefix, StringComparison.Ordinal))
+        {
+            token = nodeId[DefinitionArtifactNodePrefix.Length..];
+            return !string.IsNullOrWhiteSpace(token);
+        }
+
+        if (!nodeId.StartsWith(DefinitionArtifactCloneNodePrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        token = nodeId[DefinitionArtifactCloneNodePrefix.Length..];
+        var separatorIndex = ResolveArtifactCloneSeparatorIndex(token);
+        if (separatorIndex >= 0)
+        {
+            token = token[..separatorIndex];
+        }
+
+        return !string.IsNullOrWhiteSpace(token);
+    }
+
+    public static bool IsDefinitionArtifactNodeId(string? nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+            nodeId.StartsWith(DefinitionArtifactNodePrefix, StringComparison.Ordinal);
+    }
+
+    public static bool IsDefinitionArtifactCloneNodeId(string? nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+            nodeId.StartsWith(DefinitionArtifactCloneNodePrefix, StringComparison.Ordinal);
     }
 
     public static bool IsDefinitionRoleInstanceNodeId(string? nodeId)
@@ -402,6 +476,18 @@ public static class ProcessCanvasBranching
             Description = description
         };
     }
+
+    private static int ResolveArtifactCloneSeparatorIndex(string token)
+    {
+        var inputSeparatorIndex = token.IndexOf(DefinitionArtifactCloneInputSeparator, StringComparison.Ordinal);
+        var stepSeparatorIndex = token.IndexOf(DefinitionArtifactCloneStepSeparator, StringComparison.Ordinal);
+        var draftSeparatorIndex = token.IndexOf(DefinitionArtifactCloneDraftSeparator, StringComparison.Ordinal);
+        return new[] { inputSeparatorIndex, stepSeparatorIndex, draftSeparatorIndex }
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(-1)
+            .Min();
+    }
+
     private static string BuildNodeToken(Guid? id, string key, string title, string fallbackPrefix)
     {
         if (id.HasValue && id.Value != Guid.Empty)

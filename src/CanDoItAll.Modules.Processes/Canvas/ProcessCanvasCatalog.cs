@@ -9,6 +9,7 @@ public static class ProcessCanvasCatalog
         public const string DefinitionStep = "process-step";
         public const string DefinitionBranchRouter = "process-branch-router";
         public const string DefinitionRole = "process-role";
+        public const string DefinitionArtifact = "process-artifact";
         public const string RuntimeStep = "process-run-step";
         public const string RuntimeBranchRouter = "process-run-branch-router";
     }
@@ -18,6 +19,8 @@ public static class ProcessCanvasCatalog
         public const string DefinitionStep = "step:";
         public const string DefinitionBranchRouter = "branch:";
         public const string DefinitionRole = "role:";
+        public const string DefinitionArtifact = "artifact:";
+        public const string DefinitionArtifactClone = "artifact-clone:";
         public const string RuntimeStep = "run-step:";
         public const string RuntimeBranchRouter = "run-branch:";
     }
@@ -30,6 +33,8 @@ public static class ProcessCanvasCatalog
         public const string StepArtifactInputs = "step:artifact-inputs";
         public const string StepArtifactInputPrefix = "step:artifact-input:";
         public const string StepArtifactOutputPrefix = "step:artifact-output:";
+        public const string ArtifactSourceInput = "artifact:source";
+        public const string ArtifactUsageOutput = "artifact:usage";
         public const string BranchStepInput = "branch:step-input";
         public const string BranchDecisionRoleInput = "branch:decision-role";
         public const string BranchOutcomeOutputPrefix = "route:";
@@ -278,7 +283,8 @@ public static class ProcessCanvasCatalog
     [
         NodeKinds.DefinitionStep,
         NodeKinds.DefinitionBranchRouter,
-        NodeKinds.DefinitionRole
+        NodeKinds.DefinitionRole,
+        NodeKinds.DefinitionArtifact
     ];
 
     public static IReadOnlyList<string> RuntimeNodeKinds { get; } =

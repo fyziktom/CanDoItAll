@@ -15,12 +15,25 @@ public sealed partial class ProcessCanvasSurfaceFactory
             .ToDictionary(step => step.Id!.Value);
         var artifactOwnersById = steps
             .SelectMany(step => step.ArtifactExpectations
-                .Where(artifact => artifact.Id.HasValue)
+                .Where(artifact => artifact.Id is { } artifactId && artifactId != Guid.Empty)
                 .Select(artifact => new KeyValuePair<Guid, (ProcessStepEditorModel Step, ProcessArtifactExpectationEditorModel Artifact)>(
                     artifact.Id!.Value,
                     (step, artifact))))
             .ToDictionary(item => item.Key, item => item.Value);
         var links = new List<CanvasWorkbenchLink>();
+
+        foreach (var artifactOwner in artifactOwnersById.Values)
+        {
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildDefinitionNodeId(artifactOwner.Step),
+                SourcePortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifactOwner.Artifact),
+                TargetId = ProcessCanvasBranching.BuildDefinitionArtifactNodeId(artifactOwner.Artifact),
+                TargetPortId = ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput,
+                Kind = "artifact",
+                IsUserAuthored = true
+            });
+        }
 
         foreach (var step in steps.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
         {
@@ -130,8 +143,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
 
                 links.Add(new CanvasWorkbenchLink
                 {
-                    SourceId = BuildDefinitionNodeId(artifactOwner.Step),
-                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifactOwner.Artifact),
+                    SourceId = ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(artifactOwner.Artifact, artifactInput, step),
+                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput,
                     TargetId = BuildDefinitionNodeId(step),
                     TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs,
                     Kind = "artifact",

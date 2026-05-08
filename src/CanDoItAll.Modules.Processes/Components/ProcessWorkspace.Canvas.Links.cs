@@ -6,6 +6,22 @@ public partial class ProcessWorkspace
 {
     private async Task DeleteDefinitionCanvasNodeAsync(string? nodeId)
     {
+        if (!string.IsNullOrWhiteSpace(nodeId) &&
+            artifactCloneDrafts.Remove(nodeId))
+        {
+            var uiState = CloneCanvasUiState(ResolveStoredCanvasUiState());
+            uiState.ManualPositions.Remove(nodeId);
+            uiState.SelectedNodeIds = uiState.SelectedNodeIds
+                .Where(selectedNodeId => !string.Equals(selectedNodeId, nodeId, StringComparison.Ordinal))
+                .ToList();
+            StoreCanvasUiState(uiState);
+            SelectFallbackDefinitionNode();
+            RefreshCanvasSurface();
+            SetMessage("Artifact clone draft was removed from the canvas.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         if (ResolveDefinitionRole(nodeId) is { } role)
         {
             var roleLabel = ResolveRoleLabel(role);
@@ -276,16 +292,14 @@ public partial class ProcessWorkspace
     private bool TryDeleteArtifactInputLink(CanvasWorkbenchContextActionRequest request, out string message)
     {
         message = string.Empty;
-        if (!IsDefinitionStepNodeId(request.LinkSourceId) ||
-            !IsDefinitionStepNodeId(request.LinkTargetId) ||
+        if (!IsDefinitionStepNodeId(request.LinkTargetId) ||
             !string.Equals(request.LinkTargetPortId, ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs, StringComparison.Ordinal))
         {
             return false;
         }
 
-        if (ResolveDefinitionStep(request.LinkSourceId) is not { } sourceStep ||
-            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
-            !TryResolveDefinitionArtifactByOutputPortId(sourceStep, request.LinkSourcePortId, out var artifact))
+        if (ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
+            !TryResolveDefinitionArtifactConnectionSource(request.LinkSourceId, request.LinkSourcePortId, out var sourceStep, out var artifact))
         {
             return false;
         }
@@ -296,7 +310,7 @@ public partial class ProcessWorkspace
             return false;
         }
 
-        message = $"{ResolveStepLabel(targetStep)} no longer consumes the '{artifact.Title}' artifact from {ResolveStepLabel(sourceStep)}.";
+        message = $"{ResolveStepLabel(targetStep)} no longer consumes the '{ResolveArtifactLabel(artifact)}' artifact from {ResolveStepLabel(sourceStep)}.";
         return true;
     }
 
@@ -406,34 +420,77 @@ public partial class ProcessWorkspace
     private bool TryCreateArtifactInputConnection(CanvasWorkbenchContextActionRequest request, out string message)
     {
         message = string.Empty;
-        if (!IsDefinitionStepNodeId(request.LinkSourceId) ||
-            !IsDefinitionStepNodeId(request.LinkTargetId) ||
+        if (!IsDefinitionStepNodeId(request.LinkTargetId) ||
             !string.Equals(request.LinkTargetPortId, ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs, StringComparison.Ordinal))
         {
             return false;
         }
 
-        if (ResolveDefinitionStep(request.LinkSourceId) is not { Id: { } sourceStepId } sourceStep ||
-            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
-            !TryResolveDefinitionArtifactByOutputPortId(sourceStep, request.LinkSourcePortId, out var artifact))
+        if (ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
+            !TryResolveDefinitionArtifactConnectionSource(request.LinkSourceId, request.LinkSourcePortId, out var sourceStep, out var artifact) ||
+            sourceStep.Id is not Guid sourceStepId)
         {
             return false;
         }
 
         var dependencyBranchOutcomeId = ResolveArtifactDependencyBranchOutcomeId(sourceStep, targetStep);
         AddStepDependency(targetStep, sourceStepId, dependencyBranchOutcomeId);
-        if (targetStep.ArtifactInputs.All(input => input.ArtifactExpectationId != artifact.Id))
+        var artifactInput = targetStep.ArtifactInputs.FirstOrDefault(input => input.ArtifactExpectationId == artifact.Id);
+        if (artifactInput is null)
         {
-            targetStep.ArtifactInputs.Add(new ProcessStepArtifactInputEditorModel
+            artifactInput = new ProcessStepArtifactInputEditorModel
             {
                 Id = Guid.NewGuid(),
                 ArtifactExpectationId = artifact.Id
-            });
-            message = $"{ResolveStepLabel(targetStep)} now consumes the '{artifact.Title}' artifact from {ResolveStepLabel(sourceStep)}.";
+            };
+            targetStep.ArtifactInputs.Add(artifactInput);
+            TryConvertDraftArtifactCloneToInputClone(request.LinkSourceId, artifact, artifactInput, targetStep);
+            message = $"{ResolveStepLabel(targetStep)} now consumes the '{ResolveArtifactLabel(artifact)}' artifact from {ResolveStepLabel(sourceStep)}.";
             return true;
         }
 
-        message = $"{ResolveStepLabel(targetStep)} already consumes the '{artifact.Title}' artifact from {ResolveStepLabel(sourceStep)}.";
+        TryConvertDraftArtifactCloneToInputClone(request.LinkSourceId, artifact, artifactInput, targetStep);
+        message = $"{ResolveStepLabel(targetStep)} already consumes the '{ResolveArtifactLabel(artifact)}' artifact from {ResolveStepLabel(sourceStep)}.";
+        return true;
+    }
+
+    private bool TryResolveDefinitionArtifactConnectionSource(
+        string? sourceNodeId,
+        string? sourcePortId,
+        out ProcessStepEditorModel sourceStep,
+        out ProcessArtifactExpectationEditorModel artifact)
+    {
+        sourceStep = default!;
+        artifact = default!;
+        if (IsDefinitionStepNodeId(sourceNodeId))
+        {
+            if (ResolveDefinitionStep(sourceNodeId) is not { } resolvedSourceStep ||
+                !TryResolveDefinitionArtifactByOutputPortId(resolvedSourceStep, sourcePortId, out var resolvedArtifact) ||
+                !resolvedArtifact.Id.HasValue)
+            {
+                return false;
+            }
+
+            sourceStep = resolvedSourceStep;
+            artifact = resolvedArtifact;
+            return true;
+        }
+
+        if (!string.Equals(sourcePortId, ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput, StringComparison.Ordinal) ||
+            (!ProcessCanvasBranching.IsDefinitionArtifactNodeId(sourceNodeId) &&
+                !ProcessCanvasBranching.IsDefinitionArtifactCloneNodeId(sourceNodeId)))
+        {
+            return false;
+        }
+
+        if (!TryResolveDefinitionArtifactWithOwner(sourceNodeId, out var artifactFromNode, out var ownerStep) ||
+            !artifactFromNode.Id.HasValue)
+        {
+            return false;
+        }
+
+        sourceStep = ownerStep;
+        artifact = artifactFromNode;
         return true;
     }
 

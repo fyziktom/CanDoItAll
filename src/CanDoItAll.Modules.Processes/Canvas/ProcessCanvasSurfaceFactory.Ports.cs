@@ -288,6 +288,38 @@ public sealed partial class ProcessCanvasSurfaceFactory
         ];
     }
 
+    private static List<CanvasWorkbenchPort> BuildDefinitionArtifactInputPorts()
+    {
+        return
+        [
+            new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput,
+                Label = "Produced by",
+                Side = "left",
+                Tone = "accent",
+                Kind = "artifact-source",
+                IsRequired = true
+            }
+        ];
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionArtifactOutputPorts()
+    {
+        return
+        [
+            new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput,
+                Label = "Use artifact",
+                Side = "right",
+                Tone = "accent",
+                Kind = "artifact-output",
+                IsRequired = true
+            }
+        ];
+    }
+
     private static List<CanvasWorkbenchPort> BuildRunStepInputPorts(
         ProcessStepRunViewModel stepRun,
         ProcessCanvasCatalog.StepKindProfile profile)

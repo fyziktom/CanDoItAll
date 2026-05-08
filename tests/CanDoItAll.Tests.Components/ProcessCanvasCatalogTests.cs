@@ -12,7 +12,8 @@ public sealed class ProcessCanvasCatalogTests
             [
                 ProcessCanvasCatalog.NodeKinds.DefinitionStep,
                 ProcessCanvasCatalog.NodeKinds.DefinitionBranchRouter,
-                ProcessCanvasCatalog.NodeKinds.DefinitionRole
+                ProcessCanvasCatalog.NodeKinds.DefinitionRole,
+                ProcessCanvasCatalog.NodeKinds.DefinitionArtifact
             ],
             ProcessCanvasCatalog.DefinitionNodeKinds);
         Assert.Equal(

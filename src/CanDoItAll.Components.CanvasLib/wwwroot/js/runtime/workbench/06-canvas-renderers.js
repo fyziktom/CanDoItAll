@@ -845,26 +845,36 @@
         }
 
         if (state.connectionDraft) {
-            const previewSource = resolveConnectionAnchorHostPoint(state, state.connectionDraft, "output");
-            const previewTarget = state.connectionTarget
-                ? resolveConnectionAnchorHostPoint(state, state.connectionTarget, "input")
+            const outputDescriptor = state.connectionDraft.direction === "input"
+                ? state.connectionTarget
+                : state.connectionDraft;
+            const inputDescriptor = state.connectionDraft.direction === "input"
+                ? state.connectionDraft
+                : state.connectionTarget;
+            const previewSource = outputDescriptor
+                ? resolveConnectionAnchorHostPoint(state, outputDescriptor, "output")
+                : state.pointerHostPoint;
+            const previewTarget = inputDescriptor
+                ? resolveConnectionAnchorHostPoint(state, inputDescriptor, "input")
                 : null;
             const previewEndpoint = previewTarget || state.pointerHostPoint;
             if (previewSource && previewEndpoint) {
-                const previewSourceNode = state.lookups.byId.get(state.connectionDraft.nodeId) || null;
-                const previewTargetNode = state.connectionTarget?.nodeId
-                    ? state.lookups.byId.get(state.connectionTarget.nodeId) || null
+                const previewSourceNode = outputDescriptor?.nodeId
+                    ? state.lookups.byId.get(outputDescriptor.nodeId) || null
+                    : null;
+                const previewTargetNode = inputDescriptor?.nodeId
+                    ? state.lookups.byId.get(inputDescriptor.nodeId) || null
                     : null;
                 const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
-                    findNodePort(previewSourceNode, state.connectionDraft.portId || "", "output"),
-                    findNodePort(previewTargetNode, state.connectionTarget?.portId || "", "input"));
+                    findNodePort(previewSourceNode, outputDescriptor?.portId || "", "output"),
+                    findNodePort(previewTargetNode, inputDescriptor?.portId || "", "input"));
                 const previewGeometry = drawCanvasLink(
                     surface.context,
                     {
-                        sourceId: state.connectionDraft.nodeId,
-                        sourcePortId: state.connectionDraft.portId || "",
-                        targetId: state.connectionTarget?.nodeId || "",
-                        targetPortId: state.connectionTarget?.portId || "",
+                        sourceId: outputDescriptor?.nodeId || "",
+                        sourcePortId: outputDescriptor?.portId || "",
+                        targetId: inputDescriptor?.nodeId || "",
+                        targetPortId: inputDescriptor?.portId || "",
                         kind: "flow",
                         isUserAuthored: true
                     },
@@ -872,16 +882,16 @@
                     previewEndpoint,
                     {
                         isPreview: true,
-                        sourceSide: previewSource.side || state.connectionDraft.side || "right",
-                        targetSide: previewTarget?.side || state.connectionTarget?.side || "left",
+                        sourceSide: previewSource.side || outputDescriptor?.side || "right",
+                        targetSide: previewTarget?.side || inputDescriptor?.side || "left",
                         forceArrow: true,
                         connectionStyle: previewConnectionStyle
                     });
                 state.previewLink = {
-                    sourceId: state.connectionDraft.nodeId,
-                    sourcePortId: state.connectionDraft.portId || "",
-                    targetId: state.connectionTarget?.nodeId || null,
-                    targetPortId: state.connectionTarget?.portId || "",
+                    sourceId: outputDescriptor?.nodeId || null,
+                    sourcePortId: outputDescriptor?.portId || "",
+                    targetId: inputDescriptor?.nodeId || null,
+                    targetPortId: inputDescriptor?.portId || "",
                     startPoint: previewGeometry.startPoint,
                     endPoint: previewGeometry.endPoint,
                     controlPoint1: previewGeometry.controlPoint1,

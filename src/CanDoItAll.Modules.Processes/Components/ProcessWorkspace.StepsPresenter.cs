@@ -62,6 +62,8 @@ public partial class ProcessWorkspace
 
         public ProcessRoleEditorModel? SelectedCanvasDefinitionRole => workspace.SelectedCanvasDefinitionRole;
 
+        public ProcessArtifactExpectationEditorModel? SelectedCanvasDefinitionArtifact => workspace.SelectedCanvasDefinitionArtifact;
+
         public bool IsCanvasEditorOpen => workspace.IsCanvasEditorOpen;
 
         public bool IsCanvasEditorCreateMode => workspace.IsCanvasEditorCreateMode;

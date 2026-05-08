@@ -337,8 +337,12 @@
         }
     }
 
+    function resolveOppositeConnectionDirection(direction) {
+        return direction === "input" ? "output" : "input";
+    }
+
     function startConnectionDraft(state, descriptor) {
-        if (!descriptor || descriptor.direction !== "output") {
+        if (!descriptor || (descriptor.direction !== "output" && descriptor.direction !== "input")) {
             return false;
         }
 
@@ -363,8 +367,9 @@
 
         const portHit = resolveConnectionPortHit(state, event, sceneHit);
         const descriptor = buildConnectionDescriptor(portHit);
+        const targetDirection = resolveOppositeConnectionDirection(state.connectionDraft.direction);
         const nextTarget = descriptor &&
-            descriptor.direction === "input" &&
+            descriptor.direction === targetDirection &&
             descriptor.nodeId !== state.connectionDraft.nodeId
             ? descriptor
             : null;
@@ -381,19 +386,25 @@
             return false;
         }
 
+        const sourceDescriptor = state.connectionDraft.direction === "input"
+            ? targetDescriptor
+            : state.connectionDraft;
+        const inputDescriptor = state.connectionDraft.direction === "input"
+            ? state.connectionDraft
+            : targetDescriptor;
         dispatchContextActionRequest(state, {
-            nodeId: targetDescriptor.nodeId,
+            nodeId: inputDescriptor.nodeId,
             actionId: "connection:create",
             x: 0,
             y: 0,
             targetKind: "link",
-            linkSourceId: state.connectionDraft.nodeId,
-            linkTargetId: targetDescriptor.nodeId,
+            linkSourceId: sourceDescriptor.nodeId,
+            linkTargetId: inputDescriptor.nodeId,
             linkKind: "flow",
-            linkSourcePortId: state.connectionDraft.portId || "",
-            linkTargetPortId: targetDescriptor.portId || ""
+            linkSourcePortId: sourceDescriptor.portId || "",
+            linkTargetPortId: inputDescriptor.portId || ""
         });
-        setSelection(state, [targetDescriptor.nodeId], true);
+        setSelection(state, [inputDescriptor.nodeId], true);
         state.connectionDraft = null;
         state.connectionTarget = null;
         render(state);
@@ -413,12 +424,15 @@
                         event.preventDefault();
                     }
 
-                    if (portDescriptor && portDescriptor.direction === "input" && portDescriptor.nodeId !== state.connectionDraft.nodeId) {
+                    if (portDescriptor &&
+                        portDescriptor.direction === resolveOppositeConnectionDirection(state.connectionDraft.direction) &&
+                        portDescriptor.nodeId !== state.connectionDraft.nodeId) {
                         dispatchConnectionCreate(state, portDescriptor);
                         return;
                     }
 
-                    if (portDescriptor && portDescriptor.direction === "output") {
+                    if (portDescriptor &&
+                        (portDescriptor.direction === "output" || portDescriptor.direction === "input")) {
                         startConnectionDraft(state, portDescriptor);
                         return;
                     }
@@ -430,23 +444,12 @@
                 if (supportsConnectionAuthoring(state) &&
                     event.button === 0 &&
                     portDescriptor &&
-                    portDescriptor.direction === "output") {
+                    (portDescriptor.direction === "output" || portDescriptor.direction === "input")) {
                     if (event.cancelable) {
                         event.preventDefault();
                     }
 
                     startConnectionDraft(state, portDescriptor);
-                    return;
-                }
-
-                if (supportsConnectionAuthoring(state) &&
-                    event.button === 0 &&
-                    portDescriptor &&
-                    portDescriptor.direction === "input") {
-                    if (event.cancelable) {
-                        event.preventDefault();
-                    }
-
                     return;
                 }
 

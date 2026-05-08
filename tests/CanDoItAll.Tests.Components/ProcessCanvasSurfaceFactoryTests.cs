@@ -342,7 +342,29 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             link.TargetId == reviewNode.Id &&
             link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput &&
             link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput);
+
+        var artifactNodeId = ProcessCanvasBranching.BuildDefinitionArtifactNodeId(editor.Steps[0].ArtifactExpectations[0]);
+        var artifactCloneNodeId = ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(
+            editor.Steps[0].ArtifactExpectations[0],
+            editor.Steps[1].ArtifactInputs[0],
+            editor.Steps[1]);
+        var artifactNode = Assert.Single(surface.Nodes, node => node.Id == artifactNodeId);
+        var artifactCloneNode = Assert.Single(surface.Nodes, node => node.Id == artifactCloneNodeId);
+        Assert.Equal(ProcessCanvasCatalog.NodeKinds.DefinitionArtifact, artifactNode.Kind);
+        Assert.Equal(ProcessCanvasCatalog.NodeKinds.DefinitionArtifact, artifactCloneNode.Kind);
+        Assert.Contains(artifactNode.ContextActions, action => action.ActionId == "process-definition.create-artifact-clone");
+        Assert.Contains(artifactCloneNode.ContextActions, action => action.ActionId == "process-definition.highlight-artifact-clones");
         Assert.Contains(surface.Links, link =>
+            link.SourceId == implementationNode.Id &&
+            link.TargetId == artifactNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(editor.Steps[0].ArtifactExpectations[0]) &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput);
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == artifactCloneNode.Id &&
+            link.TargetId == reviewNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
+        Assert.DoesNotContain(surface.Links, link =>
             link.SourceId == implementationNode.Id &&
             link.TargetId == reviewNode.Id &&
             link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(editor.Steps[0].ArtifactExpectations[0]) &&
