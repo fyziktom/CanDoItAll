@@ -9,6 +9,9 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
     IProcessEscalationService escalationService)
 {
     private static readonly string RunLevelAutomationLabel = "Run-level automation";
+    private const int ActiveRunExecutionRunsPerRun = 200;
+    private const int ActiveRunExecutionRunScanMinimum = 200;
+    private const int ActiveRunExecutionRunScanMaximum = 10000;
 
     public async Task<ProcessWorkspaceRunDetails> LoadAsync(Guid runId, CancellationToken cancellationToken = default)
     {
@@ -53,29 +56,36 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
 
         var agentsById = (await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken))
             .ToDictionary(item => item.Id);
+        var runIds = activeRuns
+            .Select(item => item.Id)
+            .ToList();
+        var runIdSet = runIds.ToHashSet();
+        var activeExecutionRunsByRunId = (await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(Take: ResolveActiveRunExecutionRunScanTake(activeRuns.Count)),
+                cancellationToken))
+            .Select(item => new ActiveRunExecutionRunMatch(TryParseProcessRunId(item.ProcessRunId), item))
+            .Where(item =>
+                item.ProcessRunId.HasValue &&
+                runIdSet.Contains(item.ProcessRunId.Value) &&
+                ExecutionRunBlocksSession(item.ExecutionRun))
+            .GroupBy(item => item.ProcessRunId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => item.ExecutionRun)
+                    .OrderByDescending(item => item.UpdatedAtUtc)
+                    .ToList());
+        var healthMetricsByRunId = await processesService.GetActiveRunHealthMetricsAsync(runIds, cancellationToken);
         var summaries = new List<ProcessActiveRunSummaryViewModel>();
 
         foreach (var run in activeRuns)
         {
-            var executionRuns = await workspaceService.ListExecutionRunsAsync(
-                new ExecutionRunQuery(
-                    ProcessRunId: run.Id.ToString("D"),
-                    Take: 200),
-                cancellationToken);
-            var activeExecutionRuns = executionRuns
-                .Where(ExecutionRunBlocksSession)
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ToList();
-            var runDetails = await processesService.GetRunDetailsAsync(run.Id, cancellationToken);
-
-            var stepTitlesById = await LoadStepTitlesByIdAsync(run.Id, activeExecutionRuns, cancellationToken);
+            var activeExecutionRuns = activeExecutionRunsByRunId.GetValueOrDefault(run.Id) ?? [];
+            var healthMetrics = healthMetricsByRunId.GetValueOrDefault(run.Id) ??
+                ProcessActiveRunHealthMetrics.Empty(run.Id);
             var activeAgents = activeExecutionRuns
-                .Select(item => MapActiveAgent(item, stepTitlesById, agentsById))
+                .Select(item => MapActiveAgent(item, healthMetrics.StepTitlesByStepRunId, agentsById))
                 .ToList();
-            var outboxRecords = runDetails.OutboxRecords;
-            var deadLetteredOutboxCount = outboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);
-            var pendingOutboxCount = outboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry);
-            var blockedOrFailedStepCount = runDetails.StepRuns.Count(item => item.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed);
 
             summaries.Add(new ProcessActiveRunSummaryViewModel(
                 run.Id,
@@ -86,10 +96,14 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
                 activeExecutionRuns.Sum(item => item.PendingApprovals.Count))
             {
                 Agents = activeAgents,
-                PendingOutboxCount = pendingOutboxCount,
-                DeadLetteredOutboxCount = deadLetteredOutboxCount,
-                BlockedOrFailedStepCount = blockedOrFailedStepCount,
-                HealthSummary = BuildActiveRunHealthSummary(activeAgents.Count, pendingOutboxCount, deadLetteredOutboxCount, blockedOrFailedStepCount)
+                PendingOutboxCount = healthMetrics.PendingOutboxCount,
+                DeadLetteredOutboxCount = healthMetrics.DeadLetteredOutboxCount,
+                BlockedOrFailedStepCount = healthMetrics.BlockedOrFailedStepCount,
+                HealthSummary = BuildActiveRunHealthSummary(
+                    activeAgents.Count,
+                    healthMetrics.PendingOutboxCount,
+                    healthMetrics.DeadLetteredOutboxCount,
+                    healthMetrics.BlockedOrFailedStepCount)
             });
         }
 
@@ -145,20 +159,6 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         }
 
         return mappedRuns;
-    }
-
-    private async Task<IReadOnlyDictionary<Guid, string>> LoadStepTitlesByIdAsync(
-        Guid runId,
-        IReadOnlyCollection<ExecutionRunRecord> executionRuns,
-        CancellationToken cancellationToken)
-    {
-        if (!executionRuns.Any(item => Guid.TryParse(item.ProcessStepId, out _)))
-        {
-            return new Dictionary<Guid, string>();
-        }
-
-        return (await processesService.ListStepRunsAsync(runId, cancellationToken))
-            .ToDictionary(item => item.Id, item => item.Title);
     }
 
     private static ProcessExecutionRunViewModel MapExecutionRun(
@@ -724,6 +724,21 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         return "Run is active and waiting for the next runtime handoff.";
     }
 
+    private static int ResolveActiveRunExecutionRunScanTake(int activeRunCount)
+    {
+        return Math.Clamp(
+            activeRunCount * ActiveRunExecutionRunsPerRun,
+            ActiveRunExecutionRunScanMinimum,
+            ActiveRunExecutionRunScanMaximum);
+    }
+
+    private static Guid? TryParseProcessRunId(string value)
+    {
+        return Guid.TryParse(value, out var parsedRunId)
+            ? parsedRunId
+            : null;
+    }
+
     private static ProcessActiveAgentViewModel MapActiveAgent(
         ExecutionRunRecord executionRun,
         IReadOnlyDictionary<Guid, string> stepTitlesById,
@@ -772,6 +787,10 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
                    ExecutionState.WaitingOnTool or
                    ExecutionState.Persisting;
     }
+
+    private sealed record ActiveRunExecutionRunMatch(
+        Guid? ProcessRunId,
+        ExecutionRunRecord ExecutionRun);
 }
 
 public sealed record ProcessWorkspaceRunDetails(

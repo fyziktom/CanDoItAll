@@ -84,7 +84,11 @@ public partial class ProcessWorkspace
             return;
         }
 
-        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
+        if (string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal))
+        {
+            analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
+        }
+
         runtimeStateOverview = await RuntimeStateOverviewService.GetOverviewAsync(
             definitions.Select(definition => definition.Id).ToList(),
             ProjectId,

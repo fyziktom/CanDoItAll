@@ -26,6 +26,11 @@ public interface IProcessRuntimeReadQueryService
         Guid runId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyDictionary<Guid, ProcessActiveRunHealthMetrics>> GetActiveRunHealthMetricsAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<Guid> runIds,
+        CancellationToken cancellationToken);
+
     Task<ProcessAnalyticsSummary> GetAnalyticsAsync(
         AppDbContext dbContext,
         Guid? definitionId,
@@ -340,6 +345,82 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
             workBriefs,
             conformanceObservations,
             directMessageThreads);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, ProcessActiveRunHealthMetrics>> GetActiveRunHealthMetricsAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<Guid> runIds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(runIds);
+
+        var normalizedRunIds = runIds
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToList();
+        if (normalizedRunIds.Count == 0)
+        {
+            return new Dictionary<Guid, ProcessActiveRunHealthMetrics>();
+        }
+
+        var stepProjections = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => normalizedRunIds.Contains(item.ProcessRunId))
+            .Select(item => new ProcessActiveRunStepHealthProjection(
+                item.ProcessRunId,
+                item.Id,
+                item.Title,
+                item.Status))
+            .ToListAsync(cancellationToken);
+        var stepTitlesByRunId = stepProjections
+            .GroupBy(item => item.RunId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyDictionary<Guid, string>)group.ToDictionary(item => item.StepRunId, item => item.Title));
+        var blockedOrFailedStepCountsByRunId = stepProjections
+            .GroupBy(item => item.RunId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Count(item => item.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed));
+
+        var now = DateTimeOffset.UtcNow;
+        var outboxProjections = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId.HasValue && normalizedRunIds.Contains(item.ProcessRunId.Value))
+            .Select(item => new ProcessActiveRunOutboxHealthProjection(
+                item.ProcessRunId!.Value,
+                item.Status,
+                item.LeaseExpiresAtUtc,
+                item.NextAttemptAtUtc))
+            .ToListAsync(cancellationToken);
+        var outboxSummariesByRunId = outboxProjections
+            .GroupBy(item => item.RunId)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var healthStatuses = group
+                        .Select(item => ResolveOutboxHealth(item.Status, item.LeaseExpiresAtUtc, item.NextAttemptAtUtc, now))
+                        .ToList();
+                    return new ProcessActiveRunOutboxSummaryProjection(
+                        healthStatuses.Count(item => item is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry),
+                        healthStatuses.Count(item => item == ProcessOutboxHealthStatus.DeadLettered));
+                });
+
+        var result = new Dictionary<Guid, ProcessActiveRunHealthMetrics>(normalizedRunIds.Count);
+        foreach (var runId in normalizedRunIds)
+        {
+            var outboxSummary = outboxSummariesByRunId.GetValueOrDefault(runId);
+            result[runId] = new ProcessActiveRunHealthMetrics(
+                runId,
+                outboxSummary?.PendingCount ?? 0,
+                outboxSummary?.DeadLetteredCount ?? 0,
+                blockedOrFailedStepCountsByRunId.GetValueOrDefault(runId),
+                stepTitlesByRunId.GetValueOrDefault(runId) ?? new Dictionary<Guid, string>());
+        }
+
+        return result;
     }
 
     public async Task<ProcessAnalyticsSummary> GetAnalyticsAsync(

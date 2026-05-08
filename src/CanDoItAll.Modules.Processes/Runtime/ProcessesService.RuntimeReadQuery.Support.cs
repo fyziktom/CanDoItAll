@@ -143,12 +143,21 @@ public sealed partial class ProcessRuntimeReadQueryService
 
     private static ProcessOutboxHealthStatus ResolveOutboxHealth(ProcessOutboxRecord record, DateTimeOffset now)
     {
-        return record.Status switch
+        return ResolveOutboxHealth(record.Status, record.LeaseExpiresAtUtc, record.NextAttemptAtUtc, now);
+    }
+
+    private static ProcessOutboxHealthStatus ResolveOutboxHealth(
+        ProcessOutboxRecordStatus status,
+        DateTimeOffset? leaseExpiresAtUtc,
+        DateTimeOffset? nextAttemptAtUtc,
+        DateTimeOffset now)
+    {
+        return status switch
         {
             ProcessOutboxRecordStatus.Completed => ProcessOutboxHealthStatus.Completed,
             ProcessOutboxRecordStatus.DeadLettered => ProcessOutboxHealthStatus.DeadLettered,
-            _ when record.LeaseExpiresAtUtc.HasValue && record.LeaseExpiresAtUtc.Value > now => ProcessOutboxHealthStatus.Leased,
-            _ when record.NextAttemptAtUtc.HasValue && record.NextAttemptAtUtc.Value > now => ProcessOutboxHealthStatus.WaitingToRetry,
+            _ when leaseExpiresAtUtc.HasValue && leaseExpiresAtUtc.Value > now => ProcessOutboxHealthStatus.Leased,
+            _ when nextAttemptAtUtc.HasValue && nextAttemptAtUtc.Value > now => ProcessOutboxHealthStatus.WaitingToRetry,
             _ => ProcessOutboxHealthStatus.Pending
         };
     }
@@ -747,6 +756,22 @@ public sealed partial class ProcessRuntimeReadQueryService
         int TouchMinutes,
         int BlockedMinutes,
         ProcessCapabilityGapSeverity CapabilityGapSeverity);
+
+    private sealed record ProcessActiveRunStepHealthProjection(
+        Guid RunId,
+        Guid StepRunId,
+        string Title,
+        ProcessStepRunStatus Status);
+
+    private sealed record ProcessActiveRunOutboxHealthProjection(
+        Guid RunId,
+        ProcessOutboxRecordStatus Status,
+        DateTimeOffset? LeaseExpiresAtUtc,
+        DateTimeOffset? NextAttemptAtUtc);
+
+    private sealed record ProcessActiveRunOutboxSummaryProjection(
+        int PendingCount,
+        int DeadLetteredCount);
 
     private sealed record ProcessDirectMessageThreadProjection(
         Guid ThreadId,

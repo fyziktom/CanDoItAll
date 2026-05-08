@@ -426,6 +426,24 @@ public sealed record ProcessActiveAgentViewModel(
     public string StatusTone { get; init; } = "neutral";
 }
 
+public sealed record ProcessActiveRunHealthMetrics(
+    Guid RunId,
+    int PendingOutboxCount,
+    int DeadLetteredOutboxCount,
+    int BlockedOrFailedStepCount,
+    IReadOnlyDictionary<Guid, string> StepTitlesByStepRunId)
+{
+    public static ProcessActiveRunHealthMetrics Empty(Guid runId)
+    {
+        return new ProcessActiveRunHealthMetrics(
+            runId,
+            0,
+            0,
+            0,
+            new Dictionary<Guid, string>());
+    }
+}
+
 public sealed record ProcessActiveRunSummaryViewModel(
     Guid RunId,
     string RunName,

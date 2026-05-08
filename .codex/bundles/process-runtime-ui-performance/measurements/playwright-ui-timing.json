@@ -1,0 +1,61 @@
+{
+  "route": "http://localhost:5032/processes?processId=9cfad5af-35c6-44d5-8938-50f889588534",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "seed": {
+    "profile": "temporary managed SQLite",
+    "activeRunCount": 16,
+    "restoredProfile": "dc8abe54-58cd-4a87-98ab-5a14de6f846b"
+  },
+  "samples": [
+    {
+      "index": 1,
+      "headingVisibleMs": 415,
+      "interactiveReadyMs": 1164,
+      "runsVisibleMs": 121,
+      "activeRunHeadings": 17,
+      "runHistoryCountText": 1
+    },
+    {
+      "index": 2,
+      "headingVisibleMs": 396,
+      "interactiveReadyMs": 1130,
+      "runsVisibleMs": 101,
+      "activeRunHeadings": 17,
+      "runHistoryCountText": 1
+    },
+    {
+      "index": 3,
+      "headingVisibleMs": 334,
+      "interactiveReadyMs": 1079,
+      "runsVisibleMs": 131,
+      "activeRunHeadings": 17,
+      "runHistoryCountText": 1
+    },
+    {
+      "index": 4,
+      "headingVisibleMs": 455,
+      "interactiveReadyMs": 1209,
+      "runsVisibleMs": 177,
+      "activeRunHeadings": 17,
+      "runHistoryCountText": 1
+    },
+    {
+      "index": 5,
+      "headingVisibleMs": 351,
+      "interactiveReadyMs": 1091,
+      "runsVisibleMs": 111,
+      "activeRunHeadings": 17,
+      "runHistoryCountText": 1
+    }
+  ],
+  "averages": {
+    "headingVisibleMs": 390,
+    "interactiveReadyMs": 1135,
+    "runsVisibleMs": 128
+  },
+  "maxRunsVisibleMs": 177,
+  "screenshot": ".codex/bundles/process-runtime-ui-performance/measurements/processes-active-runs-optimized.png"
+}
