@@ -133,14 +133,18 @@ public sealed partial class ProcessesService
                 return Result<Guid>.Failure(CreateRunStartGraphError());
             }
 
+            var stepRoleRequirementsByStepId = BuildStepRoleRequirementsByStepId(context.StepRoleRequirements);
+            var artifactExpectationTitlesByStepId = BuildArtifactExpectationTitlesByStepId(context.ArtifactExpectations);
             for (var index = 0; index < context.Steps.Count; index++)
             {
                 var step = context.Steps[index];
-                var stepRoleRequirements = context.StepRoleRequirements
-                    .Where(item => item.StepDefinitionId == step.Id)
-                    .ToList();
-                var currentAssignment = ResolveCurrentExecutorAssignment(step, stepRoleRequirements, resolvedAssignments);
-                var capabilityGapSeverity = ResolveStepCapabilityGapSeverity(step, stepRoleRequirements, resolvedAssignments);
+                var stepRoleRequirements = stepRoleRequirementsByStepId.GetValueOrDefault(step.Id) ?? [];
+                var effectiveAssignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(step.Id, resolvedAssignments);
+                var currentAssignment = ResolveCurrentExecutorAssignment(step, stepRoleRequirements, effectiveAssignmentsByRoleRequirementId);
+                var capabilityGapSeverity = ResolveStepCapabilityGapSeverity(stepRoleRequirements, effectiveAssignmentsByRoleRequirementId);
+                var evidenceExpectationSummary = artifactExpectationTitlesByStepId.TryGetValue(step.Id, out var artifactExpectationTitles)
+                    ? string.Join("; ", artifactExpectationTitles)
+                    : string.Empty;
                 var status = rootStepIds.Contains(step.Id)
                     ? (step.RequiresApproval ? ProcessStepRunStatus.WaitingApproval : ProcessStepRunStatus.Ready)
                     : ProcessStepRunStatus.Pending;
@@ -177,9 +181,7 @@ public sealed partial class ProcessesService
                         HandoffSummary = step.InputContractSummary,
                         AssignmentReason = currentAssignment?.BindingReason ?? "No executor is currently bound to the required role.",
                         ExpectedOutcome = step.OutputContractSummary,
-                        EvidenceExpectationSummary = string.Join(
-                            "; ",
-                            context.ArtifactExpectations.Where(item => item.StepDefinitionId == step.Id).Select(item => item.Title)),
+                        EvidenceExpectationSummary = evidenceExpectationSummary,
                         CreatedAtUtc = now
                     },
                     cancellationToken);
@@ -931,6 +933,46 @@ public sealed partial class ProcessesService
         ProcessRunAssignment Assignment,
         ProcessRoleRequirement ParentRole);
 
+    private static Dictionary<Guid, List<ProcessStepRoleAssignmentRequirement>> BuildStepRoleRequirementsByStepId(
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements)
+    {
+        var requirementsByStepId = new Dictionary<Guid, List<ProcessStepRoleAssignmentRequirement>>();
+        requirementsByStepId.EnsureCapacity(stepRoleRequirements.Count);
+
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (!requirementsByStepId.TryGetValue(requirement.StepDefinitionId, out var stepRequirements))
+            {
+                stepRequirements = [];
+                requirementsByStepId[requirement.StepDefinitionId] = stepRequirements;
+            }
+
+            stepRequirements.Add(requirement);
+        }
+
+        return requirementsByStepId;
+    }
+
+    private static Dictionary<Guid, List<string>> BuildArtifactExpectationTitlesByStepId(
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations)
+    {
+        var titlesByStepId = new Dictionary<Guid, List<string>>();
+        titlesByStepId.EnsureCapacity(artifactExpectations.Count);
+
+        foreach (var artifactExpectation in artifactExpectations)
+        {
+            if (!titlesByStepId.TryGetValue(artifactExpectation.StepDefinitionId, out var titles))
+            {
+                titles = [];
+                titlesByStepId[artifactExpectation.StepDefinitionId] = titles;
+            }
+
+            titles.Add(artifactExpectation.Title);
+        }
+
+        return titlesByStepId;
+    }
+
     private async Task<IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate>> BuildInheritedSubprocessAssignmentsAsync(
         AppDbContext dbContext,
         IReadOnlyList<ProcessRoleRequirement> childRoles,
@@ -1313,45 +1355,91 @@ public sealed partial class ProcessesService
     private static ProcessRunAssignment? ResolveCurrentExecutorAssignment(
         ProcessStepDefinition stepDefinition,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
-        IReadOnlyList<ProcessRunAssignment> runAssignments)
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId)
     {
-        if (stepRoleRequirements.Count == 0 || runAssignments.Count == 0)
+        if (stepRoleRequirements.Count == 0 || assignmentsByRoleRequirementId.Count == 0)
         {
             return null;
         }
 
-        var assignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
         foreach (var responsibilityKind in GetExecutorPriority(stepDefinition.StepKind))
         {
-            var candidate = stepRoleRequirements
-                .Where(item => item.ResponsibilityKind == responsibilityKind)
-                .OrderBy(item => item.FallbackOrder)
-                .Select(item => assignmentsByRoleRequirementId.GetValueOrDefault(item.RoleRequirementId))
-                .FirstOrDefault(item => item is not null);
+            var candidate = ResolveAssignmentByResponsibility(
+                stepRoleRequirements,
+                assignmentsByRoleRequirementId,
+                responsibilityKind);
             if (candidate is not null)
             {
                 return candidate;
             }
         }
 
-        return stepRoleRequirements
-            .OrderBy(item => item.IsRequired ? 0 : 1)
-            .ThenBy(item => item.FallbackOrder)
-            .Select(item => assignmentsByRoleRequirementId.GetValueOrDefault(item.RoleRequirementId))
-            .FirstOrDefault(item => item is not null);
+        return ResolveFallbackAssignment(stepRoleRequirements, assignmentsByRoleRequirementId);
+    }
+
+    private static ProcessRunAssignment? ResolveAssignmentByResponsibility(
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId,
+        ProcessResponsibilityKind responsibilityKind)
+    {
+        ProcessRunAssignment? selectedAssignment = null;
+        var selectedFallbackOrder = 0;
+
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (requirement.ResponsibilityKind != responsibilityKind ||
+                !assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
+            {
+                continue;
+            }
+
+            if (selectedAssignment is null || requirement.FallbackOrder < selectedFallbackOrder)
+            {
+                selectedAssignment = assignment;
+                selectedFallbackOrder = requirement.FallbackOrder;
+            }
+        }
+
+        return selectedAssignment;
+    }
+
+    private static ProcessRunAssignment? ResolveFallbackAssignment(
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId)
+    {
+        ProcessRunAssignment? selectedAssignment = null;
+        var selectedIsRequired = false;
+        var selectedFallbackOrder = 0;
+
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (!assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
+            {
+                continue;
+            }
+
+            if (selectedAssignment is null ||
+                requirement.IsRequired && !selectedIsRequired ||
+                requirement.IsRequired == selectedIsRequired && requirement.FallbackOrder < selectedFallbackOrder)
+            {
+                selectedAssignment = assignment;
+                selectedIsRequired = requirement.IsRequired;
+                selectedFallbackOrder = requirement.FallbackOrder;
+            }
+        }
+
+        return selectedAssignment;
     }
 
     private static ProcessCapabilityGapSeverity ResolveStepCapabilityGapSeverity(
-        ProcessStepDefinition stepDefinition,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
-        IReadOnlyList<ProcessRunAssignment> runAssignments)
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId)
     {
         if (stepRoleRequirements.Count == 0)
         {
             return ProcessCapabilityGapSeverity.None;
         }
 
-        var assignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
         foreach (var requirement in stepRoleRequirements)
         {
             if (!assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
@@ -1377,15 +1465,46 @@ public sealed partial class ProcessesService
         Guid stepDefinitionId,
         IReadOnlyList<ProcessRunAssignment> runAssignments)
     {
-        return runAssignments
-            .Where(item => !item.StepDefinitionId.HasValue || item.StepDefinitionId == stepDefinitionId)
-            .GroupBy(item => item.RoleRequirementId)
-            .ToDictionary(
-                group => group.Key,
-                group => group
-                    .OrderByDescending(item => item.StepDefinitionId == stepDefinitionId)
-                    .ThenByDescending(item => item.PartyId.HasValue)
-                    .First());
+        var assignmentsByRoleRequirementId = new Dictionary<Guid, ProcessRunAssignment>();
+        assignmentsByRoleRequirementId.EnsureCapacity(runAssignments.Count);
+
+        foreach (var assignment in runAssignments)
+        {
+            if (assignment.StepDefinitionId.HasValue && assignment.StepDefinitionId.Value != stepDefinitionId)
+            {
+                continue;
+            }
+
+            if (!assignmentsByRoleRequirementId.TryGetValue(assignment.RoleRequirementId, out var currentAssignment) ||
+                IsPreferredRunAssignment(stepDefinitionId, assignment, currentAssignment))
+            {
+                assignmentsByRoleRequirementId[assignment.RoleRequirementId] = assignment;
+            }
+        }
+
+        return assignmentsByRoleRequirementId;
+    }
+
+    private static bool IsPreferredRunAssignment(
+        Guid stepDefinitionId,
+        ProcessRunAssignment candidate,
+        ProcessRunAssignment current)
+    {
+        var candidateIsStepScoped = candidate.StepDefinitionId == stepDefinitionId;
+        var currentIsStepScoped = current.StepDefinitionId == stepDefinitionId;
+        if (candidateIsStepScoped != currentIsStepScoped)
+        {
+            return candidateIsStepScoped;
+        }
+
+        var candidateHasParty = candidate.PartyId.HasValue;
+        var currentHasParty = current.PartyId.HasValue;
+        if (candidateHasParty != currentHasParty)
+        {
+            return candidateHasParty;
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<ProcessResponsibilityKind> GetExecutorPriority(ProcessStepKind stepKind)

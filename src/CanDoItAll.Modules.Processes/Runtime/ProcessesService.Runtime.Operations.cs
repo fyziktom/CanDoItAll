@@ -154,9 +154,7 @@ public sealed partial class ProcessesService
             runAssignments.Add(assignment);
         }
 
-        var roleRequirementsByStepDefinitionId = stepRoleRequirements
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(group => group.Key, group => group.ToList());
+        var roleRequirementsByStepDefinitionId = BuildStepRoleRequirementsByStepId(stepRoleRequirements);
         foreach (var stepRun in stepRuns)
         {
             if (!stepDefinitions.TryGetValue(stepRun.StepDefinitionId, out var stepDefinition))
@@ -165,10 +163,16 @@ public sealed partial class ProcessesService
             }
 
             var currentStepRoleRequirements = roleRequirementsByStepDefinitionId.GetValueOrDefault(stepRun.StepDefinitionId) ?? [];
-            var currentExecutor = ResolveCurrentExecutorAssignment(stepDefinition, currentStepRoleRequirements, runAssignments);
+            var effectiveAssignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
+            var currentExecutor = ResolveCurrentExecutorAssignment(
+                stepDefinition,
+                currentStepRoleRequirements,
+                effectiveAssignmentsByRoleRequirementId);
             stepRun.CurrentExecutorPartyId = currentExecutor?.PartyId;
             stepRun.CurrentExecutorName = currentExecutor?.DisplayName ?? string.Empty;
-            stepRun.CapabilityGapSeverity = ResolveStepCapabilityGapSeverity(stepDefinition, currentStepRoleRequirements, runAssignments);
+            stepRun.CapabilityGapSeverity = ResolveStepCapabilityGapSeverity(
+                currentStepRoleRequirements,
+                effectiveAssignmentsByRoleRequirementId);
         }
     }
 
