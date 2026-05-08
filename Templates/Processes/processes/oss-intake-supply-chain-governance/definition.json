@@ -93,8 +93,8 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 260,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -164,8 +164,8 @@
       "DependsOnStepKey": "component-request",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 430,
-      "CanvasY": 260,
+      "CanvasX": 1160,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -250,8 +250,8 @@
       "DependsOnStepKey": "identity-and-maintenance",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 260,
+      "CanvasX": 2060,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -337,8 +337,8 @@
       "DependsOnStepKey": "license-and-obligations",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1050,
-      "CanvasY": 260,
+      "CanvasX": 2960,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -432,8 +432,8 @@
       "DependsOnStepKey": "security-and-provenance",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "compliance-steward",
-      "CanvasX": 1360,
-      "CanvasY": 260,
+      "CanvasX": 3860,
+      "CanvasY": 0,
       "BranchOutcomes": [
         {
           "Key": "approved",
@@ -508,8 +508,8 @@
       "DocRefs": [
         "processes/oss-intake-supply-chain-governance/steps/approval-and-registration.md"
       ],
-      "BranchCanvasX": 1560,
-      "BranchCanvasY": 260,
+      "BranchCanvasX": 3921,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "security-and-provenance",
@@ -538,8 +538,8 @@
       "DependsOnStepKey": "approval-and-registration",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 260,
+      "CanvasX": 4760,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -949,8 +949,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
-      "CanvasX": 810,
-      "CanvasY": 110,
+      "CanvasX": 2530,
+      "CanvasY": -460.5,
       "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
     }
   ],

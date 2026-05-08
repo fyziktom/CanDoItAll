@@ -7,6 +7,7 @@ public static class ProcessCanvasBranching
     public const string DefinitionRoleNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionRole;
     public const string RuntimeStepNodePrefix = ProcessCanvasCatalog.NodePrefixes.RuntimeStep;
     public const string RuntimeBranchNodePrefix = ProcessCanvasCatalog.NodePrefixes.RuntimeBranchRouter;
+    public const string DefinitionRoleInstanceSeparator = ":step:";
 
     public const string DefaultRouteKey = "__default__";
     public const string ErrorRouteKey = "__error__";
@@ -142,6 +143,16 @@ public static class ProcessCanvasBranching
         return $"{DefinitionRoleNodePrefix}{BuildNodeToken(role.Id, role.Key, role.DisplayName, "role")}";
     }
 
+    public static string BuildDefinitionRoleInstanceNodeId(
+        ProcessRoleEditorModel role,
+        ProcessStepEditorModel step)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(step);
+
+        return $"{BuildDefinitionRoleNodeId(role)}{DefinitionRoleInstanceSeparator}{BuildNodeToken(step.Id, step.Key, step.Title, "step")}";
+    }
+
     public static string BuildRuntimeStepNodeId(Guid stepRunId)
     {
         return $"{RuntimeStepNodePrefix}{stepRunId:D}";
@@ -232,7 +243,45 @@ public static class ProcessCanvasBranching
         }
 
         token = nodeId[DefinitionRoleNodePrefix.Length..];
+        var instanceSeparatorIndex = token.IndexOf(DefinitionRoleInstanceSeparator, StringComparison.Ordinal);
+        if (instanceSeparatorIndex >= 0)
+        {
+            token = token[..instanceSeparatorIndex];
+        }
+
         return true;
+    }
+
+    public static bool IsDefinitionRoleInstanceNodeId(string? nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+            nodeId.StartsWith(DefinitionRoleNodePrefix, StringComparison.Ordinal) &&
+            nodeId.Contains(DefinitionRoleInstanceSeparator, StringComparison.Ordinal);
+    }
+
+    public static bool TryResolveDefinitionRoleInstanceTokens(
+        string? nodeId,
+        out string roleToken,
+        out string stepToken)
+    {
+        roleToken = string.Empty;
+        stepToken = string.Empty;
+        if (string.IsNullOrWhiteSpace(nodeId) ||
+            !nodeId.StartsWith(DefinitionRoleNodePrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var token = nodeId[DefinitionRoleNodePrefix.Length..];
+        var separatorIndex = token.IndexOf(DefinitionRoleInstanceSeparator, StringComparison.Ordinal);
+        if (separatorIndex < 0 || separatorIndex + DefinitionRoleInstanceSeparator.Length >= token.Length)
+        {
+            return false;
+        }
+
+        roleToken = token[..separatorIndex];
+        stepToken = token[(separatorIndex + DefinitionRoleInstanceSeparator.Length)..];
+        return !string.IsNullOrWhiteSpace(roleToken) && !string.IsNullOrWhiteSpace(stepToken);
     }
 
     public static bool TryResolveRuntimeStepId(string? nodeId, out Guid stepRunId)

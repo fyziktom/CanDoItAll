@@ -64,15 +64,43 @@ public sealed class ProcessCanvasRecompositionServiceTests
         var repairBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(repairStep)];
         var mergeBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(mergeStep)];
         var branchBox = boxesById[ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep)];
-        var roleBox = boxesById[ProcessCanvasBranching.BuildDefinitionRoleNodeId(role)];
+        var decisionRoleBox = boxesById[ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(role, decisionStep)];
+        var implementationRoleBox = boxesById[ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(role, implementationStep)];
 
-        Assert.True(roleBox.X < intakeBox.X);
         Assert.True(intakeBox.X < decisionBox.X);
         Assert.True(decisionBox.X < implementationBox.X);
         Assert.True(decisionBox.X < repairBox.X);
+        Assert.True(decisionRoleBox.X < decisionBox.X);
+        Assert.True(implementationRoleBox.X < implementationBox.X);
+        Assert.True(Math.Abs(decisionRoleBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(implementationRoleBox.Y - implementationBox.Y) < 1d);
+        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(mergeBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(repairBox.Y - decisionBox.Y) > 150d);
         Assert.True(branchBox.X > decisionBox.X);
         Assert.True(branchBox.X < Math.Min(implementationBox.X, repairBox.X));
-        Assert.True(implementationBox.Y < mergeBox.Y || repairBox.Y < mergeBox.Y || mergeBox.X > implementationBox.X);
+        Assert.True(Math.Abs(branchBox.Y - decisionBox.Y) > 80d);
+    }
+
+    [Fact]
+    public void Recompose_keeps_multi_dependency_primary_continuations_on_main_lane()
+    {
+        var surfaceFactory = CreateSurfaceFactory();
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+        var editor = BuildPrimaryContinuationEditor();
+
+        service.Apply(editor, ProcessCanvasRecompositionMode.Recompose);
+
+        var boxesById = ResolveBoxes(surfaceFactory, editor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var reviewStep = editor.Steps.Single(step => string.Equals(step.Key, "review", StringComparison.Ordinal));
+        var implementationStep = editor.Steps.Single(step => string.Equals(step.Key, "implement", StringComparison.Ordinal));
+
+        var reviewBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(reviewStep)];
+        var implementationBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(implementationStep)];
+
+        Assert.True(reviewBox.X < implementationBox.X);
+        Assert.True(Math.Abs(reviewBox.Y - implementationBox.Y) < 1d);
     }
 
     [Fact]
@@ -377,6 +405,79 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Dependencies = CreateDependencies((implementationStepId, null)),
                     CanvasX = 1040,
                     CanvasY = 380
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildPrimaryContinuationEditor()
+    {
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            Name = "Primary continuation recomposition test",
+            Summary = "Keep multi-input continuation on the main path.",
+            ValueStatement = "A step that depends on an earlier root and its direct continuation should not become a branch lane.",
+            CustomerName = "Acme",
+            OwnerName = "Owner",
+            GovernancePolicySummary = "Primary continuation proof.",
+            ChangeSummary = "Primary continuation proof.",
+            ConstitutionRuleSummary = "Primary continuation proof.",
+            OperatingModeSummary = "Primary continuation proof.",
+            SimulationReadinessSummary = "Primary continuation proof.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "engineer",
+                    DisplayName = "Engineer",
+                    CanvasX = 120,
+                    CanvasY = 40
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "intake",
+                    Title = "Capture request",
+                    StepKind = ProcessStepKind.Start,
+                    CanvasX = 120,
+                    CanvasY = 120
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = reviewStepId,
+                    Key = "review",
+                    Title = "Review request",
+                    StepKind = ProcessStepKind.Review,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
+                    CanvasX = 430,
+                    CanvasY = 120
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = implementationStepId,
+                    Key = "implement",
+                    Title = "Implement request",
+                    StepKind = ProcessStepKind.Work,
+                    Dependencies = CreateDependencies((intakeStepId, null), (reviewStepId, null)),
+                    CanvasX = 740,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
                 }
             ]
         };

@@ -113,10 +113,10 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 140,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [],
       "RoleAssignments": [
         {
@@ -172,10 +172,10 @@
       "DependsOnStepKey": "strategy-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 300,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 1160,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "strategy-intake",
@@ -244,10 +244,10 @@
       "DependsOnStepKey": "product-evidence-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 620,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 2060,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "strategy-intake",
@@ -326,10 +326,10 @@
       "DependsOnStepKey": "business-plan-draft",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 420,
-      "CanvasY": 620,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 2960,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "business-plan-draft",
@@ -399,10 +399,10 @@
       "DependsOnStepKey": "financial-modeling",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 720,
-      "CanvasY": 620,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 3860,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "business-plan-draft",
@@ -480,10 +480,10 @@
       "DependsOnStepKey": "marketing-plan",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "business-strategist",
-      "CanvasX": 420,
-      "CanvasY": 790,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 4760,
+      "CanvasY": 0,
+      "BranchCanvasX": 4821,
+      "BranchCanvasY": -610,
       "Dependencies": [
         {
           "DependsOnStepKey": "business-plan-draft",
@@ -594,10 +594,10 @@
       "DependsOnStepKey": "integrated-review",
       "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
-      "CanvasX": 720,
-      "CanvasY": 960,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 5660,
+      "CanvasY": -380,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "integrated-review",
@@ -662,10 +662,10 @@
       "DependsOnStepKey": "integrated-review",
       "DependsOnBranchOutcomeKey": "blocked",
       "DecisionRoleKey": "",
-      "CanvasX": 720,
-      "CanvasY": 1080,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 5660,
+      "CanvasY": 380,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "integrated-review",

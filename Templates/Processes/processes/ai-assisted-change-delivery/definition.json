@@ -108,8 +108,8 @@
       "DependsOnStepKey": "",
 "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 180,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -190,8 +190,8 @@
       "DependsOnStepKey": "task-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
-      "CanvasX": 430,
-      "CanvasY": 180,
+      "CanvasX": 1160,
+      "CanvasY": 0,
       "BranchOutcomes": [
         {
           "Key": "delegate",
@@ -278,8 +278,8 @@
       "DocRefs": [
         "processes/ai-assisted-change-delivery/steps/delegation-design.md"
       ],
-      "BranchCanvasX": 630,
-      "BranchCanvasY": 180,
+      "BranchCanvasX": 1221,
+      "BranchCanvasY": -610,
       "Dependencies": [
         {
           "DependsOnStepKey": "task-intake",
@@ -308,8 +308,8 @@
       "DependsOnStepKey": "delegation-design",
 "DependsOnBranchOutcomeKey": "delegate",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 180,
+      "CanvasX": 2060,
+      "CanvasY": -380,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -417,8 +417,8 @@
       "DependsOnStepKey": "agent-execution",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1050,
-      "CanvasY": 180,
+      "CanvasX": 2960,
+      "CanvasY": -380,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -546,8 +546,8 @@
       "DependsOnStepKey": "evaluation-and-benchmarking",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "release-approver",
-      "CanvasX": 1360,
-      "CanvasY": 180,
+      "CanvasX": 3860,
+      "CanvasY": -380,
       "BranchOutcomes": [
         {
           "Key": "approved",
@@ -624,8 +624,8 @@
       "DocRefs": [
         "processes/ai-assisted-change-delivery/steps/safety-and-security-review.md"
       ],
-      "BranchCanvasX": 1560,
-      "BranchCanvasY": 180,
+      "BranchCanvasX": 3921,
+      "BranchCanvasY": -990,
       "Dependencies": [
         {
           "DependsOnStepKey": "evaluation-and-benchmarking",
@@ -683,8 +683,8 @@
       "DependsOnStepKey": "safety-and-security-review",
       "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 180,
+      "CanvasX": 4760,
+      "CanvasY": -760,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -800,8 +800,8 @@
       "DependsOnStepKey": "delegation-design",
       "DependsOnBranchOutcomeKey": "human-only",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 340,
+      "CanvasX": 2060,
+      "CanvasY": 380,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -854,8 +854,8 @@
       "DependsOnStepKey": "safety-and-security-review",
       "DependsOnBranchOutcomeKey": "rework",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 340,
+      "CanvasX": 4760,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -1353,8 +1353,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
-      "CanvasX": 960,
-      "CanvasY": 40,
+      "CanvasX": 2530,
+      "CanvasY": -519.5,
       "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
     },
     {

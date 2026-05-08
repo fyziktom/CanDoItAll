@@ -396,6 +396,16 @@ public partial class ProcessWorkspace
 
             if (position.NodeId.StartsWith(ProcessCanvasCatalog.NodePrefixes.DefinitionRole, StringComparison.Ordinal))
             {
+                if (ProcessCanvasBranching.IsDefinitionRoleInstanceNodeId(position.NodeId))
+                {
+                    uiState.ManualPositions[position.NodeId] = new CanvasWorkbenchPoint
+                    {
+                        X = position.X,
+                        Y = position.Y
+                    };
+                    continue;
+                }
+
                 var role = ResolveDefinitionRole(position.NodeId);
                 if (role is null)
                 {

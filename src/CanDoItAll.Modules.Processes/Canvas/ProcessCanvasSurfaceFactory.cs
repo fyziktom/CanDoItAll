@@ -4,6 +4,9 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessCanvasSurfaceFactory
 {
+    private const double DefinitionRoleInstanceOffsetX = 430d;
+    private const double DefinitionRoleInstanceRowGap = 260d;
+
     private readonly ProcessCanvasChromeCatalogService chromeCatalogService;
 
     public ProcessCanvasSurfaceFactory(ProcessCanvasChromeCatalogService chromeCatalogService)
@@ -50,14 +53,16 @@ public sealed partial class ProcessCanvasSurfaceFactory
             .Where(ProcessCanvasBranching.ShouldRenderBranchRouter)
             .Select(step => BuildDefinitionBranchNode(step, editor.Steps, rolesById))
             .ToList();
-        var roleNodes = editor.Roles
-            .Select((role, index) => BuildDefinitionRoleNode(role, index, editor))
+        var roleNodePlans = BuildDefinitionRoleNodePlans(editor, rolesById);
+        var roleNodeIds = BuildDefinitionRoleNodeIdMap(roleNodePlans);
+        var roleNodes = roleNodePlans
+            .Select(plan => BuildDefinitionRoleNode(plan, editor))
             .ToList();
         var nodes = new List<CanvasWorkbenchNode>(stepNodes.Count + branchNodes.Count + roleNodes.Count);
         nodes.AddRange(stepNodes);
         nodes.AddRange(branchNodes);
         nodes.AddRange(roleNodes);
-        var links = BuildDefinitionLinks(editor.Steps, rolesById, editor.MessagingPolicies);
+        var links = BuildDefinitionLinks(editor.Steps, rolesById, editor.MessagingPolicies, roleNodeIds);
 
         return new CanvasWorkbenchSurface
         {
@@ -70,7 +75,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             Links = links,
             UiState = new CanvasWorkbenchUiState
             {
-                SelectedNodeIds = ResolveSelectedNodeIds(nodes, selectedNodeId),
+                SelectedNodeIds = ResolveSelectedNodeIds(nodes, selectedNodeId, ResolveSelectedRoleInstanceNodeId(nodes, selectedNodeId)),
                 ActiveInspectorTab = "definition"
             },
             Chrome = BuildDefinitionChrome()
@@ -257,36 +262,255 @@ public sealed partial class ProcessCanvasSurfaceFactory
     }
 
     private static CanvasWorkbenchNode BuildDefinitionRoleNode(
-        ProcessRoleEditorModel role,
-        int index,
+        DefinitionRoleNodePlan plan,
         ProcessDefinitionEditorModel editor)
     {
-        var assignmentCount = editor.Steps.Sum(step => step.RoleAssignments.Count(assignment => assignment.RoleRequirementId == role.Id));
-        var decisionCount = editor.Steps.Count(step => step.DecisionRoleRequirementId == role.Id);
+        var role = plan.Role;
+        var assignmentCount = plan.RelatedStep is null
+            ? editor.Steps.Sum(step => step.RoleAssignments.Count(assignment => assignment.RoleRequirementId == role.Id))
+            : plan.Responsibilities.Count;
+        var decisionCount = plan.RelatedStep is null
+            ? editor.Steps.Count(step => step.DecisionRoleRequirementId == role.Id)
+            : plan.IsDecisionAuthority ? 1 : 0;
         var outboundMessagingCount = editor.MessagingPolicies.Count(item => item.SourceRoleRequirementId == role.Id);
         var inboundMessagingCount = editor.MessagingPolicies.Count(item => item.TargetRoleRequirementId == role.Id);
 
         return new CanvasWorkbenchNode
         {
-            Id = BuildDefinitionRoleNodeId(role),
+            Id = plan.NodeId,
             Kind = ProcessCanvasCatalog.NodeKinds.DefinitionRole,
             Family = "group",
             Icon = "people",
-            Title = string.IsNullOrWhiteSpace(role.DisplayName) ? $"Role {index + 1}" : role.DisplayName,
-            Subtitle = string.IsNullOrWhiteSpace(role.PreferredExecutorKind)
-                ? "Role contract"
-                : role.PreferredExecutorKind,
+            Title = string.IsNullOrWhiteSpace(role.DisplayName) ? $"Role {plan.RoleIndex + 1}" : role.DisplayName,
+            Subtitle = ResolveDefinitionRoleSubtitle(plan),
             LeadText = string.IsNullOrWhiteSpace(role.Purpose)
                 ? role.StaffingIntent
                 : role.Purpose,
             Status = role.IsRequired ? "required" : "optional",
-            StatusPill = role.IsRequired ? "Required" : "Optional",
+            StatusPill = plan.RelatedStep is null
+                ? role.IsRequired ? "Required" : "Optional"
+                : "Role instance",
             PaletteKey = "neutral",
             AccentColor = "#0f766e",
             DurationLabel = $"{role.DefaultAllocationPercent}%",
-            X = ResolveDefinitionRoleNodeX(role, editor),
-            Y = ResolveDefinitionRoleNodeY(role, index),
-            Chips =
+            X = ResolveDefinitionRoleNodeX(plan, editor),
+            Y = ResolveDefinitionRoleNodeY(plan),
+            Chips = BuildDefinitionRoleNodeChips(plan, assignmentCount, decisionCount, outboundMessagingCount, inboundMessagingCount),
+            FooterChips = BuildDefinitionRoleNodeFooterChips(plan),
+            ContextActions =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.EditDefinitionRole,
+                    Label = "Edit role",
+                    MenuLabel = "Edit role",
+                    Icon = "draw",
+                    Tone = "accent"
+                }
+            ],
+            InputPorts = DecorateProcessPorts(plan.RelatedStep is null
+                ? BuildDefinitionRoleInputPorts(role, editor)
+                : []),
+            OutputPorts = DecorateProcessPorts(plan.RelatedStep is null
+                ? BuildDefinitionRoleOutputPorts(role, editor)
+                : BuildDefinitionRoleInstanceOutputPorts(plan))
+        };
+    }
+
+    private static List<DefinitionRoleNodePlan> BuildDefinitionRoleNodePlans(
+        ProcessDefinitionEditorModel editor,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        var participations = BuildDefinitionRoleParticipations(editor, rolesById);
+        var participationsByRoleId = participations
+            .GroupBy(participation => participation.Role.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var messagingRoleIds = editor.MessagingPolicies
+            .SelectMany(policy => new[] { policy.SourceRoleRequirementId, policy.TargetRoleRequirementId })
+            .Where(roleId => roleId.HasValue)
+            .Select(roleId => roleId!.Value)
+            .ToHashSet();
+        var plans = new List<DefinitionRoleNodePlan>();
+
+        for (var roleIndex = 0; roleIndex < editor.Roles.Count; roleIndex++)
+        {
+            var role = editor.Roles[roleIndex];
+            if (!role.Id.HasValue ||
+                !participationsByRoleId.TryGetValue(role.Id.Value, out var roleParticipations) ||
+                roleParticipations.Count <= 1)
+            {
+                plans.Add(DefinitionRoleNodePlan.CreateContract(role, roleIndex));
+                continue;
+            }
+
+            foreach (var participation in roleParticipations)
+            {
+                plans.Add(DefinitionRoleNodePlan.CreateInstance(role, roleIndex, participation));
+            }
+
+            if (messagingRoleIds.Contains(role.Id.Value))
+            {
+                plans.Add(DefinitionRoleNodePlan.CreateContract(role, roleIndex));
+            }
+        }
+
+        return plans;
+    }
+
+    private static Dictionary<DefinitionRoleNodeKey, string> BuildDefinitionRoleNodeIdMap(
+        IReadOnlyList<DefinitionRoleNodePlan> plans)
+    {
+        var map = new Dictionary<DefinitionRoleNodeKey, string>();
+        foreach (var plan in plans)
+        {
+            if (!plan.Role.Id.HasValue)
+            {
+                continue;
+            }
+
+            map[new DefinitionRoleNodeKey(plan.Role.Id.Value, plan.RelatedStep?.Id)] = plan.NodeId;
+        }
+
+        return map;
+    }
+
+    private static List<DefinitionRoleParticipation> BuildDefinitionRoleParticipations(
+        ProcessDefinitionEditorModel editor,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        var roleIndexById = editor.Roles
+            .Select((role, index) => new { role, index })
+            .Where(item => item.role.Id.HasValue)
+            .ToDictionary(item => item.role.Id!.Value, item => item.index);
+        var builders = new Dictionary<DefinitionRoleParticipationKey, DefinitionRoleParticipationBuilder>();
+
+        for (var stepIndex = 0; stepIndex < editor.Steps.Count; stepIndex++)
+        {
+            var step = editor.Steps[stepIndex];
+            if (!step.Id.HasValue)
+            {
+                continue;
+            }
+
+            foreach (var assignment in step.RoleAssignments.Where(assignment => assignment.RoleRequirementId.HasValue))
+            {
+                var roleId = assignment.RoleRequirementId!.Value;
+                if (!rolesById.TryGetValue(roleId, out var role))
+                {
+                    continue;
+                }
+
+                var builder = ResolveRoleParticipationBuilder(
+                    builders,
+                    role,
+                    step,
+                    stepIndex,
+                    roleIndexById.GetValueOrDefault(roleId, int.MaxValue));
+                if (!builder.Responsibilities.Contains(assignment.ResponsibilityKind))
+                {
+                    builder.Responsibilities.Add(assignment.ResponsibilityKind);
+                }
+            }
+
+            if (!step.DecisionRoleRequirementId.HasValue ||
+                !rolesById.TryGetValue(step.DecisionRoleRequirementId.Value, out var decisionRole))
+            {
+                continue;
+            }
+
+            ResolveRoleParticipationBuilder(
+                    builders,
+                    decisionRole,
+                    step,
+                    stepIndex,
+                    roleIndexById.GetValueOrDefault(step.DecisionRoleRequirementId.Value, int.MaxValue))
+                .IsDecisionAuthority = true;
+        }
+
+        var ordered = builders.Values
+            .OrderBy(builder => builder.StepIndex)
+            .ThenBy(builder => builder.RoleIndex)
+            .ToList();
+        var stepInstanceCounts = ordered
+            .GroupBy(builder => builder.Step.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var stepInstanceCursors = new Dictionary<Guid, int>();
+        var result = new List<DefinitionRoleParticipation>(ordered.Count);
+
+        foreach (var builder in ordered)
+        {
+            var stepId = builder.Step.Id!.Value;
+            var stepRoleIndex = stepInstanceCursors.GetValueOrDefault(stepId);
+            stepInstanceCursors[stepId] = stepRoleIndex + 1;
+            result.Add(new DefinitionRoleParticipation(
+                builder.Role,
+                builder.Step,
+                [.. builder.Responsibilities],
+                builder.IsDecisionAuthority,
+                builder.StepIndex,
+                stepRoleIndex,
+                stepInstanceCounts[stepId]));
+        }
+
+        return result;
+    }
+
+    private static DefinitionRoleParticipationBuilder ResolveRoleParticipationBuilder(
+        IDictionary<DefinitionRoleParticipationKey, DefinitionRoleParticipationBuilder> builders,
+        ProcessRoleEditorModel role,
+        ProcessStepEditorModel step,
+        int stepIndex,
+        int roleIndex)
+    {
+        var key = new DefinitionRoleParticipationKey(role.Id!.Value, step.Id!.Value);
+        if (builders.TryGetValue(key, out var builder))
+        {
+            return builder;
+        }
+
+        builder = new DefinitionRoleParticipationBuilder(role, step, stepIndex, roleIndex);
+        builders[key] = builder;
+        return builder;
+    }
+
+    private static string? ResolveSelectedRoleInstanceNodeId(
+        IReadOnlyList<CanvasWorkbenchNode> nodes,
+        string? selectedNodeId)
+    {
+        if (!ProcessCanvasBranching.TryResolveDefinitionRoleToken(selectedNodeId, out var selectedRoleToken))
+        {
+            return null;
+        }
+
+        return nodes.FirstOrDefault(node =>
+            ProcessCanvasBranching.TryResolveDefinitionRoleInstanceTokens(node.Id, out var roleToken, out _) &&
+            string.Equals(roleToken, selectedRoleToken, StringComparison.Ordinal))?.Id;
+    }
+
+    private static string ResolveDefinitionRoleSubtitle(DefinitionRoleNodePlan plan)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return string.IsNullOrWhiteSpace(plan.Role.PreferredExecutorKind)
+                ? "Role contract"
+                : plan.Role.PreferredExecutorKind;
+        }
+
+        return string.IsNullOrWhiteSpace(plan.RelatedStep.Title)
+            ? "Step role"
+            : plan.RelatedStep.Title;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionRoleNodeChips(
+        DefinitionRoleNodePlan plan,
+        int assignmentCount,
+        int decisionCount,
+        int outboundMessagingCount,
+        int inboundMessagingCount)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return
             [
                 new CanvasWorkbenchChip
                 {
@@ -303,29 +527,98 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     Text = $"{outboundMessagingCount} out / {inboundMessagingCount} in",
                     Tone = outboundMessagingCount == 0 && inboundMessagingCount == 0 ? "neutral" : "accent"
                 }
-            ],
-            FooterChips =
+            ];
+        }
+
+        var chips = plan.Responsibilities
+            .Select(responsibility => new CanvasWorkbenchChip
+            {
+                Text = ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibility),
+                Tone = "info"
+            })
+            .ToList();
+        if (plan.IsDecisionAuthority)
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = "Decision",
+                Tone = "accent"
+            });
+        }
+
+        return chips.Count == 0
+            ? [new CanvasWorkbenchChip { Text = "Role binding", Tone = "info" }]
+            : chips;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionRoleNodeFooterChips(DefinitionRoleNodePlan plan)
+    {
+        var executorKind = string.IsNullOrWhiteSpace(plan.Role.PreferredExecutorKind)
+            ? "person"
+            : plan.Role.PreferredExecutorKind;
+        if (plan.RelatedStep is null)
+        {
+            return
             [
                 new CanvasWorkbenchChip
                 {
-                    Text = string.IsNullOrWhiteSpace(role.PreferredExecutorKind) ? "person" : role.PreferredExecutorKind,
+                    Text = executorKind,
                     Tone = "neutral"
                 }
-            ],
-            ContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.EditDefinitionRole,
-                    Label = "Edit role",
-                    MenuLabel = "Edit role",
-                    Icon = "draw",
-                    Tone = "accent"
-                }
-            ],
-            InputPorts = DecorateProcessPorts(BuildDefinitionRoleInputPorts(role, editor)),
-            OutputPorts = DecorateProcessPorts(BuildDefinitionRoleOutputPorts(role, editor))
-        };
+            ];
+        }
+
+        return
+        [
+            new CanvasWorkbenchChip
+            {
+                Text = "Same role contract",
+                Tone = "neutral"
+            },
+            new CanvasWorkbenchChip
+            {
+                Text = executorKind,
+                Tone = "neutral"
+            }
+        ];
+    }
+
+    private static double ResolveDefinitionRoleNodeX(
+        DefinitionRoleNodePlan plan,
+        ProcessDefinitionEditorModel editor)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return ResolveDefinitionRoleNodeX(plan.Role, editor);
+        }
+
+        return ResolveDefinitionStepX(plan.RelatedStep, editor.Steps) - DefinitionRoleInstanceOffsetX;
+    }
+
+    private static double ResolveDefinitionRoleNodeY(DefinitionRoleNodePlan plan)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return ResolveDefinitionRoleNodeY(plan.Role, plan.RoleIndex);
+        }
+
+        return ResolveDefinitionStepY(plan.RelatedStep) + ResolveRoleInstanceOffsetY(
+            plan.StepRoleIndex,
+            plan.StepRoleCount);
+    }
+
+    private static double ResolveRoleInstanceOffsetY(int stepRoleIndex, int stepRoleCount)
+    {
+        if (stepRoleCount <= 1)
+        {
+            return 0d;
+        }
+
+        var row = (stepRoleIndex / 2) + 1;
+        var direction = stepRoleIndex % 2 == 0
+            ? -1d
+            : 1d;
+        return direction * row * DefinitionRoleInstanceRowGap;
     }
 
     private static CanvasWorkbenchNode BuildRunNode(ProcessStepRunViewModel stepRun)
@@ -363,6 +656,80 @@ public sealed partial class ProcessCanvasSurfaceFactory
             InputPorts = DecorateProcessPorts(BuildRunStepInputPorts(stepRun, profile)),
             OutputPorts = DecorateProcessPorts(BuildRunStepOutputPorts(stepRun, profile))
         };
+    }
+
+    private readonly record struct DefinitionRoleNodeKey(Guid RoleId, Guid? StepId);
+
+    private readonly record struct DefinitionRoleParticipationKey(Guid RoleId, Guid StepId);
+
+    private sealed record DefinitionRoleParticipation(
+        ProcessRoleEditorModel Role,
+        ProcessStepEditorModel Step,
+        IReadOnlyList<ProcessResponsibilityKind> Responsibilities,
+        bool IsDecisionAuthority,
+        int StepIndex,
+        int StepRoleIndex,
+        int StepRoleCount);
+
+    private sealed class DefinitionRoleParticipationBuilder(
+        ProcessRoleEditorModel role,
+        ProcessStepEditorModel step,
+        int stepIndex,
+        int roleIndex)
+    {
+        public ProcessRoleEditorModel Role { get; } = role;
+
+        public ProcessStepEditorModel Step { get; } = step;
+
+        public int StepIndex { get; } = stepIndex;
+
+        public int RoleIndex { get; } = roleIndex;
+
+        public List<ProcessResponsibilityKind> Responsibilities { get; } = [];
+
+        public bool IsDecisionAuthority { get; set; }
+    }
+
+    private sealed record DefinitionRoleNodePlan(
+        string NodeId,
+        ProcessRoleEditorModel Role,
+        ProcessStepEditorModel? RelatedStep,
+        int RoleIndex,
+        IReadOnlyList<ProcessResponsibilityKind> Responsibilities,
+        bool IsDecisionAuthority,
+        int StepRoleIndex,
+        int StepRoleCount)
+    {
+        public static DefinitionRoleNodePlan CreateContract(
+            ProcessRoleEditorModel role,
+            int roleIndex)
+        {
+            return new DefinitionRoleNodePlan(
+                ProcessCanvasBranching.BuildDefinitionRoleNodeId(role),
+                role,
+                null,
+                roleIndex,
+                [],
+                false,
+                0,
+                1);
+        }
+
+        public static DefinitionRoleNodePlan CreateInstance(
+            ProcessRoleEditorModel role,
+            int roleIndex,
+            DefinitionRoleParticipation participation)
+        {
+            return new DefinitionRoleNodePlan(
+                ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(role, participation.Step),
+                role,
+                participation.Step,
+                roleIndex,
+                participation.Responsibilities,
+                participation.IsDecisionAuthority,
+                participation.StepRoleIndex,
+                participation.StepRoleCount);
+        }
     }
 
 }

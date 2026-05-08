@@ -143,7 +143,13 @@ internal static class ProcessWebGlLayoutEngine
         IReadOnlyDictionary<string, ProcessWebGlNodeMetrics> metrics)
     {
         var layouts = new Dictionary<string, ProcessWebGlLayoutPosition>(StringComparer.Ordinal);
-        if (editor.Roles.Count == 0)
+        var roleNodes = canvasSurface.Nodes
+            .Where(IsRoleNode)
+            .OrderBy(node => node.X)
+            .ThenBy(node => node.Y)
+            .ThenBy(node => node.Id, StringComparer.Ordinal)
+            .ToList();
+        if (roleNodes.Count == 0)
         {
             return layouts;
         }
@@ -151,22 +157,20 @@ internal static class ProcessWebGlLayoutEngine
         var maxProgress = laneProgressByNodeId.Count == 0
             ? 1d
             : laneProgressByNodeId.Values.Max();
-        for (var roleIndex = 0; roleIndex < editor.Roles.Count; roleIndex++)
+        for (var roleIndex = 0; roleIndex < roleNodes.Count; roleIndex++)
         {
-            var role = editor.Roles[roleIndex];
-            var roleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(role);
-            if (!nodesById.TryGetValue(roleNodeId, out var roleNode))
-            {
-                continue;
-            }
-
-            var linkedProgress = ResolveLinkedLaneProgress(canvasSurface, roleNodeId, laneProgressByNodeId);
-            var linkedDepth = ResolveLinkedLaneDepth(canvasSurface, roleNodeId, laneLayouts);
+            var roleNode = roleNodes[roleIndex];
+            var linkedProgress = ResolveLinkedLaneProgress(canvasSurface, roleNode.Id, laneProgressByNodeId);
+            var linkedDepth = ResolveLinkedLaneDepth(canvasSurface, roleNode.Id, laneLayouts);
             var normalized = maxProgress <= 0
                 ? 0.5d
                 : linkedProgress / maxProgress;
-            var defaultX = ResolveDefaultRoleCanvasX(editor);
-            var defaultY = ResolveDefaultRoleCanvasY(roleIndex);
+            var defaultX = ProcessCanvasBranching.IsDefinitionRoleInstanceNodeId(roleNode.Id)
+                ? roleNode.X
+                : ResolveDefaultRoleCanvasX(editor);
+            var defaultY = ProcessCanvasBranching.IsDefinitionRoleInstanceNodeId(roleNode.Id)
+                ? roleNode.Y
+                : ResolveDefaultRoleCanvasY(roleIndex);
             var lateralOffset = Math.Clamp((roleNode.X - defaultX) / 260d, -2d, 2d) * 118d;
             var verticalOffset = Math.Clamp((roleNode.Y - defaultY) / 240d, -2d, 2d) * 96d;
             layouts[roleNode.Id] = ResolveRoleLayout(

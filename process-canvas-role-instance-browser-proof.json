@@ -1,0 +1,253 @@
+{
+  "capturedAtUtc": "2026-05-08T15:31:25.676Z",
+  "pageUrl": "http://127.0.0.1:5081/processes",
+  "selectedProcess": "Multi-team software delivery and release governance",
+  "nodeCount": 55,
+  "linkCount": 113,
+  "roleNodeCount": 36,
+  "roleInstanceNodeCount": 36,
+  "canonicalRoleNodeCount": 0,
+  "roleInstanceLinkCount": 39,
+  "repeatedRoleTitles": [
+    [
+      "Lead engineer",
+      9
+    ],
+    [
+      "Delivery manager",
+      8
+    ],
+    [
+      "Release manager",
+      6
+    ],
+    [
+      "QA lead",
+      5
+    ],
+    [
+      "Solution architect",
+      4
+    ],
+    [
+      "Product owner",
+      2
+    ],
+    [
+      "Security reviewer",
+      2
+    ]
+  ],
+  "maxRoleInstanceScreenDx": 64.89,
+  "maxRoleInstanceScreenDy": 112.4,
+  "averageRoleInstanceLinkScreenDistance": 87.13,
+  "diagnostics": {
+    "rendererMode": "canvas",
+    "visibleNodeCount": 55,
+    "totalNodeCount": 55,
+    "totalLinkCount": 113,
+    "zoomPercent": 15,
+    "bounds": {
+      "minX": -338,
+      "minY": -1392,
+      "maxX": 9470,
+      "maxY": 859.45
+    }
+  },
+  "roleInstanceSamples": [
+    {
+      "id": "role:b09bdc12-458f-4ab3-a4ac-48d53b834d57:step:4171a44f-4f44-43a9-a3e7-bb9a488e28b1",
+      "title": "Product owner",
+      "stepTitle": "Clarify scope and release boundary",
+      "screenDx": 64.88,
+      "screenDy": 39.23
+    },
+    {
+      "id": "role:b09bdc12-458f-4ab3-a4ac-48d53b834d57:step:7fb98563-26f4-4eb7-be03-4d9d47d16510",
+      "title": "Product owner",
+      "stepTitle": "Run atomic implementation slice",
+      "screenDx": 64.89,
+      "screenDy": 39.24
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:4171a44f-4f44-43a9-a3e7-bb9a488e28b1",
+      "title": "Delivery manager",
+      "stepTitle": "Clarify scope and release boundary",
+      "screenDx": 64.88,
+      "screenDy": 39.23
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:21efdb33-4bf8-4792-aedc-9c50a86bfece",
+      "title": "Delivery manager",
+      "stepTitle": "Approve first-pass release readiness",
+      "screenDx": 64.89,
+      "screenDy": 36.29
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:d9e939e7-cda0-4c38-8f8a-19969bfe9a6a",
+      "title": "Delivery manager",
+      "stepTitle": "Execute first-pass controlled release rollout",
+      "screenDx": 64.89,
+      "screenDy": 34.26
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:1bdc04ee-1553-4d91-b337-b952f701e663",
+      "title": "Delivery manager",
+      "stepTitle": "Capture first-pass post-release learning",
+      "screenDx": 64.88,
+      "screenDy": 13.66
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:8b39fe54-20d3-4e44-99df-fb2e612bbddd",
+      "title": "Delivery manager",
+      "stepTitle": "Escalate unresolved repair findings",
+      "screenDx": 63.53,
+      "screenDy": 15.86
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:6d10d519-b484-45a0-8288-d3a574f6722c",
+      "title": "Delivery manager",
+      "stepTitle": "Approve repaired release readiness",
+      "screenDx": 64.88,
+      "screenDy": 39.24
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:7e377103-52e2-4870-92d8-58e625131beb",
+      "title": "Delivery manager",
+      "stepTitle": "Execute repaired controlled release rollout",
+      "screenDx": 64.89,
+      "screenDy": 39.25
+    },
+    {
+      "id": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:a8f1e204-9d47-4b9f-9500-8c4b8aeca81e",
+      "title": "Delivery manager",
+      "stepTitle": "Capture repaired-release learning",
+      "screenDx": 64.89,
+      "screenDy": 39.25
+    },
+    {
+      "id": "role:1bfedb51-41b3-42d0-9adf-6b2f5427d3b8:step:fe1b32c0-fddd-4a62-b5c8-fee4802eab56",
+      "title": "Solution architect",
+      "stepTitle": "Review architecture and canonical-model impact",
+      "screenDx": 64.89,
+      "screenDy": 39.23
+    },
+    {
+      "id": "role:1bfedb51-41b3-42d0-9adf-6b2f5427d3b8:step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "title": "Solution architect",
+      "stepTitle": "Complete peer review and integration readiness",
+      "screenDx": 64.89,
+      "screenDy": 38.86
+    },
+    {
+      "id": "role:1bfedb51-41b3-42d0-9adf-6b2f5427d3b8:step:1bdc04ee-1553-4d91-b337-b952f701e663",
+      "title": "Solution architect",
+      "stepTitle": "Capture first-pass post-release learning",
+      "screenDx": 64.88,
+      "screenDy": 39.23
+    },
+    {
+      "id": "role:1bfedb51-41b3-42d0-9adf-6b2f5427d3b8:step:a8f1e204-9d47-4b9f-9500-8c4b8aeca81e",
+      "title": "Solution architect",
+      "stepTitle": "Capture repaired-release learning",
+      "screenDx": 64.89,
+      "screenDy": 39.23
+    },
+    {
+      "id": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:fe1b32c0-fddd-4a62-b5c8-fee4802eab56",
+      "title": "Lead engineer",
+      "stepTitle": "Review architecture and canonical-model impact",
+      "screenDx": 64.89,
+      "screenDy": 39.24
+    },
+    {
+      "id": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:7fb98563-26f4-4eb7-be03-4d9d47d16510",
+      "title": "Lead engineer",
+      "stepTitle": "Run atomic implementation slice",
+      "screenDx": 64.89,
+      "screenDy": 39.22
+    }
+  ],
+  "roleLinkSamples": [
+    {
+      "sourceId": "role:4f10d616-d19b-43d8-b81a-b89e86dbec1d:step:1ce89091-7b4e-4e75-9d78-f9e12561e922",
+      "targetId": "branch:1ce89091-7b4e-4e75-9d78-f9e12561e922",
+      "kind": "decision-role"
+    },
+    {
+      "sourceId": "role:4f10d616-d19b-43d8-b81a-b89e86dbec1d:step:199a12c1-c0b8-447b-ac38-0e1a7a00c09e",
+      "targetId": "branch:199a12c1-c0b8-447b-ac38-0e1a7a00c09e",
+      "kind": "decision-role"
+    },
+    {
+      "sourceId": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:8b39fe54-20d3-4e44-99df-fb2e612bbddd",
+      "targetId": "branch:8b39fe54-20d3-4e44-99df-fb2e612bbddd",
+      "kind": "decision-role"
+    },
+    {
+      "sourceId": "role:b09bdc12-458f-4ab3-a4ac-48d53b834d57:step:4171a44f-4f44-43a9-a3e7-bb9a488e28b1",
+      "targetId": "step:4171a44f-4f44-43a9-a3e7-bb9a488e28b1",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:084fbd1c-10c3-4d8f-ae54-6aa6269bf3ae:step:4171a44f-4f44-43a9-a3e7-bb9a488e28b1",
+      "targetId": "step:4171a44f-4f44-43a9-a3e7-bb9a488e28b1",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:1bfedb51-41b3-42d0-9adf-6b2f5427d3b8:step:fe1b32c0-fddd-4a62-b5c8-fee4802eab56",
+      "targetId": "step:fe1b32c0-fddd-4a62-b5c8-fee4802eab56",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:fe1b32c0-fddd-4a62-b5c8-fee4802eab56",
+      "targetId": "step:fe1b32c0-fddd-4a62-b5c8-fee4802eab56",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:7fb98563-26f4-4eb7-be03-4d9d47d16510",
+      "targetId": "step:7fb98563-26f4-4eb7-be03-4d9d47d16510",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:b09bdc12-458f-4ab3-a4ac-48d53b834d57:step:7fb98563-26f4-4eb7-be03-4d9d47d16510",
+      "targetId": "step:7fb98563-26f4-4eb7-be03-4d9d47d16510",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "targetId": "step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:4f10d616-d19b-43d8-b81a-b89e86dbec1d:step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "targetId": "step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:1bfedb51-41b3-42d0-9adf-6b2f5427d3b8:step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "targetId": "step:ec977458-86b5-4f87-9c45-9f96c367f8ed",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:4f10d616-d19b-43d8-b81a-b89e86dbec1d:step:1ce89091-7b4e-4e75-9d78-f9e12561e922",
+      "targetId": "step:1ce89091-7b4e-4e75-9d78-f9e12561e922",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:1ce89091-7b4e-4e75-9d78-f9e12561e922",
+      "targetId": "step:1ce89091-7b4e-4e75-9d78-f9e12561e922",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:e1c357e6-1f77-48b3-8b12-4985a09711be:step:42d3f6a5-235c-4f3d-b28c-03ba28bfa09d",
+      "targetId": "step:42d3f6a5-235c-4f3d-b28c-03ba28bfa09d",
+      "kind": "role-binding"
+    },
+    {
+      "sourceId": "role:4f10d616-d19b-43d8-b81a-b89e86dbec1d:step:42d3f6a5-235c-4f3d-b28c-03ba28bfa09d",
+      "targetId": "step:42d3f6a5-235c-4f3d-b28c-03ba28bfa09d",
+      "kind": "role-binding"
+    }
+  ]
+}

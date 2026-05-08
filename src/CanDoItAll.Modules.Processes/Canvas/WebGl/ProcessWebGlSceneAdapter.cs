@@ -747,6 +747,25 @@ public sealed class ProcessWebGlSceneAdapter
             : anchorId;
     }
 
+    private static ProcessRoleEditorModel? ResolveDefinitionRoleByNodeId(
+        ProcessDefinitionEditorModel editor,
+        string nodeId)
+    {
+        if (!ProcessCanvasBranching.TryResolveDefinitionRoleToken(nodeId, out var roleToken))
+        {
+            return null;
+        }
+
+        if (Guid.TryParse(roleToken, out var roleId))
+        {
+            return editor.Roles.FirstOrDefault(role => role.Id == roleId);
+        }
+
+        return editor.Roles.FirstOrDefault(role =>
+            string.Equals(role.Key, roleToken, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(role.DisplayName.Replace(' ', '-'), roleToken, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool TryResolveDecisionAuthorityChange(
         ProcessDefinitionEditorModel editor,
         string sourceNodeId,
@@ -763,8 +782,7 @@ public sealed class ProcessWebGlSceneAdapter
             return false;
         }
 
-        var sourceRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), sourceNodeId, StringComparison.Ordinal));
+        var sourceRole = ResolveDefinitionRoleByNodeId(editor, sourceNodeId);
         var targetStep = editor.Steps.FirstOrDefault(step =>
             string.Equals(ProcessCanvasBranching.BuildDefinitionBranchNodeId(step), targetNodeId, StringComparison.Ordinal) ||
             string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), targetNodeId, StringComparison.Ordinal));
@@ -806,8 +824,7 @@ public sealed class ProcessWebGlSceneAdapter
             return false;
         }
 
-        var sourceRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), sourceNodeId, StringComparison.Ordinal));
+        var sourceRole = ResolveDefinitionRoleByNodeId(editor, sourceNodeId);
         var targetStep = editor.Steps.FirstOrDefault(step =>
             string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), targetNodeId, StringComparison.Ordinal));
         if (sourceRole?.Id is null || targetStep is null)
@@ -864,10 +881,8 @@ public sealed class ProcessWebGlSceneAdapter
             return false;
         }
 
-        var sourceRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), sourceNodeId, StringComparison.Ordinal));
-        var targetRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), targetNodeId, StringComparison.Ordinal));
+        var sourceRole = ResolveDefinitionRoleByNodeId(editor, sourceNodeId);
+        var targetRole = ResolveDefinitionRoleByNodeId(editor, targetNodeId);
         if (sourceRole?.Id is null || targetRole?.Id is null)
         {
             return true;

@@ -69,8 +69,8 @@
       "AllowsFallback": false,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 35,
-      "CanvasX": 120,
-      "CanvasY": 40,
+      "CanvasX": -170,
+      "CanvasY": -300,
       "Notes": "Commercial owner for onboarding priority, stakeholder alignment, and acceptance timing."
     },
     {
@@ -85,8 +85,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 50,
-      "CanvasX": 420,
-      "CanvasY": 40,
+      "CanvasX": 730,
+      "CanvasY": -310.5,
       "Notes": "Capacity and staffing authority for onboarding sequencing and kickoff feasibility."
     },
     {
@@ -127,10 +127,10 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 140,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [],
       "RoleAssignments": [
         {
@@ -186,10 +186,10 @@
       "DependsOnStepKey": "intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 420,
-      "CanvasY": 140,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 1160,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "intake",
@@ -266,10 +266,10 @@
       "DependsOnStepKey": "staffing-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 720,
-      "CanvasY": 140,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 2060,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "staffing-review",

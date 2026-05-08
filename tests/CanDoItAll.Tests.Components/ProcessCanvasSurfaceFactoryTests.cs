@@ -350,6 +350,94 @@ public sealed class ProcessCanvasSurfaceFactoryTests
     }
 
     [Fact]
+    public void Definition_surface_renders_repeated_role_as_step_role_instances()
+    {
+        var roleId = Guid.NewGuid();
+        var firstStepId = Guid.NewGuid();
+        var secondStepId = Guid.NewGuid();
+        var editor = new ProcessDefinitionEditorModel
+        {
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "delivery-lead",
+                    DisplayName = "Delivery lead"
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = firstStepId,
+                    Key = "scope",
+                    Title = "Clarify scope",
+                    StepKind = ProcessStepKind.Start,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            IsRequired = true
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = secondStepId,
+                    Key = "release",
+                    Title = "Approve release",
+                    StepKind = ProcessStepKind.Approval,
+                    Dependencies = CreateDependencies((firstStepId, null)),
+                    DecisionRoleRequirementId = roleId,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Approver,
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var factory = CreateFactory();
+        var surface = factory.BuildDefinitionSurface(editor);
+
+        var canonicalRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[0]);
+        var scopeRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(editor.Roles[0], editor.Steps[0]);
+        var releaseRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(editor.Roles[0], editor.Steps[1]);
+        var roleNodes = surface.Nodes
+            .Where(node => node.Kind == ProcessCanvasCatalog.NodeKinds.DefinitionRole)
+            .ToList();
+
+        Assert.DoesNotContain(roleNodes, node => node.Id == canonicalRoleNodeId);
+        Assert.Contains(roleNodes, node => node.Id == scopeRoleNodeId);
+        Assert.Contains(roleNodes, node => node.Id == releaseRoleNodeId);
+        Assert.True(ProcessCanvasBranching.TryResolveDefinitionRoleToken(scopeRoleNodeId, out var roleToken));
+        Assert.Equal(roleId.ToString("D"), roleToken);
+
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == scopeRoleNodeId &&
+            link.TargetId == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[0]) &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Responsible));
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == releaseRoleNodeId &&
+            link.TargetId == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[1]) &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Approver));
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == releaseRoleNodeId &&
+            link.TargetId == ProcessCanvasBranching.BuildDefinitionBranchNodeId(editor.Steps[1]) &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput);
+    }
+
+    [Fact]
     public void Runtime_surface_projects_branch_router_for_routed_steps()
     {
         var runId = Guid.NewGuid();

@@ -238,6 +238,38 @@ public sealed partial class ProcessCanvasSurfaceFactory
         return ports;
     }
 
+    private static List<CanvasWorkbenchPort> BuildDefinitionRoleInstanceOutputPorts(DefinitionRoleNodePlan plan)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        foreach (var responsibilityKind in plan.Responsibilities)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(responsibilityKind),
+                Label = ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibilityKind),
+                Side = "right",
+                Tone = "info",
+                Kind = responsibilityKind.ToString().ToLowerInvariant(),
+                IsRequired = true
+            });
+        }
+
+        if (plan.IsDecisionAuthority)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
+                Label = "Decision authority",
+                Side = "right",
+                Tone = "info",
+                Kind = "decision",
+                IsRequired = true
+            });
+        }
+
+        return ports;
+    }
+
     private static List<CanvasWorkbenchPort> BuildDefinitionRoleInputPorts(
         ProcessRoleEditorModel role,
         ProcessDefinitionEditorModel editor)

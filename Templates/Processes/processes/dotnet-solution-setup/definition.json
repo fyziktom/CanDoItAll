@@ -96,8 +96,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 50,
-      "CanvasX": 520,
-      "CanvasY": 40
+      "CanvasX": 2530,
+      "CanvasY": 300
     }
   ],
   "Steps": [
@@ -121,8 +121,8 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 80,
-      "CanvasY": 180,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [],
@@ -178,8 +178,8 @@
       "DependsOnStepKey": "scaffold-contract",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 360,
-      "CanvasY": 180,
+      "CanvasX": 1160,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -245,8 +245,8 @@
       "DependsOnStepKey": "create-dotnet-project",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 640,
-      "CanvasY": 180,
+      "CanvasX": 2060,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -312,10 +312,10 @@
       "DependsOnStepKey": "add-test-project",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 920,
-      "CanvasY": 180,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
+      "CanvasX": 2960,
+      "CanvasY": 0,
+      "BranchCanvasX": 3220,
+      "BranchCanvasY": 329,
       "Dependencies": [
         {
           "DependsOnStepKey": "create-dotnet-project",
@@ -387,8 +387,8 @@
       "DependsOnStepKey": "validate-first-build",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1200,
-      "CanvasY": 180,
+      "CanvasX": 3860,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
