@@ -593,6 +593,32 @@ public sealed class ProcessWorkspaceTests
                 currentSurface.UiState.HighlightedNodeIds.OrderBy(nodeId => nodeId, StringComparer.Ordinal));
         });
 
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnSelectionChanged(
+            roleVisualNodeIds[0],
+            JsonSerializer.Serialize(new[] { roleVisualNodeIds[0] }),
+            10));
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentSurface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Equal([roleVisualNodeIds[0]], currentSurface.UiState.SelectedNodeIds);
+            Assert.Equal(
+                roleVisualNodeIds.OrderBy(nodeId => nodeId, StringComparer.Ordinal),
+                currentSurface.UiState.HighlightedNodeIds.OrderBy(nodeId => nodeId, StringComparer.Ordinal));
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnSelectionChanged(
+            mergeNodeId,
+            JsonSerializer.Serialize(new[] { mergeNodeId }),
+            11));
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentSurface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Equal([mergeNodeId], currentSurface.UiState.SelectedNodeIds);
+            Assert.Empty(currentSurface.UiState.HighlightedNodeIds);
+        });
+
         var persistedEditor = await WaitForPersistedEditorAsync(
             processesService,
             saveResult.Value,

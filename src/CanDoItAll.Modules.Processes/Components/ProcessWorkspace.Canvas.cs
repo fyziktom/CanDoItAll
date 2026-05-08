@@ -120,6 +120,11 @@ public partial class ProcessWorkspace
         uiState.SelectedNodeIds = args.SelectedNodeIds.Count > 0
             ? [.. args.SelectedNodeIds]
             : [];
+        if (ShouldClearCanvasHighlightsForSelection(uiState.HighlightedNodeIds, uiState.SelectedNodeIds))
+        {
+            uiState.HighlightedNodeIds = [];
+        }
+
         StoreCanvasUiState(uiState);
         if (canvasSurface is not null)
         {
@@ -227,6 +232,24 @@ public partial class ProcessWorkspace
         StoreCanvasUiState(uiState);
         RefreshCanvasSurface();
         return Task.CompletedTask;
+    }
+
+    private static bool ShouldClearCanvasHighlightsForSelection(
+        IReadOnlyCollection<string> highlightedNodeIds,
+        IReadOnlyCollection<string> selectedNodeIds)
+    {
+        if (highlightedNodeIds.Count == 0)
+        {
+            return false;
+        }
+
+        if (selectedNodeIds.Count == 0)
+        {
+            return true;
+        }
+
+        var highlighted = highlightedNodeIds.ToHashSet(StringComparer.Ordinal);
+        return selectedNodeIds.Any(nodeId => !highlighted.Contains(nodeId));
     }
 
     private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)

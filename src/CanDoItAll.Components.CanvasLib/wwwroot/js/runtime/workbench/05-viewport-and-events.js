@@ -1142,6 +1142,7 @@
                             const hadComposer = !!state.composer;
                             clearContextMenu(state);
                             closeComposer(state);
+                            shared.clearNodeHighlights?.(state, { render: true, publish: true });
                             if (!hadContextMenu && !hadComposer) {
                                 setSelection(state, [], true);
                             }

@@ -484,11 +484,6 @@
             state.measureLayoutFrame = 0;
         }
 
-        if (state.nodeHighlightAnimationFrame) {
-            window.cancelAnimationFrame(state.nodeHighlightAnimationFrame);
-            state.nodeHighlightAnimationFrame = 0;
-        }
-
         if (state.statusNoticeTimer) {
             window.clearTimeout(state.statusNoticeTimer);
             state.statusNoticeTimer = 0;

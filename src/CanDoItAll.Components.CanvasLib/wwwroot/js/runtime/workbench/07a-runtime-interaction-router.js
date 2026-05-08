@@ -834,6 +834,7 @@
                             clearContextMenu(state);
                             closeComposer(state);
                             clearConnectionDraft(state, false);
+                            shared.clearNodeHighlights?.(state, { render: true, publish: true });
                             if (activeMode !== "authoring") {
                                 setWorkbenchToolMode(state, "authoring");
                                 render(state);

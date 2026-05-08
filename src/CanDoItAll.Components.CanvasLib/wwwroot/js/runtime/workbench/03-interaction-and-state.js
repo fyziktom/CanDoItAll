@@ -61,25 +61,56 @@
         return normalized;
     }
 
+    function shouldClearNodeHighlightsForSelection(state, selectedNodeIds) {
+        if (!state.highlightedIds || state.highlightedIds.size === 0) {
+            return false;
+        }
+
+        if (!Array.isArray(selectedNodeIds) || selectedNodeIds.length === 0) {
+            return true;
+        }
+
+        return selectedNodeIds.some(nodeId => !state.highlightedIds.has(nodeId));
+    }
+
+    function clearNodeHighlights(state, options) {
+        if (!state?.highlightedIds || state.highlightedIds.size === 0) {
+            return false;
+        }
+
+        state.highlightedIds = new Set();
+        state.ui.highlightedNodeIds = [];
+
+        if (options?.render !== false) {
+            render(state);
+        }
+
+        if (options?.publish !== false) {
+            publishState(state);
+        }
+
+        return true;
+    }
+
     function applySelection(state, selectedNodeIds, primaryNodeId, options) {
         const currentSelection = Array.isArray(state.ui?.selectedNodeIds)
             ? state.ui.selectedNodeIds
             : [];
         const normalized = selectionModel.replace(selectedNodeIds, primaryNodeId);
+        const shouldClearHighlights = shouldClearNodeHighlightsForSelection(state, normalized.selectedNodeIds);
         const isUnchangedSelection =
             currentSelection.length === normalized.selectedNodeIds.length &&
             currentSelection.every((nodeId, index) => nodeId === normalized.selectedNodeIds[index]);
 
-        if (isUnchangedSelection) {
+        if (isUnchangedSelection && !shouldClearHighlights) {
             state.selectedIds = toSelectionSet(currentSelection);
             return normalized;
         }
 
         state.ui.selectedNodeIds = normalized.selectedNodeIds;
         state.selectedIds = toSelectionSet(normalized.selectedNodeIds);
-        if (state.highlightedIds?.size > 0) {
-            state.highlightedIds = new Set();
-            state.ui.highlightedNodeIds = [];
+        if (shouldClearHighlights) {
+            clearNodeHighlights(state, { render: false, publish: false });
         }
 
         if (options?.render !== false) {
@@ -1303,5 +1334,5 @@
         state.dotNetRef.invokeMethodAsync("OnNodeEdited", JSON.stringify(payload));
     }
 
-    Object.assign(shared, { hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, removeComposerElements, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, normalizeContextMenuLayout, isHiveLayout, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, syncContextMenuLayerShellGeometry, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit });
+    Object.assign(shared, { hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, shouldClearNodeHighlightsForSelection, clearNodeHighlights, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, removeComposerElements, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, normalizeContextMenuLayout, isHiveLayout, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, syncContextMenuLayerShellGeometry, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit });
 })();
