@@ -133,7 +133,105 @@
         }
     }
 
-    function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide, fallbackDirection) {
+    function normalizeNodeAnchorSide(side) {
+        switch ((side || "").toLowerCase()) {
+            case "left":
+                return "left";
+            case "top":
+                return "top";
+            case "bottom":
+                return "bottom";
+            default:
+                return "right";
+        }
+    }
+
+    function resolveAnchorDetailMode(options) {
+        if (typeof options === "string") {
+            return options;
+        }
+
+        return typeof options?.detailMode === "string"
+            ? options.detailMode
+            : "";
+    }
+
+    function buildNodeSideAnchorPoint(state, node, side, horizontalInset, verticalInset) {
+        const position = getNodePosition(state, node);
+        const size = getNodeSize(state, node);
+        const resolvedSide = normalizeNodeAnchorSide(side);
+        const resolvedHorizontalInset = Math.max(0, horizontalInset || 0);
+        const resolvedVerticalInset = Math.max(0, verticalInset || 0);
+        switch (resolvedSide) {
+            case "left":
+                return {
+                    x: position.x - (size.width / 2) + resolvedHorizontalInset,
+                    y: position.y,
+                    side: resolvedSide
+                };
+            case "top":
+                return {
+                    x: position.x,
+                    y: position.y - (size.height / 2) + resolvedVerticalInset,
+                    side: resolvedSide
+                };
+            case "bottom":
+                return {
+                    x: position.x,
+                    y: position.y + (size.height / 2) - resolvedVerticalInset,
+                    side: resolvedSide
+                };
+            default:
+                return {
+                    x: position.x + (size.width / 2) - resolvedHorizontalInset,
+                    y: position.y,
+                    side: resolvedSide
+                };
+        }
+    }
+
+    function resolveLinkAnchorSides(state, source, target, detailMode) {
+        const sourcePosition = getNodePosition(state, source);
+        const targetPosition = getNodePosition(state, target);
+        const deltaX = targetPosition.x - sourcePosition.x;
+        const deltaY = targetPosition.y - sourcePosition.y;
+        if ((detailMode || "").toLowerCase() === "micro" && Math.abs(deltaY) > Math.abs(deltaX)) {
+            const sourceSide = deltaY >= 0 ? "bottom" : "top";
+            return {
+                sourceSide,
+                targetSide: sourceSide === "bottom" ? "top" : "bottom"
+            };
+        }
+
+        const sourceSide = deltaX >= 0 ? "right" : "left";
+        return {
+            sourceSide,
+            targetSide: sourceSide === "right" ? "left" : "right"
+        };
+    }
+
+    function resolveLinkControlVector(side) {
+        switch (normalizeNodeAnchorSide(side)) {
+            case "left":
+                return { x: -1, y: 0 };
+            case "top":
+                return { x: 0, y: -1 };
+            case "bottom":
+                return { x: 0, y: 1 };
+            default:
+                return { x: 1, y: 0 };
+        }
+    }
+
+    function buildLinkControlPoint(anchor, side, offset) {
+        const vector = resolveLinkControlVector(side);
+        return {
+            x: anchor.x + (offset * vector.x),
+            y: anchor.y + (offset * vector.y)
+        };
+    }
+
+    function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide, fallbackDirection, detailMode) {
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
         const side = resolveNodePortSide(port, fallbackSide);
@@ -158,7 +256,7 @@
                 width: hostWidth,
                 height: hostHeight
             };
-            const advancedLayout = lateRuntime.getCanvasAdvancedNodePortLayout?.(state, node, hostBounds);
+            const advancedLayout = lateRuntime.getCanvasAdvancedNodePortLayout?.(state, node, hostBounds, detailMode);
             let anchorHostPoint = null;
             if (advancedLayout) {
                 const entries = side === "right"
@@ -234,25 +332,25 @@
         };
     }
 
-    function getLinkAnchorPoint(state, node, side, portId, direction) {
+    function getLinkAnchorPoint(state, node, side, portId, direction, options) {
+        const detailMode = resolveAnchorDetailMode(options);
+        const resolvedSide = normalizeNodeAnchorSide(side);
+        if (detailMode.toLowerCase() === "micro") {
+            return buildNodeSideAnchorPoint(state, node, resolvedSide, 0, 0);
+        }
+
         const ports = getNodePortCollection(node, direction);
         if (portId && ports.length > 0) {
             const portIndex = ports.findIndex(port => port?.id === portId);
             if (portIndex >= 0) {
-                return buildPortAnchorPoint(state, node, ports[portIndex], portIndex, ports.length, side, direction);
+                return buildPortAnchorPoint(state, node, ports[portIndex], portIndex, ports.length, resolvedSide, direction, detailMode);
             }
         }
 
-        const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
-        const inset = Math.min(28, size.width * 0.11);
-        return {
-            x: side === "right"
-                ? position.x + (size.width / 2) - inset
-                : position.x - (size.width / 2) + inset,
-            y: position.y,
-            side
-        };
+        const horizontalInset = Math.min(28, size.width * 0.11);
+        const verticalInset = Math.min(22, size.height * 0.18);
+        return buildNodeSideAnchorPoint(state, node, resolvedSide, horizontalInset, verticalInset);
     }
 
     function getCollapseAnchorTargets(state, node) {
@@ -344,20 +442,22 @@
         return `link:${index}`;
     }
 
-    function getLinkPathData(state, source, target, link) {
-        const sourcePosition = getNodePosition(state, source);
-        const targetPosition = getNodePosition(state, target);
-        const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-        const targetSide = sourceSide === "right" ? "left" : "right";
-        const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide, link?.sourcePortId, "output");
-        const targetAnchor = getLinkAnchorPoint(state, target, targetSide, link?.targetPortId, "input");
-        const sourceAnchorSide = sourceAnchor.side || sourceSide;
-        const targetAnchorSide = targetAnchor.side || targetSide;
-        const controlOffset = Math.max(92, Math.abs(targetAnchor.x - sourceAnchor.x) * 0.38);
+    function getLinkPathData(state, source, target, link, options) {
+        const detailMode = resolveAnchorDetailMode(options);
+        const anchorSides = resolveLinkAnchorSides(state, source, target, detailMode);
+        const sourceAnchor = getLinkAnchorPoint(state, source, anchorSides.sourceSide, link?.sourcePortId, "output", detailMode);
+        const targetAnchor = getLinkAnchorPoint(state, target, anchorSides.targetSide, link?.targetPortId, "input", detailMode);
+        const sourceAnchorSide = sourceAnchor.side || anchorSides.sourceSide;
+        const targetAnchorSide = targetAnchor.side || anchorSides.targetSide;
+        const controlOffset = Math.max(
+            92,
+            Math.max(Math.abs(targetAnchor.x - sourceAnchor.x), Math.abs(targetAnchor.y - sourceAnchor.y)) * 0.38);
+        const sourceControl = buildLinkControlPoint(sourceAnchor, sourceAnchorSide, controlOffset);
+        const targetControl = buildLinkControlPoint(targetAnchor, targetAnchorSide, controlOffset);
         return [
             `M ${sourceAnchor.x} ${sourceAnchor.y}`,
-            `C ${sourceAnchor.x + (sourceAnchorSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
-            `${targetAnchor.x + (targetAnchorSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
+            `C ${sourceControl.x} ${sourceControl.y}`,
+            `${targetControl.x} ${targetControl.y}`,
             `${targetAnchor.x} ${targetAnchor.y}`
         ].join(" ");
     }
@@ -2042,5 +2142,5 @@
         };
     }
 
-    Object.assign(shared, { getLinkAnchorPoint, resolveCollapseAnchorInfo, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, resolveNodeMarkers, createMarkerBadge, createMarkerBadges, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
+    Object.assign(shared, { getLinkAnchorPoint, resolveLinkAnchorSides, resolveCollapseAnchorInfo, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, resolveNodeMarkers, createMarkerBadge, createMarkerBadges, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
 })();

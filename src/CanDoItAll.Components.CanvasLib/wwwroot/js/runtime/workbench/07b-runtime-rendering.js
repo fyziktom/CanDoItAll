@@ -361,6 +361,7 @@
         }
 
         if (diagnostics.showConnectorAnchors) {
+            const detailMode = resolveCanvasNodeDetailMode(state, (visibleNodes || []).length);
             const visibleLookup = new Set((visibleNodes || []).map(node => node.id));
             for (const link of state.surface.links) {
                 if (!visibleLookup.has(link.sourceId) || !visibleLookup.has(link.targetId)) {
@@ -373,13 +374,13 @@
                     continue;
                 }
 
-                const sourcePosition = getNodePosition(state, source);
-                const targetPosition = getNodePosition(state, target);
-                const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-                const targetSide = sourceSide === "right" ? "left" : "right";
+                const anchorSides = shared.resolveLinkAnchorSides?.(state, source, target, detailMode) || {
+                    sourceSide: "right",
+                    targetSide: "left"
+                };
                 for (const point of [
-                    getLinkAnchorPoint(state, source, sourceSide, link.sourcePortId, "output"),
-                    getLinkAnchorPoint(state, target, targetSide, link.targetPortId, "input")
+                    getLinkAnchorPoint(state, source, anchorSides.sourceSide, link.sourcePortId, "output", detailMode),
+                    getLinkAnchorPoint(state, target, anchorSides.targetSide, link.targetPortId, "input", detailMode)
                 ]) {
                     const hostPoint = worldToHostPoint(state, point);
                     const dot = createElement(state.document, "div", "cw-debug-anchor");

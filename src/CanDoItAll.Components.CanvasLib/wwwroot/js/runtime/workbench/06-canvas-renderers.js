@@ -374,17 +374,46 @@
         };
     }
 
+    function resolveCanvasLinkControlVector(side) {
+        switch ((side || "").toLowerCase()) {
+            case "left":
+                return { x: -1, y: 0 };
+            case "top":
+                return { x: 0, y: -1 };
+            case "bottom":
+                return { x: 0, y: 1 };
+            default:
+                return { x: 1, y: 0 };
+        }
+    }
+
+    function resolveCanvasAnchorSideFromHostBounds(bounds, point, detailMode) {
+        const centerX = bounds.left + (bounds.width / 2);
+        const centerY = bounds.top + (bounds.height / 2);
+        const pointX = Number.isFinite(point?.x) ? point.x : centerX;
+        const pointY = Number.isFinite(point?.y) ? point.y : centerY;
+        const deltaX = pointX - centerX;
+        const deltaY = pointY - centerY;
+        if ((detailMode || "").toLowerCase() === "micro" && Math.abs(deltaY) > Math.abs(deltaX)) {
+            return deltaY >= 0 ? "bottom" : "top";
+        }
+
+        return deltaX >= 0 ? "right" : "left";
+    }
+
     function buildCanvasLinkGeometry(startPoint, endPoint, sourceSide, targetSide) {
-        const controlOffset = Math.max(56, Math.abs(endPoint.x - startPoint.x) * 0.38);
-        const resolvedSourceSide = sourceSide === "left" ? -1 : 1;
-        const resolvedTargetSide = targetSide === "right" ? 1 : -1;
+        const controlOffset = Math.max(
+            56,
+            Math.max(Math.abs(endPoint.x - startPoint.x), Math.abs(endPoint.y - startPoint.y)) * 0.38);
+        const sourceVector = resolveCanvasLinkControlVector(sourceSide);
+        const targetVector = resolveCanvasLinkControlVector(targetSide);
         const controlPoint1 = {
-            x: startPoint.x + (controlOffset * resolvedSourceSide),
-            y: startPoint.y
+            x: startPoint.x + (controlOffset * sourceVector.x),
+            y: startPoint.y + (controlOffset * sourceVector.y)
         };
         const controlPoint2 = {
-            x: endPoint.x + (controlOffset * resolvedTargetSide),
-            y: endPoint.y
+            x: endPoint.x + (controlOffset * targetVector.x),
+            y: endPoint.y + (controlOffset * targetVector.y)
         };
         const midPoint = sampleCubicBezierPoint(startPoint, controlPoint1, controlPoint2, endPoint, 0.5);
         const padding = 12;
@@ -709,6 +738,7 @@
         // Keep links visible when one endpoint moves outside the viewport.
         // Only collapsed or otherwise hidden nodes should suppress a connection.
         const graphVisibleNodeIds = new Set(getVisibleNodes(state).map(node => node.id));
+        const detailMode = resolveCanvasNodeDetailMode(state, (visibleNodes || []).length);
         const nextEntries = new Map();
         let renderedLinkCount = 0;
 
@@ -723,20 +753,20 @@
                 continue;
             }
 
-            const sourcePosition = getNodePosition(state, source);
-            const targetPosition = getNodePosition(state, target);
-            const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-            const targetSide = sourceSide === "right" ? "left" : "right";
-            const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, source, sourceSide, link.sourcePortId, "output"));
-            const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, target, targetSide, link.targetPortId, "input"));
+            const anchorSides = shared.resolveLinkAnchorSides?.(state, source, target, detailMode) || {
+                sourceSide: "right",
+                targetSide: "left"
+            };
+            const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, source, anchorSides.sourceSide, link.sourcePortId, "output", detailMode));
+            const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, target, anchorSides.targetSide, link.targetPortId, "input", detailMode));
             const connectionStyle = resolveCanvasLinkConnectionStyle(
                 findNodePort(source, link.sourcePortId, "output"),
                 findNodePort(target, link.targetPortId, "input"));
             const retainedKey = getLinkRetainedKey(link, index);
             const geometry = drawCanvasLink(surface.context, link, sourceAnchor, targetAnchor, {
                 key: retainedKey,
-                sourceSide: sourceAnchor.side || sourceSide,
-                targetSide: targetAnchor.side || targetSide,
+                sourceSide: sourceAnchor.side || anchorSides.sourceSide,
+                targetSide: targetAnchor.side || anchorSides.targetSide,
                 isHovered: state.surface?.mode === "delete" && state.hoveredDeleteLinkKey === retainedKey,
                 connectionStyle
             });
@@ -789,19 +819,19 @@
 
             if (hoveredTargetId && state.lookups.byId.has(hoveredTargetId)) {
                 const previewTarget = state.lookups.byId.get(hoveredTargetId);
-                const sourcePosition = getNodePosition(state, previewSource);
-                const targetPosition = getNodePosition(state, previewTarget);
-                const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-                const targetSide = sourceSide === "right" ? "left" : "right";
-                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output"));
-                const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewTarget, targetSide, previewLink.targetPortId, "input"));
+                const anchorSides = shared.resolveLinkAnchorSides?.(state, previewSource, previewTarget, detailMode) || {
+                    sourceSide: "right",
+                    targetSide: "left"
+                };
+                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, anchorSides.sourceSide, previewLink.sourcePortId, "output", detailMode));
+                const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewTarget, anchorSides.targetSide, previewLink.targetPortId, "input", detailMode));
                 const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
                     findNodePort(previewSource, previewLink.sourcePortId, "output"),
                     findNodePort(previewTarget, previewLink.targetPortId, "input"));
                 const previewGeometry = drawCanvasLink(surface.context, previewLink, sourceAnchor, targetAnchor, {
                     isPreview: true,
-                    sourceSide: sourceAnchor.side || sourceSide,
-                    targetSide: targetAnchor.side || targetSide,
+                    sourceSide: sourceAnchor.side || anchorSides.sourceSide,
+                    targetSide: targetAnchor.side || anchorSides.targetSide,
                     forceArrow: true,
                     connectionStyle: previewConnectionStyle
                 });
@@ -818,10 +848,8 @@
             }
             else if (state.pointerHostPoint) {
                 const previewSourceBounds = projectSceneBounds(state, getNodeSceneBounds(state, previewSource));
-                const sourceSide = state.pointerHostPoint.x >= (previewSourceBounds.left + (previewSourceBounds.width / 2))
-                    ? "right"
-                    : "left";
-                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output"));
+                const sourceSide = resolveCanvasAnchorSideFromHostBounds(previewSourceBounds, state.pointerHostPoint, detailMode);
+                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output", detailMode));
                 const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
                     findNodePort(previewSource, previewLink.sourcePortId, "output"),
                     null);
