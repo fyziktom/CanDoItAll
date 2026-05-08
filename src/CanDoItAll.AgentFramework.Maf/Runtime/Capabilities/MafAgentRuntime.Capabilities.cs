@@ -355,6 +355,15 @@ public sealed partial class MafAgentRuntime
             return;
         }
 
+        if (ShouldSkipProcessBrowserMcpCapability(capability))
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Capability boundary",
+                $"Skipping browser MCP capability '{capability.Name}' because this governed process step does not require browser proof.");
+            return;
+        }
+
         switch (capability.Kind)
         {
             case CapabilityKind.Tool:
@@ -436,6 +445,22 @@ public sealed partial class MafAgentRuntime
         }
 
         return false;
+    }
+
+    private static bool ShouldSkipProcessBrowserMcpCapability(CapabilityCatalogItem capability)
+    {
+        if (WorkspaceExecutionAuditContext.Current?.ProcessBrowserToolsAllowed != false ||
+            capability.Kind != CapabilityKind.McpServer)
+        {
+            return false;
+        }
+
+        var configuration = DeserializeConfiguration<McpCapabilityConfiguration>(capability.ConfigurationJson);
+        return capability.Key.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               capability.Name.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               capability.EndpointOrPath.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase) ||
+               (configuration?.Arguments?.Any(argument =>
+                   argument.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase)) ?? false);
     }
 
     private async Task AttachCompactionAsync(

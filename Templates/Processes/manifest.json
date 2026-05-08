@@ -22,8 +22,8 @@
   },
   "Processes": [
     {
-      "Key": "dotnet-blazor-ssr-solution-setup",
-      "RelativePath": "processes/dotnet-blazor-ssr-solution-setup"
+      "Key": "dotnet-solution-setup",
+      "RelativePath": "processes/dotnet-solution-setup"
     },
     {
       "Key": "dotnet-feature-function-implementation",

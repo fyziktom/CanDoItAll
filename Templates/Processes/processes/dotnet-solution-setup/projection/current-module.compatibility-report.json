@@ -1,5 +1,5 @@
 {
-  "ProcessKey": "dotnet-blazor-ssr-solution-setup",
+  "ProcessKey": "dotnet-solution-setup",
   "Status": "Compatible",
   "Notes": [
     "Uses only current process-template fields and shared role/artifact resources.",

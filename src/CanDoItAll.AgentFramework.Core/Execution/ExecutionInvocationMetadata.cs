@@ -13,6 +13,8 @@ public static class ExecutionInvocationMetadata
     public const string ProcessCooperationModeMetadataKey = "agentProcessCooperationMode";
     public const string ProcessWorkspaceToolProfileMetadataKey = "agentProcessWorkspaceToolProfile";
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
+    public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
+    public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
 
@@ -190,6 +192,22 @@ public static class ExecutionInvocationMetadata
         return IsTrustedGovernedProcessRun(run)
             ? TryReadString(run.MetadataJson, ProcessCooperationSummaryMetadataKey)
             : string.Empty;
+    }
+
+    public static bool ResolveProcessBrowserToolsAllowed(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return !IsTrustedGovernedProcessRun(run) ||
+               TryReadBoolean(run.MetadataJson, ProcessBrowserToolsAllowedMetadataKey) != false;
+    }
+
+    public static bool ResolveProcessScaffoldToolOnly(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run) &&
+               TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
     }
 
     private static JsonObject ParseObject(string? metadataJson)

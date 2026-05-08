@@ -50,6 +50,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             groundedExternalMappedAlias,
             out var groundedExternalParentAlias,
             out var groundedExternalLeafName);
+        var usesScaffoldContractDrivenSetup = UsesScaffoldContractDrivenSetup(candidate);
+        var isDotNetSolutionSetupScaffoldMutationStep = IsDotNetSolutionSetupScaffoldMutationStep(candidate);
+        var allowsExternalTargetMutation = AllowsExternalTargetMutation(candidate, projectStructureGroundingSummary);
         var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
         var currentRunManagedOutputRoot = BuildCurrentRunManagedOutputRoot(candidate);
         var usesGroundedExternalArtifactDestination = hasGroundedExternalTarget &&
@@ -135,6 +138,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 {
                     builder.AppendLine($"- This grounded external root is described as an artifact, report, plan, document, or handoff destination for non-implementation work. Write required generated deliverable artifacts under `{groundedExternalMappedAlias}` when no narrower artifact path is listed, and keep `{currentRunManagedArtifactRoot}` for scratch evidence, logs, or managed handoff copies.");
                 }
+                else if (!allowsExternalTargetMutation)
+                {
+                    builder.AppendLine($"- This step is non-mutating. Do not create directories or write files under `{groundedExternalMappedAlias}`. Write required architecture, scope, review, readiness, or planning artifacts under `{currentRunManagedArtifactRoot}` unless an exact governed artifact path is listed.");
+                    builder.AppendLine("- Read product files only when they already exist and the current review step needs them. For a missing greenfield product root, record the intended boundary and leave creation to the modeled setup or implementation step.");
+                }
 
                 builder.AppendLine($"- In helper scripts that call native commands, use the native path `{groundedExternalAbsolutePath}` or convert `{groundedExternalMappedAlias}` to that native path before `Resolve-Path`, `Test-Path`, `Set-Location`, `Start-Process`, `cmd.exe`, `node`, `npm`, or similar native calls. Never pass an `external-target/...` alias directly to native PowerShell or process APIs.");
                 builder.AppendLine($"- Do not use broad managed-root workspace listing or search to discover launch helpers, source code, or requirements for this external-target run. List or search the grounded external-target alias and `{currentRunManagedArtifactRoot}` instead.");
@@ -166,6 +174,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine("Live project structure grounding:");
             builder.AppendLine(projectStructureGroundingSummary.Trim());
+            builder.AppendLine();
+        }
+
+        if (isDotNetSolutionSetupScaffoldMutationStep)
+        {
+            builder.AppendLine(".NET setup subprocess boundary:");
+            builder.AppendLine("- This is a scaffold/setup mutation step, not feature implementation, QA, runtime smoke, or browser proof.");
+            builder.AppendLine("- Create or repair only the files named by this step's scaffold contract. Do not add feature behavior, feature tests, template cleanup, package upgrades, browser checks, or runtime proof unless this exact step explicitly requires them.");
+            builder.AppendLine("- Do not run `dotnet run`, launch a web app, invoke browser tools, or create a long-running app process in this step. Leave build/test/runtime/browser validation to the validation step or parent QA step.");
+            builder.AppendLine("- For `create-dotnet-project`, create the solution and app project only. Do not create the test project in that step; the test project belongs to the separate `add-test-project` step.");
+            builder.AppendLine("- Evidence for this step is scaffold file presence, readback of representative solution/project files, and the required setup change-set artifact under the current-run artifact root.");
             builder.AppendLine();
         }
 
@@ -383,12 +402,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 builder.AppendLine($"- If `{groundedExternalMappedAlias}` is an unimplemented product root, the next product action must be a concrete mutation under that root, such as scaffolding a project, writing source/configuration files, or repairing generated content. Do not write final evidence artifacts or submit Blocked before trying that concrete mutation and reading either the changed files or the failure receipt.");
                 if (hasGroundedExternalScaffoldTarget && implementationMentionsDotNet)
                 {
-                    builder.AppendLine($"- For .NET scaffolding into the grounded external product root, use `workspace_dotnet_new` with `parentDirectory` set to `{groundedExternalParentAlias}` and `name` set to `{groundedExternalLeafName}`. If `{groundedExternalMappedAlias}` already exists, inspect and repair it in place instead of creating a sibling or managed artifact copy.");
-                    builder.AppendLine("- Choose the .NET template and project shape named by the current-run requirements. Do not default to Blazor, Razor, or Web App templates unless the selected work branch explicitly asks for browser UI, Blazor, or Razor; console apps, minimal APIs, workers, services, and libraries must keep their requested archetype.");
-                    builder.AppendLine($"- If `{groundedExternalMappedAlias}` has no project or source files, invoke `workspace_dotnet_new` with `parentDirectory` `{groundedExternalParentAlias}`, `name` `{groundedExternalLeafName}`, and `force` false before writing implementation-summary artifacts. Existing markdown, checklist, log, or README files in that directory are not a scaffold and are not a reason to skip project creation.");
-                    builder.AppendLine($"- If `workspace_dotnet_new` cannot scaffold into `{groundedExternalMappedAlias}` because the directory already has evidence files, repair the root in place by writing the required project/source files or return Blocked with the exact scaffold diagnostic. Do not recursively delete `{groundedExternalMappedAlias}` to make room.");
-                    builder.AppendLine($"- `{groundedExternalParentAlias}` is only the scaffold parent argument for creating `{groundedExternalMappedAlias}`. It is not a product root, evidence root, source corpus, or permission to inspect sibling folders.");
-                    builder.AppendLine($"- After scaffolding, all reads, writes, builds, tests, runs, and evidence citations must target `{groundedExternalMappedAlias}` or `{currentRunManagedArtifactRoot}`, not sibling folders under `{groundedExternalParentAlias}`.");
+                    if (usesScaffoldContractDrivenSetup)
+                    {
+                        builder.AppendLine("- The upstream scaffold contract overrides the generic product-root leaf scaffold shortcut. Read the scaffold contract before scaffolding, then use its solution name, app project name, app directory, template, target framework, and test framework exactly.");
+                        builder.AppendLine($"- Treat `{groundedExternalMappedAlias}` as the solution/product root named by the contract. Do not derive an app project name from the product-root folder leaf `{groundedExternalLeafName}` and do not scaffold the app directly at the product root unless the scaffold contract explicitly says so.");
+                        builder.AppendLine($"- For contract-driven .NET solution setup, create the product root when needed, scaffold the solution at `{groundedExternalMappedAlias}`, create the app parent directory from the contract such as `{groundedExternalMappedAlias}/src`, and set `workspace_dotnet_new` `name` to the contract's app project name.");
+                        builder.AppendLine($"- `{groundedExternalParentAlias}` is only the parent of the product root. It is not a product root, source corpus, evidence root, or permission to inspect sibling folders.");
+                    }
+                    else
+                    {
+                        builder.AppendLine($"- For .NET scaffolding into the grounded external product root, use `workspace_dotnet_new` with `parentDirectory` set to `{groundedExternalParentAlias}` and `name` set to `{groundedExternalLeafName}`. If `{groundedExternalMappedAlias}` already exists, inspect and repair it in place instead of creating a sibling or managed artifact copy.");
+                        builder.AppendLine("- Choose the .NET template and project shape named by the current-run requirements. Do not default to Blazor, Razor, or Web App templates unless the selected work branch explicitly asks for browser UI, Blazor, or Razor; console apps, minimal APIs, workers, services, and libraries must keep their requested archetype.");
+                        builder.AppendLine($"- If `{groundedExternalMappedAlias}` has no project or source files, invoke `workspace_dotnet_new` with `parentDirectory` `{groundedExternalParentAlias}`, `name` `{groundedExternalLeafName}`, and `force` false before writing implementation-summary artifacts. Existing markdown, checklist, log, or README files in that directory are not a scaffold and are not a reason to skip project creation.");
+                        builder.AppendLine($"- If `workspace_dotnet_new` cannot scaffold into `{groundedExternalMappedAlias}` because the directory already has evidence files, repair the root in place by writing the required project/source files or return Blocked with the exact scaffold diagnostic. Do not recursively delete `{groundedExternalMappedAlias}` to make room.");
+                        builder.AppendLine($"- `{groundedExternalParentAlias}` is only the scaffold parent argument for creating `{groundedExternalMappedAlias}`. It is not a product root, evidence root, source corpus, or permission to inspect sibling folders.");
+                        builder.AppendLine($"- After scaffolding, all reads, writes, builds, tests, runs, and evidence citations must target `{groundedExternalMappedAlias}` or `{currentRunManagedArtifactRoot}`, not sibling folders under `{groundedExternalParentAlias}`.");
+                    }
                 }
                 else if (hasGroundedExternalScaffoldTarget && implementationMentionsJavaScript)
                 {
@@ -527,7 +556,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "document output",
                 "report output",
                 "plan output",
-                "output folder",
                 "handoff folder",
                 "business plan",
                 "marketing plan",
@@ -536,7 +564,64 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "research report",
                 "analysis report",
                 "decision package"
-            ]);
+            ]) &&
+            !ContainsAnyArtifactDestinationSignal(
+                context,
+                [
+                    "product root",
+                    "generated app source",
+                    "app source belongs",
+                    ".sln",
+                    ".csproj",
+                    "solution name",
+                    "app project",
+                    "test project",
+                    "console app",
+                    "blazor",
+                    "razor",
+                    "asp.net",
+                    "javascript browser app",
+                    "static javascript",
+                    "index.html",
+                    "app.js",
+                    "package.json"
+                ]);
+    }
+
+    private static bool UsesScaffoldContractDrivenSetup(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        if (candidate.ArtifactInputs.Any(ReferencesScaffoldContract))
+        {
+            return true;
+        }
+
+        var context = string.Join(
+            '\n',
+            candidate.Definition.Name,
+            candidate.StepRun.Title,
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary);
+
+        return context.Contains("scaffold contract", StringComparison.OrdinalIgnoreCase) ||
+               context.Contains(".NET solution setup subprocess", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ReferencesScaffoldContract(DispatchArtifactInput artifactInput)
+    {
+        if (artifactInput.ExpectedArtifactTitle.Contains("scaffold contract", StringComparison.OrdinalIgnoreCase) ||
+            artifactInput.SourceStepTitle.Contains("scaffold contract", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return artifactInput.Artifacts.Any(artifact =>
+            artifact.Title.Contains("scaffold contract", StringComparison.OrdinalIgnoreCase) ||
+            artifact.ManagedStoragePath.EndsWith("scaffold-contract.md", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool ContainsAnyArtifactDestinationSignal(string text, IReadOnlyCollection<string> needles)

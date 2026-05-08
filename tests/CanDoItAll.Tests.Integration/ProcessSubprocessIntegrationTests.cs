@@ -2,6 +2,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -321,13 +323,13 @@ public sealed class ProcessSubprocessIntegrationTests
         var setupDefinitionId = await ImportAndPublishTemplateAsync(
             processesService,
             projectionService,
-            "dotnet-blazor-ssr-solution-setup",
+            "dotnet-solution-setup",
             projectId);
         var duplicateSetupImport = await processesService.ImportAsync(
             projectionService.GetProjectedEnvelope(
-                "dotnet-blazor-ssr-solution-setup",
+                "dotnet-solution-setup",
                 projectId,
-                ".NET Blazor SSR solution setup subprocess"));
+                ".NET solution setup subprocess"));
 
         Assert.True(duplicateSetupImport.IsSuccess, ToErrorMessage(duplicateSetupImport.Errors));
         Assert.True((await processesService.PublishAsync(duplicateSetupImport.Value)).IsSuccess);
@@ -364,7 +366,7 @@ public sealed class ProcessSubprocessIntegrationTests
 
         Assert.Equal(ProcessStepKind.Subprocess, sliceSubprocessStep.StepKind);
         Assert.Equal(setupDefinitionId, sliceSubprocessStep.SubprocessDefinitionId);
-        Assert.Equal(".NET Blazor SSR solution setup subprocess", sliceSubprocessStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(".NET solution setup subprocess", sliceSubprocessStep.SubprocessDefinitionSnapshotName);
         Assert.Equal(ProcessStepKind.Subprocess, sliceFeatureSubprocessStep.StepKind);
         Assert.Equal(featureImplementationDefinitionId, sliceFeatureSubprocessStep.SubprocessDefinitionId);
         Assert.Equal(".NET feature/function implementation subprocess", sliceFeatureSubprocessStep.SubprocessDefinitionSnapshotName);
@@ -387,7 +389,7 @@ public sealed class ProcessSubprocessIntegrationTests
         await ImportAndPublishTemplateAsync(
             processesService,
             projectionService,
-            "dotnet-blazor-ssr-solution-setup",
+            "dotnet-solution-setup",
             projectId);
         var featureDefinitionId = await ImportAndPublishTemplateAsync(
             processesService,
@@ -424,6 +426,116 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(ProcessStepKind.Subprocess, implementationStep.StepKind);
         Assert.Equal(featureDefinitionId, implementationStep.SubprocessDefinitionId);
         Assert.Equal(".NET feature/function implementation subprocess", implementationStep.SubprocessDefinitionSnapshotName);
+    }
+
+    [Fact]
+    public async Task Default_ai_delivery_template_keeps_governance_roles_agent_executable()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "AI delivery role binding validation");
+        var definitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "ai-assisted-change-delivery",
+            projectId);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var definition = await dbContext.Set<ProcessDefinition>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == definitionId);
+
+        Assert.NotNull(definition.ActivePublishedVersionId);
+        var roles = await dbContext.Set<ProcessRoleRequirement>()
+            .AsNoTracking()
+            .Where(item => item.ProcessDefinitionVersionId == definition.ActivePublishedVersionId!.Value)
+            .Where(item => new[]
+            {
+                "product-owner",
+                "solution-architect",
+                "ai-safety-reviewer",
+                "model-risk-approver",
+                "ai-evaluation-lead",
+                "qa-lead",
+                "security-reviewer",
+                "release-approver"
+            }.Contains(item.Key))
+            .ToListAsync();
+
+        Assert.Equal(8, roles.Count);
+        Assert.All(
+            roles,
+            role =>
+            {
+                Assert.Equal("person-or-agent", role.PreferredExecutorKind);
+                Assert.True(role.AllowsFallback, role.Key);
+            });
+    }
+
+    [Fact]
+    public async Task Dotnet_solution_setup_template_routes_console_scaffold_to_general_dotnet_agent()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Generic .NET setup staffing validation");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build todo summary console app",
+                "Implementation",
+                "Product root: C:\\programovani\\candoitall-test-dotnet-console. Architecture: .NET console application. Solution name: TodoSummary. App project: src/TodoSummary.Console. Test project: tests/TodoSummary.Tests. Exact interface: stdin and --text only. No web UI, no browser UI, no database, no background service.",
+                null,
+                ObjectSubtype: "task"));
+        var definitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-solution-setup",
+            projectId);
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = definitionId,
+                ProjectId = projectId,
+                RunName = "Generic .NET setup staffing validation run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Validate that generic setup staffing follows the selected console mindmap.",
+                ProjectStructureContext = new ProcessProjectStructureContext
+                {
+                    ProjectId = projectId,
+                    NodeId = "process-node",
+                    NodeTitle = "Generic setup process",
+                    ParentNodeId = workItem.Id,
+                    ParentNodeTitle = workItem.Title
+                }
+            });
+
+        Assert.True(runResult.IsSuccess, ToErrorMessage(runResult.Errors));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var engineerAssignment = await (
+            from assignment in dbContext.Set<ProcessRunAssignment>().AsNoTracking()
+            join role in dbContext.Set<ProcessRoleRequirement>().AsNoTracking()
+                on assignment.RoleRequirementId equals role.Id
+            where assignment.ProcessRunId == runResult.Value &&
+                  role.DisplayName == "Generic .NET scaffold engineer"
+            select assignment)
+            .SingleAsync();
+
+        Assert.Equal(".NET Application Developer", engineerAssignment.DisplayName);
+        Assert.NotEqual("Blazor Application Developer", engineerAssignment.DisplayName);
     }
 
     private static async Task<Guid> ImportAndPublishTemplateAsync(

@@ -341,6 +341,30 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_collapsed_project_structure_heading()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-processes2-dotnet-cli-a Architecture: - .NET console application. - Solution name: TodoSummary."
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-processes2-dotnet-cli-a", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_project_structure_node_id_annotation()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-processes1-blazor-counter-a (custom:7e4daf18f7cd439abc568402150a1889"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-processes1-blazor-counter-a", alias);
+    }
+
+    [Fact]
     public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_inline_generated_source_sentence()
     {
         var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
@@ -744,9 +768,170 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, profile);
     }
 
+    [Fact]
+    public void ResolveRequiredToolNames_for_dotnet_solution_setup_scaffold_step_skips_runtime_validation()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = ".NET solution setup subprocess",
+                Slug = "dotnet-solution-setup"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "create-dotnet-project",
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = ".NET Application Developer"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Create solution and .NET app project",
+                WorkBriefText = "Create a Blazor Web App solution skeleton. Build, test, runtime smoke, and browser proof are later validation steps.",
+                ExpectedOutcome = "Solution and app project are present.",
+                EvidenceExpectationSummary = "Solution skeleton change set"
+            },
+            [
+                (ProcessArtifactKind.Deliverable, "Solution skeleton change set", "Must include the .slnx or .sln solution file, requested .NET app project, selected template proof, and solution membership proof.")
+            ]);
+
+        Assert.Contains("workspace_dotnet_new", tools);
+        Assert.DoesNotContain("workspace_write_file", tools);
+        Assert.DoesNotContain("workspace_dotnet_build", tools);
+        Assert.DoesNotContain("workspace_dotnet_test", tools);
+        Assert.DoesNotContain("workspace_dotnet_run", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_dotnet_solution_setup_scaffold_step_ignores_downstream_tool_names()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = ".NET solution setup subprocess",
+                Slug = "dotnet-solution-setup"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "create-dotnet-project",
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = ".NET Application Developer"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Create solution and .NET app project",
+                WorkBriefText = "Create the solution and app project. Later validation steps mention workspace_dotnet_build, workspace_dotnet_test, workspace_dotnet_run, browser_snapshot, browser_take_screenshot, and browser_console_messages, but this scaffold step must not run them.",
+                ExpectedOutcome = "Solution and app project are present.",
+                EvidenceExpectationSummary = "Solution skeleton change set"
+            },
+            [
+                (ProcessArtifactKind.Deliverable, "Solution skeleton change set", "Must include the .slnx or .sln solution file, requested .NET app project, selected template proof, and solution membership proof.")
+            ]);
+
+        Assert.Contains("workspace_dotnet_new", tools);
+        Assert.DoesNotContain("workspace_write_file", tools);
+        Assert.DoesNotContain("workspace_dotnet_build", tools);
+        Assert.DoesNotContain("workspace_dotnet_test", tools);
+        Assert.DoesNotContain("workspace_dotnet_run", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+        Assert.DoesNotContain("browser_console_messages", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_console_setup_validation_does_not_require_browser_tools()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = ".NET solution setup subprocess",
+                Slug = "dotnet-solution-setup"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "validate-first-build",
+                Title = "Validate first build and test discovery",
+                StepKind = ProcessStepKind.Review
+            },
+            new ProcessStepRun
+            {
+                Title = "Validate first build and test discovery",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = ".NET QA Review Lead"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Validate first build and test discovery",
+                WorkBriefText = "Validate the .NET console application with restore, build, and test. Do not start a web app, run browser proof, or take screenshots because this is a CLI app with no web UI.",
+                ExpectedOutcome = "Console app scaffold is buildable and tests are discoverable.",
+                EvidenceExpectationSummary = "First build and test discovery evidence"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "First build and test discovery evidence", "Must include restore/build/test command output. Browser proof is not applicable for this console application.")
+            ]);
+
+        Assert.DoesNotContain("browser_console_messages", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveMissingRunnableApplicationProofSummary_skips_dotnet_solution_setup_scaffold_step()
+    {
+        var resolveMissingRunnableProof = typeof(ProcessRunAutomationDispatchService)
+            .GetMethod("ResolveMissingRunnableApplicationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRunnableApplicationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Create the .NET solution and app project. Build, test, run, and browser proof are downstream validation steps.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Solution skeleton change set", true, "Must include the solution file and requested .NET project under the agreed app directory.")],
+            [],
+            stepTitle: "Create solution and .NET app project",
+            processName: ".NET solution setup subprocess",
+            outputContractSummary: "Solution file and requested .NET application project are present and added to the solution.",
+            processSlug: "dotnet-solution-setup",
+            stepKey: "create-dotnet-project");
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Solution scaffold created and downstream validation is intentionally deferred.",
+            summaryMarkdown: "## Solution skeleton change set\nSolution and app project were created.");
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionStateWithMessages(("assistant", [CreateTextContent(responseText)])),
+            [
+                CreateToolReceipt("workspace-file", "workspace_write_file", "external-target/C/app/src/App/Program.cs", ".", "Succeeded", now),
+                CreateToolReceipt("workspace-file", "workspace_read_file", "external-target/C/app/src/App/App.csproj", ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_build", "build external-target/C/app/App.sln", ".", "Succeeded", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_test", "test external-target/C/app/App.sln", ".", "Succeeded", now.AddSeconds(3))
+            ]);
+
+        var summary = resolveMissingRunnableProof.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
     [Theory]
     [InlineData("artifacts/scopes/organization/demo/project-structure-context-brief.md", true)]
     [InlineData("artifacts/project-structure-context-brief.md", true)]
+    [InlineData("artifacts/scopes/.../implementation-slice-scope-packet.md", false)]
+    [InlineData("artifacts/scopes/<scope>/<id>/implementation-slice-scope-packet.md", false)]
+    [InlineData("artifacts/scopes/organization/demo/process-runs", false)]
     [InlineData("artifacts/scopes/organization/demo/process-runs/0001/01-scope-boundary-packet.md", false)]
     [InlineData("artifacts/scopes/organization/demo/deliveries/app/process/implementation/implementation-change-set.md", false)]
     [InlineData("artifacts/process-runs/0001/01-scope-boundary-packet.md", false)]
@@ -811,6 +996,70 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         return (AgentWorkspaceToolProfileKind)method.Invoke(
             null,
             [stepRun, workBrief, role, null, expectedArtifacts])!;
+    }
+
+    private static IReadOnlyList<string> InvokeResolveRequiredToolNames(
+        ProcessDefinition definition,
+        ProcessStepDefinition stepDefinition,
+        ProcessStepRun stepRun,
+        ProcessWorkBrief workBrief,
+        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod(
+            "ResolveRequiredToolNames",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
+        var candidate = CreateDispatchCandidate(definition, stepDefinition, stepRun, workBrief, expectedArtifactDefinitions);
+        var result = (IEnumerable)method.Invoke(null, [candidate])!;
+
+        return result.Cast<string>().ToList();
+    }
+
+    private static object CreateDispatchCandidate(
+        ProcessDefinition definition,
+        ProcessStepDefinition stepDefinition,
+        ProcessStepRun stepRun,
+        ProcessWorkBrief workBrief,
+        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DispatchCandidate type was not found.");
+        var artifactInputType = serviceType.GetNestedType("DispatchArtifactInput", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DispatchArtifactInput type was not found.");
+        var branchOutcomeType = serviceType.GetNestedType("DispatchBranchOutcome", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DispatchBranchOutcome type was not found.");
+        var expectedArtifacts = CreateDispatchArtifactExpectations(expectedArtifactDefinitions);
+        var artifactInputs = Array.CreateInstance(artifactInputType, 0);
+        var branchOutcomes = Array.CreateInstance(branchOutcomeType, 0);
+        var run = new ProcessRun
+        {
+            Name = "Test process run",
+            TriggerReason = "Create a grounded .NET app from project structure."
+        };
+
+        return Activator.CreateInstance(
+            candidateType,
+            run,
+            definition,
+            stepRun,
+            stepDefinition,
+            workBrief,
+            Guid.NewGuid(),
+            expectedArtifacts,
+            new HashSet<Guid>(),
+            artifactInputs,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            null,
+            null,
+            string.Empty,
+            branchOutcomes,
+            false,
+            new AgentProcessCooperationMetadata(
+                AgentProcessCooperationMode.ProcessArtifactHandoff,
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+                "test")) ?? throw new InvalidOperationException("DispatchCandidate could not be constructed.");
     }
 
     private static Array CreateDispatchArtifactExpectations(
@@ -2032,6 +2281,51 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void BuildExecutionPromptCore_routes_scope_artifacts_to_managed_root_when_external_product_root_is_grounded()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildExecutionPromptCore = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var candidate = CreateDispatchCandidateCore(
+            "Capture implementation slice boundary for a .NET CLI app. This step only records scope and downstream validation hooks.",
+            ProcessStepKind.Start,
+            [],
+            false,
+            [(ProcessArtifactKind.Brief, "Implementation slice scope packet", true, "Must capture product root, feature boundary, assumptions, and validation hooks.")],
+            [],
+            triggerReason: "Create a .NET CLI app from the project mindmap.",
+            stepTitle: "Capture implementation slice boundary",
+            processName: ".NET implementation slice with atomic validation",
+            outputContractSummary: "Implementation slice scope packet.");
+
+        var prompt = buildExecutionPromptCore.Invoke(
+            null,
+            [
+                candidate,
+                null,
+                """
+                Dispatcher fetched the live project structure for `TodoSummary` and focused this prompt on the selected work branch.
+                Grounded external target paths from the selected project structure:
+                - `C:\programovani\candoitall-processes1-dotnet-cli-h` mapped to `external-target/C/programovani/candoitall-processes1-dotnet-cli-h` from Product root (custom:target)
+                Requirements from project-level planning context:
+                - Output folder: C:\programovani\candoitall-processes1-dotnet-cli-h
+                - Solution name TodoSummary.
+                - Console app project src/TodoSummary.Console.
+                - xUnit test project tests/TodoSummary.Tests.
+                """,
+                null
+            ]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("This step is non-mutating. Do not create directories or write files under `external-target/C/programovani/candoitall-processes1-dotnet-cli-h`.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Managed path: artifacts/process-runs/", prompt, StringComparison.Ordinal);
+        Assert.Contains("Use `artifacts/process-runs/", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Write required generated deliverable artifacts under `external-target/C/programovani/candoitall-processes1-dotnet-cli-h`", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("write it under `external-target/C/programovani/candoitall-processes1-dotnet-cli-h`", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildExecutionPrompt_lists_current_run_artifact_root_for_pathless_required_artifacts()
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService)
@@ -2365,6 +2659,283 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             .Select(item => item.GetString())
             .ToArray();
         Assert.Contains("external-target/C/programovani/dotnet/output", aliases);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_keeps_delegated_change_execution_writable_even_with_safety_review_text()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Execute delegated work; AI safety reviewer may halt execution when boundary breaches appear. Output must include concrete product files for a plain static JavaScript app.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Delegated change set", true, "Must identify concrete product files created or changed under the grounded product root.")],
+            [],
+            triggerReason: "Deliver the generated application showcase.",
+            stepTitle: "Run delegated execution and capture full trace",
+            processName: "AI-assisted change delivery with guarded delegation",
+            outputContractSummary: "Draft change output plus full execution trace.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `StaticTimerApp` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\js-timer` mapped to `external-target/C/programovani/js-timer` from product root note (custom:root-note)
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var aliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        Assert.Contains("external-target/C/programovani/js-timer", aliases);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_marks_architecture_external_target_read_only()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Review architecture and source-of-truth impact. Produce the ADR as a managed process artifact.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Slice architecture decision record", true, "Architecture decision must not mutate the product root.")],
+            [],
+            triggerReason: "Validate architecture for a greenfield CLI app.",
+            stepTitle: "Check architecture and source-of-truth impact",
+            processName: ".NET implementation slice with atomic validation",
+            outputContractSummary: "Architecture decision record or no-ADR rationale.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TodoSummary` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\todo-summary` mapped to `external-target/C/programovani/todo-summary` from product root note (custom:root-note)
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        Assert.Contains("external-target/C/programovani/todo-summary", readOnlyAliases);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_marks_scope_external_product_root_read_only()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Capture implementation slice boundary for a .NET CLI app. This step records scope only.",
+            ProcessStepKind.Start,
+            [],
+            false,
+            [(ProcessArtifactKind.Brief, "Implementation slice scope packet", true, "Must capture product root, feature boundary, assumptions, and validation hooks.")],
+            [],
+            triggerReason: "Create a .NET CLI app from the project mindmap.",
+            stepTitle: "Capture implementation slice boundary",
+            processName: ".NET implementation slice with atomic validation",
+            outputContractSummary: "Implementation slice scope packet.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TodoSummary` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\candoitall-processes1-dotnet-cli-h` mapped to `external-target/C/programovani/candoitall-processes1-dotnet-cli-h` from Product root (custom:target)
+            Requirements from project-level planning context:
+            - Output folder: C:\programovani\candoitall-processes1-dotnet-cli-h
+            - Solution name TodoSummary.
+            - Console app project src/TodoSummary.Console.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        Assert.Contains("external-target/C/programovani/candoitall-processes1-dotnet-cli-h", readOnlyAliases);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_disables_browser_tools_for_dotnet_solution_setup_scaffold_step()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Create the .NET solution and app project. Build, test, run, and browser proof are downstream validation steps.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Solution scaffold", true, "Must create the requested solution and project files.")],
+            [],
+            triggerReason: "Create a Blazor counter app.",
+            stepTitle: "Create solution and .NET app project",
+            processName: ".NET solution setup subprocess",
+            processSlug: "dotnet-solution-setup",
+            stepKey: "create-dotnet-project");
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                null,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+        Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessScaffoldToolOnlyMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_disables_browser_tools_for_dotnet_solution_setup_scaffold_step_when_slug_is_missing()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Create the .NET solution and app project. Build, test, run, and browser proof are downstream validation steps.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Solution scaffold", true, "Must create the requested solution and project files.")],
+            [],
+            triggerReason: "Create a console app.",
+            stepTitle: "Create solution and .NET app project",
+            processName: ".NET solution setup subprocess",
+            processSlug: "",
+            stepKey: "create-dotnet-project");
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                null,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+        Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessScaffoldToolOnlyMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_allows_browser_tools_for_browser_proof_step()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the Blazor browser app. Capture screenshot-backed evidence.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshot, console messages, and unresolved risks.")],
+            [],
+            triggerReason: "Validate the requested Blazor browser app.",
+            stepTitle: "Run QA validation and browser proof",
+            processName: ".NET implementation slice with atomic validation");
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                null,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_allows_external_artifact_destination_writes()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Draft the business plan, marketing plan, and financial model for the reviewed product.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Business plan", true, "Must include customer segment, offer, risks, and validation plan.")],
+            [],
+            triggerReason: "Analyze the reviewed app as a business case and write the plan outputs.",
+            stepTitle: "Draft business plan",
+            processName: "Business plan development",
+            outputContractSummary: "Decision-ready business plan, marketing plan, and financial model.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `Business validation project` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\candoitall-dev-output\orchard-shift-board-business-v9` mapped to `external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9` from Artifact destination folder (node-target)
+            Project-structure required artifact contract:
+            - Required file `02-business-plan.md` must be written at `external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9/02-business-plan.md`.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var aliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        Assert.Contains("external-target/C/programovani/candoitall-dev-output/orchard-shift-board-business-v9", aliases);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
     }
 
     [Fact]
@@ -4015,6 +4586,72 @@ Downstream artifact expectations: implementation change set, migration checklist
         Assert.True(status == ProcessStepRunStatus.Completed, reason);
         Assert.NotNull(reason);
         Assert.Contains("completed step", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatusWithCarryForward_allows_pathless_governance_snapshot_artifact_sections()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Define delegation boundary",
+            "Create the delegation configuration and prompt package.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Delegation configuration snapshot", true, string.Empty),
+            (ProcessArtifactKind.Prompt, "Delegation contract and prompt package", true, string.Empty));
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Delegation configuration snapshot and prompt package completed.",
+            summaryMarkdown: """
+## Delegation configuration snapshot
+
+Allowed touches: index.html, styles.css, app.js.
+Forbidden actions: package installs, backend services, persistence, and files outside the product root.
+Escalation conditions: missing writable product root, unexpected package manager requirements, or requested work outside the explicit file list.
+
+## Delegation contract and prompt package
+
+Use only the project-structure mindmap requirements as scope. Create the requested static files only, and return Blocked if a required architecture or tool boundary is missing.
+""");
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Delegation boundary",
+                "process-step",
+                "step-delegation",
+                "corr-delegation",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                "{}",
+                []),
+            null,
+            [],
+            []);
+
+        var priorSuccessfulTools = new[] { "project_structure_read", "workspace_stat_path", "workspace_read_file" };
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, status);
     }
 
     [Fact]
@@ -6452,6 +7089,51 @@ Grounded external target paths from the selected project structure:
     }
 
     [Fact]
+    public void BuildExecutionPromptCore_does_not_require_browser_proof_for_scope_intake_from_project_structure()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildExecutionPromptCore = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var projectStructureContext = new ProcessProjectStructureContext
+        {
+            ProjectId = Guid.NewGuid(),
+            NodeId = "process-definition:dotnet-development-slice",
+            NodeTitle = ".NET implementation slice with atomic validation",
+            ParentNodeId = "custom:blazor-counter",
+            ParentNodeTitle = "Blazor counter requirements mindmap"
+        };
+        var candidate = CreateDispatchCandidateCore(
+            "Capture scope for a .NET Blazor SSR counter app. Downstream validation must include browser proof for counter increment interaction.",
+            ProcessStepKind.Start,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Implementation slice scope packet", true, "Must define acceptance criteria, exclusions, intended product root, setup needs, and validation hooks.")],
+            [],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver the requested .NET Blazor SSR app.",
+                projectStructureContext),
+            "Capture implementation slice boundary");
+        const string projectStructureGrounding = """
+Dispatcher fetched the live project structure for `Blazor counter requirements mindmap` and focused this prompt on the selected work branch.
+Grounded external target paths from the selected project structure:
+- `C:\programovani\candoitall-processes1-blazor-counter-a` mapped to `external-target/C/programovani/candoitall-processes1-blazor-counter-a` from Product root (custom:target)
+Requirements from project-level planning context:
+- .NET Blazor SSR app.
+- Browser proof for counter interaction.
+""";
+
+        var prompt = buildExecutionPromptCore.Invoke(null, [candidate, null, projectStructureGrounding, null]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.DoesNotContain("Mandatory browser proof execution plan", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("This step requires runnable browser proof", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("For .NET browser proof, call `workspace_dotnet_run`", prompt, StringComparison.Ordinal);
+        Assert.Contains("an absent greenfield deliverable is not a blocker by itself", prompt, StringComparison.Ordinal);
+        Assert.Contains("validation hooks", prompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void BuildExecutionPromptCore_does_not_require_greenfield_deliverable_for_architecture_steps()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -6565,6 +7247,70 @@ Requirements from project-level planning context:
             prompt,
             StringComparison.Ordinal);
         Assert.DoesNotContain("runnable app", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_uses_scaffold_contract_instead_of_product_root_leaf_for_dotnet_setup_steps()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildExecutionPromptCore = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var projectId = Guid.NewGuid();
+        var projectStructureContext = new ProcessProjectStructureContext
+        {
+            ProjectId = projectId,
+            NodeId = "process-definition:dotnet-solution-setup",
+            NodeTitle = ".NET solution setup subprocess",
+            ParentNodeId = "custom:blazor-counter",
+            ParentNodeTitle = "Blazor counter requirements mindmap"
+        };
+        var candidate = CreateDispatchCandidateCore(
+            "Create the .NET solution and app project from the upstream scaffold contract.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Solution skeleton change set", true, "Must include the solution file and requested .NET project under the agreed app directory.")],
+            [
+                (
+                    "Capture solution scaffold contract",
+                    "Scaffold contract",
+                    [
+                        (
+                            "Scaffold contract",
+                            "plan",
+                            "artifacts/scopes/organization/demo/process-runs/setup/scaffold-contract.md",
+                            "Solution ProcessCounter, app ProcessCounter.Web under productRoot/src, tests ProcessCounter.Tests under productRoot/tests.",
+                            "Created by setup contract step.")
+                    ])
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver the requested .NET Blazor SSR app.",
+                projectStructureContext),
+            "Create solution and .NET app project",
+            processName: ".NET solution setup subprocess",
+            outputContractSummary: "Solution file and requested .NET application project are present and added to the solution.");
+        const string projectStructureGrounding = """
+Dispatcher fetched the live project structure for `Blazor counter requirements mindmap` and focused this prompt on the selected work branch.
+Grounded external target paths from the selected project structure:
+- `C:\programovani\candoitall-processes1-blazor-counter-c` mapped to `external-target/C/programovani/candoitall-processes1-blazor-counter-c` from Product root (custom:target)
+Requirements from project-level planning context:
+- .NET Blazor SSR app.
+- Solution name ProcessCounter.
+- App project ProcessCounter.Web under productRoot/src.
+- Test project ProcessCounter.Tests under productRoot/tests.
+""";
+
+        var prompt = buildExecutionPromptCore.Invoke(null, [candidate, null, projectStructureGrounding, null]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("The upstream scaffold contract overrides the generic product-root leaf scaffold shortcut", prompt, StringComparison.Ordinal);
+        Assert.Contains("set `workspace_dotnet_new` `name` to the contract's app project name", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "use `workspace_dotnet_new` with `parentDirectory` set to `external-target/C/programovani` and `name` set to `candoitall-processes1-blazor-counter-c`",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("name` `candoitall-processes1-blazor-counter-c`", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -7828,6 +8574,24 @@ Ancestor path to the target work node:
             ProcessStepKind.Review,
             (ProcessArtifactKind.Decision, "Architecture decision record", true, "Must capture selected option and rejected alternatives."),
             (ProcessArtifactKind.Brief, "Project structure context brief", true, "Must capture product root and touched files."));
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.DoesNotContain("browser_console_messages", requiredToolNames);
+        Assert.DoesNotContain("browser_snapshot", requiredToolNames);
+        Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_does_not_require_browser_tools_for_architecture_with_downstream_browser_validation_hooks()
+    {
+        var resolveRequiredToolNames = typeof(ProcessRunAutomationDispatchService).GetMethod("ResolveRequiredToolNames", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Check architecture and source-of-truth impact for the Blazor browser app. Record downstream validation hooks: build, test, run, and browser proof after implementation. Instructions: browser_take_screenshot belongs to the later validation step, not this architecture step.",
+            ProcessStepKind.Work,
+            (ProcessArtifactKind.Decision, "Architecture decision record", true, "Must capture selected option, rejected alternatives, source-of-truth impact, and downstream browser validation hooks."));
 
         var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
 
@@ -10920,7 +11684,9 @@ Ancestor path to the target work node:
         string stepTitle = "Implement feature",
         IReadOnlyCollection<string>? recordedArtifactTitles = null,
         string processName = "Software delivery",
-        string outputContractSummary = "Buildable implementation")
+        string outputContractSummary = "Buildable implementation",
+        string processSlug = "",
+        string stepKey = "")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -11013,7 +11779,8 @@ Ancestor path to the target work node:
                         },
                        new ProcessDefinition
                        {
-                           Name = processName
+                           Name = processName,
+                           Slug = processSlug
                        },
                        new ProcessStepRun
                        {
@@ -11023,6 +11790,7 @@ Ancestor path to the target work node:
                        },
                        new ProcessStepDefinition
                        {
+                           Key = stepKey,
                            Title = stepTitle,
                            StepKind = stepKind,
                            InputContractSummary = "Use the available process context and artifacts.",

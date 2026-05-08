@@ -169,7 +169,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
             .First(item => item.ProviderProfileId.HasValue);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentRunFailedException>(() =>
             workspaceService.ExecuteRunAsync(
                 new ExecutionRunRequest(
                     agent.Id,
@@ -243,7 +243,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     [Fact]
     public async Task ExecuteRunAsync_required_finalizer_overrides_assistant_text()
     {
-        var outcome = CreateCompletedOutcome("The required finalizer result is authoritative.");
+        const string longReason = "The required finalizer result is authoritative and intentionally long so the persisted execution result remains a parseable process-step outcome with all blocker, evidence, and next-action details preserved.";
+        var outcome = CreateCompletedOutcome(longReason);
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer");
         var profile = testEnvironment.CreateManagedSqliteProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
@@ -283,6 +284,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         Assert.Contains("authoritative", result.ResponseText, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(detail);
         Assert.Equal(ExecutionState.Completed, detail.Run.State);
+        Assert.Equal(result.ResponseText, detail.Run.ResultSummary);
+        Assert.Contains("parseable process-step outcome", detail.Run.ResultSummary, StringComparison.Ordinal);
         Assert.Contains(
             detail.ExecutionLog,
             entry => entry.Phase == "Finalizer validation" &&
@@ -330,7 +333,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
             .First(item => item.ProviderProfileId.HasValue);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentRunFailedException>(() =>
             workspaceService.ExecuteRunAsync(
                 new ExecutionRunRequest(
                     agent.Id,
@@ -473,7 +476,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
             .First(item => item.ProviderProfileId.HasValue);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentRunFailedException>(() =>
             workspaceService.ExecuteRunAsync(
                 new ExecutionRunRequest(
                     agent.Id,

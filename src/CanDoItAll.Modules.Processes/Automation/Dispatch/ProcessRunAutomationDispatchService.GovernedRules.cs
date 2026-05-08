@@ -31,7 +31,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             foreach (var toolName in RequiredToolNameRegex.Matches(workBriefText)
                          .Where(match => !IsNegatedRequiredToolReference(workBriefText, match))
                          .Select(match => NormalizeToolToken(match.Value))
-                         .Where(IsHardRequiredProcessToolName))
+                         .Where(IsHardRequiredProcessToolName)
+                         .Where(toolName => ShouldKeepHardRequiredToolName(candidate, toolName)))
             {
                 requiredToolNames.Add(toolName);
             }
@@ -58,7 +59,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requiredToolNames.AddRange(GovernedInspectionToolNames);
         }
 
-        if (RequiresConcreteImplementationProof(candidate))
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            requiredToolNames.AddRange(ImplementationProofToolNames);
+            requiredToolNames.Add("workspace_create_directory");
+            requiredToolNames.Add("workspace_dotnet_new");
+        }
+        else if (RequiresConcreteImplementationProof(candidate))
         {
             requiredToolNames.AddRange(ImplementationProofToolNames);
             requiredToolNames.Add("workspace_write_file");
@@ -268,6 +275,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
+        if (candidate.StepRun.StepKind == ProcessStepKind.Start)
+        {
+            return false;
+        }
+
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return false;
+        }
+
+        if (IsPlanningArchitectureOrBoundaryStep(candidate))
+        {
+            return false;
+        }
+
         var triggerText = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
         var currentRunText = CollapsePromptWhitespace(string.Join(
             ' ',
@@ -283,13 +305,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        if (ContainsNonBrowserValidationTargetSignal(currentRunText))
+        {
+            return false;
+        }
+
         var browserSurfaceText = RemoveApplicabilityOnlyBrowserEvidencePhrases(currentRunText);
         var hasConcreteBrowserProofRequest = ContainsConcreteBrowserProofSignal(currentRunText) ||
                                              ContainsConcreteBrowserProofSignal(triggerText);
         if (RequiresConcreteImplementationProof(candidate))
         {
-            return hasConcreteBrowserProofRequest &&
-                   !ContainsNonBrowserValidationTargetSignal(currentRunText);
+            return hasConcreteBrowserProofRequest;
         }
 
         if (!RequiresConcreteBrowserEvidenceStep(currentRunText))
@@ -307,7 +333,106 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        return !ContainsNonBrowserValidationTargetSignal(currentRunText);
+        return true;
+    }
+
+    private static bool ShouldKeepHardRequiredToolName(DispatchCandidate candidate, string toolName)
+    {
+        if (string.IsNullOrWhiteSpace(toolName))
+        {
+            return false;
+        }
+
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return toolName is
+                "project_structure_read" or
+                "workspace_create_directory" or
+                "workspace_dotnet_new" or
+                "workspace_read_file" or
+                "workspace_stat_path" or
+                "workspace_write_file";
+        }
+
+        if (!toolName.StartsWith("browser_", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return !IsPlanningArchitectureOrBoundaryStep(candidate);
+    }
+
+    private static bool IsPlanningArchitectureOrBoundaryStep(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var stepText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            candidate.StepRun.Title,
+            candidate.StepRun.CurrentExecutorName,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.ExpectedOutcome,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title))));
+        if (string.IsNullOrWhiteSpace(stepText))
+        {
+            return false;
+        }
+
+        if (ContainsConcreteQualityProofStepSignal(stepText))
+        {
+            return false;
+        }
+
+        return stepText.Contains("scope", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("intake", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("boundary", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("planning", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("architecture", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("architect", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("source-of-truth", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("source of truth", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("decision record", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("delegation", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("allowed tools", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("refusal conditions", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("naming-contract", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("naming contract", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("scaffold contract", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDotNetSolutionSetupScaffoldMutationStep(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        if (!string.Equals(candidate.Definition.Slug, "dotnet-solution-setup", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(candidate.Definition.Name, ".NET solution setup subprocess", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return string.Equals(candidate.StepDefinition.Key, "create-dotnet-project", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate.StepDefinition.Key, "add-test-project", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsConcreteQualityProofStepSignal(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Contains("qa", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("quality validation", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("regression evidence", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("test evidence", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("browser proof", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("runtime proof", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("smoke proof", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("release readiness", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("evaluate outputs", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("review rendered", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool RequiresConcreteBrowserEvidenceStep(string currentRunText)
@@ -356,8 +481,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return value.Contains("console app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("console application", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("command-line", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("command line", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("terminal app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("terminal application", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("cli app", StringComparison.OrdinalIgnoreCase) ||
+               Regex.IsMatch(
+                   value,
+                   @"(?:^|[^a-z0-9])cli(?:[^a-z0-9]|$)",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               value.Contains("no web ui", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("no browser", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("non-browser", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("minimal api", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("web api", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("rest api", StringComparison.OrdinalIgnoreCase) ||

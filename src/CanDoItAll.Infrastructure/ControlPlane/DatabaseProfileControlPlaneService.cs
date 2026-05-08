@@ -923,12 +923,48 @@ public sealed class DatabaseProfileControlPlaneService(
             }
         }
 
-        return ResolveDefaultWorkspaceRoot();
+        return providerKind == DatabaseProviderKind.Sqlite
+            ? ResolveDefaultWorkspaceRoot()
+            : ResolveRuntimeOverrideWorkspaceRoot(providerKind, configuredConnection);
     }
 
     private string ResolveDefaultWorkspaceRoot()
     {
         return ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, _storageOptions.WorkspaceRoot);
+    }
+
+    private string ResolveRuntimeOverrideWorkspaceRoot(
+        DatabaseProviderKind providerKind,
+        string? configuredConnection)
+    {
+        var workspaceKey = CreateDeterministicGuid(
+                $"runtime-override-workspace:{BuildRuntimeOverrideWorkspaceFingerprint(providerKind, configuredConnection)}")
+            .ToString("N");
+        return Path.Combine(ResolveDefaultWorkspaceRoot(), "runtime-overrides", workspaceKey);
+    }
+
+    private static string BuildRuntimeOverrideWorkspaceFingerprint(
+        DatabaseProviderKind providerKind,
+        string? configuredConnection)
+    {
+        return providerKind switch
+        {
+            DatabaseProviderKind.PostgreSql => BuildPostgreSqlOverrideWorkspaceFingerprint(configuredConnection),
+            DatabaseProviderKind.InMemory => $"inmemory:{(string.IsNullOrWhiteSpace(configuredConnection) ? "candoitall" : configuredConnection.Trim().ToLowerInvariant())}",
+            DatabaseProviderKind.Sqlite => $"sqlite:{Path.GetFullPath(TryExtractSqliteDatabasePath(configuredConnection) ?? string.Empty).Replace('\\', '/').ToLowerInvariant()}",
+            _ => providerKind.ToString()
+        };
+    }
+
+    private static string BuildPostgreSqlOverrideWorkspaceFingerprint(string? configuredConnection)
+    {
+        var builder = string.IsNullOrWhiteSpace(configuredConnection)
+            ? new NpgsqlConnectionStringBuilder("Host=localhost;Database=candoitall;Username=postgres;Password=postgres")
+            : new NpgsqlConnectionStringBuilder(configuredConnection);
+        var host = (builder.Host ?? string.Empty).Trim().ToLowerInvariant();
+        var database = (builder.Database ?? string.Empty).Trim().ToLowerInvariant();
+        var username = (builder.Username ?? string.Empty).Trim().ToLowerInvariant();
+        return $"postgres:{host}:{builder.Port}:{database}:{username}";
     }
 
     private static string NormalizeDisplayName(string displayName, DatabaseProviderKind providerKind)

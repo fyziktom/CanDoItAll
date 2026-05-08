@@ -388,8 +388,17 @@ public sealed partial class MafAgentRuntime
 
         private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
         {
+            var auditScope = WorkspaceExecutionAuditContext.Current;
+            if (auditScope is not null &&
+                (auditScope.AllowedExternalTargetAliases.Count > 0 ||
+                 auditScope.ReadOnlyExternalTargetAliases.Count > 0))
+            {
+                return auditScope.AllowedExternalTargetAliases
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+
             return accessSettings.AllowedExternalTargetAliases
-                .Concat(WorkspaceExecutionAuditContext.Current?.AllowedExternalTargetAliases ?? [])
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }

@@ -675,16 +675,38 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var segments = normalizedPath
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length == 2 &&
-            IsManagedEvidenceRootSegment(segments[0]) &&
-            Path.HasExtension(segments[1]))
+        if (segments.Any(IsRedactedManagedPathSegment))
+        {
+            return false;
+        }
+
+        if (segments.Any(segment => string.Equals(segment, "process-runs", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+      if (segments.Length == 2 &&
+          IsManagedEvidenceRootSegment(segments[0]) &&
+          Path.HasExtension(segments[1]))
         {
             return true;
         }
 
         return segments.Length is 4 or 5 &&
-               IsManagedEvidenceRootSegment(segments[0]) &&
-               string.Equals(segments[1], "scopes", StringComparison.OrdinalIgnoreCase);
+                IsManagedEvidenceRootSegment(segments[0]) &&
+                string.Equals(segments[1], "scopes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRedactedManagedPathSegment(string segment)
+    {
+        var trimmed = segment.Trim();
+        return string.Equals(trimmed, "...", StringComparison.Ordinal) ||
+               string.Equals(trimmed, "…", StringComparison.Ordinal) ||
+               trimmed.Contains("...", StringComparison.Ordinal) ||
+               trimmed.StartsWith("<", StringComparison.Ordinal) ||
+               trimmed.EndsWith(">", StringComparison.Ordinal) ||
+               trimmed.StartsWith("{", StringComparison.Ordinal) ||
+               trimmed.EndsWith("}", StringComparison.Ordinal);
     }
 
     private static bool IsManagedEvidenceRootSegment(string segment)
@@ -3174,6 +3196,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return normalizedTitle.Contains("note", StringComparison.Ordinal) ||
                normalizedTitle.Contains("review", StringComparison.Ordinal) ||
                normalizedTitle.Contains("evidence pack", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("snapshot", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("decision record", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("handoff packet", StringComparison.Ordinal) ||
                normalizedTitle.Contains("regression", StringComparison.Ordinal) ||
                normalizedValidation.Contains("validation evidence", StringComparison.Ordinal) ||
                normalizedValidation.Contains("runtime/api/browser evidence", StringComparison.Ordinal) ||

@@ -110,6 +110,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return string.Empty;
         }
 
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return string.Empty;
+        }
+
         var implementationMentionsDotNet = ImplementationContractMentionsDotNet(candidate);
         if (!implementationMentionsDotNet &&
             (ImplementationContractMentionsJavaScript(candidate) || ImplementationContractNegatesDotNet(candidate)))

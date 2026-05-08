@@ -11,6 +11,10 @@ The agent gets a sandbox, not a blank check
 ## Notes
 Translate the human change brief into a precise delegation contract that states what the agent may touch, what it must refuse, and which evidence it must produce.
 
+Keep the contract proportional to the work. For low-risk local deliverables with a complete project-structure mindmap, the delegation boundary may be concise: allowed product root, requested files or modules, forbidden extras, validation hooks, and escalation conditions. Do not add unrequested frameworks, package managers, release gates, or broad governance work just because they could be useful.
+
+For greenfield work, do not require product files to already exist in this delegation-boundary step. Record the intended product root and access boundary, then let the delegated execution step create or modify the product only when the selected process step explicitly permits implementation. If a grounded product root is inaccessible to the execution tools, escalate the access problem instead of relocating the product to a managed output folder.
+
 ## Contracts
 - Input contract: Bounded change brief, repository context, data-sensitivity map, and tool inventory.
 - Output contract: Approved delegation contract for agent execution.
