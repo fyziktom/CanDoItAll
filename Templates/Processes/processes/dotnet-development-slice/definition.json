@@ -89,8 +89,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 60,
-      "CanvasX": 730,
-      "CanvasY": -300
+      "CanvasX": 899,
+      "CanvasY": -370
     },
     {
       "Key": "software-engineer",
@@ -105,7 +105,7 @@
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 100,
       "CanvasX": -170,
-      "CanvasY": -820.8
+      "CanvasY": -1123.2
     },
     {
       "Key": "qa-lead",
@@ -119,8 +119,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 70,
-      "CanvasX": 3430,
-      "CanvasY": 300
+      "CanvasX": 4139,
+      "CanvasY": 370
     }
   ],
   "Steps": [
@@ -201,10 +201,10 @@
       "DependsOnStepKey": "slice-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
-      "BranchCanvasX": 1420,
-      "BranchCanvasY": 329,
+      "BranchCanvasX": 1600,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "slice-intake",
@@ -270,7 +270,7 @@
       "DependsOnStepKey": "slice-architecture-check",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
+      "CanvasX": 2420,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -339,7 +339,7 @@
       "DependsOnStepKey": "prepare-solution-skeleton",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
+      "CanvasX": 3500,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -414,10 +414,10 @@
       "DependsOnStepKey": "implement-code-change",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 3860,
+      "CanvasX": 4580,
       "CanvasY": 0,
-      "BranchCanvasX": 4120,
-      "BranchCanvasY": 329,
+      "BranchCanvasX": 4840,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "implement-code-change",
@@ -481,7 +481,7 @@
       "DependsOnStepKey": "add-tests-and-proof",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 4760,
+      "CanvasX": 5660,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,

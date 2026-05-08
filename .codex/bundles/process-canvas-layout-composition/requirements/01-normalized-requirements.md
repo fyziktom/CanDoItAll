@@ -10,3 +10,6 @@
 | `REQ-006` | `N001`-`N007` | `03-validation-and-browser-proof` | Component tests and browser-visible proof support closure, or an explicit browser validation blocker is recorded. |
 | `REQ-007` | `N008`, `N009` | `04-role-instance-composition-and-default-template-repair` | Definition canvas can render multiple visual role nodes for the same role contract, with assignment and decision links routed to the nearest per-step role instance. |
 | `REQ-008` | `N010` | `04-role-instance-composition-and-default-template-repair` | Default process templates receive clearer saved canvas coordinates from the current recomposition rules, so newly synced/default processes start from the improved layout. |
+| `REQ-009` | `N011` | `05-recomposition-menu-and-layout-modes` | The recomposition toolbar control opens as a detached popup menu without increasing toolbar height, clipping, or closing before users can choose an option. |
+| `REQ-010` | `N012` | `05-recomposition-menu-and-layout-modes` | The canvas exposes at least three selectable recomposition algorithms for main-spine, branch fan-out, and feedback-lane readability in addition to balanced flow. |
+| `REQ-011` | `N013` | `05-recomposition-menu-and-layout-modes` | Browser proof records large-screen screenshots and crossing-count analytics for the layout modes on a complex default process. |

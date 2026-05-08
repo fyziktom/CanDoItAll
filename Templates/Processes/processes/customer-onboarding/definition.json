@@ -70,7 +70,7 @@
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 35,
       "CanvasX": -170,
-      "CanvasY": -300,
+      "CanvasY": -393,
       "Notes": "Commercial owner for onboarding priority, stakeholder alignment, and acceptance timing."
     },
     {
@@ -85,8 +85,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 50,
-      "CanvasX": 730,
-      "CanvasY": -310.5,
+      "CanvasX": 899,
+      "CanvasY": 370,
       "Notes": "Capacity and staffing authority for onboarding sequencing and kickoff feasibility."
     },
     {
@@ -186,7 +186,7 @@
       "DependsOnStepKey": "intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -266,7 +266,7 @@
       "DependsOnStepKey": "staffing-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
+      "CanvasX": 2420,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,

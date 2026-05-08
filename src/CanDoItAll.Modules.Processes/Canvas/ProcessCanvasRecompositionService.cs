@@ -6,7 +6,10 @@ public enum ProcessCanvasRecompositionMode
 {
     ResolveCollisions = 0,
     AddSpaceAround = 1,
-    Recompose = 2
+    Recompose = 2,
+    MainPathSpine = 3,
+    BranchFanOut = 4,
+    FeedbackLanes = 5
 }
 
 public sealed record ProcessCanvasRecompositionResult(
@@ -25,6 +28,40 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
     private const double BranchOffsetX = 260d;
     private const double BranchMinimumOffsetX = 190d;
     private const double BranchSameLaneOffsetY = 230d;
+    private static readonly string[] FeedbackPathTokens =
+    [
+        "repair",
+        "recheck",
+        "re-check",
+        "rerun",
+        "re-run",
+        "feedback",
+        "finding",
+        "exception",
+        "escalat",
+        "remediat",
+        "rollback",
+        "blocked",
+        "rework",
+        "reject",
+        "declin",
+        "fail",
+        "halt",
+        "no-go",
+        "invalid",
+        "incomplete"
+    ];
+    private static readonly string[] PrimaryPathOutcomeTokens =
+    [
+        "accept",
+        "approv",
+        "ready",
+        "pass",
+        "success",
+        "continue",
+        "proceed",
+        "complete"
+    ];
 
     public ProcessCanvasRecompositionResult Apply(
         ProcessDefinitionEditorModel editor,
@@ -38,7 +75,11 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         {
             ProcessCanvasRecompositionMode.ResolveCollisions => ApplyCollisionRelief(editor),
             ProcessCanvasRecompositionMode.AddSpaceAround => ApplySpacing(editor),
-            _ => ApplySmartRecomposition(editor)
+            ProcessCanvasRecompositionMode.Recompose or
+            ProcessCanvasRecompositionMode.MainPathSpine or
+            ProcessCanvasRecompositionMode.BranchFanOut or
+            ProcessCanvasRecompositionMode.FeedbackLanes => ApplySmartRecomposition(editor, mode),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported process canvas recomposition mode.")
         };
     }
 
@@ -84,24 +125,27 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         return ApplyPositions(editor, ProcessCanvasRecompositionMode.AddSpaceAround, baseline, resolved);
     }
 
-    private ProcessCanvasRecompositionResult ApplySmartRecomposition(ProcessDefinitionEditorModel editor)
+    private ProcessCanvasRecompositionResult ApplySmartRecomposition(
+        ProcessDefinitionEditorModel editor,
+        ProcessCanvasRecompositionMode mode)
     {
+        var profile = RecompositionLayoutProfile.Resolve(mode);
         var baseline = BuildDefinitionNodeBoxMap(editor);
         var nodeMap = surfaceFactory.BuildDefinitionSurface(editor).Nodes
             .ToDictionary(node => node.Id, StringComparer.Ordinal);
-        var stepBoxes = BuildStepLayout(editor, nodeMap);
+        var stepBoxes = BuildStepLayout(editor, nodeMap, profile);
         stepBoxes = CanvasLayoutCollisionResolver.Resolve(
                 stepBoxes.Values.ToList(),
                 new CanvasLayoutCollisionOptions
                 {
-                    MinimumGapX = 48d,
-                    MinimumGapY = 44d,
+                    MinimumGapX = profile.StepMinimumGapX,
+                    MinimumGapY = profile.StepMinimumGapY,
                     AxisPreference = CanvasLayoutAxisPreference.Vertical,
-                    PreferredAxisBias = 3.2d
+                    PreferredAxisBias = profile.StepResolverBias
                 })
             .ToDictionary(node => node.NodeId, StringComparer.Ordinal);
 
-        var roleBoxes = BuildRoleLayout(editor, nodeMap, stepBoxes);
+        var roleBoxes = BuildRoleLayout(editor, nodeMap, stepBoxes, profile);
         var roleResolverInput = new List<CanvasLayoutNodeBox>(stepBoxes.Count + roleBoxes.Count);
         roleResolverInput.AddRange(stepBoxes.Values.Select(CloneAsPinned));
         roleResolverInput.AddRange(roleBoxes.Values);
@@ -109,15 +153,15 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                 roleResolverInput,
                 new CanvasLayoutCollisionOptions
                 {
-                    MinimumGapX = 72d,
-                    MinimumGapY = 58d,
+                    MinimumGapX = profile.RoleMinimumGapX,
+                    MinimumGapY = profile.RoleMinimumGapY,
                     AxisPreference = CanvasLayoutAxisPreference.Vertical,
                     PreferredAxisBias = 2.2d
                 })
             .Where(node => !node.IsPinned)
             .ToDictionary(node => node.NodeId, StringComparer.Ordinal);
 
-        var branchBoxes = BuildBranchLayout(editor, nodeMap, stepBoxes);
+        var branchBoxes = BuildBranchLayout(editor, nodeMap, stepBoxes, profile);
         var branchResolverInput = new List<CanvasLayoutNodeBox>(stepBoxes.Count + roleBoxes.Count + branchBoxes.Count);
         branchResolverInput.AddRange(stepBoxes.Values.Select(node => CloneAsPinned(node)));
         branchResolverInput.AddRange(roleBoxes.Values.Select(node => CloneAsPinned(node)));
@@ -126,8 +170,8 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                 branchResolverInput,
                 new CanvasLayoutCollisionOptions
                 {
-                    MinimumGapX = 72d,
-                    MinimumGapY = 56d,
+                    MinimumGapX = profile.BranchMinimumGapX,
+                    MinimumGapY = profile.BranchMinimumGapY,
                     AxisPreference = CanvasLayoutAxisPreference.Auto,
                     PreferredAxisBias = 1.4d
                 })
@@ -138,7 +182,97 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             .Concat(branchBoxes.Values)
             .ToDictionary(node => node.NodeId, StringComparer.Ordinal);
 
-        return ApplyPositions(editor, ProcessCanvasRecompositionMode.Recompose, baseline, resolved);
+        return ApplyPositions(editor, mode, baseline, resolved);
+    }
+
+    private sealed record RecompositionLayoutProfile(
+        ProcessCanvasRecompositionMode Mode,
+        double StepColumnGap,
+        double StepLaneGap,
+        double RoleLocalOffsetY,
+        double BranchSameLaneOffsetY,
+        int BranchLaneStep,
+        bool PushFeedbackBranchesBelowMain,
+        bool PushAlternativeBranchesAboveMain,
+        double StepMinimumGapX,
+        double StepMinimumGapY,
+        double StepResolverBias,
+        double RoleMinimumGapX,
+        double RoleMinimumGapY,
+        double BranchMinimumGapX,
+        double BranchMinimumGapY)
+    {
+        public static RecompositionLayoutProfile Resolve(ProcessCanvasRecompositionMode mode)
+        {
+            return mode switch
+            {
+                ProcessCanvasRecompositionMode.Recompose => new RecompositionLayoutProfile(
+                    mode,
+                    ProcessCanvasRecompositionService.StepColumnGap,
+                    ProcessCanvasRecompositionService.StepLaneGap,
+                    ProcessCanvasRecompositionService.RoleLocalOffsetY,
+                    ProcessCanvasRecompositionService.BranchSameLaneOffsetY,
+                    BranchLaneStep: 1,
+                    PushFeedbackBranchesBelowMain: false,
+                    PushAlternativeBranchesAboveMain: false,
+                    StepMinimumGapX: 48d,
+                    StepMinimumGapY: 44d,
+                    StepResolverBias: 3.2d,
+                    RoleMinimumGapX: 72d,
+                    RoleMinimumGapY: 58d,
+                    BranchMinimumGapX: 72d,
+                    BranchMinimumGapY: 56d),
+                ProcessCanvasRecompositionMode.MainPathSpine => new RecompositionLayoutProfile(
+                    mode,
+                    StepColumnGap: 980d,
+                    StepLaneGap: 430d,
+                    RoleLocalOffsetY: 330d,
+                    BranchSameLaneOffsetY: 270d,
+                    BranchLaneStep: 2,
+                    PushFeedbackBranchesBelowMain: false,
+                    PushAlternativeBranchesAboveMain: false,
+                    StepMinimumGapX: 68d,
+                    StepMinimumGapY: 56d,
+                    StepResolverBias: 3.8d,
+                    RoleMinimumGapX: 82d,
+                    RoleMinimumGapY: 64d,
+                    BranchMinimumGapX: 86d,
+                    BranchMinimumGapY: 68d),
+                ProcessCanvasRecompositionMode.BranchFanOut => new RecompositionLayoutProfile(
+                    mode,
+                    StepColumnGap: 1060d,
+                    StepLaneGap: 500d,
+                    RoleLocalOffsetY: 360d,
+                    BranchSameLaneOffsetY: 330d,
+                    BranchLaneStep: 2,
+                    PushFeedbackBranchesBelowMain: false,
+                    PushAlternativeBranchesAboveMain: false,
+                    StepMinimumGapX: 82d,
+                    StepMinimumGapY: 70d,
+                    StepResolverBias: 4d,
+                    RoleMinimumGapX: 96d,
+                    RoleMinimumGapY: 72d,
+                    BranchMinimumGapX: 96d,
+                    BranchMinimumGapY: 76d),
+                ProcessCanvasRecompositionMode.FeedbackLanes => new RecompositionLayoutProfile(
+                    mode,
+                    StepColumnGap: 1080d,
+                    StepLaneGap: 520d,
+                    RoleLocalOffsetY: 370d,
+                    BranchSameLaneOffsetY: 350d,
+                    BranchLaneStep: 2,
+                    PushFeedbackBranchesBelowMain: true,
+                    PushAlternativeBranchesAboveMain: true,
+                    StepMinimumGapX: 90d,
+                    StepMinimumGapY: 78d,
+                    StepResolverBias: 4.2d,
+                    RoleMinimumGapX: 104d,
+                    RoleMinimumGapY: 78d,
+                    BranchMinimumGapX: 104d,
+                    BranchMinimumGapY: 84d),
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported process canvas recomposition layout profile.")
+            };
+        }
     }
 
     private Dictionary<string, CanvasLayoutNodeBox> BuildDefinitionNodeBoxMap(ProcessDefinitionEditorModel editor)
@@ -150,13 +284,14 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
 
     private Dictionary<string, CanvasLayoutNodeBox> BuildStepLayout(
         ProcessDefinitionEditorModel editor,
-        IReadOnlyDictionary<string, CanvasWorkbenchNode> nodeMap)
+        IReadOnlyDictionary<string, CanvasWorkbenchNode> nodeMap,
+        RecompositionLayoutProfile profile)
     {
         var steps = editor.Steps.ToList();
         var stepIdMap = steps
             .Where(step => step.Id.HasValue)
             .ToDictionary(step => step.Id!.Value);
-        var defaultOutcomeIdsByStepId = BuildDefaultOutcomeIdsByStepId(steps);
+        var primaryOutcomeIdsByStepId = BuildPrimaryOutcomeIdsByStepId(steps);
         var dependentsByParentId = BuildDependentsByParentId(steps, stepIdMap);
         var topologicalOrder = BuildTopologicalOrder(steps, stepIdMap);
         var rootLaneCursor = 0;
@@ -181,8 +316,9 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                 dependentsByParentId,
                 laneByStepId,
                 columnByStepId,
-                defaultOutcomeIdsByStepId,
+                primaryOutcomeIdsByStepId,
                 branchLaneOffsetsByParentId,
+                profile,
                 ref rootLaneCursor);
             var lane = ClaimLane(column, preferredLane, occupiedLanesByColumn);
             if (stepId.HasValue)
@@ -194,8 +330,8 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             var nodeId = ProcessCanvasBranching.BuildDefinitionStepNodeId(step);
             var node = nodeMap[nodeId];
             var box = CanvasLayoutNodeBox.FromNode(node);
-            box.X = StepColumnStartX + (column * StepColumnGap);
-            box.Y = lane * StepLaneGap;
+            box.X = StepColumnStartX + (column * profile.StepColumnGap);
+            box.Y = lane * profile.StepLaneGap;
             stepBoxes[nodeId] = box;
         }
 
@@ -205,7 +341,8 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
     private Dictionary<string, CanvasLayoutNodeBox> BuildRoleLayout(
         ProcessDefinitionEditorModel editor,
         IReadOnlyDictionary<string, CanvasWorkbenchNode> nodeMap,
-        IReadOnlyDictionary<string, CanvasLayoutNodeBox> stepBoxes)
+        IReadOnlyDictionary<string, CanvasLayoutNodeBox> stepBoxes,
+        RecompositionLayoutProfile profile)
     {
         var roleBoxes = new Dictionary<string, CanvasLayoutNodeBox>(StringComparer.Ordinal);
         var roleNodes = nodeMap.Values
@@ -243,7 +380,7 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                 var siblingIndex = ResolveRoleInstanceSiblingIndex(roleInstancesByStepToken, stepToken, node.Id);
                 var siblingCount = roleInstancesByStepToken.GetValueOrDefault(stepToken)?.Count ?? 1;
                 box.X = relatedStepBox.X - RoleLocalOffsetX;
-                box.Y = relatedStepBox.Y + ResolveRoleInstanceOffsetY(siblingIndex, siblingCount);
+                box.Y = relatedStepBox.Y + ResolveRoleInstanceOffsetY(siblingIndex, siblingCount, profile);
             }
             else if (ProcessCanvasBranching.TryResolveDefinitionRoleToken(node.Id, out var roleToken) &&
                 TryResolveDefinitionRoleByToken(editor.Roles, roleToken, out var role) &&
@@ -253,14 +390,14 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             {
                 var anchorX = anchors.Average(anchor => anchor.X);
                 var anchorY = anchors.Average(anchor => anchor.Y);
-                var side = ResolveRoleSide(index, anchorY);
+                var side = ResolveRoleSide(index, anchorY, profile);
                 box.X = anchorX - RoleLocalOffsetX;
-                box.Y = anchorY + (side * RoleLocalOffsetY);
+                box.Y = anchorY + (side * profile.RoleLocalOffsetY);
             }
             else
             {
                 box.X = roleColumnX;
-                box.Y = ResolveUnboundRoleY(index, roleNodes.Count);
+                box.Y = ResolveUnboundRoleY(index, roleNodes.Count, profile);
             }
 
             roleBoxes[node.Id] = box;
@@ -272,7 +409,8 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
     private Dictionary<string, CanvasLayoutNodeBox> BuildBranchLayout(
         ProcessDefinitionEditorModel editor,
         IReadOnlyDictionary<string, CanvasWorkbenchNode> nodeMap,
-        IReadOnlyDictionary<string, CanvasLayoutNodeBox> stepBoxes)
+        IReadOnlyDictionary<string, CanvasLayoutNodeBox> stepBoxes,
+        RecompositionLayoutProfile profile)
     {
         var boxes = new Dictionary<string, CanvasLayoutNodeBox>(StringComparer.Ordinal);
         foreach (var step in editor.Steps.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
@@ -301,7 +439,7 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                     sourceBox.X + BranchOffsetX,
                     sourceBox.X + Math.Max(BranchMinimumOffsetX, (dependentBoxes.Min(item => item.X) - sourceBox.X) / 2d));
             box.X = targetX;
-            box.Y = ResolveBranchRouterY(sourceBox, dependentBoxes);
+            box.Y = ResolveBranchRouterY(sourceBox, dependentBoxes, profile);
             boxes[branchNodeId] = box;
         }
 
@@ -352,14 +490,17 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         anchors.Add(new RoleLayoutAnchor(stepBox.X, stepBox.Y));
     }
 
-    private static double ResolveRoleSide(int index, double anchorY)
+    private static double ResolveRoleSide(
+        int index,
+        double anchorY,
+        RecompositionLayoutProfile profile)
     {
-        if (anchorY < -(StepLaneGap / 2d))
+        if (anchorY < -(profile.StepLaneGap / 2d))
         {
             return -1d;
         }
 
-        if (anchorY > StepLaneGap / 2d)
+        if (anchorY > profile.StepLaneGap / 2d)
         {
             return 1d;
         }
@@ -369,9 +510,12 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             : 1d;
     }
 
-    private static double ResolveUnboundRoleY(int index, int roleCount)
+    private static double ResolveUnboundRoleY(
+        int index,
+        int roleCount,
+        RecompositionLayoutProfile profile)
     {
-        return (index - ((roleCount - 1) / 2d)) * (StepLaneGap * 0.72d);
+        return (index - ((roleCount - 1) / 2d)) * (profile.StepLaneGap * 0.72d);
     }
 
     private static int ResolveRoleInstanceSiblingIndex(
@@ -388,7 +532,10 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         return index < 0 ? 0 : index;
     }
 
-    private static double ResolveRoleInstanceOffsetY(int siblingIndex, int siblingCount)
+    private static double ResolveRoleInstanceOffsetY(
+        int siblingIndex,
+        int siblingCount,
+        RecompositionLayoutProfile profile)
     {
         if (siblingCount <= 1)
         {
@@ -399,12 +546,13 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         var direction = siblingIndex % 2 == 0
             ? -1d
             : 1d;
-        return direction * row * RoleLocalOffsetY;
+        return direction * row * profile.RoleLocalOffsetY;
     }
 
     private static double ResolveBranchRouterY(
         CanvasLayoutNodeBox sourceBox,
-        IReadOnlyList<CanvasLayoutNodeBox> dependentBoxes)
+        IReadOnlyList<CanvasLayoutNodeBox> dependentBoxes,
+        RecompositionLayoutProfile profile)
     {
         if (dependentBoxes.Count == 0)
         {
@@ -414,13 +562,13 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         var minDependentY = dependentBoxes.Min(item => item.Y);
         if (minDependentY < sourceBox.Y - 1d)
         {
-            return minDependentY - BranchSameLaneOffsetY;
+            return minDependentY - profile.BranchSameLaneOffsetY;
         }
 
         var maxDependentY = dependentBoxes.Max(item => item.Y);
         return maxDependentY > sourceBox.Y + 1d
-            ? maxDependentY + BranchSameLaneOffsetY
-            : sourceBox.Y + BranchSameLaneOffsetY;
+            ? maxDependentY + profile.BranchSameLaneOffsetY
+            : sourceBox.Y + profile.BranchSameLaneOffsetY;
     }
 
     private static IReadOnlyList<ProcessStepEditorModel> ResolveOrderedDependents(
@@ -544,11 +692,35 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         return dependents;
     }
 
-    private static Dictionary<Guid, Guid?> BuildDefaultOutcomeIdsByStepId(IReadOnlyList<ProcessStepEditorModel> steps)
+    private static Dictionary<Guid, Guid?> BuildPrimaryOutcomeIdsByStepId(IReadOnlyList<ProcessStepEditorModel> steps)
     {
         return steps
             .Where(step => step.Id.HasValue)
-            .ToDictionary(step => step.Id!.Value, ProcessCanvasBranching.GetDefaultOutcomeId);
+            .ToDictionary(step => step.Id!.Value, ResolvePrimaryOutcomeId);
+    }
+
+    private static Guid? ResolvePrimaryOutcomeId(ProcessStepEditorModel step)
+    {
+        return step.BranchOutcomes.FirstOrDefault(IsPrimaryPathOutcome)?.Id ??
+            ProcessCanvasBranching.GetDefaultOutcomeId(step);
+    }
+
+    private static bool IsPrimaryPathOutcome(ProcessStepBranchOutcomeEditorModel outcome)
+    {
+        if (ProcessCanvasBranching.IsDefaultOutcome(outcome))
+        {
+            return true;
+        }
+
+        if (IsFeedbackPathOutcome(outcome.Key, outcome.Title, outcome.Description))
+        {
+            return false;
+        }
+
+        return PrimaryPathOutcomeTokens.Any(token =>
+            ContainsOrdinalIgnoreCase(outcome.Key, token) ||
+            ContainsOrdinalIgnoreCase(outcome.Title, token) ||
+            ContainsOrdinalIgnoreCase(outcome.Description, token));
     }
 
     private static List<ProcessStepEditorModel> BuildTopologicalOrder(
@@ -624,8 +796,9 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         IReadOnlyDictionary<Guid, List<(Guid ChildId, Guid? BranchOutcomeId)>> dependentsByParentId,
         IReadOnlyDictionary<Guid, int> laneByStepId,
         IReadOnlyDictionary<Guid, int> columnByStepId,
-        IReadOnlyDictionary<Guid, Guid?> defaultOutcomeIdsByStepId,
+        IReadOnlyDictionary<Guid, Guid?> primaryOutcomeIdsByStepId,
         IDictionary<Guid, Dictionary<string, int>> branchLaneOffsetsByParentId,
+        RecompositionLayoutProfile profile,
         ref int rootLaneCursor)
     {
         if (dependencies.Count == 0)
@@ -639,7 +812,7 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             dependentsByParentId,
             laneByStepId,
             columnByStepId,
-            defaultOutcomeIdsByStepId);
+            primaryOutcomeIdsByStepId);
         if (dependency is null ||
             !dependency.DependsOnStepId.HasValue ||
             !laneByStepId.TryGetValue(dependency.DependsOnStepId.Value, out var parentLane))
@@ -648,24 +821,31 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         }
 
         if (dependency.DependsOnBranchOutcomeId.HasValue &&
-            !IsPrimaryRouteDependency(dependency, defaultOutcomeIdsByStepId))
+            !IsPrimaryRouteDependency(dependency, primaryOutcomeIdsByStepId))
         {
             var laneKey = dependency.DependsOnBranchOutcomeId.Value.ToString("D");
-            return parentLane + ResolveBranchLaneOffset(branchLaneOffsetsByParentId, dependency.DependsOnStepId.Value, laneKey);
+            return parentLane + ResolveBranchLaneOffset(
+                branchLaneOffsetsByParentId,
+                dependency.DependsOnStepId.Value,
+                laneKey,
+                step,
+                profile);
         }
 
         if (dependentsByParentId.TryGetValue(dependency.DependsOnStepId.Value, out var dependents) && dependents.Count > 1 && step.Id.HasValue)
         {
             var primaryChildId = ResolvePrimaryChildId(
                 dependents,
-                defaultOutcomeIdsByStepId,
+                primaryOutcomeIdsByStepId,
                 dependency.DependsOnStepId.Value);
             if (primaryChildId != step.Id.Value)
             {
                 return parentLane + ResolveBranchLaneOffset(
                     branchLaneOffsetsByParentId,
                     dependency.DependsOnStepId.Value,
-                    step.Id.Value.ToString("D"));
+                    step.Id.Value.ToString("D"),
+                    step,
+                    profile);
             }
         }
 
@@ -678,7 +858,7 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         IReadOnlyDictionary<Guid, List<(Guid ChildId, Guid? BranchOutcomeId)>> dependentsByParentId,
         IReadOnlyDictionary<Guid, int> laneByStepId,
         IReadOnlyDictionary<Guid, int> columnByStepId,
-        IReadOnlyDictionary<Guid, Guid?> defaultOutcomeIdsByStepId)
+        IReadOnlyDictionary<Guid, Guid?> primaryOutcomeIdsByStepId)
     {
         var candidates = dependencies
             .Where(dependency => dependency.DependsOnStepId.HasValue &&
@@ -694,8 +874,8 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                 step,
                 dependency,
                 dependentsByParentId,
-                defaultOutcomeIdsByStepId))
-            .ThenByDescending(dependency => IsPrimaryRouteDependency(dependency, defaultOutcomeIdsByStepId))
+                primaryOutcomeIdsByStepId))
+            .ThenByDescending(dependency => IsPrimaryRouteDependency(dependency, primaryOutcomeIdsByStepId))
             .ThenByDescending(dependency => columnByStepId.GetValueOrDefault(dependency.DependsOnStepId!.Value, 0))
             .First();
     }
@@ -704,11 +884,11 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         ProcessStepEditorModel step,
         ProcessStepDependencyEditorModel dependency,
         IReadOnlyDictionary<Guid, List<(Guid ChildId, Guid? BranchOutcomeId)>> dependentsByParentId,
-        IReadOnlyDictionary<Guid, Guid?> defaultOutcomeIdsByStepId)
+        IReadOnlyDictionary<Guid, Guid?> primaryOutcomeIdsByStepId)
     {
         if (!step.Id.HasValue ||
             !dependency.DependsOnStepId.HasValue ||
-            !IsPrimaryRouteDependency(dependency, defaultOutcomeIdsByStepId))
+            !IsPrimaryRouteDependency(dependency, primaryOutcomeIdsByStepId))
         {
             return false;
         }
@@ -721,14 +901,14 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
 
         var primaryChildId = ResolvePrimaryChildId(
             dependents,
-            defaultOutcomeIdsByStepId,
+            primaryOutcomeIdsByStepId,
             dependency.DependsOnStepId.Value);
         return primaryChildId == step.Id.Value;
     }
 
     private static bool IsPrimaryRouteDependency(
         ProcessStepDependencyEditorModel dependency,
-        IReadOnlyDictionary<Guid, Guid?> defaultOutcomeIdsByStepId)
+        IReadOnlyDictionary<Guid, Guid?> primaryOutcomeIdsByStepId)
     {
         if (!dependency.DependsOnBranchOutcomeId.HasValue)
         {
@@ -736,8 +916,8 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         }
 
         return dependency.DependsOnStepId.HasValue &&
-            defaultOutcomeIdsByStepId.TryGetValue(dependency.DependsOnStepId.Value, out var defaultOutcomeId) &&
-            defaultOutcomeId == dependency.DependsOnBranchOutcomeId.Value;
+            primaryOutcomeIdsByStepId.TryGetValue(dependency.DependsOnStepId.Value, out var primaryOutcomeId) &&
+            primaryOutcomeId == dependency.DependsOnBranchOutcomeId.Value;
     }
 
     private static int ResolveRootLane(int index)
@@ -791,7 +971,9 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
     private static int ResolveBranchLaneOffset(
         IDictionary<Guid, Dictionary<string, int>> branchLaneOffsetsByParentId,
         Guid parentStepId,
-        string laneKey)
+        string laneKey,
+        ProcessStepEditorModel step,
+        RecompositionLayoutProfile profile)
     {
         if (!branchLaneOffsetsByParentId.TryGetValue(parentStepId, out var offsets))
         {
@@ -804,27 +986,63 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             return existingOffset;
         }
 
-        var offset = offsets.Count switch
-        {
-            0 => -1,
-            1 => 1,
-            _ => offsets.Count % 2 == 0
-                ? -((offsets.Count / 2) + 1)
-                : ((offsets.Count / 2) + 1)
-        };
+        var offset = ResolveNextBranchLaneOffset(offsets.Count, step, profile);
         offsets[laneKey] = offset;
         return offset;
     }
 
+    private static int ResolveNextBranchLaneOffset(
+        int branchIndex,
+        ProcessStepEditorModel step,
+        RecompositionLayoutProfile profile)
+    {
+        var magnitude = ((branchIndex / 2) + 1) * profile.BranchLaneStep;
+        if (profile.PushFeedbackBranchesBelowMain && IsFeedbackStep(step))
+        {
+            return (branchIndex + 1) * profile.BranchLaneStep;
+        }
+
+        if (profile.PushAlternativeBranchesAboveMain)
+        {
+            return -((branchIndex + 1) * profile.BranchLaneStep);
+        }
+
+        return branchIndex % 2 == 0
+            ? -magnitude
+            : magnitude;
+    }
+
+    private static bool IsFeedbackStep(ProcessStepEditorModel step)
+    {
+        return IsFeedbackPathOutcome(
+            step.Key,
+            step.Title,
+            step.Subtitle,
+            step.Notes,
+            step.ExceptionPolicySummary);
+    }
+
+    private static bool IsFeedbackPathOutcome(params string[] values)
+    {
+        return FeedbackPathTokens.Any(token =>
+            values.Any(value => ContainsOrdinalIgnoreCase(value, token)));
+    }
+
+    private static bool ContainsOrdinalIgnoreCase(string value, string token)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+            value.Contains(token, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Guid ResolvePrimaryChildId(
         IReadOnlyList<(Guid ChildId, Guid? BranchOutcomeId)> dependents,
-        IReadOnlyDictionary<Guid, Guid?> defaultOutcomeIdsByStepId,
+        IReadOnlyDictionary<Guid, Guid?> primaryOutcomeIdsByStepId,
         Guid parentStepId)
     {
-        var defaultOutcomeId = defaultOutcomeIdsByStepId.GetValueOrDefault(parentStepId);
+        var primaryOutcomeId = primaryOutcomeIdsByStepId.GetValueOrDefault(parentStepId);
         var primary = dependents.FirstOrDefault(item =>
             !item.BranchOutcomeId.HasValue ||
-            item.BranchOutcomeId == defaultOutcomeId);
+            item.BranchOutcomeId == primaryOutcomeId);
 
         return primary.ChildId == Guid.Empty
             ? dependents[0].ChildId

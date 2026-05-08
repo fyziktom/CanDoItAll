@@ -89,8 +89,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 60,
-      "CanvasX": 730,
-      "CanvasY": 300
+      "CanvasX": 899,
+      "CanvasY": 370
     },
     {
       "Key": "software-engineer",
@@ -104,8 +104,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 100,
-      "CanvasX": 2530,
-      "CanvasY": 300
+      "CanvasX": 3059,
+      "CanvasY": 370
     },
     {
       "Key": "qa-lead",
@@ -213,10 +213,10 @@
       "DependsOnStepKey": "feature-slice-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
-      "BranchCanvasX": 1420,
-      "BranchCanvasY": 329,
+      "BranchCanvasX": 1600,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "feature-slice-intake",
@@ -296,10 +296,10 @@
       "DependsOnStepKey": "implementation-approach",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 2060,
+      "CanvasX": 2420,
       "CanvasY": 0,
-      "BranchCanvasX": 2121,
-      "BranchCanvasY": 329,
+      "BranchCanvasX": 2618,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "feature-slice-intake",
@@ -371,7 +371,7 @@
       "DependsOnStepKey": "test-contract",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
+      "CanvasX": 3500,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -454,10 +454,10 @@
       "DependsOnStepKey": "code-change",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 3860,
+      "CanvasX": 4580,
       "CanvasY": 0,
-      "BranchCanvasX": 4120,
-      "BranchCanvasY": 329,
+      "BranchCanvasX": 4840,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "test-contract",
@@ -536,7 +536,7 @@
       "DependsOnStepKey": "targeted-validation",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 4760,
+      "CanvasX": 5660,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,

@@ -10,6 +10,8 @@
 - Branch routers sit between decisions and routed dependents without covering the main spine.
 - Role and executor-related nodes sit near the steps they bind to.
 - Step column and lane spacing leaves more readable connector paths.
+- The recomposition menu opens as a floating popup from the canvas toolbar and does not stretch the toolbar.
+- Users can choose different automatic graph layout modes for balanced flow, main-spine emphasis, branch fan-out, and feedback-lane separation.
 
 ## Hard Constraints
 
@@ -60,6 +62,7 @@
 ## Browser Validation Analytics
 
 - Record analytics in `reviews/01-execution-report.md` under `Browser Validation Analytics`.
+- For the reopened layout-mode pass, record large-screen screenshots and approximate line-crossing counts per recomposition mode.
 
 ## Working Assumptions
 
@@ -70,3 +73,4 @@
 
 - Component tests can prove geometry but not full visual clarity alone.
 - Browser proof may be blocked by local app launch or seed data availability.
+- Crossing counts from browser scene snapshots approximate CanvasLib paths and must be treated as comparative evidence, not exact edge-router geometry.

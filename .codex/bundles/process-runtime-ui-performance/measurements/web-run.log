@@ -217,3 +217,19 @@ info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[
       Resolved database profile PostgreSQL workspace (dc8abe54-58cd-4a87-98ab-5a14de6f846b) via PersistedActiveProfile. Provider=PostgreSql. Fingerprint=postgres:localhost:5432:candoitall-processes-5:candoitall. RuntimeLocked=False.
 info: CanDoItAll.Composition.DatabaseSwitchCoordinator[0]
       Switched active database from 63fbd3db-3d1f-457c-a439-979281a9a6c0 to dc8abe54-58cd-4a87-98ab-5a14de6f846b at generation 2.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:879113686ec64b75ab65e8c3cbd1a3ae:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:c44cdbc534e04fd3a1254131e8313dc7:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:9c587067e716440794f14167f8ad2117:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=update-definition Title=Updated process definition IdempotencyKey=process-outbox:3d5a9777d16045559db3cf025012e9bf:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=update-definition Title=Updated process definition.

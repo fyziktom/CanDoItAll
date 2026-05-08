@@ -185,7 +185,7 @@
       "DependsOnStepKey": "scope-freeze",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -288,7 +288,7 @@
       "DependsOnStepKey": "readiness-synthesis",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
+      "CanvasX": 2420,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -391,7 +391,7 @@
       "DependsOnStepKey": "cutover-rehearsal",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "release-approver",
-      "CanvasX": 2960,
+      "CanvasX": 3500,
       "CanvasY": 0,
       "BranchOutcomes": [
         {
@@ -470,8 +470,8 @@
       "DocRefs": [
         "processes/release-readiness-and-deployment/steps/security-and-go-no-go.md"
       ],
-      "BranchCanvasX": 3021,
-      "BranchCanvasY": -610,
+      "BranchCanvasX": 3709,
+      "BranchCanvasY": -1390,
       "Dependencies": [
         {
           "DependsOnStepKey": "cutover-rehearsal",
@@ -500,8 +500,8 @@
       "DependsOnStepKey": "security-and-go-no-go",
       "DependsOnBranchOutcomeKey": "go",
       "DecisionRoleKey": "",
-      "CanvasX": 3860,
-      "CanvasY": -380,
+      "CanvasX": 4580,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -592,8 +592,8 @@
       "DependsOnStepKey": "execute-cutover",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 4760,
-      "CanvasY": -380,
+      "CanvasX": 5660,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -684,8 +684,8 @@
       "DependsOnStepKey": "security-and-go-no-go",
       "DependsOnBranchOutcomeKey": "hold",
       "DecisionRoleKey": "",
-      "CanvasX": 3860,
-      "CanvasY": 380,
+      "CanvasX": 4580,
+      "CanvasY": -1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -951,8 +951,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
-      "CanvasX": 730,
-      "CanvasY": -400.24,
+      "CanvasX": 899,
+      "CanvasY": 540.5,
       "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
     },
     {

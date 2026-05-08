@@ -10,6 +10,9 @@
 | `REQ-006` | `N001`-`N007` | `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProcessCanvasRecompositionServiceTests.cs` | `03-validation-and-browser-proof` | Test command output and browser analytics row. |
 | `REQ-007` | `N008`, `N009` | `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Canvas\ProcessCanvasSurfaceFactory.cs`; `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Canvas\ProcessCanvasSurfaceFactory.Links.cs`; `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Canvas\ProcessCanvasBranching.cs` | `04-role-instance-composition-and-default-template-repair` | Surface tests prove one role contract can produce multiple visual role nodes and links use the related instance. |
 | `REQ-008` | `N010` | `C:\repositories\CanDoItAll\Templates\Processes\processes\*\definition.json` | `04-role-instance-composition-and-default-template-repair` | Projection/template validation plus browser proof on a default process. |
+| `REQ-009` | `N011` | `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessCanvasToolbarActions.razor`; `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.css` | `05-recomposition-menu-and-layout-modes` | Browser open-state screenshot and DOM metrics prove detached popup placement and toolbar height stability. |
+| `REQ-010` | `N012` | `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Canvas\ProcessCanvasRecompositionService.cs`; `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Canvas.Recomposition.cs`; `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceStepsTab.razor` | `05-recomposition-menu-and-layout-modes` | Targeted tests and toolbar proof show selectable `Main spine`, `Branch fan-out`, and `Feedback lanes` modes. |
+| `REQ-011` | `N013` | `C:\repositories\CanDoItAll\process-canvas-balanced-flow-proof.png`; `C:\repositories\CanDoItAll\process-canvas-main-spine-proof.png`; `C:\repositories\CanDoItAll\process-canvas-branch-fanout-proof.png`; `C:\repositories\CanDoItAll\process-canvas-feedback-lanes-proof.png` | `05-recomposition-menu-and-layout-modes` | Playwright scene analytics recorded approximate flow and all-link crossing counts for each mode. |
 
 ## Raw Note Closure Matrix
 
@@ -25,3 +28,6 @@
 | `N008` | `REQ-007` | Role nodes and responsibility links | Surface factory test and browser proof | `04` | None |
 | `N009` | `REQ-007` | Role identity resolution | Resolver/action tests or existing action flow validation | `04` | None |
 | `N010` | `REQ-008` | Default process templates | Template coordinate regeneration and browser proof | `04` | None |
+| `N011` | `REQ-009` | Recomposition menu chrome | Browser open-state screenshot and geometry metrics | `05` | None |
+| `N012` | `REQ-010` | Recomposition algorithms | Targeted component tests and browser mode exercise | `05` | None |
+| `N013` | `REQ-011` | Large-screen visual validation | Playwright screenshots and crossing-count analytics | `05` | Approximate line-crossing metric uses CanvasLib scene endpoints and midpoints rather than internal curve mathematics. |

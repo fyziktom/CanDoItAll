@@ -164,7 +164,7 @@
       "DependsOnStepKey": "component-request",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -250,7 +250,7 @@
       "DependsOnStepKey": "identity-and-maintenance",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
+      "CanvasX": 2420,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -337,7 +337,7 @@
       "DependsOnStepKey": "license-and-obligations",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
+      "CanvasX": 3500,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -432,7 +432,7 @@
       "DependsOnStepKey": "security-and-provenance",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "compliance-steward",
-      "CanvasX": 3860,
+      "CanvasX": 4580,
       "CanvasY": 0,
       "BranchOutcomes": [
         {
@@ -508,8 +508,8 @@
       "DocRefs": [
         "processes/oss-intake-supply-chain-governance/steps/approval-and-registration.md"
       ],
-      "BranchCanvasX": 3921,
-      "BranchCanvasY": 357,
+      "BranchCanvasX": 4789,
+      "BranchCanvasY": -1390,
       "Dependencies": [
         {
           "DependsOnStepKey": "security-and-provenance",
@@ -538,8 +538,8 @@
       "DependsOnStepKey": "approval-and-registration",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 4760,
-      "CanvasY": 0,
+      "CanvasX": 5660,
+      "CanvasY": -1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -949,8 +949,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
-      "CanvasX": 2530,
-      "CanvasY": -460.5,
+      "CanvasX": 3059,
+      "CanvasY": -540.5,
       "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
     }
   ],

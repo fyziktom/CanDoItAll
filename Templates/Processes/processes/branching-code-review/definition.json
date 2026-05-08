@@ -109,8 +109,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
-      "CanvasX": 1630,
-      "CanvasY": 645.54,
+      "CanvasX": 1979,
+      "CanvasY": -2450,
       "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
     },
     {
@@ -125,8 +125,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
-      "CanvasX": 1630,
-      "CanvasY": -1141.17,
+      "CanvasX": 1979,
+      "CanvasY": 3490,
       "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
     },
     {
@@ -141,8 +141,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 30,
-      "CanvasX": 1630,
-      "CanvasY": 1032.54,
+      "CanvasX": 1979,
+      "CanvasY": 4530,
       "Notes": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence."
     },
     {
@@ -244,10 +244,10 @@
       "DependsOnStepKey": "prepare-pull-request",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "review-lead",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
-      "BranchCanvasX": 1221,
-      "BranchCanvasY": -1410.75,
+      "BranchCanvasX": 1600,
+      "BranchCanvasY": -5561,
       "Dependencies": [
         {
           "DependsOnStepKey": "prepare-pull-request",
@@ -361,8 +361,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "repairs-required",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": -394.55,
+      "CanvasX": 2420,
+      "CanvasY": 1040,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -428,8 +428,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "qa-validation",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": 391.97,
+      "CanvasX": 2420,
+      "CanvasY": -2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -502,8 +502,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "security-review",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": -780.6,
+      "CanvasX": 2420,
+      "CanvasY": 3120,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -569,8 +569,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "architecture-review",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": 792.97,
+      "CanvasX": 2420,
+      "CanvasY": 4160,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -636,8 +636,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "ready-for-merge",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": -1180.75,
+      "CanvasX": 2420,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -710,8 +710,8 @@
       "DependsOnStepKey": "validate-qa-lane",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
-      "CanvasY": 380.33,
+      "CanvasX": 3500,
+      "CanvasY": -2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -792,8 +792,8 @@
       "DependsOnStepKey": "perform-security-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
-      "CanvasY": -760,
+      "CanvasX": 3500,
+      "CanvasY": 3120,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -874,8 +874,8 @@
       "DependsOnStepKey": "architecture-escalation",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
-      "CanvasY": 780.34,
+      "CanvasX": 3500,
+      "CanvasY": 4160,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -956,8 +956,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "__default__",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": -8.29,
+      "CanvasX": 2420,
+      "CanvasY": -5200,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -1023,8 +1023,8 @@
       "DependsOnStepKey": "normalize-default-lane",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2960,
-      "CanvasY": -20.67,
+      "CanvasX": 3500,
+      "CanvasY": -5200,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -1105,8 +1105,8 @@
       "DependsOnStepKey": "route-review-disposition",
       "DependsOnBranchOutcomeKey": "__error__",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
-      "CanvasY": 1179.24,
+      "CanvasX": 2420,
+      "CanvasY": 6240,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [

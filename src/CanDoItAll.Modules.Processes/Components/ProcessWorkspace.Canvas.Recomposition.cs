@@ -23,6 +23,15 @@ public partial class ProcessWorkspace
     private Task RecomposeDefinitionCanvasAsync()
         => ApplyDefinitionCanvasRecompositionAsync(ProcessCanvasRecompositionMode.Recompose);
 
+    private Task RecomposeDefinitionCanvasMainPathSpineAsync()
+        => ApplyDefinitionCanvasRecompositionAsync(ProcessCanvasRecompositionMode.MainPathSpine);
+
+    private Task RecomposeDefinitionCanvasBranchFanOutAsync()
+        => ApplyDefinitionCanvasRecompositionAsync(ProcessCanvasRecompositionMode.BranchFanOut);
+
+    private Task RecomposeDefinitionCanvasFeedbackLanesAsync()
+        => ApplyDefinitionCanvasRecompositionAsync(ProcessCanvasRecompositionMode.FeedbackLanes);
+
     private async Task ApplyDefinitionCanvasRecompositionAsync(ProcessCanvasRecompositionMode mode)
     {
         if (isDefinitionCanvasRecompositionInProgress)
@@ -55,7 +64,10 @@ public partial class ProcessWorkspace
                 {
                     ProcessCanvasRecompositionMode.ResolveCollisions => "Process canvas collisions are already resolved.",
                     ProcessCanvasRecompositionMode.AddSpaceAround => "Process canvas spacing is already expanded.",
-                    _ => "Process canvas already matches the current recomposition layout."
+                    ProcessCanvasRecompositionMode.MainPathSpine => "Process canvas already matches the main-path spine layout.",
+                    ProcessCanvasRecompositionMode.BranchFanOut => "Process canvas already matches the branch fan-out layout.",
+                    ProcessCanvasRecompositionMode.FeedbackLanes => "Process canvas already matches the feedback-lanes layout.",
+                    _ => "Process canvas already matches the balanced recomposition layout."
                 });
                 return;
             }
@@ -66,7 +78,13 @@ public partial class ProcessWorkspace
                     => $"Resolved collisions for {result.RepositionedNodeCount} canvas node(s).",
                 ProcessCanvasRecompositionMode.AddSpaceAround
                     => $"Added space around {result.RepositionedNodeCount} canvas node(s).",
-                _ => $"Recomposed {result.RepositionedNodeCount} process canvas node(s)."
+                ProcessCanvasRecompositionMode.MainPathSpine
+                    => $"Recomposed {result.RepositionedNodeCount} process canvas node(s) with the main-path spine layout.",
+                ProcessCanvasRecompositionMode.BranchFanOut
+                    => $"Recomposed {result.RepositionedNodeCount} process canvas node(s) with the branch fan-out layout.",
+                ProcessCanvasRecompositionMode.FeedbackLanes
+                    => $"Recomposed {result.RepositionedNodeCount} process canvas node(s) with the feedback-lanes layout.",
+                _ => $"Recomposed {result.RepositionedNodeCount} process canvas node(s) with the balanced layout."
             };
             await PersistDefinitionCanvasChangesAsync(successMessage, refreshSurface: false);
             if (workbenchRef is not null)

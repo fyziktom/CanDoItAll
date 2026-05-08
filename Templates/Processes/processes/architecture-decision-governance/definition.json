@@ -175,7 +175,7 @@
       "DependsOnStepKey": "decision-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1160,
+      "CanvasX": 1340,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -271,7 +271,7 @@
       "DependsOnStepKey": "context-and-options",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 2060,
+      "CanvasX": 2420,
       "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
@@ -365,7 +365,7 @@
       "DependsOnStepKey": "security-compliance-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "service-owner",
-      "CanvasX": 2960,
+      "CanvasX": 3500,
       "CanvasY": 0,
       "BranchOutcomes": [
         {
@@ -427,8 +427,8 @@
       "DocRefs": [
         "processes/architecture-decision-governance/steps/board-decision.md"
       ],
-      "BranchCanvasX": 3021,
-      "BranchCanvasY": -610,
+      "BranchCanvasX": 3709,
+      "BranchCanvasY": -1390,
       "Dependencies": [
         {
           "DependsOnStepKey": "security-compliance-review",
@@ -457,8 +457,8 @@
       "DependsOnStepKey": "board-decision",
       "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
-      "CanvasX": 3860,
-      "CanvasY": -380,
+      "CanvasX": 4580,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -549,8 +549,8 @@
       "DependsOnStepKey": "board-decision",
       "DependsOnBranchOutcomeKey": "deferred",
       "DecisionRoleKey": "",
-      "CanvasX": 3860,
-      "CanvasY": 380,
+      "CanvasX": 4580,
+      "CanvasY": -1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -905,8 +905,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
-      "CanvasX": 1630,
-      "CanvasY": -320.34,
+      "CanvasX": 1979,
+      "CanvasY": -370,
       "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
     },
     {
@@ -921,8 +921,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 20,
-      "CanvasX": 1630,
-      "CanvasY": 320.67,
+      "CanvasX": 1979,
+      "CanvasY": 370,
       "Notes": "Policy and evidence steward for contractual, regulatory, license, and audit-sensitive change decisions."
     },
     {

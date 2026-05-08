@@ -164,6 +164,21 @@ public partial class ProcessWorkspace
             return workspace.RecomposeDefinitionCanvasAsync();
         }
 
+        public Task RecomposeDefinitionCanvasMainPathSpineAsync()
+        {
+            return workspace.RecomposeDefinitionCanvasMainPathSpineAsync();
+        }
+
+        public Task RecomposeDefinitionCanvasBranchFanOutAsync()
+        {
+            return workspace.RecomposeDefinitionCanvasBranchFanOutAsync();
+        }
+
+        public Task RecomposeDefinitionCanvasFeedbackLanesAsync()
+        {
+            return workspace.RecomposeDefinitionCanvasFeedbackLanesAsync();
+        }
+
         public Task HandleCanvasToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         {
             return workspace.HandleCanvasToolboxWindowStateChangedAsync(state);

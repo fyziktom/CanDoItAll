@@ -35,6 +35,7 @@ Improve automatic process-canvas node positions so authored processes read as a 
 2. `subbundles/02-02-definition-recomposition-tuning`
 3. `subbundles/03-03-validation-and-browser-proof`
 4. `subbundles/04-04-role-instance-composition-and-default-template-repair`
+5. `subbundles/05-05-recomposition-menu-and-layout-modes`
 
 ## Dependency And Validation Map
 
@@ -46,6 +47,6 @@ Improve automatic process-canvas node positions so authored processes read as a 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
 - Execution status: `Completed`
-- Subbundle gate review: `Passed through 04 closure`
+- Subbundle gate review: `Passed through 05 closure`
 - Final closure gate: `Passed`
-- Browser validation analytics: `Captured for 03 and 04`
+- Browser validation analytics: `Captured for 03, 04, and 05`
