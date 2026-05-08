@@ -484,6 +484,8 @@
             state.measureLayoutFrame = 0;
         }
 
+        shared.cancelDeferredViewportRender?.(state);
+
         if (state.statusNoticeTimer) {
             window.clearTimeout(state.statusNoticeTimer);
             state.statusNoticeTimer = 0;

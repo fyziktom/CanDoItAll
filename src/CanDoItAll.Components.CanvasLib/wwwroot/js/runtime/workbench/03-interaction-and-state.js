@@ -361,10 +361,81 @@
         element.style.top = `${round(top)}px`;
     }
 
+    function applyViewportPreviewTransform(state) {
+        if (!state?.canvasStack) {
+            return;
+        }
+
+        const rendered = state.renderedViewport || {
+            panX: state.ui.panX,
+            panY: state.ui.panY,
+            zoom: state.ui.zoom
+        };
+        const renderedZoom = Math.max(0.001, rendered.zoom || 1);
+        const nextZoom = Math.max(0.001, state.ui.zoom || 1);
+        const scale = nextZoom / renderedZoom;
+        const translateX = state.ui.panX - (rendered.panX * scale);
+        const translateY = state.ui.panY - (rendered.panY * scale);
+
+        if (Math.abs(translateX) <= 0.1 &&
+            Math.abs(translateY) <= 0.1 &&
+            Math.abs(scale - 1) <= 0.001) {
+            state.canvasStack.style.transform = "";
+            state.canvasStack.style.willChange = "";
+            return;
+        }
+
+        state.canvasStack.style.transformOrigin = "0 0";
+        state.canvasStack.style.willChange = "transform";
+        state.canvasStack.style.transform = `translate3d(${round(translateX)}px, ${round(translateY)}px, 0) scale(${scale})`;
+    }
+
+    function resetViewportPreviewTransform(state) {
+        if (!state) {
+            return;
+        }
+
+        if (state.canvasStack) {
+            state.canvasStack.style.transform = "";
+            state.canvasStack.style.willChange = "";
+        }
+
+        state.renderedViewport = {
+            panX: state.ui.panX,
+            panY: state.ui.panY,
+            zoom: state.ui.zoom
+        };
+    }
+
+    function cancelDeferredViewportRender(state) {
+        if (!state?.deferredViewportRenderTimer) {
+            return false;
+        }
+
+        window.clearTimeout(state.deferredViewportRenderTimer);
+        state.deferredViewportRenderTimer = 0;
+        return true;
+    }
+
+    function scheduleDeferredViewportRender(state, delayMs) {
+        cancelDeferredViewportRender(state);
+        state.deferredViewportRenderTimer = window.setTimeout(() => {
+            state.deferredViewportRenderTimer = 0;
+            render(state);
+        }, Math.max(0, delayMs ?? 180));
+    }
+
+    function flushDeferredViewportRender(state) {
+        if (cancelDeferredViewportRender(state)) {
+            render(state);
+        }
+    }
+
     function render(state) {
         const startedAt = workbenchInternals.instrumentation.now();
         const visibleNodes = workbenchInternals.sceneLayout.getVisibleNodes(state);
         const projectedNodes = workbenchInternals.sceneLayout.getProjectedNodes(state, visibleNodes);
+        const isPanning = state.interaction?.kind === "pan";
         if (state.metrics) {
             state.metrics.renderCount += 1;
             state.metrics.lastVisibleNodeCount = projectedNodes.length;
@@ -378,14 +449,30 @@
         workbenchInternals.scenePatching.renderLinks(state, projectedNodes);
         workbenchInternals.overlayRenderer.renderSnapGuides(state);
         workbenchInternals.scenePatching.renderNodes(state, projectedNodes);
-        workbenchInternals.overlayRenderer.renderConnectorAnchorOverlay(state, projectedNodes);
-        workbenchInternals.overlayRenderer.renderTransformHandlesOverlay(state, projectedNodes);
         workbenchInternals.overlayRenderer.renderEmptyStateOverlay(state, visibleNodes);
-        workbenchInternals.overlayRenderer.renderDebugDecorations(state, projectedNodes);
-        workbenchInternals.overlayRenderer.renderDiagnosticsOverlay(state, projectedNodes);
-        workbenchInternals.overlayRenderer.renderMinimap(state, visibleNodes);
-        workbenchInternals.overlayRenderer.layoutComposer(state);
-        workbenchInternals.scenePatching.scheduleNodeMeasurement(state);
+        if (isPanning) {
+            if (state.anchorLayer) {
+                state.anchorLayer.innerHTML = "";
+            }
+
+            if (state.transformLayer) {
+                state.transformLayer.innerHTML = "";
+            }
+
+            if (state.debugLayer) {
+                state.debugLayer.innerHTML = "";
+            }
+        }
+        else {
+            workbenchInternals.overlayRenderer.renderConnectorAnchorOverlay(state, projectedNodes);
+            workbenchInternals.overlayRenderer.renderTransformHandlesOverlay(state, projectedNodes);
+            workbenchInternals.overlayRenderer.renderDebugDecorations(state, projectedNodes);
+            workbenchInternals.overlayRenderer.renderDiagnosticsOverlay(state, projectedNodes);
+            workbenchInternals.overlayRenderer.renderMinimap(state, visibleNodes);
+            workbenchInternals.overlayRenderer.layoutComposer(state);
+            workbenchInternals.scenePatching.scheduleNodeMeasurement(state);
+        }
+        resetViewportPreviewTransform(state);
 
         if (state.metrics) {
             const elapsedMs = Math.max(0, workbenchInternals.instrumentation.now() - startedAt);
@@ -1334,5 +1421,5 @@
         state.dotNetRef.invokeMethodAsync("OnNodeEdited", JSON.stringify(payload));
     }
 
-    Object.assign(shared, { hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, shouldClearNodeHighlightsForSelection, clearNodeHighlights, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, removeComposerElements, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, normalizeContextMenuLayout, isHiveLayout, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, syncContextMenuLayerShellGeometry, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit });
+    Object.assign(shared, { hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, shouldClearNodeHighlightsForSelection, clearNodeHighlights, applyViewportPreviewTransform, resetViewportPreviewTransform, cancelDeferredViewportRender, scheduleDeferredViewportRender, flushDeferredViewportRender, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, removeComposerElements, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, normalizeContextMenuLayout, isHiveLayout, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, syncContextMenuLayerShellGeometry, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit });
 })();

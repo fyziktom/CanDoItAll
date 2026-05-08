@@ -19,6 +19,7 @@
         const detailMode = resolveCanvasNodeDetailMode(state, (visibleNodes || []).length);
         const nextEntries = new Map();
         const hasHighlightedNodes = state.highlightedIds?.size > 0;
+        const surfaceMode = resolveSurfaceMode(state);
         let renderedNodeCount = 0;
 
         for (const node of visibleNodes || []) {
@@ -70,7 +71,7 @@
                 surface.context.restore();
             }
 
-            if (resolveSurfaceMode(state) === "delete" && state.hoveredDeleteNodeId === node.id) {
+            if (surfaceMode === "delete" && state.hoveredDeleteNodeId === node.id) {
                 drawRoundedPanel(
                     surface.context,
                     buildRect(hostBounds.left - 4, hostBounds.top - 4, hostBounds.width + 8, hostBounds.height + 8),

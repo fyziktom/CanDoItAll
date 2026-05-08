@@ -415,6 +415,8 @@
     function attachEvents(state) {
         state.handlers = {
             pointerDown: event => {
+                shared.flushDeferredViewportRender?.(state);
+
                 const sceneHit = getSceneHitAtEvent(state, event);
                 const portHit = resolveConnectionPortHit(state, event, sceneHit);
                 const portDescriptor = buildConnectionDescriptor(portHit);
