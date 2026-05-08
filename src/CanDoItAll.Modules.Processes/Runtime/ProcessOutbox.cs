@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -301,6 +302,7 @@ public sealed class ProcessOutboxService(
     public async Task<int> ProcessPendingAsync(
         int take = DefaultBatchSize,
         TimeSpan? leaseDuration = null,
+        DateTimeOffset? minimumAutomationDispatchCreatedAtUtc = null,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -313,17 +315,37 @@ public sealed class ProcessOutboxService(
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
             : leaseDuration.Value;
-        var recordIds = dbContext.Database.IsSqlite()
-            ? await ListPendingRecordIdsForSqliteAsync(dbContext, now, take, cancellationToken)
-            : await dbContext.Set<ProcessOutboxRecord>()
+        List<Guid> recordIds;
+        if (dbContext.Database.IsSqlite())
+        {
+            recordIds = await ListPendingRecordIdsForSqliteAsync(
+                dbContext,
+                now,
+                take,
+                minimumAutomationDispatchCreatedAtUtc,
+                cancellationToken);
+        }
+        else
+        {
+            var query = dbContext.Set<ProcessOutboxRecord>()
                 .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
                 .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now);
+            if (minimumAutomationDispatchCreatedAtUtc.HasValue)
+            {
+                var cutoff = minimumAutomationDispatchCreatedAtUtc.Value;
+                query = query.Where(item =>
+                    item.CommandKey != AutomationDispatchCommandKey ||
+                    item.CreatedAtUtc >= cutoff);
+            }
+
+            recordIds = await query
                 .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
                 .ThenBy(item => item.CreatedAtUtc)
                 .Take(take)
                 .Select(item => item.Id)
                 .ToListAsync(cancellationToken);
+        }
 
         var processedCount = 0;
         foreach (var recordId in recordIds)
@@ -684,8 +706,25 @@ public sealed class ProcessOutboxService(
         AppDbContext dbContext,
         DateTimeOffset now,
         int take,
+        DateTimeOffset? minimumAutomationDispatchCreatedAtUtc,
         CancellationToken cancellationToken)
     {
+        if (minimumAutomationDispatchCreatedAtUtc.HasValue)
+        {
+            return dbContext.Database
+                .SqlQuery<Guid>($"""
+                                 SELECT "Id" AS "Value"
+                                 FROM "Processes_Outbox"
+                                 WHERE "Status" = {(int)ProcessOutboxRecordStatus.Pending}
+                                   AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
+                                   AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
+                                   AND ("CommandKey" <> {AutomationDispatchCommandKey} OR "CreatedAtUtc" >= {minimumAutomationDispatchCreatedAtUtc.Value})
+                                 ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
+                                 LIMIT {take}
+                                 """)
+                .ToListAsync(cancellationToken);
+        }
+
         return dbContext.Database
             .SqlQuery<Guid>($"""
                              SELECT "Id" AS "Value"
@@ -779,14 +818,22 @@ public sealed class ProcessOutboxService(
 public sealed class ProcessOutboxDrainWorker(
     IServiceScopeFactory scopeFactory,
     ProcessRunRecoveryStartupGate recoveryStartupGate,
+    ProcessRuntimeSession runtimeSession,
+    IOptions<ProcessRuntimeOptions> processRuntimeOptions,
     ILogger<ProcessOutboxDrainWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(2);
-    private const int MaxConcurrentDispatches = 8;
+    private const int DefaultMaxConcurrentDispatches = 1;
+    private const int UpperMaxConcurrentDispatches = 8;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!processRuntimeOptions.Value.RecoverActiveRunsOnStartup)
+        {
+            recoveryStartupGate.MarkStartupRecoveryCompleted();
+        }
+
         try
         {
             await recoveryStartupGate.WaitForStartupRecoveryAsync(stoppingToken);
@@ -801,7 +848,7 @@ public sealed class ProcessOutboxDrainWorker(
         {
             await ObserveCompletedDispatchesAsync(activeDispatches);
 
-            if (activeDispatches.Count < MaxConcurrentDispatches)
+            if (activeDispatches.Count < ResolveMaxConcurrentDispatches())
             {
                 activeDispatches.Add(ProcessPendingRecordAsync(stoppingToken));
             }
@@ -825,7 +872,13 @@ public sealed class ProcessOutboxDrainWorker(
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var outbox = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
-            return await outbox.ProcessPendingAsync(take: 1, cancellationToken: stoppingToken);
+            var minimumAutomationDispatchCreatedAtUtc = processRuntimeOptions.Value.ResumePersistedAutomationDispatchesOnStartup
+                ? (DateTimeOffset?)null
+                : runtimeSession.StartedAtUtc;
+            return await outbox.ProcessPendingAsync(
+                take: 1,
+                minimumAutomationDispatchCreatedAtUtc: minimumAutomationDispatchCreatedAtUtc,
+                cancellationToken: stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -849,6 +902,14 @@ public sealed class ProcessOutboxDrainWorker(
             await Task.Delay(FailureBackoff, stoppingToken);
             return 0;
         }
+    }
+
+    private int ResolveMaxConcurrentDispatches()
+    {
+        var configured = processRuntimeOptions.Value.OutboxWorkerMaxConcurrency;
+        return configured <= 0
+            ? DefaultMaxConcurrentDispatches
+            : Math.Clamp(configured, 1, UpperMaxConcurrentDispatches);
     }
 
     private static async Task ObserveCompletedDispatchesAsync(HashSet<Task<int>> activeDispatches)

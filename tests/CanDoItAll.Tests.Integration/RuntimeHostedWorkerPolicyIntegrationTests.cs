@@ -25,17 +25,33 @@ public sealed class RuntimeHostedWorkerPolicyIntegrationTests
     }
 
     [Fact]
-    public void AddCanDoItAllRuntimeModules_RegistersBackgroundWorkers_ForSourceWatchLane()
+    public void AddCanDoItAllRuntimeModules_RegistersNonRecoveringBackgroundWorkers_ForSourceWatchLane()
     {
         var services = new ServiceCollection();
 
         services.AddCanDoItAllRuntimeModules(BuildConfiguration("SourceWatch"));
 
         Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessOutboxDrainWorker)));
-        Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessRunRecoveryWorker)));
+        Assert.DoesNotContain(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessRunRecoveryWorker)));
         Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(AutomationMessagePumpWorker)));
         Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ConnectorOutboxDrainWorker)));
         Assert.Contains(services, descriptor => MatchesHostedService(descriptor, "AgentFrameworkExecutionRecoveryWorker"));
+    }
+
+    [Fact]
+    public void AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCanDoItAllRuntimeModules(BuildConfiguration(
+            "SourceWatch",
+            new Dictionary<string, string?>
+            {
+                ["Processes:Runtime:RecoverActiveRunsOnStartup"] = "true"
+            }));
+
+        Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessOutboxDrainWorker)));
+        Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessRunRecoveryWorker)));
     }
 
     [Fact]
@@ -55,13 +71,24 @@ public sealed class RuntimeHostedWorkerPolicyIntegrationTests
         Assert.DoesNotContain(services, descriptor => MatchesHostedService(descriptor, "AgentFrameworkExecutionRecoveryWorker"));
     }
 
-    private static IConfiguration BuildConfiguration(string laneKind)
+    private static IConfiguration BuildConfiguration(
+        string laneKind,
+        IReadOnlyDictionary<string, string?>? additionalValues = null)
     {
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
+        var values = new Dictionary<string, string?>
+        {
+            ["CanDoItAllMcpLaneKind"] = laneKind
+        };
+        if (additionalValues is not null)
+        {
+            foreach (var value in additionalValues)
             {
-                ["CanDoItAllMcpLaneKind"] = laneKind
-            })
+                values[value.Key] = value.Value;
+            }
+        }
+
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
             .Build();
     }
 
