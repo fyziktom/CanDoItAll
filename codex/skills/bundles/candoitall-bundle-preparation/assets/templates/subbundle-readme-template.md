@@ -8,6 +8,10 @@
 
 - Describe the outcome of this subbundle.
 
+## Success Criteria
+
+- List the observable conditions that make this subbundle done.
+
 ## Covered Inputs
 
 - List the requirements, notes, or findings that this subbundle owns.
@@ -71,4 +75,5 @@
 
 ```text
 Implement this subbundle only.
+Work outcome-first: preserve the listed scope boundaries, verify prerequisites before editing, make the smallest correct change set, capture the required proof, update the execution report rows, and stop if the progression gate cannot honestly pass.
 ```

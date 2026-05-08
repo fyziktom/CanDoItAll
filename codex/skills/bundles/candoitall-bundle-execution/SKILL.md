@@ -9,6 +9,14 @@ Treat the bundle as the contract. Implement one subbundle at a time and update t
 
 This skill is for delivery, not planning. If the bundle is missing, unclear, unvalidated, or missing dependency gates, switch back to bundle preparation before changing feature code.
 
+## GPT-5.5 Execution Posture
+
+- Work outcome-first inside the current subbundle. Avoid re-planning the whole bundle unless the current gate, raw inputs, or repo observations prove the bundle is wrong.
+- Keep context durable in files: subbundle status, proof paths, commands, browser analytics, gate rows, and closure decisions should survive compaction or a different agent taking over.
+- Use tools until the proof contract passes. If a test, browser check, or lookup returns weak evidence, diagnose or retry with a better strategy instead of summarizing around the gap.
+- Use selective parallelism for independent file reads or inspections, then synthesize before editing. Do not parallelize dependent implementation steps.
+- Keep updates concise and proof-oriented: changed files, validation run, gate decision, and remaining blocker when there is one.
+
 ## Required Flow
 
 1. Read the root `README.md`, `plan`, `traceability`, and the selected subbundle README before editing code.

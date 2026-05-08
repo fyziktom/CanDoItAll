@@ -19,8 +19,11 @@ $publicSkillSources = @(
         Name           = "openai/skills"
         RepoUrl        = $OpenAiSkillsRepoUrl
         CacheDirectory = $OpenAiSkillsCache
+        PreferredPaths = @{
+            "openai-docs" = "skills\.system\openai-docs"
+        }
         SkillNames     = @(
-            "frontend-skill",
+            "openai-docs",
             "playwright",
             "screenshot",
             "imagegen"
@@ -53,8 +56,18 @@ function Ensure-Directory {
 function Find-SkillDirectory {
     param(
         [string]$Root,
-        [string]$SkillName
+        [string]$SkillName,
+        [string]$PreferredRelativePath
     )
+
+    if ($PreferredRelativePath) {
+        $preferredPath = Join-Path $Root $PreferredRelativePath
+        if (-not (Test-Path (Join-Path $preferredPath "SKILL.md"))) {
+            throw "Preferred path for skill '$SkillName' does not contain SKILL.md: $preferredPath"
+        }
+
+        return $preferredPath
+    }
 
     $matches = Get-ChildItem -Path $Root -Directory -Recurse |
         Where-Object {
@@ -167,7 +180,16 @@ if (-not $SkipPublicSkills) {
 
         Write-Step "Installing public sibling skills from $($publicSkillSource.Name)"
         foreach ($skillName in $publicSkillSource.SkillNames) {
-            $sourceDirectory = Find-SkillDirectory -Root $publicSkillSource.CacheDirectory -SkillName $skillName
+            $preferredRelativePath = $null
+            if ($publicSkillSource.PSObject.Properties.Name -contains "PreferredPaths" -and
+                $publicSkillSource.PreferredPaths.ContainsKey($skillName)) {
+                $preferredRelativePath = $publicSkillSource.PreferredPaths[$skillName]
+            }
+
+            $sourceDirectory = Find-SkillDirectory `
+                -Root $publicSkillSource.CacheDirectory `
+                -SkillName $skillName `
+                -PreferredRelativePath $preferredRelativePath
             Install-SkillDirectory -SourceDirectory $sourceDirectory -SkillName $skillName -Origin $publicSkillSource.Name
         }
     }

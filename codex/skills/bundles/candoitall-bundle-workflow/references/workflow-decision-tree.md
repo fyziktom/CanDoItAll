@@ -36,3 +36,12 @@ Return to preparation when:
 - the bundle has no usable dependency map or critical foundation plan
 - the repo changed enough that source references are stale
 - execution exposes missing requirements or false assumptions
+
+## If State Was Lost
+
+When the conversation was compacted, interrupted, or resumed without clear current state:
+
+- reread the root README, phase plan, selected subbundle, and execution report
+- trust bundle files and fresh repo observations over conversational memory
+- continue from the latest proven gate
+- repair the bundle before executing if the durable state is incomplete

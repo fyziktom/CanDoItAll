@@ -4,9 +4,17 @@
 
 - State the primary outcome without implementation detail.
 
+## Success Criteria
+
+- List the observable conditions that prove the outcome is done.
+
 ## Hard Constraints
 
 - List the non-negotiables.
+
+## Allowed Side Effects
+
+- State what may be changed. Use `none beyond documented subbundles` when scope is tight.
 
 ## Source Artifacts
 
@@ -23,6 +31,10 @@
 ## Validation Expectations
 
 - Describe the proof required before implementation is complete.
+
+## Evidence Contract
+
+- List the commands, screenshots, browser checks, host checks, or artifacts that must exist before closure.
 
 ## UI Validation Strategy
 
