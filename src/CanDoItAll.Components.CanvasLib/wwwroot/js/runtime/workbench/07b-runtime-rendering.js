@@ -101,6 +101,20 @@
         }
     }
 
+    function clearActiveDragTransientOverlays(state) {
+        if (state.anchorLayer) {
+            state.anchorLayer.innerHTML = "";
+        }
+
+        if (state.transformLayer) {
+            state.transformLayer.innerHTML = "";
+        }
+
+        if (state.debugLayer) {
+            state.debugLayer.innerHTML = "";
+        }
+    }
+
     function renderActiveDrag(state) {
         const dragContext = state?.interaction?.dragContext || buildActiveDragContext(state);
         if (!dragContext) {
@@ -118,18 +132,17 @@
 
         const visibleNodes = getVisibleNodes(state);
         const projectedNodes = getProjectedNodes(state, visibleNodes);
+        const movedNodeIds = new Set(state.interaction?.nodeIds || []);
         applySceneTransform(state);
         clearSceneHotZones(state);
         renderGroupFrames(state, projectedNodes);
-        renderLinks(state, projectedNodes);
+        renderLinks(state, projectedNodes, {
+            includePreviewLinks: false,
+            linkFilter: link => movedNodeIds.has(link.sourceId) || movedNodeIds.has(link.targetId)
+        });
         renderSnapGuides(state);
         renderNodes(state, projectedNodes);
-        renderConnectorAnchorOverlay(state, projectedNodes);
-        renderTransformHandlesOverlay(state, projectedNodes);
-        renderDebugDecorations(state, dragContext.dirtyDebugNodes);
-        renderDiagnosticsOverlay(state, projectedNodes);
-        renderMinimap(state, visibleNodes);
-        layoutComposer(state);
+        clearActiveDragTransientOverlays(state);
 
         if (state.metrics) {
             recordDragPatchMetrics(

@@ -82,6 +82,7 @@
     }
 
     function startDragForNodeIds(state, event, nodeIds, options) {
+        cancelActiveDragRender(state);
         const draggedNodes = [...new Set((nodeIds || []).filter(id => state.lookups.byId.has(id)))];
         if (!draggedNodes.length) {
             return;
@@ -108,6 +109,7 @@
         clearSnapGuides(state);
         render(state);
         state.interaction.dragContext = buildActiveDragContext(state);
+        captureActiveDragBaseLayout(state, state.interaction);
     }
 
     function startDrag(state, event, nodeId) {
@@ -123,6 +125,100 @@
 
         setSelection(state, renderedFrame.nodeIds, true);
         startDragForNodeIds(state, event, renderedFrame.nodeIds, { kind: "frame-drag", frameId });
+    }
+
+    function isNodeDragInteraction(interaction) {
+        return interaction?.kind === "drag" ||
+            interaction?.kind === "frame-drag" ||
+            interaction?.kind === "dependency-drag";
+    }
+
+    function cloneLayoutPositionMap(layoutPositions) {
+        const clone = new Map();
+        for (const [nodeId, position] of layoutPositions || []) {
+            if (!position) {
+                continue;
+            }
+
+            clone.set(nodeId, {
+                x: position.x,
+                y: position.y
+            });
+        }
+
+        return clone;
+    }
+
+    function captureActiveDragBaseLayout(state, interaction) {
+        if (!isNodeDragInteraction(interaction)) {
+            return;
+        }
+
+        const visibleNodes = getVisibleNodes(state);
+        const layoutPositions = ensureLayoutPositions(state, visibleNodes);
+        interaction.baseLayoutPositions = cloneLayoutPositionMap(layoutPositions);
+    }
+
+    function prepareActiveDragLayoutPositions(state, interaction) {
+        if (!isNodeDragInteraction(interaction)) {
+            return;
+        }
+
+        if (!interaction.baseLayoutPositions) {
+            captureActiveDragBaseLayout(state, interaction);
+        }
+
+        const visibleNodes = getVisibleNodes(state);
+        const layoutPositions = cloneLayoutPositionMap(interaction.baseLayoutPositions);
+        for (const nodeId of interaction.nodeIds || []) {
+            const position = state.ui.manualPositions?.[nodeId];
+            if (!position) {
+                continue;
+            }
+
+            layoutPositions.set(nodeId, {
+                x: position.x,
+                y: position.y
+            });
+        }
+
+        state.layoutPositions = layoutPositions;
+        state.layoutKey = buildResolvedLayoutKey(state, visibleNodes);
+        state.sceneBounds = null;
+        state.sceneBoundsKey = "";
+    }
+
+    function cancelActiveDragRender(state) {
+        if (!state?.activeDragRenderFrame) {
+            return false;
+        }
+
+        if (typeof window.cancelAnimationFrame === "function") {
+            window.cancelAnimationFrame(state.activeDragRenderFrame);
+        }
+
+        state.activeDragRenderFrame = 0;
+        return true;
+    }
+
+    function scheduleActiveDragRender(state) {
+        if (!state || state.activeDragRenderFrame) {
+            return;
+        }
+
+        if (typeof window.requestAnimationFrame !== "function") {
+            workbenchInternals.scenePatching.renderActiveDrag(state);
+            return;
+        }
+
+        state.activeDragRenderFrame = window.requestAnimationFrame(() => {
+            state.activeDragRenderFrame = 0;
+            if (!isNodeDragInteraction(state.interaction)) {
+                return;
+            }
+
+            workbenchInternals.scenePatching.renderActiveDrag(state);
+        });
     }
 
     function captureResolvedDragPositions(state, interaction) {
@@ -232,8 +328,9 @@
             };
         }
 
-        state.interaction.resolvedPositions = captureResolvedDragPositions(state, state.interaction);
-        workbenchInternals.scenePatching.renderActiveDrag(state);
+        state.interaction.resolvedPositions = null;
+        prepareActiveDragLayoutPositions(state, state.interaction);
+        scheduleActiveDragRender(state);
     }
 
     function updatePan(state, event) {
@@ -251,6 +348,7 @@
 
         const interaction = state.interaction;
         shared.cancelDeferredViewportRender?.(state);
+        cancelActiveDragRender(state);
         workbenchInternals.overlayRenderer.clearSnapGuides(state);
         if (state.metrics) {
             state.metrics.lastReleasedInteractionKind = interaction.kind || "";
