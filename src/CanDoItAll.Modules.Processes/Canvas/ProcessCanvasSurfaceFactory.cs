@@ -1,3 +1,4 @@
+using System.Globalization;
 using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Processes;
@@ -9,6 +10,25 @@ public sealed partial class ProcessCanvasSurfaceFactory
     private const double DefinitionArtifactNodeOffsetX = 360d;
     private const double DefinitionArtifactCloneOffsetX = 260d;
     private const double DefinitionArtifactNodeRowGap = 230d;
+    private static readonly string[] DefinitionArtifactAccentPalette =
+    [
+        "#be185d",
+        "#0e7490",
+        "#a16207",
+        "#7c2d12",
+        "#6d28d9",
+        "#047857",
+        "#b45309",
+        "#86198f",
+        "#1d4ed8",
+        "#15803d",
+        "#a21caf",
+        "#831843",
+        "#b91c1c",
+        "#4338ca",
+        "#4d7c0f",
+        "#c2410c"
+    ];
 
     private readonly ProcessCanvasChromeCatalogService chromeCatalogService;
 
@@ -306,17 +326,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             Y = ResolveDefinitionRoleNodeY(plan),
             Chips = BuildDefinitionRoleNodeChips(plan, assignmentCount, decisionCount, outboundMessagingCount, inboundMessagingCount),
             FooterChips = BuildDefinitionRoleNodeFooterChips(plan),
-            ContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.EditDefinitionRole,
-                    Label = "Edit role",
-                    MenuLabel = "Edit role",
-                    Icon = "draw",
-                    Tone = "accent"
-                }
-            ],
+            ContextActions = BuildDefinitionRoleContextActions(),
             InputPorts = DecorateProcessPorts(plan.RelatedStep is null
                 ? BuildDefinitionRoleInputPorts(role, editor)
                 : []),
@@ -342,8 +352,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
                 ? "draft"
                 : plan.Artifact.IsRequired ? "required" : "optional",
             StatusPill = plan.IsClone ? "Clone" : "Artifact",
-            PaletteKey = "neutral",
-            AccentColor = "#db2777",
+            PaletteKey = "artifact",
+            AccentColor = plan.AccentColor,
             DurationLabel = plan.Artifact.ArtifactKind.ToString(),
             X = ResolveDefinitionArtifactNodeX(plan),
             Y = ResolveDefinitionArtifactNodeY(plan),
@@ -373,11 +383,22 @@ public sealed partial class ProcessCanvasSurfaceFactory
         var artifactOwnersById = ownerCandidates
             .GroupBy(owner => owner.Artifact.Id!.Value)
             .ToDictionary(group => group.Key, group => group.First());
+        var artifactAccentColorsById = ownerCandidates
+            .Select(owner => owner.Artifact.Id!.Value)
+            .Distinct()
+            .Select((artifactId, artifactIndex) => new
+            {
+                ArtifactId = artifactId,
+                AccentColor = ResolveDefinitionArtifactAccentColor(artifactIndex)
+            })
+            .ToDictionary(item => item.ArtifactId, item => item.AccentColor);
         var plans = new List<DefinitionArtifactNodePlan>();
 
         foreach (var owner in ownerCandidates)
         {
-            plans.Add(DefinitionArtifactNodePlan.CreateSource(owner));
+            plans.Add(DefinitionArtifactNodePlan.CreateSource(
+                owner,
+                ResolveDefinitionArtifactAccentColor(owner, artifactAccentColorsById)));
         }
 
         for (var targetStepIndex = 0; targetStepIndex < editor.Steps.Count; targetStepIndex++)
@@ -401,7 +422,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     artifactInput,
                     targetStepIndex,
                     artifactInputIndex,
-                    relatedRoleInstanceCount));
+                    relatedRoleInstanceCount,
+                    ResolveDefinitionArtifactAccentColor(owner, artifactAccentColorsById)));
             }
         }
 
@@ -412,7 +434,10 @@ public sealed partial class ProcessCanvasSurfaceFactory
                 continue;
             }
 
-            plans.Add(DefinitionArtifactNodePlan.CreateDraftClone(owner, draft));
+            plans.Add(DefinitionArtifactNodePlan.CreateDraftClone(
+                owner,
+                draft,
+                ResolveDefinitionArtifactAccentColor(owner, artifactAccentColorsById)));
         }
 
         return plans;
@@ -798,6 +823,58 @@ public sealed partial class ProcessCanvasSurfaceFactory
         return plan.Artifact.AllowedFutureUsageSummary;
     }
 
+    private static string ResolveDefinitionArtifactAccentColor(
+        DefinitionArtifactOwner owner,
+        IReadOnlyDictionary<Guid, string> artifactAccentColorsById)
+    {
+        if (owner.Artifact.Id is { } artifactId &&
+            artifactAccentColorsById.TryGetValue(artifactId, out var accentColor))
+        {
+            return accentColor;
+        }
+
+        return ResolveDefinitionArtifactAccentColor(owner.ArtifactIndex);
+    }
+
+    private static string ResolveDefinitionArtifactAccentColor(int artifactIndex)
+    {
+        if (artifactIndex >= 0 && artifactIndex < DefinitionArtifactAccentPalette.Length)
+        {
+            return DefinitionArtifactAccentPalette[artifactIndex];
+        }
+
+        var hue = ((artifactIndex * 47) + 330) % 360;
+        return ConvertHslToHex(hue, 68d, 37d);
+    }
+
+    private static string ConvertHslToHex(int hue, double saturationPercent, double lightnessPercent)
+    {
+        var saturation = Math.Clamp(saturationPercent / 100d, 0d, 1d);
+        var lightness = Math.Clamp(lightnessPercent / 100d, 0d, 1d);
+        var chroma = (1d - Math.Abs((2d * lightness) - 1d)) * saturation;
+        var hueSector = ((hue % 360) + 360) % 360 / 60d;
+        var secondary = chroma * (1d - Math.Abs((hueSector % 2d) - 1d));
+        var match = lightness - (chroma / 2d);
+
+        var (red, green, blue) = hueSector switch
+        {
+            >= 0d and < 1d => (chroma, secondary, 0d),
+            >= 1d and < 2d => (secondary, chroma, 0d),
+            >= 2d and < 3d => (0d, chroma, secondary),
+            >= 3d and < 4d => (0d, secondary, chroma),
+            >= 4d and < 5d => (secondary, 0d, chroma),
+            _ => (chroma, 0d, secondary)
+        };
+
+        return $"#{ToHexByte(red + match)}{ToHexByte(green + match)}{ToHexByte(blue + match)}";
+    }
+
+    private static string ToHexByte(double value)
+    {
+        var channel = (int)Math.Round(Math.Clamp(value, 0d, 1d) * 255d, MidpointRounding.AwayFromZero);
+        return channel.ToString("X2", CultureInfo.InvariantCulture);
+    }
+
     private static List<CanvasWorkbenchChip> BuildDefinitionArtifactNodeChips(DefinitionArtifactNodePlan plan)
     {
         var chips = new List<CanvasWorkbenchChip>
@@ -995,6 +1072,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
         string NodeId,
         ProcessStepEditorModel OwnerStep,
         ProcessArtifactExpectationEditorModel Artifact,
+        string AccentColor,
         ProcessStepEditorModel? TargetStep,
         ProcessStepArtifactInputEditorModel? ArtifactInput,
         ProcessCanvasArtifactCloneDraft? Draft,
@@ -1009,12 +1087,15 @@ public sealed partial class ProcessCanvasSurfaceFactory
 
         public bool IsDraft => Draft is not null;
 
-        public static DefinitionArtifactNodePlan CreateSource(DefinitionArtifactOwner owner)
+        public static DefinitionArtifactNodePlan CreateSource(
+            DefinitionArtifactOwner owner,
+            string accentColor)
         {
             return new DefinitionArtifactNodePlan(
                 ProcessCanvasBranching.BuildDefinitionArtifactNodeId(owner.Artifact),
                 owner.Step,
                 owner.Artifact,
+                accentColor,
                 null,
                 null,
                 null,
@@ -1032,12 +1113,14 @@ public sealed partial class ProcessCanvasSurfaceFactory
             ProcessStepArtifactInputEditorModel artifactInput,
             int targetStepIndex,
             int inputIndex,
-            int targetRoleInstanceCount)
+            int targetRoleInstanceCount,
+            string accentColor)
         {
             return new DefinitionArtifactNodePlan(
                 ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(owner.Artifact, artifactInput, targetStep),
                 owner.Step,
                 owner.Artifact,
+                accentColor,
                 targetStep,
                 artifactInput,
                 null,
@@ -1051,12 +1134,14 @@ public sealed partial class ProcessCanvasSurfaceFactory
 
         public static DefinitionArtifactNodePlan CreateDraftClone(
             DefinitionArtifactOwner owner,
-            ProcessCanvasArtifactCloneDraft draft)
+            ProcessCanvasArtifactCloneDraft draft,
+            string accentColor)
         {
             return new DefinitionArtifactNodePlan(
                 draft.NodeId,
                 owner.Step,
                 owner.Artifact,
+                accentColor,
                 null,
                 null,
                 draft,

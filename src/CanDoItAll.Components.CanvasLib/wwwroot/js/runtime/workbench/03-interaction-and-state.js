@@ -77,6 +77,10 @@
 
         state.ui.selectedNodeIds = normalized.selectedNodeIds;
         state.selectedIds = toSelectionSet(normalized.selectedNodeIds);
+        if (state.highlightedIds?.size > 0) {
+            state.highlightedIds = new Set();
+            state.ui.highlightedNodeIds = [];
+        }
 
         if (options?.render !== false) {
             render(state);

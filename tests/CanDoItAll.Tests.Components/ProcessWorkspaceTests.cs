@@ -552,6 +552,47 @@ public sealed class ProcessWorkspaceTests
                 link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
         });
 
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                artifactCloneNodeId,
+                "process-definition.highlight-artifact-clones",
+                0,
+                0))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentSurface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Empty(currentSurface.UiState.SelectedNodeIds);
+            Assert.Contains(artifactNodeId, currentSurface.UiState.HighlightedNodeIds);
+            Assert.Contains(artifactCloneNodeId, currentSurface.UiState.HighlightedNodeIds);
+        });
+
+        var roleToken = role.Id!.Value.ToString("D");
+        var roleVisualNodeIds = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes
+            .Where(node =>
+                node.Kind == ProcessCanvasCatalog.NodeKinds.DefinitionRole &&
+                ProcessCanvasBranching.TryResolveDefinitionRoleToken(node.Id, out var token) &&
+                string.Equals(token, roleToken, StringComparison.Ordinal))
+            .Select(node => node.Id)
+            .ToList();
+        Assert.True(roleVisualNodeIds.Count >= 2);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                roleVisualNodeIds[0],
+                "process-definition.highlight-role-clones",
+                0,
+                0))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentSurface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Empty(currentSurface.UiState.SelectedNodeIds);
+            Assert.Equal(
+                roleVisualNodeIds.OrderBy(nodeId => nodeId, StringComparer.Ordinal),
+                currentSurface.UiState.HighlightedNodeIds.OrderBy(nodeId => nodeId, StringComparer.Ordinal));
+        });
+
         var persistedEditor = await WaitForPersistedEditorAsync(
             processesService,
             saveResult.Value,

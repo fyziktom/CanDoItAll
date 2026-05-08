@@ -447,6 +447,9 @@
             uiState: {
                 version: surface?.uiState?.version || "canvas-workbench.v1",
                 selectedNodeIds: normalizedSelection.selectedNodeIds,
+                highlightedNodeIds: Array.isArray(surface?.uiState?.highlightedNodeIds)
+                    ? [...new Set(surface.uiState.highlightedNodeIds.filter(Boolean))]
+                    : [],
                 collapsedNodeIds: Array.isArray(surface?.uiState?.collapsedNodeIds) ? [...surface.uiState.collapsedNodeIds] : [],
                 groupFrames: Array.isArray(surface?.uiState?.groupFrames) ? surface.uiState.groupFrames.map(normalizeGroupFrame) : [],
                 manualPositions: surface?.uiState?.manualPositions || {},
@@ -1349,6 +1352,7 @@
         return JSON.stringify({
             version: state.ui.version || "canvas-workbench.v1",
             selectedNodeIds: [...state.selectedIds],
+            highlightedNodeIds: [...(state.highlightedIds || new Set())],
             collapsedNodeIds: [...state.collapsedIds],
             groupFrames: Array.isArray(state.ui.groupFrames) ? state.ui.groupFrames.map(normalizeGroupFrame) : [],
             manualPositions: state.ui.manualPositions || {},

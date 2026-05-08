@@ -5,6 +5,68 @@
     const { contextSubmenuHoverDelayMs, MIN_ZOOM, MAX_ZOOM, selectionModel, getRequiredRootService, getTextMeasureService, getViewportControllerService, getAnimationTimelineService, clear, createElement, createSvgElement, normalizeInputField, normalizeInputValue, clamp, debounce, now, createWorkbenchMetrics, formatMetricDuration, cloneWorkbenchMetrics, incrementMetric, resetLastDragPatchMetrics, recordDragPatchMetrics, round, normalizeAction, normalizeAnnotation, normalizeCompactPath, normalizeDiagnosticsOptions, normalizeMinimapOptions, normalizeClipboardOptions, normalizeTooltipPopoverOptions, normalizeMarqueeOptions, normalizeSnapGuideOptions, normalizeConnectorAnchorOptions, normalizeTransformHandleOptions, normalizeGroupFrame, normalizeProgressPercent, normalizeMenuActionScale, normalizeSurface, toSelectionSet, toCollapsedSet, getDefaultNodeSize, resolveBaseNodeSize, estimateNodeSizeFromText, getNodeSize, buildNodeLookup, isNodeVisible, getVisibleNodes, getProjectionOverscanPx, collectProjectedContextNodeIds, isNodeProjectedInViewport, getProjectedNodes, getBaseNodePosition, getNodeDepth, getNodeMobility, buildResolvedLayoutKey, buildLayoutItems, getCollisionPaddingX, getCollisionPaddingY, getOverlapDelta, chooseCollisionAxis, resolveCollisionDirection, applyCollisionSeparation, enforceParentClearance, enforceSiblingSpacing, relaxTowardBase, computeResolvedNodePositions, ensureLayoutPositions, getNodePosition, getSceneBounds, clampPanToScene, setPan, syncMenuScaleCss, serializeState, legacyApplySceneTransform, cancelViewportAnimation, updateViewportTransform, animateViewportTransition, getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, createMarkerBadge, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint, hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit, readFileAsUpload, commitComposer, decorateComposerShell, createComposerWizard, createComposerSection, updateComposerFileState, openCreateComposer, openInlineNoteComposer, buildChildNotePlacement, buildSiblingNotePlacement, openKeyboardNoteComposer, openExistingNoteEditor, executeContextAction, openContextSubmenu, openContextSubmenuByActionId, renderContextMenuLayer, renderToolboxPreview, renderToolboxPanelLayer, showContextMenu, legacyOpenNodeMetadataMenu, startPan, isMarqueeModifierPressed, startMarquee, ensureSelectedForDrag, startDragForNodeIds, startDrag, startFrameDrag, updateMarquee, legacyApplyMarqueeSelection, updateDrag, updatePan, isNodeVisibleInViewport, centerNodeElementInViewport, ensureNodeVisible, legacyResize, findContainingBlockOverride, suspendContainingBlock, restoreContainingBlock, setMaximized, fitView, focusNode, normalizeWheelDelta, applyWheelZoom, setZoomPercent, setMenuScalePercent, toggleHelp, isManualDoubleActivation, handleNodeDoubleActivation, requestNodeOpen, legacyAttachEvents, hydrateState, refresh, getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, renderCanvasStandardNode, renderCanvasAdvancedNode } = shared;
     const { resolveSurfaceMode } = shared;
 
+    function resolveNodeHighlightPulse(state) {
+        if (!state.nodeHighlightStartedAt) {
+            state.nodeHighlightStartedAt = now();
+        }
+
+        const elapsed = (now() - state.nodeHighlightStartedAt) % 1500;
+        return 0.5 + (Math.sin((elapsed / 1500) * Math.PI * 2) * 0.5);
+    }
+
+    function scheduleNodeHighlightRender(state) {
+        if (!state) {
+            return;
+        }
+
+        if (!state.highlightedIds || state.highlightedIds.size === 0) {
+            state.nodeHighlightStartedAt = 0;
+            if (state.nodeHighlightAnimationFrame) {
+                window.cancelAnimationFrame(state.nodeHighlightAnimationFrame);
+                state.nodeHighlightAnimationFrame = 0;
+            }
+
+            return;
+        }
+
+        if (state.nodeHighlightAnimationFrame) {
+            return;
+        }
+
+        state.nodeHighlightAnimationFrame = window.requestAnimationFrame(() => {
+            state.nodeHighlightAnimationFrame = 0;
+            if (state.highlightedIds?.size > 0) {
+                render(state);
+            }
+        });
+    }
+
+    function drawNodeHighlightHalo(context, state, hostBounds, accent, pulse) {
+        const zoom = Math.max(state.ui.zoom || 1, 0.01);
+        const grow = Math.max(5, 8 * zoom);
+        const radius = Math.max(18, 24 * zoom);
+        drawRoundedPanel(
+            context,
+            buildRect(hostBounds.left - grow, hostBounds.top - grow, hostBounds.width + (grow * 2), hostBounds.height + (grow * 2)),
+            radius,
+            hexToRgba(accent, 0.05 + (pulse * 0.09)),
+            hexToRgba(accent, 0.28 + (pulse * 0.3)),
+            Math.max(1.4, 2.2 * zoom),
+            hexToRgba(accent, 0.16 + (pulse * 0.2)));
+    }
+
+    function drawNodeHighlightWash(context, state, hostBounds, accent, pulse) {
+        const zoom = Math.max(state.ui.zoom || 1, 0.01);
+        drawRoundedPanel(
+            context,
+            hostBounds,
+            Math.max(18, 22 * zoom),
+            hexToRgba(accent, 0.06 + (pulse * 0.08)),
+            hexToRgba(accent, 0.34 + (pulse * 0.32)),
+            Math.max(1.2, 1.8 * zoom),
+            "");
+    }
+
     function renderNodes(state, visibleNodes) {
         const surface = state.nodeSurface;
         if (!surface) {
@@ -33,8 +95,11 @@
             });
 
             const accent = resolveNodeAccentColor(node);
+            const isHighlighted = state.highlightedIds?.has(node.id) || false;
+            const highlightPulse = isHighlighted ? resolveNodeHighlightPulse(state) : 0;
             const meta = {
                 selected: state.selectedIds.has(node.id),
+                highlighted: isHighlighted,
                 collapsed: state.collapsedIds.has(node.id),
                 markerText: "",
                 priorityText: "",
@@ -44,6 +109,10 @@
                 pathDisplayText: "",
                 pathPromotedText: ""
             };
+            if (isHighlighted) {
+                drawNodeHighlightHalo(surface.context, state, hostBounds, accent, highlightPulse);
+            }
+
             if (detailMode === "micro") {
                 renderCanvasMicroNode(surface.context, state, node, hostBounds, accent, meta);
             }
@@ -55,6 +124,10 @@
             }
             else {
                 renderCanvasStandardNode(surface.context, state, node, hostBounds, accent, detailMode, meta);
+            }
+
+            if (isHighlighted) {
+                drawNodeHighlightWash(surface.context, state, hostBounds, accent, highlightPulse);
             }
 
             if (resolveSurfaceMode(state) === "delete" && state.hoveredDeleteNodeId === node.id) {
@@ -85,6 +158,8 @@
         if (state.metrics) {
             state.metrics.lastRenderedNodeCount = renderedNodeCount;
         }
+
+        scheduleNodeHighlightRender(state);
     }
 
     function renderActiveDrag(state) {

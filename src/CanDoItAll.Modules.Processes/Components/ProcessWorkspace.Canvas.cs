@@ -222,6 +222,9 @@ public partial class ProcessWorkspace
     private Task ClearCanvasSelectionAsync()
     {
         selectedCanvasNodeId = NoCanvasSelection;
+        var uiState = CloneCanvasUiState(ResolveStoredCanvasUiState());
+        uiState.HighlightedNodeIds = [];
+        StoreCanvasUiState(uiState);
         RefreshCanvasSurface();
         return Task.CompletedTask;
     }
@@ -272,6 +275,9 @@ public partial class ProcessWorkspace
                 return true;
             case ProcessCanvasActionIds.HighlightArtifactClones:
                 HighlightDefinitionArtifactClones(request.NodeId);
+                return true;
+            case ProcessCanvasActionIds.HighlightRoleClones:
+                HighlightDefinitionRoleClones(request.NodeId);
                 return true;
             default:
                 return false;

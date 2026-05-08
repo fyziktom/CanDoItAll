@@ -188,6 +188,29 @@ public sealed partial class ProcessCanvasSurfaceFactory
         ];
     }
 
+    private static List<CanvasWorkbenchAction> BuildDefinitionRoleContextActions()
+    {
+        return
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.EditDefinitionRole,
+                Label = "Edit role",
+                MenuLabel = "Edit role",
+                Icon = "draw",
+                Tone = "accent"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.HighlightRoleClones,
+                Label = "Highlight clones",
+                MenuLabel = "Highlight all clones",
+                Icon = "hub",
+                Tone = "accent"
+            }
+        ];
+    }
+
     private static List<CanvasWorkbenchChip> BuildDefinitionFooterChips(string status, IReadOnlyList<string> dependencyOutcomeTitles)
     {
         var chips = new List<CanvasWorkbenchChip>

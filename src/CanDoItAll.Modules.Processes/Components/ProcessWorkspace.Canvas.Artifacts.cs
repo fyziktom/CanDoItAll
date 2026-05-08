@@ -33,6 +33,7 @@ public partial class ProcessWorkspace
             Y = y
         };
         uiState.SelectedNodeIds = [draftNodeId];
+        uiState.HighlightedNodeIds = [];
         StoreCanvasUiState(uiState);
 
         selectedCanvasNodeId = draftNodeId;
@@ -64,12 +65,7 @@ public partial class ProcessWorkspace
             return;
         }
 
-        var uiState = CloneCanvasUiState(ResolveStoredCanvasUiState());
-        uiState.SelectedNodeIds = [.. nodeIds];
-        StoreCanvasUiState(uiState);
-
-        selectedCanvasNodeId = null;
-        RefreshCanvasSurface();
+        HighlightDefinitionCanvasNodes(nodeIds);
         SetMessage($"Highlighted {nodeIds.Count} canvas node(s) for '{ResolveArtifactLabel(artifact)}'.");
     }
 
@@ -94,6 +90,7 @@ public partial class ProcessWorkspace
             Y = draft.Y
         };
         uiState.SelectedNodeIds = [cloneNodeId];
+        uiState.HighlightedNodeIds = [];
         StoreCanvasUiState(uiState);
         selectedCanvasNodeId = cloneNodeId;
         return true;

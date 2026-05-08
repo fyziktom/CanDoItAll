@@ -105,6 +105,10 @@ public partial class ProcessWorkspace
         var availableNodeIds = surface.Nodes
             .Select(node => node.Id)
             .ToHashSet(StringComparer.Ordinal);
+        uiState.HighlightedNodeIds = uiState.HighlightedNodeIds
+            .Where(availableNodeIds.Contains)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
         if (string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal))
         {

@@ -1181,6 +1181,7 @@
             lookups,
             ui: normalizedSurface.uiState,
             selectedIds: toSelectionSet(normalizedSurface.uiState.selectedNodeIds),
+            highlightedIds: new Set((normalizedSurface.uiState.highlightedNodeIds || []).filter(Boolean)),
             collapsedIds: toCollapsedSet(normalizedSurface.uiState.collapsedNodeIds),
             helpOpen: false,
             interaction: null,
@@ -1272,6 +1273,7 @@
         state.lookups = workbenchInternals.stateStore.buildNodeLookup(state.surface.nodes);
         state.ui = state.surface.uiState;
         workbenchInternals.stateStore.reconcileSelection(state);
+        state.highlightedIds = new Set((state.ui.highlightedNodeIds || []).filter(Boolean));
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
         state.pointerHostPoint = null;
         state.hoveredDeleteNodeId = null;

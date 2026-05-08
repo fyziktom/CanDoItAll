@@ -352,6 +352,10 @@ public sealed class ProcessCanvasSurfaceFactoryTests
         var artifactCloneNode = Assert.Single(surface.Nodes, node => node.Id == artifactCloneNodeId);
         Assert.Equal(ProcessCanvasCatalog.NodeKinds.DefinitionArtifact, artifactNode.Kind);
         Assert.Equal(ProcessCanvasCatalog.NodeKinds.DefinitionArtifact, artifactCloneNode.Kind);
+        Assert.Equal("artifact", artifactNode.PaletteKey);
+        Assert.Equal("artifact", artifactCloneNode.PaletteKey);
+        Assert.Equal(artifactNode.AccentColor, artifactCloneNode.AccentColor);
+        Assert.NotEqual(implementationNode.AccentColor, artifactNode.AccentColor);
         Assert.Contains(artifactNode.ContextActions, action => action.ActionId == "process-definition.create-artifact-clone");
         Assert.Contains(artifactCloneNode.ContextActions, action => action.ActionId == "process-definition.highlight-artifact-clones");
         Assert.Contains(surface.Links, link =>
@@ -442,6 +446,8 @@ public sealed class ProcessCanvasSurfaceFactoryTests
         Assert.DoesNotContain(roleNodes, node => node.Id == canonicalRoleNodeId);
         Assert.Contains(roleNodes, node => node.Id == scopeRoleNodeId);
         Assert.Contains(roleNodes, node => node.Id == releaseRoleNodeId);
+        Assert.All(roleNodes, roleNode =>
+            Assert.Contains(roleNode.ContextActions, action => action.ActionId == "process-definition.highlight-role-clones"));
         Assert.True(ProcessCanvasBranching.TryResolveDefinitionRoleToken(scopeRoleNodeId, out var roleToken));
         Assert.Equal(roleId.ToString("D"), roleToken);
 

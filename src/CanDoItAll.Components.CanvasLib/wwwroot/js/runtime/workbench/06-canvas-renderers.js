@@ -177,6 +177,7 @@
             subtitle: node?.subtitle || "",
             inlineText: node?.inlineText || "",
             selected: !!extra?.selected,
+            highlighted: !!extra?.highlighted,
             collapsed: !!extra?.collapsed,
             isInlineTextNode: !!node?.isInlineTextNode,
             markerText: extra?.markerText || "",

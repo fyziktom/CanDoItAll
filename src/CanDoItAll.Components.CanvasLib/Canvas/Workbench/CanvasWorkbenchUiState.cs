@@ -16,6 +16,8 @@ public sealed class CanvasWorkbenchUiState
 
     public List<string> SelectedNodeIds { get; set; } = [];
 
+    public List<string> HighlightedNodeIds { get; set; } = [];
+
     public List<string> CollapsedNodeIds { get; set; } = [];
 
     public List<CanvasWorkbenchGroupFrame> GroupFrames { get; set; } = [];
@@ -51,6 +53,7 @@ public sealed class CanvasWorkbenchUiState
         {
             var state = JsonSerializer.Deserialize<CanvasWorkbenchUiState>(json, SerializerOptions) ?? new CanvasWorkbenchUiState();
             state.SelectedNodeIds = SelectionModel.From(state.SelectedNodeIds).ToList();
+            state.HighlightedNodeIds = NormalizeStringList(state.HighlightedNodeIds);
             state.CollapsedNodeIds = NormalizeStringList(state.CollapsedNodeIds);
             state.WindowStates = NormalizeWindowStates(state.WindowStates);
             return state;
@@ -67,6 +70,7 @@ public sealed class CanvasWorkbenchUiState
         {
             Version = Version,
             SelectedNodeIds = SelectionModel.From(SelectedNodeIds).ToList(),
+            HighlightedNodeIds = NormalizeStringList(HighlightedNodeIds),
             CollapsedNodeIds = NormalizeStringList(CollapsedNodeIds),
             GroupFrames = GroupFrames,
             ManualPositions = ManualPositions,

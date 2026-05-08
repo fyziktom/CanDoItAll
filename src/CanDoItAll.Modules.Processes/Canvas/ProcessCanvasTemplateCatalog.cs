@@ -31,6 +31,7 @@ internal static class ProcessCanvasActionIds
     public const string AddArtifactExpectation = "process-definition.add-artifact-expectation";
     public const string CreateArtifactClone = "process-definition.create-artifact-clone";
     public const string HighlightArtifactClones = "process-definition.highlight-artifact-clones";
+    public const string HighlightRoleClones = "process-definition.highlight-role-clones";
     public const string RemoveDefinitionStep = "process-definition.remove-step";
     public const string OpenDefinitionToolbox = "process-definition.open-toolbox";
 
