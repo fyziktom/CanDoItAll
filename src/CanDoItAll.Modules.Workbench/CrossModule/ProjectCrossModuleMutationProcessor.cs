@@ -82,6 +82,9 @@ public sealed class ProjectCrossModuleMutationProcessor(
             ProjectCrossModuleMutationKind.MoveDescendants => MoveAssignmentsAsync(
                 Deserialize<MoveDescendantsMutationPayload>(mutation.PayloadJson),
                 cancellationToken),
+            ProjectCrossModuleMutationKind.MoveSelectedNodes => MoveAssignmentsAsync(
+                Deserialize<MoveDescendantsMutationPayload>(mutation.PayloadJson),
+                cancellationToken),
             _ => Task.CompletedTask
         };
     }

@@ -533,19 +533,21 @@
         });
     }
 
-    function buildChildNotePlacement(position, childCount) {
+    function buildChildNotePlacement(position, childCount, sourceSize) {
         const column = childCount % 3;
         const row = Math.floor(childCount / 3);
+        const horizontalGap = ((sourceSize?.width || 148) / 2) + 98;
         return {
-            x: round(position.x + 240 + (column * 46)),
-            y: round(position.y - 70 + (row * 118))
+            x: round(position.x + horizontalGap + (column * 36)),
+            y: round(position.y + (row * 104))
         };
     }
 
-    function buildSiblingNotePlacement(position, siblingCount) {
+    function buildSiblingNotePlacement(position, siblingCount, sourceSize) {
+        const verticalGap = ((sourceSize?.height || 76) / 2) + 58;
         return {
             x: round(position.x + ((siblingCount % 2) * 24)),
-            y: round(position.y + 132)
+            y: round(position.y + verticalGap)
         };
     }
 
@@ -567,9 +569,10 @@
         }
 
         const position = getNodePosition(state, node);
+        const sourceSize = getNodeSize(state, node);
         const anchorWorld = isSibling
-            ? buildSiblingNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.parentId && candidate.id !== node.id).length)
-            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length);
+            ? buildSiblingNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.parentId && candidate.id !== node.id).length, sourceSize)
+            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length, sourceSize);
 
         openInlineNoteComposer(state, {
             kind: "note-create",

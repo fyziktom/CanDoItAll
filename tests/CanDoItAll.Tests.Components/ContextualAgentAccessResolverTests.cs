@@ -127,6 +127,24 @@ public sealed class ContextualAgentAccessResolverTests
             });
     }
 
+    [Fact]
+    public void BuildPrompt_includes_selected_project_structure_node_ids()
+    {
+        var projectId = Guid.NewGuid();
+
+        var prompt = ContextualAgentWorkspaceContextBuilder.BuildPrompt(
+            ContextualAgentWorkspaceKind.ProjectStructure,
+            projectId,
+            processDefinitionId: null,
+            [" node:alpha ", "node:beta", "node:alpha"],
+            "move selected nodes");
+
+        Assert.Contains($"Selected project id: {projectId:D}", prompt);
+        Assert.Contains("Selected project-structure node ids: node:alpha, node:beta.", prompt);
+        Assert.Contains("Treat \"selected nodes\" as exactly the selected node ids listed above", prompt);
+        Assert.Contains("When task ordering matters, create DependsOn dependency links", prompt);
+    }
+
     private static AgentDefinition CreateAgent(
         string name,
         string configurationJson,
