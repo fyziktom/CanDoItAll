@@ -158,30 +158,13 @@
                     </div>
                 }
 
-                @if (ShouldShowFeedback)
+                @if (HasError)
                 {
                     <div class="@ResolveFeedbackClass()"
                          data-testid="project-structure-process-assignment-feedback">
-                        @ResolveFeedbackText()
+                        @Dialog.Error
                     </div>
                 }
-
-                <div class="project-structure-assignment-toolbar">
-                    <div></div>
-                    <div class="project-structure-assignment-toolbar__controls">
-                        <span>View</span>
-                        <div class="project-structure-assignment-segmented" aria-label="View mode">
-                            <button type="button" aria-label="Grid view" class="is-active"><Icon Name="grid_view" /></button>
-                            <button type="button" aria-label="List view"><Icon Name="format_list_bulleted" /></button>
-                        </div>
-                        <button type="button"
-                                class="project-structure-assignment-sort"
-                                aria-label="Sort roles by role order">
-                            Sort by: Role order
-                            <Icon Name="expand_more" />
-                        </button>
-                    </div>
-                </div>
 
                 @if (IsSummaryMode)
                 {
@@ -264,7 +247,7 @@
                                             <button type="button"
                                                     class="project-structure-assignment-inline-action"
                                                     disabled="@(!displayCandidate.IsResolvable || Dialog.IsBusy)"
-                                                    @onclick="@(() => SelectCandidateAsync(role, displayCandidate))"
+                                                    @onclick="@(() => RequestSelectCandidateAsync(role, displayCandidate))"
                                                     data-testid="@($"project-structure-process-assignment-use-recommendation-{role.LaunchPlanRoleId:D}")">
                                                 Use recommendation
                                             </button>
@@ -332,6 +315,7 @@
                                 var candidate = ranked.Candidate;
                                 var badgePrefix = $"project-structure-process-assignment-candidate-{activeRole.LaunchPlanRoleId:D}-{candidate.CandidateId:D}";
                                 <article class="@ResolveCandidateOptionClass(candidate, ranked.IsMain)"
+                                         @ondblclick="@(() => RequestSelectCandidateAsync(activeRole, candidate))"
                                          data-testid="@($"{badgePrefix}-card")">
                                     <div class="project-structure-assignment-candidate-option__rank">
                                         <span>@(ranked.IsMain ? "Main candidate" : $"Candidate {ranked.Position}")</span>
@@ -376,6 +360,7 @@
                                         <button type="button"
                                                 class="project-structure-assignment-agent-badge project-structure-assignment-agent-badge--button"
                                                 data-testid="@($"{badgePrefix}-details-badge")"
+                                                @ondblclick:stopPropagation="true"
                                                 @onclick="@(() => OpenCandidateDetailsAsync(activeRole, candidate))">
                                             details
                                         </button>
@@ -390,7 +375,8 @@
                                             <button type="button"
                                                     class="project-structure-assignment-inline-action"
                                                     disabled="@(!candidate.IsResolvable || Dialog.IsBusy)"
-                                                    @onclick="@(() => SelectCandidateAsync(activeRole, candidate))"
+                                                    @onclick="@(() => RequestSelectCandidateAsync(activeRole, candidate))"
+                                                    @ondblclick:stopPropagation="true"
                                                     data-testid="@($"project-structure-process-assignment-select-candidate-{activeRole.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")">
                                                 Select agent
                                             </button>
@@ -492,9 +478,8 @@
 
     private bool IsSummaryMode => !selectedRoleId.HasValue;
 
-    private bool ShouldShowFeedback
-        => !string.IsNullOrWhiteSpace(Dialog.Error) ||
-           !string.IsNullOrWhiteSpace(ResolveFeedbackText());
+    private bool HasError
+        => !string.IsNullOrWhiteSpace(Dialog.Error);
 
     private ProjectStructureProcessStartRoleState? ActiveRole
         => selectedRoleId.HasValue
@@ -584,13 +569,63 @@
         return AssignProcessStartAgent.InvokeAsync(launchPlanRoleId);
     }
 
-    private Task SelectCandidateAsync(
+    private Task RequestSelectCandidateAsync(
         ProjectStructureProcessStartRoleState role,
         ProjectStructureProcessStartCandidateState candidate)
     {
         SelectRole(role.LaunchPlanRoleId);
-        return SelectProcessStartCandidate.InvokeAsync(
+        _ = ConfirmAndSelectCandidateAsync(role, candidate);
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmAndSelectCandidateAsync(
+        ProjectStructureProcessStartRoleState role,
+        ProjectStructureProcessStartCandidateState candidate)
+    {
+        if (!candidate.IsResolvable || candidate.IsSelected || Dialog.IsBusy)
+        {
+            return;
+        }
+
+        var currentCandidate = ResolveSelectedCandidate(role);
+        if (currentCandidate is not null && currentCandidate.CandidateId != candidate.CandidateId)
+        {
+            var confirmed = await ConfirmCandidateSwitchAsync(role, currentCandidate, candidate);
+            if (!confirmed)
+            {
+                return;
+            }
+        }
+
+        await SelectProcessStartCandidate.InvokeAsync(
             new ProjectStructureProcessStartCandidateSelection(role.LaunchPlanRoleId, candidate.CandidateId));
+    }
+
+    private async Task<bool> ConfirmCandidateSwitchAsync(
+        ProjectStructureProcessStartRoleState role,
+        ProjectStructureProcessStartCandidateState currentCandidate,
+        ProjectStructureProcessStartCandidateState nextCandidate)
+    {
+        var result = await DialogService.OpenAsync<ProjectStructureProcessAgentSwitchConfirmationDialog>(
+            "Switch assigned agent?",
+            new Dictionary<string, object?>
+            {
+                [nameof(ProjectStructureProcessAgentSwitchConfirmationDialog.Role)] = role,
+                [nameof(ProjectStructureProcessAgentSwitchConfirmationDialog.CurrentCandidate)] = currentCandidate,
+                [nameof(ProjectStructureProcessAgentSwitchConfirmationDialog.NextCandidate)] = nextCandidate
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Process assignment",
+                Subtitle = $"Confirm the assigned agent for {role.DisplayName}.",
+                Size = ModalSize.Compact,
+                DenseChrome = true,
+                TestId = "project-structure-process-assignment-agent-switch-confirmation-dialog",
+                AriaLabel = "Confirm process role agent switch",
+                ChromeCloseResult = false
+            });
+
+        return result is true;
     }
 
     private Task OpenCandidateDetailsAsync(
@@ -666,35 +701,6 @@
             ? 0
             : Math.Clamp(Dialog.ResolvedRoleCount * 100m / Dialog.Roles.Count, 0, 100);
         return $"width:{percent:0.##}%;";
-    }
-
-    private string ResolveModeNote()
-    {
-        if (IsSummaryMode)
-        {
-            return "Review the planned assignments before starting the process.";
-        }
-
-        return ActiveRole is { } role
-            ? $"Assign an agent for {role.DisplayName}. The current match is first; alternatives are sorted by score."
-            : "Select a role to assign an agent.";
-    }
-
-    private string ResolveFeedbackText()
-    {
-        if (!string.IsNullOrWhiteSpace(Dialog.Error))
-        {
-            return Dialog.Error;
-        }
-
-        if (!IsSummaryMode)
-        {
-            return ResolveModeNote();
-        }
-
-        return string.IsNullOrWhiteSpace(Dialog.StatusMessage)
-            ? ResolveModeNote()
-            : Dialog.StatusMessage;
     }
 
     private string ResolveAllRoleRailItemClass()

@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Workbench.Pages;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -40,6 +41,8 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         Assert.Contains("Release Readiness Manager", cut.Markup);
         Assert.Contains("No agent assigned", cut.Markup);
         Assert.Contains("Summary review", cut.Markup);
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-process-assignment-feedback']"));
+        Assert.Empty(cut.FindAll(".project-structure-assignment-toolbar"));
         Assert.NotNull(cut.Find($"[data-testid='project-structure-process-assignment-summary-{assignedRole.LaunchPlanRoleId:D}-{assignedCandidate.CandidateId:D}-model-badge']"));
         Assert.NotNull(cut.Find($"[data-testid='project-structure-process-assignment-summary-{assignedRole.LaunchPlanRoleId:D}-{assignedCandidate.CandidateId:D}-tools-badge']"));
         Assert.NotNull(cut.Find($"[data-testid='project-structure-process-assignment-summary-{assignedRole.LaunchPlanRoleId:D}-{assignedCandidate.CandidateId:D}-skills-badge']"));
@@ -117,6 +120,53 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         cut.Find($"[data-testid='project-structure-process-assignment-candidate-add-agent-{role.LaunchPlanRoleId:D}']").Click();
 
         Assert.Equal(role.LaunchPlanRoleId, requestedRoleId);
+    }
+
+    [Fact]
+    public void Assignment_dialog_confirms_switch_before_double_clicked_candidate_is_selected()
+    {
+        using var context = CreateContext();
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var selectedCandidate = CreateCandidate(
+            "Selected Release Manager",
+            isSelected: true,
+            isRecommended: true,
+            score: "410.0 score");
+        var alternativeCandidate = CreateCandidate(
+            ".NET Solution Architect",
+            isSelected: false,
+            isRecommended: true,
+            score: "502.0 score");
+        var role = CreateRole(
+            "Feature implementation manager",
+            isResolved: true,
+            selectedCandidate,
+            alternativeCandidate);
+        var state = CreateDialogState([role]);
+        ProjectStructureProcessStartCandidateSelection? selection = null;
+
+        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+            .Add(component => component.Dialog, state)
+            .Add(
+                component => component.SelectProcessStartCandidate,
+                EventCallback.Factory.Create<ProjectStructureProcessStartCandidateSelection>(
+                    new object(),
+                    value => selection = value)));
+
+        cut.Find($"[data-testid='project-structure-process-assignment-role-row-{role.LaunchPlanRoleId:D}']").Click();
+        cut.Find($"[data-testid='project-structure-process-assignment-candidate-{role.LaunchPlanRoleId:D}-{alternativeCandidate.CandidateId:D}-card']")
+            .TriggerEvent("ondblclick", new MouseEventArgs());
+
+        var dialog = Assert.Single(dialogService.Dialogs);
+        Assert.Equal("project-structure-process-assignment-agent-switch-confirmation-dialog", dialog.Options.TestId);
+        Assert.Equal(typeof(ProjectStructureProcessAgentSwitchConfirmationDialog), dialog.ComponentType);
+        Assert.Null(selection);
+
+        dialogService.Close(true);
+
+        cut.WaitForAssertion(() => Assert.NotNull(selection));
+        Assert.Equal(role.LaunchPlanRoleId, selection!.LaunchPlanRoleId);
+        Assert.Equal(alternativeCandidate.CandidateId, selection.CandidateId);
     }
 
     [Fact]

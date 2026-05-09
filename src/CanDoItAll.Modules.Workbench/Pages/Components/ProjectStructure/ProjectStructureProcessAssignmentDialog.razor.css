@@ -277,9 +277,9 @@
 }
 
 .project-structure-assignment-workspace {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
     min-height: 0;
     min-width: 0;
     overflow: hidden;
@@ -317,65 +317,11 @@
     color: #9f1239;
 }
 
-.project-structure-assignment-mode-note {
-    background: #eef7ff;
-    border: 1px solid rgba(56, 137, 220, 0.2);
-    border-radius: 0.8rem;
-    color: #244064;
-    font-size: 0.86rem;
-    line-height: 1.45;
-    margin-bottom: 0.85rem;
-    padding: 0.85rem 1rem;
-}
-
-.project-structure-assignment-toolbar {
-    align-items: center;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    margin-bottom: 1rem;
-}
-
-.project-structure-assignment-toolbar__controls {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.7rem;
-    justify-content: flex-end;
-}
-
-.project-structure-assignment-toolbar__controls > span {
-    color: #244064;
-    font-size: 0.84rem;
-}
-
-.project-structure-assignment-segmented {
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 0.8rem;
-    display: inline-flex;
-    padding: 0.2rem;
-}
-
-.project-structure-assignment-segmented button {
-    border: 0;
-    height: 2.1rem;
-    width: 2.1rem;
-}
-
-.project-structure-assignment-segmented button.is-active {
-    background: #eff6ff;
-    color: #075ebd;
-}
-
-.project-structure-assignment-sort {
-    border-radius: 0.82rem;
-    min-height: 2.5rem;
-}
-
 .project-structure-assignment-card-grid {
     align-content: start;
     box-sizing: border-box;
     display: grid;
+    flex: 1 1 auto;
     gap: 1rem;
     grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
     max-width: 100%;
@@ -618,6 +564,7 @@
 .project-structure-assignment-role-panel {
     align-content: start;
     display: grid;
+    flex: 1 1 auto;
     gap: 1rem;
     min-height: 0;
     min-width: 0;
@@ -719,6 +666,10 @@
     gap: 0.8rem;
     min-height: 17rem;
     padding: 0.9rem;
+}
+
+.project-structure-assignment-candidate-option:not(.is-selected) {
+    cursor: pointer;
 }
 
 .project-structure-assignment-candidate-option.is-main {
@@ -997,14 +948,6 @@ button:disabled {
 
     .project-structure-assignment-card-grid {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .project-structure-assignment-toolbar {
-        grid-template-columns: 1fr;
-    }
-
-    .project-structure-assignment-toolbar__controls {
-        justify-content: flex-start;
     }
 
     .project-structure-assignment-detail {
