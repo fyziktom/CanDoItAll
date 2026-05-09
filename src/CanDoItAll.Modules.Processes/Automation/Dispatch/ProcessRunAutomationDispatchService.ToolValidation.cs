@@ -135,14 +135,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .ToList();
         }
 
-        if (missing.Contains("project_structure_asset_create", StringComparer.Ordinal) &&
-            CanSatisfyMissingProjectStructureAssetCreateWithStorageReceipt(candidate, detail))
-        {
-            missing = missing
-                .Where(toolName => !string.Equals(toolName, "project_structure_asset_create", StringComparison.Ordinal))
-                .ToList();
-        }
-
         return CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof)
             ? missing
                 .Where(toolName =>
@@ -175,49 +167,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var toolName = NormalizeToolToken(receipt.ToolName);
             return toolName is "workspace_dotnet_build" or "workspace_dotnet_test" or "workspace_dotnet_run";
         });
-    }
-
-    private static bool CanSatisfyMissingProjectStructureAssetCreateWithStorageReceipt(
-        DispatchCandidate candidate,
-        ExecutionRunDetail detail)
-    {
-        var expectsAssetStorageReceipt = candidate.ExpectedArtifacts.Any(item =>
-            item.IsRequired &&
-            (item.Title.Contains("asset storage receipt", StringComparison.OrdinalIgnoreCase) ||
-             item.Title.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
-             item.ValidationRequirementSummary.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
-             item.ValidationRequirementSummary.Contains("storage locator", StringComparison.OrdinalIgnoreCase)));
-        if (!expectsAssetStorageReceipt)
-        {
-            return false;
-        }
-
-        var evidenceText = string.Join(
-            " ",
-            detail.Run.ResultSummary,
-            ResolveRecoveredExecutionResponseText(detail),
-            string.Join(' ', detail.Artifacts.Select(item => item.DisplayName)));
-        if (string.IsNullOrWhiteSpace(evidenceText))
-        {
-            return false;
-        }
-
-        return Regex.IsMatch(
-                   evidenceText,
-                   @"\b(?:image\s+asset\s+node\s+id|asset\s+node\s+id)\s*:\s*(?:custom:[a-z0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) &&
-               evidenceText.Contains("storage locator", StringComparison.OrdinalIgnoreCase) &&
-               (evidenceText.Contains("managed-files/", StringComparison.OrdinalIgnoreCase) ||
-                evidenceText.Contains("managed-files\\", StringComparison.OrdinalIgnoreCase) ||
-                evidenceText.Contains("project-media/", StringComparison.OrdinalIgnoreCase) ||
-                evidenceText.Contains("project-media\\", StringComparison.OrdinalIgnoreCase)) &&
-               (evidenceText.Contains("source workspace path", StringComparison.OrdinalIgnoreCase) ||
-                evidenceText.Contains("source artifact", StringComparison.OrdinalIgnoreCase) ||
-                evidenceText.Contains("source workspace", StringComparison.OrdinalIgnoreCase) ||
-                Regex.IsMatch(
-                    evidenceText,
-                    @"\bartifacts/(?:scopes/[a-z0-9_-]+/[a-z0-9_-]+/)?process-runs/[a-z0-9-]+/[^`""'\s]+\.png\b",
-                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
     }
 
     private static bool IsDotnetScaffoldInspectionReceipt(ToolExecutionReceiptRecord receipt)

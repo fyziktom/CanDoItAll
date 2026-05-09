@@ -67,8 +67,8 @@
     },
     {
       "Key": "app-screenshot-capture-agent",
-      "RoleResourceKey": "software-engineer",
-      "DisplayName": "App screenshot capture agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "App screenshot QA capture agent",
       "Purpose": "Start the requested app once, capture every requested route with Playwright MCP, and record browser proof for the set.",
       "StaffingIntent": "Agent template with workspace command tools and Playwright MCP.",
       "PreferredExecutorKind": "agent",
@@ -190,7 +190,7 @@
       "Key": "capture-page-screenshot-set",
       "Title": "Capture page screenshot set",
       "Subtitle": "Batch Playwright MCP proof",
-      "Notes": "Use the Single app startup receipt from the previous step as the authoritative running-app contract. Reuse its URL, port, process id, and working directory; do not run dotnet, npm, or other app startup commands in this capture step. Using the single running app, navigate with Playwright MCP to every concrete route in the manifest, wait for rendering, capture console messages, and save one screenshot file per route. Keep one app runtime alive for the full route list. If the startup receipt is missing, stale, or says the app stopped, block with that reason instead of starting another app instance.",
+      "Notes": "Use the Single app startup receipt from the previous step as the authoritative running-app contract. Reuse its URL, port, process id, and working directory; do not run dotnet, npm, or other app startup commands in this capture step. Using the single running app, navigate with Playwright MCP to every concrete route in the manifest, wait for rendering, capture console messages, and save one screenshot file per route. Keep one app runtime alive for the full route list. Do not call project_structure_asset_create or write project-structure nodes in this capture step; the following review/storage step owns accepted image asset creation. If the startup receipt is missing, stale, or says the app stopped, block with that reason instead of starting another app instance.",
       "StepKind": "Work",
       "DependsOnStepKey": "start-app-once-for-set",
       "InputContractSummary": "Target manifest and single startup receipt.",
@@ -251,7 +251,7 @@
       "Key": "review-and-store-screenshot-set",
       "Title": "Review and store screenshot set",
       "Subtitle": "Image asset nodes",
-      "Notes": "Review every screenshot for blank output, wrong route, fatal error page, obvious layout corruption, and missing primary UI. Store each accepted screenshot through project-structure assets and record one image asset node id per route. Use project_structure_asset_create with sourceWorkspacePath for managed workspace screenshot files; do not try to read binary screenshots as text just to base64-encode them.",
+      "Notes": "Review every screenshot for blank output, wrong route, fatal error page, obvious layout corruption, and missing primary UI. Call workspace_inspect_image for every screenshot file before storage and include format, dimensions, and byte size in the review findings. Store each accepted screenshot through project-structure assets and record one image asset node id per route. Use project_structure_asset_create with sourceWorkspacePath for managed workspace screenshot files; do not try to read binary screenshots as text just to base64-encode them.",
       "StepKind": "Review",
       "DependsOnStepKey": "capture-page-screenshot-set",
       "DecisionRoleKey": "screenshot-review-storage-agent",
@@ -287,7 +287,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by QA and layout generation.",
-          "ValidationRequirementSummary": "Must state accepted or rejected for every required screenshot route."
+          "ValidationRequirementSummary": "Must state accepted or rejected for every required screenshot route and include workspace_inspect_image results for every screenshot file."
         },
         {
           "Key": "image-asset-storage-receipts",

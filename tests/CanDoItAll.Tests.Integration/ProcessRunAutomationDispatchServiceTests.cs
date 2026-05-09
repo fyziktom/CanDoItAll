@@ -1046,6 +1046,51 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveRequiredToolNames_for_javascript_app_startup_step_does_not_require_dotnet_runner()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "App page screenshot capture",
+                Slug = "app-page-screenshot"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "start-app-once",
+                Title = "Start app once",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Start app once",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "JavaScript QA Review Lead",
+                RoleSnapshotSummary = "QA role for JavaScript, Vite, Node, and npm browser application validation."
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Start app once brief",
+                WorkBriefText = """
+                App page screenshot capture: Start app once
+                Inputs: Single-page target packet.
+                Outputs: Reachable local app instance.
+                Evidence: Startup command, working directory, PID, port, and readiness proof.
+                Instructions: Start the app from the approved source root using the requested .NET or JavaScript command. For .NET apps, call workspace_dotnet_run with keepAlive true and lifetimeScope ProcessRun because the later capture and cleanup steps own browser proof and shutdown. Wait for the expected local URL to respond. Record process id, command, working directory, port, stdout/stderr summary, readiness checks, and stop command. Do not use Playwright or capture screenshots in this step.
+                """,
+                ExpectedOutcome = "Reachable local app instance.",
+                EvidenceExpectationSummary = "App startup receipt"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "App startup receipt", "Must include command, working directory, process id or managed run handle, URL, and readiness status.")
+            ],
+            "Capture screenshots for a JavaScript Vite app from package.json using npm scripts.");
+
+        Assert.DoesNotContain("workspace_dotnet_run", tools);
+        Assert.DoesNotContain("workspace_dotnet_build", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
     public void ResolveRequiredToolNames_for_screenshot_review_storage_step_does_not_require_browser_capture_tools()
     {
         var tools = InvokeResolveRequiredToolNames(
@@ -1344,14 +1389,15 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         ProcessStepDefinition stepDefinition,
         ProcessStepRun stepRun,
         ProcessWorkBrief workBrief,
-        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions)
+        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions,
+        string triggerReason = "Create a grounded .NET app from project structure.")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var method = serviceType.GetMethod(
             "ResolveRequiredToolNames",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
-        var candidate = CreateDispatchCandidate(definition, stepDefinition, stepRun, workBrief, expectedArtifactDefinitions);
+        var candidate = CreateDispatchCandidate(definition, stepDefinition, stepRun, workBrief, expectedArtifactDefinitions, triggerReason);
         var result = (IEnumerable)method.Invoke(null, [candidate])!;
 
         return result.Cast<string>().ToList();
@@ -1362,7 +1408,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         ProcessStepDefinition stepDefinition,
         ProcessStepRun stepRun,
         ProcessWorkBrief workBrief,
-        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions)
+        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions,
+        string triggerReason = "Create a grounded .NET app from project structure.")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -1377,7 +1424,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var run = new ProcessRun
         {
             Name = "Test process run",
-            TriggerReason = "Create a grounded .NET app from project structure."
+            TriggerReason = triggerReason
         };
 
         return Activator.CreateInstance(
@@ -5012,7 +5059,7 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
-    public void ResolveCompletionStatusWithCarryForward_accepts_project_asset_storage_receipt_when_internal_tool_receipt_is_not_projected()
+    public void ResolveCompletionStatusWithCarryForward_fails_project_asset_storage_receipt_when_internal_tool_receipt_is_not_projected()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
@@ -5090,11 +5137,13 @@ Reason: Screenshot shows the requested inventory route.
             null,
             [candidate, detail, "Review and store screenshot", priorSuccessfulTools, responseText]) as string;
 
-        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
+        Assert.NotNull(reason);
+        Assert.Contains("project_structure_asset_create", reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void ResolveCompletionStatusWithCarryForward_accepts_project_asset_storage_receipt_with_png_evidence_ref()
+    public void ResolveCompletionStatusWithCarryForward_fails_project_asset_storage_receipt_with_png_evidence_ref_without_asset_tool()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
@@ -5176,7 +5225,9 @@ File: artifacts/process-runs/run-001/03-inventory-page.png
             null,
             [candidate, detail, "Review and store screenshot", priorSuccessfulTools, responseText]) as string;
 
-        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
+        Assert.NotNull(reason);
+        Assert.Contains("project_structure_asset_create", reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

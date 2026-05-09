@@ -1,11 +1,28 @@
 .live-processes-page {
+    height: 100%;
+    max-height: 100%;
     min-height: 0;
+    overflow: hidden;
+}
+
+.relative:has(> .live-processes-page) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .live-processes-dashboard,
 .live-processes-tabs,
 .live-processes-tab-panel {
     width: 100%;
+}
+
+.live-processes-dashboard {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .live-processes-summary {
@@ -71,7 +88,13 @@
 
 .live-processes-tabs {
     min-height: 0;
-    flex: 1;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.live-processes-tabs .cad-tabs__panels,
+.live-processes-tabs .cad-tabs__panel {
+    min-height: 0;
 }
 
 .live-processes-tab-panel {

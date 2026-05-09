@@ -70,6 +70,7 @@ public sealed partial class MafAgentRuntime
                 "workspace-pwsh-run-script" or "workspace_pwsh_run_script" => [AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", capability.Description)],
                 "workspace-convert-document" or "workspace_convert_document" => [AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", capability.Description)],
                 "workspace-inspect-spreadsheet" or "workspace_inspect_spreadsheet" => [AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", capability.Description)],
+                "workspace-inspect-image" or "workspace_inspect_image" => [AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", capability.Description)],
                 "provider-health" or "provider_health" => [AIFunctionFactory.Create(() => DescribeProviderHealth(provider), "provider_health", capability.Description)],
                 "agent-package-export" or "agent_package_export" => [AIFunctionFactory.Create(ListExportPackages, "agent_package_export", capability.Description)],
                 _ => []
@@ -181,6 +182,7 @@ public sealed partial class MafAgentRuntime
             {
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
             }
 
             if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
@@ -322,6 +324,7 @@ public sealed partial class MafAgentRuntime
             AddWorkspacePluginTool(tools, "workspace_pwsh_run_script", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane."), suppressApprovalRequirements));
             AddWorkspacePluginTool(tools, "workspace_convert_document", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
             AddWorkspacePluginTool(tools, "workspace_inspect_spreadsheet", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."), suppressApprovalRequirements));
+            AddWorkspacePluginTool(tools, "workspace_inspect_image", () => AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
             return tools;
         }
 

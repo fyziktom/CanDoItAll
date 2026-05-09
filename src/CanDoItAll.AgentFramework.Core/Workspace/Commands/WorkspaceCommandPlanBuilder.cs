@@ -872,6 +872,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        appProcessTreeIds = @($processTreeIds)");
         builder.AppendLine("        keepAlive = $keepAlive");
         builder.AppendLine("        lifetimeScope = $lifetimeScope");
+        builder.AppendLine("        aspNetCoreEnvironment = $env:ASPNETCORE_ENVIRONMENT");
+        builder.AppendLine("        dotnetEnvironment = $env:DOTNET_ENVIRONMENT");
         builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
         builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
         builder.AppendLine("        stdoutLog = $stdoutLog");
@@ -901,6 +903,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    }");
         builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($probeUrl)) { $probeUrl = $listenUrl }");
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $stdoutLog) | Out-Null");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:ASPNETCORE_ENVIRONMENT)) { $env:ASPNETCORE_ENVIRONMENT = 'Development' }");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:DOTNET_ENVIRONMENT)) { $env:DOTNET_ENVIRONMENT = 'Development' }");
         builder.AppendLine("    $dotnetPath = (Get-Command dotnet -ErrorAction Stop).Source");
         builder.AppendLine("    $argumentList = @('run', '--project', $projectPath, '--configuration', $configuration, '--no-launch-profile')");
         builder.AppendLine("    if ($noBuild) { $argumentList += '--no-build' }");

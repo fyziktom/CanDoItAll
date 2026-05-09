@@ -155,7 +155,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "workspace_dotnet_test",
         "workspace_dotnet_run",
         "workspace_pwsh_run_script",
-        "workspace_python_run_file"
+        "workspace_python_run_file",
+        "workspace_inspect_image"
     };
     private static readonly HashSet<string> BroadManagedWorkspaceDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -941,6 +942,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateImport = "processes_template_import";
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
     public const string ImageGenerationCreate = "image_generation_create";
+    public const string WorkspaceInspectImage = "workspace_inspect_image";
 
     private static readonly string[] SensitiveArgumentNameFragments =
     [
@@ -970,6 +972,7 @@ public static class AgentToolInvocationPolicyMetadata
             Validation("workspace_dotnet_build"),
             Validation("workspace_dotnet_test"),
             Validation("workspace_dotnet_run"),
+            Read(WorkspaceInspectImage),
             Read(LoadSkill),
             Read(ReadSkillResource),
             Mutation(RunSkillScript),

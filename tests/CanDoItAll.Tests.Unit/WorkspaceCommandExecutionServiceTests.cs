@@ -152,6 +152,9 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("http://127.0.0.1:5123", script, StringComparison.Ordinal);
             Assert.Contains("'--urls'", script, StringComparison.Ordinal);
             Assert.Contains("$keepAlive = $false", script, StringComparison.Ordinal);
+            Assert.Contains("$env:ASPNETCORE_ENVIRONMENT = 'Development'", script, StringComparison.Ordinal);
+            Assert.Contains("$env:DOTNET_ENVIRONMENT = 'Development'", script, StringComparison.Ordinal);
+            Assert.Contains("aspNetCoreEnvironment = $env:ASPNETCORE_ENVIRONMENT", script, StringComparison.Ordinal);
             Assert.Contains("Stop-AppProcessTree $processTreeIds", script, StringComparison.Ordinal);
             Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
             Assert.DoesNotContain("workflow", script, StringComparison.OrdinalIgnoreCase);
