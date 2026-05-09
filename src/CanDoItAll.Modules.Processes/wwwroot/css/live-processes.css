@@ -99,7 +99,13 @@
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.9rem;
-    padding-right: 2.8rem;
+    padding-right: 5rem;
+    cursor: pointer;
+}
+
+.live-processes-card:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
 }
 
 .live-processes-card--active {
@@ -114,10 +120,15 @@
     border-left-color: #dc2626;
 }
 
-.live-processes-card-close {
+.live-processes-card__actions {
     position: absolute;
     top: 0.55rem;
     right: 0.55rem;
+    display: flex;
+    gap: 0.35rem;
+}
+
+.live-processes-card-action {
     display: inline-flex;
     height: 1.75rem;
     width: 1.75rem;
@@ -130,13 +141,19 @@
     transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
+.live-processes-card-action:hover {
+    border-color: rgba(37, 99, 235, 0.45);
+    background: #eff6ff;
+    color: #2563eb;
+}
+
 .live-processes-card-close:hover {
     border-color: rgba(220, 38, 38, 0.5);
     background: #fff1f2;
     color: #dc2626;
 }
 
-.live-processes-card-close .rz-icon {
+.live-processes-card-action .rz-icon {
     font-size: 1rem;
 }
 
@@ -295,6 +312,181 @@
     gap: 0.5rem;
 }
 
+.live-processes-dialog-body {
+    min-height: 0;
+    max-height: min(72vh, 48rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.live-processes-dialog-body--full {
+    max-height: min(78vh, 56rem);
+}
+
+.live-processes-detail-tabs {
+    min-height: 0;
+}
+
+.live-processes-detail-panel {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding-top: 0.75rem;
+}
+
+.live-processes-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.live-processes-detail-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.65rem;
+}
+
+.live-processes-detail-metric {
+    min-width: 0;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 0.65rem 0.75rem;
+}
+
+.live-processes-detail-metric span {
+    display: block;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 720;
+    text-transform: uppercase;
+}
+
+.live-processes-detail-metric strong {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 720;
+    line-height: 1.35;
+    margin-top: 0.25rem;
+}
+
+.live-processes-detail-list,
+.live-processes-timeline-list {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.live-processes-detail-row,
+.live-processes-timeline-item {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0.7rem 0.8rem;
+}
+
+.live-processes-detail-row h3,
+.live-processes-timeline-item h3,
+.live-processes-manager-chat-threads h3 {
+    min-width: 0;
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 720;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.live-processes-detail-row p,
+.live-processes-timeline-item p {
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    margin-top: 0.2rem;
+    overflow-wrap: anywhere;
+}
+
+.live-processes-timeline-item {
+    justify-content: flex-start;
+}
+
+.live-processes-timeline-item > .cda-status-badge,
+.live-processes-timeline-item > .rz-badge {
+    flex-shrink: 0;
+}
+
+.live-processes-timeline-item span:last-child {
+    display: inline-flex;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 650;
+    margin-top: 0.35rem;
+}
+
+.live-processes-code-block {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    padding: 0.75rem;
+}
+
+.live-processes-manager-chat-layout {
+    display: grid;
+    grid-template-columns: minmax(17rem, 0.34fr) minmax(0, 1fr);
+    gap: 0.85rem;
+    min-height: min(68vh, 48rem);
+}
+
+.live-processes-manager-chat-threads,
+.live-processes-manager-chat-panel {
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.live-processes-manager-chat-threads {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    overflow: hidden;
+    padding: 0.85rem;
+}
+
+.live-processes-manager-chat-thread-list {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.55rem;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+    scrollbar-gutter: stable;
+}
+
+.live-processes-manager-chat-panel {
+    overflow: hidden;
+    padding: 0.85rem;
+}
+
 @media (max-width: 1024px) {
     .live-processes-command-strip__row,
     .live-processes-command-strip__actions {
@@ -307,7 +499,9 @@
     }
 
     .live-processes-chart-grid,
-    .live-processes-tool-layout {
+    .live-processes-tool-layout,
+    .live-processes-detail-grid,
+    .live-processes-manager-chat-layout {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -323,7 +517,7 @@
     }
 
     .live-processes-card {
-        padding-right: 2.55rem;
+        padding-right: 4.75rem;
     }
 
     .live-processes-duration-grid {

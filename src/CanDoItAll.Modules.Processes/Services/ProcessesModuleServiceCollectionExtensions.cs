@@ -33,6 +33,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddSingleton<ProcessObservationCache>();
         services.AddSingleton<IProcessObservationInvalidator>(provider => provider.GetRequiredService<ProcessObservationCache>());
         services.AddScoped<IProcessObservationService, ProcessObservationService>();
+        services.AddScoped<IProcessManagerChatService, ProcessManagerChatService>();
         services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
         services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();

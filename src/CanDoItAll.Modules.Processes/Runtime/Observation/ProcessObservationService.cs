@@ -524,6 +524,8 @@ internal sealed class ProcessObservationService(
                     activeSummary?.PendingOutboxCount ?? 0,
                     activeSummary?.DeadLetteredOutboxCount ?? 0,
                     activeSummary?.BlockedOrFailedStepCount ?? run.BlockedStepCount,
+                    run.ManagerAgentId,
+                    run.ManagerAgentName,
                     activeSummary?.HealthSummary ?? string.Empty);
             })
             .OrderBy(item => ResolveLiveRunSortRank(item.Status))

@@ -1,9 +1,13 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Components.Charts
 @implements IAsyncDisposable
 @inject IProcessObservationService ObservationService
+@inject IProcessManagerChatService ManagerChatService
+@inject IAgentFrameworkWorkspaceService AgentWorkspaceService
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -199,6 +203,109 @@
     </Footer>
 </Dialog>
 
+@if (processDetailDialogOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Process detail"
+            Title="@ProcessDetailDialogTitle"
+            Subtitle="@ProcessDetailDialogSubtitle"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            OnClose="CloseProcessDetailDialogAsync"
+            TestId="live-processes-process-detail-dialog">
+        <ChildContent>
+            @RenderProcessDetailDialog()
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Refresh"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@processDetailLoading"
+                        IsBusy="@processDetailLoading"
+                        Click="@(() => ReloadProcessDetailDialogAsync(forceRefresh: true))" />
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseProcessDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (stageDetailDialogOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Step detail"
+            Title="@StageDetailDialogTitle"
+            Subtitle="@StageDetailDialogSubtitle"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            OnClose="CloseStageDetailDialogAsync"
+            TestId="live-processes-stage-detail-dialog">
+        <ChildContent>
+            @RenderStageDetailDialog()
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseStageDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (artifactDetailDialogOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Artifact detail"
+            Title="@ArtifactDetailDialogTitle"
+            Subtitle="@ArtifactDetailDialogSubtitle"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            OnClose="CloseArtifactDetailDialogAsync"
+            TestId="live-processes-artifact-detail-dialog">
+        <ChildContent>
+            @RenderArtifactDetailDialog()
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseArtifactDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (managerChatDialogOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Manager chat"
+            Title="@ManagerChatDialogTitle"
+            Subtitle="@ManagerChatDialogSubtitle"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            OnClose="CloseManagerChatDialogAsync"
+            TestId="live-processes-manager-chat-dialog">
+        <ChildContent>
+            @RenderManagerChatDialog()
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseManagerChatDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
 @code {
     private static readonly IReadOnlyList<ProcessLiveHistoryWindow> HistoryWindows =
     [
@@ -277,6 +384,29 @@
     private bool isRefreshing;
     private bool suppressDialogOpen;
     private ProcessLiveRunCard? suppressTarget;
+    private bool processDetailDialogOpen;
+    private bool processDetailLoading;
+    private int processDetailTabIndex;
+    private ProcessLiveRunCard? processDetailRun;
+    private ProcessObservationDialogPayload? processDetailPayload;
+    private string? processDetailErrorMessage;
+    private bool stageDetailDialogOpen;
+    private bool stageDetailLoading;
+    private ProcessStageObservationSnapshot? stageDetailSnapshot;
+    private ProcessStepRunViewModel? stageDetailStep;
+    private string? stageDetailErrorMessage;
+    private bool artifactDetailDialogOpen;
+    private LiveProcessArtifactDetail? artifactDetail;
+    private bool managerChatDialogOpen;
+    private bool managerChatLoading;
+    private bool managerChatBusy;
+    private ProcessLiveRunCard? managerChatRun;
+    private ProcessManagerChatProjection? managerChatProjection;
+    private string managerChatDraftPrompt = string.Empty;
+    private string managerChatPendingPrompt = string.Empty;
+    private IReadOnlyList<string> managerChatDraftAttachmentPaths = [];
+    private int managerChatComposerKey;
+    private string? managerChatErrorMessage;
     private string? errorMessage;
     private DateTimeOffset nowUtc = DateTimeOffset.UtcNow;
     private IReadOnlyList<ProcessLiveRunCard> visibleRuns = [];
@@ -305,6 +435,28 @@
     private string SuppressDialogSubtitle => suppressTarget is null
         ? string.Empty
         : $"{suppressTarget.RunName} / {suppressTarget.Status}";
+
+    private string ProcessDetailDialogTitle => processDetailRun?.RunName ?? "Process run";
+
+    private string ProcessDetailDialogSubtitle => processDetailRun is null
+        ? string.Empty
+        : $"{processDetailRun.DefinitionName} / {processDetailRun.Status}";
+
+    private string StageDetailDialogTitle => stageDetailStep?.Title ?? "Process step";
+
+    private string StageDetailDialogSubtitle => stageDetailStep is null
+        ? string.Empty
+        : $"{stageDetailStep.Status} / {stageDetailStep.StepKind}";
+
+    private string ArtifactDetailDialogTitle => artifactDetail?.Title ?? "Artifact";
+
+    private string ArtifactDetailDialogSubtitle => artifactDetail is null
+        ? string.Empty
+        : $"{artifactDetail.Source} / {artifactDetail.Kind}";
+
+    private string ManagerChatDialogTitle => managerChatProjection?.ManagerLabel ?? "Process manager";
+
+    private string ManagerChatDialogSubtitle => managerChatProjection?.RunLabel ?? managerChatRun?.RunName ?? string.Empty;
 
     private IReadOnlyList<CdaChartSeries> ContextSeries
     {
@@ -449,6 +601,7 @@
 
     protected override Task OnInitializedAsync()
     {
+        AgentWorkspaceService.ExecutionUpdated += HandleManagerChatExecutionUpdated;
         refreshCancellation = new CancellationTokenSource();
         refreshLoopTask = RunRefreshLoopAsync(refreshCancellation.Token);
         return Task.CompletedTask;
@@ -471,14 +624,30 @@
                     {
                         <article @key="run.RunId"
                                  class="@ResolveRunCardClass(run)"
+                                 role="button"
+                                 tabindex="0"
+                                 @onclick="@(() => OpenProcessDetailDialogAsync(run))"
+                                 @onkeydown="@((KeyboardEventArgs args) => HandleRunCardKeyDownAsync(args, run))"
                                  data-testid="live-process-run-card">
-                            <button type="button"
-                                    class="live-processes-card-close"
-                                    title="Hide this process card"
-                                    aria-label="@($"Hide {run.RunName}")"
-                                    @onclick="@(() => OpenSuppressDialog(run))">
-                                <Icon Name="close" />
-                            </button>
+                            <div class="live-processes-card__actions">
+                                <button type="button"
+                                        class="live-processes-card-action"
+                                        title="Chat with process manager"
+                                        aria-label="@($"Chat with manager for {run.RunName}")"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="@(() => OpenManagerChatDialogAsync(run))">
+                                    <Icon Name="message" />
+                                </button>
+
+                                <button type="button"
+                                        class="live-processes-card-action live-processes-card-close"
+                                        title="Hide this process card"
+                                        aria-label="@($"Hide {run.RunName}")"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="@(() => OpenSuppressDialog(run))">
+                                    <Icon Name="close" />
+                                </button>
+                            </div>
 
                             <div class="live-processes-card__header">
                                 <div class="live-processes-card__identity">
@@ -658,6 +827,588 @@
         </div>;
     }
 
+    private RenderFragment RenderProcessDetailDialog()
+    {
+        var details = processDetailPayload?.RunSnapshot?.Details;
+        return @<Stack GapScale="LayoutGap.Medium"
+                       Class="live-processes-dialog-body">
+            @if (processDetailLoading)
+            {
+                <LoadingState Eyebrow="Process detail"
+                              Title="Loading process run"
+                              Description="Collecting steps, artifacts, timeline, outbox, and execution runs." />
+            }
+            else if (!string.IsNullOrWhiteSpace(processDetailErrorMessage))
+            {
+                <EmptyState Eyebrow="Process detail unavailable"
+                            Title="Unable to load process details"
+                            Description="@processDetailErrorMessage">
+                    <Actions>
+                        <Button Text="Try again"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(() => ReloadProcessDetailDialogAsync(forceRefresh: true))" />
+                    </Actions>
+                </EmptyState>
+            }
+            else if (details is null)
+            {
+                <EmptyState Eyebrow="No details"
+                            Title="Process run details are not available"
+                            Description="The live projection has the run card, but the detail snapshot could not be resolved." />
+            }
+            else
+            {
+                var artifactDetails = BuildArtifactDetails(details);
+                <Tabs SelectedIndex="@processDetailTabIndex"
+                      SelectedIndexChanged="HandleProcessDetailTabChangedAsync"
+                      Variant="TabsVariant.WorkspacePrimary"
+                      RenderMode="TabRenderMode.Client"
+                      Class="live-processes-detail-tabs"
+                      data-testid="live-processes-process-detail-tabs">
+                    <TabsItem Text="Overview"
+                              Icon="dashboard">
+                        @RenderProcessOverview(details)
+                    </TabsItem>
+
+                    <TabsItem Text="Steps"
+                              Icon="list"
+                              BadgeText="@details.StepRuns.Count.ToString(CultureInfo.InvariantCulture)">
+                        @RenderProcessSteps(details)
+                    </TabsItem>
+
+                    <TabsItem Text="Artifacts"
+                              Icon="inventory_2"
+                              BadgeText="@artifactDetails.Count.ToString(CultureInfo.InvariantCulture)">
+                        @RenderProcessArtifacts(artifactDetails)
+                    </TabsItem>
+
+                    <TabsItem Text="Timeline"
+                              Icon="timeline"
+                              BadgeText="@details.AttemptTimeline.Count.ToString(CultureInfo.InvariantCulture)">
+                        @RenderProcessTimeline(details)
+                    </TabsItem>
+                </Tabs>
+            }
+        </Stack>;
+    }
+
+    private RenderFragment RenderProcessOverview(ProcessWorkspaceRunDetails details)
+    {
+        return @<div class="live-processes-detail-panel">
+            <SummaryTiles ColumnsSm="2"
+                          ColumnsMd="3"
+                          ColumnsLg="6"
+                          ColumnsXl="6"
+                          GapScale="LayoutGap.Small">
+                <SummaryTile Label="Steps"
+                             Value="@($"{details.StepRuns.Count(item => item.Status == ProcessStepRunStatus.Completed)}/{details.StepRuns.Count}")"
+                             Tone="info"
+                             Compact="true" />
+                <SummaryTile Label="Active"
+                             Value="@details.Health.ActiveExecutionCount.ToString("N0", CultureInfo.CurrentCulture)"
+                             Tone="success"
+                             Compact="true" />
+                <SummaryTile Label="Approvals"
+                             Value="@details.Health.PendingApprovalCount.ToString("N0", CultureInfo.CurrentCulture)"
+                             Tone="warning"
+                             Compact="true" />
+                <SummaryTile Label="Blocked"
+                             Value="@details.Health.BlockedStepCount.ToString("N0", CultureInfo.CurrentCulture)"
+                             Tone="danger"
+                             Compact="true" />
+                <SummaryTile Label="Artifacts"
+                             Value="@details.Artifacts.Count.ToString("N0", CultureInfo.CurrentCulture)"
+                             Tone="secondary"
+                             Compact="true" />
+                <SummaryTile Label="Outbox"
+                             Value="@details.OutboxRecords.Count.ToString("N0", CultureInfo.CurrentCulture)"
+                             Tone="neutral"
+                             Compact="true" />
+            </SummaryTiles>
+
+            <div class="live-processes-detail-grid">
+                <SectionCard Title="Run health"
+                             Description="@ResolveRunHealthDescription(details.Health)">
+                    <div class="live-processes-detail-meta-grid">
+                        @RenderDetailMetric("Latest attempts", details.Health.LatestAttemptCount.ToString("N0", CultureInfo.CurrentCulture))
+                        @RenderDetailMetric("Waiting approval", details.Health.WaitingApprovalStepCount.ToString("N0", CultureInfo.CurrentCulture))
+                        @RenderDetailMetric("Missing artifacts", details.Health.MissingArtifactCount.ToString("N0", CultureInfo.CurrentCulture))
+                        @RenderDetailMetric("Dead letters", details.Health.DeadLetteredOutboxCount.ToString("N0", CultureInfo.CurrentCulture))
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="Recent execution"
+                             Description="Latest agent execution runs associated with this process.">
+                    @if (details.ExecutionRuns.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No executions"
+                                    Title="No agent execution runs"
+                                    Description="Execution runs appear after automation dispatches agent work." />
+                    }
+                    else
+                    {
+                        <div class="live-processes-detail-list">
+                            @foreach (var execution in details.ExecutionRuns.Take(6))
+                            {
+                                <div @key="execution.Id"
+                                     class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>@execution.Title</h3>
+                                        <p>@ResolveExecutionSubtitle(execution)</p>
+                                    </div>
+                                    <StatusBadge Tone="@execution.StatusTone"
+                                                 Text="@ResolveExecutionStatusText(execution)" />
+                                </div>
+                            }
+                        </div>
+                    }
+                </SectionCard>
+            </div>
+        </div>;
+    }
+
+    private RenderFragment RenderProcessSteps(ProcessWorkspaceRunDetails details)
+    {
+        return @<div class="live-processes-detail-panel">
+            @if (details.StepRuns.Count == 0)
+            {
+                <EmptyState Eyebrow="No steps"
+                            Title="This run has no steps"
+                            Description="Step details appear after a process run is created from a definition." />
+            }
+            else
+            {
+                <div class="live-processes-detail-list">
+                    @foreach (var step in details.StepRuns.OrderBy(item => item.Sequence))
+                    {
+                        <SelectionListItem @key="step.Id"
+                                           Title="@step.Title"
+                                           Eyebrow="@step.StepKind.ToString()"
+                                           Meta="@BuildStepMeta(step)"
+                                           Summary="@ResolveStepSummary(step)"
+                                           Dense="true"
+                                           OnSelect="@(() => OpenStageDetailDialogAsync(step))"
+                                           DataTestId="live-processes-step-item">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="@ResolveStepTone(step.Status)"
+                                                 Text="@step.Status.ToString()" />
+                                    @if (step.Health.PendingApprovalCount > 0)
+                                    {
+                                        <StatusBadge Tone="warning"
+                                                     Text="@FormatCount(step.Health.PendingApprovalCount, "approval", "approvals")" />
+                                    }
+                                    @if (step.Health.AttemptCount > 0)
+                                    {
+                                        <StatusBadge Tone="neutral"
+                                                     Text="@FormatCount(step.Health.AttemptCount, "attempt", "attempts")" />
+                                    }
+                                </Cluster>
+                            </Status>
+                        </SelectionListItem>
+                    }
+                </div>
+            }
+        </div>;
+    }
+
+    private RenderFragment RenderProcessArtifacts(IReadOnlyList<LiveProcessArtifactDetail> artifacts)
+    {
+        return @<div class="live-processes-detail-panel">
+            @if (artifacts.Count == 0)
+            {
+                <EmptyState Eyebrow="No artifacts"
+                            Title="No process artifacts are recorded"
+                            Description="Process and execution artifacts appear here when agents register durable evidence or outputs." />
+            }
+            else
+            {
+                <div class="live-processes-detail-list">
+                    @foreach (var artifact in artifacts)
+                    {
+                        <SelectionListItem @key="artifact.Key"
+                                           Title="@artifact.Title"
+                                           Eyebrow="@artifact.Source.ToString()"
+                                           Meta="@artifact.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+                                           Summary="@ResolveArtifactSummary(artifact)"
+                                           Dense="true"
+                                           OnSelect="@(() => OpenArtifactDetailDialog(artifact))"
+                                           DataTestId="live-processes-artifact-item">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="info"
+                                                 Text="@artifact.Kind" />
+                                    @if (!string.IsNullOrWhiteSpace(artifact.StepTitle))
+                                    {
+                                        <StatusBadge Tone="neutral"
+                                                     Text="@artifact.StepTitle" />
+                                    }
+                                </Cluster>
+                            </Status>
+                        </SelectionListItem>
+                    }
+                </div>
+            }
+        </div>;
+    }
+
+    private RenderFragment RenderProcessTimeline(ProcessWorkspaceRunDetails details)
+    {
+        return @<div class="live-processes-detail-panel">
+            @if (details.AttemptTimeline.Count == 0)
+            {
+                <EmptyState Eyebrow="No timeline"
+                            Title="No timeline entries are available"
+                            Description="Timeline entries appear after process steps, outbox records, approvals, or escalations change state." />
+            }
+            else
+            {
+                <div class="live-processes-timeline-list">
+                    @foreach (var item in details.AttemptTimeline.Take(80))
+                    {
+                        <div @key="BuildTimelineKey(item)"
+                             class="live-processes-timeline-item">
+                            <StatusBadge Tone="@item.StatusTone"
+                                         Text="@item.Status" />
+                            <div class="min-w-0">
+                                <h3>@item.Title</h3>
+                                <p>@item.Summary</p>
+                                <span>@item.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>;
+    }
+
+    private RenderFragment RenderStageDetailDialog()
+    {
+        var step = stageDetailStep;
+        return @<Stack GapScale="LayoutGap.Medium"
+                       Class="live-processes-dialog-body">
+            @if (stageDetailLoading)
+            {
+                <LoadingState Eyebrow="Step detail"
+                              Title="Loading step details"
+                              Description="Collecting step state and the filtered process timeline." />
+            }
+            else if (!string.IsNullOrWhiteSpace(stageDetailErrorMessage))
+            {
+                <EmptyState Eyebrow="Step detail unavailable"
+                            Title="Unable to load step detail"
+                            Description="@stageDetailErrorMessage" />
+            }
+            else if (step is null)
+            {
+                <EmptyState Eyebrow="No step"
+                            Title="No step is selected"
+                            Description="Select a process step from the run details dialog." />
+            }
+            else
+            {
+                var executions = ResolveStepExecutionRuns(step.Id);
+                var artifacts = ResolveStepArtifacts(step.Id);
+                <div class="live-processes-detail-grid">
+                    <SectionCard Title="State"
+                                 Description="@ResolveStepSummary(step)">
+                        <div class="live-processes-detail-meta-grid">
+                            @RenderDetailMetric("Status", step.Status.ToString())
+                            @RenderDetailMetric("Executor", string.IsNullOrWhiteSpace(step.CurrentExecutorName) ? "Unassigned" : step.CurrentExecutorName)
+                            @RenderDetailMetric("Wait", FormatDuration(TimeSpan.FromMinutes(step.WaitMinutes)))
+                            @RenderDetailMetric("Touch", FormatDuration(TimeSpan.FromMinutes(step.TouchMinutes)))
+                            @RenderDetailMetric("Blocked", FormatDuration(TimeSpan.FromMinutes(step.BlockedMinutes)))
+                            @RenderDetailMetric("Rework", step.ReworkCount.ToString("N0", CultureInfo.CurrentCulture))
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard Title="Health"
+                                 Description="@ResolveStepHealthDescription(step)">
+                        <div class="live-processes-detail-meta-grid">
+                            @RenderDetailMetric("Attempts", step.Health.AttemptCount.ToString("N0", CultureInfo.CurrentCulture))
+                            @RenderDetailMetric("Latest attempt", string.IsNullOrWhiteSpace(step.Health.LatestAttemptStatus) ? "None" : step.Health.LatestAttemptStatus)
+                            @RenderDetailMetric("Approvals", step.Health.PendingApprovalCount.ToString("N0", CultureInfo.CurrentCulture))
+                            @RenderDetailMetric("Outbox", step.Health.PendingOutboxCount.ToString("N0", CultureInfo.CurrentCulture))
+                        </div>
+                    </SectionCard>
+                </div>
+
+                @if (step.ArtifactExpectations.Count > 0)
+                {
+                    <SectionCard Title="Artifact expectations"
+                                 Description="Expected outputs and their satisfaction state for this step.">
+                        <div class="live-processes-detail-list">
+                            @foreach (var expectation in step.ArtifactExpectations)
+                            {
+                                <div @key="expectation.ArtifactExpectationId"
+                                     class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>@expectation.Title</h3>
+                                        <p>@ResolveArtifactExpectationSummary(expectation)</p>
+                                    </div>
+                                    <StatusBadge Tone="@ResolveArtifactExpectationTone(expectation.Status)"
+                                                 Text="@expectation.Status.ToString()" />
+                                </div>
+                            }
+                        </div>
+                    </SectionCard>
+                }
+
+                <SectionCard Title="Execution attempts"
+                             Description="Agent runs connected to this process step.">
+                    @if (executions.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No attempts"
+                                    Title="No execution attempts for this step"
+                                    Description="Attempts appear after automation dispatches this step to an agent." />
+                    }
+                    else
+                    {
+                        <div class="live-processes-detail-list">
+                            @foreach (var execution in executions)
+                            {
+                                <div @key="execution.Id"
+                                     class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>@execution.Title</h3>
+                                        <p>@ResolveExecutionSubtitle(execution)</p>
+                                    </div>
+                                    <StatusBadge Tone="@execution.StatusTone"
+                                                 Text="@ResolveExecutionStatusText(execution)" />
+                                </div>
+                            }
+                        </div>
+                    }
+                </SectionCard>
+
+                <SectionCard Title="Step artifacts"
+                             Description="Process and execution artifacts scoped to this step.">
+                    @if (artifacts.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No artifacts"
+                                    Title="No artifacts for this step"
+                                    Description="Artifacts appear after the step records durable evidence or outputs." />
+                    }
+                    else
+                    {
+                        <div class="live-processes-detail-list">
+                            @foreach (var artifact in artifacts)
+                            {
+                                <SelectionListItem @key="artifact.Key"
+                                                   Title="@artifact.Title"
+                                                   Eyebrow="@artifact.Source.ToString()"
+                                                   Meta="@artifact.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+                                                   Summary="@ResolveArtifactSummary(artifact)"
+                                                   Dense="true"
+                                                   OnSelect="@(() => OpenArtifactDetailDialog(artifact))" />
+                            }
+                        </div>
+                    }
+                </SectionCard>
+
+                <SectionCard Title="Timeline"
+                             Description="Step-scoped timeline entries ordered by most recent activity.">
+                    @if (stageDetailSnapshot?.Timeline.Count > 0)
+                    {
+                        <div class="live-processes-timeline-list">
+                            @foreach (var item in stageDetailSnapshot.Timeline.Take(60))
+                            {
+                                <div @key="BuildTimelineKey(item)"
+                                     class="live-processes-timeline-item">
+                                    <StatusBadge Tone="@item.Tone"
+                                                 Text="@item.StatusText" />
+                                    <div class="min-w-0">
+                                        <h3>@item.Title</h3>
+                                        <p>@item.Summary</p>
+                                        <span>@item.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <EmptyState Eyebrow="No timeline"
+                                    Title="No step timeline entries"
+                                    Description="Timeline entries appear after work starts on this step." />
+                    }
+                </SectionCard>
+            }
+        </Stack>;
+    }
+
+    private RenderFragment RenderArtifactDetailDialog()
+    {
+        var artifact = artifactDetail;
+        return @<Stack GapScale="LayoutGap.Medium"
+                       Class="live-processes-dialog-body">
+            @if (artifact is null)
+            {
+                <EmptyState Eyebrow="No artifact"
+                            Title="No artifact is selected"
+                            Description="Select an artifact from the process details dialog." />
+            }
+            else
+            {
+                <SectionCard Title="Artifact"
+                             Description="@ResolveArtifactSummary(artifact)">
+                    <div class="live-processes-detail-meta-grid">
+                        @RenderDetailMetric("Source", artifact.Source.ToString())
+                        @RenderDetailMetric("Kind", artifact.Kind)
+                        @RenderDetailMetric("Status", string.IsNullOrWhiteSpace(artifact.DetailStatus) ? "Not recorded" : artifact.DetailStatus)
+                        @RenderDetailMetric("Step", string.IsNullOrWhiteSpace(artifact.StepTitle) ? "Run-level" : artifact.StepTitle)
+                        @RenderDetailMetric("Created", artifact.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture))
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="Storage"
+                             Description="Recorded location or external reference for this artifact.">
+                    <div class="live-processes-code-block">@ResolveMissingText(artifact.StoragePath)</div>
+                </SectionCard>
+
+                <SectionCard Title="Provenance"
+                             Description="Who or what produced the artifact and how it may be used.">
+                    <Stack GapScale="LayoutGap.Small">
+                        <p class="live-processes-dialog-copy">@ResolveMissingText(artifact.Provenance)</p>
+                        @if (!string.IsNullOrWhiteSpace(artifact.SecondarySummary))
+                        {
+                            <p class="live-processes-dialog-copy">@artifact.SecondarySummary</p>
+                        }
+                    </Stack>
+                </SectionCard>
+            }
+        </Stack>;
+    }
+
+    private RenderFragment RenderManagerChatDialog()
+    {
+        return @<Stack GapScale="LayoutGap.Medium"
+                       Class="live-processes-dialog-body live-processes-dialog-body--full">
+            @if (managerChatLoading)
+            {
+                <LoadingState Eyebrow="Manager chat"
+                              Title="Loading manager chat"
+                              Description="Resolving the process manager and recent chat threads." />
+            }
+            else if (!string.IsNullOrWhiteSpace(managerChatErrorMessage))
+            {
+                <EmptyState Eyebrow="Manager chat unavailable"
+                            Title="Unable to open manager chat"
+                            Description="@managerChatErrorMessage">
+                    <Actions>
+                        <Button Text="Try again"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(() => ReloadManagerChatDialogAsync())" />
+                    </Actions>
+                </EmptyState>
+            }
+            else if (managerChatProjection is not { IsAvailable: true } projection)
+            {
+                <EmptyState Eyebrow="Manager chat unavailable"
+                            Title="No manager agent is available"
+                            Description="The process run does not resolve to a usable technical manager agent." />
+            }
+            else
+            {
+                <div class="live-processes-manager-chat-layout">
+                    <aside class="live-processes-manager-chat-threads">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               AlignItems="AlignItems.Center"
+                               Gap="LayoutGap.Small"
+                               Wrap="FlexWrap.Wrap">
+                            <Stack GapScale="LayoutGap.Tiny"
+                                   Class="min-w-0">
+                                <p class="cda-eyebrow">History</p>
+                                <h3>Recent threads</h3>
+                            </Stack>
+                            <Button Text="New"
+                                    Icon="add"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@managerChatBusy"
+                                    IsBusy="@managerChatBusy"
+                                    Click="StartManagerChatThreadAsync"
+                                    data-testid="live-processes-manager-chat-new-thread" />
+                        </Split>
+
+                        @if (projection.RecentSessions.Count == 0)
+                        {
+                            <EmptyState Eyebrow="No history"
+                                        Title="No manager chat threads"
+                                        Description="Start a new thread to talk with this process manager." />
+                        }
+                        else
+                        {
+                            <div class="live-processes-manager-chat-thread-list">
+                                @foreach (var session in projection.RecentSessions)
+                                {
+                                    <SelectionListItem @key="session.Id"
+                                                       Title="@ResolveChatSessionTitle(session)"
+                                                       Eyebrow="@FormatCount(session.MessageCount, "message", "messages")"
+                                                       Meta="@session.UpdatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+                                                       Summary="@ResolveChatSessionPreview(session)"
+                                                       Dense="true"
+                                                       IsSelected="@(projection.Workspace?.SelectedSessionId == session.Id)"
+                                                       OnSelect="@(() => SelectManagerChatThreadAsync(session.Id))"
+                                                       DataTestId="live-processes-manager-chat-thread">
+                                        <Status>
+                                            @if (session.PendingApprovalCount > 0)
+                                            {
+                                                <StatusBadge Tone="warning"
+                                                             Text="@FormatCount(session.PendingApprovalCount, "approval", "approvals")" />
+                                            }
+                                        </Status>
+                                    </SelectionListItem>
+                                }
+                            </div>
+                        }
+                    </aside>
+
+                    <div class="live-processes-manager-chat-panel">
+                        <ChatWorkspacePanel Agent="@projection.ManagerAgent"
+                                            Session="@projection.Workspace?.SelectedSession"
+                                            ActiveRun="@projection.Workspace?.SelectedRun"
+                                            ExecutionLog="@projection.ExecutionLog"
+                                            DraftPrompt="@managerChatDraftPrompt"
+                                            DraftPromptChanged="HandleManagerChatDraftPromptChangedAsync"
+                                            IsBusy="@managerChatBusy"
+                                            ComposerKey="@managerChatComposerKey"
+                                            RunStateText="@projection.RunStateText"
+                                            RunStateTone="@projection.RunStateTone"
+                                            PendingUserPrompt="@managerChatPendingPrompt"
+                                            DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                            SendRequested="SendManagerChatMessageAsync"
+                                            ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
+                                            ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
+                                            AttachmentRequested="StageManagerChatRunArtifactsAsync"
+                                            SessionTitleChanged="RenameManagerChatSessionAsync">
+                            <HeaderActions>
+                                <Button Icon="refresh"
+                                        Text="Reload"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@managerChatLoading"
+                                        IsBusy="@managerChatLoading"
+                                        Click="@(() => ReloadManagerChatDialogAsync())"
+                                        data-testid="live-processes-manager-chat-reload" />
+                            </HeaderActions>
+                        </ChatWorkspacePanel>
+                    </div>
+                </div>
+            }
+        </Stack>;
+    }
+
+    private RenderFragment RenderDetailMetric(string label, string value)
+    {
+        return @<div class="live-processes-detail-metric">
+            <span>@label</span>
+            <strong>@value</strong>
+        </div>;
+    }
+
     private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
@@ -768,6 +1519,412 @@
         return Task.CompletedTask;
     }
 
+    private async Task OpenProcessDetailDialogAsync(ProcessLiveRunCard run)
+    {
+        processDetailRun = run;
+        processDetailPayload = null;
+        processDetailErrorMessage = null;
+        processDetailTabIndex = 0;
+        processDetailDialogOpen = true;
+        await ReloadProcessDetailDialogAsync(forceRefresh: false);
+    }
+
+    private async Task HandleRunCardKeyDownAsync(KeyboardEventArgs args, ProcessLiveRunCard run)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await OpenProcessDetailDialogAsync(run);
+        }
+    }
+
+    private async Task ReloadProcessDetailDialogAsync(bool forceRefresh = false)
+    {
+        if (processDetailRun is null)
+        {
+            return;
+        }
+
+        processDetailLoading = true;
+        processDetailErrorMessage = null;
+        try
+        {
+            processDetailPayload = await ObservationService.GetDialogPayloadAsync(
+                new ProcessObservationDialogQuery(
+                    ProjectId,
+                    new ProcessObservationDialogDescriptor(
+                        ProcessObservationDialogKind.RunDetails,
+                        ProcessObservationFocusKind.Run,
+                        processDetailRun.RunId,
+                        StepRunId: null,
+                        processDetailRun.RunName,
+                        $"{processDetailRun.Status} / {processDetailRun.TotalStepCount} steps"),
+                    forceRefresh),
+                refreshCancellation?.Token ?? CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            processDetailErrorMessage = exception.Message;
+        }
+        finally
+        {
+            processDetailLoading = false;
+        }
+    }
+
+    private Task CloseProcessDetailDialogAsync()
+    {
+        processDetailDialogOpen = false;
+        processDetailRun = null;
+        processDetailPayload = null;
+        processDetailErrorMessage = null;
+        processDetailTabIndex = 0;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleProcessDetailTabChangedAsync(int index)
+    {
+        processDetailTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenStageDetailDialogAsync(ProcessStepRunViewModel step)
+    {
+        if (processDetailRun is null)
+        {
+            return;
+        }
+
+        stageDetailStep = step;
+        stageDetailSnapshot = null;
+        stageDetailErrorMessage = null;
+        stageDetailDialogOpen = true;
+        stageDetailLoading = true;
+        try
+        {
+            stageDetailSnapshot = await ObservationService.GetStageSnapshotAsync(
+                new ProcessStageObservationQuery(
+                    processDetailRun.RunId,
+                    step.Id,
+                    ProjectId),
+                refreshCancellation?.Token ?? CancellationToken.None);
+            if (stageDetailSnapshot.Stage is not null)
+            {
+                stageDetailStep = stageDetailSnapshot.Stage;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            stageDetailErrorMessage = exception.Message;
+        }
+        finally
+        {
+            stageDetailLoading = false;
+        }
+    }
+
+    private Task CloseStageDetailDialogAsync()
+    {
+        stageDetailDialogOpen = false;
+        stageDetailSnapshot = null;
+        stageDetailStep = null;
+        stageDetailErrorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private void OpenArtifactDetailDialog(LiveProcessArtifactDetail artifact)
+    {
+        artifactDetail = artifact;
+        artifactDetailDialogOpen = true;
+    }
+
+    private Task CloseArtifactDetailDialogAsync()
+    {
+        artifactDetailDialogOpen = false;
+        artifactDetail = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenManagerChatDialogAsync(ProcessLiveRunCard run)
+    {
+        managerChatRun = run;
+        managerChatProjection = null;
+        managerChatDraftPrompt = string.Empty;
+        managerChatPendingPrompt = string.Empty;
+        managerChatDraftAttachmentPaths = [];
+        managerChatComposerKey++;
+        managerChatErrorMessage = null;
+        managerChatDialogOpen = true;
+        await ReloadManagerChatDialogAsync();
+    }
+
+    private async Task ReloadManagerChatDialogAsync()
+    {
+        if (managerChatRun is null)
+        {
+            return;
+        }
+
+        managerChatLoading = true;
+        managerChatErrorMessage = null;
+        try
+        {
+            managerChatProjection = await ManagerChatService.LoadAsync(
+                BuildManagerChatQuery(managerChatRun, managerChatProjection?.Workspace?.SelectedSessionId),
+                refreshCancellation?.Token ?? CancellationToken.None);
+            if (!managerChatProjection.IsAvailable)
+            {
+                managerChatErrorMessage = managerChatProjection.ErrorMessage;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatLoading = false;
+        }
+    }
+
+    private Task CloseManagerChatDialogAsync()
+    {
+        managerChatDialogOpen = false;
+        managerChatRun = null;
+        managerChatProjection = null;
+        managerChatDraftPrompt = string.Empty;
+        managerChatPendingPrompt = string.Empty;
+        managerChatDraftAttachmentPaths = [];
+        managerChatErrorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task StartManagerChatThreadAsync()
+    {
+        if (managerChatRun is null || managerChatProjection is null)
+        {
+            return;
+        }
+
+        await RunManagerChatOperationAsync(async token =>
+        {
+            managerChatProjection = await ManagerChatService.StartNewThreadAsync(
+                BuildManagerChatQuery(managerChatRun, chatSessionId: null),
+                token);
+            managerChatDraftPrompt = string.Empty;
+            managerChatPendingPrompt = string.Empty;
+            managerChatDraftAttachmentPaths = [];
+            managerChatComposerKey++;
+        });
+    }
+
+    private async Task SelectManagerChatThreadAsync(Guid sessionId)
+    {
+        if (managerChatRun is null)
+        {
+            return;
+        }
+
+        await RunManagerChatOperationAsync(async token =>
+        {
+            managerChatProjection = await ManagerChatService.LoadAsync(
+                BuildManagerChatQuery(managerChatRun, sessionId),
+                token);
+            managerChatDraftPrompt = string.Empty;
+            managerChatPendingPrompt = string.Empty;
+            managerChatDraftAttachmentPaths = [];
+            managerChatComposerKey++;
+        });
+    }
+
+    private Task HandleManagerChatDraftPromptChangedAsync(string value)
+    {
+        managerChatDraftPrompt = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task SendManagerChatMessageAsync()
+    {
+        if (managerChatRun is null || managerChatProjection is null)
+        {
+            return;
+        }
+
+        var prompt = BuildManagerChatPromptWithAttachments();
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            managerChatErrorMessage = "Write a manager chat prompt before sending it.";
+            return;
+        }
+
+        var pendingPrompt = managerChatDraftPrompt;
+        managerChatPendingPrompt = pendingPrompt;
+        var previousDraft = managerChatDraftPrompt;
+        managerChatDraftPrompt = string.Empty;
+        managerChatComposerKey++;
+
+        await RunManagerChatOperationAsync(
+            async token =>
+            {
+                managerChatProjection = await ManagerChatService.SendMessageAsync(
+                    new ProcessManagerChatMessageRequest(
+                        BuildManagerChatQuery(managerChatRun, managerChatProjection.Workspace?.SelectedSessionId),
+                        managerChatProjection.Workspace?.SelectedSessionId,
+                        prompt),
+                    token);
+                managerChatDraftAttachmentPaths = [];
+            },
+            onError: () =>
+            {
+                managerChatDraftPrompt = previousDraft;
+                managerChatComposerKey++;
+            });
+
+        managerChatPendingPrompt = string.Empty;
+    }
+
+    private async Task HandleManagerChatApprovalDecisionAsync(bool approved)
+    {
+        await ContinueManagerChatApprovalsAsync(approved, autoApprovePendingToolCalls: false);
+    }
+
+    private async Task ApproveManagerChatConversationAsync()
+    {
+        await ContinueManagerChatApprovalsAsync(approved: true, autoApprovePendingToolCalls: true);
+    }
+
+    private async Task ContinueManagerChatApprovalsAsync(bool approved, bool autoApprovePendingToolCalls)
+    {
+        if (managerChatRun is null || managerChatProjection?.Workspace?.SelectedSessionId is not Guid sessionId)
+        {
+            return;
+        }
+
+        await RunManagerChatOperationAsync(async token =>
+        {
+            managerChatProjection = await ManagerChatService.RespondToApprovalsAsync(
+                new ProcessManagerChatApprovalRequest(
+                    BuildManagerChatQuery(managerChatRun, sessionId),
+                    sessionId,
+                    approved,
+                    autoApprovePendingToolCalls),
+                token);
+        });
+    }
+
+    private async Task RenameManagerChatSessionAsync(string title)
+    {
+        if (managerChatRun is null || managerChatProjection?.Workspace?.SelectedSessionId is not Guid sessionId)
+        {
+            return;
+        }
+
+        await RunManagerChatOperationAsync(async token =>
+        {
+            managerChatProjection = await ManagerChatService.RenameThreadAsync(
+                new ProcessManagerChatRenameRequest(
+                    BuildManagerChatQuery(managerChatRun, sessionId),
+                    sessionId,
+                    title),
+                token);
+        });
+    }
+
+    private async Task StageManagerChatRunArtifactsAsync()
+    {
+        if (managerChatRun is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var snapshot = await ObservationService.GetRunSnapshotAsync(
+                new ProcessRunObservationQuery(managerChatRun.RunId, ProjectId),
+                refreshCancellation?.Token ?? CancellationToken.None);
+            var artifactPaths = snapshot.Details.Artifacts
+                .Select(item => item.ManagedStoragePath)
+                .Concat(snapshot.Details.ExecutionRuns.SelectMany(item => item.Artifacts.Select(artifact => artifact.RelativePath)))
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(50)
+                .ToArray();
+            if (artifactPaths.Length == 0)
+            {
+                managerChatErrorMessage = "The selected process run does not have artifacts to stage.";
+                return;
+            }
+
+            managerChatDraftAttachmentPaths = artifactPaths;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = $"Unable to stage process artifacts. {exception.Message}";
+        }
+    }
+
+    private async Task RunManagerChatOperationAsync(
+        Func<CancellationToken, Task> operation,
+        Action? onError = null)
+    {
+        managerChatBusy = true;
+        managerChatErrorMessage = null;
+        try
+        {
+            await operation(refreshCancellation?.Token ?? CancellationToken.None);
+            if (managerChatProjection is { IsAvailable: false })
+            {
+                managerChatErrorMessage = managerChatProjection.ErrorMessage;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            onError?.Invoke();
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatBusy = false;
+        }
+    }
+
+    private void HandleManagerChatExecutionUpdated(object? sender, ExecutionLogEntry entry)
+    {
+        if (!ShouldAcceptManagerChatExecutionEntry(entry))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            if (!ShouldAcceptManagerChatExecutionEntry(entry) || managerChatProjection is null)
+            {
+                return;
+            }
+
+            var runState = ResolveManagerChatExecutionState(entry.State);
+            managerChatProjection = managerChatProjection with
+            {
+                ExecutionLog = UpsertManagerChatExecutionLogEntry(managerChatProjection.ExecutionLog, entry),
+                RunStateText = runState.Text,
+                RunStateTone = runState.Tone
+            };
+
+            StateHasChanged();
+        });
+    }
+
     private void PruneSuppressions()
     {
         if (snapshot is null || suppressedRuns.Count == 0)
@@ -814,6 +1971,326 @@
         return suppressedRuns.TryGetValue(runId, out var suppression) &&
                suppression.Status == status &&
                suppression.ExpiresAtUtc > nowUtc;
+    }
+
+    private ProcessManagerChatProjectionQuery BuildManagerChatQuery(
+        ProcessLiveRunCard run,
+        Guid? chatSessionId)
+    {
+        return new ProcessManagerChatProjectionQuery(
+            run.RunId,
+            run.DefinitionId,
+            run.DefinitionName,
+            run.RunName,
+            run.Status,
+            run.CompletedStepCount,
+            run.TotalStepCount,
+            run.BlockedStepCount,
+            run.CapabilityGapCount,
+            run.ActiveExecutionCount,
+            run.PendingApprovalCount,
+            run.EstimatedCost,
+            run.ActualCost,
+            run.UpdatedAtUtc,
+            run.ManagerAgentId,
+            run.ManagerAgentName,
+            ProjectId,
+            chatSessionId);
+    }
+
+    private string BuildManagerChatPromptWithAttachments()
+    {
+        if (managerChatDraftAttachmentPaths.Count == 0)
+        {
+            return managerChatDraftPrompt.Trim();
+        }
+
+        var attachmentText = string.Join(
+            Environment.NewLine,
+            managerChatDraftAttachmentPaths.Select(path => $"- {path}"));
+        return $"""
+Use these process artifacts as input:
+{attachmentText}
+
+User request:
+{managerChatDraftPrompt.Trim()}
+""";
+    }
+
+    private bool ShouldAcceptManagerChatExecutionEntry(ExecutionLogEntry entry)
+    {
+        if (managerChatProjection?.ManagerAgent?.Id != entry.AgentId)
+        {
+            return false;
+        }
+
+        var selectedSessionId = managerChatProjection.Workspace?.SelectedSessionId;
+        return !selectedSessionId.HasValue || entry.ChatSessionId == selectedSessionId.Value;
+    }
+
+    private static IReadOnlyList<ExecutionLogEntry> UpsertManagerChatExecutionLogEntry(
+        IReadOnlyList<ExecutionLogEntry> entries,
+        ExecutionLogEntry entry)
+    {
+        return entries
+            .Where(item => item.Id != entry.Id)
+            .Append(entry)
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToArray();
+    }
+
+    private static (string Text, string Tone) ResolveManagerChatExecutionState(ExecutionState state)
+    {
+        return (
+            state.ToString(),
+            state switch
+            {
+                ExecutionState.Completed => "success",
+                ExecutionState.WaitingOnTool => "warning",
+                ExecutionState.Failed => "danger",
+                ExecutionState.Running or ExecutionState.Preparing or ExecutionState.Persisting => "info",
+                _ => "neutral"
+            });
+    }
+
+    private IReadOnlyList<LiveProcessArtifactDetail> BuildArtifactDetails(ProcessWorkspaceRunDetails details)
+    {
+        var stepTitlesById = details.StepRuns.ToDictionary(item => item.Id, item => item.Title);
+        var artifacts = new List<LiveProcessArtifactDetail>();
+
+        foreach (var artifact in details.Artifacts)
+        {
+            artifacts.Add(new LiveProcessArtifactDetail(
+                $"process:{artifact.Id:N}",
+                artifact.Id,
+                artifact.StepRunId,
+                ExecutionRunId: null,
+                ResolveMissingText(artifact.Title),
+                artifact.ArtifactKind.ToString(),
+                artifact.StepRunId.HasValue ? stepTitlesById.GetValueOrDefault(artifact.StepRunId.Value, string.Empty) : string.Empty,
+                ResolveArtifactPath(artifact.ManagedStoragePath, artifact.ExternalReferenceKey),
+                artifact.ProvenanceSummary,
+                artifact.AllowedFutureUsageSummary,
+                artifact.TrustStatus.ToString(),
+                artifact.CreatedAtUtc,
+                LiveProcessArtifactSource.Process));
+        }
+
+        foreach (var executionRun in details.ExecutionRuns)
+        {
+            foreach (var artifact in executionRun.Artifacts)
+            {
+                artifacts.Add(new LiveProcessArtifactDetail(
+                    $"execution:{executionRun.Id:N}:{artifact.Id:N}",
+                    artifact.Id,
+                    executionRun.StepRunId,
+                    executionRun.Id,
+                    ResolveMissingText(artifact.DisplayName),
+                    artifact.ArtifactKind,
+                    executionRun.StepRunId.HasValue ? stepTitlesById.GetValueOrDefault(executionRun.StepRunId.Value, executionRun.StepTitle) : executionRun.StepTitle,
+                    artifact.RelativePath,
+                    artifact.ProducedBy,
+                    artifact.Summary,
+                    artifact.ContentType,
+                    artifact.CreatedAtUtc,
+                    LiveProcessArtifactSource.Execution));
+            }
+        }
+
+        return artifacts
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private IReadOnlyList<ProcessExecutionRunViewModel> ResolveStepExecutionRuns(Guid stepRunId)
+    {
+        return processDetailPayload?.RunSnapshot?.Details.ExecutionRuns
+            .Where(item => item.StepRunId == stepRunId)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToArray() ?? [];
+    }
+
+    private IReadOnlyList<LiveProcessArtifactDetail> ResolveStepArtifacts(Guid stepRunId)
+    {
+        var details = processDetailPayload?.RunSnapshot?.Details;
+        return details is null
+            ? []
+            : BuildArtifactDetails(details)
+                .Where(item => item.StepRunId == stepRunId)
+                .ToArray();
+    }
+
+    private static string ResolveRunHealthDescription(ProcessRunHealthSummaryViewModel health)
+    {
+        return string.IsNullOrWhiteSpace(health.ActionableReason)
+            ? $"Recovery classification: {health.RecoveryClassification}."
+            : health.ActionableReason;
+    }
+
+    private static string ResolveStepHealthDescription(ProcessStepRunViewModel step)
+    {
+        if (!string.IsNullOrWhiteSpace(step.Health.ActionableReason))
+        {
+            return step.Health.ActionableReason;
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.BlockedReason))
+        {
+            return step.BlockedReason;
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.ExceptionSummary))
+        {
+            return step.ExceptionSummary;
+        }
+
+        return $"Recovery classification: {step.Health.RecoveryClassification}.";
+    }
+
+    private static string ResolveStepSummary(ProcessStepRunViewModel step)
+    {
+        if (!string.IsNullOrWhiteSpace(step.DecisionSummary))
+        {
+            return step.DecisionSummary;
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.BlockedReason))
+        {
+            return step.BlockedReason;
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.RefusalReason))
+        {
+            return step.RefusalReason;
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.ExceptionSummary))
+        {
+            return step.ExceptionSummary;
+        }
+
+        return string.IsNullOrWhiteSpace(step.CurrentExecutorName)
+            ? "No executor is currently assigned."
+            : $"Executor: {step.CurrentExecutorName}.";
+    }
+
+    private static string BuildStepMeta(ProcessStepRunViewModel step)
+    {
+        return $"Step {step.Sequence} / wait {step.WaitMinutes}m / touch {step.TouchMinutes}m / blocked {step.BlockedMinutes}m";
+    }
+
+    private static string ResolveStepTone(ProcessStepRunStatus status)
+    {
+        return status switch
+        {
+            ProcessStepRunStatus.Completed => "success",
+            ProcessStepRunStatus.InProgress => "info",
+            ProcessStepRunStatus.Blocked or ProcessStepRunStatus.WaitingApproval => "warning",
+            ProcessStepRunStatus.Failed or ProcessStepRunStatus.Refused => "danger",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveExecutionSubtitle(ProcessExecutionRunViewModel execution)
+    {
+        var agent = string.IsNullOrWhiteSpace(execution.AgentName)
+            ? "Agent"
+            : execution.AgentName;
+        var step = string.IsNullOrWhiteSpace(execution.StepTitle)
+            ? "Run-level"
+            : execution.StepTitle;
+        return $"{agent} / {step} / {execution.UpdatedAtUtc.LocalDateTime:g}";
+    }
+
+    private static string ResolveExecutionStatusText(ProcessExecutionRunViewModel execution)
+    {
+        return string.IsNullOrWhiteSpace(execution.StatusBadgeText)
+            ? execution.State.ToString()
+            : execution.StatusBadgeText;
+    }
+
+    private static string ResolveArtifactSummary(LiveProcessArtifactDetail artifact)
+    {
+        if (!string.IsNullOrWhiteSpace(artifact.SecondarySummary))
+        {
+            return artifact.SecondarySummary;
+        }
+
+        if (!string.IsNullOrWhiteSpace(artifact.Provenance))
+        {
+            return artifact.Provenance;
+        }
+
+        return string.IsNullOrWhiteSpace(artifact.StoragePath)
+            ? "No artifact summary was recorded."
+            : artifact.StoragePath;
+    }
+
+    private static string ResolveArtifactExpectationSummary(ProcessArtifactExpectationSatisfactionViewModel expectation)
+    {
+        var required = expectation.IsRequired ? "Required" : "Optional";
+        var source = expectation.SourceKind == ProcessArtifactExpectationSourceKind.None
+            ? "No source"
+            : expectation.SourceKind.ToString();
+        return $"{required} / {source} / {ResolveMissingText(expectation.SatisfiedByTitle)}";
+    }
+
+    private static string ResolveArtifactExpectationTone(ProcessArtifactExpectationSatisfactionStatus status)
+    {
+        return status switch
+        {
+            ProcessArtifactExpectationSatisfactionStatus.Satisfied => "success",
+            ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed => "danger",
+            ProcessArtifactExpectationSatisfactionStatus.Expected => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveArtifactPath(string managedStoragePath, string externalReferenceKey)
+    {
+        if (!string.IsNullOrWhiteSpace(managedStoragePath))
+        {
+            return managedStoragePath;
+        }
+
+        return externalReferenceKey;
+    }
+
+    private static string ResolveChatSessionTitle(ChatSessionSummaryRecord session)
+    {
+        return string.IsNullOrWhiteSpace(session.Title)
+            ? "Untitled manager thread"
+            : session.Title;
+    }
+
+    private static string ResolveChatSessionPreview(ChatSessionSummaryRecord session)
+    {
+        return string.IsNullOrWhiteSpace(session.LastMessagePreview)
+            ? "No messages yet."
+            : session.LastMessagePreview;
+    }
+
+    private static string BuildTimelineKey(ProcessAttemptTimelineEntryViewModel item)
+    {
+        return $"{item.Kind}:{FormatNullableGuid(item.StepRunId)}:{FormatNullableGuid(item.ExecutionRunId)}:{FormatNullableGuid(item.OutboxRecordId)}:{FormatNullableGuid(item.EscalationId)}:{item.OccurredAtUtc.UtcTicks}";
+    }
+
+    private static string BuildTimelineKey(ProcessObservationTimelineItem item)
+    {
+        return $"{item.Kind}:{FormatNullableGuid(item.StepRunId)}:{FormatNullableGuid(item.ExecutionRunId)}:{FormatNullableGuid(item.OutboxRecordId)}:{FormatNullableGuid(item.EscalationId)}:{item.OccurredAtUtc.UtcTicks}";
+    }
+
+    private static string FormatNullableGuid(Guid? value)
+    {
+        return value?.ToString("N") ?? "none";
+    }
+
+    private static string ResolveMissingText(string value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "Not recorded"
+            : value.Trim();
     }
 
     private static string ResolveHistoryWindowLabel(ProcessLiveHistoryWindow historyWindow)
@@ -972,6 +2449,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
         if (refreshCancellation is not null)
         {
             await refreshCancellation.CancelAsync();
@@ -996,4 +2474,25 @@
     private sealed record SuppressedRunCard(
         ProcessRunStatus Status,
         DateTimeOffset ExpiresAtUtc);
+
+    private sealed record LiveProcessArtifactDetail(
+        string Key,
+        Guid ArtifactId,
+        Guid? StepRunId,
+        Guid? ExecutionRunId,
+        string Title,
+        string Kind,
+        string StepTitle,
+        string StoragePath,
+        string Provenance,
+        string SecondarySummary,
+        string DetailStatus,
+        DateTimeOffset CreatedAtUtc,
+        LiveProcessArtifactSource Source);
+
+    private enum LiveProcessArtifactSource
+    {
+        Process,
+        Execution
+    }
 }

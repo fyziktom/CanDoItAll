@@ -232,6 +232,8 @@ public sealed record ProcessLiveRunCard(
     int PendingOutboxCount,
     int DeadLetteredOutboxCount,
     int BlockedOrFailedStepCount,
+    Guid? ManagerAgentId,
+    string ManagerAgentName,
     string HealthSummary);
 
 public sealed record ProcessLiveAgentCard(
