@@ -76,6 +76,7 @@ public sealed partial class ProcessesService {
             await projectStructureBridge.SyncRunAsync(dbContext, run, stepRuns, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
 
             return Result.Success();
         }

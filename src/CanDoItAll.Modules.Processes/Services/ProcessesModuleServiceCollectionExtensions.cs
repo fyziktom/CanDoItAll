@@ -23,11 +23,19 @@ public static class ProcessesModuleServiceCollectionExtensions
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddOptions<ProcessRuntimeOptions>()
             .BindConfiguration(ProcessRuntimeOptions.SectionName);
+        services.AddOptions<ProcessObservationCacheOptions>()
+            .BindConfiguration(ProcessObservationCacheOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
         services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
+        services.AddSingleton<ProcessObservationCache>();
+        services.AddSingleton<IProcessObservationInvalidator>(provider => provider.GetRequiredService<ProcessObservationCache>());
+        services.AddScoped<IProcessObservationService, ProcessObservationService>();
+        services.AddScoped<IProcessManagerChatService, ProcessManagerChatService>();
+        services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
+        services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessRunRecoveryService>();

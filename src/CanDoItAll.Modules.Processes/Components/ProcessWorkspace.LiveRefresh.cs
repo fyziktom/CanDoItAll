@@ -84,17 +84,7 @@ public partial class ProcessWorkspace
             return;
         }
 
-        if (string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal))
-        {
-            analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
-        }
-
-        runtimeStateOverview = await RuntimeStateOverviewService.GetOverviewAsync(
-            definitions.Select(definition => definition.Id).ToList(),
-            ProjectId,
-            forceRefresh: true,
-            cancellationToken);
-        await LoadRuntimePaneDataAsync(cancellationToken);
+        await LoadRuntimePaneDataAsync(forceRefresh: true, cancellationToken);
         RefreshCanvasSurface();
         StateHasChanged();
 
@@ -112,8 +102,46 @@ public partial class ProcessWorkspace
         }
 
         runtimeRefreshCts.Cancel();
-        runtimeRefreshCts.Dispose();
-        runtimeRefreshCts = null;
-        runtimeRefreshTask = null;
+        if (runtimeRefreshTask is null || runtimeRefreshTask.IsCompleted)
+        {
+            runtimeRefreshCts.Dispose();
+            runtimeRefreshCts = null;
+            runtimeRefreshTask = null;
+        }
+    }
+
+    private async Task StopRuntimeRefreshLoopAsync()
+    {
+        var refreshCts = runtimeRefreshCts;
+        var refreshTask = runtimeRefreshTask;
+        if (refreshCts is null && refreshTask is null)
+        {
+            return;
+        }
+
+        refreshCts?.Cancel();
+        try
+        {
+            if (refreshTask is not null)
+            {
+                await refreshTask;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            refreshCts?.Dispose();
+            if (ReferenceEquals(runtimeRefreshCts, refreshCts))
+            {
+                runtimeRefreshCts = null;
+            }
+
+            if (ReferenceEquals(runtimeRefreshTask, refreshTask))
+            {
+                runtimeRefreshTask = null;
+            }
+        }
     }
 }

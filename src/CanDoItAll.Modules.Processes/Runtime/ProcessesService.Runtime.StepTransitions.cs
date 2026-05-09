@@ -201,6 +201,10 @@ public sealed partial class ProcessesService
 
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            NotifyRunObservationChanged(
+                transitionContext.Run.ProjectId,
+                transitionContext.Run.ProcessDefinitionId,
+                transitionContext.Run.Id);
 
             return Result.Success();
         }

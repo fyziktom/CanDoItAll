@@ -219,6 +219,10 @@ public interface IProcessEscalationService
         Guid runId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<Guid, IReadOnlyList<ProcessEscalationViewModel>>> ListForRunsAsync(
+        IReadOnlyCollection<Guid> runIds,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProcessAttemptTimelineEntryViewModel>> ListJournalTimelineAsync(
         Guid runId,
         CancellationToken cancellationToken = default);
@@ -285,6 +289,40 @@ public sealed class ProcessEscalationService(
             .ThenBy(item => item.DueAtUtc ?? DateTimeOffset.MaxValue)
             .ThenByDescending(item => item.UpdatedAtUtc)
             .ToList();
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, IReadOnlyList<ProcessEscalationViewModel>>> ListForRunsAsync(
+        IReadOnlyCollection<Guid> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+
+        var normalizedRunIds = runIds
+            .Where(runId => runId != Guid.Empty)
+            .Distinct()
+            .ToArray();
+        if (normalizedRunIds.Length == 0)
+        {
+            return new Dictionary<Guid, IReadOnlyList<ProcessEscalationViewModel>>();
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var eventTypes = ProcessEscalationJournal.EventTypeValues;
+        var entries = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(entry => normalizedRunIds.Contains(entry.ProcessRunId) && eventTypes.Contains(entry.EventType))
+            .ToListAsync(cancellationToken);
+
+        return ProcessEscalationJournal.Project(entries)
+            .GroupBy(item => item.ProcessRunId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ProcessEscalationViewModel>)group
+                    .OrderBy(item => item.Status == ProcessEscalationStatus.Resolved)
+                    .ThenByDescending(item => item.Severity)
+                    .ThenBy(item => item.DueAtUtc ?? DateTimeOffset.MaxValue)
+                    .ThenByDescending(item => item.UpdatedAtUtc)
+                    .ToList());
     }
 
     public async Task<IReadOnlyList<ProcessAttemptTimelineEntryViewModel>> ListJournalTimelineAsync(

@@ -285,6 +285,7 @@ public sealed partial class ProcessesService
                 artifact.ManagedStoragePath),
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
         return Result<Guid>.Success(artifact.Id);
     }
 
@@ -419,6 +420,7 @@ public sealed partial class ProcessesService
             cancellationToken);
         run.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
+        NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
 
         return Result.Success();
     }

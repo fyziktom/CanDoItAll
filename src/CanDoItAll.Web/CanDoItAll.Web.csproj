@@ -4,6 +4,7 @@
     <ProjectReference Include="..\CanDoItAll.Components\CanDoItAll.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj" />
     <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

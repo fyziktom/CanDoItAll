@@ -20,6 +20,7 @@ public sealed partial class ProcessesService(
     HrService hrService,
     AiAgentService aiAgentService,
     CollaborationService collaborationService,
+    IProcessObservationInvalidator processObservationInvalidator,
     ILogger<ProcessesService> logger)
 {
     private const string DefaultActor = "process-management";

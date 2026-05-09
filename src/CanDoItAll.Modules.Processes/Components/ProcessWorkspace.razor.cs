@@ -61,6 +61,15 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private ProcessRuntimeStateOverviewService RuntimeStateOverviewService { get; set; } = default!;
 
     [Inject]
+    private IProcessObservationService ProcessObservationService { get; set; } = default!;
+
+    [Inject]
+    private IProcessObservationInvalidator ProcessObservationInvalidator { get; set; } = default!;
+
+    [Inject]
+    private ProcessObservationDashboardState ObservationDashboardState { get; set; } = default!;
+
+    [Inject]
     private DialogService DialogService { get; set; } = default!;
 
     [Inject]
@@ -154,6 +163,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string importJson = string.Empty;
     private string projectName = string.Empty;
     private bool isFeedingDefaults;
+    private readonly CancellationTokenSource componentLifetimeCts = new();
     private Guid? stoppingRunId;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
@@ -304,7 +314,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         try
         {
             await CatalogWarmupService.WarmupAsync(synchronizeExistingDefinitions: true);
-            RuntimeStateOverviewService.Invalidate();
+            InvalidateObservationState();
             await LoadWorkspaceAsync();
             SetMessage("Default processes were synchronized from the current template pack.");
         }
@@ -317,5 +327,27 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
             isFeedingDefaults = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private void InvalidateObservationState(Guid? definitionId = null, Guid? runId = null)
+    {
+        RuntimeStateOverviewService.Invalidate();
+        if (runId.HasValue)
+        {
+            var definitionForRun = runs.FirstOrDefault(item => item.Id == runId.Value)?.ProcessDefinitionId ??
+                definitionId ??
+                selectedProcessId ??
+                Guid.Empty;
+            ProcessObservationInvalidator.NotifyRunChanged(new ProcessRunObservationKey(ProjectId, definitionForRun, runId.Value));
+            return;
+        }
+
+        if (definitionId.HasValue)
+        {
+            ProcessObservationInvalidator.NotifyDefinitionChanged(new ProcessDefinitionObservationKey(ProjectId, definitionId.Value));
+            return;
+        }
+
+        ProcessObservationInvalidator.NotifyProjectChanged(ProjectId);
     }
 }

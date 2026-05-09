@@ -274,6 +274,8 @@ public partial class MainLayout
         {
             "/" => new TuningSurfaceDefinition("page-home", "Home", "Dashboard summary and startup guidance."),
             "/projects" => new TuningSurfaceDefinition("page-projectspage", "ProjectsPage", "Project list, editor, and phase planning."),
+            "/processes" => new TuningSurfaceDefinition("page-processespage", "ProcessesPage", "Process definition and runtime management workspace."),
+            "/processes/live" => new TuningSurfaceDefinition("page-liveprocessespage", "LiveProcessesPage", "Live process observation dashboard with cards, active agents, metrics, and tool analytics."),
             "/crm-hr" => new TuningSurfaceDefinition("page-crmhrhomepage", "CrmHrHomePage", "CRM / HR module summary and route hub."),
             "/crm-hr/directory" => new TuningSurfaceDefinition("page-crmhrdirectorypage", "CrmHrDirectoryPage", "Unified party directory and editor."),
             "/crm-hr/crm" => new TuningSurfaceDefinition("page-crmhrcrmpage", "CrmHrCrmPage", "CRM workspace shell for accounts and opportunities."),
@@ -317,6 +319,7 @@ public partial class MainLayout
         => path.Trim().ToLowerInvariant() switch
         {
             var normalized when normalized.StartsWith("/crm-hr", StringComparison.Ordinal) => "CRM / HR",
+            var normalized when normalized.StartsWith("/processes", StringComparison.Ordinal) => "Processes",
             "/validation" => "Validation",
             "/test-lab" => "Testing",
             "/settings" => "Settings",

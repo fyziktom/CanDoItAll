@@ -419,6 +419,7 @@ public sealed record ProcessActiveAgentViewModel(
     string StepTitle,
     ExecutionState State,
     RunOutcome? Outcome,
+    DateTimeOffset? StartedAtUtc,
     DateTimeOffset UpdatedAtUtc)
 {
     public string StatusBadgeText { get; init; } = string.Empty;

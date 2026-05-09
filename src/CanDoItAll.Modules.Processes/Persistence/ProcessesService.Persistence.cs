@@ -137,6 +137,7 @@ public sealed partial class ProcessesService
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+                NotifyDefinitionObservationChanged(definition.ProjectId, definition.Id);
                 return Result<Guid>.Success(definition.Id);
             }
             catch (DbUpdateConcurrencyException)
