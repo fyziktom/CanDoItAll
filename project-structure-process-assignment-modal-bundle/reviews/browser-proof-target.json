@@ -1,9 +1,0 @@
-{
-  "projectId": "4a6f0d32-68ad-42c0-b729-1ebc6be7d94d",
-  "definitionId": "3121ce24-4517-4fff-9432-8a055cf5bf77",
-  "route": "http://localhost:5532/projects/4a6f0d32-68ad-42c0-b729-1ebc6be7d94d/structure",
-  "roleCount": 12,
-  "publishResult": {
-    "ok": true
-  }
-}
