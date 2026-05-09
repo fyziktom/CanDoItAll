@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant Manager
+    participant CaptureAgent
+    participant ReviewStorageAgent
+    Manager->>CaptureAgent: Provide route manifest and run contract
+    CaptureAgent->>CaptureAgent: Start app once
+    loop Each screenshot-candidate route
+        CaptureAgent->>CaptureAgent: Navigate with Playwright MCP and capture screenshot
+    end
+    CaptureAgent->>ReviewStorageAgent: Send screenshot set and browser evidence
+    ReviewStorageAgent->>ReviewStorageAgent: Review every image and store accepted image assets
+    ReviewStorageAgent->>Manager: Return route-to-asset map and findings

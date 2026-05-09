@@ -34,6 +34,18 @@
       "RelativePath": "processes/dotnet-development-slice"
     },
     {
+      "Key": "app-page-screenshot",
+      "RelativePath": "processes/app-page-screenshot"
+    },
+    {
+      "Key": "app-pages-screenshot-set",
+      "RelativePath": "processes/app-pages-screenshot-set"
+    },
+    {
+      "Key": "app-layout-image-generation",
+      "RelativePath": "processes/app-layout-image-generation"
+    },
+    {
       "Key": "software-delivery",
       "RelativePath": "processes/software-delivery"
     },

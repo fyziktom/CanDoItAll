@@ -115,6 +115,10 @@ public sealed partial class MafAgentRuntime
                     "project_structure_approval_request",
                     "Records an approval-request node in the project structure so blocked work is written back into the graph."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_asset_create",
+                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. Use this for generated screenshots and binary media instead of writing loose files into project notes. Provide either media base64 data or sourceWorkspacePath pointing at a file inside the managed workspace."),
+                AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_get",
                     "Returns readonly metadata for an existing managed asset node."),
@@ -523,6 +527,30 @@ public sealed partial class MafAgentRuntime
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
                     return await agentService.GetAssetAsync(projectId, nodeId, cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureNodeSummary> ProjectStructureAssetCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureAssetCreateInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "assets.create",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.CreateAssetAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
                 },
                 cancellationToken);
         }

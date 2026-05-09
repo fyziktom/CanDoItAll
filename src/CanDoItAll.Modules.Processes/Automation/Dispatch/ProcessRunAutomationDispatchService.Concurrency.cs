@@ -258,7 +258,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var primaryHasDeclaredOutcome = TryResolveDeclaredStepOutcome(primaryResponse, out _);
+        var resultSummary = string.IsNullOrWhiteSpace(detail.Run.ResultSummary)
+            ? string.Empty
+            : detail.Run.ResultSummary.Trim();
+        var resultSummaryHasDeclaredOutcome = TryResolveDeclaredStepOutcome(resultSummary, out _);
         var recoveredHasDeclaredOutcome = TryResolveDeclaredStepOutcome(recoveredResponse, out _);
+        if (resultSummaryHasDeclaredOutcome)
+        {
+            return resultSummary;
+        }
+
         return !primaryHasDeclaredOutcome && recoveredHasDeclaredOutcome
             ? recoveredResponse
             : primaryResponse;

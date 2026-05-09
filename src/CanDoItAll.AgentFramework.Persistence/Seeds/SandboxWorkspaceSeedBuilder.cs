@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v72";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v74";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -20,6 +20,13 @@ internal static class SandboxWorkspaceSeedBuilder
         "gpt-4.1"
     ];
 
+    private static readonly IReadOnlyList<string> OpenAiImageSuggestedModels =
+    [
+        "gpt-image-1-mini",
+        "gpt-image-1",
+        "gpt-image-1.5"
+    ];
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     internal static SandboxWorkspaceDocument Build()
@@ -28,6 +35,7 @@ internal static class SandboxWorkspaceSeedBuilder
 
         var openAiProviderId = CreateStableGuid("providers/openai-default");
         var openAiChatProviderId = CreateStableGuid("providers/openai-chat-completions");
+        var openAiImageProviderId = CreateStableGuid("providers/openai-image-generation");
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
 
         var playwrightLocalMcpCapabilityId = CreateStableGuid("capabilities/playwright-local-mcp");
@@ -106,6 +114,9 @@ internal static class SandboxWorkspaceSeedBuilder
         var businessStrategistAgentId = CreateStableGuid("agents/business-strategist");
         var financialStrategistAgentId = CreateStableGuid("agents/financial-strategist");
         var marketingSpecialistAgentId = CreateStableGuid("agents/marketing-specialist");
+        var screenshotCaptureAgentTemplateId = CreateStableGuid("agents/app-screenshot-capture-agent-template");
+        var screenshotReviewStorageAgentTemplateId = CreateStableGuid("agents/screenshot-review-storage-agent-template");
+        var layoutImageGenerationAgentTemplateId = CreateStableGuid("agents/layout-image-generation-agent-template");
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
         var capabilities = new List<CapabilityCatalogItem>
         {
@@ -365,7 +376,7 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", "Workspace Dotnet Restore", "Runs a bounded dotnet restore recipe in the managed workspace or a grounded external-target alias.", "workspace_dotnet_restore", approvalRequired: true),
             CreateToolCapability(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", "Workspace Dotnet Build", "Runs a bounded dotnet build recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_build"),
             CreateToolCapability(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", "Workspace Dotnet Test", "Runs a bounded dotnet test recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_test"),
-            CreateToolCapability(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", "Workspace Dotnet Run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias, with durable launch evidence. HTTP smoke stops the launched process tree by default; use keepAlive true only for same-step browser proof and stop it with the recorded startup.json stopCommand before finalizing. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_run"),
+            CreateToolCapability(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", "Workspace Dotnet Run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias, with durable launch evidence. HTTP smoke stops the launched process tree by default; use keepAlive true with lifetimeScope ExecutionRun for same-step browser proof, or lifetimeScope ProcessRun only when a later process step owns capture and cleanup. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying.", "workspace_dotnet_run"),
             CreateToolCapability(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", "Workspace Dotnet New", "Creates an approved dotnet project scaffold in the managed workspace or a grounded external-target alias. Use approved current SDK template names and inspect an unsuccessful result before retrying. For an exact output root, pass its parent as parentDirectory and the root leaf as name. For test projects, pass a parentDirectory under the grounded product root, such as <product-root>/tests, with name <AppName>.Tests; never reuse the product parent to create <AppName>.Tests as a sibling. Keep tests and support projects under child folders of the grounded product root unless another root is explicitly grounded. Do not scaffold product or test projects into managed src/tests/tools roots or sibling external-target roots during an external-target run.", "workspace_dotnet_new", approvalRequired: true),
             CreateToolCapability(workspacePythonRunFileCapabilityId, "workspace-python-run-file", "Workspace Python Run File", "Runs a workspace Python file through the controlled execution plane with durable receipts.", "workspace_python_run_file", approvalRequired: true),
             CreateToolCapability(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", "Workspace PowerShell Run Script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane.", "workspace_pwsh_run_script", approvalRequired: true),
@@ -463,6 +474,25 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Not checked",
                 null,
                 OpenAiSuggestedModels),
+            new(
+                openAiImageProviderId,
+                "OpenAI image generation",
+                ProviderKind.OpenAi,
+                "https://api.openai.com/v1",
+                "OPENAI_API_KEY",
+                "gpt-image-1-mini",
+                ProviderTransportKind.Responses,
+                true,
+                false,
+                false,
+                false,
+                false,
+                CreateOpenAiImageProviderConfigurationJson(),
+                "Image-generation profile for OpenAI Images API workflows. Defaulted to the lower-cost GPT Image 1 Mini model; runtime image tools should still require explicit agent permission.",
+                "Not checked",
+                null,
+                OpenAiImageSuggestedModels,
+                ProviderProfilePurpose.ImageGeneration),
             new(
                 ollamaProviderId,
                 "Remote Ollama",
@@ -1536,6 +1566,166 @@ internal static class SandboxWorkspaceSeedBuilder
             now,
             ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
+        var screenshotCaptureAgentTemplate = CreateWorkloadAgent(
+            screenshotCaptureAgentTemplateId,
+            "App Screenshot Capture Agent Template",
+            "Runnable app screenshot capture agent",
+            "Runs .NET or JavaScript apps once for a screenshot process step and captures route screenshots through Playwright MCP.",
+            GetSeedText("agents/app-screenshot-capture-template.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "app-screenshot-capture-agent",
+            WithWorkspaceToolProfile(
+                WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4,
+                        runtimeUse = "app-screenshot-capture"
+                    }),
+                    canRead: true,
+                    canWrite: false,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: false,
+                allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
+                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
+                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
+            ],
+            ["template", "screenshot", "playwright", "runtime"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            isTemplate: true);
+
+        var screenshotReviewStorageAgentTemplate = CreateWorkloadAgent(
+            screenshotReviewStorageAgentTemplateId,
+            "Screenshot Review Storage Agent Template",
+            "Screenshot reviewer and asset writer",
+            "Reviews captured screenshots and writes accepted images back to project structure as managed image asset nodes.",
+            GetSeedText("agents/screenshot-review-storage-template.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "screenshot-review-storage-agent",
+            WithImageGenerationAccess(
+            WithWorkspaceToolAccess(
+                WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4,
+                        runtimeUse = "screenshot-review-storage"
+                    }),
+                    canRead: true,
+                    canWrite: true,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: true,
+                allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation,
+                settings =>
+                {
+                    settings.CanReadStorage = true;
+                    settings.CanWriteStorage = true;
+                    settings.AllowAllStorageCatalogs = true;
+                }),
+            canGenerateImages: false,
+            preferredProviderProfileId: null,
+            defaultModel: string.Empty,
+            canStoreImagesAsProjectAssets: true),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+            ],
+            ["template", "screenshot", "review", "asset-storage"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            isTemplate: true);
+
+        var layoutImageGenerationAgentTemplate = CreateWorkloadAgent(
+            layoutImageGenerationAgentTemplateId,
+            "Layout Image Generation Agent Template",
+            "Layout image generator and asset writer",
+            "Reads stored app screenshots, generates improved layout recommendation images through the preferred image provider, and stores generated images as managed project assets.",
+            GetSeedText("agents/layout-image-generation-template.instructions"),
+            openAiProviderId,
+            AgentWorkloadKind.Qa,
+            "layout-image-generation-agent",
+            WithImageGenerationAccess(
+            WithWorkspaceToolAccess(
+                WithProcessAccess(
+                WithProjectStructureAccess(
+                    SerializeConfiguration(new
+                    {
+                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
+                        enableCompaction = true,
+                        maxLocalRagResults = 4,
+                        runtimeUse = "layout-image-generation"
+                    }),
+                    canRead: true,
+                    canWrite: true,
+                    allowAllProjects: true),
+                canRead: true,
+                canWrite: true,
+                allowAllDefinitions: true),
+                AgentWorkspaceToolProfileKind.QualityValidation,
+                settings =>
+                {
+                    settings.CanReadStorage = true;
+                    settings.CanWriteStorage = true;
+                    settings.AllowAllStorageCatalogs = true;
+                }),
+            canGenerateImages: true,
+            preferredProviderProfileId: openAiImageProviderId,
+            defaultModel: "gpt-image-1-mini",
+            canStoreImagesAsProjectAssets: true),
+            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
+            [
+                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
+                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
+                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
+                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
+                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
+                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
+                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
+            ],
+            ["template", "layout", "image-generation", "asset-storage", "openai"],
+            now,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            isTemplate: true);
+
         return new SandboxWorkspaceDocument(
             LatestVersion,
             [
@@ -1559,7 +1749,10 @@ internal static class SandboxWorkspaceSeedBuilder
                 javascriptQaAgent,
                 businessStrategistAgent,
                 financialStrategistAgent,
-                marketingSpecialistAgent
+                marketingSpecialistAgent,
+                screenshotCaptureAgentTemplate,
+                screenshotReviewStorageAgentTemplate,
+                layoutImageGenerationAgentTemplate
             ],
             providers,
             capabilities,
@@ -1605,7 +1798,8 @@ internal static class SandboxWorkspaceSeedBuilder
         IReadOnlyList<AgentCapabilityAssignment> capabilities,
         IReadOnlyList<string> tags,
         DateTimeOffset now,
-        string model = ManagedSeedProviderFallbacks.OpenAiDefaultModel)
+        string model = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        bool isTemplate = false)
     {
         return new AgentDefinition(
             id,
@@ -1622,7 +1816,7 @@ internal static class SandboxWorkspaceSeedBuilder
             false,
             false,
             WithDefaultReasoningEffort(configurationJson),
-            false,
+            isTemplate,
             templateKey,
             permissions,
             capabilities,
@@ -1677,9 +1871,35 @@ internal static class SandboxWorkspaceSeedBuilder
         string configurationJson,
         AgentWorkspaceToolProfileKind profile)
     {
-        return AgentWorkspaceToolAccessMetadata.Write(
+        return WithWorkspaceToolAccess(configurationJson, profile, configure: null);
+    }
+
+    private static string WithWorkspaceToolAccess(
+        string configurationJson,
+        AgentWorkspaceToolProfileKind profile,
+        Action<AgentWorkspaceToolAccessSettings>? configure)
+    {
+        var settings = AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
+        configure?.Invoke(settings);
+        return AgentWorkspaceToolAccessMetadata.Write(configurationJson, settings);
+    }
+
+    private static string WithImageGenerationAccess(
+        string configurationJson,
+        bool canGenerateImages,
+        Guid? preferredProviderProfileId,
+        string defaultModel,
+        bool canStoreImagesAsProjectAssets)
+    {
+        return AgentImageGenerationAccessMetadata.Write(
             configurationJson,
-            AgentWorkspaceToolAccessProfiles.CreateSettings(profile));
+            new AgentImageGenerationAccessSettings
+            {
+                CanGenerateImages = canGenerateImages,
+                PreferredProviderProfileId = preferredProviderProfileId,
+                DefaultModel = defaultModel,
+                CanStoreImagesAsProjectAssets = canStoreImagesAsProjectAssets
+            });
     }
 
     private static string WithDefaultReasoningEffort(string configurationJson)
@@ -1709,6 +1929,17 @@ internal static class SandboxWorkspaceSeedBuilder
             {
                 reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
             }
+        });
+    }
+
+    private static string CreateOpenAiImageProviderConfigurationJson()
+    {
+        return SerializeConfiguration(new
+        {
+            endpointFamily = "images",
+            defaultQuality = "low",
+            defaultSize = "1024x1024",
+            defaultOutputFormat = "png"
         });
     }
 

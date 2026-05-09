@@ -30,7 +30,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessWorkBrief? WorkBrief,
         Guid TechnicalAgentId,
         IReadOnlyList<DispatchArtifactExpectation> ExpectedArtifacts,
-        IReadOnlySet<Guid> RecordedArtifactExpectationIds,
+        HashSet<Guid> RecordedArtifactExpectationIds,
         IReadOnlyList<DispatchArtifactInput> ArtifactInputs,
         HashSet<string> ExternalReferenceKeys,
         Guid? ChatSessionId,

@@ -135,6 +135,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .ToList();
         }
 
+        if (missing.Contains("project_structure_asset_create", StringComparer.Ordinal) &&
+            CanSatisfyMissingProjectStructureAssetCreateWithStorageReceipt(candidate, detail))
+        {
+            missing = missing
+                .Where(toolName => !string.Equals(toolName, "project_structure_asset_create", StringComparison.Ordinal))
+                .ToList();
+        }
+
         return CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof)
             ? missing
                 .Where(toolName =>
@@ -167,6 +175,49 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var toolName = NormalizeToolToken(receipt.ToolName);
             return toolName is "workspace_dotnet_build" or "workspace_dotnet_test" or "workspace_dotnet_run";
         });
+    }
+
+    private static bool CanSatisfyMissingProjectStructureAssetCreateWithStorageReceipt(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        var expectsAssetStorageReceipt = candidate.ExpectedArtifacts.Any(item =>
+            item.IsRequired &&
+            (item.Title.Contains("asset storage receipt", StringComparison.OrdinalIgnoreCase) ||
+             item.Title.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
+             item.ValidationRequirementSummary.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
+             item.ValidationRequirementSummary.Contains("storage locator", StringComparison.OrdinalIgnoreCase)));
+        if (!expectsAssetStorageReceipt)
+        {
+            return false;
+        }
+
+        var evidenceText = string.Join(
+            " ",
+            detail.Run.ResultSummary,
+            ResolveRecoveredExecutionResponseText(detail),
+            string.Join(' ', detail.Artifacts.Select(item => item.DisplayName)));
+        if (string.IsNullOrWhiteSpace(evidenceText))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+                   evidenceText,
+                   @"\b(?:image\s+asset\s+node\s+id|asset\s+node\s+id)\s*:\s*(?:custom:[a-z0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) &&
+               evidenceText.Contains("storage locator", StringComparison.OrdinalIgnoreCase) &&
+               (evidenceText.Contains("managed-files/", StringComparison.OrdinalIgnoreCase) ||
+                evidenceText.Contains("managed-files\\", StringComparison.OrdinalIgnoreCase) ||
+                evidenceText.Contains("project-media/", StringComparison.OrdinalIgnoreCase) ||
+                evidenceText.Contains("project-media\\", StringComparison.OrdinalIgnoreCase)) &&
+               (evidenceText.Contains("source workspace path", StringComparison.OrdinalIgnoreCase) ||
+                evidenceText.Contains("source artifact", StringComparison.OrdinalIgnoreCase) ||
+                evidenceText.Contains("source workspace", StringComparison.OrdinalIgnoreCase) ||
+                Regex.IsMatch(
+                    evidenceText,
+                    @"\bartifacts/(?:scopes/[a-z0-9_-]+/[a-z0-9_-]+/)?process-runs/[a-z0-9-]+/[^`""'\s]+\.png\b",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
     }
 
     private static bool IsDotnetScaffoldInspectionReceipt(ToolExecutionReceiptRecord receipt)
@@ -665,7 +716,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             successfulToolNames.Add(toolName);
         }
 
-        foreach (var toolName in ResolveSuccessfulExecutionLogToolNames(detail.ExecutionLog))
+        foreach (var toolName in ResolveSuccessfulExecutionLogToolNames(detail))
         {
             successfulToolNames.Add(toolName);
         }
@@ -673,20 +724,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return successfulToolNames;
     }
 
-    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(IReadOnlyList<ExecutionLogEntry> executionLog)
+    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(ExecutionRunDetail detail)
     {
+        var executionLog = detail.ExecutionLog;
         if (executionLog.Count == 0)
         {
             return [];
         }
 
+        var canTrustCompletedInternalToolLogs =
+            detail.Run.State == ExecutionState.Completed &&
+            detail.Run.Outcome == RunOutcome.Succeeded &&
+            HasCompletedDeclaredStepOutcome(detail);
         var toolNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in executionLog)
         {
             if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
                 entry.State == ExecutionState.Failed ||
                 !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
-                !IsProviderNativeExecutionLogToolName(toolName))
+                (!IsProviderNativeExecutionLogToolName(toolName) &&
+                 !(canTrustCompletedInternalToolLogs && IsInternalMafExecutionLogToolName(toolName))))
             {
                 continue;
             }
@@ -836,6 +893,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool IsProviderNativeExecutionLogToolName(string toolName)
     {
         return toolName.StartsWith("browser_", StringComparison.Ordinal);
+    }
+
+    private static bool IsInternalMafExecutionLogToolName(string toolName)
+    {
+        return toolName.StartsWith("project_structure_", StringComparison.Ordinal) ||
+               toolName.StartsWith("process_", StringComparison.Ordinal) ||
+               toolName.StartsWith("image_generation_", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> ResolveSuccessfulSessionToolNames(string? serializedSessionStateJson)

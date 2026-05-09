@@ -940,6 +940,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateMermaidGet = "processes_template_mermaid_get";
     public const string ProcessesTemplateImport = "processes_template_import";
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
+    public const string ImageGenerationCreate = "image_generation_create";
 
     private static readonly string[] SensitiveArgumentNameFragments =
     [
@@ -982,6 +983,7 @@ public static class AgentToolInvocationPolicyMetadata
             Mutation(ProcessesAssignmentResolve),
             Mutation(ProcessesArtifactRecord),
             Mutation(ProcessesTemplateImport),
+            Mutation(ImageGenerationCreate),
             Read(ProcessesDefinitionsList),
             Read(ProcessesDefinitionEditorGet),
             Read(ProcessesDefinitionExport),

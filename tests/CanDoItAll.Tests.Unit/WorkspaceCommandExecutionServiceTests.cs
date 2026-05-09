@@ -197,6 +197,41 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task DotnetRun_http_smoke_can_mark_process_run_lifetime_for_downstream_capture()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb/SampleWeb.csproj",
+                url: "http://127.0.0.1:5126/",
+                startupTimeoutSeconds: 5,
+                timeoutSeconds: 20,
+                keepAlive: true,
+                lifetimeScope: WorkspaceProcessLifetimeScope.ProcessRun);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            var encodedIndex = processHost.LastRequest!.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
+            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
+            Assert.Contains("$lifetimeScope = 'ProcessRun'", script, StringComparison.Ordinal);
+            Assert.Contains("lifetimeScope = $lifetimeScope", script, StringComparison.Ordinal);
+            Assert.Contains("stopCommand", script, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetTest_accepts_project_directory_when_target_is_unambiguous()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");

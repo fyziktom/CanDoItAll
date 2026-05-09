@@ -102,6 +102,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var primaryRoleText = BuildPrimaryRoleProfileText(stepRun, workBrief, role, assignment, expectedArtifacts);
         var roleText = BuildRoleProfileText(stepRun, workBrief, role, assignment, expectedArtifacts);
+        if (RequiresRuntimeCleanupWorkspaceToolProfile(stepRun, roleText))
+        {
+            return AgentWorkspaceToolProfileKind.QualityValidation;
+        }
+
         if (stepRun.StepKind == ProcessStepKind.Work && ContainsDevelopmentProfileSignal(primaryRoleText))
         {
             return AgentWorkspaceToolProfileKind.SoftwareDevelopment;
@@ -136,6 +141,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return stepRun.StepKind == ProcessStepKind.Work
             ? AgentWorkspaceToolProfileKind.BusinessAnalysis
             : AgentWorkspaceToolProfileKind.ReadOnly;
+    }
+
+    private static bool RequiresRuntimeCleanupWorkspaceToolProfile(ProcessStepRun stepRun, string roleText)
+    {
+        return stepRun.StepKind == ProcessStepKind.End &&
+               ContainsAny(
+                   roleText,
+                   "stop the managed app process",
+                   "stop managed app process",
+                   "stop app",
+                   "stop the app",
+                   "shutdown",
+                   "managed run",
+                   "process tree",
+                   "runtime session");
     }
 
     private static bool ContainsDevelopmentProfileSignal(string text)
