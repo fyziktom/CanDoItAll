@@ -302,6 +302,41 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal("ReadingTimeBudgeter", arguments[2]);
     }
 
+    [Theory]
+    [InlineData("external-source-root")]
+    [InlineData("runtime")]
+    public void IsProjectLevelPlanningContextNode_includes_source_and_runtime_context(string objectSubtype)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var nodeType = serviceType.GetNestedType(
+            "ProjectStructureGroundingNodeData",
+            BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ProjectStructureGroundingNodeData type was not found.");
+        var constructor = nodeType
+            .GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Single(item => item.GetParameters().Length == 9);
+        var node = constructor.Invoke(
+        [
+            "custom:source-root",
+            "project:demo",
+            "External",
+            objectSubtype,
+            "Scenario source root",
+            @"C:\programovani\candoitall-dev-55-output\scenario-01-dotnet-trailhead-snack-box",
+            "",
+            @"External generated app source root: C:\programovani\candoitall-dev-55-output\scenario-01-dotnet-trailhead-snack-box",
+            "{}"
+        ]);
+        var method = serviceType.GetMethod(
+            "IsProjectLevelPlanningContextNode",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("IsProjectLevelPlanningContextNode method was not found.");
+
+        var included = (bool)method.Invoke(null, [node])!;
+
+        Assert.True(included);
+    }
+
     [Fact]
     public void PruneAllowedExternalTargetAliasesForCurrentRun_removes_ancestor_roots()
     {
@@ -402,6 +437,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_escaped_newline_bulleted_source_annotation()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box\\n- Source root (mapped alias): external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box - Expected project source path for web project (relative to source root): src/TrailheadSnackBox.Web - Run command (assumption): dotnet run --project src/TrailheadSnackBox.Web"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box", alias);
+    }
+
+    [Fact]
     public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_escaped_newline_exact_archetype()
     {
         var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
@@ -432,6 +479,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
         [
             "external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box Business-analysis ro"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_inline_app_project_path_annotation()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box - App project path (relative to source root): src/TrailheadSnackBox.Web - Run command (expected): dotnet run --project src/TrailheadSnackBox.Web - Expected base URL (primary assumption): https://localhost:5001"
         ]);
 
         var alias = Assert.Single(aliases);
@@ -525,6 +584,25 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         Assert.True(mapped);
         Assert.Equal("external-target/C/programovani/dotnet/HarborShiftScheduler", arguments[1]);
+    }
+
+    [Fact]
+    public void TryMapAbsoluteExternalPathToAlias_strips_inline_app_project_path_annotation()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "TryMapAbsoluteExternalPathToAlias",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryMapAbsoluteExternalPathToAlias method was not found.");
+        object?[] arguments =
+        [
+            @"C:\programovani\candoitall-dev-55-output\scenario-01-dotnet-trailhead-snack-box - App project path (relative to source root): src/TrailheadSnackBox.Web - Run command (expected): dotnet run --project src/TrailheadSnackBox.Web",
+            string.Empty
+        ];
+
+        var mapped = (bool)method.Invoke(null, arguments)!;
+
+        Assert.True(mapped);
+        Assert.Equal("external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box", arguments[1]);
     }
 
     [Fact]
@@ -769,6 +847,40 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveWorkspaceToolProfile_keeps_quality_validation_for_runtime_cleanup_handoff()
+    {
+        var profile = InvokeResolveWorkspaceToolProfile(
+            new ProcessStepRun
+            {
+                Title = "Cleanup and handoff",
+                StepKind = ProcessStepKind.End,
+                CurrentExecutorName = "Runtime App Screenshot Capture Agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Cleanup and handoff",
+                WorkBriefText = """
+                Read upstream screenshot review findings and project image asset storage receipt.
+                Stop the managed app process if one is still live and write the handoff.
+                The upstream capture step already produced browser_snapshot, browser_take_screenshot, and browser_console_messages.
+                """,
+                ExpectedOutcome = "Single page screenshot handoff with cleanup status.",
+                EvidenceExpectationSummary = "Single page screenshot handoff"
+            },
+            new ProcessRoleRequirement
+            {
+                Key = "app-screenshot-capture-agent",
+                DisplayName = "App screenshot capture agent",
+                Purpose = "Capture screenshots and clean up runnable app processes."
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Single page screenshot handoff", "Must include final route, screenshot artifact, asset node id, cleanup status, and blockers.")
+            ]);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, profile);
+    }
+
+    [Fact]
     public void ResolveRequiredToolNames_for_dotnet_solution_setup_scaffold_step_skips_runtime_validation()
     {
         var tools = InvokeResolveRequiredToolNames(
@@ -883,6 +995,235 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 (ProcessArtifactKind.Evidence, "First build and test discovery evidence", "Must include restore/build/test command output. Browser proof is not applicable for this console application.")
             ]);
 
+        Assert.DoesNotContain("browser_console_messages", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_app_startup_step_honors_negated_browser_capture()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "App page screenshot capture",
+                Slug = "app-page-screenshot"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "start-app-once",
+                Title = "Start app once",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Start app once",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "Runtime App Screenshot Capture Agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Start app once brief",
+                WorkBriefText = """
+                App page screenshot capture: Start app once
+                Inputs: Single-page target packet.
+                Outputs: Reachable local app instance.
+                Evidence: Startup command, working directory, PID, port, and readiness proof.
+                Instructions: Start the app from the approved source root using the requested .NET or JavaScript command. For .NET apps, call workspace_dotnet_run with keepAlive true and lifetimeScope ProcessRun because the later capture and cleanup steps own browser proof and shutdown. Wait for the expected local URL to respond. Record process id, command, working directory, port, stdout/stderr summary, readiness checks, and stop command. Do not use Playwright or capture screenshots in this step.
+                """,
+                ExpectedOutcome = "Reachable local app instance.",
+                EvidenceExpectationSummary = "App startup receipt"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "App startup receipt", "Must include command, working directory, process id or managed run handle, URL, and readiness status.")
+            ]);
+
+        Assert.Contains("workspace_dotnet_run", tools);
+        Assert.DoesNotContain("workspace_pwsh_run_script", tools);
+        Assert.DoesNotContain("browser_console_messages", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_screenshot_review_storage_step_does_not_require_browser_capture_tools()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "App page screenshot capture",
+                Slug = "app-page-screenshot"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "review-and-store-screenshot",
+                Title = "Review and store screenshot",
+                StepKind = ProcessStepKind.Review
+            },
+            new ProcessStepRun
+            {
+                Title = "Review and store screenshot",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = "Runtime Screenshot Review Storage Agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Review and store screenshot",
+                WorkBriefText = """
+                Review the captured screenshot and browser evidence. Store accepted screenshots through project_structure_asset_create with sourceWorkspacePath.
+                The upstream capture step already owns browser_snapshot, browser_take_screenshot, and browser_console_messages.
+                """,
+                ExpectedOutcome = "Review findings and project image asset storage receipt.",
+                EvidenceExpectationSummary = "Screenshot review findings and Project image asset storage receipt"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Screenshot review findings", "Must state accepted or rejected with the visual reason."),
+                (ProcessArtifactKind.Evidence, "Project image asset storage receipt", "Must include project id, image asset node id, content type, original file name, and storage locator.")
+            ]);
+
+        Assert.Contains("project_structure_asset_create", tools);
+        Assert.DoesNotContain("browser_console_messages", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_keeps_image_generation_tool_references()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "App layout image generation",
+                Slug = "app-layout-image-generation"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "generate-layout-recommendation",
+                Title = "Generate layout recommendation",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Generate layout recommendation",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "Runtime Layout Image Generation Agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Generate layout recommendation",
+                WorkBriefText = """
+                Read the stored screenshot asset and call image_generation_create with sourceProjectAssets.
+                Store the generated image through project_structure_asset_create with sourceWorkspacePath from the generation result.
+                """,
+                ExpectedOutcome = "Generated layout image asset storage receipt.",
+                EvidenceExpectationSummary = "Generated layout image asset storage receipt"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Generated layout image asset storage receipt", "Must include generated image node id, provider, model, source screenshot asset id, and storage locator.")
+            ]);
+
+        Assert.Contains("image_generation_create", tools);
+        Assert.Contains("project_structure_asset_create", tools);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredToolExecutions_accepts_completed_internal_maf_tool_invocations_from_execution_log()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingTools = serviceType.GetMethod(
+            "ResolveMissingRequiredToolExecutions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredToolExecutions method was not found.");
+        var candidate = CreateDispatchCandidate(
+            new ProcessDefinition
+            {
+                Name = "App layout image generation",
+                Slug = "app-layout-image-generation"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "generate-layout-recommendation",
+                Title = "Generate layout recommendation",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Generate layout recommendation",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "Runtime Layout Image Generation Agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Generate layout recommendation",
+                WorkBriefText = """
+                Read the stored screenshot asset and call image_generation_create with sourceProjectAssets.
+                Store the generated image through project_structure_asset_create with sourceWorkspacePath from the generation result.
+                """,
+                ExpectedOutcome = "Generated layout image asset storage receipt.",
+                EvidenceExpectationSummary = "Generated layout image asset storage receipt"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Generated layout image asset storage receipt", "Must include generated image node id, provider, model, source screenshot asset id, and storage locator.")
+            ]);
+        var detail = CreateSuccessfulExecutionDetail(
+            """
+            {"status":"Completed","reason":"Generated layout recommendation image created and stored as project asset.","branchOutcomeKey":"completed","branchOutcomeTitle":"Completed","evidenceRefs":["custom:1fc595afea754f6fb41137d670c72c99"],"nextActions":[],"humanReadableSummaryMarkdown":"Generated layout image asset storage receipt."}
+            """,
+            serializedSessionStateJson: null);
+        var now = DateTimeOffset.UtcNow;
+        detail = detail with
+        {
+            ExecutionLog =
+            [
+                CreateExecutionLogToolInvocation(detail.Run.Id, detail.Run.AgentId, now, "image_generation_create"),
+                CreateExecutionLogToolInvocation(detail.Run.Id, detail.Run.AgentId, now.AddSeconds(1), "project_structure_asset_create")
+            ]
+        };
+
+        var missingRequiredTools = resolveMissingTools.Invoke(null, [candidate, detail]) as IReadOnlyList<string>;
+
+        Assert.NotNull(missingRequiredTools);
+        Assert.DoesNotContain("image_generation_create", missingRequiredTools, StringComparer.Ordinal);
+        Assert.DoesNotContain("project_structure_asset_create", missingRequiredTools, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_screenshot_cleanup_handoff_step_does_not_require_browser_capture_tools()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "App page screenshot capture",
+                Slug = "app-page-screenshot"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "cleanup-and-handoff",
+                Title = "Cleanup and handoff",
+                StepKind = ProcessStepKind.End
+            },
+            new ProcessStepRun
+            {
+                Title = "Cleanup and handoff",
+                StepKind = ProcessStepKind.End,
+                CurrentExecutorName = "Runtime App Screenshot Capture Agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Cleanup and handoff",
+                WorkBriefText = """
+                Read upstream screenshot review findings and project image asset storage receipt.
+                Stop the managed app process if one is still live and write the handoff.
+                The upstream capture step already produced browser_snapshot, browser_take_screenshot, and browser_console_messages.
+                """,
+                ExpectedOutcome = "Single page screenshot handoff with cleanup status.",
+                EvidenceExpectationSummary = "Single page screenshot handoff"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Single page screenshot handoff", "Must include final route, screenshot artifact, asset node id, cleanup status, and blockers.")
+            ]);
+
+        Assert.Contains("workspace_pwsh_run_script", tools);
         Assert.DoesNotContain("browser_console_messages", tools);
         Assert.DoesNotContain("browser_snapshot", tools);
         Assert.DoesNotContain("browser_take_screenshot", tools);
@@ -1605,6 +1946,88 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             artifactContent);
 
         Assert.Null(matchedExpectationId);
+    }
+
+    [Fact]
+    public void MatchExpectedArtifactId_matches_provider_native_browser_screenshot_to_pathless_visual_expectation()
+    {
+        var expectedArtifactId = Guid.NewGuid();
+        var expectedArtifacts = new[]
+        {
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                expectedArtifactId,
+                ProcessArtifactKind.Evidence,
+                "Page screenshot file",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Capture a PNG screenshot of the requested app page using browser_take_screenshot.",
+                string.Empty),
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                Guid.NewGuid(),
+                ProcessArtifactKind.Evidence,
+                "Browser navigation and console evidence",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Capture browser navigation, URL, and console observations.",
+                string.Empty)
+        };
+        var artifact = new ExecutionArtifactRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "generated-output",
+            "inventory-127.0.0.1-53227.png",
+            "artifacts/scopes/organization/demo/process-runs/run-001/inventory-127.0.0.1-53227.png",
+            "image/png",
+            "browser_take_screenshot",
+            "Projected provider-native browser output.",
+            DateTimeOffset.UtcNow);
+
+        var matchedExpectationId = ProcessRunAutomationDispatchService.MatchExpectedArtifactId(expectedArtifacts, artifact);
+
+        Assert.Equal(expectedArtifactId, matchedExpectationId);
+    }
+
+    [Fact]
+    public void MatchExpectedArtifactId_prefers_route_specific_provider_native_browser_screenshot_expectation()
+    {
+        var inventoryScreenshotId = Guid.NewGuid();
+        var expectedArtifacts = new[]
+        {
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                Guid.NewGuid(),
+                ProcessArtifactKind.Evidence,
+                "Home page screenshot",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Capture a PNG screenshot of the home page using browser_take_screenshot.",
+                string.Empty),
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                inventoryScreenshotId,
+                ProcessArtifactKind.Evidence,
+                "Inventory page screenshot",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Capture a PNG screenshot of the inventory page using browser_take_screenshot.",
+                string.Empty)
+        };
+        var artifact = new ExecutionArtifactRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "generated-output",
+            "inventory-127.0.0.1-53227.png",
+            "artifacts/scopes/organization/demo/process-runs/run-001/inventory-127.0.0.1-53227.png",
+            "image/png",
+            "browser_take_screenshot",
+            "Projected provider-native browser output.",
+            DateTimeOffset.UtcNow);
+
+        var matchedExpectationId = ProcessRunAutomationDispatchService.MatchExpectedArtifactId(expectedArtifacts, artifact);
+
+        Assert.Equal(inventoryScreenshotId, matchedExpectationId);
     }
 
     [Fact]
@@ -4589,6 +5012,225 @@ Downstream artifact expectations: implementation change set, migration checklist
     }
 
     [Fact]
+    public void ResolveCompletionStatusWithCarryForward_accepts_project_asset_storage_receipt_when_internal_tool_receipt_is_not_projected()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Review and store screenshot",
+            """
+            Review the captured screenshot and store accepted screenshots through project_structure_asset_create with sourceWorkspacePath.
+            Do not recapture browser proof in this review step.
+            """,
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Screenshot review findings", true, "Must state accepted or rejected with the visual reason."),
+            (ProcessArtifactKind.Evidence, "Project image asset storage receipt", true, "Must include project id, image asset node id, content type, original file name, and storage locator."));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Screenshot reviewed and stored as project image asset.",
+            summaryMarkdown: """
+## Project image asset storage receipt
+Project id: 3569901c-dcc2-4f88-a08a-01801bfae9b9
+Image asset node id: custom:c9ed5f770fbb4d57bee1f504f651e8a4
+Content type: image/png
+Original file name: 01-inventory-page.png
+Storage locator: managed-files/project-media/images/3569901cdcc24f88a08a01801bfae9b9/01-inventory-page.png
+Source workspace path (ingested): artifacts/process-runs/run-001/01-inventory-page.png
+
+## Screenshot review findings
+Result: Accepted
+Reason: Screenshot shows the requested inventory route.
+""");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Screenshot review",
+                "process-step",
+                "review-and-store-screenshot",
+                "corr-screenshot-review",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+
+        var priorSuccessfulTools = new[]
+        {
+            "workspace_read_file",
+            "workspace_stat_path",
+            "workspace_write_file"
+        };
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Review and store screenshot", priorSuccessfulTools, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatusWithCarryForward_accepts_project_asset_storage_receipt_with_png_evidence_ref()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Review and store screenshot",
+            """
+            Review the captured screenshot and store accepted screenshots through project_structure_asset_create with sourceWorkspacePath.
+            """,
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Screenshot review findings", true, "Must state accepted or rejected with the visual reason."),
+            (ProcessArtifactKind.Evidence, "Project image asset storage receipt", true, "Must include project id, image asset node id, content type, original file name, and storage locator."));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Screenshot reviewed and stored as project image asset.",
+            evidenceRefs:
+            [
+                "artifacts/scopes/organization/demo/process-runs/run-001/03-inventory-page.png",
+                "artifacts/scopes/organization/demo/process-runs/run-001/04-project-image-asset-storage-receipt.md"
+            ],
+            summaryMarkdown: """
+## Project image asset storage receipt
+Project id: 3569901c-dcc2-4f88-a08a-01801bfae9b9
+Image asset node id: custom:f26734b04646415cb8c1e32b130a08b1
+Content type: image/png
+Original file name: 03-inventory-page.png
+Storage locator: managed-files/project-media/images/3569901cdcc24f88a08a01801bfae9b9/03-inventory-page.png
+
+## Screenshot review findings
+Decision: Accepted
+Reason: Screenshot shows the requested inventory route and is readable enough to store as the project image asset.
+File: artifacts/process-runs/run-001/03-inventory-page.png
+""");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Screenshot review",
+                "process-step",
+                "review-and-store-screenshot",
+                "corr-screenshot-review",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+        var priorSuccessfulTools = new[]
+        {
+            "workspace_read_file",
+            "workspace_stat_path",
+            "workspace_write_file"
+        };
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Review and store screenshot", priorSuccessfulTools, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+    }
+
+    [Fact]
+    public void ResolveMissingUpstreamArtifactInspectionSummary_treats_successful_read_as_text_artifact_inspection()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingInspection = serviceType.GetMethod(
+            "ResolveMissingUpstreamArtifactInspectionSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingUpstreamArtifactInspectionSummary method was not found.");
+        const string browserEvidencePath = "artifacts/scopes/organization/demo/process-runs/run-001/03-browser-navigation-and-console-evidence.md";
+        var candidate = CreateDispatchCandidateCore(
+            """
+            Review the captured screenshot and browser evidence, then store the accepted screenshot as a project image asset.
+            """,
+            ProcessStepKind.Review,
+            [],
+            false,
+            [
+                (ProcessArtifactKind.Evidence, "Screenshot review findings", true, "Must state accepted or rejected with the visual reason."),
+                (ProcessArtifactKind.Evidence, "Project image asset storage receipt", true, "Must include project id, image asset node id, content type, original file name, and storage locator.")
+            ],
+            [
+                (
+                    "Capture page screenshot",
+                    "Browser navigation and console evidence",
+                    [
+                        (
+                            "Browser navigation and console evidence",
+                            "Evidence",
+                            browserEvidencePath,
+                            "Browser proof for /inventory.",
+                            "Projected from capture step."
+                        )
+                    ]
+                )
+            ],
+            stepTitle: "Review and store screenshot");
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText: "Reviewed browser evidence.",
+            serializedSessionStateJson: BuildSerializedSessionState(
+                ("workspace_read_file", CreateProviderNativeTextResult("Read browser evidence."))),
+            toolReceipts:
+            [
+                CreateToolReceipt("workspace-file", "workspace_read_file", browserEvidencePath, ".", "Succeeded", now)
+            ]);
+
+        var summary = resolveMissingInspection.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveCompletionStatusWithCarryForward_allows_pathless_governance_snapshot_artifact_sections()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -5251,6 +5893,60 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         Assert.NotNull(resolvedResponseText);
         Assert.Equal(recoveredAssistantMessage, resolvedResponseText);
+    }
+
+    [Fact]
+    public void ResolvePreferredExecutionResponseText_prefers_structured_result_summary_over_unstructured_primary_text()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolvePreferredResponseText = serviceType.GetMethod("ResolvePreferredExecutionResponseText", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolvePreferredExecutionResponseText method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Review the screenshot and store accepted image assets.",
+            ProcessStepKind.Review);
+
+        var now = DateTimeOffset.UtcNow;
+        var structuredResultSummary = StructuredOutcome(
+            ProcessStepOutcomeStatus.Blocked,
+            "Image asset storage failed.",
+            summaryMarkdown: "## Project image asset storage receipt\r\nNo image assets stored.");
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Screenshot review run",
+                "process-step",
+                "step-4",
+                "corr-4",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                structuredResultSummary,
+                "OpenAI chat completions",
+                "gpt-5-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+
+        var unstructuredPrimaryText = "## Project image asset storage receipt\r\nNo image assets stored because the screenshot was not readable.";
+        var resolvedResponseText = resolvePreferredResponseText.Invoke(
+            null,
+            [candidate, unstructuredPrimaryText, detail]) as string;
+
+        Assert.NotNull(resolvedResponseText);
+        Assert.Equal(structuredResultSummary, resolvedResponseText);
     }
 
     [Fact]
@@ -6718,6 +7414,131 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var result = (bool)(canProjectResponseTextArtifactWithoutDeclaredPath.Invoke(null, [expectedArtifact]) ?? false);
 
         Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("App startup receipt", "Startup command, working directory, PID, port, and readiness proof.")]
+    [InlineData("Single page screenshot handoff", "Cleanup receipt and final project asset reference.")]
+    [InlineData("Browser navigation and console evidence", "Capture URL, route, browser console observations, and page readiness proof.")]
+    public void CanProjectResponseTextArtifactWithoutDeclaredPath_allows_pathless_receipt_and_handoff_evidence(
+        string title,
+        string validationRequirementSummary)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var canProjectResponseTextArtifactWithoutDeclaredPath = serviceType.GetMethod(
+            "CanProjectResponseTextArtifactWithoutDeclaredPath",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CanProjectResponseTextArtifactWithoutDeclaredPath method was not found.");
+        var expectedArtifact = new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+            Guid.NewGuid(),
+            ProcessArtifactKind.Evidence,
+            title,
+            true,
+            ProcessArtifactTrustRequirement.ReviewRequired,
+            ProcessSensitivityLevel.Internal,
+            validationRequirementSummary,
+            string.Empty);
+
+        var result = (bool)(canProjectResponseTextArtifactWithoutDeclaredPath.Invoke(null, [expectedArtifact]) ?? false);
+
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("artifacts/process-runs/run-001/inventory-desktop.png")]
+    [InlineData("artifacts/scopes/organization/demo/process-runs/run-001/inventory-desktop.png")]
+    public void IsProviderNativeBrowserArtifactPath_accepts_current_run_and_scoped_process_run_outputs(string path)
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "IsProviderNativeBrowserArtifactPath",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("IsProviderNativeBrowserArtifactPath method was not found.");
+
+        var result = (bool)(method.Invoke(null, [path]) ?? false);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_satisfies_pathless_browser_evidence_from_response_and_scoped_browser_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod(
+            "ResolveMissingRequiredArtifactSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Capture page screenshot",
+            "Capture the app page screenshot with browser tools and report browser navigation evidence.",
+            ProcessStepKind.Work,
+            (ProcessArtifactKind.Evidence, "Browser navigation and console evidence", true, "Capture URL, route, browser console observations, and page readiness proof."),
+            (ProcessArtifactKind.Evidence, "Page screenshot file", true, "Capture a PNG screenshot of the requested app page using browser_take_screenshot."));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "The browser reached the inventory route and screenshots were saved for the requested page.",
+            summaryMarkdown:
+            """
+            ## Browser navigation and console evidence
+
+            Browser navigation opened http://127.0.0.1:56039/inventory, confirmed the inventory route was ready, and checked console observations with no blocking errors. Page readiness was confirmed before the screenshots were captured, and the route under test matched the process target.
+
+            ## Page screenshot file
+
+            Desktop screenshot: artifacts/scopes/organization/demo/process-runs/run-001/inventory-desktop.png
+            Mobile screenshot: artifacts/scopes/organization/demo/process-runs/run-001/inventory-mobile.png
+            """);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                (
+                    "browser_take_screenshot",
+                    new Dictionary<string, object?> { ["filename"] = "artifacts/scopes/organization/demo/process-runs/run-001/inventory-desktop.png" },
+                    CreateProviderNativeTextResult("Saved screenshot.")),
+                (
+                    "browser_console_messages",
+                    new Dictionary<string, object?> { ["filename"] = "artifacts/scopes/organization/demo/process-runs/run-001/inventory-console.log" },
+                    CreateProviderNativeTextResult("Saved console messages."))));
+
+        var missingSummary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.Equal(string.Empty, missingSummary);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_satisfies_pathless_startup_receipt_from_structured_summary()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod(
+            "ResolveMissingRequiredArtifactSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Start app once",
+            "Start the app, record process id, command, working directory, URL, readiness status, and stop command. Do not use Playwright or capture screenshots in this step.",
+            ProcessStepKind.Work,
+            (ProcessArtifactKind.Evidence, "App startup receipt", true, "Must include command, working directory, process id or managed run handle, URL, and readiness status."));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "The app started and the startup receipt was captured.",
+            summaryMarkdown:
+            """
+            ## App startup receipt
+
+            - Command: dotnet run --project src/TrailheadSnackBox.Web
+            - Working directory: external-target/C/programovani/candoitall-dev-55-output/scenario-01-dotnet-trailhead-snack-box/src/TrailheadSnackBox.Web
+            - Process id / managed run handle: 63760
+            - URL: http://127.0.0.1:52123/inventory
+            - Readiness status: HTTP 200 returned for /inventory.
+            - Stop command: Stop-Process -Id 63760 -Force
+            """);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                ("workspace_dotnet_run", CreateProviderNativeTextResult("App started at http://127.0.0.1:52123."))));
+
+        var missingSummary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.Equal(string.Empty, missingSummary);
     }
 
     [Fact]

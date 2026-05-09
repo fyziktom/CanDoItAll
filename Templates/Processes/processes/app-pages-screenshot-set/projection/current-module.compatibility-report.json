@@ -1,0 +1,8 @@
+{
+  "processKey": "app-pages-screenshot-set",
+  "compatible": true,
+  "notes": [
+    "Uses current module process definition projection.",
+    "Multi-page screenshot behavior is encoded in template steps and artifact expectations."
+  ]
+}

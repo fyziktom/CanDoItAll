@@ -99,6 +99,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requiredToolNames.Add("workspace_write_file");
         }
 
+        if (RequiresRuntimeCleanupCommand(candidate))
+        {
+            requiredToolNames.Add("workspace_pwsh_run_script");
+        }
+
         return requiredToolNames;
     }
 
@@ -310,6 +315,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        if (ContainsNegatedBrowserProofInstruction(currentRunText))
+        {
+            return false;
+        }
+
+        if (IsScreenshotReviewOrStorageConsumerStep(candidate, currentRunText))
+        {
+            return false;
+        }
+
+        if (IsScreenshotCleanupOrHandoffConsumerStep(candidate, currentRunText))
+        {
+            return false;
+        }
+
         var browserSurfaceText = RemoveApplicabilityOnlyBrowserEvidencePhrases(currentRunText);
         var hasConcreteBrowserProofRequest = ContainsConcreteBrowserProofSignal(currentRunText) ||
                                              ContainsConcreteBrowserProofSignal(triggerText);
@@ -359,7 +379,148 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return true;
         }
 
-        return !IsPlanningArchitectureOrBoundaryStep(candidate);
+        return !IsPlanningArchitectureOrBoundaryStep(candidate) &&
+               !IsScreenshotReviewOrStorageConsumerStep(candidate, string.Empty) &&
+               !IsScreenshotCleanupOrHandoffConsumerStep(candidate, string.Empty);
+    }
+
+    private static bool IsScreenshotReviewOrStorageConsumerStep(DispatchCandidate candidate, string currentRunText)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        if (candidate.StepRun.StepKind != ProcessStepKind.Review)
+        {
+            return false;
+        }
+
+        var stepText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            currentRunText,
+            candidate.StepRun.Title,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.ExpectedOutcome,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary)),
+            string.Join(' ', candidate.ArtifactInputs.Select(item => item.ExpectedArtifactTitle))));
+        if (string.IsNullOrWhiteSpace(stepText) ||
+            !stepText.Contains("screenshot", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var hasReviewOrStorageIntent = stepText.Contains("review", StringComparison.OrdinalIgnoreCase) ||
+                                       stepText.Contains("store", StringComparison.OrdinalIgnoreCase) ||
+                                       stepText.Contains("storage", StringComparison.OrdinalIgnoreCase) ||
+                                       stepText.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
+                                       stepText.Contains("asset node", StringComparison.OrdinalIgnoreCase);
+        if (!hasReviewOrStorageIntent)
+        {
+            return false;
+        }
+
+        var hasStorageOutput = candidate.ExpectedArtifacts.Any(item =>
+            item.Title.Contains("review", StringComparison.OrdinalIgnoreCase) ||
+            item.Title.Contains("storage receipt", StringComparison.OrdinalIgnoreCase) ||
+            item.Title.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
+            item.ValidationRequirementSummary.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
+            item.ValidationRequirementSummary.Contains("storage locator", StringComparison.OrdinalIgnoreCase));
+        if (!hasStorageOutput)
+        {
+            return false;
+        }
+
+        return candidate.ArtifactInputs.Count == 0 ||
+               candidate.ArtifactInputs.Any(item =>
+                   item.ExpectedArtifactTitle.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ||
+                   item.ExpectedArtifactTitle.Contains("browser", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsScreenshotCleanupOrHandoffConsumerStep(DispatchCandidate candidate, string currentRunText)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        if (candidate.StepRun.StepKind != ProcessStepKind.End)
+        {
+            return false;
+        }
+
+        var stepText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            currentRunText,
+            candidate.StepRun.Title,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.ExpectedOutcome,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary)),
+            string.Join(' ', candidate.ArtifactInputs.Select(item => item.ExpectedArtifactTitle))));
+        if (string.IsNullOrWhiteSpace(stepText) ||
+            !stepText.Contains("screenshot", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var hasCleanupOrHandoffIntent = stepText.Contains("cleanup", StringComparison.OrdinalIgnoreCase) ||
+                                        stepText.Contains("clean up", StringComparison.OrdinalIgnoreCase) ||
+                                        stepText.Contains("handoff", StringComparison.OrdinalIgnoreCase) ||
+                                        stepText.Contains("close runtime", StringComparison.OrdinalIgnoreCase) ||
+                                        stepText.Contains("stop once", StringComparison.OrdinalIgnoreCase);
+        if (!hasCleanupOrHandoffIntent)
+        {
+            return false;
+        }
+
+        return candidate.ArtifactInputs.Count == 0 ||
+               candidate.ArtifactInputs.Any(item =>
+                   item.ExpectedArtifactTitle.Contains("review", StringComparison.OrdinalIgnoreCase) ||
+                   item.ExpectedArtifactTitle.Contains("storage", StringComparison.OrdinalIgnoreCase) ||
+                   item.ExpectedArtifactTitle.Contains("asset", StringComparison.OrdinalIgnoreCase) ||
+                   item.ExpectedArtifactTitle.Contains("screenshot", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool RequiresRuntimeCleanupCommand(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        if (candidate.StepRun.StepKind != ProcessStepKind.End)
+        {
+            return false;
+        }
+
+        var stepText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            candidate.StepRun.Title,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.StepDefinition.EvidenceContractSummary,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))));
+        if (string.IsNullOrWhiteSpace(stepText))
+        {
+            return false;
+        }
+
+        var hasCleanupIntent = stepText.Contains("cleanup", StringComparison.OrdinalIgnoreCase) ||
+                               stepText.Contains("clean up", StringComparison.OrdinalIgnoreCase) ||
+                               stepText.Contains("stop", StringComparison.OrdinalIgnoreCase) ||
+                               stepText.Contains("shutdown", StringComparison.OrdinalIgnoreCase) ||
+                               stepText.Contains("close runtime", StringComparison.OrdinalIgnoreCase);
+        if (!hasCleanupIntent)
+        {
+            return false;
+        }
+
+        return stepText.Contains("app process", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("application process", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("managed run", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("process tree", StringComparison.OrdinalIgnoreCase) ||
+               stepText.Contains("runtime session", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsPlanningArchitectureOrBoundaryStep(DispatchCandidate candidate)
@@ -505,6 +666,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
                value.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("presentation", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("document", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsNegatedBrowserProofInstruction(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+                   value,
+                   @"\b(?:do\s+not|don't|must\s+not|should\s+not|never)\s+(?:use\s+)?(?:playwright|browser\s+tools?|browser\s+proof)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\b(?:do\s+not|don't|must\s+not|should\s+not|never)\s+(?:capture|take|create|record)\s+(?:a\s+|any\s+)?screenshots?\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
 }

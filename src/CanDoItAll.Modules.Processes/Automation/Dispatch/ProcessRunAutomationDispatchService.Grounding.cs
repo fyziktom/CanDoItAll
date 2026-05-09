@@ -748,7 +748,11 @@ ORDER BY "CreatedAtUtc", "Title";
                subtype.Contains("constraint", StringComparison.OrdinalIgnoreCase) ||
                subtype.Contains("decision", StringComparison.OrdinalIgnoreCase) ||
                subtype.Contains("planning", StringComparison.OrdinalIgnoreCase) ||
-               subtype.Contains("note", StringComparison.OrdinalIgnoreCase);
+               subtype.Contains("note", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("path", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("root", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("runtime", StringComparison.OrdinalIgnoreCase) ||
+               subtype.Contains("source", StringComparison.OrdinalIgnoreCase);
     }
 
     private static ProcessProjectStructureContext? TryResolveProjectLevelProjectStructureContext(

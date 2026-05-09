@@ -23,6 +23,7 @@ public sealed class AgentEditorModel
     public AgentProjectStructureAccessSettings ProjectStructureAccess { get; set; } = new();
     public AgentProcessAccessSettings ProcessAccess { get; set; } = new();
     public AgentWorkspaceToolAccessSettings WorkspaceToolAccess { get; set; } = new();
+    public AgentImageGenerationAccessSettings ImageGenerationAccess { get; set; } = new();
     public List<Guid> SelectedCapabilityIds { get; set; } = [];
     public List<string> Tags { get; set; } = [];
 
@@ -51,6 +52,7 @@ public sealed class AgentEditorModel
             ProjectStructureAccess = AgentProjectStructureAccessMetadata.Read(definition.ConfigurationJson),
             ProcessAccess = AgentProcessAccessMetadata.Read(definition.ConfigurationJson),
             WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(definition.ConfigurationJson),
+            ImageGenerationAccess = AgentImageGenerationAccessMetadata.Read(definition.ConfigurationJson),
             SelectedCapabilityIds = definition.Capabilities.Select(item => item.CapabilityId).ToList(),
             Tags = definition.Tags.ToList()
         };
@@ -66,6 +68,7 @@ public sealed class ProviderProfileEditorModel
     public string ApiKeyEnvironmentVariable { get; set; } = string.Empty;
     public string DefaultModel { get; set; } = string.Empty;
     public ProviderTransportKind Transport { get; set; } = ProviderTransportKind.Responses;
+    public ProviderProfilePurpose Purpose { get; set; } = ProviderProfilePurpose.Chat;
     public bool IsEnabled { get; set; } = true;
     public bool SupportsStreaming { get; set; } = true;
     public bool SupportsTools { get; set; } = true;
@@ -86,6 +89,7 @@ public sealed class ProviderProfileEditorModel
             ApiKeyEnvironmentVariable = definition.ApiKeyEnvironmentVariable,
             DefaultModel = definition.DefaultModel,
             Transport = definition.Transport,
+            Purpose = definition.Purpose,
             IsEnabled = definition.IsEnabled,
             SupportsStreaming = definition.SupportsStreaming,
             SupportsTools = definition.SupportsTools,

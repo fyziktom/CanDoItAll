@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -365,6 +366,49 @@ public sealed class ProjectStructureAgentIntegrationTests
             string.Equals(link.SourceId, revision.NodeId, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, original.Id, StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.DerivedFrom);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateAssetAsync_accepts_workspace_source_path()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspacePathResolver = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
+
+        var projectId = await CreateProjectAsync(projects, "Source path image asset");
+        var sourceRelativePath = Path.Combine("artifacts", "process-runs", Guid.NewGuid().ToString("N"), "inventory.png");
+        var sourceFullPath = Path.Combine(workspacePathResolver.ResolveWorkspaceRoot(), sourceRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(sourceFullPath)!);
+        await File.WriteAllBytesAsync(sourceFullPath, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+
+        var created = await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.ImageAsset,
+                "Inventory screenshot",
+                "Captured /inventory route",
+                "Accepted screenshot from the process-run artifact path.",
+                null,
+                $"project:{projectId}",
+                "screenshot",
+                null,
+                null,
+                sourceRelativePath.Replace('\\', '/'),
+                "inventory.png",
+                "image/png"),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var node = Assert.Single(surface.Nodes, item => item.Id == created.Id);
+
+        Assert.Equal(ProjectObjectType.ImageAsset, node.ObjectType);
+        Assert.Equal("screenshot", node.ObjectSubtype);
+        Assert.Equal("inventory.png", node.MediaOriginalFileName);
+        Assert.Equal("image/png", node.MediaContentType);
+        Assert.False(string.IsNullOrWhiteSpace(node.MediaRelativePath));
     }
 
     [Fact]

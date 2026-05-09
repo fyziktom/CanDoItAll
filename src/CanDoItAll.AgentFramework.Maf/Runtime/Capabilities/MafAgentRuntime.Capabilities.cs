@@ -33,6 +33,7 @@ public sealed partial class MafAgentRuntime
         await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
         await AttachInternalProcessToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
+        await AttachInternalImageGenerationToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements);
         await AttachCatalogCapabilitiesAsync(
             composition,
@@ -277,6 +278,34 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "Processes",
             "Attached internal process-module tools backed by the workspace services and current agent policy.");
+    }
+
+    private async Task AttachInternalImageGenerationToolsAsync(
+        RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        bool suppressApprovalRequirements)
+    {
+        if (!agent.Permissions.CanUseTools)
+        {
+            return;
+        }
+
+        var tools = CreateImageGenerationToolBuilder()
+            .CreateTools(agent)
+            .Select(tool => WrapInternalProcessMutationTool(tool, suppressApprovalRequirements))
+            .ToList();
+        if (tools.Count == 0)
+        {
+            return;
+        }
+
+        composition.State.Tools.AddRange(tools);
+        composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Image generation",
+            "Attached internal image-generation tools backed by the agent image-generation access policy.");
     }
 
     private async Task AttachA2ARemoteAgentToolsAsync(

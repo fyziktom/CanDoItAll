@@ -816,7 +816,7 @@ public sealed class ProjectStructureAgentService(
             Convert.ToBase64String(bytes));
     }
 
-    public Task<ProjectStructureNodeSummary> CreateAssetAsync(
+    public async Task<ProjectStructureNodeSummary> CreateAssetAsync(
         Guid projectId,
         ProjectStructureAssetCreateInput request,
         ProjectStructureAgentContext agent,
@@ -827,7 +827,9 @@ public sealed class ProjectStructureAgentService(
             throw new ProjectStructureAgentException(400, "AssetTypeRequired", "Asset nodes must be File, ImageAsset, or VideoAsset.");
         }
 
-        return CreateNodeAsync(
+        var media = await ResolveAssetCreateMediaAsync(request, cancellationToken);
+
+        return await CreateNodeAsync(
             projectId,
             new ProjectStructureNodeCreateInput(
                 request.ObjectType,
@@ -836,7 +838,7 @@ public sealed class ProjectStructureAgentService(
                 request.Notes,
                 request.ParentNodeKey,
                 ObjectSubtype: request.ObjectSubtype,
-                Media: request.Media,
+                Media: media,
                 MetadataJson: request.MetadataJson,
                 LeaseToken: request.LeaseToken),
             agent,
@@ -994,6 +996,82 @@ public sealed class ProjectStructureAgentService(
         {
             throw new ProjectStructureAgentException(400, "InvalidBase64Payload", "Uploaded media content was not valid base64.", ex.Message);
         }
+    }
+
+    private async Task<ProjectObjectMediaPayload> ResolveAssetCreateMediaAsync(
+        ProjectStructureAssetCreateInput request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Media is not null)
+        {
+            EnsureValidMediaPayload(request.Media);
+            return request.Media;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SourceWorkspacePath))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "MediaSourceRequired",
+                "Asset creation requires either a media payload or a source workspace path.");
+        }
+
+        var resolution = pathAccessGuard.ResolveWorkspacePath(request.SourceWorkspacePath);
+        if (!resolution.IsSuccess)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "SourceWorkspacePathInvalid",
+                resolution.Message);
+        }
+
+        if (!File.Exists(resolution.FullPath))
+        {
+            throw new ProjectStructureAgentException(
+                404,
+                "SourceWorkspaceFileNotFound",
+                $"Source workspace file '{request.SourceWorkspacePath}' was not found.");
+        }
+
+        var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
+        var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
+        var contentType = ResolveSourceAssetContentType(request.SourceContentType, fileName);
+        return new ProjectObjectMediaPayload(
+            fileName,
+            contentType,
+            Convert.ToBase64String(bytes));
+    }
+
+    private static string ResolveSourceAssetFileName(string? requestedFileName, string fullPath)
+    {
+        var candidate = string.IsNullOrWhiteSpace(requestedFileName)
+            ? Path.GetFileName(fullPath)
+            : Path.GetFileName(requestedFileName.Trim());
+        return string.IsNullOrWhiteSpace(candidate)
+            ? "project-asset.bin"
+            : candidate;
+    }
+
+    private static string ResolveSourceAssetContentType(string? requestedContentType, string fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedContentType))
+        {
+            return requestedContentType.Trim();
+        }
+
+        return Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".pdf" => "application/pdf",
+            ".json" => "application/json",
+            ".md" => "text/markdown",
+            ".txt" => "text/plain",
+            _ => "application/octet-stream"
+        };
     }
 
     private static void ValidateLinkInput(ProjectStructureLinkInput request)

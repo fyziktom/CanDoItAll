@@ -111,6 +111,152 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_workspace_seeds_openai_image_generation_provider()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var providers = await workspaceService.ListProvidersAsync();
+        var imageProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.OpenAi &&
+                    item.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                    string.Equals(item.Name, "OpenAI image generation", StringComparison.Ordinal));
+        var service = new ProviderProfileService();
+        var matrix = service.ResolveFeatureMatrix(imageProvider);
+
+        Assert.Equal("https://api.openai.com/v1", imageProvider.BaseUrl);
+        Assert.Equal("OPENAI_API_KEY", imageProvider.ApiKeyEnvironmentVariable);
+        Assert.Equal("gpt-image-1-mini", imageProvider.DefaultModel);
+        Assert.False(imageProvider.SupportsTools);
+        Assert.Contains("gpt-image-1-mini", imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        Assert.True(matrix.SupportsImageGeneration);
+    }
+
+    [Fact]
+    public async Task Organization_workspace_seeds_screenshot_agent_templates_with_required_access()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var providers = await workspaceService.ListProvidersAsync();
+        var openAiDefaultProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.OpenAi &&
+                    string.Equals(item.Name, "OpenAI default", StringComparison.Ordinal));
+        var openAiImageProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.OpenAi &&
+                    item.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                    string.Equals(item.Name, "OpenAI image generation", StringComparison.Ordinal));
+        var capabilities = await workspaceService.ListCapabilitiesAsync();
+        var capabilityIdsByKey = capabilities.ToDictionary(item => item.Key, item => item.Id, StringComparer.OrdinalIgnoreCase);
+        var agentsWithTemplates = await workspaceService.ListAgentsAsync(includeTemplates: true);
+        var activeAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+
+        var captureTemplate = Assert.Single(
+            agentsWithTemplates,
+            item => string.Equals(item.Name, "App Screenshot Capture Agent Template", StringComparison.Ordinal));
+        var reviewTemplate = Assert.Single(
+            agentsWithTemplates,
+            item => string.Equals(item.Name, "Screenshot Review Storage Agent Template", StringComparison.Ordinal));
+        var layoutTemplate = Assert.Single(
+            agentsWithTemplates,
+            item => string.Equals(item.Name, "Layout Image Generation Agent Template", StringComparison.Ordinal));
+
+        Assert.DoesNotContain(activeAgents, item => item.Id == captureTemplate.Id);
+        Assert.DoesNotContain(activeAgents, item => item.Id == reviewTemplate.Id);
+        Assert.DoesNotContain(activeAgents, item => item.Id == layoutTemplate.Id);
+
+        Assert.True(captureTemplate.IsTemplate);
+        Assert.Equal("app-screenshot-capture-agent", captureTemplate.TemplateKey);
+        AssertOpenAiBacked(captureTemplate, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertHasCapabilities(
+            captureTemplate,
+            capabilityIdsByKey["playwright-local-mcp"],
+            capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"],
+            capabilityIdsByKey["dotnet-app-delivery-inline-skill"],
+            capabilityIdsByKey["blazor-ssr-delivery-inline-skill"],
+            capabilityIdsByKey["candoitall-watch-playwright-loop"],
+            capabilityIdsByKey["workspace-create-directory"],
+            capabilityIdsByKey["workspace-write-file"],
+            capabilityIdsByKey["workspace-dotnet-run"],
+            capabilityIdsByKey["workspace-pwsh-run-script"]);
+
+        var captureEditor = await workspaceService.GetAgentEditorAsync(captureTemplate.Id);
+        Assert.True(captureEditor.ProjectStructureAccess.CanRead);
+        Assert.False(captureEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(captureEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(captureEditor.ProcessAccess.CanRead);
+        Assert.False(captureEditor.ProcessAccess.CanWrite);
+        Assert.True(captureEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, captureEditor.WorkspaceToolAccess.Profile);
+        Assert.True(captureEditor.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.True(captureEditor.WorkspaceToolAccess.CanRunLocalScripts);
+        Assert.False(captureEditor.ImageGenerationAccess.CanGenerateImages);
+        Assert.False(captureEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
+        Assert.Contains("Start the application once", captureEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Use Playwright MCP", captureEditor.Instructions, StringComparison.Ordinal);
+
+        Assert.True(reviewTemplate.IsTemplate);
+        Assert.Equal("screenshot-review-storage-agent", reviewTemplate.TemplateKey);
+        AssertOpenAiBacked(reviewTemplate, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertHasCapabilities(
+            reviewTemplate,
+            capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"],
+            capabilityIdsByKey["frontend-skill"],
+            capabilityIdsByKey["workspace-create-directory"],
+            capabilityIdsByKey["workspace-write-file"],
+            capabilityIdsByKey["workspace-source-rag"]);
+
+        var reviewEditor = await workspaceService.GetAgentEditorAsync(reviewTemplate.Id);
+        Assert.True(reviewEditor.ProjectStructureAccess.CanRead);
+        Assert.True(reviewEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(reviewEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(reviewEditor.ProcessAccess.CanRead);
+        Assert.True(reviewEditor.ProcessAccess.CanWrite);
+        Assert.True(reviewEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, reviewEditor.WorkspaceToolAccess.Profile);
+        Assert.True(reviewEditor.WorkspaceToolAccess.CanReadStorage);
+        Assert.True(reviewEditor.WorkspaceToolAccess.CanWriteStorage);
+        Assert.True(reviewEditor.WorkspaceToolAccess.AllowAllStorageCatalogs);
+        Assert.False(reviewEditor.ImageGenerationAccess.CanGenerateImages);
+        Assert.True(reviewEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
+        Assert.Contains("project_structure_asset_create", reviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("objectType` `ImageAsset", reviewEditor.Instructions, StringComparison.Ordinal);
+
+        Assert.True(layoutTemplate.IsTemplate);
+        Assert.Equal("layout-image-generation-agent", layoutTemplate.TemplateKey);
+        AssertOpenAiBacked(layoutTemplate, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertHasCapabilities(
+            layoutTemplate,
+            capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"],
+            capabilityIdsByKey["frontend-skill"],
+            capabilityIdsByKey["workspace-create-directory"],
+            capabilityIdsByKey["workspace-write-file"],
+            capabilityIdsByKey["workspace-source-rag"]);
+
+        var layoutEditor = await workspaceService.GetAgentEditorAsync(layoutTemplate.Id);
+        Assert.True(layoutEditor.ProjectStructureAccess.CanRead);
+        Assert.True(layoutEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(layoutEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(layoutEditor.ProcessAccess.CanRead);
+        Assert.True(layoutEditor.ProcessAccess.CanWrite);
+        Assert.True(layoutEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, layoutEditor.WorkspaceToolAccess.Profile);
+        Assert.True(layoutEditor.ImageGenerationAccess.CanGenerateImages);
+        Assert.Equal(openAiImageProvider.Id, layoutEditor.ImageGenerationAccess.PreferredProviderProfileId);
+        Assert.Equal("gpt-image-1-mini", layoutEditor.ImageGenerationAccess.DefaultModel);
+        Assert.True(layoutEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
+        Assert.Contains("sourceProjectAssets", layoutEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("image_generation_create", layoutEditor.Instructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Organization_workspace_default_integrated_agents_do_not_attach_project_structure_or_processes_mcp_capabilities()
     {
         await using var application = await TestApplication.CreateAsync();

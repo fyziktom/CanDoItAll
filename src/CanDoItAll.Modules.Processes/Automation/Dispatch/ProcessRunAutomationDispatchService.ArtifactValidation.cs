@@ -505,6 +505,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return true;
         }
 
+        if (CanProjectProviderNativeVisualArtifact(candidate, detail, expectedArtifact))
+        {
+            return true;
+        }
+
         if (ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact))
         {
             return true;
@@ -927,6 +932,47 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 expectedArtifact,
                 path,
                 content: string.Empty));
+    }
+
+    private static bool CanProjectProviderNativeVisualArtifact(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DispatchArtifactExpectation expectedArtifact)
+    {
+        if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Evidence)
+        {
+            return false;
+        }
+
+        var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
+        foreach (var pair in browserOutputsByToolName)
+        {
+            foreach (var outputFileName in pair.Value)
+            {
+                var normalizedOutputPath = WorkspaceScopeDescriptor.NormalizeRelativePath(outputFileName);
+                if (!IsProviderNativeBrowserArtifactPath(normalizedOutputPath))
+                {
+                    continue;
+                }
+
+                var syntheticArtifact = new ExecutionArtifactRecord(
+                    Guid.Empty,
+                    detail.Run.Id,
+                    "generated-output",
+                    ResolvePromptFileName(normalizedOutputPath),
+                    normalizedOutputPath,
+                    GuessContentTypeFromPath(normalizedOutputPath),
+                    pair.Key,
+                    "Provider-native browser output captured by a browser MCP tool.",
+                    DateTimeOffset.MinValue);
+                if (MatchExpectedArtifactId(candidate.ExpectedArtifacts, syntheticArtifact) == expectedArtifact.Id)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     internal static bool WorkspaceWrittenFileMatchesExpectedArtifact(
@@ -2295,6 +2341,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        var providerNativeVisualMatches = expectedArtifacts
+            .Select(item => new
+            {
+                Expectation = item,
+                Score = ScoreProviderNativeVisualArtifactExpectation(item, artifact, relativePath, displayName)
+            })
+            .Where(item => item.Score > 0)
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Expectation.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (providerNativeVisualMatches.Count == 1 ||
+            providerNativeVisualMatches.Count > 1 &&
+            providerNativeVisualMatches[0].Score > providerNativeVisualMatches[1].Score)
+        {
+            return providerNativeVisualMatches[0].Expectation.Id;
+        }
+
         var managedNarrativeMatches = expectedArtifacts
             .Where(item => IsManagedNarrativeArtifactFallbackMatch(
                 expectedArtifacts,
@@ -2394,6 +2457,80 @@ internal sealed partial class ProcessRunAutomationDispatchService
                string.Equals(expectedSlug, fileSlug, StringComparison.Ordinal) ||
                relativePath.Contains(expectedSlug, StringComparison.OrdinalIgnoreCase) ||
                MatchesExpectedArtifactByTitleTokens(expectedArtifact.Title, relativePath, displayName);
+    }
+
+    private static int ScoreProviderNativeVisualArtifactExpectation(
+        DispatchArtifactExpectation expectedArtifact,
+        ExecutionArtifactRecord artifact,
+        string relativePath,
+        string displayName)
+    {
+        if (!IsProviderNativeBrowserOutputArtifact(artifact) ||
+            !IsImageArtifact(artifact) ||
+            expectedArtifact.ArtifactKind != ProcessArtifactKind.Evidence ||
+            ShouldIgnoreProductSourceForNarrativeExpectation(expectedArtifact, relativePath) ||
+            TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out _))
+        {
+            return 0;
+        }
+
+        var expectedText = CollapsePromptWhitespace(
+            $"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}");
+        if (!ContainsVisualArtifactSignal(expectedText))
+        {
+            return 0;
+        }
+
+        var expectedTokens = TokenizeVisualArtifactMatchText(expectedText);
+        var observedTokens = TokenizeVisualArtifactMatchText($"{relativePath} {displayName}")
+            .ToHashSet(StringComparer.Ordinal);
+        var matchedTokenCount = expectedTokens.Count(observedTokens.Contains);
+        var score = 10 + matchedTokenCount * 10;
+        if (ContainsScreenshotArtifactSignal(expectedText))
+        {
+            score += 8;
+        }
+
+        if (string.Equals(NormalizeToolToken(artifact.ProducedBy), "browser_take_screenshot", StringComparison.Ordinal))
+        {
+            score += 8;
+        }
+
+        return score;
+    }
+
+    private static bool IsImageArtifact(ExecutionArtifactRecord artifact)
+    {
+        var extension = Path.GetExtension(artifact.RelativePath);
+        return artifact.ContentType.Contains("image", StringComparison.OrdinalIgnoreCase) ||
+               IsImageExtension(extension);
+    }
+
+    private static bool ContainsVisualArtifactSignal(string text)
+    {
+        var normalizedText = text.ToLowerInvariant();
+        return ContainsScreenshotArtifactSignal(normalizedText) ||
+               normalizedText.Contains("image", StringComparison.Ordinal) ||
+               normalizedText.Contains("visual", StringComparison.Ordinal) ||
+               normalizedText.Contains("render", StringComparison.Ordinal) ||
+               normalizedText.Contains("layout", StringComparison.Ordinal);
+    }
+
+    private static bool ContainsScreenshotArtifactSignal(string text)
+    {
+        var normalizedText = text.ToLowerInvariant();
+        return normalizedText.Contains("screenshot", StringComparison.Ordinal) ||
+               normalizedText.Contains("screen shot", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<string> TokenizeVisualArtifactMatchText(string value)
+    {
+        return TokenizeArtifactComparisonText(value)
+            .Where(token => !ArtifactTitleNoiseTokens.Contains(token))
+            .Where(token => !ArtifactContentNoiseTokens.Contains(token))
+            .Where(token => !token.All(char.IsDigit))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     private static bool MatchesExpectedArtifactByTitleTokens(
@@ -3019,7 +3156,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson));
 
         var missingStatPaths = requiredInspectionPaths.StatPaths
-            .Where(path => !ContainsEquivalentManagedPath(successfulStatPaths, path))
+            .Where(path => !ContainsEquivalentManagedPath(successfulStatPaths, path) &&
+                           !ContainsEquivalentManagedPath(successfulReadPaths, path))
             .Take(3)
             .ToList();
         var missingReadPaths = requiredInspectionPaths.ReadPaths
@@ -3195,6 +3333,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
         return normalizedTitle.Contains("note", StringComparison.Ordinal) ||
                normalizedTitle.Contains("review", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("receipt", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("handoff", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("browser navigation", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("console evidence", StringComparison.Ordinal) ||
                normalizedTitle.Contains("evidence pack", StringComparison.Ordinal) ||
                normalizedTitle.Contains("snapshot", StringComparison.Ordinal) ||
                normalizedTitle.Contains("decision record", StringComparison.Ordinal) ||

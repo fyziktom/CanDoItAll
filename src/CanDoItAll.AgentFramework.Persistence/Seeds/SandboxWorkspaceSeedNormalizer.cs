@@ -13,7 +13,8 @@ internal static class SandboxWorkspaceSeedNormalizer
     private static readonly IReadOnlySet<string> ManagedSeedOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "OpenAI default",
-        "OpenAI chat completions"
+        "OpenAI chat completions",
+        "OpenAI image generation"
     };
 
     private static readonly HashSet<string> ManagedSeriousDeliveryTemplateKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -36,7 +37,10 @@ internal static class SandboxWorkspaceSeedNormalizer
         "javascript-qa-review-lead",
         "business-strategist",
         "financial-strategist",
-        "marketing-specialist"
+        "marketing-specialist",
+        "app-screenshot-capture-agent",
+        "screenshot-review-storage-agent",
+        "layout-image-generation-agent"
     };
 
     internal static SandboxWorkspaceDocument Normalize(SandboxWorkspaceDocument document)
@@ -120,6 +124,7 @@ internal static class SandboxWorkspaceSeedNormalizer
                 SupportsTools = match.SupportsTools || seededProvider.SupportsTools,
                 PreferFrameworkManagedChatHistory = match.PreferFrameworkManagedChatHistory || seededProvider.PreferFrameworkManagedChatHistory,
                 SupportsBackgroundResponses = match.SupportsBackgroundResponses || seededProvider.SupportsBackgroundResponses,
+                Purpose = ShouldUseSeedProviderPurpose(match, seededProvider) ? seededProvider.Purpose : match.Purpose,
                 ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededProvider.ConfigurationJson : match.ConfigurationJson,
                 Notes = string.IsNullOrWhiteSpace(match.Notes) ? seededProvider.Notes : match.Notes,
                 SuggestedModels = isManagedSeedOpenAiProvider
@@ -142,6 +147,14 @@ internal static class SandboxWorkspaceSeedNormalizer
                seededProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
                ManagedSeedOpenAiProviderNames.Contains(existingProvider.Name) &&
                ManagedSeedOpenAiProviderNames.Contains(seededProvider.Name);
+    }
+
+    private static bool ShouldUseSeedProviderPurpose(ProviderProfile existingProvider, ProviderProfile seededProvider)
+    {
+        return seededProvider.Purpose != ProviderProfilePurpose.Chat &&
+               existingProvider.Kind == seededProvider.Kind &&
+               (existingProvider.Id == seededProvider.Id ||
+                string.Equals(existingProvider.Name, seededProvider.Name, StringComparison.OrdinalIgnoreCase));
     }
 
     private static MergeResult<CapabilityCatalogItem> MergeCapabilities(IReadOnlyList<CapabilityCatalogItem> existingCapabilities, IReadOnlyList<CapabilityCatalogItem> seededCapabilities)

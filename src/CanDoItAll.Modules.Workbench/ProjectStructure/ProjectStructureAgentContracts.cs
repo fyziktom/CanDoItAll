@@ -360,11 +360,14 @@ public sealed record ProjectStructureAssetCreateInput(
     string Title,
     string Subtitle,
     string Notes,
-    ProjectObjectMediaPayload Media,
+    ProjectObjectMediaPayload? Media,
     string? ParentNodeKey = null,
     string? ObjectSubtype = null,
     string? MetadataJson = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    string? SourceWorkspacePath = null,
+    string? SourceFileName = null,
+    string? SourceContentType = null);
 
 public sealed record ProjectStructureApprovalRequestCreateInput(
     string Title,
