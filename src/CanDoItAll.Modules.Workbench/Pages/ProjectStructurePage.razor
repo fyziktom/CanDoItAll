@@ -1248,7 +1248,7 @@ else
         var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
         var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
         var parentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
-        var placement = placementPolicy.ResolveCreatePlacement(surface?.Nodes ?? [], sourceNode, parentNode, request);
+        var placementPlan = placementPolicy.ResolveCreatePlacementPlan(surface?.Nodes ?? [], sourceNode, parentNode, request, definition.ObjectType);
         var prepared = ProjectStructureCreateRequestComposer.Compose(
             definition,
             request with
@@ -1258,12 +1258,17 @@ else
                 Notes = ResolveCreatedNotes(definition, request)
             },
             parentNodeId ?? $"project:{ProjectId}",
-            placement);
+            placementPlan.Placement);
         var created = await ProjectWorkbenchService.CreateObjectAsync(ProjectId, prepared.Request);
 
         foreach (var pendingLink in prepared.PendingLinks)
         {
             await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, created.Id, pendingLink.TargetNodeId, pendingLink.LinkKind);
+        }
+
+        if (placementPlan.FollowUpMoves.Count > 0)
+        {
+            await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, placementPlan.FollowUpMoves);
         }
 
         await ReloadSurfaceAsync(created.Id);

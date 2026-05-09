@@ -68,6 +68,70 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Quick_sibling_note_insertion_persists_downward_stack_shift()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Quick note stack shift");
+        var parentNodeId = $"project:{projectId}";
+        var sourceNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Source note",
+                string.Empty,
+                "Source note",
+                parentNodeId,
+                420,
+                240));
+        var lowerNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Lower note",
+                string.Empty,
+                "Lower note",
+                parentNodeId,
+                420,
+                344));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, sourceNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        const string insertedNote = "Inserted quick note\r\nwith enough text\r\nto require vertical room";
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+            new CanvasWorkbenchCreateActionRequest(
+                "add-note",
+                sourceNode.Id,
+                sourceNode.X,
+                sourceNode.Y,
+                sourceNode.ParentId,
+                "Inserted quick note",
+                string.Empty,
+                insertedNote,
+                "sibling",
+                "quick-note",
+                string.Empty,
+                null))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Title, "Inserted quick note", StringComparison.Ordinal));
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedLowerNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, lowerNode.Id, StringComparison.Ordinal));
+        Assert.True(persistedLowerNode.Y > lowerNode.Y);
+    }
+
+    [Fact]
     public async Task Change_block_type_patches_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
