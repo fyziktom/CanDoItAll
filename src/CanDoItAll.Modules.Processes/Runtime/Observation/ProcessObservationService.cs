@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -7,11 +9,14 @@ internal sealed class ProcessObservationService(
     ProcessesService processesService,
     ProcessWorkspaceRunDetailsLoader runDetailsLoader,
     ProcessRuntimeStateOverviewService runtimeStateOverviewService,
+    IAgentFrameworkWorkspaceService workspaceService,
     ProcessObservationCache cache,
     IOptions<ProcessObservationCacheOptions> options,
     ILogger<ProcessObservationService> logger) : IProcessObservationService
 {
     private const int MaxTimelineTake = 200;
+    private const int LiveToolUsageLimit = 30;
+    private const int LiveProcessOptionLimit = 250;
 
     public async Task<ProcessDashboardObservationSnapshot> GetDashboardSnapshotAsync(
         ProcessObservationDashboardQuery query,
@@ -52,6 +57,41 @@ internal sealed class ProcessObservationService(
             policy,
             async token => await BuildDashboardSnapshotAsync(query, normalizedDefinitionIds, policy, token),
             query.ForceRefresh,
+            cancellationToken);
+
+        return result.Value with
+        {
+            Staleness = BuildStaleness(result)
+        };
+    }
+
+    public async Task<ProcessLiveObservationSnapshot> GetLiveSnapshotAsync(
+        ProcessLiveObservationQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var normalizedQuery = query with
+        {
+            HistoryWindow = NormalizeHistoryWindow(query.HistoryWindow)
+        };
+        var cacheKey = new ProcessObservationCacheKey(
+            ProcessObservationCacheKind.LiveSnapshot,
+            normalizedQuery.ProjectId,
+            DefinitionId: null,
+            normalizedQuery.ProcessRunId,
+            StepRunId: null,
+            ProcessObservationDefinitionSetKey.From([]),
+            QueryFingerprint: $"live:{normalizedQuery.HistoryWindow}");
+        var policy = new ProcessObservationCachePolicy(
+            options.Value.GetActiveDashboardAbsoluteExpiration(),
+            options.Value.GetSlidingExpiration(),
+            options.Value.DashboardEntrySize);
+        var result = await cache.GetOrCreateAsync(
+            cacheKey,
+            policy,
+            async token => await BuildLiveSnapshotAsync(normalizedQuery, policy, token),
+            normalizedQuery.ForceRefresh,
             cancellationToken);
 
         return result.Value with
@@ -301,6 +341,305 @@ internal sealed class ProcessObservationService(
                 observedAtUtc.Add(policy.AbsoluteExpiration)));
     }
 
+    private async Task<ProcessLiveObservationSnapshot> BuildLiveSnapshotAsync(
+        ProcessLiveObservationQuery query,
+        ProcessObservationCachePolicy policy,
+        CancellationToken cancellationToken)
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var definitions = await processesService.ListDefinitionsAsync(query.ProjectId, cancellationToken);
+        var definitionsById = definitions.ToDictionary(item => item.Id);
+        var allRuns = await processesService.ListRunsAsync(
+            definitionId: null,
+            query.ProjectId,
+            cancellationToken);
+        var observedRuns = allRuns
+            .Where(run => ShouldIncludeLiveRun(run, query.ProcessRunId))
+            .ToList();
+        var activeRunSummaries = await runDetailsLoader.LoadActiveRunSummariesAsync(
+            observedRuns,
+            cancellationToken);
+        var activeRunSummariesByRunId = activeRunSummaries.ToDictionary(item => item.RunId);
+        var historyStartUtc = observedAtUtc.Subtract(ResolveHistoryWindowSpan(query.HistoryWindow));
+        HashSet<Guid> processRunIdsForHistory = query.ProcessRunId.HasValue
+            ? [query.ProcessRunId.Value]
+            : allRuns.Select(item => item.Id).ToHashSet();
+        var executionRuns = await LoadLiveExecutionRunsAsync(
+            processRunIdsForHistory,
+            query.HistoryWindow,
+            historyStartUtc,
+            cancellationToken);
+        var executionRunDetails = await LoadLiveExecutionRunDetailsAsync(
+            executionRuns,
+            query.HistoryWindow,
+            cancellationToken);
+        var metrics = ExtractLiveMetrics(executionRunDetails, historyStartUtc);
+        var toolReceipts = ExtractLiveToolReceipts(executionRunDetails, historyStartUtc);
+        var sourceMaxUpdatedAtUtc = ResolveLiveSourceMaxUpdatedAtUtc(
+            observedRuns,
+            activeRunSummaries,
+            executionRuns,
+            metrics,
+            toolReceipts);
+        var revision = ProcessObservationSnapshotRevision.Create(observedAtUtc, sourceMaxUpdatedAtUtc);
+
+        return new ProcessLiveObservationSnapshot(
+            query.ProjectId,
+            query.HistoryWindow,
+            query.ProcessRunId,
+            BuildLiveProcessOptions(allRuns, definitionsById),
+            BuildLiveRunCards(observedRuns, definitionsById, activeRunSummariesByRunId),
+            BuildLiveAgentCards(activeRunSummaries),
+            BuildLiveStats(observedRuns, activeRunSummaries, metrics),
+            BuildLiveMetricPoints(metrics, query.HistoryWindow),
+            BuildLiveToolUsage(toolReceipts),
+            revision,
+            new ProcessObservationStaleness(
+                ProcessObservationFreshness.Fresh,
+                observedAtUtc,
+                observedAtUtc.Add(policy.AbsoluteExpiration)));
+    }
+
+    private async Task<IReadOnlyList<ExecutionRunRecord>> LoadLiveExecutionRunsAsync(
+        IReadOnlySet<Guid> processRunIds,
+        ProcessLiveHistoryWindow historyWindow,
+        DateTimeOffset historyStartUtc,
+        CancellationToken cancellationToken)
+    {
+        if (processRunIds.Count == 0)
+        {
+            return [];
+        }
+
+        return (await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    Take: ResolveLiveExecutionRunTake(historyWindow),
+                    UpdatedFromUtc: historyStartUtc),
+                cancellationToken))
+            .Select(item => new LiveExecutionRunMatch(TryParseGuid(item.ProcessRunId), item))
+            .Where(item => item.ProcessRunId.HasValue && processRunIds.Contains(item.ProcessRunId.Value))
+            .Select(item => item.ExecutionRun)
+            .OrderBy(item => item.UpdatedAtUtc)
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<ExecutionRunDetail>> LoadLiveExecutionRunDetailsAsync(
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        ProcessLiveHistoryWindow historyWindow,
+        CancellationToken cancellationToken)
+    {
+        if (executionRuns.Count == 0)
+        {
+            return [];
+        }
+
+        var details = new List<ExecutionRunDetail>();
+        foreach (var executionRun in executionRuns
+                     .OrderByDescending(item => item.UpdatedAtUtc)
+                     .Take(ResolveLiveExecutionRunDetailTake(historyWindow)))
+        {
+            try
+            {
+                details.Add(await workspaceService.GetExecutionRunDetailAsync(
+                    executionRun.Id,
+                    cancellationToken));
+            }
+            catch (InvalidOperationException exception)
+            {
+                logger.LogDebug(
+                    exception,
+                    "Skipped live process execution detail load because the execution run was not available. ExecutionRunId={ExecutionRunId}",
+                    executionRun.Id);
+            }
+        }
+
+        return details;
+    }
+
+    private static IReadOnlyList<AgentRunMetric> ExtractLiveMetrics(
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        DateTimeOffset historyStartUtc)
+    {
+        return executionRunDetails
+            .SelectMany(item => item.Metrics)
+            .Where(item => item.CreatedAtUtc >= historyStartUtc)
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ToolExecutionReceiptRecord> ExtractLiveToolReceipts(
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        DateTimeOffset historyStartUtc)
+    {
+        return executionRunDetails
+            .SelectMany(item => item.ToolReceipts)
+            .Where(item =>
+                item.StartedAtUtc >= historyStartUtc ||
+                item.CompletedAtUtc >= historyStartUtc)
+            .OrderBy(item => item.StartedAtUtc)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessLiveProcessOption> BuildLiveProcessOptions(
+        IReadOnlyList<ProcessRunListItem> runs,
+        IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById)
+    {
+        return runs
+            .OrderBy(item => IsLiveObservedRunStatus(item.Status) ? 0 : 1)
+            .ThenByDescending(item => item.UpdatedAtUtc)
+            .Take(LiveProcessOptionLimit)
+            .Select(item => new ProcessLiveProcessOption(
+                item.Id,
+                item.Name,
+                ResolveDefinitionName(item.ProcessDefinitionId, definitionsById),
+                item.Status,
+                item.UpdatedAtUtc))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessLiveRunCard> BuildLiveRunCards(
+        IReadOnlyList<ProcessRunListItem> runs,
+        IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById,
+        IReadOnlyDictionary<Guid, ProcessActiveRunSummaryViewModel> activeRunSummariesByRunId)
+    {
+        return runs
+            .Select(run =>
+            {
+                activeRunSummariesByRunId.TryGetValue(run.Id, out var activeSummary);
+                return new ProcessLiveRunCard(
+                    run.Id,
+                    run.ProcessDefinitionId,
+                    ResolveDefinitionName(run.ProcessDefinitionId, definitionsById),
+                    run.Name,
+                    run.Status,
+                    run.UpdatedAtUtc,
+                    run.CompletedStepCount,
+                    run.TotalStepCount,
+                    run.BlockedStepCount,
+                    run.CapabilityGapCount,
+                    run.EstimatedCost,
+                    run.ActualCost,
+                    activeSummary?.ActiveExecutionCount ?? 0,
+                    activeSummary?.PendingApprovalCount ?? 0,
+                    activeSummary?.PendingOutboxCount ?? 0,
+                    activeSummary?.DeadLetteredOutboxCount ?? 0,
+                    activeSummary?.BlockedOrFailedStepCount ?? run.BlockedStepCount,
+                    activeSummary?.HealthSummary ?? string.Empty);
+            })
+            .OrderBy(item => ResolveLiveRunSortRank(item.Status))
+            .ThenByDescending(item => item.ActiveExecutionCount)
+            .ThenByDescending(item => item.PendingApprovalCount)
+            .ThenByDescending(item => item.UpdatedAtUtc)
+            .ThenBy(item => item.RunName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessLiveAgentCard> BuildLiveAgentCards(
+        IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries)
+    {
+        return activeRunSummaries
+            .SelectMany(summary => summary.Agents.Select(agent => new ProcessLiveAgentCard(
+                summary.RunId,
+                summary.RunName,
+                agent.ExecutionRunId,
+                agent.AgentId,
+                agent.AgentName,
+                agent.AgentRoleTitle,
+                agent.StepTitle,
+                agent.State,
+                agent.Outcome,
+                agent.StartedAtUtc,
+                agent.UpdatedAtUtc,
+                agent.StatusBadgeText,
+                agent.StatusTone)))
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenBy(item => item.AgentName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static ProcessLiveStats BuildLiveStats(
+        IReadOnlyList<ProcessRunListItem> observedRuns,
+        IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries,
+        IReadOnlyList<AgentRunMetric> metrics)
+    {
+        return new ProcessLiveStats(
+            observedRuns.Count,
+            observedRuns.Count(item => item.Status == ProcessRunStatus.Active),
+            observedRuns.Count(item => item.Status == ProcessRunStatus.Blocked),
+            observedRuns.Count(item => item.Status == ProcessRunStatus.Failed),
+            activeRunSummaries.Sum(item => item.ActiveExecutionCount),
+            activeRunSummaries.Sum(item => item.PendingApprovalCount),
+            activeRunSummaries.Sum(item => item.PendingOutboxCount),
+            activeRunSummaries.Sum(item => item.DeadLetteredOutboxCount),
+            metrics.Sum(item => item.DurationMs),
+            ClampToInt(metrics.Sum(item => (long)item.InputTokens)),
+            ClampToInt(metrics.Sum(item => (long)item.OutputTokens)),
+            ClampToInt(metrics.Sum(item => (long)item.ToolCalls)),
+            observedRuns.Sum(item => item.EstimatedCost),
+            observedRuns.Sum(item => item.ActualCost));
+    }
+
+    private static IReadOnlyList<ProcessLiveMetricPoint> BuildLiveMetricPoints(
+        IReadOnlyList<AgentRunMetric> metrics,
+        ProcessLiveHistoryWindow historyWindow)
+    {
+        if (metrics.Count == 0)
+        {
+            return [];
+        }
+
+        var bucketSpan = ResolveMetricBucketSpan(historyWindow);
+        var buckets = new Dictionary<DateTimeOffset, LiveMetricAccumulator>();
+        foreach (var metric in metrics)
+        {
+            var bucket = FloorToBucket(metric.CreatedAtUtc, bucketSpan);
+            if (!buckets.TryGetValue(bucket, out var accumulator))
+            {
+                accumulator = new LiveMetricAccumulator();
+                buckets[bucket] = accumulator;
+            }
+
+            accumulator.InputTokens += metric.InputTokens;
+            accumulator.OutputTokens += metric.OutputTokens;
+            accumulator.DurationMs += metric.DurationMs;
+            accumulator.ToolCalls += metric.ToolCalls;
+        }
+
+        return buckets
+            .OrderBy(item => item.Key)
+            .Select(item => new ProcessLiveMetricPoint(
+                item.Key,
+                ClampToInt(item.Value.InputTokens),
+                ClampToInt(item.Value.OutputTokens),
+                item.Value.DurationMs,
+                ClampToInt(item.Value.ToolCalls)))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessLiveToolUsage> BuildLiveToolUsage(
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        if (toolReceipts.Count == 0)
+        {
+            return [];
+        }
+
+        return toolReceipts
+            .GroupBy(item => new ProcessLiveToolUsageKey(
+                NormalizeToolLabel(item.ToolFamily, "tool"),
+                NormalizeToolLabel(item.ToolName, "unknown")))
+            .Select(group => new ProcessLiveToolUsage(
+                group.Key.ToolName,
+                group.Key.ToolFamily,
+                group.Count(),
+                group.Max(item => item.CompletedAtUtc)))
+            .OrderByDescending(item => item.CallCount)
+            .ThenByDescending(item => item.LastUsedAtUtc)
+            .ThenBy(item => item.ToolName, StringComparer.OrdinalIgnoreCase)
+            .Take(LiveToolUsageLimit)
+            .ToArray();
+    }
+
     private static IReadOnlyList<ProcessObservationDialogDescriptor> BuildDialogDescriptors(
         IReadOnlyList<ProcessRunListItem> runs)
     {
@@ -418,6 +757,180 @@ internal sealed class ProcessObservationService(
         return maxUpdatedAtUtc;
     }
 
+    private static DateTimeOffset? ResolveLiveSourceMaxUpdatedAtUtc(
+        IReadOnlyList<ProcessRunListItem> runs,
+        IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries,
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        IReadOnlyList<AgentRunMetric> metrics,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        var candidates = new List<DateTimeOffset>();
+        AddIfPresent(candidates, FindMaxUpdatedAtUtc(runs));
+        AddIfPresent(candidates, FindMaxUpdatedAtUtc(activeRunSummaries));
+        AddIfPresent(candidates, FindMax(executionRuns, item => item.UpdatedAtUtc));
+        AddIfPresent(candidates, FindMax(metrics, item => item.CreatedAtUtc));
+        AddIfPresent(candidates, FindMax(toolReceipts, item => item.CompletedAtUtc));
+
+        return candidates.Count == 0
+            ? null
+            : candidates.Max();
+    }
+
+    private static DateTimeOffset? FindMax<T>(
+        IReadOnlyList<T> items,
+        Func<T, DateTimeOffset> selector)
+    {
+        DateTimeOffset? maxValue = null;
+        foreach (var item in items)
+        {
+            var value = selector(item);
+            if (!maxValue.HasValue || value > maxValue.Value)
+            {
+                maxValue = value;
+            }
+        }
+
+        return maxValue;
+    }
+
+    private static void AddIfPresent(
+        List<DateTimeOffset> values,
+        DateTimeOffset? value)
+    {
+        if (value.HasValue)
+        {
+            values.Add(value.Value);
+        }
+    }
+
+    private static bool ShouldIncludeLiveRun(
+        ProcessRunListItem run,
+        Guid? processRunId)
+    {
+        return processRunId.HasValue
+            ? run.Id == processRunId.Value
+            : IsLiveObservedRunStatus(run.Status);
+    }
+
+    private static bool IsLiveObservedRunStatus(ProcessRunStatus status)
+    {
+        return status is ProcessRunStatus.Active or ProcessRunStatus.Blocked or ProcessRunStatus.Failed;
+    }
+
+    private static int ResolveLiveRunSortRank(ProcessRunStatus status)
+    {
+        return status switch
+        {
+            ProcessRunStatus.Blocked => 0,
+            ProcessRunStatus.Failed => 1,
+            ProcessRunStatus.Active => 2,
+            _ => 3
+        };
+    }
+
+    private static string ResolveDefinitionName(
+        Guid definitionId,
+        IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById)
+    {
+        return definitionsById.TryGetValue(definitionId, out var definition) &&
+               !string.IsNullOrWhiteSpace(definition.Name)
+            ? definition.Name
+            : "Process definition";
+    }
+
+    private static string NormalizeToolLabel(
+        string? value,
+        string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? fallback
+            : value.Trim();
+    }
+
+    private static Guid? TryParseGuid(string value)
+    {
+        return Guid.TryParse(value, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static ProcessLiveHistoryWindow NormalizeHistoryWindow(ProcessLiveHistoryWindow historyWindow)
+    {
+        return Enum.IsDefined(historyWindow)
+            ? historyWindow
+            : ProcessLiveHistoryWindow.LiveHour;
+    }
+
+    private static TimeSpan ResolveHistoryWindowSpan(ProcessLiveHistoryWindow historyWindow)
+    {
+        return historyWindow switch
+        {
+            ProcessLiveHistoryWindow.OneDay => TimeSpan.FromDays(1),
+            ProcessLiveHistoryWindow.SevenDays => TimeSpan.FromDays(7),
+            ProcessLiveHistoryWindow.ThirtyDays => TimeSpan.FromDays(30),
+            _ => TimeSpan.FromHours(1)
+        };
+    }
+
+    private static TimeSpan ResolveMetricBucketSpan(ProcessLiveHistoryWindow historyWindow)
+    {
+        return historyWindow switch
+        {
+            ProcessLiveHistoryWindow.OneDay => TimeSpan.FromHours(1),
+            ProcessLiveHistoryWindow.SevenDays => TimeSpan.FromHours(6),
+            ProcessLiveHistoryWindow.ThirtyDays => TimeSpan.FromDays(1),
+            _ => TimeSpan.FromMinutes(5)
+        };
+    }
+
+    private static int ResolveLiveExecutionRunTake(ProcessLiveHistoryWindow historyWindow)
+    {
+        return historyWindow switch
+        {
+            ProcessLiveHistoryWindow.OneDay => 1000,
+            ProcessLiveHistoryWindow.SevenDays => 2500,
+            ProcessLiveHistoryWindow.ThirtyDays => 5000,
+            _ => 500
+        };
+    }
+
+    private static int ResolveLiveExecutionRunDetailTake(ProcessLiveHistoryWindow historyWindow)
+    {
+        return historyWindow switch
+        {
+            ProcessLiveHistoryWindow.OneDay => 180,
+            ProcessLiveHistoryWindow.SevenDays => 240,
+            ProcessLiveHistoryWindow.ThirtyDays => 300,
+            _ => 120
+        };
+    }
+
+    private static DateTimeOffset FloorToBucket(
+        DateTimeOffset timestamp,
+        TimeSpan bucketSpan)
+    {
+        var utcTicks = timestamp.UtcTicks;
+        var bucketTicks = bucketSpan.Ticks;
+        if (bucketTicks <= 0)
+        {
+            return timestamp.ToUniversalTime();
+        }
+
+        return new DateTimeOffset(utcTicks - utcTicks % bucketTicks, TimeSpan.Zero);
+    }
+
+    private static int ClampToInt(long value)
+    {
+        if (value <= 0)
+        {
+            return 0;
+        }
+
+        return value >= int.MaxValue
+            ? int.MaxValue
+            : (int)value;
+    }
+
     private static string BuildDashboardFingerprint(ProcessObservationDashboardQuery query)
     {
         return string.Join(
@@ -435,5 +948,24 @@ internal sealed class ProcessObservationService(
                 : ProcessObservationFreshness.Fresh,
             result.StoredAtUtc,
             result.ExpiresAtUtc);
+    }
+
+    private sealed record LiveExecutionRunMatch(
+        Guid? ProcessRunId,
+        ExecutionRunRecord ExecutionRun);
+
+    private sealed record ProcessLiveToolUsageKey(
+        string ToolFamily,
+        string ToolName);
+
+    private sealed class LiveMetricAccumulator
+    {
+        public long InputTokens { get; set; }
+
+        public long OutputTokens { get; set; }
+
+        public long DurationMs { get; set; }
+
+        public long ToolCalls { get; set; }
     }
 }

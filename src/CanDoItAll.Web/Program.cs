@@ -1,5 +1,6 @@
 using CanDoItAll.Components;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.Charts;
 using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -47,6 +48,7 @@ builder.Services.AddRazorComponents()
     .AddHubOptions(options => options.MaximumReceiveMessageSize = promptAttachmentMessageLimitBytes);
 
 builder.Services.AddCanDoItAllBaseLib();
+builder.Services.AddCanDoItAllCharts();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
 builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);

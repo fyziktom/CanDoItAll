@@ -1,0 +1,999 @@
+@namespace CanDoItAll.Modules.Processes
+@using System.Globalization
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Components.Charts
+@implements IAsyncDisposable
+@inject IProcessObservationService ObservationService
+
+<PageTitle>@PageTitleText</PageTitle>
+
+<PageScaffold FillHeight="true"
+              MaxWidthClass="max-w-full"
+              Class="live-processes-page"
+              data-testid="live-processes-page">
+    <Header>
+        <Toolbar Class="live-processes-command-strip"
+                 data-testid="live-processes-command-strip">
+            <ToolbarRow Class="live-processes-command-strip__row">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.Wrap"
+                         Class="min-w-0">
+                    <p class="cda-eyebrow whitespace-nowrap">Processes</p>
+                    <h1 class="live-processes-title">@PageTitleText</h1>
+                    <StatusBadge Tone="info"
+                                 Text="@FormatCount(CurrentStats.RunningRunCount, "running", "running")" />
+                    <StatusBadge Tone="warning"
+                                 Text="@FormatCount(CurrentStats.BlockedRunCount, "blocked", "blocked")" />
+                    <StatusBadge Tone="danger"
+                                 Text="@FormatCount(CurrentStats.FailedRunCount, "failed", "failed")" />
+                    <StatusBadge Tone="neutral"
+                                 Text="@LastRefreshText" />
+                </Cluster>
+
+                <ToolbarActions Class="live-processes-command-strip__actions">
+                    <select class="cda-input live-processes-select"
+                            aria-label="History window"
+                            value="@selectedWindow"
+                            @onchange="HandleHistoryWindowChangedAsync">
+                        @foreach (var historyWindow in HistoryWindows)
+                        {
+                            <option value="@historyWindow">@ResolveHistoryWindowLabel(historyWindow)</option>
+                        }
+                    </select>
+
+                    <select class="cda-input live-processes-select live-processes-select--wide"
+                            aria-label="Process filter"
+                            value="@SelectedProcessFilterValue"
+                            @onchange="HandleProcessFilterChangedAsync">
+                        <option value="">All processes</option>
+                        @foreach (var process in ProcessOptions)
+                        {
+                            <option value="@process.RunId.ToString("D")">
+                                @BuildProcessOptionLabel(process)
+                            </option>
+                        }
+                    </select>
+
+                    <Button Text="Refresh"
+                            Icon="refresh"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@isRefreshing"
+                            IsBusy="@isRefreshing"
+                            Click="ForceRefreshAsync"
+                            data-testid="live-processes-refresh-button" />
+                </ToolbarActions>
+            </ToolbarRow>
+        </Toolbar>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium"
+               Class="live-processes-dashboard min-h-0 flex-1"
+               data-testid="live-processes-dashboard">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="live-processes-alert"
+                     role="alert"
+                     data-testid="live-processes-error">
+                    <Icon Name="error" />
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            @if (isLoading && snapshot is null)
+            {
+                <LoadingState Eyebrow="Live processes"
+                              Title="Loading process projection"
+                              Description="Collecting current runs, active agents, metrics, and tool usage." />
+            }
+            else
+            {
+                <div class="live-processes-summary">
+                    <SummaryTiles ColumnsSm="2"
+                                  ColumnsMd="3"
+                                  ColumnsLg="6"
+                                  ColumnsXl="6"
+                                  GapScale="LayoutGap.Small">
+                        <SummaryTile Label="Observed"
+                                     Value="@CurrentStats.ObservedRunCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     Tone="info"
+                                     Compact="true" />
+                        <SummaryTile Label="Agents"
+                                     Value="@CurrentStats.ActiveAgentCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     Tone="success"
+                                     Compact="true" />
+                        <SummaryTile Label="Context"
+                                     Value="@FormatTokens(CurrentStats.TotalTokens)"
+                                     Tone="secondary"
+                                     Compact="true" />
+                        <SummaryTile Label="Tool calls"
+                                     Value="@CurrentStats.ToolCalls.ToString("N0", CultureInfo.CurrentCulture)"
+                                     Tone="warning"
+                                     Compact="true" />
+                        <SummaryTile Label="Time"
+                                     Value="@FormatDuration(TimeSpan.FromMilliseconds(CurrentStats.DurationMs))"
+                                     Tone="neutral"
+                                     Compact="true" />
+                        <SummaryTile Label="Cost"
+                                     Value="@FormatMoney(CurrentStats.ActualCost)"
+                                     Tone="danger"
+                                     Compact="true" />
+                    </SummaryTiles>
+                </div>
+
+                <Tabs SelectedIndex="@selectedTabIndex"
+                      SelectedIndexChanged="HandleTabChangedAsync"
+                      Variant="TabsVariant.WorkspacePrimary"
+                      RenderMode="TabRenderMode.Client"
+                      Class="live-processes-tabs"
+                      data-testid="live-processes-tabs">
+                    <TabsItem Text="Activity"
+                              Icon="monitoring"
+                              BadgeText="@visibleRuns.Count.ToString(CultureInfo.InvariantCulture)">
+                        @RenderActivityTab()
+                    </TabsItem>
+
+                    <TabsItem Text="Agents"
+                              Icon="smart_toy"
+                              BadgeText="@visibleAgents.Count.ToString(CultureInfo.InvariantCulture)">
+                        @RenderAgentsTab()
+                    </TabsItem>
+
+                    <TabsItem Text="Graphs"
+                              Icon="bar_chart">
+                        @RenderGraphsTab()
+                    </TabsItem>
+
+                    <TabsItem Text="Tool analytics"
+                              Icon="analytics"
+                              BadgeText="@ToolUsage.Count.ToString(CultureInfo.InvariantCulture)">
+                        @RenderToolAnalyticsTab()
+                    </TabsItem>
+                </Tabs>
+            }
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+<Dialog IsOpen="@suppressDialogOpen"
+        Eyebrow="Projection"
+        Title="Hide process card"
+        Subtitle="@SuppressDialogSubtitle"
+        Size="ModalSize.Compact"
+        DenseChrome="true"
+        OnClose="CloseSuppressDialogAsync"
+        TestId="live-processes-suppress-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <p class="live-processes-dialog-copy">
+                The process remains unchanged. The card returns when the status changes or the selected interval expires.
+            </p>
+            <div class="live-processes-duration-grid">
+                <Button Text="10 minutes"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="@(() => ConfirmSuppressAsync(TimeSpan.FromMinutes(10)))" />
+                <Button Text="30 minutes"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="@(() => ConfirmSuppressAsync(TimeSpan.FromMinutes(30)))" />
+                <Button Text="1 hour"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="@(() => ConfirmSuppressAsync(TimeSpan.FromHours(1)))" />
+                <Button Text="1 day"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="@(() => ConfirmSuppressAsync(TimeSpan.FromDays(1)))" />
+            </div>
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="CloseSuppressDialogAsync" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private static readonly IReadOnlyList<ProcessLiveHistoryWindow> HistoryWindows =
+    [
+        ProcessLiveHistoryWindow.LiveHour,
+        ProcessLiveHistoryWindow.OneDay,
+        ProcessLiveHistoryWindow.SevenDays,
+        ProcessLiveHistoryWindow.ThirtyDays
+    ];
+
+    private static readonly CdaChartOptions ContextChartOptions = new()
+    {
+        Type = CdaChartType.Area,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Tokens",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        FillOpacity = 0.22,
+        Curve = CdaChartCurve.Straight,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#2563eb", "#16a34a"]
+    };
+
+    private static readonly CdaChartOptions DurationChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Minutes",
+        Unit = "min",
+        TooltipPrecision = 2,
+        ValuePrecision = 2,
+        ShowToolbar = false,
+        EnableZoom = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#7c3aed", "#0891b2"]
+    };
+
+    private static readonly CdaChartOptions MoneyChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        YAxisTitle = "Cost",
+        Unit = "$",
+        TooltipPrecision = 2,
+        ValuePrecision = 2,
+        ShowToolbar = false,
+        EnableZoom = false,
+        RotateXAxisLabels = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#0f766e", "#dc2626"]
+    };
+
+    private static readonly CdaChartOptions ToolUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        YAxisTitle = "Calls",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        ShowToolbar = false,
+        EnableZoom = false,
+        RotateXAxisLabels = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#f59e0b"]
+    };
+
+    private readonly Dictionary<Guid, SuppressedRunCard> suppressedRuns = [];
+
+    private ProcessLiveObservationSnapshot? snapshot;
+    private ProcessLiveHistoryWindow selectedWindow = ProcessLiveHistoryWindow.LiveHour;
+    private Guid? selectedProcessRunId;
+    private Guid? loadedProjectId;
+    private CancellationTokenSource? refreshCancellation;
+    private Task? refreshLoopTask;
+    private bool hasLoaded;
+    private bool isLoading = true;
+    private bool isRefreshing;
+    private bool suppressDialogOpen;
+    private ProcessLiveRunCard? suppressTarget;
+    private string? errorMessage;
+    private DateTimeOffset nowUtc = DateTimeOffset.UtcNow;
+    private IReadOnlyList<ProcessLiveRunCard> visibleRuns = [];
+    private IReadOnlyList<ProcessLiveAgentCard> visibleAgents = [];
+    private IReadOnlyDictionary<Guid, ProcessRunStatus> runStatusesById = new Dictionary<Guid, ProcessRunStatus>();
+
+    [Parameter]
+    public Guid? ProjectId { get; set; }
+
+    private string PageTitleText => ProjectId.HasValue ? "Project Live Processes" : "Live Processes";
+
+    private ProcessLiveStats CurrentStats => snapshot?.Stats ?? ProcessLiveStats.Empty;
+
+    private IReadOnlyList<ProcessLiveProcessOption> ProcessOptions => snapshot?.ProcessOptions ?? [];
+
+    private IReadOnlyList<ProcessLiveMetricPoint> MetricPoints => snapshot?.MetricPoints ?? [];
+
+    private IReadOnlyList<ProcessLiveToolUsage> ToolUsage => snapshot?.ToolUsage ?? [];
+
+    private string SelectedProcessFilterValue => selectedProcessRunId?.ToString("D") ?? string.Empty;
+
+    private string LastRefreshText => snapshot is null
+        ? "not loaded"
+        : $"{snapshot.Staleness.Freshness} {FormatAge(snapshot.Staleness.AgeAt(nowUtc))}";
+
+    private string SuppressDialogSubtitle => suppressTarget is null
+        ? string.Empty
+        : $"{suppressTarget.RunName} / {suppressTarget.Status}";
+
+    private IReadOnlyList<CdaChartSeries> ContextSeries
+    {
+        get
+        {
+            if (MetricPoints.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new()
+                {
+                    Name = "Input tokens",
+                    Type = CdaChartType.Area,
+                    Color = "#2563eb",
+                    Points = MetricPoints
+                        .Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.InputTokens))
+                        .ToArray()
+                },
+                new()
+                {
+                    Name = "Output tokens",
+                    Type = CdaChartType.Area,
+                    Color = "#16a34a",
+                    Points = MetricPoints
+                        .Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.OutputTokens))
+                        .ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> DurationSeries
+    {
+        get
+        {
+            if (MetricPoints.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new()
+                {
+                    Name = "Spent time",
+                    Type = CdaChartType.Bar,
+                    Color = "#7c3aed",
+                    Points = MetricPoints
+                        .Select(item => new CdaChartPoint(
+                            item.TimestampUtc.UtcDateTime,
+                            Math.Round(item.DurationMs / 60000m, 2)))
+                        .ToArray()
+                },
+                new()
+                {
+                    Name = "Tool calls",
+                    Type = CdaChartType.Line,
+                    Color = "#0891b2",
+                    Points = MetricPoints
+                        .Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ToolCalls))
+                        .ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> MoneySeries
+    {
+        get
+        {
+            var runs = visibleRuns.Take(12).ToArray();
+            if (runs.Length == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new()
+                {
+                    Name = "Actual",
+                    Type = CdaChartType.Bar,
+                    Color = "#0f766e",
+                    Points = runs
+                        .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.ActualCost))
+                        .ToArray()
+                },
+                new()
+                {
+                    Name = "Estimated",
+                    Type = CdaChartType.Bar,
+                    Color = "#dc2626",
+                    Points = runs
+                        .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.EstimatedCost))
+                        .ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> ToolUsageSeries
+    {
+        get
+        {
+            if (ToolUsage.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new()
+                {
+                    Name = "Tool calls",
+                    Type = CdaChartType.Bar,
+                    Color = "#f59e0b",
+                    Points = ToolUsage
+                        .Take(15)
+                        .Select(item => new CdaChartPoint(TrimLabel(item.ToolName, 26), item.CallCount))
+                        .ToArray()
+                }
+            ];
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (hasLoaded && loadedProjectId == ProjectId)
+        {
+            return;
+        }
+
+        loadedProjectId = ProjectId;
+        selectedProcessRunId = null;
+        suppressedRuns.Clear();
+        hasLoaded = true;
+        await RefreshAsync(forceRefresh: true);
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        refreshCancellation = new CancellationTokenSource();
+        refreshLoopTask = RunRefreshLoopAsync(refreshCancellation.Token);
+        return Task.CompletedTask;
+    }
+
+    private RenderFragment RenderActivityTab()
+    {
+        return @<div class="live-processes-tab-panel"
+                     data-testid="live-processes-activity-tab">
+            @if (visibleRuns.Count == 0)
+            {
+                <EmptyState Eyebrow="No visible process cards"
+                            Title="No running or blocked processes"
+                            Description="Hidden cards return when their process status changes or the suppression interval expires." />
+            }
+            else
+            {
+                <div class="live-processes-card-grid">
+                    @foreach (var run in visibleRuns)
+                    {
+                        <article @key="run.RunId"
+                                 class="@ResolveRunCardClass(run)"
+                                 data-testid="live-process-run-card">
+                            <button type="button"
+                                    class="live-processes-card-close"
+                                    title="Hide this process card"
+                                    aria-label="@($"Hide {run.RunName}")"
+                                    @onclick="@(() => OpenSuppressDialog(run))">
+                                <Icon Name="close" />
+                            </button>
+
+                            <div class="live-processes-card__header">
+                                <div class="live-processes-card__identity">
+                                    <p class="cda-eyebrow">@run.DefinitionName</p>
+                                    <h2>@run.RunName</h2>
+                                </div>
+                                <StatusBadge Tone="@ResolveRunTone(run.Status)"
+                                             Text="@run.Status.ToString()" />
+                            </div>
+
+                            <div class="live-processes-progress"
+                                 aria-label="@BuildProgressText(run)">
+                                <span style="@BuildProgressStyle(run)"></span>
+                            </div>
+
+                            <div class="live-processes-card__metrics">
+                                <span>@BuildProgressText(run)</span>
+                                <span>@FormatAge(nowUtc - run.UpdatedAtUtc) since activity</span>
+                                @if (run.BlockedStepCount > 0)
+                                {
+                                    <span>@FormatCount(run.BlockedStepCount, "blocked step", "blocked steps")</span>
+                                }
+                                @if (run.ActiveExecutionCount > 0)
+                                {
+                                    <span>@FormatCount(run.ActiveExecutionCount, "active agent", "active agents")</span>
+                                }
+                                @if (run.PendingApprovalCount > 0)
+                                {
+                                    <span>@FormatCount(run.PendingApprovalCount, "approval", "approvals")</span>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(run.HealthSummary))
+                            {
+                                <p class="live-processes-card__summary">@run.HealthSummary</p>
+                            }
+
+                            <div class="live-processes-card__footer">
+                                <StatusBadge Tone="neutral"
+                                             Text="@FormatMoney(run.ActualCost)" />
+                                <StatusBadge Tone="info"
+                                             Text="@($"{run.CompletedStepCount}/{run.TotalStepCount} steps")" />
+                                @if (run.DeadLetteredOutboxCount > 0)
+                                {
+                                    <StatusBadge Tone="danger"
+                                                 Text="@FormatCount(run.DeadLetteredOutboxCount, "dead letter", "dead letters")" />
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>;
+    }
+
+    private RenderFragment RenderAgentsTab()
+    {
+        return @<div class="live-processes-tab-panel"
+                     data-testid="live-processes-agents-tab">
+            @if (visibleAgents.Count == 0)
+            {
+                <EmptyState Eyebrow="No active agents"
+                            Title="No process agents are working right now"
+                            Description="Active execution cards appear here when process runs have agent work in progress." />
+            }
+            else
+            {
+                <div class="live-processes-agent-grid">
+                    @foreach (var agent in visibleAgents)
+                    {
+                        <article @key="agent.ExecutionRunId"
+                                 class="live-processes-agent-card"
+                                 data-testid="live-process-agent-card">
+                            <div class="live-processes-agent-card__avatar">
+                                <Avatar Alt="@agent.AgentName"
+                                        FallbackText="@ResolveAgentInitials(agent.AgentName)"
+                                        DefaultImageSeed="@agent.AgentId.ToString("N")"
+                                        Size="AvatarSize.Large" />
+                            </div>
+                            <div class="live-processes-agent-card__body">
+                                <div class="live-processes-agent-card__header">
+                                    <div class="min-w-0">
+                                        <p class="cda-eyebrow">@agent.RunName</p>
+                                        <h2>@agent.AgentName</h2>
+                                    </div>
+                                    <StatusBadge Tone="@agent.StatusTone"
+                                                 Text="@ResolveAgentStatusText(agent)" />
+                                </div>
+                                <p class="live-processes-agent-card__role">@ResolveAgentRole(agent)</p>
+                                <div class="live-processes-agent-card__details">
+                                    <span>@agent.StepTitle</span>
+                                    <span>@FormatAgentElapsed(agent)</span>
+                                    <span>@FormatAge(nowUtc - agent.UpdatedAtUtc) since signal</span>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>;
+    }
+
+    private RenderFragment RenderGraphsTab()
+    {
+        return @<div class="live-processes-tab-panel live-processes-chart-grid"
+                     data-testid="live-processes-graphs-tab">
+            <CdaChart Title="Context usage"
+                      Description="@ResolveChartDescription("Input and output tokens")"
+                      Series="@ContextSeries"
+                      Options="@ContextChartOptions"
+                      Height="320"
+                      EmptyText="No context metrics in the selected window." />
+
+            <CdaChart Title="Spent time and tool calls"
+                      Description="@ResolveChartDescription("Runtime duration and tool activity")"
+                      Series="@DurationSeries"
+                      Options="@DurationChartOptions"
+                      Height="320"
+                      EmptyText="No runtime metrics in the selected window." />
+
+            <CdaChart Title="Process cost"
+                      Description="Visible process cards, sorted by current attention."
+                      Series="@MoneySeries"
+                      Options="@MoneyChartOptions"
+                      Height="320"
+                      EmptyText="No process cost data to chart." />
+        </div>;
+    }
+
+    private RenderFragment RenderToolAnalyticsTab()
+    {
+        return @<div class="live-processes-tab-panel"
+                     data-testid="live-processes-tool-analytics-tab">
+            <div class="live-processes-tool-layout">
+                <CdaChart Title="Tool calls"
+                          Description="@ResolveChartDescription("Top tool calls by count")"
+                          Series="@ToolUsageSeries"
+                          Options="@ToolUsageChartOptions"
+                          Height="340"
+                          EmptyText="No tool calls in the selected window." />
+
+                <section class="live-processes-tool-table"
+                         aria-label="Tool usage table">
+                    <div class="live-processes-tool-table__header">
+                        <p class="cda-eyebrow">Tool usage</p>
+                        <StatusBadge Tone="neutral"
+                                     Text="@ResolveHistoryWindowLabel(selectedWindow)" />
+                    </div>
+                    @if (ToolUsage.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No tool calls"
+                                    Title="No tool analytics available"
+                                    Description="Tool receipts from matching process execution runs appear here after agents call tools." />
+                    }
+                    else
+                    {
+                        <div class="live-processes-tool-rows">
+                            @foreach (var tool in ToolUsage)
+                            {
+                                <div @key="tool.ToolName"
+                                     class="live-processes-tool-row">
+                                    <div class="min-w-0">
+                                        <h3>@tool.ToolName</h3>
+                                        <p>@tool.ToolFamily</p>
+                                    </div>
+                                    <div class="live-processes-tool-row__meta">
+                                        <StatusBadge Tone="warning"
+                                                     Text="@FormatCount(tool.CallCount, "call", "calls")" />
+                                        <span>@tool.LastUsedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
+        </div>;
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () => await RefreshAsync(forceRefresh: false));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task RefreshAsync(bool forceRefresh)
+    {
+        if (isRefreshing)
+        {
+            return;
+        }
+
+        isRefreshing = true;
+        nowUtc = DateTimeOffset.UtcNow;
+        try
+        {
+            var cancellationToken = refreshCancellation?.Token ?? CancellationToken.None;
+            snapshot = await ObservationService.GetLiveSnapshotAsync(
+                new ProcessLiveObservationQuery(
+                    ProjectId,
+                    selectedWindow,
+                    selectedProcessRunId,
+                    forceRefresh),
+                cancellationToken);
+            errorMessage = null;
+            PruneSuppressions();
+            RebuildVisibleProjection();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            isRefreshing = false;
+        }
+    }
+
+    private async Task ForceRefreshAsync()
+    {
+        await RefreshAsync(forceRefresh: true);
+    }
+
+    private async Task HandleHistoryWindowChangedAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ProcessLiveHistoryWindow>(args.Value?.ToString(), out var parsed))
+        {
+            selectedWindow = parsed;
+            await RefreshAsync(forceRefresh: true);
+        }
+    }
+
+    private async Task HandleProcessFilterChangedAsync(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        selectedProcessRunId = Guid.TryParse(rawValue, out var parsed)
+            ? parsed
+            : null;
+        suppressedRuns.Clear();
+        await RefreshAsync(forceRefresh: true);
+    }
+
+    private Task HandleTabChangedAsync(int index)
+    {
+        selectedTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private void OpenSuppressDialog(ProcessLiveRunCard run)
+    {
+        suppressTarget = run;
+        suppressDialogOpen = true;
+    }
+
+    private Task CloseSuppressDialogAsync()
+    {
+        suppressDialogOpen = false;
+        suppressTarget = null;
+        return Task.CompletedTask;
+    }
+
+    private Task ConfirmSuppressAsync(TimeSpan duration)
+    {
+        if (suppressTarget is not null)
+        {
+            suppressedRuns[suppressTarget.RunId] = new SuppressedRunCard(
+                suppressTarget.Status,
+                nowUtc.Add(duration));
+            RebuildVisibleProjection();
+        }
+
+        suppressDialogOpen = false;
+        suppressTarget = null;
+        return Task.CompletedTask;
+    }
+
+    private void PruneSuppressions()
+    {
+        if (snapshot is null || suppressedRuns.Count == 0)
+        {
+            return;
+        }
+
+        var statusesByRunId = snapshot.Runs.ToDictionary(item => item.RunId, item => item.Status);
+        foreach (var suppression in suppressedRuns.ToArray())
+        {
+            if (suppression.Value.ExpiresAtUtc <= nowUtc ||
+                !statusesByRunId.TryGetValue(suppression.Key, out var currentStatus) ||
+                currentStatus != suppression.Value.Status)
+            {
+                suppressedRuns.Remove(suppression.Key);
+            }
+        }
+    }
+
+    private void RebuildVisibleProjection()
+    {
+        if (snapshot is null)
+        {
+            visibleRuns = [];
+            visibleAgents = [];
+            runStatusesById = new Dictionary<Guid, ProcessRunStatus>();
+            return;
+        }
+
+        var statusesByRunId = snapshot.Runs.ToDictionary(item => item.RunId, item => item.Status);
+        runStatusesById = statusesByRunId;
+        visibleRuns = snapshot.Runs
+            .Where(item => !IsSuppressed(item.RunId, item.Status))
+            .ToArray();
+        visibleAgents = snapshot.ActiveAgents
+            .Where(item =>
+                !statusesByRunId.TryGetValue(item.RunId, out var status) ||
+                !IsSuppressed(item.RunId, status))
+            .ToArray();
+    }
+
+    private bool IsSuppressed(Guid runId, ProcessRunStatus status)
+    {
+        return suppressedRuns.TryGetValue(runId, out var suppression) &&
+               suppression.Status == status &&
+               suppression.ExpiresAtUtc > nowUtc;
+    }
+
+    private static string ResolveHistoryWindowLabel(ProcessLiveHistoryWindow historyWindow)
+    {
+        return historyWindow switch
+        {
+            ProcessLiveHistoryWindow.OneDay => "1 day",
+            ProcessLiveHistoryWindow.SevenDays => "7 days",
+            ProcessLiveHistoryWindow.ThirtyDays => "30 days",
+            _ => "Live 1h"
+        };
+    }
+
+    private static string ResolveRunTone(ProcessRunStatus status)
+    {
+        return status switch
+        {
+            ProcessRunStatus.Active => "info",
+            ProcessRunStatus.Blocked => "warning",
+            ProcessRunStatus.Failed => "danger",
+            ProcessRunStatus.Completed => "mint",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveRunCardClass(ProcessLiveRunCard run)
+    {
+        return $"live-processes-card live-processes-card--{run.Status.ToString().ToLowerInvariant()}";
+    }
+
+    private static string ResolveAgentInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+        {
+            return "AI";
+        }
+
+        if (parts.Length == 1)
+        {
+            return parts[0].Length <= 2
+                ? parts[0].ToUpperInvariant()
+                : parts[0][..2].ToUpperInvariant();
+        }
+
+        return string.Concat(parts[0][0], parts[^1][0]).ToUpperInvariant();
+    }
+
+    private static string ResolveAgentRole(ProcessLiveAgentCard agent)
+    {
+        return string.IsNullOrWhiteSpace(agent.AgentRoleTitle)
+            ? "Process agent"
+            : agent.AgentRoleTitle;
+    }
+
+    private static string ResolveAgentStatusText(ProcessLiveAgentCard agent)
+    {
+        return string.IsNullOrWhiteSpace(agent.StatusBadgeText)
+            ? agent.State.ToString()
+            : agent.StatusBadgeText;
+    }
+
+    private static string BuildProcessOptionLabel(ProcessLiveProcessOption option)
+    {
+        return $"{option.RunName} / {option.Status}";
+    }
+
+    private static string BuildProgressText(ProcessLiveRunCard run)
+    {
+        return run.TotalStepCount <= 0
+            ? "No steps"
+            : $"{run.CompletedStepCount}/{run.TotalStepCount} complete";
+    }
+
+    private static string BuildProgressStyle(ProcessLiveRunCard run)
+    {
+        var percent = run.TotalStepCount <= 0
+            ? 0
+            : Math.Clamp(run.CompletedStepCount * 100m / run.TotalStepCount, 0m, 100m);
+        return FormattableString.Invariant($"width:{percent:0.##}%;");
+    }
+
+    private string FormatAgentElapsed(ProcessLiveAgentCard agent)
+    {
+        var startedAtUtc = agent.StartedAtUtc ?? agent.UpdatedAtUtc;
+        return $"{FormatDuration(nowUtc - startedAtUtc)} working";
+    }
+
+    private static string FormatCount(int count, string singular, string plural)
+    {
+        return count == 1
+            ? $"1 {singular}"
+            : $"{count.ToString("N0", CultureInfo.CurrentCulture)} {plural}";
+    }
+
+    private static string FormatTokens(int tokens)
+    {
+        return tokens >= 1_000_000
+            ? $"{tokens / 1_000_000m:0.##}M"
+            : tokens >= 1_000
+                ? $"{tokens / 1_000m:0.#}K"
+                : tokens.ToString("N0", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatMoney(decimal value)
+    {
+        return value == 0m
+            ? "$0"
+            : FormattableString.Invariant($"${value:N2}");
+    }
+
+    private static string FormatAge(TimeSpan age)
+    {
+        if (age < TimeSpan.Zero)
+        {
+            age = TimeSpan.Zero;
+        }
+
+        if (age.TotalDays >= 1)
+        {
+            return $"{(int)age.TotalDays}d {age.Hours}h";
+        }
+
+        if (age.TotalHours >= 1)
+        {
+            return $"{(int)age.TotalHours}h {age.Minutes}m";
+        }
+
+        if (age.TotalMinutes >= 1)
+        {
+            return $"{(int)age.TotalMinutes}m";
+        }
+
+        return $"{Math.Max(0, age.Seconds)}s";
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        return FormatAge(duration);
+    }
+
+    private static string ResolveChartDescription(string metric)
+    {
+        return $"{metric} / {DateTime.Now.ToString("g", CultureInfo.CurrentCulture)}";
+    }
+
+    private static string TrimLabel(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return $"{value[..Math.Max(1, maxLength - 3)]}...";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (refreshCancellation is not null)
+        {
+            await refreshCancellation.CancelAsync();
+        }
+
+        if (refreshLoopTask is not null)
+        {
+            try
+            {
+                await refreshLoopTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        refreshCancellation?.Dispose();
+    }
+
+    private int selectedTabIndex;
+
+    private sealed record SuppressedRunCard(
+        ProcessRunStatus Status,
+        DateTimeOffset ExpiresAtUtc);
+}

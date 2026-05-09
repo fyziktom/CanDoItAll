@@ -328,6 +328,7 @@ internal sealed record ProcessObservationCacheKey(
 internal enum ProcessObservationCacheKind
 {
     Dashboard,
+    LiveSnapshot,
     RunSnapshot,
     StageSnapshot,
     TimelinePage,

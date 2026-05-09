@@ -764,6 +764,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             stepTitle,
             executionRun.State,
             executionRun.Outcome,
+            executionRun.StartedAtUtc ?? executionRun.CreatedAtUtc,
             executionRun.UpdatedAtUtc)
         {
             StatusBadgeText = ProcessExecutionRunDisplayProjector.BuildRawBadge(executionRun.State, executionRun.Outcome),

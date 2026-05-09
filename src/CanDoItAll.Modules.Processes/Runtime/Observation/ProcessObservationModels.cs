@@ -1,9 +1,15 @@
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.Modules.Processes;
 
 public interface IProcessObservationService
 {
     Task<ProcessDashboardObservationSnapshot> GetDashboardSnapshotAsync(
         ProcessObservationDashboardQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<ProcessLiveObservationSnapshot> GetLiveSnapshotAsync(
+        ProcessLiveObservationQuery query,
         CancellationToken cancellationToken = default);
 
     Task<ProcessRunObservationSnapshot> GetRunSnapshotAsync(
@@ -109,6 +115,12 @@ public sealed record ProcessObservationDashboardQuery(
     }
 }
 
+public sealed record ProcessLiveObservationQuery(
+    Guid? ProjectId,
+    ProcessLiveHistoryWindow HistoryWindow = ProcessLiveHistoryWindow.LiveHour,
+    Guid? ProcessRunId = null,
+    bool ForceRefresh = false);
+
 public sealed record ProcessRunObservationQuery(
     Guid RunId,
     Guid? ProjectId = null,
@@ -159,6 +171,134 @@ public sealed record ProcessDashboardObservationSnapshot(
             staleness);
     }
 }
+
+public sealed record ProcessLiveObservationSnapshot(
+    Guid? ProjectId,
+    ProcessLiveHistoryWindow HistoryWindow,
+    Guid? ProcessRunId,
+    IReadOnlyList<ProcessLiveProcessOption> ProcessOptions,
+    IReadOnlyList<ProcessLiveRunCard> Runs,
+    IReadOnlyList<ProcessLiveAgentCard> ActiveAgents,
+    ProcessLiveStats Stats,
+    IReadOnlyList<ProcessLiveMetricPoint> MetricPoints,
+    IReadOnlyList<ProcessLiveToolUsage> ToolUsage,
+    ProcessObservationSnapshotRevision Revision,
+    ProcessObservationStaleness Staleness)
+{
+    public static ProcessLiveObservationSnapshot Empty(
+        Guid? projectId,
+        ProcessLiveHistoryWindow historyWindow,
+        Guid? processRunId,
+        ProcessObservationSnapshotRevision revision,
+        ProcessObservationStaleness staleness)
+    {
+        return new ProcessLiveObservationSnapshot(
+            projectId,
+            historyWindow,
+            processRunId,
+            [],
+            [],
+            [],
+            ProcessLiveStats.Empty,
+            [],
+            [],
+            revision,
+            staleness);
+    }
+}
+
+public sealed record ProcessLiveProcessOption(
+    Guid RunId,
+    string RunName,
+    string DefinitionName,
+    ProcessRunStatus Status,
+    DateTimeOffset UpdatedAtUtc);
+
+public sealed record ProcessLiveRunCard(
+    Guid RunId,
+    Guid DefinitionId,
+    string DefinitionName,
+    string RunName,
+    ProcessRunStatus Status,
+    DateTimeOffset UpdatedAtUtc,
+    int CompletedStepCount,
+    int TotalStepCount,
+    int BlockedStepCount,
+    int CapabilityGapCount,
+    decimal EstimatedCost,
+    decimal ActualCost,
+    int ActiveExecutionCount,
+    int PendingApprovalCount,
+    int PendingOutboxCount,
+    int DeadLetteredOutboxCount,
+    int BlockedOrFailedStepCount,
+    string HealthSummary);
+
+public sealed record ProcessLiveAgentCard(
+    Guid RunId,
+    string RunName,
+    Guid ExecutionRunId,
+    Guid AgentId,
+    string AgentName,
+    string AgentRoleTitle,
+    string StepTitle,
+    ExecutionState State,
+    RunOutcome? Outcome,
+    DateTimeOffset? StartedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    string StatusBadgeText,
+    string StatusTone);
+
+public sealed record ProcessLiveStats(
+    int ObservedRunCount,
+    int RunningRunCount,
+    int BlockedRunCount,
+    int FailedRunCount,
+    int ActiveAgentCount,
+    int PendingApprovalCount,
+    int PendingOutboxCount,
+    int DeadLetteredOutboxCount,
+    long DurationMs,
+    int InputTokens,
+    int OutputTokens,
+    int ToolCalls,
+    decimal EstimatedCost,
+    decimal ActualCost)
+{
+    public static ProcessLiveStats Empty { get; } = new(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0m,
+        0m);
+
+    public int TotalTokens => InputTokens + OutputTokens;
+}
+
+public sealed record ProcessLiveMetricPoint(
+    DateTimeOffset TimestampUtc,
+    int InputTokens,
+    int OutputTokens,
+    long DurationMs,
+    int ToolCalls)
+{
+    public int TotalTokens => InputTokens + OutputTokens;
+}
+
+public sealed record ProcessLiveToolUsage(
+    string ToolName,
+    string ToolFamily,
+    int CallCount,
+    DateTimeOffset LastUsedAtUtc);
 
 public sealed record ProcessRunObservationSnapshot(
     Guid RunId,
@@ -234,6 +374,14 @@ public enum ProcessObservationFocusKind
     AgentExecution,
     Escalation,
     Outbox
+}
+
+public enum ProcessLiveHistoryWindow
+{
+    LiveHour,
+    OneDay,
+    SevenDays,
+    ThirtyDays
 }
 
 public enum ProcessObservationFreshness
