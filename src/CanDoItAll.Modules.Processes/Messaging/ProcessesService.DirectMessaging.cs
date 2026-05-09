@@ -108,6 +108,7 @@ public sealed partial class ProcessesService
             run.UpdatedAtUtc = now;
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
             return Result<Guid>.Failure(Error.Validation(authorization.UserMessage, authorization.ErrorCode));
         }
 
@@ -146,6 +147,7 @@ public sealed partial class ProcessesService
         run.UpdatedAtUtc = now;
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
         return Result<Guid>.Success(threadId);
     }
 

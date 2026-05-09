@@ -46,7 +46,7 @@ public partial class ProcessWorkspace
         }
 
         selectedProcessId = result.Value;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId);
         await LoadWorkspaceAsync();
         SetMessage("Process definition saved.");
     }
@@ -91,7 +91,7 @@ public partial class ProcessWorkspace
         selectedCanvasNodeId = null;
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState();
         await LoadWorkspaceAsync();
         SetMessage("Process definition deleted.");
     }
@@ -111,7 +111,7 @@ public partial class ProcessWorkspace
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
         detailTab = DetailTabRuns;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId);
         await LoadWorkspaceAsync();
         SetMessage("Development seed baseline prepared.");
     }

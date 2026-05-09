@@ -34,7 +34,7 @@ public partial class ProcessWorkspace
         return launchPlans.FirstOrDefault()?.Id;
     }
 
-    private async Task LoadLaunchPlanDetailsAsync()
+    private async Task LoadLaunchPlanDetailsAsync(CancellationToken cancellationToken = default)
     {
         if (!selectedLaunchPlanId.HasValue)
         {
@@ -42,7 +42,7 @@ public partial class ProcessWorkspace
             return;
         }
 
-        selectedLaunchPlan = await ProcessesService.GetLaunchPlanAsync(selectedLaunchPlanId.Value);
+        selectedLaunchPlan = await ProcessesService.GetLaunchPlanAsync(selectedLaunchPlanId.Value, cancellationToken);
     }
 
     private async Task SelectLaunchPlanAsync(Guid launchPlanId)
@@ -201,7 +201,7 @@ public partial class ProcessWorkspace
         selectedCanvasNodeId = null;
         ResetRuntimeCanvasState();
         detailTab = DetailTabRuns;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId);
         await LoadWorkspaceAsync();
         SetMessage("Launch plan executed into a process run.");
     }

@@ -254,6 +254,7 @@ public sealed partial class ProcessesService
         }
 
         await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+        NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
 
         return Result<Guid>.Success(run.Id);
     }

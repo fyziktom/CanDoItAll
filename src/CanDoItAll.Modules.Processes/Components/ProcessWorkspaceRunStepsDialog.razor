@@ -86,7 +86,8 @@
                 {
                     var selectedBranchOutcomeId = Presenter.ResolveSelectedBranchOutcomeId(stepRun.Id);
 
-                    <SurfaceCard data-testid="processes-step-run-card">
+                    <SurfaceCard @key="stepRun.Id"
+                                 data-testid="processes-step-run-card">
                         <Split Gap="LayoutGap.Medium">
                             <Stack GapScale="LayoutGap.Tiny"
                                    Class="min-w-0">

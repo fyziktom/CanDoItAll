@@ -20,11 +20,25 @@
 }
 
 .processes-workspace-root ::deep .processes-workspace-identity {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 0.75rem 1rem;
 }
 
+.processes-workspace-root ::deep .processes-workspace-identity > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
 .processes-workspace-root ::deep .processes-workspace-identity__copy {
-    flex: 1 1 26rem;
+    flex: 1 1 min(26rem, 100%);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .processes-workspace-root ::deep .processes-workspace-identity__copy .cda-eyebrow {
@@ -32,7 +46,9 @@
 }
 
 .processes-workspace-root ::deep .processes-workspace-identity__title {
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     color: rgb(15 23 42);
     font-size: 1rem;
@@ -42,9 +58,35 @@
     white-space: nowrap;
 }
 
-.processes-workspace-root ::deep .processes-workspace-identity__badges {
+.processes-workspace-root ::deep .processes-workspace-identity__copy .pf-help-popover {
     flex: 0 0 auto;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity__badges {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
     justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+    .processes-workspace-root ::deep .processes-workspace-identity__copy {
+        flex-basis: 100%;
+    }
+
+    .processes-workspace-root ::deep .processes-workspace-identity__title {
+        display: -webkit-box;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .processes-workspace-root ::deep .processes-workspace-identity__badges {
+        width: 100%;
+        flex: 1 1 100%;
+        justify-content: flex-start;
+    }
 }
 
 .processes-workspace-root ::deep .process-canvas-toolbar-actions {

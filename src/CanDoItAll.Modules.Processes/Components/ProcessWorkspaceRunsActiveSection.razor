@@ -28,7 +28,8 @@
         <Stack GapScale="LayoutGap.Medium">
             @foreach (var summary in Presenter.ActiveRunSummaries)
             {
-                <SurfaceCard Soft="true">
+                <SurfaceCard @key="summary.RunId"
+                             Soft="true">
                     <Split Gap="LayoutGap.Medium">
                         <div>
                             <p class="cda-eyebrow">Process run</p>
@@ -75,7 +76,8 @@
                                Class="mt-4">
                             @foreach (var agent in summary.Agents)
                             {
-                                <SurfaceCard Soft="true">
+                                <SurfaceCard @key="agent.ExecutionRunId"
+                                             Soft="true">
                                     <Split Gap="LayoutGap.Small">
                                         <div>
                                             <p class="text-sm font-semibold text-slate-950">@agent.AgentName</p>
