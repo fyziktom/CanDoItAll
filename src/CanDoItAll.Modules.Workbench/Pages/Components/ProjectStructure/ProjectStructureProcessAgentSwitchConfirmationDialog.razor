@@ -1,0 +1,111 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@inject DialogService DialogService
+
+<div class="project-structure-agent-switch-confirmation"
+     data-testid="project-structure-process-assignment-agent-switch-confirmation-content">
+    <div class="project-structure-agent-switch-confirmation__role">
+        <span>Process role</span>
+        <strong>@Role.DisplayName</strong>
+    </div>
+
+    <div class="project-structure-agent-switch-confirmation__flow">
+        <section class="project-structure-agent-switch-confirmation__agent is-current">
+            <Avatar Alt="@CurrentCandidate.DisplayName"
+                    ImageUrl="@ResolveCandidateImageUrl(CurrentCandidate)"
+                    FallbackText="@BuildInitials(CurrentCandidate.DisplayName)"
+                    DefaultImageSeed="@CurrentCandidate.DisplayName"
+                    Size="AvatarSize.Large"
+                    Shape="AvatarShape.Rounded" />
+            <span>Current</span>
+            <strong>@CurrentCandidate.DisplayName</strong>
+            <small>@CurrentCandidate.ScoreLabel</small>
+        </section>
+
+        <div class="project-structure-agent-switch-confirmation__arrow"
+             aria-hidden="true">
+            <Icon Name="arrow_forward" />
+        </div>
+
+        <section class="project-structure-agent-switch-confirmation__agent is-next">
+            <Avatar Alt="@NextCandidate.DisplayName"
+                    ImageUrl="@ResolveCandidateImageUrl(NextCandidate)"
+                    FallbackText="@BuildInitials(NextCandidate.DisplayName)"
+                    DefaultImageSeed="@NextCandidate.DisplayName"
+                    Size="AvatarSize.Large"
+                    Shape="AvatarShape.Rounded" />
+            <span>New assignment</span>
+            <strong>@NextCandidate.DisplayName</strong>
+            <small>@NextCandidate.ScoreLabel</small>
+        </section>
+    </div>
+
+    <div class="project-structure-agent-switch-confirmation__summary">
+        <Icon Name="auto_awesome" />
+        <span>@ResolveSwitchSummary()</span>
+    </div>
+
+    <div class="project-structure-agent-switch-confirmation__actions">
+        <Button Text="Keep current"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                Click="CancelAsync"
+                data-testid="project-structure-process-assignment-agent-switch-cancel" />
+        <Button Text="Switch agent"
+                ButtonStyle="ButtonStyle.Success"
+                Click="ConfirmAsync"
+                data-testid="project-structure-process-assignment-agent-switch-confirm" />
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartRoleState Role { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartCandidateState CurrentCandidate { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartCandidateState NextCandidate { get; set; } = default!;
+
+    private Task ConfirmAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync(true)
+            : DialogReference.CloseAsync(true);
+
+    private Task CancelAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync(false)
+            : DialogReference.CloseAsync(false);
+
+    private string ResolveSwitchSummary()
+    {
+        if (!string.IsNullOrWhiteSpace(NextCandidate.RecommendationSummary))
+        {
+            return NextCandidate.RecommendationSummary;
+        }
+
+        return $"{NextCandidate.DisplayName} will replace {CurrentCandidate.DisplayName} for this role.";
+    }
+
+    private static string? ResolveCandidateImageUrl(ProjectStructureProcessStartCandidateState candidate)
+        => string.IsNullOrWhiteSpace(candidate.AgentAvatarImageUrl)
+            ? null
+            : candidate.AgentAvatarImageUrl;
+
+    private static string BuildInitials(string value)
+    {
+        var segments = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToList();
+
+        return segments.Count == 0
+            ? "AI"
+            : string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
+    }
+}

@@ -1,0 +1,47 @@
+{
+  "capturedAt": "2026-05-09T05:56:02.772Z",
+  "route": "http://localhost:5532/projects/4a6f0d32-68ad-42c0-b729-1ebc6be7d94d/structure",
+  "viewport": {
+    "width": 1920,
+    "height": 900
+  },
+  "screenshots": [
+    "browser-tune-01-summary-compact.png",
+    "browser-tune-02-role-compact.png",
+    "browser-tune-03-switch-confirmation.png"
+  ],
+  "summary": {
+    "feedbackCount": 0,
+    "toolbarCount": 0,
+    "viewTextPresent": false,
+    "cardCount": 12,
+    "gridTop": 211.875,
+    "firstCardTop": 211.875,
+    "workspaceHeight": 660.734375,
+    "modalWidth": 1894.40625,
+    "bodyOverflowX": false
+  },
+  "role": {
+    "feedbackCount": 0,
+    "toolbarCount": 0,
+    "removedTextPresent": false,
+    "candidateCount": 22,
+    "firstCandidate": "Main candidateauto_awesome Recommended Blazor Application Developer 196.0 score Builds Blazor Web App and component-driven ASP.NET Core UI deliverables with Bas",
+    "secondCandidateTestId": "project-structure-process-assignment-candidate-ae9c6aff-e847-48d1-b973-9392283d66ea-0b1e0759-01c7-4033-be25-4095e3d7e55b-card",
+    "panelTop": 211.875,
+    "firstCardTop": 330.3125,
+    "bodyOverflowX": false
+  },
+  "confirmation": {
+    "wrapperPresent": true,
+    "contentPresent": true,
+    "text": "Process role Feature implementation manager Current Blazor Application Developer 196.0 score arrow_forward New assignment Programming Workspace Analyst 186.0 score auto_awesome Projected from AgentFramework organization catalog. Keep current Switch agent",
+    "avatarCount": 4,
+    "arrowPresent": true,
+    "cancelPresent": true,
+    "confirmPresent": true,
+    "zIndex": 1900,
+    "width": 1920,
+    "height": 900
+  }
+}
