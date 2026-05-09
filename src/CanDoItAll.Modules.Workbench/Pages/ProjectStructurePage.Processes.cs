@@ -1,3 +1,7 @@
+using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
@@ -14,6 +18,12 @@ public partial class ProjectStructurePage
 
     [Inject]
     private ProcessesService ProcessesService { get; set; } = default!;
+
+    [Inject]
+    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
+    private DialogService DialogService { get; set; } = default!;
 
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
@@ -143,6 +153,22 @@ public partial class ProjectStructurePage
     private void CloseProcessStartDialog()
     {
         processStartDialog = null;
+    }
+
+    private async Task ReviewAndStartProcessAsync()
+    {
+        if (processStartDialog is null)
+        {
+            return;
+        }
+
+        processStartDialog = processStartDialog with
+        {
+            AssignmentsReviewed = true,
+            Error = string.Empty
+        };
+
+        await ExecuteProcessStartAsync();
     }
 
     private async Task ExecuteProcessStartAsync()
@@ -479,6 +505,160 @@ public partial class ProjectStructurePage
         }
     }
 
+    private async Task OpenManualProcessStartAgentPickerAsync(Guid launchPlanRoleId)
+    {
+        if (processStartDialog is null || !processStartDialog.LaunchPlanId.HasValue)
+        {
+            return;
+        }
+
+        var launchPlanId = processStartDialog.LaunchPlanId.Value;
+        var role = processStartDialog.Roles.FirstOrDefault(item => item.LaunchPlanRoleId == launchPlanRoleId);
+        if (role is null)
+        {
+            processStartDialog = processStartDialog with { Error = "The selected launch role was not found. Reload the launch plan and try again." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+            var selectedAgentId = role.Candidates
+                .FirstOrDefault(candidate => candidate.IsSelected && candidate.TechnicalAgentId.HasValue)
+                ?.TechnicalAgentId;
+            var result = await DialogService.OpenAsync<AgentSwitchDialog>(
+                $"Assign {role.DisplayName}",
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentSwitchDialog.Agents)] = agents,
+                    [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId,
+                    [nameof(AgentSwitchDialog.FavoriteToggled)] =
+                        (Func<AgentDefinition, Task<AgentDefinition>>)ToggleProcessStartAgentFavoriteAsync
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Process assignment",
+                    Subtitle = "Choose the technical AI agent for this process role.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    TestId = "project-structure-process-assignment-agent-switch-dialog",
+                    AriaLabel = "Assign process role agent"
+                });
+
+            if (result is not Guid agentId)
+            {
+                return;
+            }
+
+            if (processStartDialog?.LaunchPlanId != launchPlanId)
+            {
+                return;
+            }
+
+            await ApplyManualProcessStartAgentSelectionAsync(launchPlanId, launchPlanRoleId, agentId);
+        }
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "opening the AI agent directory");
+        }
+    }
+
+    private async Task ApplyManualProcessStartAgentSelectionAsync(
+        Guid launchPlanId,
+        Guid launchPlanRoleId,
+        Guid technicalAgentId)
+    {
+        if (processStartDialog is null || processStartDialog.LaunchPlanId != launchPlanId)
+        {
+            return;
+        }
+
+        var role = processStartDialog.Roles.FirstOrDefault(item => item.LaunchPlanRoleId == launchPlanRoleId);
+        if (role is null)
+        {
+            processStartDialog = processStartDialog with { Error = "The selected launch role was not found. Reload the launch plan and try again." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var existingCandidate = role.Candidates.FirstOrDefault(candidate =>
+            candidate.IsResolvable &&
+            candidate.TechnicalAgentId == technicalAgentId);
+        if (existingCandidate is not null)
+        {
+            if (existingCandidate.IsSelected)
+            {
+                return;
+            }
+
+            await SelectProcessStartCandidateAsync(
+                new ProjectStructureProcessStartCandidateSelection(launchPlanRoleId, existingCandidate.CandidateId));
+            return;
+        }
+
+        try
+        {
+            processStartDialog = processStartDialog with
+            {
+                IsBusy = true,
+                Error = string.Empty,
+                ConfirmHrManagerMatch = false
+            };
+            await InvokeAsync(StateHasChanged);
+
+            var result = await ProcessesService.SelectLaunchTechnicalAgentAsync(
+                new ProcessLaunchTechnicalAgentSelectionRequest
+                {
+                    LaunchPlanId = launchPlanId,
+                    LaunchPlanRoleId = launchPlanRoleId,
+                    TechnicalAgentId = technicalAgentId
+                });
+            if (result.IsFailure)
+            {
+                await SetProcessActionErrorAsync(result.Errors);
+                return;
+            }
+
+            await ReloadProcessStartLaunchPlanAsync(
+                launchPlanId,
+                "Role selection updated from the AI agent directory.");
+        }
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "assigning the selected AI agent");
+        }
+    }
+
+    private async Task<AgentDefinition> ToggleProcessStartAgentFavoriteAsync(AgentDefinition agent)
+    {
+        var editor = await AgentWorkspaceService.GetAgentEditorAsync(agent.Id);
+        if (editor.Id is null)
+        {
+            throw new InvalidOperationException("Agent was not found.");
+        }
+
+        if (editor.Tags.Any(AgentSpecialTags.IsFavorite))
+        {
+            editor.Tags = editor.Tags
+                .Where(item => !AgentSpecialTags.IsFavorite(item))
+                .ToList();
+        }
+        else
+        {
+            editor.Tags = editor.Tags
+                .Append(AgentSpecialTags.Favorite)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        await AgentWorkspaceService.SaveAgentAsync(editor);
+        var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+        return agents.FirstOrDefault(item => item.Id == agent.Id)
+            ?? throw new InvalidOperationException("Agent was not found after saving favorite state.");
+    }
+
     private Task HandleProcessStartAssignmentsReviewedChanged(ChangeEventArgs args)
     {
         if (processStartDialog is null)
@@ -783,6 +963,7 @@ public partial class ProjectStructurePage
                     role.Candidates
                         .Select(candidate => new ProjectStructureProcessStartCandidateState(
                             candidate.Id,
+                            candidate.TechnicalAgentId,
                             candidate.DisplayName,
                             candidate.CandidateKind.ToString(),
                             candidate.ExecutorKind,

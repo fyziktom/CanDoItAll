@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -221,5 +222,162 @@ public sealed partial class ProcessesService
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
+    }
+
+    public async Task<Result> SelectLaunchTechnicalAgentAsync(
+        ProcessLaunchTechnicalAgentSelectionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.LaunchPlanId == Guid.Empty ||
+            request.LaunchPlanRoleId == Guid.Empty ||
+            request.TechnicalAgentId == Guid.Empty)
+        {
+            return Result.Failure(Error.Validation(
+                "Launch plan, role, and technical agent are required.",
+                "processes.launch.technical-agent-selection-required"));
+        }
+
+        await SynchronizeAiDirectoryProjectionForProcessAsync("launch-plan manual technical agent selection", cancellationToken);
+        var aiDirectory = await aiAgentService.ListAgentDirectoryAsync(cancellationToken);
+        var aiResource = aiDirectory.FirstOrDefault(item => item.TechnicalAgentId == request.TechnicalAgentId);
+        if (aiResource is null)
+        {
+            return Result.Failure(Error.Validation(
+                "The selected AI agent is not available in the CRM-HR AI directory projection yet. Refresh the agent catalog and try again.",
+                "processes.launch.technical-agent-not-projected"));
+        }
+
+        if (aiResource.BindingStatus != AiResourceBindingStatus.Bound ||
+            !aiResource.TechnicalAgentId.HasValue)
+        {
+            return Result.Failure(Error.Validation(
+                $"The selected AI agent '{aiResource.DisplayName}' is not bound to a runnable technical agent.",
+                "processes.launch.technical-agent-not-bound"));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var plan = await dbContext.Set<ProcessLaunchPlan>()
+            .SingleOrDefaultAsync(item => item.Id == request.LaunchPlanId, cancellationToken);
+        if (plan is null)
+        {
+            return Result.Failure(Error.Validation("Launch plan was not found.", "processes.launch.not-found"));
+        }
+
+        if (plan.Status is not ProcessLaunchPlanStatus.Draft and not ProcessLaunchPlanStatus.ChangesRequested)
+        {
+            return Result.Failure(Error.Validation(
+                "Only draft or changes-requested launch plans can change candidate selection.",
+                "processes.launch.selection-locked"));
+        }
+
+        var role = await dbContext.Set<ProcessLaunchPlanRole>()
+            .SingleOrDefaultAsync(item => item.Id == request.LaunchPlanRoleId && item.LaunchPlanId == request.LaunchPlanId, cancellationToken);
+        if (role is null)
+        {
+            return Result.Failure(Error.Validation("Launch role was not found.", "processes.launch.role-not-found"));
+        }
+
+        var candidate = await dbContext.Set<ProcessLaunchCandidate>()
+            .SingleOrDefaultAsync(
+                item =>
+                    item.LaunchPlanRoleId == request.LaunchPlanRoleId &&
+                    item.TechnicalAgentId == request.TechnicalAgentId,
+                cancellationToken);
+        if (candidate is null)
+        {
+            candidate = BuildManualTechnicalAgentCandidate(role, aiResource);
+            await dbContext.Set<ProcessLaunchCandidate>().AddAsync(candidate, cancellationToken);
+        }
+        else
+        {
+            UpdateManualTechnicalAgentCandidate(candidate, role, aiResource);
+        }
+
+        role.SelectedCandidateId = candidate.Id;
+        role.RequiresProvisioning = candidate.RequiresProvisioning;
+        role.IsResolved = candidate.CandidateKind != ProcessLaunchCandidateKind.Gap;
+        role.SelectionSummary = ResolveLaunchSelectionSummary(candidate);
+        role.ReadinessSummary = ResolveLaunchReadinessSummary(candidate, "Selected");
+        plan.UpdatedAtUtc = clock.GetUtcNow();
+        plan.Status = ProcessLaunchPlanStatus.Draft;
+
+        var staleProvisioning = await dbContext.Set<ProcessLaunchProvisioningRequest>()
+            .Where(item => item.LaunchPlanId == plan.Id && item.LaunchPlanRoleId == role.Id)
+            .ToListAsync(cancellationToken);
+        if (staleProvisioning.Count > 0)
+        {
+            dbContext.RemoveRange(staleProvisioning);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
+    private ProcessLaunchCandidate BuildManualTechnicalAgentCandidate(
+        ProcessLaunchPlanRole role,
+        AiAgentListItemModel aiResource)
+    {
+        var candidate = new ProcessLaunchCandidate
+        {
+            LaunchPlanRoleId = role.Id,
+            CandidateKind = ProcessLaunchCandidateKind.AiResource,
+            CreatedAtUtc = clock.GetUtcNow()
+        };
+
+        UpdateManualTechnicalAgentCandidate(candidate, role, aiResource);
+        return candidate;
+    }
+
+    private static void UpdateManualTechnicalAgentCandidate(
+        ProcessLaunchCandidate candidate,
+        ProcessLaunchPlanRole role,
+        AiAgentListItemModel aiResource)
+    {
+        var requiredSkillIds = DeserializeGuidList(role.RequiredSkillIdsJson);
+        candidate.CandidateKind = ProcessLaunchCandidateKind.AiResource;
+        candidate.PartyId = aiResource.PartyId;
+        candidate.TechnicalAgentId = aiResource.TechnicalAgentId;
+        candidate.DisplayName = aiResource.DisplayName;
+        candidate.ExecutorKind = string.IsNullOrWhiteSpace(aiResource.OwnerName)
+            ? "AI agent"
+            : $"AI agent / {aiResource.OwnerName}";
+        candidate.Score = 520m + Math.Min(aiResource.CapabilityCount, 40);
+        candidate.IsRecommended = false;
+        candidate.AllowsDirectMessaging = true;
+        candidate.RequiresProvisioning = false;
+        candidate.RecommendationSummary = $"Manually selected from the shared AI agent directory for '{role.DisplayName}'.";
+        candidate.AvailabilitySummary = BuildManualTechnicalAgentAvailabilitySummary(aiResource);
+        candidate.SourceRegistryKey = $"agent-framework-directory:{aiResource.PartyId:D}:{aiResource.TechnicalAgentId!.Value:D}";
+        candidate.MetadataJson = BuildLaunchProvisioningMetadata(
+            new ProcessRoleRequirement
+            {
+                Id = role.RoleRequirementId,
+                DisplayName = role.DisplayName,
+                Key = role.RoleKey,
+                PreferredExecutorKind = role.PreferredExecutorKind
+            },
+            requiredSkillIds,
+            aiResource.DisplayName,
+            aiResource.PartyId);
+    }
+
+    private static string BuildManualTechnicalAgentAvailabilitySummary(AiAgentListItemModel aiResource)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(aiResource.ProviderName))
+        {
+            parts.Add(aiResource.ProviderName.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(aiResource.DefaultModel))
+        {
+            parts.Add(aiResource.DefaultModel.Trim());
+        }
+
+        parts.Add(aiResource.CapabilityCount == 1
+            ? "1 capability"
+            : $"{aiResource.CapabilityCount} capabilities");
+
+        return string.Join(" / ", parts);
     }
 }

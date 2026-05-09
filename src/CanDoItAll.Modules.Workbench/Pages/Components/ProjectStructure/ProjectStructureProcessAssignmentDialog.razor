@@ -1,0 +1,574 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+<ProjectStructureOverlayDialog AriaLabel="@Dialog.Title"
+                               Kicker="Process assignment"
+                               Title="Assign AI agents to process roles"
+                               Summary="Each role in this process requires an AI agent. You can use recommended agents or search the directory to find the best match."
+                               FullScreen="true"
+                               DialogClass="project-structure-assignment-modal"
+                               BodyClass="project-structure-assignment-modal__body"
+                               DataTestId="project-structure-process-assignment-dialog"
+                               Close="Close">
+    <Actions>
+        @if (Dialog.ConfirmHrManagerMatch)
+        {
+            <Button Text="Keep manual matching"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Disabled="@Dialog.IsBusy"
+                    data-testid="project-structure-process-assignment-cancel-hr"
+                    Click="CancelHrManagerMatch" />
+            <Button Text="Confirm HR match"
+                    ButtonStyle="ButtonStyle.Info"
+                    IsBusy="@Dialog.IsBusy"
+                    data-testid="project-structure-process-assignment-confirm-hr"
+                    Click="ExecuteHrManagerMatch" />
+        }
+        else
+        {
+            <div class="project-structure-assignment-progress"
+                 data-testid="project-structure-process-assignment-progress">
+                <strong>@($"{Dialog.ResolvedRoleCount} of {Dialog.Roles.Count} roles assigned")</strong>
+                <span>
+                    <i style="@ResolveProgressStyle()"></i>
+                </span>
+            </div>
+            <Button Text="Cancel"
+                    Variant="Variant.Outlined"
+                    ButtonStyle="ButtonStyle.Base"
+                    Disabled="@Dialog.IsBusy"
+                    Click="Close" />
+            <Button Text="Save and close"
+                    Variant="Variant.Outlined"
+                    ButtonStyle="ButtonStyle.Info"
+                    Disabled="@Dialog.IsBusy"
+                    data-testid="project-structure-process-assignment-save-close"
+                    Click="Close" />
+            <Button Text="Review and start"
+                    ButtonStyle="ButtonStyle.Info"
+                    Disabled="@(Dialog.RequiredGapCount > 0 || Dialog.IsBusy)"
+                    IsBusy="@Dialog.IsBusy"
+                    data-testid="project-structure-process-assignment-review-start"
+                    Click="ReviewAndStartProcess" />
+        }
+    </Actions>
+    <Body>
+        <div class="project-structure-assignment-shell">
+            <aside class="project-structure-assignment-rail"
+                   aria-label="Process roles">
+                <div class="project-structure-assignment-search">
+                    <Icon Name="search" />
+                    <input type="search"
+                           value="@roleSearchText"
+                           placeholder="Search roles..."
+                           aria-label="Search roles"
+                           data-testid="project-structure-process-assignment-role-search"
+                           @oninput="HandleRoleSearchChanged" />
+                    <button type="button"
+                            aria-label="Filter roles"
+                            title="Filter roles"
+                            class="project-structure-assignment-icon-button"
+                            data-testid="project-structure-process-assignment-filter">
+                        <Icon Name="filter_list" />
+                    </button>
+                </div>
+
+                <div class="project-structure-assignment-rail__heading">
+                    <span>Process roles (@Dialog.Roles.Count)</span>
+                </div>
+
+                <div class="project-structure-assignment-role-list"
+                     data-testid="project-structure-process-assignment-role-list">
+                    @foreach (var role in FilteredRoles)
+                    {
+                        var candidate = ResolveSelectedCandidate(role);
+                        <button type="button"
+                                class="@ResolveRoleRailItemClass(role)"
+                                data-testid="@($"project-structure-process-assignment-role-row-{role.LaunchPlanRoleId:D}")"
+                                @onclick="@(() => SelectRole(role.LaunchPlanRoleId))">
+                            <span class="project-structure-assignment-role-list__icon">
+                                <Icon Name="@ResolveRoleIcon(role)" />
+                            </span>
+                            <span class="project-structure-assignment-role-list__copy">
+                                <strong>@role.DisplayName</strong>
+                                <small>@(role.IsRequired ? "Required" : "Optional")</small>
+                                @if (candidate?.IsRecommended == true)
+                                {
+                                    <em><Icon Name="auto_awesome" /> Recommended</em>
+                                }
+                            </span>
+                            @if (role.IsResolved)
+                            {
+                                <span class="project-structure-assignment-role-list__status project-structure-assignment-role-list__status--ok">
+                                    <Icon Name="check" />
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="project-structure-assignment-role-list__assign">Assign</span>
+                            }
+                        </button>
+                    }
+                </div>
+
+                <div class="project-structure-assignment-help"
+                     data-testid="project-structure-process-assignment-hr-help">
+                    <span aria-hidden="true"><Icon Name="support_agent" /></span>
+                    <div>
+                        <strong>Need help with assignments?</strong>
+                        <small>Ask the HR AI agent for suggestions</small>
+                    </div>
+                    <button type="button"
+                            disabled="@Dialog.IsBusy"
+                            @onclick="RequestHrManagerMatch"
+                            data-testid="project-structure-process-assignment-ask-hr">
+                        <Icon Name="auto_awesome" />
+                        Ask HR AI
+                    </button>
+                </div>
+            </aside>
+
+            <main class="project-structure-assignment-workspace">
+                @if (Dialog.ConfirmHrManagerMatch)
+                {
+                    <div class="project-structure-assignment-hr-confirmation"
+                         data-testid="project-structure-process-assignment-hr-confirmation">
+                        <strong>@($"Let {Dialog.HrManagerName} pair the roles?")</strong>
+                        <span>The suggestions will stay visible here so you can review them before the process starts.</span>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Dialog.StatusMessage) || !string.IsNullOrWhiteSpace(Dialog.Error))
+                {
+                    <div class="@ResolveFeedbackClass()"
+                         data-testid="project-structure-process-assignment-feedback">
+                        @(string.IsNullOrWhiteSpace(Dialog.Error) ? Dialog.StatusMessage : Dialog.Error)
+                    </div>
+                }
+
+                <div class="project-structure-assignment-toolbar">
+                    <div></div>
+                    <div class="project-structure-assignment-toolbar__controls">
+                        <span>View</span>
+                        <div class="project-structure-assignment-segmented" aria-label="View mode">
+                            <button type="button" aria-label="Grid view" class="is-active"><Icon Name="grid_view" /></button>
+                            <button type="button" aria-label="List view"><Icon Name="format_list_bulleted" /></button>
+                        </div>
+                        <button type="button"
+                                class="project-structure-assignment-sort"
+                                aria-label="Sort roles by role order">
+                            Sort by: Role order
+                            <Icon Name="expand_more" />
+                        </button>
+                    </div>
+                </div>
+
+                <div class="project-structure-assignment-card-grid"
+                     data-testid="project-structure-process-assignment-role-cards">
+                    @foreach (var role in Dialog.Roles)
+                    {
+                        var selectedCandidate = ResolveSelectedCandidate(role);
+                        var suggestedCandidate = ResolveSuggestedCandidate(role);
+                        var displayCandidate = selectedCandidate ?? suggestedCandidate;
+
+                        <article class="@ResolveRoleCardClass(role)"
+                                 data-testid="@($"project-structure-process-assignment-role-card-{role.LaunchPlanRoleId:D}")">
+                            <button type="button"
+                                    class="project-structure-assignment-card__header"
+                                    @onclick="@(() => SelectRole(role.LaunchPlanRoleId))">
+                                <span>@ResolveRoleNumber(role)</span>
+                                <span>
+                                    <strong>@role.DisplayName</strong>
+                                    <small>@(role.IsRequired ? "Required" : "Optional")</small>
+                                </span>
+                                @if (role.IsResolved)
+                                {
+                                    <i><Icon Name="check" /></i>
+                                }
+                            </button>
+
+                            @if (displayCandidate is not null)
+                            {
+                                var selected = selectedCandidate is not null;
+                                <div class="project-structure-assignment-recommendation">
+                                    <Icon Name="auto_awesome" />
+                                    <span>@(displayCandidate.IsRecommended ? "HR AI recommended" : "Available match")</span>
+                                </div>
+                                <div class="@ResolveCandidatePanelClass(selected)">
+                                    <Avatar Alt="@displayCandidate.DisplayName"
+                                            FallbackText="@BuildInitials(displayCandidate.DisplayName)"
+                                            DefaultImageSeed="@displayCandidate.DisplayName"
+                                            Size="AvatarSize.Large"
+                                            Shape="AvatarShape.Rounded" />
+                                    <div>
+                                        <strong>@displayCandidate.DisplayName</strong>
+                                        <small>@displayCandidate.ScoreLabel</small>
+                                    </div>
+                                    @if (selected)
+                                    {
+                                        <span class="project-structure-assignment-selected-pill">Selected <Icon Name="check" /></span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button"
+                                                class="project-structure-assignment-inline-action"
+                                                disabled="@(!displayCandidate.IsResolvable || Dialog.IsBusy)"
+                                                @onclick="@(() => SelectCandidateAsync(role, displayCandidate))"
+                                                data-testid="@($"project-structure-process-assignment-use-recommendation-{role.LaunchPlanRoleId:D}")">
+                                            Use recommendation
+                                        </button>
+                                    }
+                                </div>
+                                <button type="button"
+                                        class="project-structure-assignment-card__change"
+                                        disabled="@Dialog.IsBusy"
+                                        @onclick="@(() => AssignAgentAsync(role.LaunchPlanRoleId))"
+                                        data-testid="@($"project-structure-process-assignment-change-agent-{role.LaunchPlanRoleId:D}")">
+                                    @(selected ? "Change agent" : "Assign another agent")
+                                    <Icon Name="edit" />
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="project-structure-assignment-empty">
+                                    <span><Icon Name="hub" /></span>
+                                    <strong>No agent assigned</strong>
+                                    <small>Select an agent from directory or use AI recommendation</small>
+                                    <button type="button"
+                                            disabled="@Dialog.IsBusy"
+                                            @onclick="@(() => AssignAgentAsync(role.LaunchPlanRoleId))"
+                                            data-testid="@($"project-structure-process-assignment-assign-agent-{role.LaunchPlanRoleId:D}")">
+                                        Assign agent
+                                    </button>
+                                </div>
+                            }
+                        </article>
+                    }
+                </div>
+
+                @if (SelectedDetail is { } detail)
+                {
+                    <section class="project-structure-assignment-detail"
+                             data-testid="project-structure-process-assignment-selected-detail">
+                        <div class="project-structure-assignment-detail__identity">
+                            <Avatar Alt="@detail.Candidate.DisplayName"
+                                    FallbackText="@BuildInitials(detail.Candidate.DisplayName)"
+                                    DefaultImageSeed="@detail.Candidate.DisplayName"
+                                    Size="AvatarSize.Large"
+                                    Shape="AvatarShape.Rounded" />
+                            <div>
+                                <div class="project-structure-assignment-detail__title">
+                                    <strong>@detail.Candidate.DisplayName</strong>
+                                    <span>Selected</span>
+                                </div>
+                                <p>@ResolveDetailSummary(detail)</p>
+                                <div class="project-structure-assignment-detail__meta">
+                                    <span>@detail.Candidate.ScoreLabel</span>
+                                    <span>@detail.Candidate.CandidateKindLabel</span>
+                                    <span>@detail.Candidate.ExecutorKind</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="project-structure-assignment-profile-button">View profile</button>
+                        <div class="project-structure-assignment-detail__reasons">
+                            <strong>Why recommended?</strong>
+                            @foreach (var reason in BuildReasons(detail))
+                            {
+                                <span><Icon Name="check_circle" /> @reason</span>
+                            }
+                        </div>
+                        <button type="button"
+                                class="project-structure-assignment-detail__close"
+                                aria-label="Close selected agent detail"
+                                @onclick="ClearSelectedDetail">
+                            <Icon Name="close" />
+                        </button>
+                    </section>
+                }
+            </main>
+        </div>
+    </Body>
+</ProjectStructureOverlayDialog>
+
+@code {
+    private string roleSearchText = string.Empty;
+    private Guid? selectedRoleId;
+    private bool detailDismissed;
+
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartDialogState Dialog { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback ReviewAndStartProcess { get; set; }
+
+    [Parameter]
+    public EventCallback RequestHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback CancelHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureProcessStartCandidateSelection> SelectProcessStartCandidate { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> AssignProcessStartAgent { get; set; }
+
+    private IReadOnlyList<ProjectStructureProcessStartRoleState> FilteredRoles
+        => Dialog.Roles
+            .Where(MatchesRoleSearch)
+            .ToList();
+
+    private SelectedAgentDetail? SelectedDetail
+    {
+        get
+        {
+            if (detailDismissed)
+            {
+                return null;
+            }
+
+            var selectedRole = ResolveSelectedRole();
+            var selectedCandidate = selectedRole is null ? null : ResolveSelectedCandidate(selectedRole);
+            if (selectedRole is not null && selectedCandidate is not null)
+            {
+                return new SelectedAgentDetail(selectedRole, selectedCandidate);
+            }
+
+            var fallbackRole = Dialog.Roles.FirstOrDefault(role => ResolveSelectedCandidate(role) is not null);
+            if (fallbackRole is null)
+            {
+                return null;
+            }
+
+            var fallbackCandidate = ResolveSelectedCandidate(fallbackRole);
+            return fallbackCandidate is null ? null : new SelectedAgentDetail(fallbackRole, fallbackCandidate);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Dialog.Roles.Count == 0)
+        {
+            selectedRoleId = null;
+            detailDismissed = false;
+            return;
+        }
+
+        if (!selectedRoleId.HasValue || Dialog.Roles.All(role => role.LaunchPlanRoleId != selectedRoleId.Value))
+        {
+            selectedRoleId = Dialog.Roles.FirstOrDefault(role => !role.IsResolved)?.LaunchPlanRoleId
+                ?? Dialog.Roles[0].LaunchPlanRoleId;
+            detailDismissed = false;
+        }
+    }
+
+    private void HandleRoleSearchChanged(ChangeEventArgs args)
+    {
+        roleSearchText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private bool MatchesRoleSearch(ProjectStructureProcessStartRoleState role)
+    {
+        if (string.IsNullOrWhiteSpace(roleSearchText))
+        {
+            return true;
+        }
+
+        var query = roleSearchText.Trim();
+        return role.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               role.PreferredExecutorKind.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               role.SelectionSummary.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SelectRole(Guid launchPlanRoleId)
+    {
+        selectedRoleId = launchPlanRoleId;
+        detailDismissed = false;
+    }
+
+    private Task AssignAgentAsync(Guid launchPlanRoleId)
+    {
+        SelectRole(launchPlanRoleId);
+        return AssignProcessStartAgent.InvokeAsync(launchPlanRoleId);
+    }
+
+    private Task SelectCandidateAsync(
+        ProjectStructureProcessStartRoleState role,
+        ProjectStructureProcessStartCandidateState candidate)
+    {
+        SelectRole(role.LaunchPlanRoleId);
+        return SelectProcessStartCandidate.InvokeAsync(
+            new ProjectStructureProcessStartCandidateSelection(role.LaunchPlanRoleId, candidate.CandidateId));
+    }
+
+    private void ClearSelectedDetail()
+    {
+        detailDismissed = true;
+    }
+
+    private ProjectStructureProcessStartRoleState? ResolveSelectedRole()
+    {
+        if (selectedRoleId.HasValue)
+        {
+            var selected = Dialog.Roles.FirstOrDefault(role => role.LaunchPlanRoleId == selectedRoleId.Value);
+            if (selected is not null)
+            {
+                return selected;
+            }
+        }
+
+        return Dialog.Roles.FirstOrDefault(role => ResolveSelectedCandidate(role) is not null);
+    }
+
+    private ProjectStructureProcessStartCandidateState? ResolveSelectedCandidate(ProjectStructureProcessStartRoleState role)
+        => role.Candidates.FirstOrDefault(candidate => candidate.IsSelected);
+
+    private ProjectStructureProcessStartCandidateState? ResolveSuggestedCandidate(ProjectStructureProcessStartRoleState role)
+        => role.Candidates
+            .Where(candidate => !candidate.IsSelected && candidate.IsResolvable)
+            .OrderByDescending(candidate => candidate.IsRecommended)
+            .ThenByDescending(candidate => ResolveScore(candidate))
+            .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    private string ResolveProgressStyle()
+    {
+        var percent = Dialog.Roles.Count == 0
+            ? 0
+            : Math.Clamp(Dialog.ResolvedRoleCount * 100m / Dialog.Roles.Count, 0, 100);
+        return $"width:{percent:0.##}%;";
+    }
+
+    private string ResolveRoleRailItemClass(ProjectStructureProcessStartRoleState role)
+        => CssClassBuilder.Join(
+            "project-structure-assignment-role-list__item",
+            selectedRoleId == role.LaunchPlanRoleId ? "is-active" : null,
+            role.IsResolved ? "is-resolved" : "needs-agent");
+
+    private string ResolveRoleCardClass(ProjectStructureProcessStartRoleState role)
+        => CssClassBuilder.Join(
+            "project-structure-assignment-card",
+            selectedRoleId == role.LaunchPlanRoleId ? "is-active" : null,
+            role.IsResolved ? "is-resolved" : "needs-agent");
+
+    private string ResolveCandidatePanelClass(bool selected)
+        => CssClassBuilder.Join(
+            "project-structure-assignment-candidate",
+            selected ? "is-selected" : null);
+
+    private string ResolveFeedbackClass()
+        => CssClassBuilder.Join(
+            "project-structure-assignment-feedback",
+            string.IsNullOrWhiteSpace(Dialog.Error) ? null : "project-structure-assignment-feedback--error");
+
+    private int ResolveRoleNumber(ProjectStructureProcessStartRoleState role)
+    {
+        var index = -1;
+        for (var roleIndex = 0; roleIndex < Dialog.Roles.Count; roleIndex++)
+        {
+            if (Dialog.Roles[roleIndex].LaunchPlanRoleId == role.LaunchPlanRoleId)
+            {
+                index = roleIndex;
+                break;
+            }
+        }
+
+        return index < 0 ? 0 : index + 1;
+    }
+
+    private static decimal ResolveScore(ProjectStructureProcessStartCandidateState candidate)
+    {
+        var token = candidate.ScoreLabel.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return decimal.TryParse(
+            token,
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var score)
+            ? score
+            : 0m;
+    }
+
+    private static string ResolveRoleIcon(ProjectStructureProcessStartRoleState role)
+    {
+        if (role.DisplayName.Contains("architect", StringComparison.OrdinalIgnoreCase))
+        {
+            return "design_services";
+        }
+
+        if (role.DisplayName.Contains("review", StringComparison.OrdinalIgnoreCase) ||
+            role.DisplayName.Contains("qa", StringComparison.OrdinalIgnoreCase))
+        {
+            return "fact_check";
+        }
+
+        if (role.DisplayName.Contains("strateg", StringComparison.OrdinalIgnoreCase))
+        {
+            return "campaign";
+        }
+
+        return "smart_toy";
+    }
+
+    private static string ResolveDetailSummary(SelectedAgentDetail detail)
+    {
+        if (!string.IsNullOrWhiteSpace(detail.Candidate.RecommendationSummary))
+        {
+            return detail.Candidate.RecommendationSummary;
+        }
+
+        return $"AI agent assigned to {detail.Role.DisplayName}.";
+    }
+
+    private static IReadOnlyList<string> BuildReasons(SelectedAgentDetail detail)
+    {
+        var reasons = new List<string>();
+        if (!string.IsNullOrWhiteSpace(detail.Candidate.RecommendationSummary))
+        {
+            reasons.Add(TrimReason(detail.Candidate.RecommendationSummary));
+        }
+
+        if (!string.IsNullOrWhiteSpace(detail.Candidate.AvailabilitySummary))
+        {
+            reasons.Add(TrimReason(detail.Candidate.AvailabilitySummary));
+        }
+
+        if (!string.IsNullOrWhiteSpace(detail.Role.ReadinessSummary))
+        {
+            reasons.Add(TrimReason(detail.Role.ReadinessSummary));
+        }
+
+        return reasons.Count == 0
+            ? ["Good fit for this process role"]
+            : reasons.Take(3).ToList();
+    }
+
+    private static string TrimReason(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length <= 96 ? trimmed : trimmed[..93] + "...";
+    }
+
+    private static string BuildInitials(string value)
+    {
+        var segments = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToList();
+
+        return segments.Count == 0
+            ? "AI"
+            : string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
+    }
+
+    private sealed record SelectedAgentDetail(
+        ProjectStructureProcessStartRoleState Role,
+        ProjectStructureProcessStartCandidateState Candidate);
+}

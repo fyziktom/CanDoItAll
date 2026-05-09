@@ -130,6 +130,7 @@ public sealed record ProjectStructureProcessStartCandidateSelection(
 
 public sealed record ProjectStructureProcessStartCandidateState(
     Guid CandidateId,
+    Guid? TechnicalAgentId,
     string DisplayName,
     string CandidateKindLabel,
     string ExecutorKind,

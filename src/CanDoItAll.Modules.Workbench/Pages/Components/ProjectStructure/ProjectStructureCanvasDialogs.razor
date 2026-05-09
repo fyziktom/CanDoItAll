@@ -320,6 +320,19 @@
     const string processStartRequestHrKey = "project-structure-process-start-request-hr";
     const string processStartContinueKey = "project-structure-process-start-continue";
 
+    @if (isStaffingStage)
+    {
+        <ProjectStructureProcessAssignmentDialog Dialog="@startDialog"
+                                                 Close="CloseProcessStart"
+                                                 ReviewAndStartProcess="ReviewAndStartProcess"
+                                                 RequestHrManagerMatch="RequestHrManagerMatch"
+                                                 CancelHrManagerMatch="CancelHrManagerMatch"
+                                                 ExecuteHrManagerMatch="ExecuteHrManagerMatch"
+                                                 SelectProcessStartCandidate="SelectProcessStartCandidate"
+                                                 AssignProcessStartAgent="AssignProcessStartAgent" />
+    }
+    else
+    {
     <ProjectStructureOverlayDialog AriaLabel="@startDialog.Title"
                                    Kicker="Process start"
                                    Title="@startDialog.Title"
@@ -620,6 +633,7 @@
             </Stack>
         </Body>
     </ProjectStructureOverlayDialog>
+    }
 }
 
 @if (PreviewNode is not null)
@@ -749,7 +763,13 @@
     public EventCallback ExecuteProcessStart { get; set; }
 
     [Parameter]
+    public EventCallback ReviewAndStartProcess { get; set; }
+
+    [Parameter]
     public EventCallback<ProjectStructureProcessStartCandidateSelection> SelectProcessStartCandidate { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> AssignProcessStartAgent { get; set; }
 
     [Parameter]
     public EventCallback<ChangeEventArgs> ProcessStartAssignmentsReviewedChanged { get; set; }

@@ -645,6 +645,15 @@ public sealed class ProcessLaunchCandidateSelectionRequest
     public Guid CandidateId { get; set; }
 }
 
+public sealed class ProcessLaunchTechnicalAgentSelectionRequest
+{
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public Guid TechnicalAgentId { get; set; }
+}
+
 public sealed class ProcessLaunchApprovalDecisionRequest
 {
     public Guid LaunchPlanId { get; set; }
