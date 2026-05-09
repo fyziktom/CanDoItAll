@@ -218,6 +218,56 @@ public sealed record ProjectStructureReadResponse(
     IReadOnlyList<ProjectStructureLinkSummary> Links,
     IReadOnlyList<string> Warnings);
 
+public sealed record ProjectStructureNodeCatalogResponse(
+    IReadOnlyList<ProjectStructureNodeCatalogItem> Items,
+    IReadOnlyList<ProjectStructureNodeCatalogObjectType> ObjectTypes,
+    IReadOnlyList<ProjectStructureLinkKindCatalogItem> LinkKinds,
+    IReadOnlyList<string> Guidance);
+
+public sealed record ProjectStructureNodeCatalogItem(
+    string ActionId,
+    ProjectObjectType ObjectType,
+    string ObjectSubtype,
+    string GroupKey,
+    string Label,
+    string Description,
+    string DefaultTitle,
+    string TitleLabel,
+    string SubtitleLabel,
+    string NotesLabel,
+    bool RequiresFile,
+    string AcceptedFileTypes,
+    IReadOnlyList<ProjectStructureNodeCatalogField> InputFields,
+    IReadOnlyList<ProjectStructureNodeCatalogDefaultValue> DefaultInputValues,
+    IReadOnlyList<string> Aliases);
+
+public sealed record ProjectStructureNodeCatalogField(
+    string Key,
+    string Label,
+    string InputMode,
+    string Placeholder,
+    bool IsRequired,
+    IReadOnlyList<ProjectStructureNodeCatalogOption> Options);
+
+public sealed record ProjectStructureNodeCatalogOption(
+    string Value,
+    string Label);
+
+public sealed record ProjectStructureNodeCatalogDefaultValue(
+    string Key,
+    string Value);
+
+public sealed record ProjectStructureNodeCatalogObjectType(
+    ProjectObjectType ObjectType,
+    string Label,
+    bool IsUserCreatable,
+    IReadOnlyList<string> CreatableSubtypes);
+
+public sealed record ProjectStructureLinkKindCatalogItem(
+    ProjectObjectLinkKind Kind,
+    string Label,
+    string Guidance);
+
 [JsonConverter(typeof(ProjectStructureNodeCreateInputJsonConverter))]
 public sealed record ProjectStructureNodeCreateInput(
     ProjectObjectType ObjectType,
@@ -354,6 +404,26 @@ public sealed record ProjectStructureNodeCommandInput(
 public sealed record ProjectStructureSubtreeTransferInput(
     Guid TargetProjectId,
     string? LeaseToken = null);
+
+public sealed record ProjectStructureNodesToSubprojectInput(
+    string Name,
+    IReadOnlyList<string> NodeIds,
+    string? Description = null,
+    string? Objective = null,
+    string? CurrentPhase = null,
+    ProjectStatus Status = ProjectStatus.Active,
+    bool IncludeDescendants = true,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureNodesToSubprojectResult(
+    Guid SourceProjectId,
+    Guid TargetProjectId,
+    string TargetProjectName,
+    IReadOnlyList<string> RequestedNodeIds,
+    IReadOnlyList<string> MovedNodeIds,
+    int MovedNodeCount,
+    int MovedRootCount,
+    IReadOnlyList<string> Warnings);
 
 public sealed record ProjectStructureAssetCreateInput(
     ProjectObjectType ObjectType,

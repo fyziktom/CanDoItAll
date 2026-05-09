@@ -222,6 +222,50 @@ internal static partial class ProjectStructureCanvasCatalog
                 definition.Tone))
             .ToList();
 
+    public static ProjectStructureNodeCatalogResponse BuildAgentNodeCatalog()
+    {
+        var items = CreateLeafDefinitions
+            .OrderBy(item => item.GroupKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Label, StringComparer.OrdinalIgnoreCase)
+            .Select(BuildCatalogItem)
+            .ToList();
+        var creatableSubtypesByType = items
+            .GroupBy(item => item.ObjectType)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => item.ObjectSubtype)
+                    .Where(subtype => !string.IsNullOrWhiteSpace(subtype))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(subtype => subtype, StringComparer.OrdinalIgnoreCase)
+                    .ToList());
+        var objectTypes = Enum.GetValues<ProjectObjectType>()
+            .Select(objectType => new ProjectStructureNodeCatalogObjectType(
+                objectType,
+                ProjectNodeKindRegistry.ResolveLabel(objectType, string.Empty),
+                items.Any(item => item.ObjectType == objectType),
+                creatableSubtypesByType.TryGetValue(objectType, out var subtypes) ? subtypes : []))
+            .ToList();
+        var linkKinds = Enum.GetValues<ProjectObjectLinkKind>()
+            .Select(linkKind => new ProjectStructureLinkKindCatalogItem(
+                linkKind,
+                linkKind.ToString(),
+                ResolveLinkKindGuidance(linkKind)))
+            .ToList();
+
+        return new ProjectStructureNodeCatalogResponse(
+            items,
+            objectTypes,
+            linkKinds,
+            [
+                "Use objectType WorkItem with objectSubtype task for work task nodes. Do not invent node enum names such as WorkTask or TaskNode.",
+                "Use ProjectBlock plus a lowercase objectSubtype such as feature, implementation, testing, delivery, backlog, task-flow, risk, server, or wifi for typed blocks.",
+                "Use File plus a file subtype such as pdf, excel, docx, markdown, mermaid, screenshot, log, archive, or audio for generated or uploaded files.",
+                "When creating several task nodes, decide whether any task depends on another and create DependsOn links from dependent task to prerequisite task.",
+                "Every user-created node must have a parentNodeKey. Use project:{projectId} for top-level nodes or an existing node id for child nodes."
+            ]);
+    }
+
     private static IReadOnlyList<string> BuildTopLevelMenuEntries(ProjectObjectType? sourceType) => sourceType switch
     {
         ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep =>
@@ -378,6 +422,83 @@ internal static partial class ProjectStructureCanvasCatalog
             SupportsDragDrop = definition.RequiresFile,
             InputFields = definition.InputFields?.ToList() ?? [],
             DefaultInputValues = definition.DefaultInputValues?.ToList() ?? []
+        };
+
+    private static ProjectStructureNodeCatalogItem BuildCatalogItem(ProjectStructureCreateLeafDefinition definition)
+        => new(
+            definition.ActionId,
+            definition.ObjectType,
+            definition.ObjectSubtype,
+            definition.GroupKey,
+            definition.Label,
+            definition.Description,
+            definition.DefaultTitle,
+            definition.TitleLabel,
+            definition.SubtitleLabel,
+            definition.NotesLabel,
+            definition.RequiresFile,
+            definition.AcceptedFileTypes,
+            definition.InputFields?.Select(field => new ProjectStructureNodeCatalogField(
+                field.Key,
+                field.Label,
+                field.InputMode,
+                field.Placeholder,
+                field.IsRequired,
+                field.Options.Select(option => new ProjectStructureNodeCatalogOption(option.Value, option.Label)).ToList())).ToList() ?? [],
+            definition.DefaultInputValues?.Select(item => new ProjectStructureNodeCatalogDefaultValue(item.Key, item.Value)).ToList() ?? [],
+            BuildCatalogAliases(definition));
+
+    private static IReadOnlyList<string> BuildCatalogAliases(ProjectStructureCreateLeafDefinition definition)
+    {
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            definition.ActionId,
+            definition.Label,
+            definition.DefaultTitle,
+            definition.ObjectType.ToString()
+        };
+
+        if (!string.IsNullOrWhiteSpace(definition.ObjectSubtype))
+        {
+            aliases.Add(definition.ObjectSubtype);
+            aliases.Add($"{definition.ObjectType}:{definition.ObjectSubtype}");
+            aliases.Add($"{definition.ObjectType} {definition.ObjectSubtype}");
+        }
+
+        if (definition.ObjectType == ProjectObjectType.WorkItem && string.Equals(definition.ObjectSubtype, "task", StringComparison.OrdinalIgnoreCase))
+        {
+            aliases.Add("task");
+            aliases.Add("work task");
+            aliases.Add("work item");
+            aliases.Add("work item task");
+        }
+
+        if (definition.ObjectType == ProjectObjectType.File && string.Equals(definition.ObjectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase))
+        {
+            aliases.Add("diagram");
+            aliases.Add("mermaid diagram");
+        }
+
+        return aliases
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Select(alias => alias.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string ResolveLinkKindGuidance(ProjectObjectLinkKind linkKind)
+        => linkKind switch
+        {
+            ProjectObjectLinkKind.DependsOn => "Use for task and scheduling prerequisites. The source node depends on the target node.",
+            ProjectObjectLinkKind.Contains => "System-owned parent/root containment. Prefer parentNodeKey or reparent tools instead of authoring this directly.",
+            ProjectObjectLinkKind.BelongsTo => "System-owned editable parent relationship. Prefer parentNodeKey or reparent tools instead of authoring this directly.",
+            ProjectObjectLinkKind.Uses => "Use when one node consumes, references, or needs another artifact or resource.",
+            ProjectObjectLinkKind.Validates => "Use when validation evidence or a validation run validates another node.",
+            ProjectObjectLinkKind.Tests => "Use when a test plan or test evidence tests another node.",
+            ProjectObjectLinkKind.Blocks => "Use when a node blocks another node without representing a direct schedule prerequisite.",
+            ProjectObjectLinkKind.DerivedFrom => "Use when a new asset or node is a revision or derivation of another node.",
+            _ => string.Empty
         };
 
     private static string ResolveCreateMenuLabel(ProjectStructureCreateLeafDefinition definition)

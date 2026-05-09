@@ -664,6 +664,21 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             cancellationToken);
     }
 
+    public async Task<ProjectStructureSubprojectTransferResult?> MoveNodesToProjectAsync(
+        Guid sourceProjectId,
+        IReadOnlyCollection<string> sourceNodeKeys,
+        Guid targetProjectId,
+        bool includeDescendants = true,
+        CancellationToken cancellationToken = default)
+    {
+        return await crossModuleMutationService.MoveNodesToProjectAsync(
+            sourceProjectId,
+            sourceNodeKeys,
+            targetProjectId,
+            includeDescendants,
+            cancellationToken);
+    }
+
     public async Task<ProjectStructureNode?> UpdateObjectMetadataAsync(
         Guid projectId,
         string nodeKey,

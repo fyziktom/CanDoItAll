@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Components;
@@ -32,7 +33,74 @@ public sealed record ContextualAgentWorkspaceRefreshRequest(
     Guid? ChatSessionId,
     Guid? ExecutionRunId,
     Guid? ProjectId = null,
-    Guid? ProcessDefinitionId = null);
+    Guid? ProcessDefinitionId = null,
+    IReadOnlyList<string>? SelectedNodeIds = null);
+
+public static class ContextualAgentWorkspaceContextBuilder
+{
+    public static string BuildPrompt(
+        ContextualAgentWorkspaceKind workspaceKind,
+        Guid? projectId,
+        Guid? processDefinitionId,
+        IEnumerable<string>? selectedNodeIds,
+        string prompt)
+    {
+        return workspaceKind switch
+        {
+            ContextualAgentWorkspaceKind.ProjectStructure when projectId.HasValue =>
+                BuildProjectStructurePrompt(projectId.Value, selectedNodeIds, prompt),
+            ContextualAgentWorkspaceKind.Processes when processDefinitionId.HasValue => $"""
+Context:
+- Workspace: process definition.
+- Selected process definition id: {processDefinitionId.Value:D}.
+- Treat "this process" and "selected process" as that process definition.
+- Use process-definition operations for process reads or mutations.
+- For adding one process role, use {AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd} instead of loading and rewriting the full editor model.
+- Do not use project-structure operations unless the user explicitly asks about project structure.
+
+User request:
+{prompt}
+""",
+            _ => prompt
+        };
+    }
+
+    public static IReadOnlyList<string> NormalizeSelectedNodeIds(IEnumerable<string>? selectedNodeIds)
+    {
+        return selectedNodeIds?
+            .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
+            .Select(nodeId => nodeId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList()
+            ?? [];
+    }
+
+    private static string BuildProjectStructurePrompt(
+        Guid projectId,
+        IEnumerable<string>? selectedNodeIds,
+        string prompt)
+    {
+        var normalizedSelectedNodeIds = NormalizeSelectedNodeIds(selectedNodeIds);
+        var selectionLine = normalizedSelectedNodeIds.Count == 0
+            ? "- Selected project-structure node ids: none."
+            : $"- Selected project-structure node ids: {string.Join(", ", normalizedSelectedNodeIds)}.";
+
+        return $"""
+Context:
+- Workspace: project structure.
+- Selected project id: {projectId:D}.
+{selectionLine}
+- Treat "this project" and "selected project" as that project structure.
+- Treat "selected nodes" as exactly the selected node ids listed above; if none are listed, ask for a selection or exact node ids.
+- Use project-structure operations for structure reads or mutations.
+- Use the project-structure node catalog before creating or reclassifying unfamiliar node kinds.
+- When task ordering matters, create DependsOn dependency links so Gantt and readiness views stay correct.
+
+User request:
+{prompt}
+""";
+    }
+}
 
 public static class ContextualAgentAccessResolver
 {

@@ -7,7 +7,8 @@ namespace CanDoItAll.Modules.Workbench;
 internal enum ProjectCrossModuleMutationKind
 {
     DeleteSubtree = 1,
-    MoveDescendants = 2
+    MoveDescendants = 2,
+    MoveSelectedNodes = 3
 }
 
 internal enum ProjectCrossModuleMutationStatus

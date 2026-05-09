@@ -17,6 +17,23 @@ public static class ProjectStructureAgentApi
             .DisableAntiforgery();
         group.ApplyApiAuthorization(endpoints);
 
+        group.MapGet("/node-catalog", async (
+            HttpContext httpContext,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-catalog",
+                null,
+                null,
+                null,
+                null,
+                null,
+                (_, cancellationToken) => agentService.GetNodeCatalogAsync(cancellationToken),
+                cancellationToken));
+
         group.MapGet("/projects", async (
             HttpContext httpContext,
             ProjectStructureAgentService agentService,
@@ -463,6 +480,26 @@ public static class ProjectStructureAgentApi
                 request,
                 (agent, cancellationToken) => agentService.ReparentNodeAsync(projectId, request, agent, cancellationToken),
                 cancellationToken));
+
+        group.MapPost("/projects/{projectId:guid}/nodes/move-to-new-subproject", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureNodesToSubprojectInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.nodes-move-to-new-subproject",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.MoveNodesToNewSubprojectAsync(projectId, request, agent, cancellationToken),
+                cancellationToken,
+                response => response.TargetProjectId));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/move-descendants-to-project", async (
             Guid projectId,
@@ -1058,6 +1095,7 @@ public static class ProjectStructureAgentApi
         {
             ProjectStructureReadResponse readResponse => readResponse.Warnings,
             ProjectStructureChecklistResponse checklistResponse => checklistResponse.Warnings,
+            ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
             ProjectStructureImportResult importResult => importResult.Warnings,
             ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
             _ => []

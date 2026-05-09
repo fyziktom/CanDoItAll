@@ -149,6 +149,11 @@ public sealed class ProjectStructureAgentService(
         return new ProjectStructureReadResponse(surface.ProjectId, surface.ProjectName, mappedNodes, links, warnings);
     }
 
+    public Task<ProjectStructureNodeCatalogResponse> GetNodeCatalogAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(ProjectStructureCanvasCatalog.BuildAgentNodeCatalog());
+    }
+
     public async Task<ProjectStructureNodeSummary> CreateNodeAsync(
         Guid projectId,
         ProjectStructureNodeCreateInput request,
@@ -611,6 +616,115 @@ public sealed class ProjectStructureAgentService(
                 }
 
                 return result;
+            },
+            cancellationToken);
+    }
+
+    public async Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(
+        Guid sourceProjectId,
+        ProjectStructureNodesToSubprojectInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        var requestedNodeIds = NormalizeNodeIds(request.NodeIds);
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new ProjectStructureAgentException(400, "SubprojectNameRequired", "A subproject name is required.");
+        }
+
+        if (requestedNodeIds.Count == 0)
+        {
+            throw new ProjectStructureAgentException(400, "SelectedNodesRequired", "At least one selected project-structure node id is required.");
+        }
+
+        return await leaseService.RunWithProjectMutationLeaseAsync(
+            sourceProjectId,
+            request.LeaseToken,
+            agent,
+            "move-selected-nodes-to-new-subproject",
+            async cancellationToken =>
+            {
+                var warnings = new List<string>();
+                var sourceSurface = await projectWorkbenchService.GetStructureAsync(sourceProjectId, cancellationToken);
+                var sourceNodeIds = sourceSurface.Nodes
+                    .Where(node => node.ObjectType != ProjectObjectType.ProjectRoot)
+                    .Select(node => node.Id)
+                    .ToHashSet(StringComparer.Ordinal);
+                var existingRequestedNodeIds = requestedNodeIds
+                    .Where(sourceNodeIds.Contains)
+                    .ToList();
+                var missingNodeIds = requestedNodeIds
+                    .Where(nodeId => !sourceNodeIds.Contains(nodeId))
+                    .ToList();
+
+                if (missingNodeIds.Count > 0)
+                {
+                    warnings.Add($"Ignored {missingNodeIds.Count} selected node id(s) that were not found in the source project.");
+                }
+
+                if (existingRequestedNodeIds.Count == 0)
+                {
+                    throw new ProjectStructureAgentException(
+                        404,
+                        "SelectedNodesNotFound",
+                        "None of the selected project-structure node ids were found in the source project.",
+                        new { requestedNodeIds });
+                }
+
+                var createResult = await projectsService.SaveAsync(new ProjectEditorModel
+                {
+                    Name = request.Name.Trim(),
+                    Description = string.IsNullOrWhiteSpace(request.Description)
+                        ? $"Extracted from {sourceSurface.ProjectName}."
+                        : request.Description.Trim(),
+                    Objective = string.IsNullOrWhiteSpace(request.Objective)
+                        ? $"Own selected project-structure nodes from {sourceSurface.ProjectName}."
+                        : request.Objective.Trim(),
+                    CurrentPhase = string.IsNullOrWhiteSpace(request.CurrentPhase)
+                        ? "Execution"
+                        : request.CurrentPhase.Trim(),
+                    Status = request.Status
+                }, cancellationToken);
+                var targetProject = await ResolveSavedProjectAsync(createResult, cancellationToken);
+
+                ThrowIfFailure(await projectsService.AddSubprojectAsync(sourceProjectId, targetProject.Id, cancellationToken));
+
+                var transfer = await projectWorkbenchService.MoveNodesToProjectAsync(
+                    sourceProjectId,
+                    existingRequestedNodeIds,
+                    targetProject.Id,
+                    request.IncludeDescendants,
+                    cancellationToken);
+                if (transfer is null)
+                {
+                    throw new ProjectStructureAgentException(
+                        400,
+                        "SelectedNodesTransferUnavailable",
+                        "The selected nodes could not be moved to the new subproject.",
+                        new { sourceProjectId, targetProject.Id, existingRequestedNodeIds });
+                }
+
+                var targetSurface = await projectWorkbenchService.GetStructureAsync(targetProject.Id, cancellationToken);
+                var movedNodeIds = targetSurface.Nodes
+                    .Where(node => node.ObjectType != ProjectObjectType.ProjectRoot)
+                    .Select(node => node.Id)
+                    .OrderBy(nodeId => nodeId, StringComparer.Ordinal)
+                    .ToList();
+
+                if (transfer.MovedNodeCount != movedNodeIds.Count)
+                {
+                    warnings.Add($"Moved {transfer.MovedNodeCount} node(s), but {movedNodeIds.Count} node id(s) were found in the new subproject.");
+                }
+
+                return new ProjectStructureNodesToSubprojectResult(
+                    sourceProjectId,
+                    targetProject.Id,
+                    targetProject.Name,
+                    requestedNodeIds,
+                    movedNodeIds,
+                    transfer.MovedNodeCount,
+                    transfer.MovedRootCount,
+                    warnings);
             },
             cancellationToken);
     }
@@ -1105,6 +1219,14 @@ public sealed class ProjectStructureAgentService(
         var message = string.Join(" ", result.Errors.Select(error => error.Message));
         throw new ProjectStructureAgentException(400, "ProjectStructureValidation", string.IsNullOrWhiteSpace(message) ? "The request could not be completed." : message);
     }
+
+    private static IReadOnlyList<string> NormalizeNodeIds(IReadOnlyList<string>? nodeIds)
+        => nodeIds?
+            .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
+            .Select(nodeId => nodeId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList()
+            ?? [];
 
     private static HashSet<string>? ResolveIncludedNodeIds(IReadOnlyList<ProjectStructureNode> nodes, ProjectStructureReadRequest request)
     {

@@ -94,6 +94,78 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             return new ProjectStructureSubprojectTransferResult(targetProjectId, 0, 0);
         }
 
+        return await MoveCollectedNodesToProjectAsync(
+            dbContext,
+            sourceProjectId,
+            sourceNodeKey,
+            targetProjectId,
+            sourceRecords,
+            movedNodeKeys,
+            movedRootKeys,
+            ProjectCrossModuleMutationKind.MoveDescendants,
+            "Moving descendants committed the Workbench change, but canonical assignment reconciliation failed.",
+            cancellationToken);
+    }
+
+    public async Task<ProjectStructureSubprojectTransferResult?> MoveNodesToProjectAsync(
+        Guid sourceProjectId,
+        IReadOnlyCollection<string> sourceNodeKeys,
+        Guid targetProjectId,
+        bool includeDescendants = true,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedSourceNodeKeys = sourceNodeKeys
+            .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
+            .Select(nodeKey => nodeKey.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (normalizedSourceNodeKeys.Count == 0 || sourceProjectId == targetProjectId)
+        {
+            return null;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == sourceProjectId)
+            .ToListAsync(cancellationToken);
+        if (sourceRecords.Count == 0)
+        {
+            return null;
+        }
+
+        var (movedNodeKeys, movedRootKeys) = CollectEditableSelectedMoveKeys(sourceRecords, normalizedSourceNodeKeys, includeDescendants);
+        if (movedNodeKeys.Count == 0)
+        {
+            return new ProjectStructureSubprojectTransferResult(targetProjectId, 0, 0);
+        }
+
+        return await MoveCollectedNodesToProjectAsync(
+            dbContext,
+            sourceProjectId,
+            BuildSelectedNodesScopeNodeKey(normalizedSourceNodeKeys),
+            targetProjectId,
+            sourceRecords,
+            movedNodeKeys,
+            movedRootKeys,
+            ProjectCrossModuleMutationKind.MoveSelectedNodes,
+            "Moving selected nodes committed the Workbench change, but canonical assignment reconciliation failed.",
+            cancellationToken);
+    }
+
+    private async Task<ProjectStructureSubprojectTransferResult?> MoveCollectedNodesToProjectAsync(
+        AppDbContext dbContext,
+        Guid sourceProjectId,
+        string scopeNodeKey,
+        Guid targetProjectId,
+        IReadOnlyCollection<ProjectObjectRecord> sourceRecords,
+        HashSet<string> movedNodeKeys,
+        HashSet<string> movedRootKeys,
+        ProjectCrossModuleMutationKind mutationKind,
+        string failureMessage,
+        CancellationToken cancellationToken)
+    {
         var targetNodeKeys = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == targetProjectId)
             .Select(item => item.NodeKey)
@@ -105,23 +177,25 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         var mutationRecord = mutationCoordinator.Begin(
             sourceProjectId,
-            sourceNodeKey,
-            ProjectCrossModuleMutationKind.MoveDescendants,
+            scopeNodeKey,
+            mutationKind,
             JsonSerializer.Serialize(new MoveDescendantsMutationPayload(
                 sourceProjectId,
                 targetProjectId,
-                sourceNodeKey,
+                scopeNodeKey,
                 movedNodeKeys.OrderBy(item => item, StringComparer.Ordinal).ToArray(),
                 movedRootKeys.OrderBy(item => item, StringComparer.Ordinal).ToArray())));
         await dbContext.Set<ProjectCrossModuleMutationRecord>().AddAsync(mutationRecord, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var targetRootNodeKey = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(targetProjectId);
+        var sourceRootNodeKey = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(sourceProjectId);
         var movedRecords = sourceRecords
             .Where(item => movedNodeKeys.Contains(item.NodeKey))
             .ToList();
         await ProjectNodeBindingStorage.LoadAsync(dbContext, movedRecords, cancellationToken);
         var movedRecordByNodeKey = movedRecords.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
+        var originalParentByMovedNodeKey = movedRecords.ToDictionary(item => item.NodeKey, item => item.ParentNodeKey, StringComparer.Ordinal);
         var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var record in movedRecords)
@@ -137,6 +211,24 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 Route = RewriteProjectScopedRoute(binding.Route, sourceProjectId, targetProjectId)
             };
             record.UpdatedAtUtc = updatedAtUtc;
+        }
+
+        var leftBehindChildren = sourceRecords
+            .Where(item =>
+                !item.IsSystemManaged &&
+                !movedNodeKeys.Contains(item.NodeKey) &&
+                movedNodeKeys.Contains(item.ParentNodeKey ?? string.Empty))
+            .ToList();
+        foreach (var child in leftBehindChildren)
+        {
+            var originalMovedParentNodeKey = child.ParentNodeKey ?? string.Empty;
+            var fallbackParentNodeKey = originalParentByMovedNodeKey.TryGetValue(originalMovedParentNodeKey, out var originalParentNodeKey) &&
+                                        !string.IsNullOrWhiteSpace(originalParentNodeKey) &&
+                                        !movedNodeKeys.Contains(originalParentNodeKey)
+                ? originalParentNodeKey
+                : sourceRootNodeKey;
+            child.ParentNodeKey = fallbackParentNodeKey;
+            child.UpdatedAtUtc = updatedAtUtc;
         }
 
         var linksToProcess = await dbContext.Set<ProjectObjectLinkRecord>()
@@ -173,7 +265,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         await ProcessMutationOrThrowAsync(
             mutationRecord.Id,
-            "Moving descendants committed the Workbench change, but canonical assignment reconciliation failed.",
+            failureMessage,
             cancellationToken);
         return new ProjectStructureSubprojectTransferResult(targetProjectId, movedNodeKeys.Count, movedRootKeys.Count);
     }
@@ -263,6 +355,72 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         }
 
         return (movedNodeKeys, movedRootKeys);
+    }
+
+    private static (HashSet<string> MovedNodeKeys, HashSet<string> MovedRootKeys) CollectEditableSelectedMoveKeys(
+        IReadOnlyCollection<ProjectObjectRecord> sourceRecords,
+        IReadOnlyCollection<string> sourceNodeKeys,
+        bool includeDescendants)
+    {
+        var editableRecordsByKey = sourceRecords
+            .Where(item => !item.IsSystemManaged)
+            .ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
+        var editableChildrenByParent = sourceRecords
+            .Where(item => !item.IsSystemManaged && !string.IsNullOrWhiteSpace(item.ParentNodeKey))
+            .GroupBy(item => item.ParentNodeKey!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var movedNodeKeys = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>();
+
+        foreach (var sourceNodeKey in sourceNodeKeys)
+        {
+            if (!editableRecordsByKey.ContainsKey(sourceNodeKey))
+            {
+                continue;
+            }
+
+            if (movedNodeKeys.Add(sourceNodeKey) && includeDescendants)
+            {
+                queue.Enqueue(sourceNodeKey);
+            }
+        }
+
+        while (queue.Count > 0)
+        {
+            var currentNodeKey = queue.Dequeue();
+            if (!editableChildrenByParent.TryGetValue(currentNodeKey, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                if (!movedNodeKeys.Add(child.NodeKey))
+                {
+                    continue;
+                }
+
+                queue.Enqueue(child.NodeKey);
+            }
+        }
+
+        var movedRootKeys = movedNodeKeys
+            .Where(nodeKey =>
+                editableRecordsByKey.TryGetValue(nodeKey, out var record) &&
+                !movedNodeKeys.Contains(record.ParentNodeKey ?? string.Empty))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return (movedNodeKeys, movedRootKeys);
+    }
+
+    private static string BuildSelectedNodesScopeNodeKey(IReadOnlyList<string> sourceNodeKeys)
+    {
+        var scopeNodeKey = sourceNodeKeys.Count == 1
+            ? sourceNodeKeys[0]
+            : $"selected:{sourceNodeKeys[0]}";
+        return scopeNodeKey.Length <= 160
+            ? scopeNodeKey
+            : scopeNodeKey[..160];
     }
 
     private static bool IsLegacyEditableHierarchyLink(

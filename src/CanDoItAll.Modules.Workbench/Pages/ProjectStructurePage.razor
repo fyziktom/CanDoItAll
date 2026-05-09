@@ -31,7 +31,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ILogger<ProjectStructurePage> Logger
 @implements IDisposable
 
-<PageTitle>Project Structure</PageTitle>
+<PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
 
 @if (unavailableState is not null)
 {
@@ -118,7 +118,8 @@ else
                                                          WindowStateChanged="HandleAgentWindowStateChangedAsync"
                                                          WorkspaceRefreshRequested="HandleAgentWorkspaceRefreshRequestedAsync"
                                                          WorkspaceKind="@ContextualAgentWorkspaceKind.ProjectStructure"
-                                                         ProjectId="@ProjectId" />
+                                                         ProjectId="@ProjectId"
+                                                         SelectedNodeIds="@selectedNodeIds" />
                         @if (ToolboxWindowState.IsVisible)
                         {
                             <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"

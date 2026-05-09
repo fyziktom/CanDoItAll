@@ -289,6 +289,9 @@
     public Guid? ProcessDefinitionId { get; set; }
 
     [Parameter]
+    public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
+    [Parameter]
     public EventCallback<ContextualAgentWorkspaceRefreshRequest> WorkspaceRefreshRequested { get; set; }
 
     private IReadOnlyList<AgentDefinition> agents = [];
@@ -725,7 +728,8 @@
                 selectedSessionId,
                 executionRunId,
                 ProjectId,
-                ProcessDefinitionId));
+                ProcessDefinitionId,
+                ContextualAgentWorkspaceContextBuilder.NormalizeSelectedNodeIds(SelectedNodeIds)));
     }
 
     private Task OpenRuntimeDetailsDialogAsync()
@@ -831,6 +835,7 @@
             WorkspaceKind,
             ProjectId,
             ProcessDefinitionId,
+            ContextualAgentWorkspaceContextBuilder.NormalizeSelectedNodeIds(SelectedNodeIds),
             WindowId,
             ChatWindowId,
             agent,
@@ -938,34 +943,12 @@ Use these workspace artifacts as input:
     }
 
     private string BuildContextualPrompt(string prompt)
-    {
-        return WorkspaceKind switch
-        {
-            ContextualAgentWorkspaceKind.ProjectStructure when ProjectId.HasValue => $"""
-Context:
-- Workspace: project structure.
-- Selected project id: {ProjectId.Value:D}.
-- Treat "this project" and "selected project" as that project structure.
-- Use project-structure operations for structure reads or mutations.
-
-User request:
-{prompt}
-""",
-            ContextualAgentWorkspaceKind.Processes when ProcessDefinitionId.HasValue => $"""
-Context:
-- Workspace: process definition.
-- Selected process definition id: {ProcessDefinitionId.Value:D}.
-- Treat "this process" and "selected process" as that process definition.
-- Use process-definition operations for process reads or mutations.
-- For adding one process role, use {AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd} instead of loading and rewriting the full editor model.
-- Do not use project-structure operations unless the user explicitly asks about project structure.
-
-User request:
-{prompt}
-""",
-            _ => prompt
-        };
-    }
+        => ContextualAgentWorkspaceContextBuilder.BuildPrompt(
+            WorkspaceKind,
+            ProjectId,
+            ProcessDefinitionId,
+            SelectedNodeIds,
+            prompt);
 
     private ExecutionInvocationContext BuildInvocationContext()
     {
@@ -1004,6 +987,12 @@ User request:
         if (ProjectId.HasValue)
         {
             metadata["projectId"] = ProjectId.Value.ToString("D");
+        }
+
+        if (WorkspaceKind == ContextualAgentWorkspaceKind.ProjectStructure)
+        {
+            metadata["selectedNodeIdsJson"] = JsonSerializer.Serialize(
+                ContextualAgentWorkspaceContextBuilder.NormalizeSelectedNodeIds(SelectedNodeIds));
         }
 
         if (ProcessDefinitionId.HasValue)
@@ -1242,6 +1231,7 @@ User request:
         ContextualAgentWorkspaceKind WorkspaceKind,
         Guid? ProjectId,
         Guid? ProcessDefinitionId,
+        IReadOnlyList<string> SelectedNodeIds,
         string WindowId,
         string ChatWindowId,
         AgentDefinition Agent,
