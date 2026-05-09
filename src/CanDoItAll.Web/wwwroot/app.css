@@ -48,6 +48,7 @@ a {
     display: block;
 }
 
-[data-testid="project-structure-process-assignment-agent-switch-dialog"] {
+[data-testid="project-structure-process-assignment-agent-switch-dialog"],
+[data-testid="project-structure-process-assignment-agent-details-dialog"] {
     z-index: 1900 !important;
 }

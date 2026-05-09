@@ -141,7 +141,16 @@ public sealed record ProjectStructureProcessStartCandidateState(
     bool IsResolvable,
     string RecommendationSummary,
     string AvailabilitySummary,
-    string SourceRegistryKey);
+    string SourceRegistryKey,
+    string AgentProviderName = "",
+    string AgentModel = "",
+    string AgentRoleTitle = "",
+    string AgentSummary = "",
+    string AgentStatusLabel = "",
+    string AgentWorkloadLabel = "",
+    string AgentAvatarImageUrl = "",
+    IReadOnlyList<string>? ToolNames = null,
+    IReadOnlyList<string>? SkillNames = null);
 
 public sealed record ProjectStructureProcessStartRoleState(
     Guid LaunchPlanRoleId,
