@@ -18,3 +18,15 @@ public sealed record WorkspaceSpreadsheetInspectionResult(
     string Preview,
     bool PreviewTruncated,
     string Diagnostics);
+
+public sealed record WorkspaceImageInspectionResult(
+    bool Succeeded,
+    string Message,
+    WorkspaceToolReceipt Receipt,
+    string Path,
+    string Format,
+    string ContentType,
+    long SizeBytes,
+    int? Width,
+    int? Height,
+    string Diagnostics);

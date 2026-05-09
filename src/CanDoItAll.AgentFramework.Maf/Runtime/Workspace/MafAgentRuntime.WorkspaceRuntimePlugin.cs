@@ -185,6 +185,12 @@ public sealed partial class MafAgentRuntime
             return artifactToolService.InspectSpreadsheetFile(allowedPath, maxRows, maxColumns, previewCharacters);
         }
 
+        public Task<WorkspaceImageInspectionResult> InspectImageFile(string path)
+        {
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            return artifactToolService.InspectImageFile(allowedPath);
+        }
+
         private string? PrepareFileReadPath(string? path)
         {
             EnsureFileReadAllowed(path);

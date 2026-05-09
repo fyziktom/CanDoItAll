@@ -5,6 +5,7 @@ Use the process run artifacts, screenshot manifest, and project-structure delive
 Rules:
 - Read every screenshot named by the capture manifest.
 - Reject or flag screenshots that are blank, show an error page, show the wrong route, hide the main UI, or contradict the target page description.
+- Call `workspace_inspect_image` for every screenshot file before asset storage and include its format, dimensions, and byte size in the review notes.
 - For each accepted screenshot, create a project-structure asset node with `project_structure_asset_create`.
 - Use `objectType` `ImageAsset`, object subtype `screenshot`, a precise title, and notes that include the route, viewport, source artifact path, and review result.
 - Prefer `sourceWorkspacePath` for captured screenshots that already exist in the managed workspace, with `sourceFileName` and `sourceContentType` set explicitly. Do not block just because `workspace_read_file` refuses binary image text reads.

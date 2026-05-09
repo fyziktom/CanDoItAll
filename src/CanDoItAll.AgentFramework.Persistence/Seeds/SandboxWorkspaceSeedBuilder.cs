@@ -87,6 +87,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var workspacePwshRunScriptCapabilityId = CreateStableGuid("capabilities/workspace-pwsh-run-script");
         var workspaceConvertDocumentCapabilityId = CreateStableGuid("capabilities/workspace-convert-document");
         var workspaceInspectSpreadsheetCapabilityId = CreateStableGuid("capabilities/workspace-inspect-spreadsheet");
+        var workspaceInspectImageCapabilityId = CreateStableGuid("capabilities/workspace-inspect-image");
         var localDocsCapabilityId = CreateStableGuid("capabilities/workspace-source-rag");
         var architectureDocsCapabilityId = CreateStableGuid("capabilities/architecture-source-rag");
         var mailContextCapabilityId = CreateStableGuid("capabilities/mail-triage-context");
@@ -382,6 +383,7 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", "Workspace PowerShell Run Script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane.", "workspace_pwsh_run_script", approvalRequired: true),
             CreateToolCapability(workspaceConvertDocumentCapabilityId, "workspace-convert-document", "Workspace Convert Document", "Converts a workspace document such as a PDF into markdown using markitdown.", "workspace_convert_document", approvalRequired: true),
             CreateToolCapability(workspaceInspectSpreadsheetCapabilityId, "workspace-inspect-spreadsheet", "Workspace Inspect Spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview.", "workspace_inspect_spreadsheet", approvalRequired: true),
+            CreateToolCapability(workspaceInspectImageCapabilityId, "workspace-inspect-image", "Workspace Inspect Image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before project asset storage.", "workspace_inspect_image"),
             new(
                 localDocsCapabilityId,
                 CapabilityKind.Rag,
@@ -1664,6 +1666,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
                 CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
                 CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
+                CreateAssignment(workspaceInspectImageCapabilityId, "workspace-inspect-image", CapabilityKind.Tool),
                 CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
             ],
             ["template", "screenshot", "review", "asset-storage"],

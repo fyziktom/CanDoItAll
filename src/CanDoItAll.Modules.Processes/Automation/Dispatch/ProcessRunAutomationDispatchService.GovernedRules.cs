@@ -374,6 +374,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "workspace_write_file";
         }
 
+        if (toolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal) &&
+            IsJavaScriptOnlyRunContext(candidate))
+        {
+            return false;
+        }
+
         if (!toolName.StartsWith("browser_", StringComparison.Ordinal))
         {
             return true;
@@ -382,6 +388,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return !IsPlanningArchitectureOrBoundaryStep(candidate) &&
                !IsScreenshotReviewOrStorageConsumerStep(candidate, string.Empty) &&
                !IsScreenshotCleanupOrHandoffConsumerStep(candidate, string.Empty);
+    }
+
+    private static bool IsJavaScriptOnlyRunContext(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var runContextText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason),
+            candidate.Run.Name,
+            candidate.StepRun.CurrentExecutorName,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.Definition.Name,
+            candidate.Definition.Slug,
+            candidate.StepDefinition.Key));
+
+        return ContainsJavaScriptRuntimeSignal(runContextText) &&
+               !ContainsDotNetRuntimeSignal(runContextText);
+    }
+
+    private static bool ContainsJavaScriptRuntimeSignal(string value)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               (value.Contains("javascript", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("typescript", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("vite", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("node", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("npm", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("package.json", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains(" js-", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains(" js/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsDotNetRuntimeSignal(string value)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               (value.Contains(".net", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("dotnet", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("c#", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("asp.net", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("blazor", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("razor", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains(".csproj", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("csproj", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsScreenshotReviewOrStorageConsumerStep(DispatchCandidate candidate, string currentRunText)

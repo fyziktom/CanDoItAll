@@ -46,7 +46,8 @@ Add image-generation provider profiles and agent preferences, seed screenshot-or
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Execution status: `Completed`
+- Execution status: `Reopened and completed`
 - Subbundle gate review: `Passed`
 - Final closure gate: `Passed`
 - Browser validation analytics: `Passed`
+- Reopened validation report: `reviews/02-reopened-screenshot-validation.md`

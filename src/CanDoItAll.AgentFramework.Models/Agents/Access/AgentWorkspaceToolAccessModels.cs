@@ -418,6 +418,7 @@ public static class AgentWorkspaceToolAccessMetadata
             case "workspace_git_status":
             case "workspace_git_diff":
             case "workspace_inspect_spreadsheet":
+            case "workspace_inspect_image":
                 permission = AgentWorkspaceToolPermissionKind.ReadFiles;
                 return true;
             case "workspace_create_directory":
