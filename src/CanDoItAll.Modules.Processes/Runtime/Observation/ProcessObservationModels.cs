@@ -178,6 +178,8 @@ public sealed record ProcessLiveObservationSnapshot(
     Guid? ProcessRunId,
     IReadOnlyList<ProcessLiveProcessOption> ProcessOptions,
     IReadOnlyList<ProcessLiveRunCard> Runs,
+    IReadOnlyList<ProcessLiveEscalationCard> Escalations,
+    IReadOnlyList<ProcessLiveRunEventCard> RunEvents,
     IReadOnlyList<ProcessLiveAgentCard> ActiveAgents,
     ProcessLiveStats Stats,
     IReadOnlyList<ProcessLiveMetricPoint> MetricPoints,
@@ -196,6 +198,8 @@ public sealed record ProcessLiveObservationSnapshot(
             projectId,
             historyWindow,
             processRunId,
+            [],
+            [],
             [],
             [],
             [],
@@ -235,6 +239,43 @@ public sealed record ProcessLiveRunCard(
     Guid? ManagerAgentId,
     string ManagerAgentName,
     string HealthSummary);
+
+public sealed record ProcessLiveEscalationCard(
+    string Key,
+    Guid RunId,
+    Guid DefinitionId,
+    string DefinitionName,
+    string RunName,
+    ProcessRunStatus RunStatus,
+    Guid EscalationId,
+    Guid? StepRunId,
+    string StepTitle,
+    ProcessEscalationKind Kind,
+    ProcessEscalationSeverity Severity,
+    ProcessEscalationStatus Status,
+    string Title,
+    string Reason,
+    string Owner,
+    string SourceToolName,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? DueAtUtc,
+    Guid? ManagerAgentId,
+    string ManagerAgentName);
+
+public sealed record ProcessLiveRunEventCard(
+    string Key,
+    Guid RunId,
+    Guid DefinitionId,
+    string DefinitionName,
+    string RunName,
+    ProcessRunStatus Status,
+    string Title,
+    string Summary,
+    string Icon,
+    DateTimeOffset OccurredAtUtc,
+    Guid? ManagerAgentId,
+    string ManagerAgentName);
 
 public sealed record ProcessLiveAgentCard(
     Guid RunId,

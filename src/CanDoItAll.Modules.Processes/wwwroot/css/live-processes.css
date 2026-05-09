@@ -63,6 +63,12 @@
     font-weight: 650;
 }
 
+.live-processes-alert--info {
+    border-color: rgba(37, 99, 235, 0.24);
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
 .live-processes-tabs {
     min-height: 0;
     flex: 1;
@@ -118,6 +124,133 @@
 
 .live-processes-card--failed {
     border-left-color: #dc2626;
+}
+
+.live-processes-notification-card {
+    min-height: 12rem;
+    padding-right: 3.4rem;
+    overflow: hidden;
+    cursor: default;
+}
+
+.live-processes-notification-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.92;
+}
+
+.live-processes-notification-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.live-processes-notification-card--escalation {
+    border-left-color: #d97706;
+    box-shadow: 0 14px 32px rgba(217, 119, 6, 0.16);
+}
+
+.live-processes-notification-card--escalation::before {
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.96), rgba(255, 255, 255, 0.8));
+}
+
+.live-processes-notification-card--approvalrequired,
+.live-processes-notification-card--blockedstep,
+.live-processes-notification-card--operatorrequestedrework {
+    border-left-color: #d97706;
+}
+
+.live-processes-notification-card--failedstep,
+.live-processes-notification-card--retrybudgetexhausted {
+    border-left-color: #dc2626;
+    box-shadow: 0 14px 32px rgba(220, 38, 38, 0.16);
+}
+
+.live-processes-notification-card--saferefusal,
+.live-processes-notification-card--toolpolicyblocked {
+    border-left-color: #7c3aed;
+    box-shadow: 0 14px 32px rgba(124, 58, 237, 0.14);
+}
+
+.live-processes-notification-card--outboxdeadletter {
+    border-left-color: #e11d48;
+    box-shadow: 0 14px 32px rgba(225, 29, 72, 0.15);
+}
+
+.live-processes-notification-card--severity-critical {
+    border-color: rgba(220, 38, 38, 0.38);
+    border-left-color: #991b1b;
+}
+
+.live-processes-notification-card--event {
+    border-left-width: 5px;
+}
+
+.live-processes-notification-card--completed {
+    border-left-color: #059669;
+    box-shadow: 0 16px 34px rgba(5, 150, 105, 0.18);
+}
+
+.live-processes-notification-card--completed::before {
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.78));
+}
+
+.live-processes-notification-card--blocked {
+    border-left-color: #d97706;
+    box-shadow: 0 16px 34px rgba(217, 119, 6, 0.18);
+}
+
+.live-processes-notification-card--blocked::before {
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.78));
+}
+
+.live-processes-notification-card--failed {
+    border-left-color: #dc2626;
+    box-shadow: 0 16px 34px rgba(220, 38, 38, 0.2);
+}
+
+.live-processes-notification-card--failed::before {
+    background: linear-gradient(135deg, rgba(254, 242, 242, 0.98), rgba(255, 255, 255, 0.78));
+}
+
+.live-processes-notification-card__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: flex-start;
+}
+
+.live-processes-notification-card__icon {
+    display: inline-flex;
+    height: 2.35rem;
+    width: 2.35rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.84);
+    color: #0f172a;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.live-processes-notification-card__icon .rz-icon {
+    font-size: 1.25rem;
+}
+
+.live-processes-notification-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: auto;
+}
+
+.live-processes-notification-close {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    z-index: 2;
 }
 
 .live-processes-card__actions {

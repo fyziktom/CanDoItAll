@@ -8,6 +8,7 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class ProcessObservationService(
     ProcessesService processesService,
     ProcessWorkspaceRunDetailsLoader runDetailsLoader,
+    IProcessEscalationService escalationService,
     ProcessRuntimeStateOverviewService runtimeStateOverviewService,
     IAgentFrameworkWorkspaceService workspaceService,
     ProcessObservationCache cache,
@@ -17,6 +18,8 @@ internal sealed class ProcessObservationService(
     private const int MaxTimelineTake = 200;
     private const int LiveToolUsageLimit = 30;
     private const int LiveProcessOptionLimit = 250;
+    private const int LiveEscalationLimit = 60;
+    private const int LiveRunEventLimit = 60;
 
     public async Task<ProcessDashboardObservationSnapshot> GetDashboardSnapshotAsync(
         ProcessObservationDashboardQuery query,
@@ -356,11 +359,24 @@ internal sealed class ProcessObservationService(
         var observedRuns = allRuns
             .Where(run => ShouldIncludeLiveRun(run, query.ProcessRunId))
             .ToList();
+        var observedRunIds = observedRuns
+            .Select(item => item.Id)
+            .ToArray();
         var activeRunSummaries = await runDetailsLoader.LoadActiveRunSummariesAsync(
             observedRuns,
             cancellationToken);
         var activeRunSummariesByRunId = activeRunSummaries.ToDictionary(item => item.RunId);
         var historyStartUtc = observedAtUtc.Subtract(ResolveHistoryWindowSpan(query.HistoryWindow));
+        var liveEscalationsByRunId = await escalationService.ListForRunsAsync(observedRunIds, cancellationToken);
+        var escalationCards = BuildLiveEscalationCards(
+            observedRuns,
+            definitionsById,
+            liveEscalationsByRunId);
+        var runEventCards = BuildLiveRunEventCards(
+            allRuns,
+            definitionsById,
+            historyStartUtc,
+            query.ProcessRunId);
         HashSet<Guid> processRunIdsForHistory = query.ProcessRunId.HasValue
             ? [query.ProcessRunId.Value]
             : allRuns.Select(item => item.Id).ToHashSet();
@@ -378,6 +394,8 @@ internal sealed class ProcessObservationService(
         var sourceMaxUpdatedAtUtc = ResolveLiveSourceMaxUpdatedAtUtc(
             observedRuns,
             activeRunSummaries,
+            escalationCards,
+            runEventCards,
             executionRuns,
             metrics,
             toolReceipts);
@@ -389,6 +407,8 @@ internal sealed class ProcessObservationService(
             query.ProcessRunId,
             BuildLiveProcessOptions(allRuns, definitionsById),
             BuildLiveRunCards(observedRuns, definitionsById, activeRunSummariesByRunId),
+            escalationCards,
+            runEventCards,
             BuildLiveAgentCards(activeRunSummaries),
             BuildLiveStats(observedRuns, activeRunSummaries, metrics),
             BuildLiveMetricPoints(metrics, query.HistoryWindow),
@@ -533,6 +553,91 @@ internal sealed class ProcessObservationService(
             .ThenByDescending(item => item.PendingApprovalCount)
             .ThenByDescending(item => item.UpdatedAtUtc)
             .ThenBy(item => item.RunName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessLiveEscalationCard> BuildLiveEscalationCards(
+        IReadOnlyList<ProcessRunListItem> runs,
+        IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessEscalationViewModel>> escalationsByRunId)
+    {
+        if (runs.Count == 0 || escalationsByRunId.Count == 0)
+        {
+            return [];
+        }
+
+        var cards = new List<ProcessLiveEscalationCard>();
+        foreach (var run in runs)
+        {
+            if (!escalationsByRunId.TryGetValue(run.Id, out var escalations))
+            {
+                continue;
+            }
+
+            foreach (var escalation in escalations.Where(item => item.IsOpen))
+            {
+                cards.Add(new ProcessLiveEscalationCard(
+                    BuildLiveEscalationKey(escalation),
+                    run.Id,
+                    run.ProcessDefinitionId,
+                    ResolveDefinitionName(run.ProcessDefinitionId, definitionsById),
+                    run.Name,
+                    run.Status,
+                    escalation.Id,
+                    escalation.StepRunId,
+                    escalation.StepTitle,
+                    escalation.Kind,
+                    escalation.Severity,
+                    escalation.Status,
+                    escalation.Title,
+                    escalation.Reason,
+                    escalation.Owner,
+                    escalation.SourceToolName,
+                    escalation.CreatedAtUtc,
+                    escalation.UpdatedAtUtc,
+                    escalation.DueAtUtc,
+                    run.ManagerAgentId,
+                    run.ManagerAgentName));
+            }
+        }
+
+        return cards
+            .OrderByDescending(item => item.Severity)
+            .ThenBy(item => item.DueAtUtc ?? DateTimeOffset.MaxValue)
+            .ThenByDescending(item => item.UpdatedAtUtc)
+            .ThenBy(item => item.RunName, StringComparer.OrdinalIgnoreCase)
+            .Take(LiveEscalationLimit)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessLiveRunEventCard> BuildLiveRunEventCards(
+        IReadOnlyList<ProcessRunListItem> runs,
+        IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById,
+        DateTimeOffset historyStartUtc,
+        Guid? processRunId)
+    {
+        return runs
+            .Where(run => IsLiveRunEventStatus(run.Status))
+            .Where(run => processRunId.HasValue
+                ? run.Id == processRunId.Value
+                : run.UpdatedAtUtc >= historyStartUtc)
+            .Select(run => new ProcessLiveRunEventCard(
+                BuildLiveRunEventKey(run),
+                run.Id,
+                run.ProcessDefinitionId,
+                ResolveDefinitionName(run.ProcessDefinitionId, definitionsById),
+                run.Name,
+                run.Status,
+                ResolveLiveRunEventTitle(run),
+                ResolveLiveRunEventSummary(run),
+                ResolveLiveRunEventIcon(run.Status),
+                run.UpdatedAtUtc,
+                run.ManagerAgentId,
+                run.ManagerAgentName))
+            .OrderBy(item => ResolveLiveRunEventSortRank(item.Status))
+            .ThenByDescending(item => item.OccurredAtUtc)
+            .ThenBy(item => item.RunName, StringComparer.OrdinalIgnoreCase)
+            .Take(LiveRunEventLimit)
             .ToArray();
     }
 
@@ -762,6 +867,8 @@ internal sealed class ProcessObservationService(
     private static DateTimeOffset? ResolveLiveSourceMaxUpdatedAtUtc(
         IReadOnlyList<ProcessRunListItem> runs,
         IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries,
+        IReadOnlyList<ProcessLiveEscalationCard> escalationCards,
+        IReadOnlyList<ProcessLiveRunEventCard> runEventCards,
         IReadOnlyList<ExecutionRunRecord> executionRuns,
         IReadOnlyList<AgentRunMetric> metrics,
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
@@ -769,6 +876,8 @@ internal sealed class ProcessObservationService(
         var candidates = new List<DateTimeOffset>();
         AddIfPresent(candidates, FindMaxUpdatedAtUtc(runs));
         AddIfPresent(candidates, FindMaxUpdatedAtUtc(activeRunSummaries));
+        AddIfPresent(candidates, FindMax(escalationCards, item => item.UpdatedAtUtc));
+        AddIfPresent(candidates, FindMax(runEventCards, item => item.OccurredAtUtc));
         AddIfPresent(candidates, FindMax(executionRuns, item => item.UpdatedAtUtc));
         AddIfPresent(candidates, FindMax(metrics, item => item.CreatedAtUtc));
         AddIfPresent(candidates, FindMax(toolReceipts, item => item.CompletedAtUtc));
@@ -819,6 +928,11 @@ internal sealed class ProcessObservationService(
         return status is ProcessRunStatus.Active or ProcessRunStatus.Blocked or ProcessRunStatus.Failed;
     }
 
+    private static bool IsLiveRunEventStatus(ProcessRunStatus status)
+    {
+        return status is ProcessRunStatus.Completed or ProcessRunStatus.Blocked or ProcessRunStatus.Failed;
+    }
+
     private static int ResolveLiveRunSortRank(ProcessRunStatus status)
     {
         return status switch
@@ -827,6 +941,60 @@ internal sealed class ProcessObservationService(
             ProcessRunStatus.Failed => 1,
             ProcessRunStatus.Active => 2,
             _ => 3
+        };
+    }
+
+    private static int ResolveLiveRunEventSortRank(ProcessRunStatus status)
+    {
+        return status switch
+        {
+            ProcessRunStatus.Failed => 0,
+            ProcessRunStatus.Blocked => 1,
+            ProcessRunStatus.Completed => 2,
+            _ => 3
+        };
+    }
+
+    private static string BuildLiveEscalationKey(ProcessEscalationViewModel escalation)
+    {
+        return $"escalation:{escalation.Id:N}:{escalation.Status}:{escalation.UpdatedAtUtc.UtcTicks}";
+    }
+
+    private static string BuildLiveRunEventKey(ProcessRunListItem run)
+    {
+        return $"run-event:{run.Id:N}:{run.Status}:{run.UpdatedAtUtc.UtcTicks}";
+    }
+
+    private static string ResolveLiveRunEventTitle(ProcessRunListItem run)
+    {
+        return run.Status switch
+        {
+            ProcessRunStatus.Completed => "Process finished successfully",
+            ProcessRunStatus.Blocked => "Process is blocked",
+            ProcessRunStatus.Failed => "Process failed",
+            _ => "Process status changed"
+        };
+    }
+
+    private static string ResolveLiveRunEventSummary(ProcessRunListItem run)
+    {
+        return run.Status switch
+        {
+            ProcessRunStatus.Completed => $"{run.Name} completed {run.CompletedStepCount}/{run.TotalStepCount} step(s).",
+            ProcessRunStatus.Blocked => $"{run.Name} is blocked with {run.BlockedStepCount} blocked step(s).",
+            ProcessRunStatus.Failed => $"{run.Name} failed after {run.CompletedStepCount}/{run.TotalStepCount} completed step(s).",
+            _ => $"{run.Name} changed to {run.Status}."
+        };
+    }
+
+    private static string ResolveLiveRunEventIcon(ProcessRunStatus status)
+    {
+        return status switch
+        {
+            ProcessRunStatus.Completed => "check_circle",
+            ProcessRunStatus.Blocked => "block",
+            ProcessRunStatus.Failed => "error",
+            _ => "notifications"
         };
     }
 
