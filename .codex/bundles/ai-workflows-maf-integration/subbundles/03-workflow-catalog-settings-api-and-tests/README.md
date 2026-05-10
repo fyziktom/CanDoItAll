@@ -45,6 +45,7 @@
 - Workflow catalog service for definition list/detail/version lifecycle.
 - Workflow settings service and validation rules for provider/model defaults, runtime options, artifact policy, and human-in-loop policy.
 - LLM Call Component library service with create/list/detail/update/version or equivalent lifecycle.
+- Workflow LLM provider options endpoint backed by the existing agent provider registry; do not add a parallel MAF-owned provider catalog.
 - Workflow validation service that validates graph connectivity, node kinds, component references, input/output shape compatibility, provider capability compatibility, and unsupported MAF mappings.
 - Workflow test runner API/service that executes a draft or saved workflow against sample input and returns structured result, event trace, artifacts, validation issues, and runtime errors.
 - API endpoints and tests for workflow catalog, settings, components, validation, and test runs.
@@ -61,7 +62,7 @@
 
 - API, service, model-validation, runtime-test, and performance-review depth.
 - Requires architecture review focused on API contract boundaries and workflow/process separation.
-- Execution result: workflow catalog/settings/component/test-run services and `/api/workflows` endpoints were implemented with typed workflow contracts and no raw MAF API contracts. Tests cover save/list/detail/versioning, validation failure, runtime failure, successful in-process test runs, JSON ID round-tripping, and OpenAPI route exposure.
+- Execution result: workflow catalog/settings/component/test-run services and `/api/workflows` endpoints were implemented with typed workflow contracts and no raw MAF API contracts. Tests cover save/list/detail/versioning, validation failure, runtime failure, successful in-process test runs, JSON ID round-tripping, OpenAPI route exposure, and provider option projection from agent provider profiles.
 
 ## Implementation Steps
 

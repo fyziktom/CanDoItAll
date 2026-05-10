@@ -54,7 +54,11 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
         services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
-        services.TryAddScoped<InMemoryWorkflowCatalogService>();
+        services.TryAddScoped(serviceProvider => new InMemoryWorkflowCatalogService(
+            serviceProvider.GetRequiredService<InMemoryWorkflowCatalogStore>(),
+            serviceProvider.GetRequiredService<IWorkflowDefinitionValidator>(),
+            serviceProvider.GetRequiredService<IProviderProfileRegistry>(),
+            serviceProvider.GetRequiredService<IProviderProfileService>()));
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());

@@ -24,7 +24,10 @@ public sealed class WorkflowsPageTests
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-create-starter']");
-        Assert.Contains("Create a starter workflow", cut.Markup);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("disabled", cut.Find("[data-testid='workflows-create-starter']").OuterHtml, StringComparison.OrdinalIgnoreCase);
+        });
 
         cut.Find("[data-testid='workflows-create-starter']").Click();
 
@@ -34,7 +37,16 @@ public sealed class WorkflowsPageTests
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
         Assert.Single(await catalogService.ListDefinitionsAsync());
-        Assert.Single(await componentLibrary.ListComponentsAsync());
+        var component = Assert.Single(await componentLibrary.ListComponentsAsync());
+        var defaultProvider = (await componentLibrary.ListProviderOptionsAsync()).FirstOrDefault(option => option.IsEnabled);
+        if (defaultProvider is not null)
+        {
+            Assert.Equal(defaultProvider.ProviderProfileId, component.ProviderProfileId);
+            var expectedModel = string.IsNullOrWhiteSpace(defaultProvider.DefaultModel)
+                ? defaultProvider.ModelOptions.FirstOrDefault() ?? "gpt-5.4"
+                : defaultProvider.DefaultModel;
+            Assert.Equal(expectedModel, component.Model);
+        }
 
         cut.Find("[data-testid='workflows-run-test']").Click();
 
@@ -60,11 +72,16 @@ public sealed class WorkflowsPageTests
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.WaitForElement("[data-testid='workflow-canvas-provider-options']");
         cut.Find("[data-testid='workflow-canvas-create-component']").Click();
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-component']"));
+        });
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("disabled", cut.Find("[data-testid='workflow-canvas-validate']").OuterHtml, StringComparison.OrdinalIgnoreCase);
         });
 
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();

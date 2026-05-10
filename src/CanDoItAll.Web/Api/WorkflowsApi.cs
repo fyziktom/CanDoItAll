@@ -81,6 +81,12 @@ internal static class WorkflowsApi
             Results.Ok(await catalogService.ValidateDefinitionAsync(request, cancellationToken)))
             .WithName("ValidateDraftWorkflowDefinition");
 
+        workflows.MapGet("/provider-options", async (
+                IWorkflowComponentLibraryService componentLibrary,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await componentLibrary.ListProviderOptionsAsync(cancellationToken)))
+            .WithName("ListWorkflowProviderOptions");
+
         workflows.MapGet("/components", async (
                 IWorkflowComponentLibraryService componentLibrary,
                 CancellationToken cancellationToken) =>

@@ -112,7 +112,7 @@
                                     <option value="">Select component</option>
                                     @foreach (var component in componentOptions)
                                     {
-                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @component.Model</option>
+                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
                                     }
                                 </select>
                             </label>
@@ -353,6 +353,55 @@
                                 Disabled="@isBusy"
                                 data-testid="workflow-canvas-create-component" />
                     </Split>
+                    <p class="workflows-muted mt-3"
+                       data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
+                    @{
+                        var newComponentModelOptions = ResolveNewComponentModelOptions();
+                    }
+                    <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
+                        @if (ProviderOptions.Count > 0)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Provider</span>
+                                <select class="cda-input"
+                                        value="@newComponentProviderProfileId"
+                                        @onchange="HandleNewComponentProviderChanged"
+                                        data-testid="workflow-canvas-component-provider">
+                                    @if (!ProviderOptions.Any(option => option.IsEnabled))
+                                    {
+                                        <option value="">No enabled chat provider</option>
+                                    }
+                                    @foreach (var providerOption in ProviderOptions)
+                                    {
+                                        <option value="@providerOption.ProviderProfileId.ToString("D")"
+                                                disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+                        <label class="workflow-canvas-field">
+                            <span>Model</span>
+                            @if (newComponentModelOptions.Count > 0)
+                            {
+                                <select class="cda-input"
+                                        value="@newComponentModel"
+                                        @onchange="HandleNewComponentModelChanged"
+                                        data-testid="workflow-canvas-component-model">
+                                    @foreach (var model in newComponentModelOptions)
+                                    {
+                                        <option value="@model">@model</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input class="cda-input"
+                                       value="@newComponentModel"
+                                       @onchange="HandleNewComponentModelChanged"
+                                       data-testid="workflow-canvas-component-model" />
+                            }
+                        </label>
+                    </Grid>
                     @if (componentOptions.Count == 0)
                     {
                         <EmptyState Eyebrow="No components"
@@ -367,7 +416,7 @@
                                 <div class="workflow-canvas-component" data-testid="workflow-canvas-component">
                                     <div>
                                         <strong>@component.Name</strong>
-                                        <span>@component.Model · @component.Modality · @component.ResultShape.Kind</span>
+                                        <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality · @component.ResultShape.Kind</span>
                                     </div>
                                     <Button Text="Place"
                                             ButtonStyle="ButtonStyle.Light"

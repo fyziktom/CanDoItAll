@@ -33,6 +33,7 @@ public partial class WorkflowsPage
 
     private IReadOnlyList<WorkflowCatalogItem> definitions = [];
     private IReadOnlyList<LlmCallComponent> components = [];
+    private IReadOnlyList<WorkflowProviderOption> providerOptions = [];
     private IReadOnlyList<WorkflowRunSnapshot> runs = [];
     private IReadOnlyList<WorkflowEventRecord> runEvents = [];
     private IReadOnlyList<WorkflowArtifactRecord> artifacts = [];
@@ -98,12 +99,14 @@ public partial class WorkflowsPage
         var settingsTask = SettingsService.GetSettingsAsync();
         var definitionsTask = CatalogService.ListDefinitionsAsync();
         var componentsTask = ComponentLibrary.ListComponentsAsync();
+        var providerOptionsTask = ComponentLibrary.ListProviderOptionsAsync();
         var runsTask = RunStore.ListRunsAsync();
-        await Task.WhenAll(settingsTask, definitionsTask, componentsTask, runsTask);
+        await Task.WhenAll(settingsTask, definitionsTask, componentsTask, providerOptionsTask, runsTask);
 
         settings = await settingsTask;
         definitions = await definitionsTask;
         components = await componentsTask;
+        providerOptions = await providerOptionsTask;
         runs = await runsTask;
 
         var definitionId = preferredDefinitionId ??
@@ -179,11 +182,12 @@ public partial class WorkflowsPage
 
         try
         {
+            var providerOption = ResolveDefaultProviderOption();
             var component = await ComponentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
                 Id: null,
                 Name: $"Starter LLM call {DateTimeOffset.UtcNow:HHmmss}",
-                ProviderProfileId: null,
-                Model: "gpt-5.4",
+                ProviderProfileId: providerOption?.ProviderProfileId,
+                Model: ResolveDefaultModel(providerOption),
                 Modality: WorkflowModality.Text,
                 ModelSettings: new WorkflowModelSettings(
                     Temperature: 0.2,
@@ -338,6 +342,7 @@ public partial class WorkflowsPage
     private async Task RefreshComponentLibraryAsync()
     {
         components = await ComponentLibrary.ListComponentsAsync();
+        providerOptions = await ComponentLibrary.ListProviderOptionsAsync();
     }
 
     private bool IsSelectedDefinition(WorkflowCatalogItem item)
@@ -443,6 +448,26 @@ public partial class WorkflowsPage
     private static string FormatDate(DateTimeOffset value)
     {
         return value.ToLocalTime().ToString("MMM d, HH:mm");
+    }
+
+    private WorkflowProviderOption? ResolveDefaultProviderOption()
+    {
+        return providerOptions.FirstOrDefault(option => option.IsEnabled);
+    }
+
+    private static string ResolveDefaultModel(WorkflowProviderOption? providerOption)
+    {
+        if (providerOption is null)
+        {
+            return "gpt-5.4";
+        }
+
+        if (!string.IsNullOrWhiteSpace(providerOption.DefaultModel))
+        {
+            return providerOption.DefaultModel;
+        }
+
+        return providerOption.ModelOptions.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model)) ?? "gpt-5.4";
     }
 
     private void OpenAgents()

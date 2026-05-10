@@ -27,6 +27,9 @@ public partial class WorkflowCanvasEditor
     public IReadOnlyList<LlmCallComponent> Components { get; set; } = [];
 
     [Parameter]
+    public IReadOnlyList<WorkflowProviderOption> ProviderOptions { get; set; } = [];
+
+    [Parameter]
     public EventCallback<WorkflowDefinition> DefinitionSaved { get; set; }
 
     [Parameter]
@@ -45,6 +48,8 @@ public partial class WorkflowCanvasEditor
     private string edgeTargetNodeId = "end";
     private WorkflowEdgeKind edgeKind = WorkflowEdgeKind.Direct;
     private string edgeCondition = string.Empty;
+    private string newComponentProviderProfileId = string.Empty;
+    private string newComponentModel = string.Empty;
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string errorMessage = string.Empty;
     private bool isBusy;
@@ -93,6 +98,7 @@ public partial class WorkflowCanvasEditor
     protected override void OnParametersSet()
     {
         componentOptions = Components;
+        SyncNewComponentDefaults();
         var incomingKey = Definition is null
             ? "draft"
             : $"{Definition.Id}:{Definition.VersionId}";
@@ -180,11 +186,12 @@ public partial class WorkflowCanvasEditor
         isBusy = true;
         try
         {
+            var providerOption = ResolveSelectedNewComponentProvider();
             var component = await ComponentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
                 Id: null,
                 Name: $"Canvas LLM call {DateTimeOffset.UtcNow:HHmmss}",
-                ProviderProfileId: null,
-                Model: "gpt-5.4",
+                ProviderProfileId: providerOption?.ProviderProfileId,
+                Model: ResolveNewComponentModel(providerOption),
                 Modality: WorkflowModality.Text,
                 ModelSettings: new WorkflowModelSettings(
                     Temperature: 0.2,
@@ -432,6 +439,17 @@ public partial class WorkflowCanvasEditor
         };
     }
 
+    private void HandleNewComponentProviderChanged(ChangeEventArgs args)
+    {
+        newComponentProviderProfileId = args.Value?.ToString() ?? string.Empty;
+        newComponentModel = ResolveDefaultModel(ResolveSelectedNewComponentProvider());
+    }
+
+    private void HandleNewComponentModelChanged(ChangeEventArgs args)
+    {
+        newComponentModel = args.Value?.ToString()?.Trim() ?? string.Empty;
+    }
+
     private void HandleSelectedNodeNameChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
     {
         node.Name = args.Value?.ToString() ?? string.Empty;
@@ -528,6 +546,111 @@ public partial class WorkflowCanvasEditor
     private static string FormatComponentId(WorkflowComponentId? componentId)
     {
         return componentId?.Value.ToString("D") ?? string.Empty;
+    }
+
+    private WorkflowProviderOption? ResolveDefaultProviderOption()
+    {
+        return ProviderOptions.FirstOrDefault(option => option.IsEnabled);
+    }
+
+    private WorkflowProviderOption? ResolveSelectedNewComponentProvider()
+    {
+        if (!Guid.TryParse(newComponentProviderProfileId, out var providerId))
+        {
+            return null;
+        }
+
+        return ProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerId);
+    }
+
+    private IReadOnlyList<string> ResolveNewComponentModelOptions()
+    {
+        return ResolveSelectedNewComponentProvider()?.ModelOptions ?? [];
+    }
+
+    private string ResolveNewComponentModel(WorkflowProviderOption? providerOption)
+    {
+        return string.IsNullOrWhiteSpace(newComponentModel)
+            ? ResolveDefaultModel(providerOption)
+            : newComponentModel.Trim();
+    }
+
+    private static string ResolveDefaultModel(WorkflowProviderOption? providerOption)
+    {
+        if (providerOption is null)
+        {
+            return "gpt-5.4";
+        }
+
+        if (!string.IsNullOrWhiteSpace(providerOption.DefaultModel))
+        {
+            return providerOption.DefaultModel;
+        }
+
+        return providerOption.ModelOptions.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model)) ?? "gpt-5.4";
+    }
+
+    private string ResolveComponentProviderLabel(LlmCallComponent component)
+    {
+        if (!component.ProviderProfileId.HasValue)
+        {
+            return "No provider";
+        }
+
+        var provider = ProviderOptions.FirstOrDefault(option => option.ProviderProfileId == component.ProviderProfileId.Value);
+        return provider?.Name ?? "Provider missing";
+    }
+
+    private string BuildProviderOptionsSummary()
+    {
+        if (ProviderOptions.Count == 0)
+        {
+            return "No agent chat providers are available; new components use an unbound preview model.";
+        }
+
+        var enabledCount = ProviderOptions.Count(option => option.IsEnabled);
+        return $"{enabledCount} enabled chat provider(s) available from the agent provider registry.";
+    }
+
+    private static string BuildProviderOptionLabel(WorkflowProviderOption option)
+    {
+        var label = $"{option.Name} - {option.Kind} - {option.Transport}";
+        return option.IsEnabled ? label : $"{label} (disabled)";
+    }
+
+    private void SyncNewComponentDefaults()
+    {
+        if (ProviderOptions.Count == 0)
+        {
+            newComponentProviderProfileId = string.Empty;
+            if (string.IsNullOrWhiteSpace(newComponentModel))
+            {
+                newComponentModel = "gpt-5.4";
+            }
+
+            return;
+        }
+
+        var selectedProvider = ResolveSelectedNewComponentProvider();
+        if (selectedProvider is null || !selectedProvider.IsEnabled)
+        {
+            selectedProvider = ResolveDefaultProviderOption();
+            newComponentProviderProfileId = selectedProvider?.ProviderProfileId.ToString("D") ?? string.Empty;
+            newComponentModel = ResolveDefaultModel(selectedProvider);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newComponentModel))
+        {
+            newComponentModel = ResolveDefaultModel(selectedProvider);
+            return;
+        }
+
+        if (selectedProvider.ModelOptions.Count > 0 &&
+            !selectedProvider.ModelOptions.Contains(newComponentModel, StringComparer.OrdinalIgnoreCase))
+        {
+            newComponentModel = ResolveDefaultModel(selectedProvider);
+        }
     }
 
     private void InsertNodeBeforeEnd(WorkflowCanvasNodeDraft node)

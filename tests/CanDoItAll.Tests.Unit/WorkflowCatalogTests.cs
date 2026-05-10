@@ -70,6 +70,84 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task ComponentLibraryListsChatProviderOptionsFromAgentProviderRegistry()
+    {
+        var chatProvider = CreateProvider(
+            "OpenAI chat",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            "gpt-5.4",
+            ["gpt-5.4-mini"]);
+        var imageProvider = CreateProvider(
+            "OpenAI image",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.ImageGeneration,
+            "gpt-image-1",
+            ["gpt-image-1"]);
+        var catalog = CreateCatalog([chatProvider, imageProvider]);
+
+        var options = await catalog.ListProviderOptionsAsync();
+
+        var option = Assert.Single(options);
+        Assert.Equal(chatProvider.Id, option.ProviderProfileId);
+        Assert.Equal(ProviderProfilePurpose.Chat, option.Purpose);
+        Assert.Contains("gpt-5.4", option.ModelOptions);
+        Assert.Contains("gpt-5.4-mini", option.ModelOptions);
+        Assert.True(option.SupportsStructuredOutput);
+    }
+
+    [Fact]
+    public async Task ComponentLibraryRejectsNonChatProviderForLlmComponents()
+    {
+        var imageProvider = CreateProvider(
+            "OpenAI image",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.ImageGeneration,
+            "gpt-image-1",
+            ["gpt-image-1"]);
+        var catalog = CreateCatalog([imageProvider]);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => catalog.SaveComponentAsync(
+            CreateComponentRequest() with
+            {
+                ProviderProfileId = imageProvider.Id,
+                Model = imageProvider.DefaultModel
+            }));
+
+        Assert.Contains("not a chat provider", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ComponentLibraryRejectsStructuredOutputWhenProviderDoesNotSupportIt()
+    {
+        var ollamaProvider = CreateProvider(
+            "Ollama chat",
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions,
+            ProviderProfilePurpose.Chat,
+            "llama3.2",
+            ["llama3.2"]);
+        var catalog = CreateCatalog([ollamaProvider]);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => catalog.SaveComponentAsync(
+            CreateComponentRequest() with
+            {
+                ProviderProfileId = ollamaProvider.Id,
+                Model = ollamaProvider.DefaultModel,
+                ModelSettings = new WorkflowModelSettings(
+                    Temperature: 0.2,
+                    MaxOutputTokens: 800,
+                    RequireJsonOutput: true,
+                    ResponseFormatJsonSchema: "{}")
+            }));
+
+        Assert.Contains("structured JSON output", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task TestRunnerExecutesSavedWorkflowWithInProcessBackend()
     {
         var catalog = CreateCatalog();
@@ -139,9 +217,14 @@ public sealed class WorkflowCatalogTests
         Assert.Contains("not registered", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static InMemoryWorkflowCatalogService CreateCatalog()
+    private static InMemoryWorkflowCatalogService CreateCatalog(IReadOnlyList<ProviderProfile>? providers = null)
     {
-        return new InMemoryWorkflowCatalogService(new WorkflowDefinitionValidator());
+        var providerProfileService = providers is null ? null : new ProviderProfileService();
+        return new InMemoryWorkflowCatalogService(
+            new InMemoryWorkflowCatalogStore(),
+            new WorkflowDefinitionValidator(),
+            providers is null ? null : new TestProviderProfileRegistry(providers),
+            providerProfileService);
     }
 
     private static WorkflowTestRunner CreateRunner(
@@ -266,5 +349,80 @@ public sealed class WorkflowCatalogTests
             InputShape: WorkflowValueShape.Text,
             ResultShape: WorkflowValueShape.Text,
             Permissions: AgentPermissionsPolicy.Default);
+    }
+
+    private static ProviderProfile CreateProvider(
+        string name,
+        ProviderKind kind,
+        ProviderTransportKind transport,
+        ProviderProfilePurpose purpose,
+        string defaultModel,
+        IReadOnlyList<string> suggestedModels)
+    {
+        return new ProviderProfile(
+            Id: Guid.NewGuid(),
+            Name: name,
+            Kind: kind,
+            BaseUrl: kind == ProviderKind.Ollama ? "http://localhost:11434" : "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable: "TEST_PROVIDER_API_KEY",
+            DefaultModel: defaultModel,
+            Transport: transport,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: transport == ProviderTransportKind.Responses,
+            ConfigurationJson: "{}",
+            Notes: string.Empty,
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: suggestedModels,
+            Purpose: purpose);
+    }
+
+    private sealed class TestProviderProfileRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
+    {
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(providers);
+        }
+
+        public Task<ProviderProfile?> GetProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(providers.FirstOrDefault(provider => provider.Id == providerId));
+        }
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(
+            Guid? providerId = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Guid> SaveProviderAsync(
+            ProviderProfileEditorModel model,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task DeleteProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<ProviderProfile> UpdateProviderAsync(
+            Guid providerId,
+            Func<ProviderProfile, ProviderProfile> update,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

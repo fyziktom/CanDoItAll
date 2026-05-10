@@ -36,6 +36,8 @@ public interface IWorkflowSettingsService
 
 public interface IWorkflowComponentLibraryService
 {
+    Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(CancellationToken cancellationToken = default);
 
     Task<LlmCallComponent?> GetComponentAsync(

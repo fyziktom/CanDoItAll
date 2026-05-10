@@ -118,9 +118,25 @@ public sealed class WorkflowApiIntegrationTests
         var paths = payload.RootElement.GetProperty("paths");
 
         Assert.True(paths.TryGetProperty("/api/workflows/definitions", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/provider-options", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/components", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/test-runs", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/events", out _));
+    }
+
+    [Fact]
+    public async Task Workflow_api_exposes_agent_provider_options_for_llm_components()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        var response = await host.Client.GetAsync("/api/workflows/provider-options");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var options = JsonSerializer.Deserialize<IReadOnlyList<WorkflowProviderOption>>(body, JsonOptions())!;
+
+        Assert.NotEmpty(options);
+        Assert.All(options, option => Assert.Equal(ProviderProfilePurpose.Chat, option.Purpose));
+        Assert.Contains(options, option => option.IsEnabled && !string.IsNullOrWhiteSpace(option.DefaultModel));
     }
 
     private static async Task<LlmCallComponent> SaveComponentAsync(ApiTestHost host)

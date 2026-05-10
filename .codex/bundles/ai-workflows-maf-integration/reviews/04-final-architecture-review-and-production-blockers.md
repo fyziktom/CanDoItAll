@@ -19,6 +19,7 @@
 | Catalog/settings/components/API | Accepted | `/api/workflows` owns workflow catalog, settings, component library, validation, test-runs, run status/events, artifacts, and external request responses. |
 | Agents module UI | Accepted | `/agents/workflows` is a separate workflow page inside the Agents module and does not merge workflows into technical-agent tabs. |
 | Canvas editor | Accepted | Canvas state maps to typed workflow definitions, nodes, edges, ports, LLM Call Components, validation, preview run, and persisted node layout. |
+| Workflow LLM provider ownership | Accepted after repair | MAF does not impose a separate provider catalog; workflow LLM Call Components now consume existing CanDoItAll agent provider profiles/options and validate provider purpose/capabilities. |
 | Process role integration | Accepted | Processes remain above workflows and agents; workflow is a typed executor option with explicit run links and process artifact projection. |
 | Web API integration | Accepted after fix | Process run detail now serializes workflow run links, and scoped assignment resolution preserves workflow definition/version ids. |
 
@@ -33,6 +34,7 @@
 ## Durable Article Alignment
 
 - The implementation follows MAF guidance for treating workflows as first-class workflow graphs and keeps DurableTask/DTS as the production direction.
+- MAF provider adapters are treated as runtime integration mechanisms, not as a replacement for CanDoItAll provider governance. Existing agent provider profiles remain the catalog for workflow LLM calls.
 - The implementation does not yet call `ConfigureDurableOptions` because the repo has no DurableTask/Azure Functions hosting package reference and no selected DTS/emulator configuration.
 - The in-process backend is intentionally limited to tests, previews, local development, and short non-durable runs. It must not be promoted as the durable production runtime.
 
@@ -42,6 +44,7 @@
 - Workflow unit tests passed 16/16.
 - Workflow component tests passed 3/3.
 - Workflow API integration tests passed 4/4.
+- Provider registry repair validation passed: workflow catalog unit tests 9/9, workflow component tests 3/3, workflow API integration tests 5/5, and focused Core/AgentFramework module/Web builds passed with 0 warnings/errors.
 - Process workflow executor integration tests passed 5/5.
 - Process launch planning regression passed 15/15.
 - Browser screenshots cover Workflows page, canvas authoring/test run, workflow executor selection, and process workflow run ledger.

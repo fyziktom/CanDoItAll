@@ -71,6 +71,21 @@ public sealed record LlmCallComponentSaveRequest(
     WorkflowValueShape ResultShape,
     AgentPermissionsPolicy Permissions);
 
+public sealed record WorkflowProviderOption(
+    Guid ProviderProfileId,
+    string Name,
+    ProviderKind Kind,
+    ProviderTransportKind Transport,
+    ProviderProfilePurpose Purpose,
+    string DefaultModel,
+    IReadOnlyList<string> ModelOptions,
+    bool IsEnabled,
+    bool SupportsStreaming,
+    bool SupportsTools,
+    bool SupportsStructuredOutput,
+    bool SupportsVision,
+    bool SupportsBackgroundResponses);
+
 public sealed record WorkflowTestRunRequest(
     WorkflowId? WorkflowId,
     WorkflowVersionId? VersionId,

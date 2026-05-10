@@ -10,6 +10,7 @@
 - Added persisted `WorkflowNode.CanvasX`/`CanvasY` layout coordinates so canvas save/load can round-trip positions through the workflow definition.
 - Added `WorkflowCanvasEditor` on the `/agents/workflows` page with CanvasLib workbench rendering, prepared LLM Call Component library, typed node toolbox, node editor, edge editor, validation, preview run, and save actions.
 - Covered Start, End, LLM call, triage, strict logic, artifact, human input, agent step, and subworkflow node kinds in the toolbox/editor.
+- Provider repair: prepared LLM Call Components now use provider/model options from the existing agent provider registry; the canvas exposes provider/model selectors and validation rejects non-chat or capability-incompatible provider selections.
 - Browser proof authored a three-node LLM workflow, validated it, ran an in-process preview successfully, and saved it.
 
 ## Objective
@@ -120,6 +121,7 @@
 - Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-component-tests-4\`
 - Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowCatalogTests" --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-unit-tests-6\`
 - Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter FullyQualifiedName~WorkflowApiIntegrationTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-integration-tests-4\`
+- Passed provider repair validation: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter FullyQualifiedName~WorkflowCatalogTests --logger "console;verbosity=minimal" -m:1 -p:UseSharedCompilation=false -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\provider-workflow-unit-3\` passed 9/9; `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter FullyQualifiedName~WorkflowsPageTests --logger "console;verbosity=minimal" -m:1 -p:UseSharedCompilation=false -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\provider-workflow-components-5\` passed 3/3; `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~WorkflowApiIntegrationTests --logger "console;verbosity=minimal" -m:1 -p:UseSharedCompilation=false -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\provider-workflow-api-2\` passed 5/5.
 - Passed: browser desktop screenshot at `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-05\workflow-canvas-desktop-proof.png`
 - Passed: browser narrower-width screenshot at `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-05\workflow-canvas-mobile-proof.png`
 
