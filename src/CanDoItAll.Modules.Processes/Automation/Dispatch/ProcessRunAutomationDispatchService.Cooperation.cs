@@ -36,8 +36,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return candidates
             .OrderByDescending(item => item.StepDefinitionId == stepRun.StepDefinitionId)
-            .ThenByDescending(item => item.PartyId.HasValue)
+            .ThenByDescending(HasDispatchExecutableTarget)
             .FirstOrDefault();
+    }
+
+    private static bool HasDispatchExecutableTarget(ProcessRunAssignment assignment)
+    {
+        return assignment.PartyId.HasValue ||
+            assignment.WorkflowDefinitionId.HasValue && assignment.WorkflowVersionId.HasValue;
     }
 
     private static AgentProcessCooperationMetadata ResolveProcessCooperationMetadata(

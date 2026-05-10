@@ -1,0 +1,385 @@
+@namespace CanDoItAll.Modules.AgentFramework.Pages.Components
+@using CanDoItAll.Components.CanvasLib
+
+<SurfaceCard Class="workflow-canvas-editor"
+             data-testid="workflow-canvas-editor">
+    <CanvasWorkbenchStage Eyebrow="Workflow canvas"
+                          Title="@document.Name"
+                          Description="@document.Description"
+                          Stats="CanvasStats">
+        <HeaderActions>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="New draft"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ResetDraftAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflow-canvas-new-draft" />
+                <Button Text="Validate"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ValidateAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflow-canvas-validate" />
+                <Button Text="Run preview"
+                        Click="RunPreviewAsync"
+                        Disabled="@isBusy"
+                        IsBusy="@isTesting"
+                        data-testid="workflow-canvas-run-preview" />
+                <Button Text="Save"
+                        Click="SaveAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflow-canvas-save" />
+            </Cluster>
+        </HeaderActions>
+        <Canvas>
+            <CanvasWorkbench Surface="CanvasSurface"
+                             SelectionChanged="HandleCanvasSelectionChangedAsync"
+                             NodesMoved="HandleCanvasNodesMovedAsync"
+                             CreateActionInvoked="HandleCanvasCreateActionAsync"
+                             NodeEdited="HandleCanvasNodeEditedAsync" />
+        </Canvas>
+        <Inspector>
+            <Stack GapScale="LayoutGap.Medium" data-testid="workflow-canvas-inspector">
+                <div class="workflow-canvas-panel">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition" />
+                    <label class="workflow-canvas-field">
+                        <span>Name</span>
+                        <input class="cda-input"
+                               value="@document.Name"
+                               @onchange="HandleNameChanged"
+                               data-testid="workflow-canvas-name" />
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Description</span>
+                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                  value="@document.Description"
+                                  @onchange="HandleDescriptionChanged"
+                                  data-testid="workflow-canvas-description"></textarea>
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Runtime backend</span>
+                        <select class="cda-input"
+                                value="@document.RuntimePolicy.PreferredBackend"
+                                @onchange="HandleRuntimeBackendChanged"
+                                data-testid="workflow-canvas-runtime">
+                            @foreach (var backend in Enum.GetValues<WorkflowRuntimeBackendKind>())
+                            {
+                                <option value="@backend">@backend</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+
+                @if (SelectedNode is null)
+                {
+                    <EmptyState Eyebrow="No node selected"
+                                Title="Select a workflow node"
+                                Description="Use the canvas or node list to choose the node whose typed settings should be edited." />
+                }
+                else
+                {
+                    var selected = SelectedNode;
+                    <div class="workflow-canvas-panel" data-testid="workflow-canvas-node-editor">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected node" />
+                        <label class="workflow-canvas-field">
+                            <span>Node name</span>
+                            <input class="cda-input"
+                                   value="@selected.Name"
+                                   @onchange="args => HandleSelectedNodeNameChanged(selected, args)"
+                                   data-testid="workflow-canvas-node-name" />
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Kind</span>
+                            <select class="cda-input"
+                                    value="@selected.Kind"
+                                    @onchange="args => HandleSelectedNodeKindChanged(selected, args)"
+                                    disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                    data-testid="workflow-canvas-node-kind">
+                                @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                        </label>
+
+                        @if (selected.Kind == WorkflowNodeKind.LlmCall)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>LLM Call Component</span>
+                                <select class="cda-input"
+                                        value="@FormatComponentId(selected.ComponentId)"
+                                        @onchange="args => HandleSelectedComponentChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-component">
+                                    <option value="">Select component</option>
+                                    @foreach (var component in componentOptions)
+                                    {
+                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @component.Model</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.HumanInput)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Request kind</span>
+                                <select class="cda-input"
+                                        value="@selected.ExternalRequestKind"
+                                        @onchange="args => HandleSelectedRequestKindChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-request-kind">
+                                    @foreach (var requestKind in Enum.GetValues<WorkflowExternalRequestKind>())
+                                    {
+                                        <option value="@requestKind">@requestKind</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.AgentStep)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Agent id</span>
+                                <input class="cda-input"
+                                       value="@selected.AgentId?.ToString("D")"
+                                       @onchange="args => HandleSelectedAgentIdChanged(selected, args)"
+                                       data-testid="workflow-canvas-node-agent-id" />
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.Subworkflow)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Subworkflow id</span>
+                                <input class="cda-input"
+                                       value="@selected.SubworkflowId?.Value.ToString("D")"
+                                       @onchange="args => HandleSelectedSubworkflowIdChanged(selected, args)"
+                                       data-testid="workflow-canvas-node-subworkflow-id" />
+                            </label>
+                        }
+
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                            <label class="workflow-canvas-field">
+                                <span>Input shape</span>
+                                <select class="cda-input"
+                                        value="@selected.InputShapeKind"
+                                        @onchange="args => HandleSelectedInputShapeChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-input-shape">
+                                    @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                    {
+                                        <option value="@shape">@shape</option>
+                                    }
+                                </select>
+                            </label>
+                            <label class="workflow-canvas-field">
+                                <span>Result shape</span>
+                                <select class="cda-input"
+                                        value="@selected.ResultShapeKind"
+                                        @onchange="args => HandleSelectedResultShapeChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-result-shape">
+                                    @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                    {
+                                        <option value="@shape">@shape</option>
+                                    }
+                                </select>
+                            </label>
+                        </Grid>
+
+                        <label class="workflow-canvas-field">
+                            <span>Instructions</span>
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                      value="@selected.Instructions"
+                                      @onchange="args => HandleSelectedInstructionsChanged(selected, args)"
+                                      data-testid="workflow-canvas-node-instructions"></textarea>
+                        </label>
+
+                        <Button Text="Remove node"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Size="ButtonSize.Small"
+                                Disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                Click="RemoveSelectedNodeAsync"
+                                data-testid="workflow-canvas-remove-node" />
+                    </div>
+                }
+
+                <div class="workflow-canvas-panel" data-testid="workflow-canvas-edge-editor">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Edges" />
+                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                        <label class="workflow-canvas-field">
+                            <span>Source</span>
+                            <select class="cda-input" @bind="edgeSourceNodeId" data-testid="workflow-canvas-edge-source">
+                                @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.End))
+                                {
+                                    <option value="@node.Id.Value">@node.Name</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Target</span>
+                            <select class="cda-input" @bind="edgeTargetNodeId" data-testid="workflow-canvas-edge-target">
+                                @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.Start))
+                                {
+                                    <option value="@node.Id.Value">@node.Name</option>
+                                }
+                            </select>
+                        </label>
+                    </Grid>
+                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                        <label class="workflow-canvas-field">
+                            <span>Kind</span>
+                            <select class="cda-input" @bind="edgeKind" data-testid="workflow-canvas-edge-kind">
+                                @foreach (var kind in Enum.GetValues<WorkflowEdgeKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Condition</span>
+                            <input class="cda-input" @bind="edgeCondition" data-testid="workflow-canvas-edge-condition" />
+                        </label>
+                    </Grid>
+                    <Button Text="Add edge"
+                            Size="ButtonSize.Small"
+                            Click="AddEdgeAsync"
+                            Disabled="@isBusy"
+                            data-testid="workflow-canvas-add-edge" />
+
+                    <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                        @foreach (var edge in document.Edges)
+                        {
+                            <div class="workflow-canvas-edge-row" data-testid="workflow-canvas-edge-row">
+                                <span>@ResolveNodeName(edge.SourceNodeId) -> @ResolveNodeName(edge.TargetNodeId)</span>
+                                <StatusBadge Tone="info" Text="@edge.Kind.ToString()" />
+                                <Button Text="Remove"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => RemoveEdgeAsync(edge))"
+                                        data-testid="workflow-canvas-remove-edge" />
+                            </div>
+                        }
+                    </Stack>
+                </div>
+
+                <div class="workflow-canvas-panel" data-testid="workflow-canvas-validation-panel">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Validation and preview" />
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <p class="workflow-canvas-error">@errorMessage</p>
+                    }
+                    @if (validationIssues.Count == 0)
+                    {
+                        <p class="workflows-muted">No validation issues for the current canvas draft.</p>
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Small">
+                            @foreach (var issue in validationIssues)
+                            {
+                                <div class="workflows-issue" data-testid="workflow-canvas-validation-issue">
+                                    <strong>@issue.Code</strong>
+                                    <span>@issue.Message</span>
+                                </div>
+                            }
+                        </Stack>
+                    }
+
+                    <label class="workflow-canvas-field mt-3">
+                        <span>Preview input JSON</span>
+                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                  @bind="testInputJson"
+                                  data-testid="workflow-canvas-test-input"></textarea>
+                    </label>
+
+                    @if (testResult is not null)
+                    {
+                        <div class="workflow-canvas-test-result" data-testid="workflow-canvas-test-result">
+                            <StatusBadge Tone="@(testResult.Succeeded ? "success" : "danger")"
+                                         Text="@(testResult.Succeeded ? "Succeeded" : "Failed")" />
+                            @if (testResult.Run is not null)
+                            {
+                                <span>@testResult.Run.Summary</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(testResult.ErrorMessage))
+                            {
+                                <span>@testResult.ErrorMessage</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </Stack>
+        </Inspector>
+        <Supporting>
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
+                <div class="workflow-canvas-panel" data-testid="workflow-canvas-toolbox">
+                    <Split Gap="LayoutGap.Small">
+                        <div>
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Toolbox" />
+                            <h3 class="workflow-canvas-panel-title">Typed workflow nodes</h3>
+                        </div>
+                        <StatusBadge Tone="info" Text="@document.Nodes.Count.ToString()" />
+                    </Split>
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-3">
+                        @foreach (var kind in WorkflowCanvasDefinitionMapper.CreatableNodeKinds)
+                        {
+                            <Button Text="@WorkflowCanvasDefinitionMapper.ResolveDefaultNodeName(kind)"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => AddNodeAsync(kind))"
+                                    data-testid="workflow-canvas-add-node" />
+                        }
+                    </Cluster>
+                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                        @foreach (var node in document.Nodes)
+                        {
+                            <button type="button"
+                                    class="workflow-canvas-node-picker @(selectedNodeId == node.Id.Value ? "workflow-canvas-node-picker--selected" : string.Empty)"
+                                    @onclick="@(() => SelectNode(node.Id.Value))"
+                                    data-testid="workflow-canvas-select-node">
+                                <span>@node.Name</span>
+                                <small>@node.Kind</small>
+                            </button>
+                        }
+                    </Stack>
+                </div>
+
+                <div class="workflow-canvas-panel" data-testid="workflow-canvas-component-library">
+                    <Split Gap="LayoutGap.Small">
+                        <div>
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
+                            <h3 class="workflow-canvas-panel-title">Prepared calls</h3>
+                        </div>
+                        <Button Text="Create"
+                                Size="ButtonSize.Small"
+                                Click="CreateDefaultComponentAsync"
+                                Disabled="@isBusy"
+                                data-testid="workflow-canvas-create-component" />
+                    </Split>
+                    @if (componentOptions.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No components"
+                                    Title="Create an LLM component"
+                                    Description="Prepared calls carry provider, model, modality, model settings, instructions, and result shape." />
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                            @foreach (var component in componentOptions)
+                            {
+                                <div class="workflow-canvas-component" data-testid="workflow-canvas-component">
+                                    <div>
+                                        <strong>@component.Name</strong>
+                                        <span>@component.Model · @component.Modality · @component.ResultShape.Kind</span>
+                                    </div>
+                                    <Button Text="Place"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => AddLlmComponentNodeAsync(component))"
+                                            data-testid="workflow-canvas-place-component" />
+                                </div>
+                            }
+                        </Stack>
+                    }
+                </div>
+            </Grid>
+        </Supporting>
+    </CanvasWorkbenchStage>
+</SurfaceCard>

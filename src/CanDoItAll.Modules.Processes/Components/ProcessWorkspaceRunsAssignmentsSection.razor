@@ -50,7 +50,8 @@
                     <div>
                         <label class="cda-field-label">Project party</label>
                         <InputSelect @bind-Value="Presenter.AssignmentPartyId"
-                                     class="cda-input">
+                                     class="cda-input"
+                                     disabled="@Presenter.IsWorkflowAssignmentSelected">
                             <option value="">None</option>
                             @foreach (var option in Presenter.PartyOptions)
                             {
@@ -65,9 +66,32 @@
                     </div>
                     <div>
                         <label class="cda-field-label">Executor kind</label>
-                        <InputText @bind-Value="Presenter.AssignmentExecutorKind"
-                                   class="cda-input" />
+                        <InputSelect @bind-Value="Presenter.AssignmentExecutorKind"
+                                     class="cda-input"
+                                     data-testid="processes-assignment-executor-kind-input">
+                            <option value="@ProcessExecutorKindNames.Human">Human</option>
+                            <option value="@ProcessExecutorKindNames.AiAgent">AI agent</option>
+                            <option value="@ProcessExecutorKindNames.Workflow">Workflow</option>
+                        </InputSelect>
                     </div>
+                    @if (Presenter.IsWorkflowAssignmentSelected)
+                    {
+                        <div>
+                            <label class="cda-field-label">Workflow definition</label>
+                            <select value="@Presenter.AssignmentWorkflowOptionKey"
+                                    @onchange="Presenter.SetAssignmentWorkflowOption"
+                                    class="cda-input"
+                                    data-testid="processes-assignment-workflow-input">
+                                <option value="">Select workflow</option>
+                                @foreach (var workflow in Presenter.WorkflowOptions)
+                                {
+                                    <option value="@($"{workflow.DefinitionId:D}|{workflow.VersionId:D}")">
+                                        @($"{workflow.Name} / {workflow.Status} / {workflow.PreferredBackend}")
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    }
                     <div>
                         <label class="cda-field-label">Binding reason</label>
                         <InputTextArea @bind-Value="Presenter.AssignmentBindingReason"
@@ -79,6 +103,7 @@
                     </label>
                     <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                         <InputCheckbox @bind-Value="Presenter.AssignmentAllowsDirectMessaging"
+                                       disabled="@Presenter.IsWorkflowAssignmentSelected"
                                        data-testid="processes-assignment-direct-messaging-checkbox" />
                         Allow direct role messaging for this assignment snapshot
                     </label>

@@ -94,6 +94,8 @@ internal static class ProcessDependencyCompatibilityBridge
             Purpose = role.Purpose,
             StaffingIntent = role.StaffingIntent,
             PreferredExecutorKind = role.PreferredExecutorKind,
+            PreferredWorkflowDefinitionId = role.PreferredWorkflowDefinitionId,
+            PreferredWorkflowVersionId = role.PreferredWorkflowVersionId,
             PreferredProjectAssignmentRole = role.PreferredProjectAssignmentRole,
             IsRequired = role.IsRequired,
             AllowsFallback = role.AllowsFallback,

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -35,6 +36,7 @@ public sealed partial class ProcessesService
         var aiDirectory = aiDirectorySnapshot.Directory;
         var aiDirectoryByPartyId = aiDirectory.ToDictionary(item => item.PartyId);
         var aiStaffingFactsByPartyId = aiDirectorySnapshot.StaffingFactsByPartyId;
+        var workflowCandidates = await ListRunnableWorkflowCandidatesAsync(cancellationToken);
         ProcessProjectStructureContextFormatter.TryParse(plan.TriggerReason, out var projectStructureContext);
         var roleSkillIds = publishedContext.RoleSkillsByRoleId.Values
             .SelectMany(item => item)
@@ -69,6 +71,7 @@ public sealed partial class ProcessesService
                 projectAssignmentsByRole,
                 aiDirectory,
                 aiDirectoryByPartyId,
+                workflowCandidates,
                 cancellationToken);
             ApplyLaunchRoleRecommendation(
                 role,
@@ -128,6 +131,7 @@ public sealed partial class ProcessesService
         IReadOnlyDictionary<ProjectPartyAssignmentRole, IReadOnlyList<ProjectPartyAssignmentDetail>> projectAssignmentsByRole,
         IReadOnlyList<AiAgentListItemModel> aiDirectory,
         IReadOnlyDictionary<Guid, AiAgentListItemModel> aiDirectoryByPartyId,
+        IReadOnlyList<WorkflowCatalogItem> workflowCandidates,
         CancellationToken cancellationToken)
     {
         var candidates = new List<ProcessLaunchCandidate>();
@@ -136,6 +140,23 @@ public sealed partial class ProcessesService
             .Select(item => item.SkillId)
             .Distinct()
             .ToList();
+        if (IsWorkflowRole(role))
+        {
+            candidates.AddRange(BuildWorkflowCandidatesForRole(role, workflowCandidates));
+            if (candidates.Count == 0)
+            {
+                var gapCandidate = CreateGapCandidate(role);
+                gapCandidate.RecommendationSummary = "No active workflow definition matches this process role.";
+                gapCandidate.AvailabilitySummary = "Select or activate a workflow definition before launching this process role.";
+                candidates.Add(gapCandidate);
+            }
+
+            return candidates
+                .OrderByDescending(item => item.Score)
+                .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         var seenPartyIds = new HashSet<Guid>();
         var requiresTechnicalAgentBinding = RequiresTechnicalAgentBinding(plan);
         var includeAiDirectoryCandidates = IsAiRole(role) || requiresTechnicalAgentBinding;
@@ -388,6 +409,66 @@ public sealed partial class ProcessesService
             .OrderByDescending(item => item.Score)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private async Task<IReadOnlyList<WorkflowCatalogItem>> ListRunnableWorkflowCandidatesAsync(CancellationToken cancellationToken)
+    {
+        return (await workflowCatalogService.ListDefinitionsAsync(cancellationToken))
+            .Where(item => item.Status == WorkflowLifecycleStatus.Active)
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private List<ProcessLaunchCandidate> BuildWorkflowCandidatesForRole(
+        ProcessRoleRequirement role,
+        IReadOnlyList<WorkflowCatalogItem> workflows)
+    {
+        var hasPreferredWorkflow = role.PreferredWorkflowDefinitionId.HasValue;
+        var matchingWorkflows = hasPreferredWorkflow
+            ? workflows
+                .Where(item =>
+                    item.Id.Value == role.PreferredWorkflowDefinitionId!.Value &&
+                    (!role.PreferredWorkflowVersionId.HasValue || item.VersionId.Value == role.PreferredWorkflowVersionId.Value))
+                .ToList()
+            : workflows.ToList();
+        var candidates = new List<ProcessLaunchCandidate>(matchingWorkflows.Count);
+        foreach (var workflow in matchingWorkflows)
+        {
+            candidates.Add(CreateWorkflowCandidate(
+                role,
+                workflow,
+                isRecommended: hasPreferredWorkflow || candidates.Count == 0,
+                score: hasPreferredWorkflow ? 104m : 82m - candidates.Count));
+        }
+
+        return candidates;
+    }
+
+    private ProcessLaunchCandidate CreateWorkflowCandidate(
+        ProcessRoleRequirement role,
+        WorkflowCatalogItem workflow,
+        bool isRecommended,
+        decimal score)
+    {
+        return new ProcessLaunchCandidate
+        {
+            CandidateKind = ProcessLaunchCandidateKind.Workflow,
+            WorkflowDefinitionId = workflow.Id.Value,
+            WorkflowVersionId = workflow.VersionId.Value,
+            DisplayName = workflow.Name,
+            ExecutorKind = ProcessExecutorKindNames.Workflow,
+            Score = score,
+            IsRecommended = isRecommended,
+            AllowsDirectMessaging = false,
+            RequiresProvisioning = false,
+            RecommendationSummary = role.PreferredWorkflowDefinitionId.HasValue
+                ? $"Matched preferred workflow '{workflow.Name}' for this process role."
+                : $"Matched active workflow '{workflow.Name}' for this process role.",
+            AvailabilitySummary = $"{workflow.Status} / {workflow.PreferredBackend}",
+            SourceRegistryKey = $"workflow:{workflow.Id.Value:D}:{workflow.VersionId.Value:D}",
+            MetadataJson = "{}",
+            CreatedAtUtc = clock.GetUtcNow()
+        };
     }
 
     private static void ApplyLaunchRoleRecommendation(

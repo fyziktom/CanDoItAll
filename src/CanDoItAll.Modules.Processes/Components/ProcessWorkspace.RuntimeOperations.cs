@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 
 namespace CanDoItAll.Modules.Processes;
@@ -425,8 +426,10 @@ public partial class ProcessWorkspace
         if (assignment is null)
         {
             assignmentPartyId = null;
+            assignmentWorkflowDefinitionId = null;
+            assignmentWorkflowVersionId = null;
             assignmentDisplayName = string.Empty;
-            assignmentExecutorKind = "person";
+            assignmentExecutorKind = ProcessExecutorKindNames.Human;
             assignmentBindingReason = string.Empty;
             assignmentIsFallback = false;
             assignmentAllowsDirectMessaging = true;
@@ -435,12 +438,58 @@ public partial class ProcessWorkspace
         }
 
         assignmentPartyId = assignment.PartyId;
+        assignmentWorkflowDefinitionId = assignment.WorkflowDefinitionId;
+        assignmentWorkflowVersionId = assignment.WorkflowVersionId;
         assignmentDisplayName = assignment.DisplayName;
-        assignmentExecutorKind = string.IsNullOrWhiteSpace(assignment.ExecutorKind) ? "person" : assignment.ExecutorKind;
+        assignmentExecutorKind = ProcessExecutorKindNames.Normalize(assignment.ExecutorKind);
         assignmentBindingReason = assignment.BindingReason;
         assignmentIsFallback = assignment.IsFallback;
         assignmentAllowsDirectMessaging = assignment.AllowsDirectMessaging;
         SynchronizeDirectMessagingComposer();
+    }
+
+    private void SetAssignmentExecutorKind(string? executorKind)
+    {
+        assignmentExecutorKind = ProcessExecutorKindNames.Normalize(executorKind);
+        if (ProcessExecutorKindNames.IsWorkflow(assignmentExecutorKind))
+        {
+            assignmentPartyId = null;
+            assignmentAllowsDirectMessaging = false;
+            if (!assignmentWorkflowDefinitionId.HasValue)
+            {
+                var firstWorkflow = workflowOptions.FirstOrDefault(item => item.Status == WorkflowLifecycleStatus.Active)
+                    ?? workflowOptions.FirstOrDefault();
+                if (firstWorkflow is not null)
+                {
+                    assignmentWorkflowDefinitionId = firstWorkflow.DefinitionId;
+                    assignmentWorkflowVersionId = firstWorkflow.VersionId;
+                }
+            }
+        }
+        else
+        {
+            assignmentWorkflowDefinitionId = null;
+            assignmentWorkflowVersionId = null;
+        }
+    }
+
+    private string AssignmentWorkflowOptionKey
+        => BuildWorkflowOptionKey(assignmentWorkflowDefinitionId, assignmentWorkflowVersionId);
+
+    private void SetAssignmentWorkflowOption(string? optionKey)
+    {
+        if (TryParseWorkflowOptionKey(optionKey, out var definitionId, out var versionId))
+        {
+            assignmentWorkflowDefinitionId = definitionId;
+            assignmentWorkflowVersionId = versionId;
+            assignmentExecutorKind = ProcessExecutorKindNames.Workflow;
+            assignmentPartyId = null;
+            assignmentAllowsDirectMessaging = false;
+            return;
+        }
+
+        assignmentWorkflowDefinitionId = null;
+        assignmentWorkflowVersionId = null;
     }
 
     private async Task ResolveSelectedAssignmentAsync()
@@ -459,6 +508,8 @@ public partial class ProcessWorkspace
                 RoleRequirementId = assignment.RoleRequirementId,
                 StepDefinitionId = assignment.StepDefinitionId,
                 PartyId = assignmentPartyId,
+                WorkflowDefinitionId = assignmentWorkflowDefinitionId,
+                WorkflowVersionId = assignmentWorkflowVersionId,
                 DisplayName = assignmentDisplayName,
                 ExecutorKind = assignmentExecutorKind,
                 BindingReason = string.IsNullOrWhiteSpace(assignmentBindingReason)
@@ -703,6 +754,33 @@ public partial class ProcessWorkspace
         return string.IsNullOrWhiteSpace(bindingName)
             ? $"{roleName} ({status})"
             : $"{roleName} / {bindingName} ({status})";
+    }
+
+    private static string BuildWorkflowOptionKey(Guid? definitionId, Guid? versionId)
+    {
+        return definitionId.HasValue && versionId.HasValue
+            ? $"{definitionId.Value:D}|{versionId.Value:D}"
+            : string.Empty;
+    }
+
+    private static bool TryParseWorkflowOptionKey(
+        string? optionKey,
+        out Guid definitionId,
+        out Guid versionId)
+    {
+        definitionId = Guid.Empty;
+        versionId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(optionKey))
+        {
+            return false;
+        }
+
+        var parts = optionKey.Split('|', StringSplitOptions.TrimEntries);
+        return parts.Length == 2 &&
+            Guid.TryParse(parts[0], out definitionId) &&
+            Guid.TryParse(parts[1], out versionId) &&
+            definitionId != Guid.Empty &&
+            versionId != Guid.Empty;
     }
 
     private string ResolveDefinitionStatusTone(ProcessDefinitionStatus status)

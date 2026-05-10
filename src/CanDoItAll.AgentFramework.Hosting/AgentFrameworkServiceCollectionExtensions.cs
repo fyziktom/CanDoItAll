@@ -51,6 +51,23 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
             serviceProvider.GetRequiredService<IAgentRuntime>()));
+        services.TryAddSingleton<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
+        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
+        services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
+        services.TryAddScoped<InMemoryWorkflowCatalogService>();
+        services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddSingleton<InMemoryWorkflowRunStore>();
+        services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
+        services.TryAddSingleton<MafWorkflowCompiler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutionBackend, MafInProcessWorkflowExecutionBackend>());
+        services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
+        services.TryAddScoped<IWorkflowProcessExecutorBridge, WorkflowProcessExecutorBridge>();
+        services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
         services.TryAddScoped<IAgentFrameworkWorkspaceService, AgentFrameworkWorkspaceService>();
 
         return services;

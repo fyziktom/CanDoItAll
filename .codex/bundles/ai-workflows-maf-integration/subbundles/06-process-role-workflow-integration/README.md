@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Passed`
 
 ## Objective
 
@@ -106,19 +106,26 @@
 
 ## Proof Required
 
-- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx`
-- Process service/runtime tests covering workflow role assignment and existing executor behavior.
-- Migration/compatibility proof if persisted executor-kind shape changes.
-- Browser screenshots for process launch/assignment UI if changed.
-- Execution report architecture review notes.
+- Passed: `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj --no-restore --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\process-module-build-07\` with 0 warnings/errors.
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\process-workflow-tests-10\` with 5/5 tests passing after the subbundle 07 API projection fix.
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~WorkflowApiIntegrationTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-api-regression-07\` with 4/4 tests passing.
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~ProcessLaunchPlanningIntegrationTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\process-launch-regression-06\` with 15/15 tests passing.
+- Passed: `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx --no-restore --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-sln-build-9\` with 0 warnings/errors.
+- Passed: migration compatibility proof through SQLite migration `20260510182238_AddProcessWorkflowExecutorLinks` and PostgreSQL migration `20260510182326_AddProcessWorkflowExecutorLinks`; persisted executor kind remains normalized through `ProcessExecutorKindNames`.
+- Passed: architecture/performance review recorded in `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\03-process-workflow-architecture-review.md`.
+- Passed: process role workflow browser proof recorded below.
 
 ## Browser Validation Logging
 
-- Route: process workspace launch/assignment route if UI changed.
-- Viewports: maximized desktop and narrower-width when process UI changes.
-- Playwright evidence: open process launch/assignment flow, select workflow executor, verify candidate details, inspect workflow-backed run status.
-- Screenshots: process role workflow selection and workflow-backed assignment status.
-- Use `N/A` only if implementation is service/API-only and no browser-visible process surface changes.
+- Route: `http://localhost:5127/processes` from isolated build output `C:\repositories\CanDoItAll\.codex\tmp\workflow-sln-build-8\`.
+- Viewports: desktop 1600x1000 and narrower 430x920.
+- Playwright evidence: opened the process workspace, edited a process role, selected preferred executor kind `Workflow`, selected active workflow `Browser proof workflow executor`, started/observed a workflow-backed process run, and inspected the workflow execution ledger.
+- Screenshots:
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\artifacts\browser\subbundle-06-role-workflow-selection-desktop.png`
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\artifacts\browser\subbundle-06-role-workflow-selection-narrow.png`
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\artifacts\browser\subbundle-06-workflow-run-ledger-desktop.png`
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\artifacts\browser\subbundle-06-workflow-run-ledger-card-desktop.png`
+- Screenshot review: workflow selector and workflow execution ledger render without visible overlap/clipping at desktop and narrow widths.
 
 ## Progression Gate
 

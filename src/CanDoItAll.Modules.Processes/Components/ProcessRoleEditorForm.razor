@@ -37,10 +37,32 @@
                            data-testid="processes-role-display-name-input" />
             </FormField>
             <FormField Text="Preferred executor kind">
-                <InputText @bind-Value="Model.PreferredExecutorKind"
-                           class="cda-input"
-                           data-testid="processes-role-executor-kind-input" />
+                <select value="@ProcessExecutorKindNames.Normalize(Model.PreferredExecutorKind)"
+                        @onchange="HandleExecutorKindChanged"
+                        class="cda-input"
+                        data-testid="processes-role-executor-kind-input">
+                    <option value="@ProcessExecutorKindNames.Human">Human</option>
+                    <option value="@ProcessExecutorKindNames.AiAgent">AI agent</option>
+                    <option value="@ProcessExecutorKindNames.Workflow">Workflow</option>
+                </select>
             </FormField>
+            @if (ProcessExecutorKindNames.IsWorkflow(Model.PreferredExecutorKind))
+            {
+                <FormField Text="Preferred workflow">
+                    <select value="@SelectedWorkflowOptionKey"
+                            @onchange="HandleWorkflowChanged"
+                            class="cda-input"
+                            data-testid="processes-role-workflow-input">
+                        <option value="">Any active workflow</option>
+                        @foreach (var workflow in WorkflowOptions)
+                        {
+                            <option value="@BuildWorkflowOptionKey(workflow.DefinitionId, workflow.VersionId)">
+                                @($"{workflow.Name} / {workflow.Status} / {workflow.PreferredBackend}")
+                            </option>
+                        }
+                    </select>
+                </FormField>
+            }
         </Grid>
 
         <Grid Gap="LayoutGap.Large"
@@ -133,5 +155,62 @@
     public bool ShowRemove { get; set; } = true;
 
     [Parameter]
+    public IReadOnlyList<ProcessWorkflowDefinitionOption> WorkflowOptions { get; set; } = [];
+
+    [Parameter]
     public EventCallback Remove { get; set; }
+
+    private string SelectedWorkflowOptionKey
+        => BuildWorkflowOptionKey(Model.PreferredWorkflowDefinitionId, Model.PreferredWorkflowVersionId);
+
+    private void HandleExecutorKindChanged(ChangeEventArgs args)
+    {
+        Model.PreferredExecutorKind = ProcessExecutorKindNames.Normalize(args.Value?.ToString());
+        if (!ProcessExecutorKindNames.IsWorkflow(Model.PreferredExecutorKind))
+        {
+            Model.PreferredWorkflowDefinitionId = null;
+            Model.PreferredWorkflowVersionId = null;
+        }
+    }
+
+    private void HandleWorkflowChanged(ChangeEventArgs args)
+    {
+        if (TryParseWorkflowOptionKey(args.Value?.ToString(), out var definitionId, out var versionId))
+        {
+            Model.PreferredExecutorKind = ProcessExecutorKindNames.Workflow;
+            Model.PreferredWorkflowDefinitionId = definitionId;
+            Model.PreferredWorkflowVersionId = versionId;
+            return;
+        }
+
+        Model.PreferredWorkflowDefinitionId = null;
+        Model.PreferredWorkflowVersionId = null;
+    }
+
+    private static string BuildWorkflowOptionKey(Guid? definitionId, Guid? versionId)
+    {
+        return definitionId.HasValue && versionId.HasValue
+            ? $"{definitionId.Value:D}|{versionId.Value:D}"
+            : string.Empty;
+    }
+
+    private static bool TryParseWorkflowOptionKey(
+        string? optionKey,
+        out Guid definitionId,
+        out Guid versionId)
+    {
+        definitionId = Guid.Empty;
+        versionId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(optionKey))
+        {
+            return false;
+        }
+
+        var parts = optionKey.Split('|', StringSplitOptions.TrimEntries);
+        return parts.Length == 2 &&
+            Guid.TryParse(parts[0], out definitionId) &&
+            Guid.TryParse(parts[1], out versionId) &&
+            definitionId != Guid.Empty &&
+            versionId != Guid.Empty;
+    }
 }

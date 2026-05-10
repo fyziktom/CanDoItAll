@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -61,6 +61,7 @@
 
 - API, service, model-validation, runtime-test, and performance-review depth.
 - Requires architecture review focused on API contract boundaries and workflow/process separation.
+- Execution result: workflow catalog/settings/component/test-run services and `/api/workflows` endpoints were implemented with typed workflow contracts and no raw MAF API contracts. Tests cover save/list/detail/versioning, validation failure, runtime failure, successful in-process test runs, JSON ID round-tripping, and OpenAPI route exposure.
 
 ## Implementation Steps
 

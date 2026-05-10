@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Closed for implemented app path; production durability/persistence follow-up remains`
 
 ## Objective
 
@@ -101,22 +101,30 @@
 
 ## Proof Required
 
-- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx`
-- Relevant `dotnet test` commands and summaries.
-- DTS emulator/selected durable backend smoke proof or accepted blocker.
-- API smoke proof with endpoint list and outcomes.
-- Performance scan/review checklist and findings for workflow runtime/API hot paths.
-- Browser screenshots and Playwright action/assertion summary.
-- Final architecture review notes.
-- Completed `reviews/01-execution-report.md` gate tables.
+- Passed: `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx --no-restore --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-sln-build-9\` with 0 warnings/errors.
+- Passed: workflow unit tests with 16/16 tests passing.
+- Passed: workflow component tests with 3/3 tests passing.
+- Passed: workflow API integration tests with 4/4 tests passing.
+- Passed: process workflow executor integration tests with 5/5 tests passing.
+- Passed: process launch planning regression with 15/15 tests passing.
+- DurableTask/DTS smoke: not run. Accepted blocker for this implementation pass because no project references `Microsoft.Agents.AI.DurableTask` or Azure Functions hosting packages. The final architecture review keeps production durable execution open and rejects treating in-process execution as production durable.
+- API smoke proof: `/api/workflows/settings`, `/api/workflows/definitions`, `/api/workflows/components`, `/api/workflows/test-runs`, `/api/workflows/runs/{runId}/events`, `/api/workflows/runs/{runId}/artifacts`, `/api/workflows/runs/{runId}/pending-requests`, `/api/workflows/external-requests/{requestId}/response`, and `/api/processes/runs/{runId}` workflow-link projection are covered by integration tests and browser/API proof.
+- Performance review: completed through the targeted scan recorded in `reviews/01-execution-report.md`; no code change required.
+- Browser proof: subbundles 04/05/06 screenshots cover Workflows page, canvas/test run, and process workflow role/run ledger.
+- Final architecture review: `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\04-final-architecture-review-and-production-blockers.md`.
+- Completed execution report: `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\01-execution-report.md`.
 
 ## Browser Validation Logging
 
-- Route: full integrated app workflow path.
-- Viewports: maximized desktop and narrower-width.
-- Playwright evidence: navigate to Workflows, open/create workflow, configure component/canvas, validate/test run, inspect run events/artifacts/request, navigate to process role workflow integration.
-- Screenshots: Workflows page, canvas editor, test/run result, artifact/request view, process role workflow selection/status, narrower-width key screen.
-- Review questions: verify every visible workflow state is real, no content overlaps, canvas is nonblank, actions do not shift layout, errors are actionable, and process/workflow boundaries are understandable.
+- Route: `/agents/workflows` and `/processes` workflow role/run integration.
+- Viewports: desktop and narrower-width evidence from subbundles 04, 05, and 06.
+- Playwright evidence: workflow page catalog/test-run, nonblank canvas/component placement, process role workflow selection, and process workflow execution ledger were opened and screenshot-reviewed.
+- Screenshots:
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-04\workflow-desktop-proof.png`
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-05\workflow-canvas-desktop-proof.png`
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\artifacts\browser\subbundle-06-role-workflow-selection-desktop.png`
+  - `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\artifacts\browser\subbundle-06-workflow-run-ledger-desktop.png`
+- Screenshot review: visible workflow states are real, canvas is nonblank, and process/workflow boundaries are shown through separate workflow run ledger references.
 
 ## Progression Gate
 

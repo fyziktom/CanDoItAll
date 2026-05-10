@@ -59,13 +59,62 @@
         </SurfaceCard>
     }
 
-    @if (Presenter.ExecutionRuns.Count == 0)
+    @if (Presenter.WorkflowRuns.Count > 0)
+    {
+        <SurfaceCard Soft="true"
+                     data-testid="processes-workflow-run-ledger">
+            <Split Gap="LayoutGap.Medium">
+                <div>
+                    <p class="cda-eyebrow">Workflow executions</p>
+                    <h3 class="mt-1 text-base font-semibold text-slate-950">MAF workflow role runs</h3>
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="info"
+                                 Text="@($"{Presenter.WorkflowRuns.Count} linked")" />
+                    <StatusBadge Tone="warning"
+                                 Text="@($"{Presenter.WorkflowRuns.Count(item => item.PendingRequestCount > 0)} pending input")" />
+                </Cluster>
+            </Split>
+            <Stack GapScale="LayoutGap.Small"
+                   Class="mt-4">
+                @foreach (var workflowRun in Presenter.WorkflowRuns)
+                {
+                    <SurfaceCard Soft="true">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-950">@workflowRun.WorkflowName</p>
+                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                                    @(string.IsNullOrWhiteSpace(workflowRun.StepTitle) ? "Run-level workflow" : workflowRun.StepTitle)
+                                    / @workflowRun.Backend
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(workflowRun.Summary))
+                                {
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">@workflowRun.Summary</p>
+                                }
+                                <p class="mt-2 text-xs text-slate-500">@workflowRun.WorkflowRunId</p>
+                            </div>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@ResolveWorkflowTone(workflowRun.State)"
+                                             Text="@workflowRun.State.ToString()" />
+                                <StatusBadge Tone="info"
+                                             Text="@($"{workflowRun.ArtifactCount} artifacts")" />
+                                <StatusBadge Tone="warning"
+                                             Text="@($"{workflowRun.PendingRequestCount} pending requests")" />
+                            </Cluster>
+                        </Split>
+                    </SurfaceCard>
+                }
+            </Stack>
+        </SurfaceCard>
+    }
+
+    @if (Presenter.ExecutionRuns.Count == 0 && Presenter.WorkflowRuns.Count == 0)
     {
         <EmptyState Eyebrow="No executions"
                     Title="No technical execution runs recorded"
                     Description="This run has not dispatched any AgentFramework-backed work yet, or the selected executor is still human-only." />
     }
-    else
+    else if (Presenter.ExecutionRuns.Count > 0)
     {
         <Stack GapScale="LayoutGap.Medium">
             @foreach (var executionRun in Presenter.ExecutionRuns)
@@ -305,6 +354,19 @@
             ProcessOutboxHealthStatus.DeadLettered => "danger",
             ProcessOutboxHealthStatus.Leased => "info",
             ProcessOutboxHealthStatus.WaitingToRetry => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveWorkflowTone(WorkflowRunState state)
+    {
+        return state switch
+        {
+            WorkflowRunState.Completed => "mint",
+            WorkflowRunState.Failed => "danger",
+            WorkflowRunState.Cancelled => "neutral",
+            WorkflowRunState.WaitingForInput => "warning",
+            WorkflowRunState.Running => "info",
             _ => "neutral"
         };
     }

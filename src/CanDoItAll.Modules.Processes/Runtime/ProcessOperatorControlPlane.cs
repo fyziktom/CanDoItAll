@@ -64,7 +64,8 @@ public enum ProcessAttemptTimelineKind
     ManagerDirective,
     Recovery,
     ReworkPacket,
-    ManualRerun
+    ManualRerun,
+    Workflow
 }
 
 public sealed record ProcessEscalationViewModel(
@@ -264,6 +265,8 @@ public sealed class ProcessEscalationService(
         ProcessRuntimeEventTypes.AgentRecoveryAttemptRecorded,
         ProcessRuntimeEventTypes.AgentReworkPacketCreated,
         ProcessRuntimeEventTypes.ManualAgentStepRerun,
+        ProcessRuntimeEventTypes.WorkflowRunStarted,
+        ProcessRuntimeEventTypes.WorkflowRunObserved,
         ProcessRuntimeEventTypes.ProcessOperatorApprovalDecided
     ];
 
@@ -721,6 +724,7 @@ public sealed class ProcessEscalationService(
             ProcessRuntimeEventTypes.AgentRecoveryAttemptRecorded => ProcessAttemptTimelineKind.Recovery,
             ProcessRuntimeEventTypes.AgentReworkPacketCreated => ProcessAttemptTimelineKind.ReworkPacket,
             ProcessRuntimeEventTypes.ManualAgentStepRerun => ProcessAttemptTimelineKind.ManualRerun,
+            ProcessRuntimeEventTypes.WorkflowRunStarted or ProcessRuntimeEventTypes.WorkflowRunObserved => ProcessAttemptTimelineKind.Workflow,
             ProcessRuntimeEventTypes.ProcessOperatorApprovalDecided => ProcessAttemptTimelineKind.Approval,
             _ => ProcessAttemptTimelineKind.Escalation
         };
@@ -731,6 +735,7 @@ public sealed class ProcessEscalationService(
             ProcessRuntimeEventTypes.ProcessEscalationReworkRequested => "warning",
             ProcessRuntimeEventTypes.AgentReworkPacketCreated => "info",
             ProcessRuntimeEventTypes.ManualAgentStepRerun => "warning",
+            ProcessRuntimeEventTypes.WorkflowRunStarted or ProcessRuntimeEventTypes.WorkflowRunObserved => "info",
             ProcessRuntimeEventTypes.ProcessOperatorApprovalDecided when entry.Title.Contains("Approved", StringComparison.OrdinalIgnoreCase) => "mint",
             ProcessRuntimeEventTypes.ProcessOperatorApprovalDecided => "danger",
             _ => "info"

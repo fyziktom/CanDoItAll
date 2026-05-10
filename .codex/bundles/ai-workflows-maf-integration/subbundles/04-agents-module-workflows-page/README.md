@@ -2,7 +2,14 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+
+## Execution Notes
+
+- Added `/agents/workflows` in `CanDoItAll.Modules.AgentFramework` with isolated page state for catalog, selected definition, validation, settings summary, preview test runs, run timeline, artifacts, and pending human-in-loop requests.
+- Added an Agents shell action that navigates to the workflow page without merging workflows into the existing Agents tab set.
+- Added component tests for starter workflow creation, in-process preview execution, and Agents shell navigation.
+- Browser proof captured on `http://127.0.0.1:5099/agents/workflows` at 1440x1000 and 390x900 after creating a starter workflow and running a successful preview.
 
 ## Objective
 
@@ -101,11 +108,11 @@
 
 ## Proof Required
 
-- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx`
-- Relevant module/component test command if available.
-- Browser validation with maximized desktop screenshot.
-- Browser validation with narrower-width screenshot.
-- Execution report entries with route, viewport, Playwright actions/assertions, screenshots, and visual review notes.
+- Passed: `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx --no-restore --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-sln-build-5\`
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-component-tests-2\`
+- Passed: browser validation with desktop screenshot at `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-04\workflow-desktop-proof.png`
+- Passed: browser validation with narrower-width screenshot at `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-04\workflow-mobile-proof.png`
+- Recorded in `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\01-execution-report.md`.
 
 ## Browser Validation Logging
 

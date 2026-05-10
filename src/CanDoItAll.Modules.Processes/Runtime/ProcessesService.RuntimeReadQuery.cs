@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,8 +46,13 @@ public interface IProcessRuntimeReadQueryService
         CancellationToken cancellationToken);
 }
 
-public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeReadQueryService
+public sealed partial class ProcessRuntimeReadQueryService(
+    IWorkflowCatalogService? workflowCatalog = null,
+    IWorkflowRunStore? workflowRuns = null) : IProcessRuntimeReadQueryService
 {
+    private readonly IWorkflowCatalogService? workflowCatalog = workflowCatalog;
+    private readonly IWorkflowRunStore? workflowRuns = workflowRuns;
+
     public async Task<IReadOnlyList<ProcessRunListItem>> ListRunsAsync(
         AppDbContext dbContext,
         Guid? definitionId,
@@ -335,6 +342,9 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
         var workBriefs = await ListWorkBriefsAsync(dbContext, runId, cancellationToken);
         var conformanceObservations = await ListConformanceObservationsAsync(dbContext, runId, cancellationToken);
         var directMessageThreads = await ListDirectMessageThreadsAsync(dbContext, runId, cancellationToken);
+        var workflowRunLinks = await EnrichWorkflowRunsAsync(
+            await ListWorkflowRunsAsync(dbContext, runId, cancellationToken),
+            cancellationToken);
 
         return new ProcessWorkspaceRunDetails(
             stepRuns,
@@ -344,7 +354,53 @@ public sealed partial class ProcessRuntimeReadQueryService : IProcessRuntimeRead
             assignments,
             workBriefs,
             conformanceObservations,
-            directMessageThreads);
+            directMessageThreads)
+        {
+            WorkflowRuns = workflowRunLinks
+        };
+    }
+
+    private async Task<IReadOnlyList<ProcessWorkflowRunViewModel>> EnrichWorkflowRunsAsync(
+        IReadOnlyList<ProcessWorkflowRunViewModel> workflowRunLinks,
+        CancellationToken cancellationToken)
+    {
+        if (workflowRunLinks.Count == 0 || workflowRuns is null)
+        {
+            return workflowRunLinks;
+        }
+
+        IReadOnlyDictionary<(Guid DefinitionId, Guid VersionId), string> workflowNamesByKey =
+            workflowCatalog is null
+                ? new Dictionary<(Guid DefinitionId, Guid VersionId), string>()
+                : (await workflowCatalog.ListDefinitionsAsync(cancellationToken))
+                    .ToDictionary(
+                        item => (item.Id.Value, item.VersionId.Value),
+                        item => item.Name);
+        var enriched = new List<ProcessWorkflowRunViewModel>(workflowRunLinks.Count);
+        foreach (var workflowRun in workflowRunLinks)
+        {
+            var runId = new WorkflowRunId(workflowRun.WorkflowRunId);
+            var snapshot = await workflowRuns.GetRunAsync(runId, cancellationToken);
+            var artifacts = await workflowRuns.ListArtifactsAsync(runId, cancellationToken);
+            var pendingRequests = await workflowRuns.ListPendingExternalRequestsAsync(runId, cancellationToken);
+            enriched.Add(workflowRun with
+            {
+                WorkflowName = workflowNamesByKey.GetValueOrDefault(
+                    (workflowRun.WorkflowDefinitionId, workflowRun.WorkflowVersionId),
+                    workflowRun.WorkflowName),
+                State = snapshot?.State ?? workflowRun.State,
+                Summary = string.IsNullOrWhiteSpace(snapshot?.Summary)
+                    ? workflowRun.Summary
+                    : snapshot.Summary,
+                ArtifactCount = artifacts.Count,
+                PendingRequestCount = pendingRequests.Count,
+                UpdatedAtUtc = snapshot?.UpdatedAtUtc ?? workflowRun.UpdatedAtUtc
+            });
+        }
+
+        return enriched
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList();
     }
 
     public async Task<IReadOnlyDictionary<Guid, ProcessActiveRunHealthMetrics>> GetActiveRunHealthMetricsAsync(

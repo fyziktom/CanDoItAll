@@ -290,4 +290,9 @@ public partial class AgentsHomePage
     {
         Navigation.NavigateTo("/processes");
     }
+
+    private void OpenWorkflows()
+    {
+        Navigation.NavigateTo("/agents/workflows");
+    }
 }

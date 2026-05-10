@@ -27,6 +27,7 @@ public static class ProcessesModuleServiceCollectionExtensions
             .BindConfiguration(ProcessObservationCacheOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
+        services.AddScoped<ProcessWorkflowRunCoordinator>();
         services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();

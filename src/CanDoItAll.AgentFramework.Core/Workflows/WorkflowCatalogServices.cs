@@ -1,0 +1,563 @@
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.AgentFramework.Core;
+
+public sealed class InMemoryWorkflowCatalogStore
+{
+    internal SemaphoreSlim Gate { get; } = new(1, 1);
+
+    internal Dictionary<WorkflowId, List<WorkflowDefinition>> Definitions { get; } = [];
+
+    internal Dictionary<WorkflowComponentId, LlmCallComponent> Components { get; } = [];
+
+    internal WorkflowSettings Settings { get; set; } = WorkflowSettings.Default;
+}
+
+public sealed class InMemoryWorkflowCatalogService :
+    IWorkflowCatalogService,
+    IWorkflowComponentLibraryService,
+    IWorkflowSettingsService
+{
+    private readonly InMemoryWorkflowCatalogStore store;
+    private readonly IWorkflowDefinitionValidator validator;
+    private readonly IProviderProfileRegistry? providerRegistry;
+    private readonly IProviderProfileService? providerProfileService;
+
+    public InMemoryWorkflowCatalogService(IWorkflowDefinitionValidator validator)
+        : this(new InMemoryWorkflowCatalogStore(), validator)
+    {
+    }
+
+    public InMemoryWorkflowCatalogService(
+        InMemoryWorkflowCatalogStore store,
+        IWorkflowDefinitionValidator validator,
+        IProviderProfileRegistry? providerRegistry = null,
+        IProviderProfileService? providerProfileService = null)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(validator);
+
+        this.store = store;
+        this.validator = validator;
+        this.providerRegistry = providerRegistry;
+        this.providerProfileService = providerProfileService;
+    }
+
+    public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            return store.Definitions.Values
+                .Select(versions => versions[^1])
+                .OrderByDescending(definition => definition.UpdatedAtUtc)
+                .Select(definition => new WorkflowCatalogItem(
+                    definition.Id,
+                    definition.VersionId,
+                    definition.Name,
+                    definition.Description,
+                    definition.Status,
+                    definition.RuntimePolicy.PreferredBackend,
+                    definition.UpdatedAtUtc))
+                .ToArray();
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+        WorkflowId workflowId,
+        WorkflowVersionId? versionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        WorkflowDefinition? definition;
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!store.Definitions.TryGetValue(workflowId, out var versions))
+            {
+                return null;
+            }
+
+            definition = versionId is null
+                ? versions[^1]
+                : versions.SingleOrDefault(item => item.VersionId == versionId.Value);
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+
+        return definition is null
+            ? null
+            : new WorkflowDefinitionDetail(
+                definition,
+                await ValidateDefinitionAsync(definition, cancellationToken));
+    }
+
+    public async Task<WorkflowDefinition> SaveDefinitionAsync(
+        WorkflowDefinitionSaveRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        ArgumentNullException.ThrowIfNull(request.Graph);
+        ArgumentNullException.ThrowIfNull(request.RuntimePolicy);
+
+        var now = DateTimeOffset.UtcNow;
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            var workflowId = request.Id ?? WorkflowId.New();
+            store.Definitions.TryGetValue(workflowId, out var versions);
+            var current = versions is { Count: > 0 } ? versions[^1] : null;
+            if (request.ExpectedVersionId is { } expectedVersionId &&
+                current is not null &&
+                current.VersionId != expectedVersionId)
+            {
+                throw new InvalidOperationException($"Workflow definition '{workflowId}' was updated by another request.");
+            }
+
+            var definition = new WorkflowDefinition(
+                workflowId,
+                WorkflowVersionId.New(),
+                request.Name.Trim(),
+                request.Description.Trim(),
+                request.Status,
+                request.Graph,
+                request.RuntimePolicy,
+                current?.CreatedAtUtc ?? now,
+                now);
+
+            if (versions is null)
+            {
+                store.Definitions[workflowId] = [definition];
+            }
+            else
+            {
+                versions.Add(definition);
+            }
+
+            return definition;
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task DeleteDefinitionAsync(
+        WorkflowId workflowId,
+        CancellationToken cancellationToken = default)
+    {
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            store.Definitions.Remove(workflowId);
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<WorkflowValidationResult> ValidateDefinitionAsync(
+        WorkflowDefinition definition,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+
+        var componentSnapshot = await ListReferencedComponentsAsync(definition, cancellationToken);
+        var result = validator.Validate(definition, componentSnapshot);
+        var issues = result.Issues.ToList();
+
+        if (definition.RuntimePolicy.RequireDurableProductionRuns &&
+            definition.RuntimePolicy.PreferredBackend == WorkflowRuntimeBackendKind.InProcess)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidWorkflowSettings,
+                "Durable production workflows cannot prefer the in-process runtime backend."));
+        }
+
+        var currentSettings = await GetSettingsAsync(cancellationToken);
+        if (!currentSettings.HumanInLoopPolicy.AllowHumanInputNodes &&
+            definition.Graph.Nodes.Any(node => node.Kind == WorkflowNodeKind.HumanInput))
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidWorkflowSettings,
+                "Human-in-loop nodes are disabled by workflow settings."));
+        }
+
+        foreach (var component in componentSnapshot)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var providerIssues = await ValidateProviderCompatibilityAsync(component, cancellationToken);
+            issues.AddRange(providerIssues);
+        }
+
+        return new WorkflowValidationResult(issues);
+    }
+
+    public async Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(CancellationToken cancellationToken = default)
+    {
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            return store.Components.Values
+                .OrderBy(component => component.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<LlmCallComponent?> GetComponentAsync(
+        WorkflowComponentId componentId,
+        CancellationToken cancellationToken = default)
+    {
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            store.Components.TryGetValue(componentId, out var component);
+            return component;
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<LlmCallComponent> SaveComponentAsync(
+        LlmCallComponentSaveRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Model);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Instructions);
+        ArgumentNullException.ThrowIfNull(request.ModelSettings);
+        ArgumentNullException.ThrowIfNull(request.InputShape);
+        ArgumentNullException.ThrowIfNull(request.ResultShape);
+
+        var now = DateTimeOffset.UtcNow;
+        var component = new LlmCallComponent(
+            request.Id ?? WorkflowComponentId.New(),
+            request.Name.Trim(),
+            request.ProviderProfileId,
+            request.Model.Trim(),
+            request.Modality,
+            request.ModelSettings,
+            request.Instructions.Trim(),
+            request.InputShape,
+            request.ResultShape,
+            request.Permissions,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now);
+
+        var validation = validator.Validate(
+            CreateComponentValidationDefinition(component),
+            [component]);
+        var providerIssues = await ValidateProviderCompatibilityAsync(component, cancellationToken);
+        var issues = validation.Issues.Concat(providerIssues).ToArray();
+        if (issues.Length > 0)
+        {
+            throw new InvalidOperationException(string.Join(" ", issues.Select(issue => issue.Message)));
+        }
+
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (store.Components.TryGetValue(component.Id, out var current))
+            {
+                component = component with { CreatedAtUtc = current.CreatedAtUtc };
+            }
+
+            store.Components[component.Id] = component;
+            return component;
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task DeleteComponentAsync(
+        WorkflowComponentId componentId,
+        CancellationToken cancellationToken = default)
+    {
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            store.Components.Remove(componentId);
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(store.Settings);
+    }
+
+    public Task<WorkflowSettings> SaveSettingsAsync(
+        WorkflowSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0)
+        {
+            throw new InvalidOperationException("Workflow artifact inline payload limit must be positive.");
+        }
+
+        if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0)
+        {
+            throw new InvalidOperationException("Workflow human-in-loop timeout must be positive.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        store.Settings = settings;
+        return Task.FromResult(settings);
+    }
+
+    private async Task<IReadOnlyList<WorkflowValidationIssue>> ValidateProviderCompatibilityAsync(
+        LlmCallComponent component,
+        CancellationToken cancellationToken)
+    {
+        if (!component.ProviderProfileId.HasValue || providerRegistry is null)
+        {
+            return [];
+        }
+
+        var provider = await providerRegistry.GetProviderAsync(component.ProviderProfileId.Value, cancellationToken);
+        if (provider is null)
+        {
+            return
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidProviderModel,
+                    $"LLM Call Component '{component.Id}' references provider '{component.ProviderProfileId.Value:D}', which does not exist.")
+            ];
+        }
+
+        if (!provider.IsEnabled)
+        {
+            return
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidProviderModel,
+                    $"LLM Call Component '{component.Id}' references disabled provider '{provider.Name}'.")
+            ];
+        }
+
+        var providerSupportsVision = providerProfileService?.ResolveFeatureMatrix(provider).SupportsVision ?? true;
+        if (component.Modality is (WorkflowModality.Vision or WorkflowModality.Multimodal) && !providerSupportsVision)
+        {
+            return
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.UnsupportedModality,
+                    $"LLM Call Component '{component.Id}' requires vision support but provider '{provider.Name}' does not support vision.")
+            ];
+        }
+
+        return [];
+    }
+
+    private async Task<IReadOnlyList<LlmCallComponent>> ListReferencedComponentsAsync(
+        WorkflowDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        var referencedComponentIds = definition.Graph.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.LlmCall && node.Settings.ComponentId.HasValue)
+            .Select(node => node.Settings.ComponentId!.Value)
+            .ToHashSet();
+        if (referencedComponentIds.Count == 0)
+        {
+            return [];
+        }
+
+        var allComponents = await ListComponentsAsync(cancellationToken);
+        return allComponents
+            .Where(component => referencedComponentIds.Contains(component.Id))
+            .ToArray();
+    }
+
+    private static WorkflowDefinition CreateComponentValidationDefinition(LlmCallComponent component)
+    {
+        var start = new WorkflowNodeId("start");
+        var llm = new WorkflowNodeId("llm");
+        var end = new WorkflowNodeId("end");
+        return new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "Component validation",
+            "Internal component validation workflow.",
+            WorkflowLifecycleStatus.Draft,
+            new WorkflowGraph(
+                start,
+                [
+                    new WorkflowNode(
+                        start,
+                        WorkflowNodeKind.Start,
+                        "Start",
+                        [],
+                        new WorkflowNodeSettings(
+                            ComponentId: null,
+                            AgentId: null,
+                            SubworkflowId: null,
+                            ExternalRequestKind: null,
+                            Instructions: string.Empty,
+                            InputShape: component.InputShape,
+                            ResultShape: component.InputShape)),
+                    new WorkflowNode(
+                        llm,
+                        WorkflowNodeKind.LlmCall,
+                        "LLM",
+                        [],
+                        new WorkflowNodeSettings(
+                            component.Id,
+                            AgentId: null,
+                            SubworkflowId: null,
+                            ExternalRequestKind: null,
+                            Instructions: string.Empty,
+                            InputShape: component.InputShape,
+                            ResultShape: component.ResultShape)),
+                    new WorkflowNode(
+                        end,
+                        WorkflowNodeKind.End,
+                        "End",
+                        [],
+                        new WorkflowNodeSettings(
+                            ComponentId: null,
+                            AgentId: null,
+                            SubworkflowId: null,
+                            ExternalRequestKind: null,
+                            Instructions: string.Empty,
+                            InputShape: component.ResultShape,
+                            ResultShape: component.ResultShape))
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-llm"),
+                        start,
+                        SourcePortId: null,
+                        llm,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty),
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("llm-to-end"),
+                        llm,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]),
+            WorkflowSettings.Default.DefaultRuntimePolicy,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+    }
+}
+
+public sealed class WorkflowTestRunner(
+    IWorkflowCatalogService catalog,
+    IWorkflowRuntimeManager runtimeManager,
+    IWorkflowRunStore runStore) : IWorkflowTestRunner
+{
+    public async Task<WorkflowTestRunResult> RunAsync(
+        WorkflowTestRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var definition = await ResolveDefinitionAsync(request, cancellationToken);
+        if (definition is null)
+        {
+            return new WorkflowTestRunResult(
+                Succeeded: false,
+                new WorkflowValidationResult(
+                [
+                    new WorkflowValidationIssue(
+                        WorkflowValidationIssueCode.MissingName,
+                        "A saved workflow id or draft workflow definition is required.")
+                ]),
+                Run: null,
+                Events: [],
+                Artifacts: [],
+                PendingExternalRequests: [],
+                ErrorMessage: "Workflow definition was not found.");
+        }
+
+        var validation = await catalog.ValidateDefinitionAsync(definition, cancellationToken);
+        if (!validation.Succeeded || request.ValidateOnly)
+        {
+            return new WorkflowTestRunResult(
+                validation.Succeeded,
+                validation,
+                Run: null,
+                Events: [],
+                Artifacts: [],
+                PendingExternalRequests: [],
+                ErrorMessage: validation.Succeeded ? string.Empty : "Workflow definition failed validation.");
+        }
+
+        try
+        {
+            var run = await runtimeManager.StartAsync(
+                definition,
+                new WorkflowRunStartRequest(
+                    definition.Id,
+                    definition.VersionId,
+                    string.IsNullOrWhiteSpace(request.InputJson) ? "{}" : request.InputJson,
+                    request.RequestedBackend,
+                    SourceProcessRunId: null,
+                    SourceProcessAssignmentId: null),
+                cancellationToken);
+            return new WorkflowTestRunResult(
+                run.State is WorkflowRunState.Completed or WorkflowRunState.WaitingForInput or WorkflowRunState.Idle,
+                validation,
+                run,
+                await runtimeManager.ListEventsAsync(run.RunId, cancellationToken),
+                await runStore.ListArtifactsAsync(run.RunId, cancellationToken),
+                await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken),
+                run.State == WorkflowRunState.Failed ? run.Summary : string.Empty);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
+        {
+            return new WorkflowTestRunResult(
+                Succeeded: false,
+                validation,
+                Run: null,
+                Events: [],
+                Artifacts: [],
+                PendingExternalRequests: [],
+                ErrorMessage: exception.Message);
+        }
+    }
+
+    private async Task<WorkflowDefinition?> ResolveDefinitionAsync(
+        WorkflowTestRunRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.DraftDefinition is not null)
+        {
+            return request.DraftDefinition;
+        }
+
+        if (request.WorkflowId is not { } workflowId)
+        {
+            return null;
+        }
+
+        return (await catalog.GetDefinitionAsync(workflowId, request.VersionId, cancellationToken))?.Definition;
+    }
+}

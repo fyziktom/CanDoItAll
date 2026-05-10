@@ -1,6 +1,6 @@
 # AI Workflows MAF Integration
 
-This bundle is a planning-only coordination package for adding first-class AI workflows to CanDoItAll using Microsoft Agent Framework workflows. It intentionally does not implement feature code.
+This bundle now records the implemented and validated workflow integration path for adding first-class AI workflows to CanDoItAll using Microsoft Agent Framework workflows.
 
 ## Profile
 
@@ -15,7 +15,7 @@ This bundle is a planning-only coordination package for adding first-class AI wo
 - Requested outcome: an implementation-ready, phased bundle that directs agents through MAF wrapper foundations, runtime management, workflow catalog/settings/testing, Agents module UI, canvas editing, process integration, web API integration, and final validation.
 - Hard constraints: planning only; use the local MAF source clone at `C:\repositories\agent-framework`; preserve strong typing; avoid silent fallback behavior; keep workflows in the existing AgentFramework module with their own page; keep processes as the higher-level orchestrator.
 - Evidence required before closure: each implementation subbundle must capture build/test proof, architecture review findings, API proof where relevant, browser screenshots for UI phases, and execution-report gate updates.
-- Known blockers or explicit scope exceptions: no product implementation is included in this prepared bundle; final schema names and route names are implementation decisions, but the bundle constrains the required boundaries and validation.
+- Known blockers or explicit scope exceptions: the implemented path uses MAF workflow models and an in-process backend for preview/test/short non-durable runs. Production DurableTask/DTS hosting and persistent workflow storage remain explicit follow-up gates because this repo does not currently reference `Microsoft.Agents.AI.DurableTask` or Azure Functions hosting packages.
 
 ## Bundle Layout
 
@@ -48,7 +48,8 @@ This bundle is a planning-only coordination package for adding first-class AI wo
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Execution status: `Not started`
-- Subbundle gate review: `Pending implementation`
-- Final closure gate: `Pending implementation`
-- Browser validation analytics: `Pending implementation`
+- Execution status: `Implemented and validated for the in-app workflow path`
+- Subbundle gate review: `01 passed; 02 passed with explicit DurableTask/DTS host follow-up; 03 passed; 04 passed; 05 passed; 06 passed; 07 passed with production durable-host follow-up; 08 closed for implemented app path`
+- Phase 1 detailed architecture review: `Passed for downstream UI/API work; production durability/persistence gate remains open as explicit follow-up`
+- Final closure gate: `Closed with production durability/persistence blocker documented; do not treat in-process execution as production durable`
+- Browser validation analytics: `04 passed; 05 passed; 06 passed; 07/08 covered by integrated route and process-link evidence`

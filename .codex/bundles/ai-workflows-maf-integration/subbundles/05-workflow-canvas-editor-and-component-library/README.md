@@ -2,7 +2,15 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+
+## Execution Notes
+
+- Added workflow canvas state/draft models and typed conversion to/from `WorkflowDefinition` without using process definition models as the canonical workflow shape.
+- Added persisted `WorkflowNode.CanvasX`/`CanvasY` layout coordinates so canvas save/load can round-trip positions through the workflow definition.
+- Added `WorkflowCanvasEditor` on the `/agents/workflows` page with CanvasLib workbench rendering, prepared LLM Call Component library, typed node toolbox, node editor, edge editor, validation, preview run, and save actions.
+- Covered Start, End, LLM call, triage, strict logic, artifact, human input, agent step, and subworkflow node kinds in the toolbox/editor.
+- Browser proof authored a three-node LLM workflow, validated it, ran an in-process preview successfully, and saved it.
 
 ## Objective
 
@@ -108,11 +116,12 @@
 
 ## Proof Required
 
-- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx`
-- Component/service tests for canvas mapping and validation where available.
-- Browser screenshot of maximized desktop canvas with toolbox, selected node editor, and validation/test panel.
-- Browser screenshot of narrower-width behavior.
-- Execution report route, viewport, Playwright actions/assertions, screenshots, and visual review notes.
+- Passed: `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx --no-restore --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-sln-build-7\`
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-component-tests-4\`
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowCatalogTests" --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-unit-tests-6\`
+- Passed: `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter FullyQualifiedName~WorkflowApiIntegrationTests --verbosity minimal -m:1 -p:OutDir=C:\repositories\CanDoItAll\.codex\tmp\workflow-integration-tests-4\`
+- Passed: browser desktop screenshot at `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-05\workflow-canvas-desktop-proof.png`
+- Passed: browser narrower-width screenshot at `C:\repositories\CanDoItAll\.codex\bundles\ai-workflows-maf-integration\reviews\evidence\subbundle-05\workflow-canvas-mobile-proof.png`
 
 ## Browser Validation Logging
 

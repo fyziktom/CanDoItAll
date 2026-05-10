@@ -1,0 +1,139 @@
+.workflows-summary ::deep .cda-summary-tile--badge {
+    flex: 0 1 13.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 0.75rem;
+}
+
+.workflows-layout {
+    align-items: start;
+}
+
+.workflows-card-title {
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgb(15 23 42);
+}
+
+.workflows-muted {
+    margin: 0;
+    color: rgb(71 85 105);
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.workflows-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgb(226 232 240);
+}
+
+.workflows-catalog-item,
+.workflows-run-item {
+    width: 100%;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(255 255 255);
+    text-align: left;
+    color: rgb(51 65 85);
+}
+
+.workflows-catalog-item:hover,
+.workflows-run-item:hover {
+    border-color: rgb(59 130 246);
+    background: rgb(248 250 252);
+}
+
+.workflows-catalog-item--selected,
+.workflows-run-item--selected {
+    border-color: rgb(37 99 235);
+    background: rgb(239 246 255);
+}
+
+.workflows-catalog-item__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+    color: rgb(15 23 42);
+}
+
+.workflows-catalog-item__meta,
+.workflows-run-item small {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+}
+
+.workflows-fact {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(248 250 252);
+}
+
+.workflows-fact span,
+.workflows-field span {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.workflows-fact strong {
+    color: rgb(15 23 42);
+    font-size: 0.9rem;
+}
+
+.workflows-field {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.workflows-input {
+    min-height: 8rem;
+    resize: vertical;
+}
+
+.workflows-request-response {
+    min-height: 4.5rem;
+    resize: vertical;
+}
+
+.workflows-issue,
+.workflows-event,
+.workflows-artifact,
+.workflows-request {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(248 250 252);
+    color: rgb(51 65 85);
+    font-size: 0.875rem;
+}
+
+.workflows-issue strong,
+.workflows-artifact strong,
+.workflows-request strong {
+    color: rgb(15 23 42);
+}
+
+.workflows-run-list {
+    max-height: 20rem;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+    scrollbar-gutter: stable;
+}
+
+@media (max-width: 900px) {
+    .workflows-summary ::deep .cda-summary-tile--badge {
+        flex-basis: 11.75rem;
+    }
+}

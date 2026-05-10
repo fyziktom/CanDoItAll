@@ -95,6 +95,8 @@ public sealed partial class ProcessesService {
                 item.RoleRequirementId,
                 item.StepDefinitionId,
                 item.PartyId,
+                item.WorkflowDefinitionId,
+                item.WorkflowVersionId,
                 item.DisplayName,
                 item.ExecutorKind,
                 item.BindingReason,

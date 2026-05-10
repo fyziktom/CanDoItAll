@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -86,6 +86,7 @@
 
 - Critical runtime foundation.
 - Requires build, unit/integration tests, DurableTask/DTS proof or documented blocker, performance review, and an architecture review focused on run management, concurrency, checkpointing, and human-in-loop durability.
+- Execution result: runtime manager, in-process MAF backend, product run/event/external-request/artifact stores, pause/respond behavior, explicit backend rejection, and concurrent run isolation were implemented and validated. DurableTask/DTS smoke is explicitly blocked for this subbundle because no product DTS host/client registration exists yet; subbundle 07 remains responsible for durable host/API integration and durable smoke proof before production closure.
 
 ## Implementation Steps
 
