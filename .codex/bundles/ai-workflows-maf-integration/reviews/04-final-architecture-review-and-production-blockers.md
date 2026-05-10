@@ -54,3 +54,11 @@
 
 - The implemented application path is accepted for further product iteration and non-durable preview/testing.
 - Production closure is intentionally not claimed until DurableTask/DTS hosting and persistent workflow storage are implemented and revalidated.
+
+## Re-entry Review Addendum
+
+- Date: 2026-05-10.
+- Accepted repair: MAF checkpoint persistence helper moved from `CanDoItAll.AgentFramework.Core` to `CanDoItAll.AgentFramework.Maf`; Core is back to product contracts/provider-neutral orchestration and no longer references `Microsoft.Agents.AI.Workflows`.
+- Accepted repair: workflow catalog save now snapshots incoming graph collections to prevent mutable caller-owned lists from mutating the stored canonical workflow definition.
+- Regression guards: `WorkflowArchitectureBoundaryTests.AgentFrameworkCoreDoesNotReferenceMafWorkflowPackage` and `WorkflowCatalogTests.CatalogSnapshotsDefinitionGraphOnSave`.
+- Remaining architecture concern: the in-process workflow backend still binds all node kinds as generic payload-forwarding executors, and `WorkflowRuntimeManager` handles human-input nodes with a coarse pre-backend pause. This remains acceptable only for preview/test/non-durable proof and must be reopened before production semantic execution.

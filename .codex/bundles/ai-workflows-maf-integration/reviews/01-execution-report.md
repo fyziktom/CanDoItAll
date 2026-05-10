@@ -60,6 +60,17 @@
 - API repair applied: `/api/workflows/provider-options` exposes the workflow LLM provider choices for clients without creating a parallel provider management API.
 - Proof: `dotnet build src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj --no-restore -m:1 -p:UseSharedCompilation=false -p:OutDir=.codex\tmp\provider-core-build\` passed; `dotnet build src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj --no-restore -m:1 -p:UseSharedCompilation=false -p:OutDir=.codex\tmp\provider-module-build-2\` passed; `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 -p:UseSharedCompilation=false -p:OutDir=.codex\tmp\provider-web-build-2\` passed; workflow catalog unit tests passed 9/9; workflow page component tests passed 3/3 in `.codex\tmp\provider-workflow-components-5\`; workflow API integration tests passed 5/5.
 
+## Re-entry Architecture Repair Addendum
+
+- Date: 2026-05-10.
+- Review artifact: `reviews/05-reentry-architecture-performance-review.md`.
+- Bundle gate repair: subbundle statuses 06, 07, and 08 now use final validator states while preserving the production durable/persistence follow-up as an explicit blocker.
+- Architecture repair applied: `WorkflowBackedAgentExecutionCheckpointBridge` moved from `CanDoItAll.AgentFramework.Core` to `CanDoItAll.AgentFramework.Maf`, and `CanDoItAll.AgentFramework.Core` no longer references `Microsoft.Agents.AI.Workflows`.
+- Canonical model repair applied: workflow catalog saves now snapshot incoming graph nodes, ports, and edges so mutable caller lists cannot mutate the saved canonical definition after persistence.
+- Open architecture blockers preserved: current in-process workflow node execution remains preview-level, human-input routing is coarse, DurableTask/DTS hosting is not implemented, and persistent workflow product storage is still required before production closure.
+- Performance scan result: targeted post-fix scan found 0 sync waits, 0 `Task.Run`, 0 `Thread.Sleep`, 0 regex usage, 0 culture-sensitive case conversions, 0 string comparison issues, 4 JSON serialization calls using cached/options-backed paths, and LINQ limited to projection/validation code.
+- Proof: Core build passed; MAF build passed; workflow architecture boundary test passed 1/1; workflow foundation tests passed 10/10; workflow catalog tests passed 10/10; integration test project build passed with 0 warnings/errors.
+
 ## Raw Note Closure
 
 | Raw note | Status | Proof |

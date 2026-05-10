@@ -29,6 +29,25 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogSnapshotsDefinitionGraphOnSave()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var nodes = CreateDefinitionGraph(component.Id).Nodes.ToList();
+        var edges = CreateDefinitionGraph(component.Id).Edges.ToList();
+        var graph = new WorkflowGraph(new WorkflowNodeId("start"), nodes, edges);
+
+        var saved = await catalog.SaveDefinitionAsync(CreateSaveRequest(graph));
+        nodes.Clear();
+        edges.Clear();
+        var detail = await catalog.GetDefinitionAsync(saved.Id);
+
+        Assert.NotNull(detail);
+        Assert.Equal(3, detail.Definition.Graph.Nodes.Count);
+        Assert.Equal(2, detail.Definition.Graph.Edges.Count);
+    }
+
+    [Fact]
     public async Task ValidationCatchesDisconnectedNodesAndShapeMismatch()
     {
         var catalog = CreateCatalog();

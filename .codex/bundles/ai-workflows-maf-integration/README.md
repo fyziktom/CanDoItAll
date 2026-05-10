@@ -53,3 +53,4 @@ This bundle now records the implemented and validated workflow integration path 
 - Phase 1 detailed architecture review: `Passed for downstream UI/API work; production durability/persistence gate remains open as explicit follow-up`
 - Final closure gate: `Closed with production durability/persistence blocker documented; do not treat in-process execution as production durable`
 - Browser validation analytics: `04 passed; 05 passed; 06 passed; 07/08 covered by integrated route and process-link evidence`
+- Re-entry architecture repair: `2026-05-10 Core/MAF isolation repaired; workflow graph save snapshot added; production semantic execution blockers remain documented`

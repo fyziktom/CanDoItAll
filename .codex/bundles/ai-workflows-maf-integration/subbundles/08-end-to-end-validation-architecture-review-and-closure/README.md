@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Closed for implemented app path; production durability/persistence follow-up remains`
+- `Completed`
+- Production durability and persistent workflow storage remain explicit follow-up blockers before production closure.
 
 ## Objective
 

@@ -127,7 +127,7 @@ public sealed class InMemoryWorkflowCatalogService :
                 request.Name.Trim(),
                 request.Description.Trim(),
                 request.Status,
-                request.Graph,
+                SnapshotGraph(request.Graph),
                 request.RuntimePolicy,
                 current?.CreatedAtUtc ?? now,
                 now);
@@ -450,6 +450,16 @@ public sealed class InMemoryWorkflowCatalogService :
             .Select(model => model.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static WorkflowGraph SnapshotGraph(WorkflowGraph graph)
+    {
+        return new WorkflowGraph(
+            graph.StartNodeId,
+            graph.Nodes
+                .Select(node => node with { Ports = node.Ports.ToArray() })
+                .ToArray(),
+            graph.Edges.ToArray());
     }
 
     private async Task<IReadOnlyList<LlmCallComponent>> ListReferencedComponentsAsync(

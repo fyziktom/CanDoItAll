@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Passed with production durable-host follow-up`
+- `Completed`
+- Production durable-host follow-up remains open and owned by the production durability workstream.
 
 ## Objective
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Passed`
+- `Completed`
 
 ## Objective
 
