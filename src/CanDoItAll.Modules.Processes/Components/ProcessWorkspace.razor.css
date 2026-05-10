@@ -1,7 +1,7 @@
 .processes-workspace-root {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: calc(100dvh - 6.5rem);
     min-height: 0;
     overflow: hidden;
 }
@@ -67,6 +67,123 @@
     min-width: 0;
     max-width: 100%;
     justify-content: flex-end;
+}
+
+.processes-workspace-root ::deep .processes-role-card-grid {
+    width: 100%;
+    align-self: stretch;
+    align-items: stretch;
+}
+
+.processes-workspace-root ::deep .processes-role-card {
+    display: flex;
+    width: 100%;
+    min-height: 12.5rem;
+    overflow: hidden;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 1rem;
+    background: rgb(248 250 252);
+    color: rgb(15 23 42);
+    padding: 1rem;
+    position: relative;
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.processes-workspace-root ::deep .processes-role-card:hover,
+.processes-workspace-root ::deep .processes-role-card:focus-within {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 12px 28px rgb(15 23 42 / 0.08);
+    transform: translateY(-1px);
+}
+
+.processes-workspace-root ::deep .processes-role-card > * {
+    width: 100%;
+    min-width: 0;
+}
+
+.processes-workspace-root ::deep .processes-role-card__identity {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.processes-workspace-root ::deep .processes-role-card__avatar {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.95rem;
+    background: rgb(255 255 255 / 0.94);
+    color: rgb(51 65 85);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 16px rgb(15 23 42 / 0.06);
+}
+
+.processes-workspace-root ::deep .processes-role-card__copy {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.processes-workspace-root ::deep .processes-role-card__name {
+    margin: 0.7rem 0 0;
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.processes-workspace-root ::deep .processes-role-card__kind {
+    margin: 0.25rem 0 0;
+    color: rgb(100 116 139);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    text-transform: uppercase;
+}
+
+.processes-workspace-root ::deep .processes-role-card__summary {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: rgb(71 85 105);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.processes-workspace-root ::deep .processes-role-card__tags {
+    max-height: 4.5rem;
+    overflow: hidden;
+}
+
+.processes-workspace-root ::deep .processes-role-card__footer {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.processes-workspace-root ::deep .processes-role-card__footer > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 @media (max-width: 640px) {
@@ -326,6 +443,17 @@
 }
 
 @media (max-width: 767.98px) {
+    .processes-workspace-root {
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+    }
+
+    .processes-workspace-root ::deep .processes-page-scaffold {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
     .processes-workspace-root ::deep .cad-tabs--fill-height {
         display: block;
         height: auto !important;

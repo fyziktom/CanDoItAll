@@ -1080,7 +1080,7 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
-    public async Task Templates_dialog_adds_role_templates_into_the_current_definition_without_closing_the_modal()
+    public async Task Templates_dialog_opens_role_template_details_before_adding_to_the_current_definition()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -1098,14 +1098,99 @@ public sealed class ProcessWorkspaceTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
 
         await SetTemplateLibraryCategoryAsync(cut, "roles");
+        var initialRoleCount = GetEditor(cut.Instance).Roles.Count;
+        var initialRoleIds = process.Editor.Roles.Select(role => role.Id).ToHashSet();
+
         cut.Find("[data-testid='processes-template-library-add-button']").Click();
 
         cut.WaitForAssertion(() =>
         {
             var editor = GetEditor(cut.Instance);
-            Assert.Equal(2, editor.Roles.Count);
+            Assert.Equal(initialRoleCount, editor.Roles.Count);
+            Assert.False(string.IsNullOrWhiteSpace(cut.Find("[data-testid='processes-role-display-name-input']").GetAttribute("value")));
+            Assert.NotNull(cut.Find("[data-testid='processes-role-details-dialog']"));
         });
-        Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']"));
+        Assert.Empty(cut.FindAll("[data-testid='processes-template-library-dialog']"));
+
+        var addedRoleDisplayName = string.Empty;
+        cut.Find("[data-testid='processes-role-dialog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Equal(initialRoleCount + 1, editor.Roles.Count);
+            var addedRole = Assert.Single(editor.Roles, role => !initialRoleIds.Contains(role.Id));
+            addedRoleDisplayName = addedRole.DisplayName;
+            Assert.False(string.IsNullOrWhiteSpace(addedRoleDisplayName));
+            Assert.False(string.IsNullOrWhiteSpace(addedRole.RoleTemplateSourceKey));
+            Assert.Empty(cut.FindAll("[data-testid='processes-role-details-dialog']"));
+        });
+
+        await ActivateRolesTabAsync(cut);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(initialRoleCount + 1, cut.FindAll("[data-testid='processes-role-card']").Count);
+            Assert.Contains(addedRoleDisplayName, cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Roles_tab_add_role_uses_details_dialog_before_card_creation_and_allows_editing()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Role card authoring project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateRolesTabAsync(cut);
+
+        var initialRoleCount = GetEditor(cut.Instance).Roles.Count;
+        cut.Find("[data-testid='processes-add-role-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-role-details-dialog']"));
+            Assert.Equal(initialRoleCount, GetEditor(cut.Instance).Roles.Count);
+        });
+
+        cut.Find("[data-testid='processes-role-key-input']").Change("release-captain");
+        cut.Find("[data-testid='processes-role-display-name-input']").Change("Release captain");
+        cut.Find("[data-testid='processes-role-purpose-input']").Change("Own the release readiness call.");
+        cut.Find("[data-testid='processes-role-dialog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Equal(initialRoleCount + 1, editor.Roles.Count);
+            Assert.Contains(editor.Roles, role =>
+                role.Key == "release-captain" &&
+                role.DisplayName == "Release captain");
+            Assert.Equal(initialRoleCount + 1, cut.FindAll("[data-testid='processes-role-card']").Count);
+            Assert.Contains("Release captain", cut.Markup);
+        });
+
+        var detailsButtons = cut.FindAll("[data-testid='processes-role-details-button']");
+        detailsButtons.Last().Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-details-dialog']")));
+        cut.Find("[data-testid='processes-role-display-name-input']").Change("Release owner");
+        cut.Find("[data-testid='processes-role-dialog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Contains(editor.Roles, role =>
+                role.Key == "release-captain" &&
+                role.DisplayName == "Release owner");
+            Assert.Contains("Release owner", cut.Markup);
+        });
     }
 
     [Fact]
@@ -1485,6 +1570,22 @@ public sealed class ProcessWorkspaceTests
         };
 
         return new MessagingCanvasFixture(editor, "delivery-lead", "review-lead");
+    }
+
+    private static async Task ActivateRolesTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var method = typeof(ProcessWorkspace).GetMethod("HandleDetailTabChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(cut.Instance, [1]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-add-role-button']")));
     }
 
     private static async Task ActivateStepsTabAsync(IRenderedComponent<ProcessWorkspace> cut)

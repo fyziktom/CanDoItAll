@@ -4,6 +4,25 @@ namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace
 {
+    private ProcessRoleEditorModel? roleDialogModel;
+    private ProcessRoleEditorModel? roleDialogTarget;
+    private bool roleDialogIsNew;
+    private string roleDialogError = string.Empty;
+    private string selectedRoleTemplateItemId = string.Empty;
+
+    private IReadOnlyList<ProcessTemplateLibraryListItem> RoleTemplateOptions
+        => ProcessTemplateLibraryService.ListItems(ProcessTemplateLibraryCategory.Roles);
+
+    private string RoleDialogTitle
+        => roleDialogIsNew
+            ? "Add role"
+            : $"Edit {ResolveRoleDisplayName(roleDialogTarget)}";
+
+    private string RoleDialogSubtitle
+        => roleDialogIsNew
+            ? "Create the role draft here first. It appears as a role card after you save the dialog."
+            : "Edit the role contract details, then save the draft back to the process definition.";
+
     private async Task CreateNewAsync()
     {
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
@@ -172,13 +191,104 @@ public partial class ProcessWorkspace
 
     private void AddRole()
     {
-        editor.Roles.Add(new ProcessRoleEditorModel
+        OpenRoleDialog(
+            new ProcessRoleEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DefaultAllocationPercent = 100,
+                IsRequired = true,
+                AllowsFallback = true
+            },
+            target: null,
+            isNew: true);
+    }
+
+    private void OpenRoleDetails(ProcessRoleEditorModel role)
+    {
+        OpenRoleDialog(CloneRole(role), role, isNew: false);
+    }
+
+    private void OpenRoleDialog(ProcessRoleEditorModel draft, ProcessRoleEditorModel? target, bool isNew)
+    {
+        roleDialogModel = draft;
+        roleDialogTarget = target;
+        roleDialogIsNew = isNew;
+        roleDialogError = string.Empty;
+        selectedRoleTemplateItemId = string.Empty;
+    }
+
+    private Task CloseRoleDialogAsync()
+    {
+        roleDialogModel = null;
+        roleDialogTarget = null;
+        roleDialogIsNew = false;
+        roleDialogError = string.Empty;
+        selectedRoleTemplateItemId = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void ApplySelectedRoleTemplate()
+    {
+        if (roleDialogModel is null || string.IsNullOrWhiteSpace(selectedRoleTemplateItemId))
         {
-            Id = Guid.NewGuid(),
-            DisplayName = $"Role {editor.Roles.Count + 1}",
-            DefaultAllocationPercent = 100
-        });
+            return;
+        }
+
+        var currentId = roleDialogModel.Id;
+        var currentCanvasX = roleDialogModel.CanvasX;
+        var currentCanvasY = roleDialogModel.CanvasY;
+        var draft = CreateUniqueRoleDraftFromTemplate(selectedRoleTemplateItemId, roleDialogTarget);
+
+        if (!roleDialogIsNew && currentId.HasValue)
+        {
+            draft.Id = currentId;
+            draft.CanvasX = currentCanvasX;
+            draft.CanvasY = currentCanvasY;
+        }
+
+        roleDialogModel = draft;
+        roleDialogError = string.Empty;
+    }
+
+    private void SaveRoleDialog()
+    {
+        if (roleDialogModel is null)
+        {
+            return;
+        }
+
+        roleDialogError = ValidateRoleDialog(roleDialogModel);
+        if (!string.IsNullOrWhiteSpace(roleDialogError))
+        {
+            return;
+        }
+
+        roleDialogModel.Id ??= Guid.NewGuid();
+        if (roleDialogIsNew || roleDialogTarget is null || !editor.Roles.Contains(roleDialogTarget))
+        {
+            editor.Roles.Add(CloneRole(roleDialogModel));
+        }
+        else
+        {
+            CopyRole(roleDialogModel, roleDialogTarget);
+        }
+
         RefreshCanvasSurface();
+        SetMessage(roleDialogIsNew ? "Role added to the process draft." : "Role details updated.");
+        _ = CloseRoleDialogAsync();
+    }
+
+    private void RemoveRoleFromDialog()
+    {
+        if (roleDialogTarget is null)
+        {
+            _ = CloseRoleDialogAsync();
+            return;
+        }
+
+        RemoveRole(roleDialogTarget);
+        SetMessage("Role removed from the process draft.");
+        _ = CloseRoleDialogAsync();
     }
 
     private void RemoveRole(ProcessRoleEditorModel role, bool refreshSurface = true)
@@ -200,6 +310,107 @@ public partial class ProcessWorkspace
         {
             RefreshCanvasSurface();
         }
+    }
+
+    private ProcessRoleEditorModel CreateUniqueRoleDraftFromTemplate(string itemId, ProcessRoleEditorModel? excludedRole)
+    {
+        var ordinal = 1;
+        ProcessRoleEditorModel draft;
+        do
+        {
+            draft = ProcessTemplateLibraryService.CreateRoleDraft(itemId, ordinal);
+            ordinal++;
+        }
+        while (editor.Roles.Any(role =>
+            !ReferenceEquals(role, excludedRole) &&
+            string.Equals(role.Key, draft.Key, StringComparison.OrdinalIgnoreCase)));
+
+        return draft;
+    }
+
+    private static string ValidateRoleDialog(ProcessRoleEditorModel role)
+    {
+        if (string.IsNullOrWhiteSpace(role.DisplayName))
+        {
+            return "Display name is required before the role can be added.";
+        }
+
+        if (role.DefaultAllocationPercent is < 0 or > 100)
+        {
+            return "Default allocation percent must be between 0 and 100.";
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveRoleDisplayName(ProcessRoleEditorModel? role)
+    {
+        if (role is null || string.IsNullOrWhiteSpace(role.DisplayName))
+        {
+            return "Unnamed role";
+        }
+
+        return role.DisplayName.Trim();
+    }
+
+    private static string ResolveRoleExecutorKind(ProcessRoleEditorModel role)
+    {
+        return string.IsNullOrWhiteSpace(role.PreferredExecutorKind)
+            ? "Executor kind not set"
+            : role.PreferredExecutorKind.Trim();
+    }
+
+    private static string ResolveRoleSummary(ProcessRoleEditorModel role)
+    {
+        if (!string.IsNullOrWhiteSpace(role.Purpose))
+        {
+            return role.Purpose.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(role.StaffingIntent))
+        {
+            return role.StaffingIntent.Trim();
+        }
+
+        return "No purpose is configured yet.";
+    }
+
+    private static string ResolveRoleKey(ProcessRoleEditorModel role)
+    {
+        return string.IsNullOrWhiteSpace(role.Key)
+            ? "Key pending"
+            : role.Key.Trim();
+    }
+
+    private static string ResolveRoleTemplateLabel(ProcessRoleEditorModel role)
+    {
+        if (!string.IsNullOrWhiteSpace(role.RoleTemplateSnapshotName))
+        {
+            return role.RoleTemplateSnapshotName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(role.RoleTemplateSourceKey))
+        {
+            return role.RoleTemplateSourceKey.Trim();
+        }
+
+        return "Manual role";
+    }
+
+    private static string BuildRoleInitials(ProcessRoleEditorModel role)
+    {
+        var source = ResolveRoleDisplayName(role);
+        var segments = source
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToList();
+
+        if (segments.Count == 0)
+        {
+            return "RL";
+        }
+
+        return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
     }
 
     private void AddStep()

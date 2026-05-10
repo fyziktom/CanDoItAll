@@ -28,15 +28,18 @@
               ColumnsMd="3">
             <FormField Text="Key">
                 <InputText @bind-Value="Model.Key"
-                           class="cda-input" />
+                           class="cda-input"
+                           data-testid="processes-role-key-input" />
             </FormField>
             <FormField Text="Display name">
                 <InputText @bind-Value="Model.DisplayName"
-                           class="cda-input" />
+                           class="cda-input"
+                           data-testid="processes-role-display-name-input" />
             </FormField>
             <FormField Text="Preferred executor kind">
                 <InputText @bind-Value="Model.PreferredExecutorKind"
-                           class="cda-input" />
+                           class="cda-input"
+                           data-testid="processes-role-executor-kind-input" />
             </FormField>
         </Grid>
 
@@ -44,11 +47,13 @@
               ColumnsMd="2">
             <FormField Text="Purpose">
                 <InputTextArea @bind-Value="Model.Purpose"
-                               class="cda-input cda-input--textarea min-h-24" />
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-role-purpose-input" />
             </FormField>
             <FormField Text="Staffing intent">
                 <InputTextArea @bind-Value="Model.StaffingIntent"
-                               class="cda-input cda-input--textarea min-h-24" />
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-role-staffing-intent-input" />
             </FormField>
         </Grid>
 
@@ -56,7 +61,8 @@
               ColumnsMd="3">
             <FormField Text="Project assignment role">
                 <InputSelect @bind-Value="Model.PreferredProjectAssignmentRole"
-                             class="cda-input">
+                             class="cda-input"
+                             data-testid="processes-role-project-assignment-role-input">
                     <option value="">No preferred project role</option>
                     @foreach (var assignmentRole in Enum.GetValues<ProjectPartyAssignmentRole>())
                     {
@@ -66,11 +72,13 @@
             </FormField>
             <FormField Text="Default allocation percent">
                 <InputNumber @bind-Value="Model.DefaultAllocationPercent"
-                             class="cda-input" />
+                             class="cda-input"
+                             data-testid="processes-role-allocation-input" />
             </FormField>
             <FormField Text="Role template source key">
                 <InputText @bind-Value="Model.RoleTemplateSourceKey"
-                           class="cda-input" />
+                           class="cda-input"
+                           data-testid="processes-role-template-source-input" />
             </FormField>
         </Grid>
 
@@ -78,11 +86,13 @@
               ColumnsMd="2">
             <FormField Text="Template snapshot name">
                 <InputText @bind-Value="Model.RoleTemplateSnapshotName"
-                           class="cda-input" />
+                           class="cda-input"
+                           data-testid="processes-role-template-snapshot-input" />
             </FormField>
             <FormField Text="Snapshot summary">
                 <InputTextArea @bind-Value="Model.SnapshotSummary"
-                               class="cda-input cda-input--textarea min-h-24" />
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-role-snapshot-summary-input" />
             </FormField>
         </Grid>
 
