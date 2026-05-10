@@ -1,6 +1,7 @@
 using CanDoItAll.Mcp.Components.Catalog;
 using CanDoItAll.Mcp.Components.Configuration;
 using CanDoItAll.Mcp.Components.Tools;
+using CanDoItAll.Mcp.Core.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -51,10 +52,30 @@ public sealed class ComponentsToolsTests
         Assert.Contains(contracts.Data!.Contracts, contract => string.Equals(contract.Name, "CanvasCalendarSurface", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static ComponentsTools CreateTools()
+    [Fact]
+    public async Task Tool_Execution_Refreshes_Idle_Activity()
+    {
+        var timeProvider = new ManualTimeProvider();
+        var activityTracker = new McpIdleActivityTracker(timeProvider);
+        var tools = CreateTools(activityTracker);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        var search = await tools.ComponentsSearchAsync("TextBox");
+        var snapshot = activityTracker.GetSnapshot();
+
+        Assert.True(search.Ok);
+        Assert.Equal(timeProvider.GetUtcNow(), snapshot.LastActivityUtc);
+        Assert.Equal(0, snapshot.ActiveOperationCount);
+    }
+
+    private static ComponentsTools CreateTools(IMcpIdleActivityTracker? activityTracker = null)
     {
         var service = new ComponentCatalogService(CreateOptions());
-        return new ComponentsTools(service, NullLogger<ComponentsTools>.Instance);
+        return new ComponentsTools(
+            service,
+            activityTracker ?? new McpIdleActivityTracker(TimeProvider.System),
+            NullLogger<ComponentsTools>.Instance);
     }
 
     private static IOptions<McpServerOptions> CreateOptions()
@@ -91,5 +112,20 @@ public sealed class ComponentsToolsTests
         }
 
         throw new InvalidOperationException("Could not locate the CanDoItAll workspace root for MCP component tests.");
+    }
+
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private DateTimeOffset utcNow = new(2026, 5, 9, 12, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            return utcNow;
+        }
+
+        public void Advance(TimeSpan duration)
+        {
+            utcNow += duration;
+        }
     }
 }

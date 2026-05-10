@@ -1,7 +1,12 @@
 {
   "Server": {
     "Name": "CanDoItAll.Mcp.Components",
-    "WorkspaceRoot": "."
+    "WorkspaceRoot": ".",
+    "IdleShutdown": {
+      "Enabled": true,
+      "InactivityTimeoutSeconds": 300,
+      "CheckIntervalSeconds": 15
+    }
   },
   "Catalog": {
     "BaseLibRoot": "src/CanDoItAll.Components.BaseLib",

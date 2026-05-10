@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
   </ItemGroup>
 
 </Project>

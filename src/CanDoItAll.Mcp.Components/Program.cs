@@ -25,6 +25,8 @@ internal static class Program
         builder.Services
             .AddValidatedCanDoItAllMcpOptions<ComponentsMcpServerOptions, McpServerOptionsValidator>(builder.Configuration);
 
+        builder.Services.AddCanDoItAllMcpIdleShutdown<ComponentsMcpServerOptions>(options => options.Server.IdleShutdown);
+
         builder.Services.AddSingleton<ServerInstanceIdentity>();
         builder.Services.AddSingleton<ComponentCatalogService>();
 

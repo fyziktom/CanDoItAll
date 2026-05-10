@@ -1,11 +1,15 @@
 using System.ComponentModel;
+using CanDoItAll.Mcp.Core.Hosting;
 using CanDoItAll.Mcp.SshOps.Coordination;
 using ModelContextProtocol.Server;
 
 namespace CanDoItAll.Mcp.SshOps.Tools;
 
 [McpServerToolType]
-public sealed class SshOpsTools(TargetCoordinator coordinator, ILogger<SshOpsTools> logger)
+public sealed class SshOpsTools(
+    TargetCoordinator coordinator,
+    IMcpIdleActivityTracker idleActivityTracker,
+    ILogger<SshOpsTools> logger)
 {
     [McpServerTool(Name = "targets_list", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Lists configured SSH deployment targets and their capability summary.")]
@@ -351,6 +355,7 @@ public sealed class SshOpsTools(TargetCoordinator coordinator, ILogger<SshOpsToo
         string? target = null)
     {
         var correlationId = CorrelationIdFactory.Create();
+        using var activity = idleActivityTracker.BeginOperation();
 
         try
         {

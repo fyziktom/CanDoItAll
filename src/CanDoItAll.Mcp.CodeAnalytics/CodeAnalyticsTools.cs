@@ -11,7 +11,7 @@ namespace CanDoItAll.Mcp.CodeAnalytics;
 public sealed class CodeAnalyticsTools(ICodeAnalyticsCoordinator coordinator, ILogger<CodeAnalyticsTools> logger)
 {
     [McpServerTool(Name = "code_analytics_snapshot_build", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Builds or refreshes an architectural snapshot for a C# solution or project using the sibling CanDoItAll.CodeAnalsis libraries.")]
+    [Description("Builds or refreshes an architectural snapshot for a C# solution or project using the sibling CanDoItAll.CodeAnalsis libraries. For large solutions, scope by project, namespace, or project path unless the task is architecture-wide.")]
     public Task<McpToolEnvelope<SnapshotBuildResponse>> CodeAnalyticsSnapshotBuildAsync(CodeAnalyticsBuildSnapshotInput? request = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("code_analytics_snapshot_build", () => coordinator.BuildSnapshotAsync(request ?? new CodeAnalyticsBuildSnapshotInput(), cancellationToken));
@@ -141,7 +141,7 @@ public sealed class CodeAnalyticsTools(ICodeAnalyticsCoordinator coordinator, IL
     }
 
     [McpServerTool(Name = "code_analytics_focused_context_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Builds a focused context pack around a type, member, service registration, or query text to support deeper code investigations.")]
+    [Description("Builds a focused context pack around a type, member, service registration, or query text. Use FocusTags, RelationHints, Depth, Intent, and Precision to get high-signal usage context without loading broad callers.")]
     public Task<McpToolEnvelope<FocusedContextResponse>> CodeAnalyticsFocusedContextGetAsync(CodeAnalyticsFocusedContextInput request, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("code_analytics_focused_context_get", () => coordinator.GetFocusedContextAsync(request, cancellationToken));
