@@ -58,7 +58,7 @@
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed by local prepared-stage validator`
-- Execution status: `Not started`
-- Subbundle gate review: `Ready for subbundle 01 entry gate`
-- Final closure gate: `Not run`
-- Browser validation analytics: `Planned for subbundle 03 and final closure`
+- Execution status: `Completed`
+- Subbundle gate review: `All five subbundles completed with proof`
+- Final closure gate: `Passed by local completed-stage validator`
+- Browser validation analytics: `Passed on /agents/workflows with desktop maximized canvas screenshot proof`

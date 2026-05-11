@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -33,12 +33,12 @@
 
 ## Exact Source References
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorContracts.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorContracts.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
 
 ## Deliverables
 
@@ -94,7 +94,7 @@
 
 ## Proof Required
 
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowExecutorTests|FullyQualifiedName~WorkflowFoundationTests" --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowExecutorTests|FullyQualifiedName~WorkflowFoundationTests" --verbosity minimal -m:1`
 - Include test output or execution-report rows showing predicate false branch skipped, switch default selected, and fan-out target selection honored.
 - Add a code-review note in `reviews/01-execution-report.md` confirming the compiler no longer treats `ConditionExpression` as an executable predicate.
 

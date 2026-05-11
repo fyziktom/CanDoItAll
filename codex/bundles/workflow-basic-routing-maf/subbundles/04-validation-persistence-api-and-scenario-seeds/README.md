@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -32,13 +32,13 @@
 
 ## Exact Source References
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowCatalogServices.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowCatalogModels.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Web/Api/WorkflowsApi.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowCatalogTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowCatalogServices.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowCatalogModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Api/WorkflowsApi.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowCatalogTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
 
 ## Deliverables
 
@@ -92,8 +92,8 @@
 
 ## Proof Required
 
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowCatalogTests|FullyQualifiedName~WorkflowFoundationTests" --verbosity minimal -m:1`
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter FullyQualifiedName~WorkflowApiIntegrationTests --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowCatalogTests|FullyQualifiedName~WorkflowFoundationTests" --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter FullyQualifiedName~WorkflowApiIntegrationTests --verbosity minimal -m:1`
 - Execution-report note: migration required or no migration required, with the exact storage reason.
 - Include one saved/reloaded route assertion summary in `reviews/01-execution-report.md`.
 

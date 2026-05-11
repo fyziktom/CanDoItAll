@@ -11,6 +11,11 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkflowExecutorTests
 {
+    private static readonly WorkflowValueShape JsonObjectShape = new(
+        WorkflowValueShapeKind.Object,
+        "{}",
+        "JSON object");
+
     [Fact]
     public void CatalogListsBuiltInAndPlannedExecutors()
     {
@@ -143,6 +148,264 @@ public sealed class WorkflowExecutorTests
 
         Assert.Equal(WorkflowRunState.Completed, result.Run.State);
         Assert.Equal(1, executor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task MafCompilerSkipsPredicateFalseBranch()
+    {
+        var executor = new BranchRecordingWorkflowExecutor();
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, []);
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("spam", WorkflowExecutorIds.StorageFile),
+            CreateExecutorNode("normal", WorkflowExecutorIds.StorageFile),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge(
+                "start-spam",
+                "start",
+                "spam",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.Predicate(
+                    "$.classification",
+                    WorkflowRouteOperator.Equals,
+                    "\"spam\"",
+                    WorkflowRouteValueKind.String,
+                    label: "spam")),
+            CreateEdge(
+                "start-normal",
+                "start",
+                "normal",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.Predicate(
+                    "$.classification",
+                    WorkflowRouteOperator.NotEquals,
+                    "\"spam\"",
+                    WorkflowRouteValueKind.String,
+                    label: "not spam")),
+            CreateEdge("spam-end", "spam", "end"),
+            CreateEdge("normal-end", "normal", "end")
+        ]);
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"classification\":\"spam\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Equal(1, executor.InvocationCountFor("spam"));
+        Assert.Equal(0, executor.InvocationCountFor("normal"));
+    }
+
+    [Fact]
+    public async Task MafCompilerUsesSwitchDefaultWhenNoCaseMatches()
+    {
+        var executor = new BranchRecordingWorkflowExecutor
+        {
+            OutputsByNode =
+            {
+                ["classify"] = "{\"decision\":\"needsHuman\"}"
+            }
+        };
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, []);
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("classify", WorkflowExecutorIds.StorageFile),
+            CreateExecutorNode("approved", WorkflowExecutorIds.StorageFile, JsonObjectShape),
+            CreateExecutorNode("rework", WorkflowExecutorIds.StorageFile, JsonObjectShape),
+            CreateExecutorNode("manual", WorkflowExecutorIds.StorageFile, JsonObjectShape),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-classify", "start", "classify"),
+            CreateEdge(
+                "classify-approved",
+                "classify",
+                "approved",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.SwitchCase("$.decision", "\"approved\"", WorkflowRouteValueKind.String, "approved")),
+            CreateEdge(
+                "classify-rework",
+                "classify",
+                "rework",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.SwitchCase("$.decision", "\"rework\"", WorkflowRouteValueKind.String, "rework")),
+            CreateEdge(
+                "classify-manual",
+                "classify",
+                "manual",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.SwitchDefault("default manual review")),
+            CreateEdge("approved-end", "approved", "end"),
+            CreateEdge("rework-end", "rework", "end"),
+            CreateEdge("manual-end", "manual", "end")
+        ]);
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"ticket\":\"A-100\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Equal(1, executor.InvocationCountFor("classify"));
+        Assert.Equal(0, executor.InvocationCountFor("approved"));
+        Assert.Equal(0, executor.InvocationCountFor("rework"));
+        Assert.Equal(1, executor.InvocationCountFor("manual"));
+    }
+
+    [Fact]
+    public async Task MafCompilerFanOutRoutesOnlySelectedTargets()
+    {
+        var executor = new BranchRecordingWorkflowExecutor
+        {
+            OutputsByNode =
+            {
+                ["select-channels"] = "{\"channels\":[\"email\",\"slack\"]}"
+            }
+        };
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, []);
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("select-channels", WorkflowExecutorIds.StorageFile),
+            CreateExecutorNode("email", WorkflowExecutorIds.StorageFile, JsonObjectShape),
+            CreateExecutorNode("slack", WorkflowExecutorIds.StorageFile, JsonObjectShape),
+            CreateExecutorNode("ticket", WorkflowExecutorIds.StorageFile, JsonObjectShape),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-select", "start", "select-channels"),
+            CreateEdge(
+                "select-email",
+                "select-channels",
+                "email",
+                WorkflowEdgeKind.FanOut,
+                WorkflowEdgeRouting.FanOutSelector(
+                    "$.channels",
+                    WorkflowRouteOperator.Contains,
+                    "\"email\"",
+                    WorkflowRouteValueKind.String,
+                    targetIndex: 0,
+                    label: "email")),
+            CreateEdge(
+                "select-slack",
+                "select-channels",
+                "slack",
+                WorkflowEdgeKind.FanOut,
+                WorkflowEdgeRouting.FanOutSelector(
+                    "$.channels",
+                    WorkflowRouteOperator.Contains,
+                    "\"slack\"",
+                    WorkflowRouteValueKind.String,
+                    targetIndex: 1,
+                    label: "slack")),
+            CreateEdge(
+                "select-ticket",
+                "select-channels",
+                "ticket",
+                WorkflowEdgeKind.FanOut,
+                WorkflowEdgeRouting.FanOutSelector(
+                    "$.channels",
+                    WorkflowRouteOperator.Contains,
+                    "\"ticket\"",
+                    WorkflowRouteValueKind.String,
+                    targetIndex: 2,
+                    label: "ticket")),
+            CreateEdge("email-end", "email", "end"),
+            CreateEdge("slack-end", "slack", "end"),
+            CreateEdge("ticket-end", "ticket", "end")
+        ]);
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"case\":\"route updates\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Equal(1, executor.InvocationCountFor("email"));
+        Assert.Equal(1, executor.InvocationCountFor("slack"));
+        Assert.Equal(0, executor.InvocationCountFor("ticket"));
+    }
+
+    [Fact]
+    public void BuiltInRoutingScenarioMatrixCoversRealWorldExamples()
+    {
+        var compiler = new BuiltInJsonWorkflowRoutingCompiler();
+        var scenarios = new[]
+        {
+            CreateRouteScenario("invoice over approval threshold", "{\"invoice\":{\"amount\":1250}}", "$.invoice.amount", WorkflowRouteOperator.GreaterThan, "1000", WorkflowRouteValueKind.Number, true),
+            CreateRouteScenario("small invoice auto approval", "{\"invoice\":{\"amount\":250}}", "$.invoice.amount", WorkflowRouteOperator.LessThanOrEqual, "500", WorkflowRouteValueKind.Number, true),
+            CreateRouteScenario("enterprise customer switch case", "{\"customer\":{\"tier\":\"enterprise\"}}", "$.customer.tier", WorkflowRouteOperator.Equals, "\"enterprise\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("support ticket urgent priority", "{\"ticket\":{\"priority\":\"Urgent\"}}", "$.ticket.priority", WorkflowRouteOperator.Equals, "\"urgent\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("fraud risk above review score", "{\"risk\":{\"score\":0.92}}", "$.risk.score", WorkflowRouteOperator.GreaterThanOrEqual, "0.85", WorkflowRouteValueKind.Number, true),
+            CreateRouteScenario("inventory does not need restock", "{\"stock\":{\"onHand\":42}}", "$.stock.onHand", WorkflowRouteOperator.LessThan, "10", WorkflowRouteValueKind.Number, false),
+            CreateRouteScenario("email notification selected", "{\"channels\":[\"email\",\"slack\"]}", "$.channels", WorkflowRouteOperator.Contains, "\"email\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("sms notification not selected", "{\"channels\":[\"email\",\"slack\"]}", "$.channels", WorkflowRouteOperator.Contains, "\"sms\"", WorkflowRouteValueKind.String, false),
+            CreateRouteScenario("incident starts with sev prefix", "{\"incident\":{\"severity\":\"sev-1\"}}", "$.incident.severity", WorkflowRouteOperator.StartsWith, "\"sev-\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("document ends with pdf extension", "{\"file\":{\"name\":\"contract.pdf\"}}", "$.file.name", WorkflowRouteOperator.EndsWith, "\".pdf\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("customer note contains renewal", "{\"note\":\"Renewal requested by account owner\"}", "$.note", WorkflowRouteOperator.Contains, "\"renewal\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("missing approval reason", "{\"approval\":{\"status\":\"approved\"}}", "$.approval.reason", WorkflowRouteOperator.DoesNotExist, "", WorkflowRouteValueKind.Json, true),
+            CreateRouteScenario("approval flag truthy", "{\"approval\":{\"approved\":true}}", "$.approval.approved", WorkflowRouteOperator.IsTruthy, "", WorkflowRouteValueKind.Json, true),
+            CreateRouteScenario("archive flag falsy", "{\"archive\":false}", "$.archive", WorkflowRouteOperator.IsFalsy, "", WorkflowRouteValueKind.Json, true),
+            CreateRouteScenario("region is not blocked", "{\"region\":\"emea\"}", "$.region", WorkflowRouteOperator.NotEquals, "\"blocked\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("first line item sku match", "{\"items\":[{\"sku\":\"A1\"}]}", "$.items[0].sku", WorkflowRouteOperator.Equals, "\"A1\"", WorkflowRouteValueKind.String, true),
+            CreateRouteScenario("contract expiration is present", "{\"contract\":{\"expiresOn\":\"2026-12-31\"}}", "$.contract.expiresOn", WorkflowRouteOperator.Exists, "", WorkflowRouteValueKind.Json, true),
+            CreateRouteScenario("nullable manager assignment", "{\"manager\":null}", "$.manager", WorkflowRouteOperator.Equals, "null", WorkflowRouteValueKind.Null, true),
+            CreateRouteScenario("lead score is below sales handoff", "{\"lead\":{\"score\":61}}", "$.lead.score", WorkflowRouteOperator.LessThan, "75", WorkflowRouteValueKind.Number, true),
+            CreateRouteScenario("sentiment avoids negative path", "{\"sentiment\":\"neutral\"}", "$.sentiment", WorkflowRouteOperator.NotEquals, "\"negative\"", WorkflowRouteValueKind.String, true)
+        };
+        var definition = CreateDefinition([CreateNode("start", WorkflowNodeKind.Start), CreateNode("end", WorkflowNodeKind.End)], [
+            CreateEdge("start-end", "start", "end")
+        ]);
+        var passed = new List<string>();
+
+        foreach (var scenario in scenarios)
+        {
+            var edge = CreateEdge(
+                scenario.Name,
+                "start",
+                "end",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.Predicate(
+                    scenario.JsonPath,
+                    scenario.Operator,
+                    scenario.ExpectedValueJson,
+                    scenario.ExpectedValueKind,
+                    scenario.Name));
+            var route = compiler.CompilePredicate(definition, edge);
+
+            Assert.Equal(scenario.Expected, route.Predicate(new WorkflowNodeInput(scenario.PayloadJson)));
+            passed.Add(scenario.Name);
+        }
+
+        Assert.True(passed.Count >= 20);
     }
 
     [Fact]
@@ -622,13 +885,16 @@ public sealed class WorkflowExecutorTests
             new WorkflowNodeInput("{}"));
     }
 
-    private static WorkflowNode CreateExecutorNode(string id, WorkflowExecutorId executorId)
+    private static WorkflowNode CreateExecutorNode(
+        string id,
+        WorkflowExecutorId executorId,
+        WorkflowValueShape? inputShape = null)
         => new(
             new WorkflowNodeId(id),
             WorkflowNodeKind.Executor,
             id,
             [],
-            CreateSettings(executorId));
+            CreateSettings(executorId, inputShape));
 
     private static WorkflowNode CreateLlmNode(string id, WorkflowComponentId componentId)
         => new(
@@ -645,14 +911,16 @@ public sealed class WorkflowExecutorTests
                 InputShape: WorkflowValueShape.Text,
                 ResultShape: WorkflowValueShape.Text));
 
-    private static WorkflowNodeSettings CreateSettings(WorkflowExecutorId executorId)
+    private static WorkflowNodeSettings CreateSettings(
+        WorkflowExecutorId executorId,
+        WorkflowValueShape? inputShape = null)
         => new WorkflowNodeSettings(
             ComponentId: null,
             AgentId: null,
             SubworkflowId: null,
             ExternalRequestKind: null,
             Instructions: string.Empty,
-            InputShape: WorkflowValueShape.Text,
+            InputShape: inputShape ?? WorkflowValueShape.Text,
             ResultShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON")) with
         {
             ExecutorId = executorId,
@@ -677,15 +945,40 @@ public sealed class WorkflowExecutorTests
                     : WorkflowValueShape.Text,
                 ResultShape: WorkflowValueShape.Text));
 
-    private static WorkflowEdge CreateEdge(string id, string source, string target)
+    private static WorkflowEdge CreateEdge(
+        string id,
+        string source,
+        string target,
+        WorkflowEdgeKind kind = WorkflowEdgeKind.Direct,
+        WorkflowEdgeRouting? routing = null)
         => new(
             new WorkflowEdgeId(id),
             new WorkflowNodeId(source),
             SourcePortId: null,
             new WorkflowNodeId(target),
             TargetPortId: null,
-            WorkflowEdgeKind.Direct,
-            ConditionExpression: string.Empty);
+            kind,
+            ConditionExpression: string.Empty)
+        {
+            Routing = routing ?? WorkflowEdgeRouting.Always
+        };
+
+    private static RouteScenario CreateRouteScenario(
+        string name,
+        string payloadJson,
+        string jsonPath,
+        WorkflowRouteOperator @operator,
+        string expectedValueJson,
+        WorkflowRouteValueKind expectedValueKind,
+        bool expected)
+        => new(
+            name,
+            payloadJson,
+            jsonPath,
+            @operator,
+            expectedValueJson,
+            expectedValueKind,
+            expected);
 
     private static LlmCallComponent CreateLlmComponent(
         WorkflowValueShape inputShape,
@@ -730,6 +1023,35 @@ public sealed class WorkflowExecutorTests
             return ValueTask.FromResult(new WorkflowNodeExecutionResult(
                 context.Node.Id,
                 "{\"recorded\":true}",
+                context.Descriptor.ResultShape));
+        }
+    }
+
+    private sealed class BranchRecordingWorkflowExecutor : IWorkflowExecutor
+    {
+        private readonly Dictionary<string, int> invocationCounts = new(StringComparer.Ordinal);
+
+        public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
+
+        public Dictionary<string, string> OutputsByNode { get; init; } = new(StringComparer.Ordinal);
+
+        public int InvocationCountFor(string nodeId)
+            => invocationCounts.GetValueOrDefault(nodeId);
+
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowExecutorExecutionContext context,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            var nodeId = context.Node.Id.Value;
+            invocationCounts[nodeId] = invocationCounts.GetValueOrDefault(nodeId) + 1;
+            var payload = OutputsByNode.TryGetValue(nodeId, out var output)
+                ? output
+                : input.PayloadJson;
+
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                context.Node.Id,
+                payload,
                 context.Descriptor.ResultShape));
         }
     }
@@ -872,4 +1194,13 @@ public sealed class WorkflowExecutorTests
             }
         }
     }
+
+    private sealed record RouteScenario(
+        string Name,
+        string PayloadJson,
+        string JsonPath,
+        WorkflowRouteOperator Operator,
+        string ExpectedValueJson,
+        WorkflowRouteValueKind ExpectedValueKind,
+        bool Expected);
 }

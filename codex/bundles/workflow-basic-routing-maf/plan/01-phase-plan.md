@@ -34,7 +34,7 @@ section Closure
 
 ## Phase Gates
 
-- Gate after preparation: run `python3 codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py .codex/bundles/workflow-basic-routing-maf --profile initiative --stage prepared` and repair failures.
+- Gate after preparation: run `python3 codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/workflow-basic-routing-maf --profile initiative --stage prepared` and repair failures.
 - Gate before subbundle 01: confirm the current `WorkflowEdge` shape and saved-definition serializer have not changed since bundle preparation.
 - Gate after subbundle 01: old definitions load; new route metadata serializes; validator detects malformed route definitions.
 - Gate after subbundle 02: runtime tests prove conditional false branches are skipped, switch default is honored, and fan-out selection matches expected target indices.

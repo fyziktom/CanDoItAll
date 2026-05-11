@@ -2,33 +2,33 @@
 
 ## Backend Files
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowModels.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorContracts.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowCatalogServices.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorContracts.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowCatalogServices.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs`
 
 ## UI Files
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.css`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Components.CanvasLib/Canvas/Graph/Primitives/ConnectorPathPrimitive.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.css`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Components.CanvasLib/Canvas/Graph/Primitives/ConnectorPathPrimitive.cs`
 
 ## Persistence/API Files
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Web/Api/WorkflowsApi.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowCatalogModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Api/WorkflowsApi.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowCatalogModels.cs`
 
 ## Test Files
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowCatalogTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/ProcessWorkflowExecutorIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowCatalogTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessWorkflowExecutorIntegrationTests.cs`

@@ -442,6 +442,9 @@
                 sourcePortId: link?.sourcePortId || "",
                 targetPortId: link?.targetPortId || "",
                 kind: link?.kind || "",
+                label: link?.label || "",
+                summary: link?.summary || "",
+                tone: link?.tone || "neutral",
                 isUserAuthored: !!link?.isUserAuthored
             })) : [],
             uiState: {

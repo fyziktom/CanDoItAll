@@ -62,6 +62,15 @@ public partial class WorkflowCanvasEditor
     private string edgeTargetNodeId = "end";
     private WorkflowEdgeKind edgeKind = WorkflowEdgeKind.Direct;
     private string edgeCondition = string.Empty;
+    private WorkflowEdgeId? editingEdgeId;
+    private WorkflowRouteKind edgeRouteKind = WorkflowRouteKind.Always;
+    private string edgeRouteLabel = string.Empty;
+    private string edgeRouteJsonPath = "$.status";
+    private WorkflowRouteOperator edgeRouteOperator = WorkflowRouteOperator.Equals;
+    private WorkflowRouteValueKind edgeRouteValueKind = WorkflowRouteValueKind.String;
+    private string edgeRouteExpectedValue = "approved";
+    private bool edgeRouteCaseSensitive;
+    private int? edgeRouteFanOutTargetIndex;
     private string newComponentProviderProfileId = string.Empty;
     private string newComponentModel = string.Empty;
     private string workflowToolboxSearchText = string.Empty;
@@ -81,6 +90,8 @@ public partial class WorkflowCanvasEditor
         => string.IsNullOrWhiteSpace(selectedNodeId)
             ? null
             : document.Nodes.FirstOrDefault(node => node.Id.Value == selectedNodeId);
+
+    private string EdgeEditorSubmitLabel => editingEdgeId is null ? "Add edge" : "Update edge";
 
     private string SelectionWindowSummary
         => SelectedNode is null
@@ -339,27 +350,74 @@ public partial class WorkflowCanvasEditor
 
         var source = new WorkflowNodeId(edgeSourceNodeId);
         var target = new WorkflowNodeId(edgeTargetNodeId);
-        if (document.Edges.Any(edge => edge.SourceNodeId == source && edge.TargetNodeId == target))
+        if (document.Edges.Any(edge =>
+                edge.SourceNodeId == source &&
+                edge.TargetNodeId == target &&
+                edge.Id != editingEdgeId))
         {
             errorMessage = "That workflow edge already exists.";
             return Task.CompletedTask;
         }
 
-        document.Edges.Add(new WorkflowCanvasEdgeDraft(
-            CreateEdgeId(source, target),
-            source,
-            target)
+        edgeKind = ResolveEdgeKindForRoute(edgeRouteKind);
+        var routing = BuildEdgeRoutingFromEditor();
+        if (!TryValidateEdgeRouting(routing, out var routeError))
         {
-            Kind = edgeKind,
-            ConditionExpression = edgeCondition
-        });
-        edgeCondition = string.Empty;
+            errorMessage = routeError;
+            return Task.CompletedTask;
+        }
+
+        if (editingEdgeId is { } edgeId &&
+            document.Edges.FirstOrDefault(edge => edge.Id == edgeId) is { } existing)
+        {
+            existing.SourceNodeId = source;
+            existing.TargetNodeId = target;
+            existing.Kind = edgeKind;
+            existing.ConditionExpression = edgeCondition;
+            existing.Routing = routing;
+        }
+        else
+        {
+            document.Edges.Add(new WorkflowCanvasEdgeDraft(
+                CreateEdgeId(source, target),
+                source,
+                target)
+            {
+                Kind = edgeKind,
+                ConditionExpression = edgeCondition,
+                Routing = routing
+            });
+        }
+
+        ResetEdgeEditor();
         return Task.CompletedTask;
     }
 
     private Task RemoveEdgeAsync(WorkflowCanvasEdgeDraft edge)
     {
         document.Edges.Remove(edge);
+        if (editingEdgeId == edge.Id)
+        {
+            ResetEdgeEditor();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task EditEdgeAsync(WorkflowCanvasEdgeDraft edge)
+    {
+        editingEdgeId = edge.Id;
+        edgeSourceNodeId = edge.SourceNodeId.Value;
+        edgeTargetNodeId = edge.TargetNodeId.Value;
+        edgeKind = edge.Kind;
+        edgeCondition = edge.ConditionExpression;
+        ApplyRouteToEditor(edge.Routing);
+        return Task.CompletedTask;
+    }
+
+    private Task CancelEdgeEditAsync()
+    {
+        ResetEdgeEditor();
         return Task.CompletedTask;
     }
 
@@ -1406,7 +1464,8 @@ public partial class WorkflowCanvasEditor
             node.Id)
         {
             Kind = incomingToEnd.Kind,
-            ConditionExpression = incomingToEnd.ConditionExpression
+            ConditionExpression = incomingToEnd.ConditionExpression,
+            Routing = incomingToEnd.Routing
         });
         document.Edges.Add(new WorkflowCanvasEdgeDraft(
             CreateEdgeId(node.Id, end.Id),
@@ -1441,5 +1500,211 @@ public partial class WorkflowCanvasEditor
         edgeTargetNodeId = document.Nodes.FirstOrDefault(node => node.Kind != WorkflowNodeKind.Start && node.Id.Value != edgeSourceNodeId)?.Id.Value ?? string.Empty;
         edgeKind = WorkflowEdgeKind.Direct;
         edgeCondition = string.Empty;
+        editingEdgeId = null;
+        edgeRouteKind = WorkflowRouteKind.Always;
+        edgeRouteLabel = string.Empty;
+        edgeRouteJsonPath = "$.status";
+        edgeRouteOperator = WorkflowRouteOperator.Equals;
+        edgeRouteValueKind = WorkflowRouteValueKind.String;
+        edgeRouteExpectedValue = "approved";
+        edgeRouteCaseSensitive = false;
+        edgeRouteFanOutTargetIndex = null;
+    }
+
+    private void ResetEdgeEditor()
+    {
+        SyncEdgeDefaults();
+    }
+
+    private void ApplyRouteToEditor(WorkflowEdgeRouting routing)
+    {
+        edgeRouteKind = routing.Kind;
+        edgeRouteLabel = routing.Label;
+        edgeRouteJsonPath = string.IsNullOrWhiteSpace(routing.JsonPath) ? "$.status" : routing.JsonPath;
+        edgeRouteOperator = routing.Operator;
+        edgeRouteValueKind = routing.ExpectedValueKind;
+        edgeRouteExpectedValue = FormatExpectedValueForEditor(routing);
+        edgeRouteCaseSensitive = routing.CaseSensitive;
+        edgeRouteFanOutTargetIndex = routing.FanOutTargetIndex;
+    }
+
+    private WorkflowEdgeRouting BuildEdgeRoutingFromEditor()
+    {
+        var label = edgeRouteLabel.Trim();
+        var jsonPath = edgeRouteJsonPath.Trim();
+        var expectedValueJson = ShowsExpectedValue(edgeRouteKind, edgeRouteOperator)
+            ? NormalizeExpectedValueJson(edgeRouteExpectedValue, edgeRouteValueKind)
+            : string.Empty;
+
+        return edgeRouteKind switch
+        {
+            WorkflowRouteKind.Always => WorkflowEdgeRouting.Always with
+            {
+                Label = label
+            },
+            WorkflowRouteKind.SwitchCase => WorkflowEdgeRouting.SwitchCase(
+                jsonPath,
+                expectedValueJson,
+                edgeRouteValueKind,
+                label,
+                edgeRouteCaseSensitive),
+            WorkflowRouteKind.SwitchDefault => WorkflowEdgeRouting.SwitchDefault(label),
+            WorkflowRouteKind.FanOutSelector => WorkflowEdgeRouting.FanOutSelector(
+                jsonPath,
+                edgeRouteOperator,
+                expectedValueJson,
+                edgeRouteValueKind,
+                edgeRouteFanOutTargetIndex,
+                label,
+                edgeRouteCaseSensitive),
+            _ => WorkflowEdgeRouting.Predicate(
+                jsonPath,
+                edgeRouteOperator,
+                expectedValueJson,
+                edgeRouteValueKind,
+                label,
+                edgeRouteCaseSensitive)
+        };
+    }
+
+    private static bool TryValidateEdgeRouting(WorkflowEdgeRouting routing, out string error)
+    {
+        error = string.Empty;
+        if (routing.FanOutTargetIndex is < 0)
+        {
+            error = "Fan-out target index must be zero or greater.";
+            return false;
+        }
+
+        if (WorkflowRoutingValidation.RequiresJsonPath(routing) &&
+            !WorkflowRoutingValidation.TryParseJsonPath(routing.JsonPath, out _, out var pathError))
+        {
+            error = $"Route JSON path is invalid: {pathError}.";
+            return false;
+        }
+
+        if (!WorkflowRoutingValidation.TryValidateExpectedValue(routing, out var valueError))
+        {
+            error = $"Route expected value is invalid: {valueError}.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static WorkflowEdgeKind ResolveEdgeKindForRoute(WorkflowRouteKind routeKind)
+        => routeKind switch
+        {
+            WorkflowRouteKind.Predicate or WorkflowRouteKind.SwitchCase or WorkflowRouteKind.SwitchDefault => WorkflowEdgeKind.Conditional,
+            WorkflowRouteKind.FanOutSelector => WorkflowEdgeKind.FanOut,
+            _ => WorkflowEdgeKind.Direct
+        };
+
+    private void HandleEdgeRouteKindChanged(ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<WorkflowRouteKind>(args.Value?.ToString(), out var routeKind))
+        {
+            return;
+        }
+
+        edgeRouteKind = routeKind;
+        edgeKind = ResolveEdgeKindForRoute(routeKind);
+        if (routeKind == WorkflowRouteKind.SwitchDefault)
+        {
+            edgeRouteJsonPath = string.Empty;
+            edgeRouteExpectedValue = string.Empty;
+            edgeRouteFanOutTargetIndex = null;
+        }
+        else if (routeKind == WorkflowRouteKind.SwitchCase ||
+                 !WorkflowRoutingValidation.RequiresExpectedValue(edgeRouteOperator))
+        {
+            edgeRouteOperator = WorkflowRouteOperator.Equals;
+        }
+
+        if (routeKind != WorkflowRouteKind.SwitchDefault &&
+            string.IsNullOrWhiteSpace(edgeRouteJsonPath))
+        {
+            edgeRouteJsonPath = "$.status";
+        }
+    }
+
+    private void HandleEdgeFanOutTargetIndexChanged(ChangeEventArgs args)
+    {
+        var value = ReadString(args);
+        edgeRouteFanOutTargetIndex = int.TryParse(value, out var targetIndex)
+            ? targetIndex
+            : null;
+    }
+
+    private static bool IsPredicateRoute(WorkflowRouteKind routeKind)
+        => routeKind is WorkflowRouteKind.Predicate or WorkflowRouteKind.SwitchCase or WorkflowRouteKind.FanOutSelector;
+
+    private static bool ShowsOperator(WorkflowRouteKind routeKind)
+        => routeKind is WorkflowRouteKind.Predicate or WorkflowRouteKind.FanOutSelector;
+
+    private static bool ShowsExpectedValue(WorkflowRouteKind routeKind, WorkflowRouteOperator routeOperator)
+        => routeKind == WorkflowRouteKind.SwitchCase ||
+           IsPredicateRoute(routeKind) && WorkflowRoutingValidation.RequiresExpectedValue(routeOperator);
+
+    private static bool ShowsCaseSensitivity(WorkflowRouteKind routeKind, WorkflowRouteOperator routeOperator)
+        => ShowsExpectedValue(routeKind, routeOperator) &&
+           routeOperator is
+               WorkflowRouteOperator.Equals or
+               WorkflowRouteOperator.NotEquals or
+               WorkflowRouteOperator.Contains or
+               WorkflowRouteOperator.StartsWith or
+               WorkflowRouteOperator.EndsWith;
+
+    private static string NormalizeExpectedValueJson(string value, WorkflowRouteValueKind valueKind)
+    {
+        var trimmed = value.Trim();
+        if (valueKind == WorkflowRouteValueKind.String)
+        {
+            if (TryDeserializeRouteJson<string>(trimmed, out _))
+            {
+                return trimmed;
+            }
+
+            return JsonSerializer.Serialize(trimmed, ExecutorJsonOptions);
+        }
+
+        return valueKind switch
+        {
+            WorkflowRouteValueKind.Null => "null",
+            WorkflowRouteValueKind.Boolean when bool.TryParse(trimmed, out var boolean) => boolean ? "true" : "false",
+            _ => trimmed
+        };
+    }
+
+    private static string FormatExpectedValueForEditor(WorkflowEdgeRouting routing)
+    {
+        if (!WorkflowRoutingValidation.RequiresExpectedValue(routing.Operator))
+        {
+            return string.Empty;
+        }
+
+        if (routing.ExpectedValueKind == WorkflowRouteValueKind.String &&
+            TryDeserializeRouteJson<string>(routing.ExpectedValueJson, out var value))
+        {
+            return value ?? string.Empty;
+        }
+
+        return routing.ExpectedValueJson;
+    }
+
+    private static bool TryDeserializeRouteJson<TValue>(string json, out TValue? value)
+    {
+        try
+        {
+            value = string.IsNullOrWhiteSpace(json)
+                ? default
+                : JsonSerializer.Deserialize<TValue>(json, ExecutorJsonOptions);
+            return true;
+        }
+        catch (JsonException)
+        {
+            value = default;
+            return false;
+        }
     }
 }

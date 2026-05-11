@@ -141,6 +141,53 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_authors_typed_predicate_route_metadata()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-create-component']");
+        cut.Find("[data-testid='workflow-canvas-create-component']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
+        });
+        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
+
+        cut.Find("[data-testid='workflow-canvas-edit-edge']").Click();
+        cut.Find("[data-testid='workflow-canvas-edge-route-kind']").Change(WorkflowRouteKind.Predicate.ToString());
+        cut.WaitForElement("[data-testid='workflow-canvas-edge-route-json-path']");
+        cut.Find("[data-testid='workflow-canvas-edge-route-label']").Change("High value");
+        cut.Find("[data-testid='workflow-canvas-edge-route-json-path']").Change("$.invoice.total");
+        cut.Find("[data-testid='workflow-canvas-edge-route-operator']").Change(WorkflowRouteOperator.GreaterThanOrEqual.ToString());
+        cut.Find("[data-testid='workflow-canvas-edge-route-value-kind']").Change(WorkflowRouteValueKind.Number.ToString());
+        cut.Find("[data-testid='workflow-canvas-edge-route-expected-value']").Change("5000");
+        cut.Find("[data-testid='workflow-canvas-add-edge']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("High value", cut.Find("[data-testid='workflow-canvas-edge-route-summary']").TextContent);
+            Assert.Contains("$.invoice.total", cut.Find("[data-testid='workflow-canvas-edge-route-summary']").TextContent);
+        });
+
+        cut.Find("[data-testid='workflow-canvas-validate']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow canvas valid");
+            Assert.DoesNotContain("workflow-canvas-validation-issue", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);

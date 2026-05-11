@@ -351,12 +351,12 @@ public sealed class ProcessWorkflowExecutorIntegrationTests
             new WorkflowNodeId("start"),
             [
                 CreateNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
-                CreateNode("llm", WorkflowNodeKind.LlmCall, componentId),
+                CreateNode("logic", WorkflowNodeKind.StrictLogic, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
                 CreateNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
             ],
             [
-                CreateEdge("start-to-llm", "start", "llm"),
-                CreateEdge("llm-to-end", "llm", "end")
+                CreateEdge("start-to-logic", "start", "logic"),
+                CreateEdge("logic-to-end", "logic", "end")
             ]);
     }
 

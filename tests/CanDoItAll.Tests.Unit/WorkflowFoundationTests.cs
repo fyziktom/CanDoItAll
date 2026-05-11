@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -7,6 +9,8 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkflowFoundationTests
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
+
     [Fact]
     public void WorkflowIdRejectsEmptyValue()
     {
@@ -86,6 +90,166 @@ public sealed class WorkflowFoundationTests
 
         Assert.True(durableTask.IsDurable);
         Assert.True(durableTask.SupportsDashboardObservability);
+    }
+
+    [Fact]
+    public void WorkflowEdgeDefaultsMissingRoutingMetadataForLegacyJson()
+    {
+        const string legacyEdgeJson = """
+            {
+              "id": "legacy-edge",
+              "sourceNodeId": "start",
+              "sourcePortId": null,
+              "targetNodeId": "end",
+              "targetPortId": null,
+              "kind": "Conditional",
+              "conditionExpression": "$.approved == true"
+            }
+            """;
+
+        var edge = JsonSerializer.Deserialize<WorkflowEdge>(legacyEdgeJson, SerializerOptions);
+
+        Assert.NotNull(edge);
+        Assert.Equal(WorkflowRouteKind.Always, edge.Routing.Kind);
+        Assert.Equal("$.approved == true", edge.ConditionExpression);
+    }
+
+    [Fact]
+    public void WorkflowEdgeRoutingRoundTripsTypedPredicateMetadata()
+    {
+        var edge = CreateEdge(
+            "start-approved",
+            "start",
+            "approved",
+            WorkflowEdgeKind.Conditional,
+            WorkflowEdgeRouting.Predicate(
+                "$.approval.status",
+                WorkflowRouteOperator.Equals,
+                "\"approved\"",
+                WorkflowRouteValueKind.String,
+                label: "Approved path"));
+
+        var json = JsonSerializer.Serialize(edge, SerializerOptions);
+        var roundTripped = JsonSerializer.Deserialize<WorkflowEdge>(json, SerializerOptions);
+
+        Assert.NotNull(roundTripped);
+        Assert.Equal(WorkflowRouteKind.Predicate, roundTripped.Routing.Kind);
+        Assert.Equal("$.approval.status", roundTripped.Routing.JsonPath);
+        Assert.Equal("\"approved\"", roundTripped.Routing.ExpectedValueJson);
+        Assert.Contains("routing", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ValidatorRejectsInvalidRouteExpectedJson()
+    {
+        var definition = CreateDefinition([
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateNode("approved", WorkflowNodeKind.End)
+        ], [
+            CreateEdge(
+                "start-approved",
+                "start",
+                "approved",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.Predicate(
+                    "$.approval.status",
+                    WorkflowRouteOperator.Equals,
+                    "\"approved",
+                    WorkflowRouteValueKind.String))
+        ]);
+
+        var result = new WorkflowDefinitionValidator().Validate(definition, []);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidRouteDefinition &&
+            issue.EdgeId == new WorkflowEdgeId("start-approved"));
+    }
+
+    [Fact]
+    public void ValidatorRejectsReservedArtlRouteLanguageUntilCompilerExists()
+    {
+        var definition = CreateDefinition([
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateNode("approved", WorkflowNodeKind.End)
+        ], [
+            CreateEdge(
+                "start-approved",
+                "start",
+                "approved",
+                WorkflowEdgeKind.Conditional,
+                WorkflowEdgeRouting.Predicate(
+                    "$.approval.status",
+                    WorkflowRouteOperator.Equals,
+                    "\"approved\"",
+                    WorkflowRouteValueKind.String) with
+                {
+                    RoutingLanguage = WorkflowRoutingLanguages.ArtlV1
+                })
+        ]);
+
+        var result = new WorkflowDefinitionValidator().Validate(definition, []);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidRouteDefinition &&
+            issue.Message.Contains("artl-v1", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ValidatorRejectsDuplicateSwitchDefaultRoutes()
+    {
+        var definition = CreateDefinition([
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateNode("manual", WorkflowNodeKind.End),
+            CreateNode("fallback", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-manual", "start", "manual", WorkflowEdgeKind.Conditional, WorkflowEdgeRouting.SwitchDefault("Manual")),
+            CreateEdge("start-fallback", "start", "fallback", WorkflowEdgeKind.Conditional, WorkflowEdgeRouting.SwitchDefault("Fallback"))
+        ]);
+
+        var result = new WorkflowDefinitionValidator().Validate(definition, []);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidRouteDefinition &&
+            issue.Message.Contains("more than one switch default", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ValidatorRejectsDuplicateFanOutTargetIndices()
+    {
+        var definition = CreateDefinition([
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateNode("email", WorkflowNodeKind.End),
+            CreateNode("slack", WorkflowNodeKind.End)
+        ], [
+            CreateEdge(
+                "start-email",
+                "start",
+                "email",
+                WorkflowEdgeKind.FanOut,
+                WorkflowEdgeRouting.FanOutSelector(
+                    "$.channels",
+                    WorkflowRouteOperator.Contains,
+                    "\"email\"",
+                    WorkflowRouteValueKind.String,
+                    targetIndex: 0)),
+            CreateEdge(
+                "start-slack",
+                "start",
+                "slack",
+                WorkflowEdgeKind.FanOut,
+                WorkflowEdgeRouting.FanOutSelector(
+                    "$.channels",
+                    WorkflowRouteOperator.Contains,
+                    "\"slack\"",
+                    WorkflowRouteValueKind.String,
+                    targetIndex: 0))
+        ]);
+
+        var result = new WorkflowDefinitionValidator().Validate(definition, []);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidRouteDefinition &&
+            issue.Message.Contains("duplicate fan-out target index", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -272,7 +436,12 @@ public sealed class WorkflowFoundationTests
                 ResultShape: WorkflowValueShape.Text));
     }
 
-    private static WorkflowEdge CreateEdge(string id, string source, string target)
+    private static WorkflowEdge CreateEdge(
+        string id,
+        string source,
+        string target,
+        WorkflowEdgeKind kind = WorkflowEdgeKind.Direct,
+        WorkflowEdgeRouting? routing = null)
     {
         return new WorkflowEdge(
             new WorkflowEdgeId(id),
@@ -280,8 +449,11 @@ public sealed class WorkflowFoundationTests
             SourcePortId: null,
             new WorkflowNodeId(target),
             TargetPortId: null,
-            WorkflowEdgeKind.Direct,
-            ConditionExpression: string.Empty);
+            kind,
+            ConditionExpression: string.Empty)
+        {
+            Routing = routing ?? WorkflowEdgeRouting.Always
+        };
     }
 
     private static LlmCallComponent CreateComponent()
@@ -319,5 +491,12 @@ public sealed class WorkflowFoundationTests
                 input.PayloadJson,
                 component.ResultShape));
         }
+    }
+
+    private static JsonSerializerOptions CreateSerializerOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 }

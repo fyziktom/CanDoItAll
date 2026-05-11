@@ -435,8 +435,8 @@
     }
 
     function getLinkRetainedKey(link, index) {
-        if (link?.sourceId || link?.targetId || link?.kind || link?.sourcePortId || link?.targetPortId) {
-            return `${link?.sourceId || ""}|${link?.sourcePortId || ""}|${link?.targetId || ""}|${link?.targetPortId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
+        if (link?.sourceId || link?.targetId || link?.kind || link?.sourcePortId || link?.targetPortId || link?.label || link?.tone) {
+            return `${link?.sourceId || ""}|${link?.sourcePortId || ""}|${link?.targetId || ""}|${link?.targetPortId || ""}|${link?.kind || ""}|${link?.label || ""}|${link?.tone || ""}|${link?.isUserAuthored ? "1" : "0"}`;
         }
 
         return `link:${index}`;

@@ -206,6 +206,41 @@ public enum WorkflowEdgeKind
     FanIn
 }
 
+public enum WorkflowRouteKind
+{
+    Always,
+    Predicate,
+    SwitchCase,
+    SwitchDefault,
+    FanOutSelector
+}
+
+public enum WorkflowRouteOperator
+{
+    Exists,
+    DoesNotExist,
+    Equals,
+    NotEquals,
+    Contains,
+    StartsWith,
+    EndsWith,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
+    IsTruthy,
+    IsFalsy
+}
+
+public enum WorkflowRouteValueKind
+{
+    String,
+    Number,
+    Boolean,
+    Null,
+    Json
+}
+
 public enum WorkflowPortDirection
 {
     Input,
@@ -306,6 +341,7 @@ public enum WorkflowValidationIssueCode
     InvalidExecutionPolicy,
     InvalidProviderModel,
     InvalidWorkflowSettings,
+    InvalidRouteDefinition,
     UnsupportedRuntimeBackend,
     UnsupportedModality,
     UnsupportedNodeKind,
@@ -375,6 +411,102 @@ public sealed record WorkflowNode(
     double CanvasX = 0,
     double CanvasY = 0);
 
+public sealed record WorkflowEdgeRouting(
+    WorkflowRouteKind Kind,
+    string Label,
+    string JsonPath,
+    WorkflowRouteOperator Operator,
+    string ExpectedValueJson,
+    WorkflowRouteValueKind ExpectedValueKind,
+    bool CaseSensitive,
+    int? FanOutTargetIndex,
+    string RoutingLanguage)
+{
+    public static WorkflowEdgeRouting Always { get; } = new(
+        WorkflowRouteKind.Always,
+        Label: string.Empty,
+        JsonPath: string.Empty,
+        WorkflowRouteOperator.Exists,
+        ExpectedValueJson: string.Empty,
+        WorkflowRouteValueKind.Json,
+        CaseSensitive: false,
+        FanOutTargetIndex: null,
+        WorkflowRoutingLanguages.BuiltInJsonV1);
+
+    public static WorkflowEdgeRouting Predicate(
+        string jsonPath,
+        WorkflowRouteOperator @operator,
+        string expectedValueJson,
+        WorkflowRouteValueKind expectedValueKind,
+        string label = "",
+        bool caseSensitive = false)
+        => new(
+            WorkflowRouteKind.Predicate,
+            label,
+            jsonPath,
+            @operator,
+            expectedValueJson,
+            expectedValueKind,
+            caseSensitive,
+            FanOutTargetIndex: null,
+            WorkflowRoutingLanguages.BuiltInJsonV1);
+
+    public static WorkflowEdgeRouting SwitchCase(
+        string jsonPath,
+        string expectedValueJson,
+        WorkflowRouteValueKind expectedValueKind,
+        string label = "",
+        bool caseSensitive = false)
+        => new(
+            WorkflowRouteKind.SwitchCase,
+            label,
+            jsonPath,
+            WorkflowRouteOperator.Equals,
+            expectedValueJson,
+            expectedValueKind,
+            caseSensitive,
+            FanOutTargetIndex: null,
+            WorkflowRoutingLanguages.BuiltInJsonV1);
+
+    public static WorkflowEdgeRouting SwitchDefault(string label = "")
+        => new(
+            WorkflowRouteKind.SwitchDefault,
+            label,
+            JsonPath: string.Empty,
+            WorkflowRouteOperator.Exists,
+            ExpectedValueJson: string.Empty,
+            WorkflowRouteValueKind.Json,
+            CaseSensitive: false,
+            FanOutTargetIndex: null,
+            WorkflowRoutingLanguages.BuiltInJsonV1);
+
+    public static WorkflowEdgeRouting FanOutSelector(
+        string jsonPath,
+        WorkflowRouteOperator @operator,
+        string expectedValueJson,
+        WorkflowRouteValueKind expectedValueKind,
+        int? targetIndex = null,
+        string label = "",
+        bool caseSensitive = false)
+        => new(
+            WorkflowRouteKind.FanOutSelector,
+            label,
+            jsonPath,
+            @operator,
+            expectedValueJson,
+            expectedValueKind,
+            caseSensitive,
+            targetIndex,
+            WorkflowRoutingLanguages.BuiltInJsonV1);
+}
+
+public static class WorkflowRoutingLanguages
+{
+    public const string BuiltInJsonV1 = "built-in-json-v1";
+    public const string LegacyConditionExpression = "legacy-condition-expression";
+    public const string ArtlV1 = "artl-v1";
+}
+
 public sealed record WorkflowEdge(
     WorkflowEdgeId Id,
     WorkflowNodeId SourceNodeId,
@@ -382,7 +514,10 @@ public sealed record WorkflowEdge(
     WorkflowNodeId TargetNodeId,
     WorkflowPortId? TargetPortId,
     WorkflowEdgeKind Kind,
-    string ConditionExpression);
+    string ConditionExpression)
+{
+    public WorkflowEdgeRouting Routing { get; init; } = WorkflowEdgeRouting.Always;
+}
 
 public sealed record WorkflowGraph(
     WorkflowNodeId StartNodeId,

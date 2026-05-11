@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -34,14 +34,14 @@
 
 ## Exact Source References
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.css`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Components.CanvasLib/Canvas/Graph/Primitives/ConnectorPathPrimitive.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.css`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Components.CanvasLib/Canvas/Graph/Primitives/ConnectorPathPrimitive.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasWorkbench.razor`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
 
 ## Deliverables
 
@@ -102,8 +102,8 @@
 
 ## Proof Required
 
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1`
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowExecutorTests" --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowExecutorTests" --verbosity minimal -m:1`
 - Browser proof route: `/agents/workflows` or the current workflow canvas route.
 - Screenshots: maximized route-builder edge inspector, canvas with route labels/summaries, validation failure for incomplete route, successful preview-run for a predicate/switch workflow, narrower-width route-builder layout.
 

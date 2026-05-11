@@ -3,7 +3,7 @@
 ## Uploaded Repository
 
 - Uploaded ZIP: `/mnt/data/CanDoItAll-agents-integration (4).zip`
-- Extracted repo inspected at: `/mnt/data/cando/CanDoItAll-agents-integration`
+- Extracted repo inspected at: `C:\repositories\CanDoItAll`
 
 ## Relevant External References Reviewed
 

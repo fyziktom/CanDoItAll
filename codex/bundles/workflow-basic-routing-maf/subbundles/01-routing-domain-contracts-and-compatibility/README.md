@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -34,11 +34,11 @@
 
 ## Exact Source References
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowModels.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowIdJsonConverters.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowContracts.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowIdJsonConverters.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowContracts.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
 
 ## Deliverables
 
@@ -93,7 +93,7 @@
 
 ## Proof Required
 
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowCatalogTests" --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowCatalogTests" --verbosity minimal -m:1`
 - Add or update test names in `reviews/01-execution-report.md`.
 - Include a short serialized JSON sample in the execution report or test assertion that shows `Routing` round-trips.
 

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 
@@ -75,6 +76,8 @@ internal sealed class WorkflowCanvasEdgeDraft(
     public WorkflowEdgeKind Kind { get; set; } = WorkflowEdgeKind.Direct;
 
     public string ConditionExpression { get; set; } = string.Empty;
+
+    public WorkflowEdgeRouting Routing { get; set; } = WorkflowEdgeRouting.Always;
 }
 
 internal static class WorkflowCanvasDefinitionMapper
@@ -194,7 +197,8 @@ internal static class WorkflowCanvasDefinitionMapper
             document.Edges.Add(new WorkflowCanvasEdgeDraft(edge.Id, edge.SourceNodeId, edge.TargetNodeId)
             {
                 Kind = edge.Kind,
-                ConditionExpression = edge.ConditionExpression
+                ConditionExpression = edge.ConditionExpression,
+                Routing = edge.Routing ?? WorkflowEdgeRouting.Always
             });
         }
 
@@ -237,7 +241,10 @@ internal static class WorkflowCanvasDefinitionMapper
                 edge.TargetNodeId,
                 new WorkflowPortId(InputPortId),
                 edge.Kind,
-                edge.ConditionExpression.Trim()))
+                edge.ConditionExpression.Trim())
+            {
+                Routing = edge.Routing
+            })
             .ToArray();
         var now = DateTimeOffset.UtcNow;
         return new WorkflowDefinition(
@@ -275,6 +282,31 @@ internal static class WorkflowCanvasDefinitionMapper
         var nodes = document.Nodes
             .Select(node => BuildWorkbenchNode(node, componentsById, executorsById, issuesByNode))
             .ToList();
+        var decisionSummariesBySource = document.Edges
+            .GroupBy(edge => edge.SourceNodeId)
+            .Where(group => group.Count() > 1 || group.Any(edge => edge.Routing.Kind != WorkflowRouteKind.Always))
+            .ToDictionary(
+                group => group.Key.Value,
+                group => $"{group.Count()} route(s)");
+        foreach (var node in nodes)
+        {
+            if (!decisionSummariesBySource.TryGetValue(node.Id, out var summary))
+            {
+                continue;
+            }
+
+            node.Family = "workflow-decision";
+            node.Icon = "call_split";
+            node.BranchLabel = summary;
+            node.PaletteKey = "workflow-decision";
+            node.AccentColor = "#0f766e";
+            node.FooterChips.Add(new CanvasWorkbenchChip
+            {
+                Text = summary,
+                Tone = "info"
+            });
+        }
+
         var links = document.Edges
             .Select(edge => new CanvasWorkbenchLink
             {
@@ -282,7 +314,10 @@ internal static class WorkflowCanvasDefinitionMapper
                 SourcePortId = OutputPortId,
                 TargetId = edge.TargetNodeId.Value,
                 TargetPortId = InputPortId,
-                Kind = edge.Kind.ToString(),
+                Kind = edge.Routing.Kind.ToString(),
+                Label = ResolveRouteLabel(edge),
+                Summary = BuildRouteSummary(edge),
+                Tone = ResolveRouteTone(edge),
                 IsUserAuthored = true
             })
             .ToList();
@@ -413,6 +448,93 @@ internal static class WorkflowCanvasDefinitionMapper
             WorkflowNodeKind.End => "Return the final workflow output.",
             _ => string.Empty
         };
+    }
+
+    public static string ResolveRouteModeLabel(WorkflowRouteKind kind)
+    {
+        return kind switch
+        {
+            WorkflowRouteKind.Always => "Direct",
+            WorkflowRouteKind.Predicate => "IF predicate",
+            WorkflowRouteKind.SwitchCase => "Switch case",
+            WorkflowRouteKind.SwitchDefault => "Switch default",
+            WorkflowRouteKind.FanOutSelector => "Fan-out selector",
+            _ => kind.ToString()
+        };
+    }
+
+    public static string BuildRouteSummary(WorkflowCanvasEdgeDraft edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+
+        var routing = edge.Routing ?? WorkflowEdgeRouting.Always;
+        var summary = routing.Kind switch
+        {
+            WorkflowRouteKind.Always => "Always",
+            WorkflowRouteKind.Predicate => $"{routing.JsonPath} {WorkflowRoutingValidation.FormatOperator(routing.Operator)} {FormatExpectedValue(routing)}",
+            WorkflowRouteKind.SwitchCase => $"case {FormatExpectedValue(routing)} from {routing.JsonPath}",
+            WorkflowRouteKind.SwitchDefault => "default branch",
+            WorkflowRouteKind.FanOutSelector => $"target {routing.FanOutTargetIndex?.ToString() ?? "auto"} when {routing.JsonPath} {WorkflowRoutingValidation.FormatOperator(routing.Operator)} {FormatExpectedValue(routing)}",
+            _ => routing.Kind.ToString()
+        };
+
+        return string.IsNullOrWhiteSpace(routing.Label)
+            ? summary
+            : $"{routing.Label}: {summary}";
+    }
+
+    public static string ResolveRouteLabel(WorkflowCanvasEdgeDraft edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+
+        var routing = edge.Routing ?? WorkflowEdgeRouting.Always;
+        if (!string.IsNullOrWhiteSpace(routing.Label))
+        {
+            return routing.Label.Trim();
+        }
+
+        return routing.Kind switch
+        {
+            WorkflowRouteKind.Always => "Direct",
+            WorkflowRouteKind.Predicate => "IF",
+            WorkflowRouteKind.SwitchCase => $"Case {FormatExpectedValue(routing)}",
+            WorkflowRouteKind.SwitchDefault => "Default",
+            WorkflowRouteKind.FanOutSelector => $"Fan-out {routing.FanOutTargetIndex?.ToString() ?? string.Empty}".Trim(),
+            _ => routing.Kind.ToString()
+        };
+    }
+
+    public static string ResolveRouteTone(WorkflowCanvasEdgeDraft edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+
+        return edge.Routing.Kind switch
+        {
+            WorkflowRouteKind.Always => "neutral",
+            WorkflowRouteKind.Predicate => "success",
+            WorkflowRouteKind.SwitchCase => "info",
+            WorkflowRouteKind.SwitchDefault => "default",
+            WorkflowRouteKind.FanOutSelector => "fanout",
+            _ => "neutral"
+        };
+    }
+
+    private static string FormatExpectedValue(WorkflowEdgeRouting routing)
+    {
+        if (!WorkflowRoutingValidation.RequiresExpectedValue(routing.Operator))
+        {
+            return string.Empty;
+        }
+
+        if (routing.ExpectedValueKind == WorkflowRouteValueKind.String &&
+            routing.ExpectedValueJson.Length >= 2 &&
+            routing.ExpectedValueJson[0] == '"' &&
+            routing.ExpectedValueJson[^1] == '"')
+        {
+            return routing.ExpectedValueJson[1..^1];
+        }
+
+        return routing.ExpectedValueJson;
     }
 
     public static IReadOnlyList<WorkflowNodeKind> CreatableNodeKinds { get; } =

@@ -1,8 +1,8 @@
 # Bundle Manifest
 
 - Bundle: workflow-basic-routing-maf
-- Stage: prepared
-- Validator: passed before ZIP packaging
+- Stage: completed
+- Validator: passed at completed-stage closure
 
 ## Files
 

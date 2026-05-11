@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -32,13 +32,13 @@
 
 ## Exact Source References
 
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/WorkflowCatalogTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/ProcessWorkflowExecutorIntegrationTests.cs`
-- `/mnt/data/cando/CanDoItAll-agents-integration/.codex/bundles/workflow-basic-routing-maf/reviews/01-execution-report.md`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkflowCatalogTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/ProcessWorkflowExecutorIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/codex/bundles/workflow-basic-routing-maf/reviews/01-execution-report.md`
 
 ## Deliverables
 
@@ -94,9 +94,9 @@
 
 ## Proof Required
 
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowExecutorTests|FullyQualifiedName~WorkflowCatalogTests" --verbosity minimal -m:1`
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1`
-- `dotnet test /mnt/data/cando/CanDoItAll-agents-integration/tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkflowApiIntegrationTests|FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests" --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowExecutorTests|FullyQualifiedName~WorkflowCatalogTests" --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1`
+- `dotnet test C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkflowApiIntegrationTests|FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests" --verbosity minimal -m:1`
 - Browser screenshots and screenshot-review notes under `reviews/evidence/subbundle-05/`.
 - Source-review note confirming executable routes use MAF routing primitives and unsupported ARTL is rejected until implemented.
 

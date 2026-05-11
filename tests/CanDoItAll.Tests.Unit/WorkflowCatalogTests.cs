@@ -48,6 +48,41 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogSnapshotsTypedRouteMetadataOnEdges()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var graph = CreateDefinitionGraph(component.Id);
+        var routedEdges = graph.Edges
+            .Select(edge => edge.Id.Value == "start-to-llm"
+                ? edge with
+                {
+                    Kind = WorkflowEdgeKind.Conditional,
+                    Routing = WorkflowEdgeRouting.Predicate(
+                        "$.invoice.total",
+                        WorkflowRouteOperator.GreaterThanOrEqual,
+                        "5000",
+                        WorkflowRouteValueKind.Number,
+                        "High value")
+                }
+                : edge)
+            .ToArray();
+
+        var saved = await catalog.SaveDefinitionAsync(CreateSaveRequest(new WorkflowGraph(
+            graph.StartNodeId,
+            graph.Nodes,
+            routedEdges)));
+        var detail = await catalog.GetDefinitionAsync(saved.Id);
+
+        var routedEdge = Assert.Single(detail!.Definition.Graph.Edges, edge => edge.Routing.Kind == WorkflowRouteKind.Predicate);
+        Assert.Equal("High value", routedEdge.Routing.Label);
+        Assert.Equal("$.invoice.total", routedEdge.Routing.JsonPath);
+        Assert.Equal(WorkflowRouteOperator.GreaterThanOrEqual, routedEdge.Routing.Operator);
+        Assert.Equal(WorkflowRouteValueKind.Number, routedEdge.Routing.ExpectedValueKind);
+        Assert.Equal("5000", routedEdge.Routing.ExpectedValueJson);
+    }
+
+    [Fact]
     public async Task ValidationCatchesDisconnectedNodesAndShapeMismatch()
     {
         var catalog = CreateCatalog();
@@ -253,7 +288,9 @@ public sealed class WorkflowCatalogTests
         var runtimeManager = new WorkflowRuntimeManager(
             [
                 new MafInProcessWorkflowExecutionBackend(
-                    new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
+                    new MafWorkflowCompiler(
+                        new WorkflowDefinitionValidator(),
+                        llmComponentInvoker: new PassthroughLlmComponentInvoker()),
                     catalog)
             ],
             runStore);
@@ -442,6 +479,23 @@ public sealed class WorkflowCatalogTests
             CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class PassthroughLlmComponentInvoker : IWorkflowLlmComponentInvoker
+    {
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowDefinition definition,
+            WorkflowNode node,
+            LlmCallComponent component,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                node.Id,
+                input.PayloadJson,
+                component.ResultShape));
         }
     }
 }
