@@ -1,0 +1,62 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<section @attributes='AdditionalAttributes.WithClass("cda-action-review-panel")'>
+    <header class="cda-action-review-panel__header">
+        @if (!string.IsNullOrWhiteSpace(Icon))
+        {
+            <span class="material-icons" aria-hidden="true">@Icon</span>
+        }
+        <div>
+            <span>@Eyebrow</span>
+            <h4>@Title</h4>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p>@Description</p>
+    }
+
+    @if (Items.Count > 0)
+    {
+        <dl class="cda-action-review-panel__facts">
+            @foreach (var item in Items)
+            {
+                <div>
+                    <dt>@item.Label</dt>
+                    <dd>@item.Value</dd>
+                </div>
+            }
+        </dl>
+    }
+
+    @if (ChildContent is not null)
+    {
+        <div class="cda-action-review-panel__content">
+            @ChildContent
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Eyebrow { get; set; } = "Review";
+
+    [Parameter]
+    public string Title { get; set; } = "Action impact";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string Icon { get; set; } = "fact_check";
+
+    [Parameter]
+    public IReadOnlyList<ActionReviewFact> Items { get; set; } = [];
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}

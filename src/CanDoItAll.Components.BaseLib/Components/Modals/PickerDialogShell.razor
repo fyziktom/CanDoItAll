@@ -1,0 +1,53 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<DialogScaffold Eyebrow="@Eyebrow"
+                Title="@Title"
+                Description="@Description"
+                ReviewPanel="@ReviewPanel"
+                Footer="@Footer"
+                data-testid="@TestId">
+    <EntityPicker Title="@PickerTitle"
+                  Description="@PickerDescription"
+                  Items="@Items"
+                  SelectedId="@SelectedId"
+                  SelectedIdChanged="@SelectedIdChanged"
+                  Selected="@Selected" />
+</DialogScaffold>
+
+@code {
+    [Parameter]
+    public string Eyebrow { get; set; } = "Picker";
+
+    [Parameter]
+    public string Title { get; set; } = "Choose an entity";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string PickerTitle { get; set; } = "Available entities";
+
+    [Parameter]
+    public string? PickerDescription { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<EntityPickerItem> Items { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<EntityPickerItem> Selected { get; set; }
+
+    [Parameter]
+    public RenderFragment? ReviewPanel { get; set; }
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+}

@@ -1,0 +1,61 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<section @attributes='AdditionalAttributes.WithClass("cda-timeline")' aria-label="@AriaLabel">
+    @if (Items.Count == 0)
+    {
+        <div class="cda-timeline__empty">@EmptyText</div>
+    }
+    else
+    {
+        <ol>
+            @foreach (var item in Items)
+            {
+                <li class="cda-timeline__item">
+                    <span class="@ResolveMarkerClass(item)" aria-hidden="true">
+                        @if (!string.IsNullOrWhiteSpace(item.Icon))
+                        {
+                            <span class="material-icons">@item.Icon</span>
+                        }
+                    </span>
+                    <div class="cda-timeline__content">
+                        <div class="cda-timeline__row">
+                            <strong>@item.Label</strong>
+                            @if (item.Timestamp is not null)
+                            {
+                                <time datetime="@item.Timestamp.Value.ToString("O")">@item.Timestamp.Value.ToString("g")</time>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <p>@item.Description</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(item.Meta))
+                        {
+                            <span class="cda-timeline__meta">@item.Meta</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<TimelineItem> Items { get; set; } = [];
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Timeline";
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No timeline entries.";
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private static string ResolveMarkerClass(TimelineItem item)
+        => $"cda-timeline__marker cda-timeline__marker--{NormalizeTone(item.Tone)}";
+
+    private static string NormalizeTone(string? tone)
+        => string.IsNullOrWhiteSpace(tone) ? "neutral" : tone.Trim().ToLowerInvariant();
+}

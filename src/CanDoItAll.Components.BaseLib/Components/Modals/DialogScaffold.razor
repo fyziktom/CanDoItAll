@@ -1,0 +1,99 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<section @attributes='AdditionalAttributes.WithClass(ResolveClass())'>
+    <header class="cda-dialog-scaffold__header">
+        <div class="cda-dialog-scaffold__title-block">
+            @if (!string.IsNullOrWhiteSpace(Eyebrow))
+            {
+                <span class="cda-dialog-scaffold__eyebrow">@Eyebrow</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Title))
+            {
+                <h3>@Title</h3>
+            }
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p>@Description</p>
+            }
+        </div>
+
+        @if (HeaderActions is not null)
+        {
+            <div class="cda-dialog-scaffold__actions">
+                @HeaderActions
+            </div>
+        }
+    </header>
+
+    <div class="cda-dialog-scaffold__body">
+        @if (ContextRail is not null)
+        {
+            <aside class="cda-dialog-scaffold__rail">
+                @ContextRail
+            </aside>
+        }
+
+        <main class="cda-dialog-scaffold__main">
+            @ChildContent
+        </main>
+
+        @if (ReviewPanel is not null)
+        {
+            <aside class="cda-dialog-scaffold__review">
+                @ReviewPanel
+            </aside>
+        }
+    </div>
+
+    @if (ValidationContent is not null)
+    {
+        <div class="cda-dialog-scaffold__validation">
+            @ValidationContent
+        </div>
+    }
+
+    @if (Footer is not null)
+    {
+        <footer class="cda-dialog-scaffold__footer">
+            @Footer
+        </footer>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public bool Dense { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? ContextRail { get; set; }
+
+    [Parameter]
+    public RenderFragment? ReviewPanel { get; set; }
+
+    [Parameter]
+    public RenderFragment? ValidationContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ResolveClass()
+        => Dense ? "cda-dialog-scaffold cda-dialog-scaffold--dense" : "cda-dialog-scaffold";
+}
