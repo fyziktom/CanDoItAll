@@ -6,6 +6,35 @@
 
 .workflows-layout {
     align-items: start;
+    min-width: 0;
+}
+
+.workflows-layout > * {
+    min-width: 0;
+}
+
+.workflows-history-layout {
+    align-items: stretch;
+}
+
+.workflows-history-card {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.workflows-history-card--timeline {
+    max-height: min(74dvh, 52rem);
+}
+
+.workflows-history-card--side {
+    max-height: min(35dvh, 25rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
+.workflows-history-side {
+    min-width: 0;
 }
 
 .workflows-card-title {
@@ -39,6 +68,29 @@
     background: rgb(255 255 255);
     text-align: left;
     color: rgb(51 65 85);
+}
+
+.workflows-run-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.workflows-run-item__select {
+    min-width: 0;
+    display: grid;
+    gap: 0.35rem;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: inherit;
+}
+
+.workflows-run-item__title {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow: hidden;
 }
 
 .workflows-catalog-item:hover,
@@ -119,6 +171,17 @@
     font-size: 0.875rem;
 }
 
+.workflows-event {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.workflows-event__summary {
+    min-width: 0;
+    display: grid;
+    gap: 0.35rem;
+}
+
 .workflows-issue strong,
 .workflows-artifact strong,
 .workflows-request strong {
@@ -132,8 +195,73 @@
     scrollbar-gutter: stable;
 }
 
+.workflows-history-scroll {
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.15rem;
+    scrollbar-gutter: stable;
+}
+
+.workflows-event-list {
+    max-height: min(30dvh, 22rem);
+}
+
+.workflows-events-section {
+    min-width: 0;
+}
+
+.workflows-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.workflows-clamped-text {
+    min-width: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.workflows-detail-dialog {
+    min-width: 0;
+}
+
+.workflows-detail-pre {
+    max-height: 32rem;
+    overflow: auto;
+    margin: 0.5rem 0 0;
+    padding: 0.85rem;
+    border: 1px solid rgb(203 213 225);
+    border-radius: 0.5rem;
+    background: rgb(15 23 42);
+    color: rgb(226 232 240);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 900px) {
     .workflows-summary ::deep .cda-summary-tile--badge {
         flex-basis: 11.75rem;
+    }
+
+    .workflows-run-item,
+    .workflows-event {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workflows-pager {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }

@@ -103,6 +103,13 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         return store.ListEventsAsync(runId, cancellationToken);
     }
 
+    public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+        WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return store.ListEventPageAsync(request, cancellationToken);
+    }
+
     public async Task<WorkflowRunSnapshot> CancelAsync(
         WorkflowRunId runId,
         CancellationToken cancellationToken = default)
@@ -248,6 +255,55 @@ public sealed class InMemoryWorkflowRunStore :
         return Task.FromResult<IReadOnlyList<WorkflowRunSnapshot>>(snapshot);
     }
 
+    public Task<WorkflowListPage<WorkflowRunSnapshot>> ListRunPageAsync(
+        WorkflowRunPageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var pageIndex = NormalizePageIndex(request.PageIndex);
+        var pageSize = NormalizePageSize(request.PageSize);
+        var filtered = runs.Values.AsEnumerable();
+        if (request.WorkflowId.HasValue)
+        {
+            filtered = filtered.Where(run => run.WorkflowId == request.WorkflowId.Value);
+        }
+
+        if (request.State.HasValue)
+        {
+            filtered = filtered.Where(run => run.State == request.State.Value);
+        }
+
+        if (request.Backend.HasValue)
+        {
+            filtered = filtered.Where(run => run.Backend == request.Backend.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim();
+            filtered = filtered.Where(run =>
+                run.Summary.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                run.BackendRunId.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                run.RunId.ToString().Contains(search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var ordered = filtered
+            .OrderByDescending(run => run.UpdatedAtUtc)
+            .ToArray();
+        var items = ordered
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToArray();
+
+        return Task.FromResult(new WorkflowListPage<WorkflowRunSnapshot>(
+            items,
+            pageIndex,
+            pageSize,
+            ordered.Length));
+    }
+
     public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default)
     {
         events.GetOrAdd(workflowEvent.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>())
@@ -265,6 +321,35 @@ public sealed class InMemoryWorkflowRunStore :
         }
 
         return Task.FromResult<IReadOnlyList<WorkflowEventRecord>>(queue.ToArray());
+    }
+
+    public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+        WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var pageIndex = NormalizePageIndex(request.PageIndex);
+        var pageSize = NormalizePageSize(request.PageSize);
+        if (!events.TryGetValue(request.RunId, out var queue))
+        {
+            return Task.FromResult(new WorkflowListPage<WorkflowEventRecord>([], pageIndex, pageSize, 0));
+        }
+
+        var ordered = queue
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToArray();
+        var items = ordered
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToArray();
+
+        return Task.FromResult(new WorkflowListPage<WorkflowEventRecord>(
+            items,
+            pageIndex,
+            pageSize,
+            ordered.Length));
     }
 
     public Task SaveExternalRequestAsync(
@@ -380,6 +465,12 @@ public sealed class InMemoryWorkflowRunStore :
             .Enqueue(artifact);
         return Task.FromResult(artifact);
     }
+
+    private static int NormalizePageIndex(int pageIndex)
+        => Math.Max(0, pageIndex);
+
+    private static int NormalizePageSize(int pageSize)
+        => Math.Clamp(pageSize, 1, 100);
 }
 
 public sealed class NullWorkflowEventSink : IWorkflowEventSink
