@@ -236,11 +236,14 @@ else
                                                            PreviewNode="@previewNode"
                                                            CloseAttachmentPreview="CloseAttachmentPreview"
                                                            OpenAttachmentLocally="OpenAttachmentLocallyAsync"
+                                                           EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                                            CanShowLocalOpen="CanShowLocalOpen"
+                                                           CanEditPreviewNode="CanEditNode"
                                                            ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
                                                            ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
                                                            ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
-                                                           ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource" />
+                                                           ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource"
+                                                           ResolveAttachmentTextContent="ResolveAttachmentTextContent" />
                         </ProjectStructureDeferredSurface>
                     </OverlayContent>
                 </CanvasWorkbench>
@@ -499,11 +502,14 @@ else
                                    RequestHrManagerMatch="RequestHrManagerMatchAsync"
                                    CancelHrManagerMatch="CancelHrManagerMatchAsync"
                                    ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
+                                   EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                    CanShowLocalOpen="CanShowLocalOpen"
+                                   CanEditPreviewNode="CanEditNode"
                                    ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
                                    ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
                                    ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
-                                   ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource" />
+                                   ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource"
+                                   ResolveAttachmentTextContent="ResolveAttachmentTextContent" />
 </ProjectStructureDeferredSurface>
 
 <ProjectModalHost IsOpen="@showProjectCreateModal"
@@ -959,17 +965,17 @@ else
             return;
         }
 
-        if (CanOfferFileQuickActions(node))
-        {
-            OpenQuickActionDialog(node);
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
         if (CanRenderAttachmentPreview(node))
         {
             CloseQuickActionDialog();
             OpenAttachmentPreview(node);
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (CanOfferFileQuickActions(node))
+        {
+            OpenQuickActionDialog(node);
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -1893,6 +1899,7 @@ else
             AttachmentPreviewKind.Image => "Image",
             AttachmentPreviewKind.Video => "Video",
             AttachmentPreviewKind.Audio => "Audio",
+            AttachmentPreviewKind.TextDocument => "Text",
             AttachmentPreviewKind.Document => "Document",
             _ => "File"
         };
@@ -1942,6 +1949,11 @@ else
 
     private static AttachmentPreviewKind ResolveAttachmentPreviewKind(ProjectStructureNode? node)
     {
+        if (HasInlineTextAssetPreview(node))
+        {
+            return AttachmentPreviewKind.TextDocument;
+        }
+
         if (!HasManagedAttachment(node) || !SupportsInlinePreview(node))
         {
             return AttachmentPreviewKind.None;
@@ -1965,12 +1977,46 @@ else
             return AttachmentPreviewKind.Audio;
         }
 
+        if (IsTextAttachment(node, contentType))
+        {
+            return AttachmentPreviewKind.TextDocument;
+        }
+
         if (IsDocumentAttachment(node, contentType))
         {
             return AttachmentPreviewKind.Document;
         }
 
         return AttachmentPreviewKind.None;
+    }
+
+    private static bool HasInlineTextAssetPreview(ProjectStructureNode? node)
+    {
+        return node?.ObjectType == ProjectObjectType.File &&
+               IsTextAssetSubtype(node.ObjectSubtype) &&
+               !string.IsNullOrWhiteSpace(node.Notes);
+    }
+
+    private static bool IsTextAssetSubtype(string? subtype)
+    {
+        return subtype?.Trim().ToLowerInvariant() switch
+        {
+            "md" or "markdown" or "txt" or "text" or "json" or "xml" or "csv" or "log" or "yaml" or "yml" => true,
+            _ => false
+        };
+    }
+
+    private static bool IsTextAttachment(ProjectStructureNode node, string contentType)
+    {
+        if (contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("application/xml", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("text/xml", StringComparison.OrdinalIgnoreCase) ||
+            contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return ResolveAttachmentExtension(node) is ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
     }
 
     private static bool IsDocumentAttachment(ProjectStructureNode node, string contentType)
@@ -2051,6 +2097,7 @@ else
             AttachmentPreviewKind.Image => "The image stays attached to this node and can expand without leaving the structure canvas.",
             AttachmentPreviewKind.Video => "The video stays attached to this node and can expand without leaving the structure canvas.",
             AttachmentPreviewKind.Audio => "Audio files now stay playable in the selection panel and can still jump into a desktop app when needed.",
+            AttachmentPreviewKind.TextDocument => "Text-based assets open into a readable source preview before you choose whether to edit node details.",
             AttachmentPreviewKind.Document when ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
                 => "PDF files now render directly in the inspector and can expand into a focused modal preview.",
             AttachmentPreviewKind.Document
@@ -2072,6 +2119,9 @@ else
             : route;
     }
 
+    private static string ResolveAttachmentTextContent(ProjectStructureNode node)
+        => HasInlineTextAssetPreview(node) ? node.Notes : string.Empty;
+
     private void OpenAttachmentPreview(ProjectStructureNode node)
     {
         if (!CanRenderAttachmentPreview(node))
@@ -2084,6 +2134,12 @@ else
 
     private void CloseAttachmentPreview()
         => previewNode = null;
+
+    private async Task EditAttachmentPreviewNodeAsync(ProjectStructureNode node)
+    {
+        CloseAttachmentPreview();
+        await OpenEditDialogAsync(node);
+    }
 
     public void Dispose()
     {

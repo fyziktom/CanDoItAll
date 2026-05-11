@@ -69,11 +69,13 @@ public sealed class PersistentWorkflowCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var workflowId = request.Id ?? WorkflowId.New();
-        var current = await dbContext.Set<WorkflowDefinitionRecord>()
+        var currentRecords = await dbContext.Set<WorkflowDefinitionRecord>()
             .Where(item => item.WorkflowId == workflowId.Value)
+            .ToListAsync(cancellationToken);
+        var current = currentRecords
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ThenByDescending(item => item.CreatedAtUtc)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefault();
         if (request.ExpectedVersionId is { } expectedVersionId &&
             current is not null &&
             current.VersionId != expectedVersionId.Value)
@@ -334,10 +336,10 @@ public sealed class PersistentWorkflowCatalogService(
             .Where(item => item.WorkflowId == workflowId.Value);
         var record = versionId.HasValue
             ? await query.SingleOrDefaultAsync(item => item.VersionId == versionId.Value.Value, cancellationToken)
-            : await query
+            : (await query.ToListAsync(cancellationToken))
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .ThenByDescending(item => item.CreatedAtUtc)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefault();
 
         return record is null
             ? null
@@ -620,10 +622,13 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             query = query.Where(item => item.WorkflowId == workflowId.Value.Value);
         }
 
-        return await query
+        var records = await query
+            .ToListAsync(cancellationToken);
+
+        return records
             .OrderByDescending(item => item.UpdatedAtUtc)
             .Select(item => item.ToSnapshot())
-            .ToListAsync(cancellationToken);
+            .ToArray();
     }
 
     public async Task SaveEventAsync(
@@ -655,12 +660,15 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<WorkflowEventRecordEntity>()
+        var records = await dbContext.Set<WorkflowEventRecordEntity>()
             .AsNoTracking()
             .Where(item => item.RunId == runId.Value)
+            .ToListAsync(cancellationToken);
+
+        return records
             .OrderBy(item => item.CreatedAtUtc)
             .Select(item => item.ToEvent())
-            .ToListAsync(cancellationToken);
+            .ToArray();
     }
 
     public async Task SaveExternalRequestAsync(
@@ -687,12 +695,15 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+        var records = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
             .AsNoTracking()
             .Where(item => item.RunId == runId.Value && item.RespondedAtUtc == null)
+            .ToListAsync(cancellationToken);
+
+        return records
             .OrderBy(item => item.CreatedAtUtc)
             .Select(item => item.ToRequest())
-            .ToListAsync(cancellationToken);
+            .ToArray();
     }
 
     Task<IReadOnlyList<WorkflowExternalRequestRecord>> IWorkflowExternalRequestStore.ListPendingRequestsAsync(
@@ -745,12 +756,15 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<WorkflowArtifactRecordEntity>()
+        var records = await dbContext.Set<WorkflowArtifactRecordEntity>()
             .AsNoTracking()
             .Where(item => item.RunId == runId.Value)
+            .ToListAsync(cancellationToken);
+
+        return records
             .OrderBy(item => item.CreatedAtUtc)
             .Select(item => item.ToArtifact())
-            .ToListAsync(cancellationToken);
+            .ToArray();
     }
 
     private async Task<WorkflowExternalRequestRecord> SaveExternalRequestCoreAsync(

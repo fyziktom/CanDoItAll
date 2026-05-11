@@ -1,7 +1,9 @@
 using Bunit;
+using AngleSharp.Dom;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,6 +141,36 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_preserves_maximized_state_when_selection_changes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+
+        FindButtonByTitle(cut, "Maximize canvas").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.IsMaximized);
+        });
+
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnSelectionChanged("end", "[\"end\"]", 1));
+
+        cut.WaitForAssertion(() =>
+        {
+            var canvas = cut.FindComponent<CanvasWorkbench>().Instance;
+            Assert.True(canvas.Surface.UiState.IsMaximized);
+            Assert.Equal(new[] { "end" }, canvas.Surface.UiState.SelectedNodeIds);
+        });
+    }
+
+    [Fact]
     public async Task Agents_shell_exposes_workflows_page_navigation()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -162,6 +194,10 @@ public sealed class WorkflowsPageTests
         services.RemoveAll<IWorkflowLlmComponentInvoker>();
         services.AddScoped<IWorkflowLlmComponentInvoker, DeterministicWorkflowLlmComponentInvoker>();
     }
+
+    private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
+        => cut.FindAll("button")
+            .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
 
     private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
     {

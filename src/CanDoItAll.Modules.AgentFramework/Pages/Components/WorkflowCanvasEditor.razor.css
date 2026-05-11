@@ -92,12 +92,64 @@
 
 .workflow-canvas-node-dialog {
     min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(17rem, 0.34fr) minmax(0, 1fr);
+    gap: 1rem;
+    height: min(74dvh, 48rem);
+}
+
+.workflow-canvas-node-dialog__rail,
+.workflow-canvas-node-dialog__main {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    gap: 0.85rem;
+    align-content: start;
+}
+
+.workflow-canvas-node-dialog__main {
+    grid-template-rows: auto auto minmax(14rem, 1fr) auto;
+    overflow: auto;
+    padding-right: 0.25rem;
+}
+
+.workflow-canvas-dialog-section {
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--workflow-canvas-panel-border);
+    border-radius: 8px;
+    padding: 0.85rem;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.workflow-canvas-dialog-section--fill {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+}
+
+.workflow-canvas-dialog-section--instructions {
+    display: grid;
+    grid-template-rows: auto minmax(8rem, auto);
 }
 
 .workflow-canvas-json-textarea {
     min-height: 12rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     font-size: 0.82rem;
+}
+
+.workflow-canvas-json-textarea--dialog {
+    min-height: 22rem;
+    height: 100%;
+    white-space: pre;
+    overflow: auto;
+}
+
+.workflow-canvas-textarea--comfortable {
+    min-height: 10rem;
+    line-height: 1.5;
 }
 
 .workflow-canvas-node-picker {
@@ -161,6 +213,17 @@
 }
 
 @media (max-width: 760px) {
+    .workflow-canvas-node-dialog {
+        height: auto;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workflow-canvas-node-dialog__main {
+        grid-template-rows: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
     .workflow-canvas-component,
     .workflow-canvas-edge-row,
     .workflow-canvas-test-result {

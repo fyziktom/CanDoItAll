@@ -46,6 +46,7 @@ public sealed record ProjectStructureAttachmentPreviewCardState(
     string LeadCopy,
     string Route,
     string PreviewSource,
+    string TextContent,
     string OriginalFileName,
     string ContentType,
     bool CanShowLocalOpen,
@@ -73,5 +74,6 @@ public enum AttachmentPreviewKind
     Image,
     Video,
     Audio,
-    Document
+    Document,
+    TextDocument
 }

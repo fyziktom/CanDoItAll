@@ -167,6 +167,7 @@ public partial class ProjectStructurePage
             ResolveAttachmentLeadCopy(node),
             node.Route ?? string.Empty,
             ResolveAttachmentPreviewSource(node),
+            ResolveAttachmentTextContent(node),
             node.MediaOriginalFileName ?? string.Empty,
             ResolveAttachmentContentType(node),
             CanShowLocalOpen(node),

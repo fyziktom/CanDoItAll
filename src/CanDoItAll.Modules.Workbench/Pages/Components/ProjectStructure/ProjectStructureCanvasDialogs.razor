@@ -647,6 +647,12 @@
                                    Summary="@ResolveAttachmentLeadCopy.Invoke(previewNode)"
                                    Close="CloseAttachmentPreview">
         <Actions>
+            @if (CanEditPreviewNode.Invoke(previewNode))
+            {
+                <Button Text="Edit details"
+                        ButtonStyle="ButtonStyle.Info"
+                        Click="@(() => EditPreviewNode.InvokeAsync(previewNode))" />
+            }
             @if (CanShowLocalOpen.Invoke(previewNode))
             {
                 <Button Text="Open in File Explorer"
@@ -683,6 +689,19 @@
                            controls
                            preload="metadata"
                            src="@previewNode.Route"></audio>
+                    break;
+                case AttachmentPreviewKind.TextDocument:
+                    if (!string.IsNullOrWhiteSpace(ResolveAttachmentTextContent.Invoke(previewNode)))
+                    {
+                        <pre class="project-structure-preview-dialog__source"
+                             data-testid="project-structure-text-asset-preview">@ResolveAttachmentTextContent.Invoke(previewNode)</pre>
+                    }
+                    else
+                    {
+                        <iframe class="project-structure-preview-dialog__frame project-structure-preview-dialog__frame--text"
+                                src="@ResolveAttachmentPreviewSource.Invoke(previewNode)"
+                                title="@($"{ResolveAttachmentDisplayName.Invoke(previewNode)} text preview")"></iframe>
+                    }
                     break;
                 case AttachmentPreviewKind.Document:
                     <iframe class="project-structure-preview-dialog__frame"
@@ -801,8 +820,14 @@
     [Parameter]
     public EventCallback<ProjectStructureNode> OpenAttachmentLocally { get; set; }
 
+    [Parameter]
+    public EventCallback<ProjectStructureNode> EditPreviewNode { get; set; }
+
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanEditPreviewNode { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, string> ResolveAttachmentDisplayName { get; set; } = default!;
@@ -815,6 +840,9 @@
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, string> ResolveAttachmentPreviewSource { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, string> ResolveAttachmentTextContent { get; set; } = default!;
 
     protected override void OnParametersSet()
     {

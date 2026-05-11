@@ -68,6 +68,7 @@ public partial class WorkflowCanvasEditor
     private string? expandedWorkflowToolboxGroupKey = "workflow-nodes";
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string errorMessage = string.Empty;
+    private CanvasWorkbenchUiState canvasUiState = CreateWorkflowCanvasUiState("start");
     private CanvasWorkbench? workbenchRef;
     private CanvasWorkbenchWindowState toolboxWindowState = CreateWindowState(width: 300, height: 380);
     private CanvasWorkbenchWindowState selectionWindowState = CreateWindowState(width: 260, height: 320);
@@ -92,6 +93,7 @@ public partial class WorkflowCanvasEditor
             componentOptions,
             executorDescriptors,
             validationIssues,
+            canvasUiState,
             selectedNodeId);
 
     private IReadOnlyList<CanvasWorkbenchStat> CanvasStats =>
@@ -146,6 +148,7 @@ public partial class WorkflowCanvasEditor
             : WorkflowCanvasDefinitionMapper.FromDefinition(Definition, componentOptions);
         loadedDefinitionKey = incomingKey;
         selectedNodeId = document.StartNodeId.Value;
+        canvasUiState = CreateWorkflowCanvasUiState(selectedNodeId);
         validationIssues = [];
         testResult = null;
         SyncEdgeDefaults();
@@ -192,6 +195,7 @@ public partial class WorkflowCanvasEditor
         document = WorkflowCanvasDefinitionMapper.CreateDraft(componentOptions);
         loadedDefinitionKey = "draft";
         selectedNodeId = document.StartNodeId.Value;
+        canvasUiState = CreateWorkflowCanvasUiState(selectedNodeId);
         validationIssues = [];
         testResult = null;
         errorMessage = string.Empty;
@@ -231,7 +235,7 @@ public partial class WorkflowCanvasEditor
         ApplyCreateRequest(node, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
-        selectedNodeId = node.Id.Value;
+        SelectNode(node.Id.Value);
         SyncEdgeDefaults();
     }
 
@@ -251,7 +255,7 @@ public partial class WorkflowCanvasEditor
         ApplyCreateRequest(node, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
-        selectedNodeId = node.Id.Value;
+        SelectNode(node.Id.Value);
         SyncEdgeDefaults();
         return Task.CompletedTask;
     }
@@ -275,7 +279,7 @@ public partial class WorkflowCanvasEditor
         ApplyCreateRequest(node, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
-        selectedNodeId = node.Id.Value;
+        SelectNode(node.Id.Value);
         SyncEdgeDefaults();
         return Task.CompletedTask;
     }
@@ -369,7 +373,7 @@ public partial class WorkflowCanvasEditor
 
         document.Nodes.Remove(selected);
         document.Edges.RemoveAll(edge => edge.SourceNodeId == selected.Id || edge.TargetNodeId == selected.Id);
-        selectedNodeId = document.StartNodeId.Value;
+        SelectNode(document.StartNodeId.Value);
         SyncEdgeDefaults();
         return Task.CompletedTask;
     }
@@ -401,7 +405,7 @@ public partial class WorkflowCanvasEditor
                 definition.RuntimePolicy));
             document = WorkflowCanvasDefinitionMapper.FromDefinition(saved, componentOptions);
             loadedDefinitionKey = $"{saved.Id}:{saved.VersionId}";
-            selectedNodeId = document.StartNodeId.Value;
+            SelectNode(document.StartNodeId.Value);
             validationIssues = (await CatalogService.ValidateDefinitionAsync(saved)).Issues;
             NotificationService.Success("Workflow saved", saved.Name);
             await DefinitionSaved.InvokeAsync(saved);
@@ -483,6 +487,17 @@ public partial class WorkflowCanvasEditor
     private Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
         selectedNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
+        canvasUiState.SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId)
+            ? []
+            : [selectedNodeId];
+        return Task.CompletedTask;
+    }
+
+    private Task HandleCanvasStateChangedAsync(string stateJson)
+    {
+        canvasUiState = CanvasWorkbenchUiState.Parse(stateJson);
+        selectedNodeId = canvasUiState.SelectedNodeIds.FirstOrDefault();
+        canvasUiState.ActiveInspectorTab = "workflow";
         return Task.CompletedTask;
     }
 
@@ -662,6 +677,7 @@ public partial class WorkflowCanvasEditor
     private void SelectNode(string nodeId)
     {
         selectedNodeId = nodeId;
+        canvasUiState.SelectedNodeIds = [nodeId];
     }
 
     private Task HandleCanvasNodeOpenedAsync(string nodeId)
@@ -1120,6 +1136,13 @@ public partial class WorkflowCanvasEditor
                 Width = width,
                 Height = height
             });
+
+    private static CanvasWorkbenchUiState CreateWorkflowCanvasUiState(string? selectedNodeId)
+        => new()
+        {
+            SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId) ? [] : [selectedNodeId],
+            ActiveInspectorTab = "workflow"
+        };
 
     private static CanvasWorkbenchWindowState ToggleWindow(CanvasWorkbenchWindowState state)
     {

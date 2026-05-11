@@ -39,7 +39,8 @@
                              NodesMoved="HandleCanvasNodesMovedAsync"
                              CreateActionInvoked="HandleCanvasCreateActionAsync"
                              NodeEdited="HandleCanvasNodeEditedAsync"
-                             NodeOpened="HandleCanvasNodeOpenedAsync">
+                             NodeOpened="HandleCanvasNodeOpenedAsync"
+                             StateChanged="HandleCanvasStateChangedAsync">
                 <ToolbarLeftContent>
                     <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
                         <Button Icon="widgets"
@@ -939,167 +940,184 @@
             Eyebrow="Workflow node"
             Title="@modalNode.Name"
             Subtitle="@BuildNodeDetailsDialogSubtitle(modalNode)"
-            Size="ModalSize.Wide"
+            Size="ModalSize.Full"
+            DenseChrome="true"
             TestId="workflow-canvas-node-details-modal"
             OnClose="CloseNodeDetailsDialogAsync">
         <ChildContent>
-            <Stack GapScale="LayoutGap.Medium" Class="workflow-canvas-node-dialog">
-                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
-                    <label class="workflow-canvas-field">
-                        <span>Node name</span>
-                        <input class="cda-input"
-                               value="@modalNode.Name"
-                               @onchange="args => HandleSelectedNodeNameChanged(modalNode, args)"
-                               data-testid="workflow-canvas-node-modal-name" />
-                    </label>
-                    <label class="workflow-canvas-field">
-                        <span>Kind</span>
-                        <select class="cda-input"
-                                value="@modalNode.Kind"
-                                @onchange="args => HandleSelectedNodeKindChanged(modalNode, args)"
-                                disabled="@(modalNode.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
-                                data-testid="workflow-canvas-node-modal-kind">
-                            @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
+            <div class="workflow-canvas-node-dialog">
+                <aside class="workflow-canvas-node-dialog__rail">
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity" />
+                        <label class="workflow-canvas-field">
+                            <span>Node name</span>
+                            <input class="cda-input"
+                                   value="@modalNode.Name"
+                                   @onchange="args => HandleSelectedNodeNameChanged(modalNode, args)"
+                                   data-testid="workflow-canvas-node-modal-name" />
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Kind</span>
+                            <select class="cda-input"
+                                    value="@modalNode.Kind"
+                                    @onchange="args => HandleSelectedNodeKindChanged(modalNode, args)"
+                                    disabled="@(modalNode.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                    data-testid="workflow-canvas-node-modal-kind">
+                                @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                        </label>
+                    </section>
+
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload" />
+                        <label class="workflow-canvas-field">
+                            <span>Input shape</span>
+                            <select class="cda-input"
+                                    value="@modalNode.InputShapeKind"
+                                    @onchange="args => HandleSelectedInputShapeChanged(modalNode, args)"
+                                    data-testid="workflow-canvas-node-modal-input-shape">
+                                @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                {
+                                    <option value="@shape">@shape</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Result shape</span>
+                            <select class="cda-input"
+                                    value="@modalNode.ResultShapeKind"
+                                    @onchange="args => HandleSelectedResultShapeChanged(modalNode, args)"
+                                    data-testid="workflow-canvas-node-modal-result-shape">
+                                @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                {
+                                    <option value="@shape">@shape</option>
+                                }
+                            </select>
+                        </label>
+                    </section>
+                </aside>
+
+                <main class="workflow-canvas-node-dialog__main">
+                    @if (modalNode.Kind == WorkflowNodeKind.LlmCall)
+                    {
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM call" />
+                            <label class="workflow-canvas-field">
+                                <span>Component</span>
+                                <select class="cda-input"
+                                        value="@FormatComponentId(modalNode.ComponentId)"
+                                        @onchange="args => HandleSelectedComponentChanged(modalNode, args)"
+                                        data-testid="workflow-canvas-node-modal-component">
+                                    <option value="">Select component</option>
+                                    @foreach (var component in componentOptions)
+                                    {
+                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
+                                    }
+                                </select>
+                            </label>
+                        </section>
+                    }
+
+                    @if (modalNode.Kind == WorkflowNodeKind.Executor)
+                    {
+                        var descriptor = ResolveSelectedExecutorDescriptor(modalNode);
+                        var policy = ResolveSelectedExecutionPolicy(modalNode);
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor" />
+                            <label class="workflow-canvas-field">
+                                <span>Tool</span>
+                                <select class="cda-input"
+                                        value="@modalNode.ExecutorId?.Value"
+                                        @onchange="args => HandleSelectedExecutorChanged(modalNode, args)"
+                                        data-testid="workflow-canvas-node-modal-executor">
+                                    <option value="">Select executor</option>
+                                    @foreach (var executor in executorDescriptors)
+                                    {
+                                        <option value="@executor.Id.Value"
+                                                disabled="@(!executor.IsImplemented)">@executor.Name@(executor.IsImplemented ? string.Empty : " (planned)")</option>
+                                    }
+                                </select>
+                            </label>
+
+                            @if (descriptor is not null)
                             {
-                                <option value="@kind">@kind</option>
+                                <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-executor-summary">
+                                    <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
+                                                 Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
+                                    <span>@descriptor.Description</span>
+                                </div>
                             }
-                        </select>
-                    </label>
-                </Grid>
+                        </section>
 
-            @if (modalNode.Kind == WorkflowNodeKind.LlmCall)
-            {
-                <label class="workflow-canvas-field">
-                    <span>LLM Call Component</span>
-                    <select class="cda-input"
-                            value="@FormatComponentId(modalNode.ComponentId)"
-                            @onchange="args => HandleSelectedComponentChanged(modalNode, args)"
-                            data-testid="workflow-canvas-node-modal-component">
-                        <option value="">Select component</option>
-                        @foreach (var component in componentOptions)
-                        {
-                            <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
-                        }
-                    </select>
-                </label>
-            }
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution policy" />
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                                <label class="workflow-canvas-field">
+                                    <span>Timeout seconds</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
+                                           max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
+                                           value="@policy.TimeoutSeconds"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
+                                           data-testid="workflow-canvas-node-modal-timeout" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Retries</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
+                                           max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
+                                           value="@policy.MaxRetryAttempts"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
+                                           data-testid="workflow-canvas-node-modal-retries" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Retry delay ms</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
+                                           max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
+                                           value="@policy.RetryDelayMilliseconds"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
+                                           data-testid="workflow-canvas-node-modal-retry-delay" />
+                                </label>
+                            </Grid>
+                            <label class="workflow-canvas-check-field">
+                                <input type="checkbox"
+                                       checked="@policy.CaptureOutputArtifact"
+                                       @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { CaptureOutputArtifact = ReadBool(args) })"
+                                       data-testid="workflow-canvas-node-modal-capture-output" />
+                                <span>Capture output as workflow artifact</span>
+                            </label>
+                        </section>
 
-            @if (modalNode.Kind == WorkflowNodeKind.Executor)
-            {
-                var descriptor = ResolveSelectedExecutorDescriptor(modalNode);
-                var policy = ResolveSelectedExecutionPolicy(modalNode);
-                <label class="workflow-canvas-field">
-                    <span>Executor</span>
-                    <select class="cda-input"
-                            value="@modalNode.ExecutorId?.Value"
-                            @onchange="args => HandleSelectedExecutorChanged(modalNode, args)"
-                            data-testid="workflow-canvas-node-modal-executor">
-                        <option value="">Select executor</option>
-                        @foreach (var executor in executorDescriptors)
-                        {
-                            <option value="@executor.Id.Value"
-                                    disabled="@(!executor.IsImplemented)">@executor.Name@(executor.IsImplemented ? string.Empty : " (planned)")</option>
-                        }
-                    </select>
-                </label>
+                        <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--fill">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor settings JSON" />
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea workflow-canvas-json-textarea--dialog"
+                                      value="@FormatExecutorSettingsJson(modalNode)"
+                                      @onchange="args => HandleSelectedExecutorSettingsJsonChanged(modalNode, args)"
+                                      data-testid="workflow-canvas-node-modal-settings-json"></textarea>
+                        </section>
+                    }
 
-                @if (descriptor is not null)
-                {
-                    <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-executor-summary">
-                        <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
-                                     Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
-                        <span>@descriptor.Description</span>
-                    </div>
-                }
+                    <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--instructions">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Instructions" />
+                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
+                                  value="@modalNode.Instructions"
+                                  @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
+                                  data-testid="workflow-canvas-node-modal-instructions"></textarea>
+                    </section>
 
-                <Grid Gap="LayoutGap.Small" ColumnsLg="3">
-                    <label class="workflow-canvas-field">
-                        <span>Timeout seconds</span>
-                        <input class="cda-input"
-                               type="number"
-                               min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
-                               max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
-                               value="@policy.TimeoutSeconds"
-                               @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
-                               data-testid="workflow-canvas-node-modal-timeout" />
-                    </label>
-                    <label class="workflow-canvas-field">
-                        <span>Retries</span>
-                        <input class="cda-input"
-                               type="number"
-                               min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
-                               max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
-                               value="@policy.MaxRetryAttempts"
-                               @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
-                               data-testid="workflow-canvas-node-modal-retries" />
-                    </label>
-                    <label class="workflow-canvas-field">
-                        <span>Retry delay ms</span>
-                        <input class="cda-input"
-                               type="number"
-                               min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
-                               max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
-                               value="@policy.RetryDelayMilliseconds"
-                               @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
-                               data-testid="workflow-canvas-node-modal-retry-delay" />
-                    </label>
-                </Grid>
-                <label class="workflow-canvas-check-field">
-                    <input type="checkbox"
-                           checked="@policy.CaptureOutputArtifact"
-                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { CaptureOutputArtifact = ReadBool(args) })"
-                           data-testid="workflow-canvas-node-modal-capture-output" />
-                    <span>Capture output as workflow artifact</span>
-                </label>
-                <label class="workflow-canvas-field">
-                    <span>Executor settings JSON</span>
-                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
-                              value="@FormatExecutorSettingsJson(modalNode)"
-                              @onchange="args => HandleSelectedExecutorSettingsJsonChanged(modalNode, args)"
-                              data-testid="workflow-canvas-node-modal-settings-json"></textarea>
-                </label>
-            }
-
-            <Grid Gap="LayoutGap.Small" ColumnsLg="2">
-                <label class="workflow-canvas-field">
-                    <span>Input shape</span>
-                    <select class="cda-input"
-                            value="@modalNode.InputShapeKind"
-                            @onchange="args => HandleSelectedInputShapeChanged(modalNode, args)"
-                            data-testid="workflow-canvas-node-modal-input-shape">
-                        @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
-                        {
-                            <option value="@shape">@shape</option>
-                        }
-                    </select>
-                </label>
-                <label class="workflow-canvas-field">
-                    <span>Result shape</span>
-                    <select class="cda-input"
-                            value="@modalNode.ResultShapeKind"
-                            @onchange="args => HandleSelectedResultShapeChanged(modalNode, args)"
-                            data-testid="workflow-canvas-node-modal-result-shape">
-                        @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
-                        {
-                            <option value="@shape">@shape</option>
-                        }
-                    </select>
-                </label>
-            </Grid>
-
-            <label class="workflow-canvas-field">
-                <span>Instructions</span>
-                <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
-                          value="@modalNode.Instructions"
-                          @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
-                          data-testid="workflow-canvas-node-modal-instructions"></textarea>
-            </label>
-
-                @if (!string.IsNullOrWhiteSpace(errorMessage))
-                {
-                    <p class="workflow-canvas-error">@errorMessage</p>
-                }
-            </Stack>
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <p class="workflow-canvas-error">@errorMessage</p>
+                    }
+                </main>
+            </div>
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">

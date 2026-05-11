@@ -1296,6 +1296,54 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Text_file_asset_nodes_open_readable_preview_on_canvas_double_click()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Text Asset Preview Project";
+        project.Description = "Verify source-like file preview from canvas double-click.";
+        project.Objective = "Open text assets before editing node details.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var markdownNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Operator README",
+                "Markdown asset",
+                "# Operator checklist\n\n- Review workflow output\n- Attach evidence",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "markdown"));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Operator README", cut.Markup));
+
+        await OpenNodeFromCanvasAsync(cut, markdownNode.Id);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Canvas preview", cut.Markup);
+            Assert.Contains("Operator checklist", cut.Markup);
+            Assert.Contains("project-structure-text-asset-preview", cut.Markup);
+            Assert.Contains("Edit details", cut.Markup);
+            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Audio_attachment_nodes_render_audio_preview_and_local_open_action_when_host_supports_it()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
