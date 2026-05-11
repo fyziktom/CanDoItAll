@@ -139,6 +139,8 @@ public sealed record WorkflowStorageFileExecutorSettings
 
     public string Content { get; init; } = string.Empty;
 
+    public bool ContentFromInput { get; init; }
+
     public string Query { get; init; } = string.Empty;
 
     public string SearchPattern { get; init; } = "*";
@@ -213,6 +215,8 @@ public sealed record WorkflowProjectStructureExecutorSettings
     public string Title { get; init; } = string.Empty;
 
     public string Content { get; init; } = string.Empty;
+
+    public bool ContentFromInput { get; init; }
 
     public string SourceWorkspacePath { get; init; } = string.Empty;
 

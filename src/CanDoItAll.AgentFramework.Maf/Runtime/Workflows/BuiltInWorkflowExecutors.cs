@@ -143,8 +143,8 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
             WorkflowStorageFileOperation.List => EnsureSucceeded(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxResults)),
             WorkflowStorageFileOperation.Stat => EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
             WorkflowStorageFileOperation.ReadText => EnsureSucceeded(files.ReadTextFile(Require(settings.Path, nameof(settings.Path)), settings.MaxCharacters)),
-            WorkflowStorageFileOperation.WriteText => EnsureSucceeded(files.WriteTextFile(Require(settings.Path, nameof(settings.Path)), settings.Content, settings.Overwrite)),
-            WorkflowStorageFileOperation.AppendText => EnsureSucceeded(files.AppendTextFile(Require(settings.Path, nameof(settings.Path)), settings.Content)),
+            WorkflowStorageFileOperation.WriteText => EnsureSucceeded(files.WriteTextFile(Require(settings.Path, nameof(settings.Path)), WorkflowInputPayloadText.Resolve(settings.Content, settings.ContentFromInput, input), settings.Overwrite)),
+            WorkflowStorageFileOperation.AppendText => EnsureSucceeded(files.AppendTextFile(Require(settings.Path, nameof(settings.Path)), WorkflowInputPayloadText.Resolve(settings.Content, settings.ContentFromInput, input))),
             WorkflowStorageFileOperation.SearchText => EnsureSucceeded(files.SearchText(Require(settings.Query, nameof(settings.Query)), EmptyToNull(settings.Path), settings.MaxResults)),
             WorkflowStorageFileOperation.DiffText => EnsureSucceeded(files.DiffTextFiles(Require(settings.Path, nameof(settings.Path)), Require(settings.DestinationPath, nameof(settings.DestinationPath)), settings.MaxLines)),
             _ => throw new InvalidOperationException($"Workspace file operation '{settings.Operation}' is not supported.")
@@ -419,7 +419,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                 cancellationToken),
             WorkflowProjectStructureOperation.CreateAsset => await service.CreateAssetAsync(
                 RequireProjectId(settings),
-                BuildAssetRequest(settings),
+                BuildAssetRequest(settings, input),
                 BuildAgentContext(),
                 cancellationToken),
             _ => throw new InvalidOperationException($"Project-structure operation '{settings.Operation}' is not supported.")
@@ -428,7 +428,9 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         return WorkflowExecutorJson.Result(context, result);
     }
 
-    private static ProjectStructureAssetCreateInput BuildAssetRequest(WorkflowProjectStructureExecutorSettings settings)
+    private static ProjectStructureAssetCreateInput BuildAssetRequest(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
     {
         var objectType = settings.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
             ? ProjectObjectType.ImageAsset
@@ -436,10 +438,11 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         var title = Require(settings.Title, nameof(settings.Title));
         var sourcePath = string.IsNullOrWhiteSpace(settings.SourceWorkspacePath) ? null : settings.SourceWorkspacePath.Trim();
         ProjectObjectMediaPayload? media = null;
+        var content = WorkflowInputPayloadText.Resolve(settings.Content, settings.ContentFromInput, input);
 
         if (sourcePath is null)
         {
-            var bytes = Encoding.UTF8.GetBytes(settings.Content);
+            var bytes = Encoding.UTF8.GetBytes(content);
             media = new ProjectObjectMediaPayload(
                 $"{SanitizeFileName(title)}.{NormalizeAssetKind(settings.AssetKind)}",
                 settings.ContentType,
@@ -450,7 +453,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             objectType,
             title,
             Subtitle: string.Empty,
-            Notes: settings.Content,
+            Notes: content,
             media,
             ParentNodeKey: string.IsNullOrWhiteSpace(settings.NodeId) ? null : settings.NodeId.Trim(),
             ObjectSubtype: NormalizeAssetKind(settings.AssetKind),
@@ -506,6 +509,59 @@ public sealed class ImageGenerationWorkflowExecutor : IWorkflowExecutor
         }
 
         throw new InvalidOperationException("Workflow image generation requires a provider bridge extracted from the existing MafAgentRuntime image-generation tool. The descriptor and setup contract are registered, but no workflow-safe provider bridge is registered in this host.");
+    }
+}
+
+internal static class WorkflowInputPayloadText
+{
+    public static string Resolve(string configuredValue, bool fromInput, WorkflowNodeInput input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+
+        return fromInput
+            ? Extract(input.PayloadJson)
+            : configuredValue;
+    }
+
+    private static string Extract(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            return document.RootElement.ValueKind switch
+            {
+                JsonValueKind.String => document.RootElement.GetString() ?? string.Empty,
+                JsonValueKind.Object => TryReadCommonTextProperty(document.RootElement, out var value)
+                    ? value
+                    : payload,
+                _ => payload
+            };
+        }
+        catch (JsonException)
+        {
+            return payload;
+        }
+    }
+
+    private static bool TryReadCommonTextProperty(JsonElement element, out string value)
+    {
+        foreach (var propertyName in new[] { "content", "text", "markdown", "message", "responseText" })
+        {
+            if (element.TryGetProperty(propertyName, out var property) &&
+                property.ValueKind == JsonValueKind.String)
+            {
+                value = property.GetString() ?? string.Empty;
+                return true;
+            }
+        }
+
+        value = string.Empty;
+        return false;
     }
 }
 

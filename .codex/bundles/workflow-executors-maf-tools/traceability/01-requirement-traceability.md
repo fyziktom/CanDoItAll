@@ -28,3 +28,4 @@
 | R24 | 10 | PostgreSQL database creation and testing-instance startup proof. |
 | R25 | 10 | Seed counts and 20-example scenario matrix with project structures. |
 | R26 | 10, 11 | Scenario failures mapped to repairs, retests, blockers, or follow-up subbundles. |
+| R27 | 04, 10, 11 | Unit routing test plus PostgreSQL multi-step scenarios for project tree -> LLM -> project asset, spreadsheet markdown -> LLM -> report file, and project node -> LLM -> project asset. |

@@ -146,6 +146,49 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafCompilerRoutesExecutorOutputThroughLlmIntoNextExecutor()
+    {
+        var component = CreateLlmComponent(
+            inputShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "Project tree JSON"),
+            resultShape: WorkflowValueShape.Text);
+        var executor = new RoutingWorkflowExecutor();
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var llmInvoker = new RecordingLlmComponentInvoker(input =>
+            $"WORKFLOW_LLM_TRANSFORMED\n\nInput contained approval: {input.Contains("Approval decision", StringComparison.OrdinalIgnoreCase)}");
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker, llmInvoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, [component]);
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("read-tree", WorkflowExecutorIds.StorageFile),
+            CreateLlmNode("summarize", component.Id),
+            CreateExecutorNode("save-asset", WorkflowExecutorIds.StorageFile),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-read", "start", "read-tree"),
+            CreateEdge("read-llm", "read-tree", "summarize"),
+            CreateEdge("llm-save", "summarize", "save-asset"),
+            CreateEdge("save-end", "save-asset", "end")
+        ]);
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"input\":\"project\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Contains("Approval decision", llmInvoker.InputPayloads.Single(), StringComparison.Ordinal);
+        Assert.Contains("WORKFLOW_LLM_TRANSFORMED", executor.InputsByNode["save-asset"], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InvokerRetriesTransientExecutorFailure()
     {
         var executor = new RecordingWorkflowExecutor { FailuresBeforeSuccess = 1 };
@@ -587,6 +630,21 @@ public sealed class WorkflowExecutorTests
             [],
             CreateSettings(executorId));
 
+    private static WorkflowNode CreateLlmNode(string id, WorkflowComponentId componentId)
+        => new(
+            new WorkflowNodeId(id),
+            WorkflowNodeKind.LlmCall,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                componentId,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: WorkflowValueShape.Text,
+                ResultShape: WorkflowValueShape.Text));
+
     private static WorkflowNodeSettings CreateSettings(WorkflowExecutorId executorId)
         => new WorkflowNodeSettings(
             ComponentId: null,
@@ -629,6 +687,27 @@ public sealed class WorkflowExecutorTests
             WorkflowEdgeKind.Direct,
             ConditionExpression: string.Empty);
 
+    private static LlmCallComponent CreateLlmComponent(
+        WorkflowValueShape inputShape,
+        WorkflowValueShape resultShape)
+        => new(
+            WorkflowComponentId.New(),
+            "Project summarizer",
+            ProviderProfileId: null,
+            "gpt-5-mini",
+            WorkflowModality.Text,
+            new WorkflowModelSettings(
+                Temperature: 0,
+                MaxOutputTokens: 400,
+                RequireJsonOutput: resultShape.Kind == WorkflowValueShapeKind.Json,
+                ResponseFormatJsonSchema: string.Empty),
+            "Summarize the workflow payload.",
+            inputShape,
+            resultShape,
+            AgentPermissionsPolicy.Default,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
     private sealed class RecordingWorkflowExecutor : IWorkflowExecutor
     {
         public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
@@ -652,6 +731,51 @@ public sealed class WorkflowExecutorTests
                 context.Node.Id,
                 "{\"recorded\":true}",
                 context.Descriptor.ResultShape));
+        }
+    }
+
+    private sealed class RoutingWorkflowExecutor : IWorkflowExecutor
+    {
+        public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
+
+        public Dictionary<string, string> InputsByNode { get; } = new(StringComparer.Ordinal);
+
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowExecutorExecutionContext context,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            InputsByNode[context.Node.Id.Value] = input.PayloadJson;
+            var payload = context.Node.Id.Value switch
+            {
+                "read-tree" => "{\"projectName\":\"Solar Asset Invoice Intake\",\"nodes\":[{\"title\":\"Approval decision\"}]}",
+                "save-asset" => "{\"saved\":true}",
+                _ => "{}"
+            };
+
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                context.Node.Id,
+                payload,
+                context.Descriptor.ResultShape));
+        }
+    }
+
+    private sealed class RecordingLlmComponentInvoker(Func<string, string> transform) : IWorkflowLlmComponentInvoker
+    {
+        public List<string> InputPayloads { get; } = [];
+
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowDefinition definition,
+            WorkflowNode node,
+            LlmCallComponent component,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            InputPayloads.Add(input.PayloadJson);
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                node.Id,
+                transform(input.PayloadJson),
+                component.ResultShape));
         }
     }
 

@@ -499,6 +499,12 @@
                                 </label>
                                 <label class="workflow-canvas-check-field">
                                     <input type="checkbox"
+                                           checked="@settings.ContentFromInput"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { ContentFromInput = ReadBool(args) })" />
+                                    <span>Use workflow input as content</span>
+                                </label>
+                                <label class="workflow-canvas-check-field">
+                                    <input type="checkbox"
                                            checked="@settings.Overwrite"
                                            @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { Overwrite = ReadBool(args) })" />
                                     <span>Overwrite existing file</span>
@@ -704,6 +710,12 @@
                                     <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
                                               value="@settings.Content"
                                               @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { Content = ReadString(args) })"></textarea>
+                                </label>
+                                <label class="workflow-canvas-check-field">
+                                    <input type="checkbox"
+                                           checked="@settings.ContentFromInput"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { ContentFromInput = ReadBool(args) })" />
+                                    <span>Use workflow input as content</span>
                                 </label>
                             }
                             else if (selected.ExecutorId == WorkflowExecutorIds.ImageGeneration)

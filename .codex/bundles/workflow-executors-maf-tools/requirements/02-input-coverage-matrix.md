@@ -25,3 +25,4 @@
 | "add also projects with some project structures" | R25 | Projects/project-structure services | Project seed proof and project-structure executor scenarios | 10 | Needed for complex tree/file/asset scenarios. |
 | "If... something is working incorrectly repair/improve it" | R26 | Defect-specific files | Repair and retest rows | 10, 11 | No hidden residual-risk closure. |
 | "up to date APIs for controlling workflows similar as processes" | R23 | Workflow API | HTTP/API observer smoke | 09 | Compare against process control endpoints. |
+| "add multiple steps... executors works together with llm calls... transfer of in/outs" | R27 | MAF compiler, LLM component invoker, executor settings, PostgreSQL scenario harness | Live multi-step workflow proof with executor -> LLM -> executor chains | 10, 11 | Requires real LLM node execution and downstream content-from-input writes. |

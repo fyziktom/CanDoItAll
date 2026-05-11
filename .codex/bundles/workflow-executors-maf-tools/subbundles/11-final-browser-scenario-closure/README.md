@@ -10,7 +10,7 @@ Close the reopened bundle only after UI proof, API proof, PostgreSQL test-instan
 
 ## Covered Inputs
 
-- All original inputs plus `inputs/03-follow-up-request.md`.
+- All original inputs plus `inputs/03-follow-up-request.md` and `inputs/04-multistep-llm-transfer-request.md`.
 
 ## Prerequisites
 

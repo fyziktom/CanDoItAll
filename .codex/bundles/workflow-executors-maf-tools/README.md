@@ -10,6 +10,7 @@
 - Keep the architecture plugin-ready without implementing the full plugin system in this phase. Executor contracts must describe execution, settings schema, default policy, catalog grouping, and future UI setup renderer keys.
 - Make workflow canvas authoring expose executors through a second-level right-click menu and a component toolbox similar to the project-structure canvas.
 - Reopened follow-up: move workflow toolbox and selection into canvas floating windows, require modal creation and double-click details/editing, split the workflows page into operational tabs, add observer-grade workflow APIs, and prove 20 real-world examples in a PostgreSQL-backed testing instance with seeded projects/project structures.
+- Multi-step follow-up: prove executor outputs can flow through real LLM calls and into downstream executors, including project-structure read -> LLM transform -> project-structure asset save.
 
 ## Outcome Contract
 
@@ -58,3 +59,4 @@
 - Subbundle gate review: `Executed; see reviews/01-execution-report.md`
 - Final closure gate: `Passed by completed-stage validator`
 - Browser validation analytics: `Playwright proof captured for tabs, floating windows, create modal, and double-click details modal`
+- Multi-step scenario proof: `25 PostgreSQL-backed scenarios completed, including 3 executor -> gpt-5-mini -> executor transfer chains`

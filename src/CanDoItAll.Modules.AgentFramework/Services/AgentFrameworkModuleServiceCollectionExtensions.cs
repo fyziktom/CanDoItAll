@@ -44,6 +44,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new WorkspacePathResolutionService(workspaceRoot, scope);
         });
+        services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new MafAgentRuntime(workspaceRoot, serviceProvider, scope);
+        });
+        services.TryAddScoped<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<MafAgentRuntime>());
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.AddScoped<IProviderProfileRegistry, WorkspaceBackedAgentProviderProfileRegistry>();
@@ -72,17 +78,17 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 
         services.TryAddScoped<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
         services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
+        services.TryAddScoped<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
         services.TryAddScoped<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
-        services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
-        services.TryAddScoped<InMemoryWorkflowCatalogService>();
-        services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
-        services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
-        services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
-        services.TryAddSingleton<InMemoryWorkflowRunStore>();
-        services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
-        services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
-        services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddScoped<PersistentWorkflowCatalogService>();
+        services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.TryAddScoped<PersistentWorkflowRunStore>();
+        services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
         services.TryAddScoped<MafWorkflowCompiler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutionBackend, MafInProcessWorkflowExecutionBackend>());

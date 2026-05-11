@@ -112,7 +112,9 @@ public sealed class WorkflowFoundationTests
         var manager = new WorkflowRuntimeManager(
             [
                 new MafInProcessWorkflowExecutionBackend(
-                    new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
+                    new MafWorkflowCompiler(
+                        new WorkflowDefinitionValidator(),
+                        llmComponentInvoker: new PassthroughLlmComponentInvoker()),
                     [component])
             ],
             store);
@@ -207,7 +209,9 @@ public sealed class WorkflowFoundationTests
         var manager = new WorkflowRuntimeManager(
             [
                 new MafInProcessWorkflowExecutionBackend(
-                    new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
+                    new MafWorkflowCompiler(
+                        new WorkflowDefinitionValidator(),
+                        llmComponentInvoker: new PassthroughLlmComponentInvoker()),
                     [component])
             ],
             new InMemoryWorkflowRunStore());
@@ -299,5 +303,21 @@ public sealed class WorkflowFoundationTests
             AgentPermissionsPolicy.Default,
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
+    }
+
+    private sealed class PassthroughLlmComponentInvoker : IWorkflowLlmComponentInvoker
+    {
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowDefinition definition,
+            WorkflowNode node,
+            LlmCallComponent component,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                node.Id,
+                input.PayloadJson,
+                component.ResultShape));
+        }
     }
 }

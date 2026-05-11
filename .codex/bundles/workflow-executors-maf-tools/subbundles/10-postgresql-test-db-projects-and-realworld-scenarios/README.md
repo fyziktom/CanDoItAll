@@ -11,6 +11,7 @@ Create a new PostgreSQL test database, run the testing instance against it, seed
 ## Covered Inputs
 
 - `inputs/03-follow-up-request.md`: create a new PostgreSQL database for this test, seed 20 real-world workflow examples, add projects with project structures, test file operations, asset-node creation, and repair broken behavior.
+- `inputs/04-multistep-llm-transfer-request.md`: add multi-step executor and LLM examples proving payload handoff across workflow nodes.
 
 ## Prerequisites
 
@@ -34,7 +35,7 @@ Create a new PostgreSQL test database, run the testing instance against it, seed
 - Documented connection/profile used by the testing instance with secrets masked in reports.
 - Seeded projects with project structures and assets sufficient for project-structure read/write executor scenarios.
 - 20 real-world workflow examples seeded into the running test instance through API or durable persistence.
-- Scenario execution report covering success and non-happy paths across storage, HTTP, spreadsheet, project structure, image/provider, retry/timeout, and observer controls.
+- Scenario execution report covering success and non-happy paths across storage, HTTP, spreadsheet, project structure, image/provider, retry/timeout, observer controls, and executor -> LLM -> executor payload transfer.
 
 ## Dependency Impact
 
@@ -73,7 +74,7 @@ Create a new PostgreSQL test database, run the testing instance against it, seed
 ## Acceptance Checklist
 
 - New PostgreSQL DB exists and the app can run against it.
-- At least 20 examples are created in the testing instance.
+- At least 20 examples are created in the testing instance, including multi-step examples with LLM transformation between executors.
 - Projects/project structures exist for complex executor tests.
 - Scenario report identifies passed, repaired, partial, and blocked cases honestly.
 

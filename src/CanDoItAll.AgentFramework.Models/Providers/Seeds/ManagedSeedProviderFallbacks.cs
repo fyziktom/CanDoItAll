@@ -73,7 +73,7 @@ public static class ManagedSeedProviderFallbacks
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (IsFallbackProvider(provider))
+        if (IsFallbackProvider(provider) && IsManagedSeedAgent(agent))
         {
             return CreateOpenAiDefaultProvider(provider);
         }

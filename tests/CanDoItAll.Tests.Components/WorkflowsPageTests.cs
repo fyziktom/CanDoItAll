@@ -5,6 +5,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -13,7 +14,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_creates_starter_workflow_and_runs_preview()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -69,7 +70,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_places_llm_component_validates_runs_and_saves_definition()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -154,5 +155,27 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='agents-shell-open-workflows']").Click();
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
+    }
+
+    private static void RegisterDeterministicWorkflowLlmInvoker(IServiceCollection services)
+    {
+        services.RemoveAll<IWorkflowLlmComponentInvoker>();
+        services.AddScoped<IWorkflowLlmComponentInvoker, DeterministicWorkflowLlmComponentInvoker>();
+    }
+
+    private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
+    {
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowDefinition definition,
+            WorkflowNode node,
+            LlmCallComponent component,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                node.Id,
+                $"Workflow LLM test output: {input.PayloadJson}",
+                component.ResultShape));
+        }
     }
 }

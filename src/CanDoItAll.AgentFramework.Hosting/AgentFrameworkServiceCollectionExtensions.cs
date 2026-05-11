@@ -66,6 +66,7 @@ public static class AgentFrameworkServiceCollectionExtensions
 
         services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
         services.TryAddSingleton<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
+        services.TryAddSingleton<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
         services.TryAddSingleton<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
         services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
