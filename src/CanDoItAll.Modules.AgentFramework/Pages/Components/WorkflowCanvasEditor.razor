@@ -33,11 +33,222 @@
             </Cluster>
         </HeaderActions>
         <Canvas>
-            <CanvasWorkbench Surface="CanvasSurface"
+            <CanvasWorkbench @ref="workbenchRef"
+                             Surface="CanvasSurface"
                              SelectionChanged="HandleCanvasSelectionChangedAsync"
                              NodesMoved="HandleCanvasNodesMovedAsync"
                              CreateActionInvoked="HandleCanvasCreateActionAsync"
-                             NodeEdited="HandleCanvasNodeEditedAsync" />
+                             NodeEdited="HandleCanvasNodeEditedAsync"
+                             NodeOpened="HandleCanvasNodeOpenedAsync">
+                <ToolbarLeftContent>
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                        <Button Icon="widgets"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ToggleToolboxWindowAsync"
+                                data-testid="workflow-canvas-toggle-toolbox" />
+                        <Button Icon="select_all"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ToggleSelectionWindowAsync"
+                                data-testid="workflow-canvas-toggle-selection" />
+                        <Button Icon="smart_toy"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ToggleComponentsWindowAsync"
+                                data-testid="workflow-canvas-toggle-components" />
+                    </Cluster>
+                </ToolbarLeftContent>
+                <OverlayContent>
+                    <span class="workflow-canvas-overlay-safe-top" aria-hidden="true"></span>
+
+                    @if (toolboxWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@ToolboxWindowId"
+                                              TestId="workflow-canvas-toolbox-window"
+                                              AriaLabel="Workflow toolbox floating window"
+                                              Kicker="Workflow"
+                                              Title="Nodes and executors"
+                                              Summary="@($"{document.Nodes.Count} nodes · {executorDescriptors.Count(executor => executor.IsImplemented)} executors")"
+                                              BodyClass="workflow-canvas-floating-window__body"
+                                              DefaultPlacement="top-left"
+                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
+                                              DefaultWidth="300"
+                                              DefaultHeight="380"
+                                              MinWidth="260"
+                                              MinHeight="220"
+                                              MaxWidth="300"
+                                              MaxHeight="520"
+                                              State="@toolboxWindowState"
+                                              StateChanged="HandleToolboxWindowStateChangedAsync">
+                            <OverlayComponentToolbox TestId="workflow-canvas-executor-toolbox"
+                                                     AriaLabel="Workflow nodes and executors toolbox"
+                                                     Class="workflow-canvas-toolbox-catalog"
+                                                     ShowHeader="false"
+                                                     SearchText="@workflowToolboxSearchText"
+                                                     SearchTextChanged="@((string? value) => workflowToolboxSearchText = value ?? string.Empty)"
+                                                     SearchPlaceholder="Search nodes, executors, files, HTTP, spreadsheets"
+                                                     EmptyTitle="No workflow tools match the current search."
+                                                     EmptyDescription="Clear the filter to restore nodes and executors."
+                                                     Badges="@WorkflowToolboxBadges"
+                                                     Sections="@WorkflowToolboxSections"
+                                                     GroupToggled="ExpandWorkflowToolboxGroup"
+                                                     ItemSelected="HandleWorkflowToolboxItemSelectedAsync" />
+                        </CanvasFloatingWindow>
+                    }
+
+                    @if (selectionWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@SelectionWindowId"
+                                              TestId="workflow-canvas-selection-window"
+                                              AriaLabel="Workflow selection floating window"
+                                              Kicker="Selection"
+                                              Title="Workflow nodes"
+                                              Summary="@SelectionWindowSummary"
+                                              BodyClass="workflow-canvas-floating-window__body"
+                                              DefaultPlacement="top-right"
+                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
+                                              DefaultWidth="260"
+                                              DefaultHeight="320"
+                                              MinWidth="240"
+                                              MinHeight="180"
+                                              MaxWidth="260"
+                                              MaxHeight="480"
+                                              State="@selectionWindowState"
+                                              StateChanged="HandleSelectionWindowStateChangedAsync">
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var node in document.Nodes)
+                                {
+                                    <button type="button"
+                                            class="workflow-canvas-node-picker @(selectedNodeId == node.Id.Value ? "workflow-canvas-node-picker--selected" : string.Empty)"
+                                            @onclick="@(() => SelectNode(node.Id.Value))"
+                                            data-testid="workflow-canvas-select-node">
+                                        <span>@node.Name</span>
+                                        <small>@node.Kind</small>
+                                    </button>
+                                }
+
+                                @if (SelectedNode is not null)
+                                {
+                                    <Button Text="Open details"
+                                            Icon="open_in_new"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="OpenSelectedNodeDetailsAsync"
+                                            data-testid="workflow-canvas-open-selected-node-details" />
+                                }
+                            </Stack>
+                        </CanvasFloatingWindow>
+                    }
+
+                    @if (componentsWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@ComponentsWindowId"
+                                              TestId="workflow-canvas-components-window"
+                                              AriaLabel="Workflow component library floating window"
+                                              Kicker="LLM"
+                                              Title="Prepared calls"
+                                              Summary="@BuildProviderOptionsSummary()"
+                                              BodyClass="workflow-canvas-floating-window__body"
+                                              DefaultPlacement="top-left"
+                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
+                                              DefaultWidth="320"
+                                              DefaultHeight="380"
+                                              MinWidth="260"
+                                              MinHeight="220"
+                                              MaxWidth="320"
+                                              MaxHeight="520"
+                                              State="@componentsWindowState"
+                                              StateChanged="HandleComponentsWindowStateChangedAsync">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
+                                    <h3 class="workflow-canvas-panel-title">Prepared calls</h3>
+                                </div>
+                                <Button Text="Create"
+                                        Size="ButtonSize.Small"
+                                        Click="CreateDefaultComponentAsync"
+                                        Disabled="@isBusy"
+                                        data-testid="workflow-canvas-create-component" />
+                            </Split>
+                            <p class="workflows-muted mt-3"
+                               data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
+                            @{
+                                var newComponentModelOptions = ResolveNewComponentModelOptions();
+                            }
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
+                                @if (ProviderOptions.Count > 0)
+                                {
+                                    <label class="workflow-canvas-field">
+                                        <span>Provider</span>
+                                        <select class="cda-input"
+                                                value="@newComponentProviderProfileId"
+                                                @onchange="HandleNewComponentProviderChanged"
+                                                data-testid="workflow-canvas-component-provider">
+                                            @if (!ProviderOptions.Any(option => option.IsEnabled))
+                                            {
+                                                <option value="">No enabled chat provider</option>
+                                            }
+                                            @foreach (var providerOption in ProviderOptions)
+                                            {
+                                                <option value="@providerOption.ProviderProfileId.ToString("D")"
+                                                        disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+                                <label class="workflow-canvas-field">
+                                    <span>Model</span>
+                                    @if (newComponentModelOptions.Count > 0)
+                                    {
+                                        <select class="cda-input"
+                                                value="@newComponentModel"
+                                                @onchange="HandleNewComponentModelChanged"
+                                                data-testid="workflow-canvas-component-model">
+                                            @foreach (var model in newComponentModelOptions)
+                                            {
+                                                <option value="@model">@model</option>
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input class="cda-input"
+                                               value="@newComponentModel"
+                                               @onchange="HandleNewComponentModelChanged"
+                                               data-testid="workflow-canvas-component-model" />
+                                    }
+                                </label>
+                            </Grid>
+                            @if (componentOptions.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No components"
+                                            Title="Create an LLM component"
+                                            Description="Prepared calls carry provider, model, modality, model settings, instructions, and result shape." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var component in componentOptions)
+                                    {
+                                        <div class="workflow-canvas-component" data-testid="workflow-canvas-component">
+                                            <div>
+                                                <strong>@component.Name</strong>
+                                                <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality · @component.ResultShape.Kind</span>
+                                            </div>
+                                            <Button Text="Place"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="@(() => OpenLlmComponentCreateAsync(component))"
+                                                    data-testid="workflow-canvas-place-component" />
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+                        </CanvasFloatingWindow>
+                    }
+                </OverlayContent>
+            </CanvasWorkbench>
         </Canvas>
         <Inspector>
             <Stack GapScale="LayoutGap.Medium" data-testid="workflow-canvas-inspector">
@@ -707,131 +918,184 @@
                 </div>
             </Stack>
         </Inspector>
-        <Supporting>
-            <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
-                <div class="workflow-canvas-panel" data-testid="workflow-canvas-toolbox">
-                    <Split Gap="LayoutGap.Small">
-                        <div>
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Toolbox" />
-                            <h3 class="workflow-canvas-panel-title">Nodes and executors</h3>
-                        </div>
-                        <StatusBadge Tone="info" Text="@document.Nodes.Count.ToString()" />
-                    </Split>
-                    <OverlayComponentToolbox TestId="workflow-canvas-executor-toolbox"
-                                             AriaLabel="Workflow nodes and executors toolbox"
-                                             Class="workflow-canvas-toolbox-catalog mt-3"
-                                             ShowHeader="false"
-                                             SearchText="@workflowToolboxSearchText"
-                                             SearchTextChanged="@((string? value) => workflowToolboxSearchText = value ?? string.Empty)"
-                                             SearchPlaceholder="Search nodes, executors, files, HTTP, spreadsheets"
-                                             EmptyTitle="No workflow tools match the current search."
-                                             EmptyDescription="Clear the filter to restore nodes and executors."
-                                             Badges="@WorkflowToolboxBadges"
-                                             Sections="@WorkflowToolboxSections"
-                                             GroupToggled="ExpandWorkflowToolboxGroup"
-                                             ItemSelected="HandleWorkflowToolboxItemSelectedAsync" />
-                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                        @foreach (var node in document.Nodes)
-                        {
-                            <button type="button"
-                                    class="workflow-canvas-node-picker @(selectedNodeId == node.Id.Value ? "workflow-canvas-node-picker--selected" : string.Empty)"
-                                    @onclick="@(() => SelectNode(node.Id.Value))"
-                                    data-testid="workflow-canvas-select-node">
-                                <span>@node.Name</span>
-                                <small>@node.Kind</small>
-                            </button>
-                        }
-                    </Stack>
-                </div>
-
-                <div class="workflow-canvas-panel" data-testid="workflow-canvas-component-library">
-                    <Split Gap="LayoutGap.Small">
-                        <div>
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
-                            <h3 class="workflow-canvas-panel-title">Prepared calls</h3>
-                        </div>
-                        <Button Text="Create"
-                                Size="ButtonSize.Small"
-                                Click="CreateDefaultComponentAsync"
-                                Disabled="@isBusy"
-                                data-testid="workflow-canvas-create-component" />
-                    </Split>
-                    <p class="workflows-muted mt-3"
-                       data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
-                    @{
-                        var newComponentModelOptions = ResolveNewComponentModelOptions();
-                    }
-                    <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
-                        @if (ProviderOptions.Count > 0)
-                        {
-                            <label class="workflow-canvas-field">
-                                <span>Provider</span>
-                                <select class="cda-input"
-                                        value="@newComponentProviderProfileId"
-                                        @onchange="HandleNewComponentProviderChanged"
-                                        data-testid="workflow-canvas-component-provider">
-                                    @if (!ProviderOptions.Any(option => option.IsEnabled))
-                                    {
-                                        <option value="">No enabled chat provider</option>
-                                    }
-                                    @foreach (var providerOption in ProviderOptions)
-                                    {
-                                        <option value="@providerOption.ProviderProfileId.ToString("D")"
-                                                disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
-                                    }
-                                </select>
-                            </label>
-                        }
-                        <label class="workflow-canvas-field">
-                            <span>Model</span>
-                            @if (newComponentModelOptions.Count > 0)
-                            {
-                                <select class="cda-input"
-                                        value="@newComponentModel"
-                                        @onchange="HandleNewComponentModelChanged"
-                                        data-testid="workflow-canvas-component-model">
-                                    @foreach (var model in newComponentModelOptions)
-                                    {
-                                        <option value="@model">@model</option>
-                                    }
-                                </select>
-                            }
-                            else
-                            {
-                                <input class="cda-input"
-                                       value="@newComponentModel"
-                                       @onchange="HandleNewComponentModelChanged"
-                                       data-testid="workflow-canvas-component-model" />
-                            }
-                        </label>
-                    </Grid>
-                    @if (componentOptions.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No components"
-                                    Title="Create an LLM component"
-                                    Description="Prepared calls carry provider, model, modality, model settings, instructions, and result shape." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Small" Class="mt-3">
-                            @foreach (var component in componentOptions)
-                            {
-                                <div class="workflow-canvas-component" data-testid="workflow-canvas-component">
-                                    <div>
-                                        <strong>@component.Name</strong>
-                                        <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality · @component.ResultShape.Kind</span>
-                                    </div>
-                                    <Button Text="Place"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Size="ButtonSize.Small"
-                                            Click="@(() => AddLlmComponentNodeAsync(component))"
-                                            data-testid="workflow-canvas-place-component" />
-                                </div>
-                            }
-                        </Stack>
-                    }
-                </div>
-            </Grid>
-        </Supporting>
     </CanvasWorkbenchStage>
 </SurfaceCard>
+
+@if (isNodeDetailsDialogOpen && SelectedNode is { } modalNode)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Workflow node"
+            Title="@modalNode.Name"
+            Subtitle="@BuildNodeDetailsDialogSubtitle(modalNode)"
+            Size="ModalSize.Wide"
+            TestId="workflow-canvas-node-details-modal"
+            OnClose="CloseNodeDetailsDialogAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium" Class="workflow-canvas-node-dialog">
+                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                    <label class="workflow-canvas-field">
+                        <span>Node name</span>
+                        <input class="cda-input"
+                               value="@modalNode.Name"
+                               @onchange="args => HandleSelectedNodeNameChanged(modalNode, args)"
+                               data-testid="workflow-canvas-node-modal-name" />
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Kind</span>
+                        <select class="cda-input"
+                                value="@modalNode.Kind"
+                                @onchange="args => HandleSelectedNodeKindChanged(modalNode, args)"
+                                disabled="@(modalNode.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                data-testid="workflow-canvas-node-modal-kind">
+                            @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
+                            {
+                                <option value="@kind">@kind</option>
+                            }
+                        </select>
+                    </label>
+                </Grid>
+
+            @if (modalNode.Kind == WorkflowNodeKind.LlmCall)
+            {
+                <label class="workflow-canvas-field">
+                    <span>LLM Call Component</span>
+                    <select class="cda-input"
+                            value="@FormatComponentId(modalNode.ComponentId)"
+                            @onchange="args => HandleSelectedComponentChanged(modalNode, args)"
+                            data-testid="workflow-canvas-node-modal-component">
+                        <option value="">Select component</option>
+                        @foreach (var component in componentOptions)
+                        {
+                            <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
+                        }
+                    </select>
+                </label>
+            }
+
+            @if (modalNode.Kind == WorkflowNodeKind.Executor)
+            {
+                var descriptor = ResolveSelectedExecutorDescriptor(modalNode);
+                var policy = ResolveSelectedExecutionPolicy(modalNode);
+                <label class="workflow-canvas-field">
+                    <span>Executor</span>
+                    <select class="cda-input"
+                            value="@modalNode.ExecutorId?.Value"
+                            @onchange="args => HandleSelectedExecutorChanged(modalNode, args)"
+                            data-testid="workflow-canvas-node-modal-executor">
+                        <option value="">Select executor</option>
+                        @foreach (var executor in executorDescriptors)
+                        {
+                            <option value="@executor.Id.Value"
+                                    disabled="@(!executor.IsImplemented)">@executor.Name@(executor.IsImplemented ? string.Empty : " (planned)")</option>
+                        }
+                    </select>
+                </label>
+
+                @if (descriptor is not null)
+                {
+                    <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-executor-summary">
+                        <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
+                                     Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
+                        <span>@descriptor.Description</span>
+                    </div>
+                }
+
+                <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                    <label class="workflow-canvas-field">
+                        <span>Timeout seconds</span>
+                        <input class="cda-input"
+                               type="number"
+                               min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
+                               max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
+                               value="@policy.TimeoutSeconds"
+                               @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
+                               data-testid="workflow-canvas-node-modal-timeout" />
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Retries</span>
+                        <input class="cda-input"
+                               type="number"
+                               min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
+                               max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
+                               value="@policy.MaxRetryAttempts"
+                               @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
+                               data-testid="workflow-canvas-node-modal-retries" />
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Retry delay ms</span>
+                        <input class="cda-input"
+                               type="number"
+                               min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
+                               max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
+                               value="@policy.RetryDelayMilliseconds"
+                               @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
+                               data-testid="workflow-canvas-node-modal-retry-delay" />
+                    </label>
+                </Grid>
+                <label class="workflow-canvas-check-field">
+                    <input type="checkbox"
+                           checked="@policy.CaptureOutputArtifact"
+                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { CaptureOutputArtifact = ReadBool(args) })"
+                           data-testid="workflow-canvas-node-modal-capture-output" />
+                    <span>Capture output as workflow artifact</span>
+                </label>
+                <label class="workflow-canvas-field">
+                    <span>Executor settings JSON</span>
+                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
+                              value="@FormatExecutorSettingsJson(modalNode)"
+                              @onchange="args => HandleSelectedExecutorSettingsJsonChanged(modalNode, args)"
+                              data-testid="workflow-canvas-node-modal-settings-json"></textarea>
+                </label>
+            }
+
+            <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                <label class="workflow-canvas-field">
+                    <span>Input shape</span>
+                    <select class="cda-input"
+                            value="@modalNode.InputShapeKind"
+                            @onchange="args => HandleSelectedInputShapeChanged(modalNode, args)"
+                            data-testid="workflow-canvas-node-modal-input-shape">
+                        @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                        {
+                            <option value="@shape">@shape</option>
+                        }
+                    </select>
+                </label>
+                <label class="workflow-canvas-field">
+                    <span>Result shape</span>
+                    <select class="cda-input"
+                            value="@modalNode.ResultShapeKind"
+                            @onchange="args => HandleSelectedResultShapeChanged(modalNode, args)"
+                            data-testid="workflow-canvas-node-modal-result-shape">
+                        @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                        {
+                            <option value="@shape">@shape</option>
+                        }
+                    </select>
+                </label>
+            </Grid>
+
+            <label class="workflow-canvas-field">
+                <span>Instructions</span>
+                <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                          value="@modalNode.Instructions"
+                          @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
+                          data-testid="workflow-canvas-node-modal-instructions"></textarea>
+            </label>
+
+                @if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    <p class="workflow-canvas-error">@errorMessage</p>
+                }
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="CloseNodeDetailsDialogAsync"
+                        data-testid="workflow-canvas-node-modal-close" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}

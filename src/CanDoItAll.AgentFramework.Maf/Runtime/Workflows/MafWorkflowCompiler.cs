@@ -74,7 +74,7 @@ public sealed class MafWorkflowCompiler(
 
     private ExecutorBinding CreateExecutorBinding(WorkflowDefinition definition, WorkflowNode node)
     {
-        ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        async ValueTask<WorkflowNodeInput> ExecuteAsync(
             WorkflowNodeInput input,
             IWorkflowContext context,
             CancellationToken cancellationToken)
@@ -86,16 +86,14 @@ public sealed class MafWorkflowCompiler(
                     throw new InvalidOperationException($"Workflow executor node '{node.Id}' requires a registered executor invoker.");
                 }
 
-                return executorInvoker.ExecuteAsync(definition, node, input, cancellationToken);
+                var result = await executorInvoker.ExecuteAsync(definition, node, input, cancellationToken);
+                return new WorkflowNodeInput(result.PayloadJson);
             }
 
-            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
-                node.Id,
-                input.PayloadJson,
-                node.Settings.ResultShape ?? WorkflowValueShape.Text));
+            return input;
         }
 
-        return ((Func<WorkflowNodeInput, IWorkflowContext, CancellationToken, ValueTask<WorkflowNodeExecutionResult>>)ExecuteAsync)
+        return ((Func<WorkflowNodeInput, IWorkflowContext, CancellationToken, ValueTask<WorkflowNodeInput>>)ExecuteAsync)
             .BindAsExecutor(node.Id.Value, threadsafe: true);
     }
 }

@@ -34,7 +34,6 @@ public sealed class WorkflowsPageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow created");
-            Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
         Assert.Single(await catalogService.ListDefinitionsAsync());
         var component = Assert.Single(await componentLibrary.ListComponentsAsync());
@@ -48,6 +47,14 @@ public sealed class WorkflowsPageTests
             Assert.Equal(expectedModel, component.Model);
         }
 
+        cut.Find("[data-testid='workflows-tab-processes']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
+        });
+
+        cut.Find("[data-testid='workflows-tab-history']").Click();
+        cut.WaitForElement("[data-testid='workflows-run-test']");
         cut.Find("[data-testid='workflows-run-test']").Click();
 
         cut.WaitForAssertion(() =>
@@ -71,7 +78,10 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
 
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-provider-options']");
         cut.Find("[data-testid='workflow-canvas-create-component']").Click();
         cut.WaitForAssertion(() =>
@@ -111,6 +121,11 @@ public sealed class WorkflowsPageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow saved");
+        });
+
+        cut.Find("[data-testid='workflows-tab-processes']").Click();
+        cut.WaitForAssertion(() =>
+        {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
 

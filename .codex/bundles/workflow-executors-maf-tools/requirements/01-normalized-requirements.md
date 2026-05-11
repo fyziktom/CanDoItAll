@@ -19,3 +19,12 @@
 | R15 | Add setup UI hooks for built-in and future plugin executors. | Node inspector edits descriptor-backed settings and stores them in typed settings JSON. |
 | R16 | Validate with at least 20 real-world workflow examples. | Execution report lists 20 scenario rows with result, provider, and proof artifact. |
 | R17 | Test `gpt-5-mini` and Ollama `gptoss20b64k`. | Execution report records provider/model state, command/run result, and exact blocker if unavailable. |
+| R18 | Workflow toolbox must be a floating window inside the workflow canvas, matching the project-structure canvas pattern. | Browser proof shows the workflow toolbox open as a canvas floating window without clipping or layering defects. |
+| R19 | Workflow selection and node list must be a floating window inside the workflow canvas. | Browser proof shows a selected node and the selection floating window open inside the canvas. |
+| R20 | Adding a workflow node or executor from toolbox or right-click must show a modal/composer before the node is added. | Browser proof shows the create modal/composer and then the resulting node. |
+| R21 | Double-clicking a workflow node must open a details/edit modal. | Browser proof shows the double-click node modal and at least one editable field. |
+| R22 | Workflows page must be split into practical tabs for dashboard, definitions/process listing, editor, templates, history, analytics, and related runtime surfaces. | Browser proof shows tab navigation and preserved existing workflow surfaces. |
+| R23 | Workflow APIs must support observer-style control comparable to process APIs: list catalogs, start saved runs, cancel, inspect events/artifacts/pending requests, respond, and see analytics/catalog metadata. | HTTP/API proof shows observer operations without UI-only control. |
+| R24 | A new PostgreSQL test database must be created and used by the testing instance without mutating the user’s existing app database. | Execution report records DB creation and app startup proof with secrets masked. |
+| R25 | The testing instance must include projects/project structures and at least 20 real-world workflow examples covering file/storage, project-structure, asset-node, HTTP, spreadsheet, provider/image, retry/timeout, and observer scenarios. | Seed counts and scenario matrix prove 20 examples and project-structure data. |
+| R26 | Defects discovered by the real scenario run must be repaired within this scope or recorded as exact blockers/follow-up subbundles. | Scenario failures are mapped to fixes, retests, or exact blockers. |

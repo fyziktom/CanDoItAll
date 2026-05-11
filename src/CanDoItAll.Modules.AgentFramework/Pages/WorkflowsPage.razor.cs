@@ -46,6 +46,7 @@ public partial class WorkflowsPage
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string pendingResponseJson = "{\"approved\":true}";
     private string errorMessage = string.Empty;
+    private int activeWorkflowTabIndex;
     private bool isLoading = true;
     private bool isBusy;
     private bool isRunningTest;
@@ -364,6 +365,28 @@ public partial class WorkflowsPage
             ? $"allows human input with {settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes} minute timeout"
             : "disables human input nodes";
         return $"Default backend is {settings.DefaultRuntimePolicy.PreferredBackend}; artifact policy {artifactPolicy}; human-in-loop policy {humanPolicy}.";
+    }
+
+    private string BuildProviderOptionsSummary()
+    {
+        if (providerOptions.Count == 0)
+        {
+            return "No agent chat providers are available; new components use an unbound preview model.";
+        }
+
+        var enabledCount = providerOptions.Count(option => option.IsEnabled);
+        return $"{enabledCount} enabled chat provider(s) available from the agent provider registry.";
+    }
+
+    private string ResolveComponentProviderLabel(LlmCallComponent component)
+    {
+        if (!component.ProviderProfileId.HasValue)
+        {
+            return "No provider";
+        }
+
+        var provider = providerOptions.FirstOrDefault(option => option.ProviderProfileId == component.ProviderProfileId.Value);
+        return provider?.Name ?? "Provider missing";
     }
 
     private static WorkflowGraph CreateStarterGraph(WorkflowComponentId componentId)

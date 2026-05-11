@@ -19,3 +19,12 @@
 | R15 | 01, 05 | Inspector/settings tests and screenshot proving descriptor-backed setup. |
 | R16 | 06 | Execution report contains 20 real-world scenarios with result/proof. |
 | R17 | 06 | Execution report contains `gpt-5-mini` and `gptoss20b64k` attempts. |
+| R18 | 08 | Browser screenshot with workflow toolbox floating window. |
+| R19 | 08 | Browser screenshot with workflow selection floating window. |
+| R20 | 08 | Browser proof that toolbox and right-click create open modal/composer before adding. |
+| R21 | 08 | Browser proof that node double-click opens details/edit modal. |
+| R22 | 08 | Browser proof for workflows page tabs and preserved content. |
+| R23 | 09 | HTTP/API observer smoke for catalog, run start/cancel, events, artifacts, pending requests, analytics. |
+| R24 | 10 | PostgreSQL database creation and testing-instance startup proof. |
+| R25 | 10 | Seed counts and 20-example scenario matrix with project structures. |
+| R26 | 10, 11 | Scenario failures mapped to repairs, retests, blockers, or follow-up subbundles. |

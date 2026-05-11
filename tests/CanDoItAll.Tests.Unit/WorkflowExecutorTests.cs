@@ -113,6 +113,39 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafCompilerRoutesStartOutputIntoExecutorNode()
+    {
+        var executor = new RecordingWorkflowExecutor();
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, []);
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("tool", WorkflowExecutorIds.StorageFile),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-tool", "start", "tool"),
+            CreateEdge("tool-end", "tool", "end")
+        ]);
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"input\":\"hello\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Equal(1, executor.InvocationCount);
+    }
+
+    [Fact]
     public async Task InvokerRetriesTransientExecutorFailure()
     {
         var executor = new RecordingWorkflowExecutor { FailuresBeforeSuccess = 1 };

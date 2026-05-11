@@ -492,6 +492,7 @@ internal static class WorkflowCanvasDefinitionMapper
             EmptyStateDescription = "Use the toolbox to add typed workflow steps.",
             FocusActionLabel = "Focus start",
             ShowQuickCreateRail = true,
+            CollapseOnDoubleClick = false,
             QuickCreateActions = CreatableNodeKinds
                 .Select(kind => new CanvasWorkbenchAction
                 {
@@ -501,7 +502,11 @@ internal static class WorkflowCanvasDefinitionMapper
                     Description = ResolveDefaultInstructions(kind),
                     Icon = ResolveIcon(kind),
                     Tone = ResolveTone(kind),
-                    RequiresInput = false
+                    RequiresInput = true,
+                    CreateMode = "dialog",
+                    TitlePlaceholder = ResolveDefaultNodeName(kind),
+                    NotesPlaceholder = ResolveDefaultInstructions(kind),
+                    SubmitLabel = "Add node"
                 })
                 .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors))
                 .ToList()

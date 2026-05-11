@@ -45,7 +45,11 @@ internal static class WorkflowExecutorCanvasCatalog
             Description = descriptor.Description,
             Icon = descriptor.IconName,
             Tone = ResolveTone(descriptor.Category),
-            RequiresInput = false,
+            RequiresInput = true,
+            CreateMode = "dialog",
+            TitlePlaceholder = descriptor.Name,
+            NotesPlaceholder = descriptor.Description,
+            SubmitLabel = "Add executor",
             ObjectSubtype = descriptor.Id.Value
         };
 

@@ -70,6 +70,36 @@
     overflow: auto;
 }
 
+.workflow-canvas-overlay-safe-top {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: 1px;
+    height: 0;
+    pointer-events: none;
+}
+
+.workflow-canvas-floating-window__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: auto;
+}
+
+.workflow-canvas-floating-window__body .workflow-canvas-toolbox-catalog .cda-component-toolbox__body {
+    max-height: none;
+}
+
+.workflow-canvas-node-dialog {
+    min-width: 0;
+}
+
+.workflow-canvas-json-textarea {
+    min-height: 12rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+}
+
 .workflow-canvas-node-picker {
     display: grid;
     width: 100%;
