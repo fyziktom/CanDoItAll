@@ -1,0 +1,49 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<DialogScaffold Eyebrow="@Eyebrow"
+                Title="@Title"
+                Description="@Description"
+                Dense="@Dense"
+                HeaderActions="@HeaderActions"
+                ContextRail="@InspectorRail"
+                ReviewPanel="@InspectorPanel"
+                ValidationContent="@ValidationContent"
+                Footer="@Footer"
+                data-testid="@TestId">
+    @ChildContent
+</DialogScaffold>
+
+@code {
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public bool Dense { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? InspectorRail { get; set; }
+
+    [Parameter]
+    public RenderFragment? InspectorPanel { get; set; }
+
+    [Parameter]
+    public RenderFragment? ValidationContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

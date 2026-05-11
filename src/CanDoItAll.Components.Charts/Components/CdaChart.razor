@@ -95,7 +95,7 @@ else
     {
         Options ??= new CdaChartOptions();
         _renderSeries = NormalizeSeries(Series);
-        _apexOptions = CdaApexChartOptionsFactory.Build(Options, _renderSeries, Title);
+        _apexOptions = CdaApexChartOptionsFactory.Build(Options, _renderSeries, null);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -1,0 +1,66 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<section @attributes='AdditionalAttributes.WithClass("cda-status-check-list")'>
+    @if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Description))
+    {
+        <header class="cda-status-check-list__header">
+            @if (!string.IsNullOrWhiteSpace(Title))
+            {
+                <h4>@Title</h4>
+            }
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p>@Description</p>
+            }
+        </header>
+    }
+
+    @if (Items.Count == 0)
+    {
+        <div class="cda-status-check-list__empty">@EmptyText</div>
+    }
+    else
+    {
+        <ul>
+            @foreach (var item in Items)
+            {
+                <li>
+                    <span class="@ResolveIconClass(item)" aria-hidden="true">
+                        <span class="material-icons">@(item.Complete ? "check" : "radio_button_unchecked")</span>
+                    </span>
+                    <span>
+                        <strong>@item.Label</strong>
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <small>@item.Description</small>
+                        }
+                    </span>
+                    <em>@item.Status</em>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<StatusCheckItem> Items { get; set; } = [];
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No checks are available.";
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private static string ResolveIconClass(StatusCheckItem item)
+        => $"cda-status-check-list__icon cda-status-check-list__icon--{NormalizeTone(item.Tone)}";
+
+    private static string NormalizeTone(string? tone)
+        => string.IsNullOrWhiteSpace(tone) ? "neutral" : tone.Trim().ToLowerInvariant();
+}

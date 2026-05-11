@@ -1,0 +1,32 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<CopyableMonoValue Value="@Value"
+                   StartChars="@StartChars"
+                   EndChars="@EndChars"
+                   Truncate="@Truncate"
+                   EmptyText="@EmptyText"
+                   AriaLabel="@AriaLabel"
+                   data-testid="@TestId" />
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public int StartChars { get; set; } = 10;
+
+    [Parameter]
+    public int EndChars { get; set; } = 6;
+
+    [Parameter]
+    public bool Truncate { get; set; } = true;
+
+    [Parameter]
+    public string EmptyText { get; set; } = "no hash";
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Copy hash";
+
+    [Parameter]
+    public string? TestId { get; set; }
+}

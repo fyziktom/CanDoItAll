@@ -1,0 +1,78 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<section @attributes='AdditionalAttributes.WithClass("cda-diff-viewer")'>
+    <header class="cda-diff-viewer__header">
+        <div>
+            <span>@Eyebrow</span>
+            <h4>@Title</h4>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Summary))
+        {
+            <p>@Summary</p>
+        }
+    </header>
+
+    <div class="cda-diff-viewer__grid">
+        <section>
+            <strong>@BeforeLabel</strong>
+            <pre>@BeforeText</pre>
+        </section>
+        <section>
+            <strong>@AfterLabel</strong>
+            <pre>@AfterText</pre>
+        </section>
+    </div>
+
+    @if (ChangedLineCount > 0)
+    {
+        <div class="cda-diff-viewer__summary">@ChangedLineCount changed line(s)</div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Eyebrow { get; set; } = "Diff";
+
+    [Parameter]
+    public string Title { get; set; } = "Current vs previous";
+
+    [Parameter]
+    public string? Summary { get; set; }
+
+    [Parameter]
+    public string BeforeLabel { get; set; } = "Before";
+
+    [Parameter]
+    public string AfterLabel { get; set; } = "After";
+
+    [Parameter]
+    public string? BeforeText { get; set; }
+
+    [Parameter]
+    public string? AfterText { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private int ChangedLineCount
+    {
+        get
+        {
+            string[] before = (BeforeText ?? string.Empty).Split('\n');
+            string[] after = (AfterText ?? string.Empty).Split('\n');
+            int count = Math.Max(before.Length, after.Length);
+            int changed = 0;
+            for (var index = 0; index < count; index++)
+            {
+                string beforeLine = index < before.Length ? before[index].TrimEnd('\r') : string.Empty;
+                string afterLine = index < after.Length ? after[index].TrimEnd('\r') : string.Empty;
+                if (!string.Equals(beforeLine, afterLine, StringComparison.Ordinal))
+                {
+                    changed++;
+                }
+            }
+
+            return changed;
+        }
+    }
+}
