@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -23,6 +24,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceFileService>(_ => new WorkspaceFileService(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<IWorkspacePathResolutionService>(_ => new WorkspacePathResolutionService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
         services.TryAddSingleton<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
             normalizedWorkspaceRoot,
@@ -51,6 +53,19 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
             serviceProvider.GetRequiredService<IAgentRuntime>()));
+        services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ImageGenerationWorkflowExecutor>());
+        foreach (var descriptor in BuiltInWorkflowExecutorDescriptors.Planned)
+        {
+            services.AddSingleton<IWorkflowExecutor>(new PlannedWorkflowExecutor(descriptor));
+        }
+
+        services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddSingleton<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddSingleton<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
         services.TryAddSingleton<InMemoryWorkflowCatalogStore>();

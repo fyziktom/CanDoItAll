@@ -8,7 +8,9 @@ public sealed record MafWorkflowBuildResult(
     Workflow? Workflow,
     WorkflowCompilationResult Compilation);
 
-public sealed class MafWorkflowCompiler(IWorkflowDefinitionValidator validator)
+public sealed class MafWorkflowCompiler(
+    IWorkflowDefinitionValidator validator,
+    IWorkflowExecutorInvoker? executorInvoker = null)
 {
     public MafWorkflowBuildResult Compile(
         WorkflowDefinition definition,
@@ -29,7 +31,7 @@ public sealed class MafWorkflowCompiler(IWorkflowDefinitionValidator validator)
         {
             var bindings = definition.Graph.Nodes.ToDictionary(
                 node => node.Id,
-                node => CreateExecutorBinding(node));
+                node => CreateExecutorBinding(definition, node));
             var start = bindings[definition.Graph.StartNodeId];
             var builder = new WorkflowBuilder(start)
                 .WithName(definition.Name)
@@ -70,17 +72,30 @@ public sealed class MafWorkflowCompiler(IWorkflowDefinitionValidator validator)
         }
     }
 
-    private static ExecutorBinding CreateExecutorBinding(WorkflowNode node)
+    private ExecutorBinding CreateExecutorBinding(WorkflowDefinition definition, WorkflowNode node)
     {
-        ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(WorkflowNodeInput input)
+        ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowNodeInput input,
+            IWorkflowContext context,
+            CancellationToken cancellationToken)
         {
+            if (node.Kind == WorkflowNodeKind.Executor || node.Settings.ExecutorId is not null)
+            {
+                if (executorInvoker is null)
+                {
+                    throw new InvalidOperationException($"Workflow executor node '{node.Id}' requires a registered executor invoker.");
+                }
+
+                return executorInvoker.ExecuteAsync(definition, node, input, cancellationToken);
+            }
+
             return ValueTask.FromResult(new WorkflowNodeExecutionResult(
                 node.Id,
                 input.PayloadJson,
                 node.Settings.ResultShape ?? WorkflowValueShape.Text));
         }
 
-        return ((Func<WorkflowNodeInput, ValueTask<WorkflowNodeExecutionResult>>)ExecuteAsync)
+        return ((Func<WorkflowNodeInput, IWorkflowContext, CancellationToken, ValueTask<WorkflowNodeExecutionResult>>)ExecuteAsync)
             .BindAsExecutor(node.Id.Value, threadsafe: true);
     }
 }

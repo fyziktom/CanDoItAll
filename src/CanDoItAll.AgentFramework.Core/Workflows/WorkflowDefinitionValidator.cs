@@ -1,9 +1,21 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
 {
+    private readonly IWorkflowExecutorCatalog? executorCatalog;
+
+    public WorkflowDefinitionValidator()
+    {
+    }
+
+    public WorkflowDefinitionValidator(IWorkflowExecutorCatalog executorCatalog)
+    {
+        this.executorCatalog = executorCatalog;
+    }
+
     public WorkflowValidationResult Validate(WorkflowDefinition definition, IReadOnlyList<LlmCallComponent> components)
     {
         ArgumentNullException.ThrowIfNull(definition);
@@ -100,6 +112,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
             }
         }
 
+        AddExecutorIssues(graph, issues);
         AddDisconnectedNodeIssues(graph, issues);
         AddShapeIssues(graph, componentsById, issues);
 
@@ -151,6 +164,57 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
         }
 
         return new WorkflowValidationResult(issues);
+    }
+
+    private void AddExecutorIssues(
+        WorkflowGraph graph,
+        List<WorkflowValidationIssue> issues)
+    {
+        foreach (var node in graph.Nodes.Where(node => node.Kind == WorkflowNodeKind.Executor || node.Settings.ExecutorId is not null))
+        {
+            if (node.Settings.ExecutorId is not { } executorId)
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidExecutorReference,
+                    $"Workflow executor node '{node.Id}' must specify an executor id.",
+                    node.Id));
+                continue;
+            }
+
+            if (executorCatalog is not null && !executorCatalog.TryGetExecutor(executorId, out _))
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidExecutorReference,
+                    $"Workflow executor '{executorId}' is not registered.",
+                    node.Id));
+            }
+
+            var policy = node.Settings.ExecutionPolicy ?? WorkflowExecutorExecutionPolicy.Default;
+            if (!WorkflowExecutorPolicyLimits.IsValid(policy))
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidExecutionPolicy,
+                    $"Workflow executor node '{node.Id}' has an invalid timeout or retry policy.",
+                    node.Id));
+            }
+
+            if (string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson))
+            {
+                continue;
+            }
+
+            try
+            {
+                using var _ = JsonDocument.Parse(node.Settings.ExecutorSettingsJson);
+            }
+            catch (JsonException exception)
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidExecutorSettings,
+                    $"Workflow executor node '{node.Id}' has invalid settings JSON: {exception.Message}",
+                    node.Id));
+            }
+        }
     }
 
     private static void AddDisconnectedNodeIssues(

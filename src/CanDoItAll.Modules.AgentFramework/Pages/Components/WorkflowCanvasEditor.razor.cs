@@ -1,15 +1,24 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.OverlayLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public partial class WorkflowCanvasEditor
 {
+    private static readonly JsonSerializerOptions ExecutorJsonOptions = CreateExecutorJsonOptions(writeIndented: false);
+    private static readonly JsonSerializerOptions IndentedExecutorJsonOptions = CreateExecutorJsonOptions(writeIndented: true);
+
     [Inject]
     public IWorkflowCatalogService CatalogService { get; set; } = default!;
+
+    [Inject]
+    public IWorkflowExecutorCatalog ExecutorCatalog { get; set; } = default!;
 
     [Inject]
     public IWorkflowComponentLibraryService ComponentLibrary { get; set; } = default!;
@@ -40,6 +49,7 @@ public partial class WorkflowCanvasEditor
 
     private WorkflowCanvasDocument document = WorkflowCanvasDefinitionMapper.CreateDraft([]);
     private IReadOnlyList<LlmCallComponent> componentOptions = [];
+    private IReadOnlyList<WorkflowExecutorDescriptor> executorDescriptors = [];
     private IReadOnlyList<WorkflowValidationIssue> validationIssues = [];
     private WorkflowTestRunResult? testResult;
     private string loadedDefinitionKey = string.Empty;
@@ -50,6 +60,8 @@ public partial class WorkflowCanvasEditor
     private string edgeCondition = string.Empty;
     private string newComponentProviderProfileId = string.Empty;
     private string newComponentModel = string.Empty;
+    private string workflowToolboxSearchText = string.Empty;
+    private string? expandedWorkflowToolboxGroupKey = "workflow-nodes";
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string errorMessage = string.Empty;
     private bool isBusy;
@@ -64,6 +76,7 @@ public partial class WorkflowCanvasEditor
         => WorkflowCanvasDefinitionMapper.BuildSurface(
             document,
             componentOptions,
+            executorDescriptors,
             validationIssues,
             selectedNodeId);
 
@@ -89,6 +102,12 @@ public partial class WorkflowCanvasEditor
         },
         new()
         {
+            Label = "Executors",
+            Value = executorDescriptors.Count(executor => executor.IsImplemented).ToString(),
+            Tone = "info"
+        },
+        new()
+        {
             Label = "Validation",
             Value = validationIssues.Count == 0 ? "Valid" : validationIssues.Count.ToString(),
             Tone = validationIssues.Count == 0 ? "success" : "warning"
@@ -98,6 +117,7 @@ public partial class WorkflowCanvasEditor
     protected override void OnParametersSet()
     {
         componentOptions = Components;
+        executorDescriptors = ExecutorCatalog.ListExecutors();
         SyncNewComponentDefaults();
         var incomingKey = Definition is null
             ? "draft"
@@ -131,6 +151,12 @@ public partial class WorkflowCanvasEditor
 
     private async Task AddNodeAsync(WorkflowNodeKind kind)
     {
+        if (kind == WorkflowNodeKind.Executor)
+        {
+            await AddExecutorNodeAsync(ResolveDefaultExecutorDescriptor());
+            return;
+        }
+
         LlmCallComponent? component = null;
         if (kind == WorkflowNodeKind.LlmCall)
         {
@@ -164,6 +190,26 @@ public partial class WorkflowCanvasEditor
             220 + ((document.Nodes.Count % 3) * 120));
         WorkflowCanvasDefinitionMapper.ApplyComponent(node, component);
         node.Name = component.Name;
+        document.Nodes.Add(node);
+        InsertNodeBeforeEnd(node);
+        selectedNodeId = node.Id.Value;
+        SyncEdgeDefaults();
+        return Task.CompletedTask;
+    }
+
+    private Task AddExecutorNodeAsync(WorkflowExecutorDescriptor? descriptor)
+    {
+        var node = WorkflowCanvasDefinitionMapper.CreateNode(
+            WorkflowNodeKind.Executor,
+            document.Nodes,
+            componentOptions,
+            320 + (document.Nodes.Count * 120),
+            220 + ((document.Nodes.Count % 3) * 120));
+        if (descriptor is not null)
+        {
+            WorkflowCanvasDefinitionMapper.ApplyExecutor(node, descriptor);
+        }
+
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
         selectedNodeId = node.Id.Value;
@@ -399,6 +445,13 @@ public partial class WorkflowCanvasEditor
         if (WorkflowCanvasDefinitionMapper.TryParseCreateActionId(request.ActionId, out var kind))
         {
             await AddNodeAsync(kind);
+            return;
+        }
+
+        if (WorkflowExecutorCanvasCatalog.TryParseCreateActionId(request.ActionId, out var executorId) &&
+            TryResolveExecutorDescriptor(executorId, out var descriptor))
+        {
+            await AddExecutorNodeAsync(descriptor);
         }
     }
 
@@ -477,6 +530,16 @@ public partial class WorkflowCanvasEditor
         {
             node.ExternalRequestKind ??= WorkflowExternalRequestKind.HumanInput;
         }
+
+        if (kind == WorkflowNodeKind.Executor)
+        {
+            ApplySelectedExecutor(node, ResolveDefaultExecutorDescriptor());
+            return;
+        }
+
+        node.ExecutorId = null;
+        node.ExecutorSettingsJson = string.Empty;
+        node.ExecutionPolicy = null;
     }
 
     private void HandleSelectedComponentChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
@@ -536,6 +599,375 @@ public partial class WorkflowCanvasEditor
     private void SelectNode(string nodeId)
     {
         selectedNodeId = nodeId;
+    }
+
+    private Task HandleWorkflowToolboxItemSelectedAsync(string actionId)
+    {
+        if (WorkflowCanvasDefinitionMapper.TryParseCreateActionId(actionId, out var kind))
+        {
+            return AddNodeAsync(kind);
+        }
+
+        if (WorkflowExecutorCanvasCatalog.TryParseCreateActionId(actionId, out var executorId) &&
+            TryResolveExecutorDescriptor(executorId, out var descriptor))
+        {
+            return AddExecutorNodeAsync(descriptor);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void ExpandWorkflowToolboxGroup(string groupKey)
+    {
+        if (!HasWorkflowToolboxSearch)
+        {
+            expandedWorkflowToolboxGroupKey = groupKey;
+        }
+    }
+
+    private bool HasWorkflowToolboxSearch
+        => !string.IsNullOrWhiteSpace(workflowToolboxSearchText);
+
+    private IReadOnlyList<OverlayToolboxBadge> WorkflowToolboxBadges
+        =>
+        [
+            new("Workflow", "info"),
+            new($"{executorDescriptors.Count(executor => executor.IsImplemented)} executors", "label")
+        ];
+
+    private IReadOnlyList<OverlayToolboxSection> WorkflowToolboxSections
+        => BuildWorkflowToolboxSections();
+
+    private IReadOnlyList<OverlayToolboxSection> BuildWorkflowToolboxSections()
+    {
+        var workflowNodeItems = WorkflowCanvasDefinitionMapper.CreatableNodeKinds
+            .Select(kind => new OverlayToolboxItem(
+                WorkflowCanvasDefinitionMapper.BuildCreateActionId(kind),
+                WorkflowCanvasDefinitionMapper.ResolveDefaultNodeName(kind),
+                WorkflowCanvasDefinitionMapper.ResolveDefaultInstructions(kind),
+                Icon: ResolveWorkflowToolboxNodeIcon(kind),
+                Tone: ResolveWorkflowToolboxNodeTone(kind),
+                DataTestId: $"workflow-toolbox-node-{kind}"))
+            .Where(MatchesWorkflowToolboxSearch)
+            .ToList();
+
+        var executorGroups = executorDescriptors
+            .GroupBy(executor => executor.Category)
+            .OrderBy(group => group.Key)
+            .Select(group => BuildExecutorToolboxGroup(group.Key, group))
+            .Where(group => group.Items.Count > 0)
+            .ToList();
+
+        var sections = new List<OverlayToolboxSection>();
+        if (workflowNodeItems.Count > 0)
+        {
+            sections.Add(new OverlayToolboxSection(
+                "workflow-nodes",
+                "Workflow nodes",
+                "Control, AI, human, artifact, and orchestration steps.",
+                [
+                    new OverlayToolboxGroup(
+                        "workflow-nodes",
+                        "Typed nodes",
+                        "Core workflow node kinds",
+                        workflowNodeItems,
+                        Icon: "account_tree",
+                        Tone: "info",
+                        IsExpanded: IsWorkflowToolboxGroupExpanded("workflow-nodes"),
+                        DataTestId: "workflow-toolbox-group-workflow-nodes",
+                        BodyDataTestId: "workflow-toolbox-group-body-workflow-nodes")
+                ],
+                Tone: "info",
+                DataTestId: "workflow-toolbox-section-nodes"));
+        }
+
+        if (executorGroups.Count > 0)
+        {
+            sections.Add(new OverlayToolboxSection(
+                "workflow-executors",
+                "Executors",
+                "Typed tool execution nodes backed by the executor catalog.",
+                executorGroups,
+                Tone: "accent",
+                DataTestId: "workflow-toolbox-section-executors"));
+        }
+
+        if (sections.Count == 0)
+        {
+            expandedWorkflowToolboxGroupKey = null;
+        }
+
+        return sections;
+    }
+
+    private OverlayToolboxGroup BuildExecutorToolboxGroup(
+        WorkflowExecutorCategoryKind category,
+        IEnumerable<WorkflowExecutorDescriptor> descriptors)
+    {
+        var items = descriptors
+            .OrderBy(executor => executor.IsImplemented ? 0 : 1)
+            .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(executor => new OverlayToolboxItem(
+                WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
+                executor.Name,
+                executor.Description,
+                Icon: executor.IconName,
+                Tone: WorkflowExecutorCanvasCatalog.ResolveTone(executor.Category),
+                IsDisabled: !executor.IsImplemented,
+                DataTestId: $"workflow-toolbox-executor-{executor.Id.Value.Replace('.', '-')}"))
+            .Where(MatchesWorkflowToolboxSearch)
+            .ToList();
+
+        var key = $"executor-{category}";
+        return new OverlayToolboxGroup(
+            key,
+            WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(category),
+            WorkflowExecutorCanvasCatalog.ResolveCategoryDescription(category),
+            items,
+            Icon: WorkflowExecutorCanvasCatalog.ResolveCategoryIcon(category),
+            Tone: WorkflowExecutorCanvasCatalog.ResolveTone(category),
+            IsExpanded: IsWorkflowToolboxGroupExpanded(key),
+            DataTestId: $"workflow-toolbox-group-{key}",
+            BodyDataTestId: $"workflow-toolbox-group-body-{key}");
+    }
+
+    private bool MatchesWorkflowToolboxSearch(OverlayToolboxItem item)
+    {
+        if (!HasWorkflowToolboxSearch)
+        {
+            return true;
+        }
+
+        var search = workflowToolboxSearchText.Trim();
+        return item.Label.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.Summary.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.ActionId.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsWorkflowToolboxGroupExpanded(string groupKey)
+    {
+        if (HasWorkflowToolboxSearch)
+        {
+            return true;
+        }
+
+        expandedWorkflowToolboxGroupKey ??= groupKey;
+        return string.Equals(expandedWorkflowToolboxGroupKey, groupKey, StringComparison.Ordinal);
+    }
+
+    private WorkflowExecutorDescriptor? ResolveDefaultExecutorDescriptor()
+        => executorDescriptors.FirstOrDefault(executor => executor.IsImplemented)
+           ?? executorDescriptors.FirstOrDefault();
+
+    private bool TryResolveExecutorDescriptor(
+        WorkflowExecutorId executorId,
+        out WorkflowExecutorDescriptor descriptor)
+    {
+        descriptor = executorDescriptors.FirstOrDefault(item => item.Id == executorId)!;
+        return descriptor is not null;
+    }
+
+    private WorkflowExecutorDescriptor? ResolveSelectedExecutorDescriptor(WorkflowCanvasNodeDraft node)
+        => node.ExecutorId.HasValue && TryResolveExecutorDescriptor(node.ExecutorId.Value, out var descriptor)
+            ? descriptor
+            : null;
+
+    private void HandleSelectedExecutorChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            node.ExecutorId = null;
+            node.ExecutorSettingsJson = string.Empty;
+            node.ExecutionPolicy = null;
+            return;
+        }
+
+        var executorId = new WorkflowExecutorId(rawValue);
+        if (TryResolveExecutorDescriptor(executorId, out var descriptor))
+        {
+            ApplySelectedExecutor(node, descriptor);
+        }
+    }
+
+    private static void ApplySelectedExecutor(
+        WorkflowCanvasNodeDraft node,
+        WorkflowExecutorDescriptor? descriptor)
+    {
+        if (descriptor is null)
+        {
+            return;
+        }
+
+        WorkflowCanvasDefinitionMapper.ApplyExecutor(node, descriptor);
+    }
+
+    private static string ResolveWorkflowToolboxNodeIcon(WorkflowNodeKind kind)
+        => kind switch
+        {
+            WorkflowNodeKind.LlmCall => "smart_toy",
+            WorkflowNodeKind.Triage => "call_split",
+            WorkflowNodeKind.StrictLogic => "rule",
+            WorkflowNodeKind.Artifact => "description",
+            WorkflowNodeKind.HumanInput => "approval",
+            WorkflowNodeKind.AgentStep => "support_agent",
+            WorkflowNodeKind.Subworkflow => "account_tree",
+            _ => "circle"
+        };
+
+    private static string ResolveWorkflowToolboxNodeTone(WorkflowNodeKind kind)
+        => kind switch
+        {
+            WorkflowNodeKind.LlmCall => "success",
+            WorkflowNodeKind.Triage => "accent",
+            WorkflowNodeKind.StrictLogic => "warning",
+            WorkflowNodeKind.Artifact => "danger",
+            WorkflowNodeKind.HumanInput => "warning",
+            WorkflowNodeKind.AgentStep or WorkflowNodeKind.Subworkflow => "info",
+            _ => "neutral"
+        };
+
+    private WorkflowExecutorExecutionPolicy ResolveSelectedExecutionPolicy(WorkflowCanvasNodeDraft node)
+        => node.ExecutionPolicy
+           ?? ResolveSelectedExecutorDescriptor(node)?.DefaultPolicy
+           ?? WorkflowExecutorExecutionPolicy.Default;
+
+    private void UpdateSelectedExecutionPolicy(
+        WorkflowCanvasNodeDraft node,
+        Func<WorkflowExecutorExecutionPolicy, WorkflowExecutorExecutionPolicy> update)
+    {
+        node.ExecutionPolicy = update(ResolveSelectedExecutionPolicy(node));
+    }
+
+    private TSettings ReadExecutorSettings<TSettings>(WorkflowCanvasNodeDraft node)
+        where TSettings : new()
+    {
+        var settingsJson = string.IsNullOrWhiteSpace(node.ExecutorSettingsJson)
+            ? ResolveSelectedExecutorDescriptor(node)?.DefaultSettingsJson
+            : node.ExecutorSettingsJson;
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return new TSettings();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<TSettings>(settingsJson, ExecutorJsonOptions) ?? new TSettings();
+        }
+        catch (JsonException)
+        {
+            return new TSettings();
+        }
+    }
+
+    private void UpdateExecutorSettings<TSettings>(
+        WorkflowCanvasNodeDraft node,
+        Func<TSettings, TSettings> update)
+        where TSettings : new()
+    {
+        var updated = update(ReadExecutorSettings<TSettings>(node));
+        node.ExecutorSettingsJson = JsonSerializer.Serialize(updated, ExecutorJsonOptions);
+        errorMessage = string.Empty;
+    }
+
+    private void UpdateEnumExecutorSettings<TSettings, TEnum>(
+        WorkflowCanvasNodeDraft node,
+        ChangeEventArgs args,
+        Func<TSettings, TEnum, TSettings> update)
+        where TSettings : new()
+        where TEnum : struct, Enum
+    {
+        if (Enum.TryParse<TEnum>(ReadString(args), out var parsed))
+        {
+            UpdateExecutorSettings<TSettings>(node, settings => update(settings, parsed));
+        }
+    }
+
+    private string BuildHeadersJson(WorkflowCanvasNodeDraft node)
+        => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowHttpExecutorSettings>(node).Headers, IndentedExecutorJsonOptions);
+
+    private void UpdateHttpHeadersJson(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        if (!TryDeserializeJson<IReadOnlyDictionary<string, string>>(args.Value?.ToString(), out var headers))
+        {
+            return;
+        }
+
+        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
+        {
+            Headers = headers ?? new Dictionary<string, string>()
+        });
+    }
+
+    private string BuildCellWritesJson(WorkflowCanvasNodeDraft node)
+        => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node).CellWrites, IndentedExecutorJsonOptions);
+
+    private string BuildRangeWritesJson(WorkflowCanvasNodeDraft node)
+        => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node).RangeWrites, IndentedExecutorJsonOptions);
+
+    private void UpdateSpreadsheetCellWritesJson(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        if (!TryDeserializeJson<IReadOnlyList<WorkflowSpreadsheetCellWrite>>(args.Value?.ToString(), out var writes))
+        {
+            return;
+        }
+
+        UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node, settings => settings with
+        {
+            CellWrites = writes ?? []
+        });
+    }
+
+    private void UpdateSpreadsheetRangeWritesJson(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        if (!TryDeserializeJson<IReadOnlyList<WorkflowSpreadsheetRangeWrite>>(args.Value?.ToString(), out var writes))
+        {
+            return;
+        }
+
+        UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node, settings => settings with
+        {
+            RangeWrites = writes ?? []
+        });
+    }
+
+    private bool TryDeserializeJson<T>(string? json, out T? value)
+    {
+        try
+        {
+            value = string.IsNullOrWhiteSpace(json)
+                ? default
+                : JsonSerializer.Deserialize<T>(json, ExecutorJsonOptions);
+            errorMessage = string.Empty;
+            return true;
+        }
+        catch (JsonException exception)
+        {
+            value = default;
+            errorMessage = exception.Message;
+            return false;
+        }
+    }
+
+    private static string ReadString(ChangeEventArgs args)
+        => args.Value?.ToString() ?? string.Empty;
+
+    private static int ReadInt(ChangeEventArgs args, int fallback)
+        => int.TryParse(args.Value?.ToString(), out var value) ? value : fallback;
+
+    private static bool ReadBool(ChangeEventArgs args)
+        => args.Value is bool value
+            ? value
+            : bool.TryParse(args.Value?.ToString(), out var parsed) && parsed;
+
+    private static JsonSerializerOptions CreateExecutorJsonOptions(bool writeIndented)
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = writeIndented
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private string ResolveNodeName(WorkflowNodeId nodeId)

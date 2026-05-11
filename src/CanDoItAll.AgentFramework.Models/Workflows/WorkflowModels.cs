@@ -190,6 +190,7 @@ public enum WorkflowNodeKind
     LlmCall,
     Triage,
     StrictLogic,
+    Executor,
     Artifact,
     HumanInput,
     AgentStep,
@@ -300,6 +301,9 @@ public enum WorkflowValidationIssueCode
     DisconnectedNode,
     UnknownEdgeEndpoint,
     InvalidComponentReference,
+    InvalidExecutorReference,
+    InvalidExecutorSettings,
+    InvalidExecutionPolicy,
     InvalidProviderModel,
     InvalidWorkflowSettings,
     UnsupportedRuntimeBackend,
@@ -353,7 +357,14 @@ public sealed record WorkflowNodeSettings(
     WorkflowExternalRequestKind? ExternalRequestKind,
     string Instructions,
     WorkflowValueShape? InputShape,
-    WorkflowValueShape? ResultShape);
+    WorkflowValueShape? ResultShape)
+{
+    public WorkflowExecutorId? ExecutorId { get; init; }
+
+    public string ExecutorSettingsJson { get; init; } = string.Empty;
+
+    public WorkflowExecutorExecutionPolicy? ExecutionPolicy { get; init; }
+}
 
 public sealed record WorkflowNode(
     WorkflowNodeId Id,

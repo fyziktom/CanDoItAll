@@ -44,6 +44,12 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
 
     public WorkflowExternalRequestKind? ExternalRequestKind { get; set; }
 
+    public WorkflowExecutorId? ExecutorId { get; set; }
+
+    public string ExecutorSettingsJson { get; set; } = string.Empty;
+
+    public WorkflowExecutorExecutionPolicy? ExecutionPolicy { get; set; }
+
     public string Instructions { get; set; } = WorkflowCanvasDefinitionMapper.ResolveDefaultInstructions(kind);
 
     public WorkflowValueShapeKind InputShapeKind { get; set; } = WorkflowValueShapeKind.Text;
@@ -82,6 +88,7 @@ internal static class WorkflowCanvasDefinitionMapper
         [WorkflowNodeKind.LlmCall] = "smart_toy",
         [WorkflowNodeKind.Triage] = "call_split",
         [WorkflowNodeKind.StrictLogic] = "rule",
+        [WorkflowNodeKind.Executor] = "bolt",
         [WorkflowNodeKind.Artifact] = "description",
         [WorkflowNodeKind.HumanInput] = "approval",
         [WorkflowNodeKind.AgentStep] = "support_agent",
@@ -95,6 +102,7 @@ internal static class WorkflowCanvasDefinitionMapper
         [WorkflowNodeKind.LlmCall] = "#047857",
         [WorkflowNodeKind.Triage] = "#7c3aed",
         [WorkflowNodeKind.StrictLogic] = "#b45309",
+        [WorkflowNodeKind.Executor] = "#0f766e",
         [WorkflowNodeKind.Artifact] = "#be185d",
         [WorkflowNodeKind.HumanInput] = "#a16207",
         [WorkflowNodeKind.AgentStep] = "#0e7490",
@@ -169,6 +177,9 @@ internal static class WorkflowCanvasDefinitionMapper
                 AgentId = node.Settings.AgentId,
                 SubworkflowId = node.Settings.SubworkflowId,
                 ExternalRequestKind = node.Settings.ExternalRequestKind,
+                ExecutorId = node.Settings.ExecutorId,
+                ExecutorSettingsJson = node.Settings.ExecutorSettingsJson,
+                ExecutionPolicy = node.Settings.ExecutionPolicy,
                 Instructions = node.Settings.Instructions,
                 InputShapeKind = ResolveInputShapeKind(node, components),
                 ResultShapeKind = ResolveResultShapeKind(node, components),
@@ -209,7 +220,12 @@ internal static class WorkflowCanvasDefinitionMapper
                     node.ExternalRequestKind,
                     node.Instructions.Trim(),
                     CreateShape(node.InputShapeKind),
-                    CreateShape(node.ResultShapeKind)),
+                    CreateShape(node.ResultShapeKind))
+                {
+                    ExecutorId = node.ExecutorId,
+                    ExecutorSettingsJson = node.ExecutorSettingsJson.Trim(),
+                    ExecutionPolicy = node.ExecutionPolicy
+                },
                 node.CanvasX,
                 node.CanvasY))
             .ToArray();
@@ -239,11 +255,13 @@ internal static class WorkflowCanvasDefinitionMapper
     public static CanvasWorkbenchSurface BuildSurface(
         WorkflowCanvasDocument document,
         IReadOnlyList<LlmCallComponent> components,
+        IReadOnlyList<WorkflowExecutorDescriptor> executors,
         IReadOnlyList<WorkflowValidationIssue> validationIssues,
         string? selectedNodeId)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(components);
+        ArgumentNullException.ThrowIfNull(executors);
         ArgumentNullException.ThrowIfNull(validationIssues);
 
         var issuesByNode = validationIssues
@@ -251,8 +269,9 @@ internal static class WorkflowCanvasDefinitionMapper
             .GroupBy(issue => issue.NodeId!.Value)
             .ToDictionary(group => group.Key, group => group.ToArray());
         var componentsById = components.ToDictionary(component => component.Id);
+        var executorsById = executors.ToDictionary(executor => executor.Id);
         var nodes = document.Nodes
-            .Select(node => BuildWorkbenchNode(node, componentsById, issuesByNode))
+            .Select(node => BuildWorkbenchNode(node, componentsById, executorsById, issuesByNode))
             .ToList();
         var links = document.Edges
             .Select(edge => new CanvasWorkbenchLink
@@ -283,7 +302,7 @@ internal static class WorkflowCanvasDefinitionMapper
                 SelectedNodeIds = selectedNodeIds,
                 ActiveInspectorTab = "workflow"
             },
-            Chrome = BuildChrome()
+            Chrome = BuildChrome(executors)
         };
     }
 
@@ -334,6 +353,30 @@ internal static class WorkflowCanvasDefinitionMapper
         }
     }
 
+    public static void ApplyExecutor(WorkflowCanvasNodeDraft node, WorkflowExecutorDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        ArgumentNullException.ThrowIfNull(descriptor);
+
+        node.Kind = WorkflowNodeKind.Executor;
+        node.ExecutorId = descriptor.Id;
+        node.ExecutorSettingsJson = descriptor.DefaultSettingsJson;
+        node.ExecutionPolicy = descriptor.DefaultPolicy;
+        node.InputShapeKind = descriptor.InputShape.Kind;
+        node.ResultShapeKind = descriptor.ResultShape.Kind;
+        if (string.IsNullOrWhiteSpace(node.Name) ||
+            string.Equals(node.Name, ResolveDefaultNodeName(WorkflowNodeKind.Executor), StringComparison.Ordinal))
+        {
+            node.Name = descriptor.Name;
+        }
+
+        if (string.IsNullOrWhiteSpace(node.Instructions) ||
+            string.Equals(node.Instructions, ResolveDefaultInstructions(WorkflowNodeKind.Executor), StringComparison.Ordinal))
+        {
+            node.Instructions = descriptor.Description;
+        }
+    }
+
     public static string ResolveDefaultNodeName(WorkflowNodeKind kind)
     {
         return kind switch
@@ -342,6 +385,7 @@ internal static class WorkflowCanvasDefinitionMapper
             WorkflowNodeKind.LlmCall => "LLM call",
             WorkflowNodeKind.Triage => "Triage",
             WorkflowNodeKind.StrictLogic => "Strict logic",
+            WorkflowNodeKind.Executor => "Executor",
             WorkflowNodeKind.Artifact => "Artifact output",
             WorkflowNodeKind.HumanInput => "Human input",
             WorkflowNodeKind.AgentStep => "Agent step",
@@ -358,6 +402,7 @@ internal static class WorkflowCanvasDefinitionMapper
             WorkflowNodeKind.LlmCall => "Call the selected model with strict task instructions and return only the requested result.",
             WorkflowNodeKind.Triage => "Classify the input and route it to the correct downstream branch.",
             WorkflowNodeKind.StrictLogic => "Apply deterministic business rules to the current workflow payload.",
+            WorkflowNodeKind.Executor => "Execute a typed tool with explicit settings, timeout, retry, and output policy.",
             WorkflowNodeKind.Artifact => "Capture the current payload as a workflow artifact.",
             WorkflowNodeKind.HumanInput => "Request explicit human input before continuing.",
             WorkflowNodeKind.AgentStep => "Invoke the selected agent with the current workflow payload.",
@@ -387,6 +432,7 @@ internal static class WorkflowCanvasDefinitionMapper
         {
             WorkflowNodeKind.LlmCall => "llm",
             WorkflowNodeKind.StrictLogic => "logic",
+            WorkflowNodeKind.Executor => "executor",
             WorkflowNodeKind.HumanInput => "human",
             WorkflowNodeKind.AgentStep => "agent",
             WorkflowNodeKind.Subworkflow => "subworkflow",
@@ -436,7 +482,7 @@ internal static class WorkflowCanvasDefinitionMapper
         }
     }
 
-    private static CanvasWorkbenchChrome BuildChrome()
+    private static CanvasWorkbenchChrome BuildChrome(IReadOnlyList<WorkflowExecutorDescriptor> executors)
     {
         return new CanvasWorkbenchChrome
         {
@@ -457,6 +503,7 @@ internal static class WorkflowCanvasDefinitionMapper
                     Tone = ResolveTone(kind),
                     RequiresInput = false
                 })
+                .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors))
                 .ToList()
         };
     }
@@ -464,29 +511,33 @@ internal static class WorkflowCanvasDefinitionMapper
     private static CanvasWorkbenchNode BuildWorkbenchNode(
         WorkflowCanvasNodeDraft node,
         IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> componentsById,
+        IReadOnlyDictionary<WorkflowExecutorId, WorkflowExecutorDescriptor> executorsById,
         IReadOnlyDictionary<WorkflowNodeId, WorkflowValidationIssue[]> issuesByNode)
     {
         var issueCount = issuesByNode.TryGetValue(node.Id, out var issues) ? issues.Length : 0;
         var component = node.ComponentId is { } componentId && componentsById.TryGetValue(componentId, out var matchedComponent)
             ? matchedComponent
             : null;
+        var executor = node.ExecutorId is { } executorId && executorsById.TryGetValue(executorId, out var matchedExecutor)
+            ? matchedExecutor
+            : null;
         return new CanvasWorkbenchNode
         {
             Id = node.Id.Value,
             Kind = node.Kind.ToString(),
             Family = node.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End ? "workflow-boundary" : "workflow-step",
-            Icon = ResolveIcon(node.Kind),
+            Icon = ResolveIcon(node, executor),
             Title = string.IsNullOrWhiteSpace(node.Name) ? ResolveDefaultNodeName(node.Kind) : node.Name,
-            Subtitle = ResolveSubtitle(node, component),
+            Subtitle = ResolveSubtitle(node, component, executor),
             LeadText = string.IsNullOrWhiteSpace(node.Instructions) ? ResolveDefaultInstructions(node.Kind) : node.Instructions,
             Status = issueCount == 0 ? "valid" : "invalid",
             StatusPill = issueCount == 0 ? node.Kind.ToString() : $"{issueCount} issue(s)",
-            PaletteKey = issueCount == 0 ? ResolveTone(node.Kind) : "danger",
+            PaletteKey = issueCount == 0 ? ResolveTone(node, executor) : "danger",
             AccentColor = issueCount == 0 ? ResolveAccent(node.Kind) : "#b91c1c",
             DurationLabel = node.Kind == WorkflowNodeKind.HumanInput ? "Wait" : "Step",
             X = node.CanvasX,
             Y = node.CanvasY,
-            Chips = BuildNodeChips(node, component),
+            Chips = BuildNodeChips(node, component, executor),
             FooterChips = BuildFooterChips(node),
             Annotations = issueCount == 0
                 ? []
@@ -527,7 +578,8 @@ internal static class WorkflowCanvasDefinitionMapper
 
     private static List<CanvasWorkbenchChip> BuildNodeChips(
         WorkflowCanvasNodeDraft node,
-        LlmCallComponent? component)
+        LlmCallComponent? component,
+        WorkflowExecutorDescriptor? executor)
     {
         var chips = new List<CanvasWorkbenchChip>
         {
@@ -548,6 +600,15 @@ internal static class WorkflowCanvasDefinitionMapper
             {
                 Text = component.Model,
                 Tone = "accent"
+            });
+        }
+
+        if (executor is not null)
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = executor.IsImplemented ? executor.Name : $"{executor.Name} planned",
+                Tone = executor.IsImplemented ? "accent" : "warning"
             });
         }
 
@@ -674,13 +735,15 @@ internal static class WorkflowCanvasDefinitionMapper
 
     private static string ResolveSubtitle(
         WorkflowCanvasNodeDraft node,
-        LlmCallComponent? component)
+        LlmCallComponent? component,
+        WorkflowExecutorDescriptor? executor)
     {
         return node.Kind switch
         {
             WorkflowNodeKind.LlmCall => component is null ? "Prepared LLM Call Component required" : component.Name,
             WorkflowNodeKind.Triage => "Conditional routing",
             WorkflowNodeKind.StrictLogic => "Deterministic logic",
+            WorkflowNodeKind.Executor => executor is null ? "Executor required" : $"{executor.Category} executor",
             WorkflowNodeKind.Artifact => "Artifact capture",
             WorkflowNodeKind.HumanInput => "RequestPort style pause",
             WorkflowNodeKind.AgentStep => node.AgentId.HasValue ? "Agent executor" : "Agent id required later",
@@ -696,6 +759,18 @@ internal static class WorkflowCanvasDefinitionMapper
         return NodeIcons.TryGetValue(kind, out var icon) ? icon : "circle";
     }
 
+    private static string ResolveIcon(WorkflowCanvasNodeDraft node, WorkflowExecutorDescriptor? executor)
+    {
+        if (node.Kind == WorkflowNodeKind.Executor &&
+            executor is not null &&
+            !string.IsNullOrWhiteSpace(executor.IconName))
+        {
+            return executor.IconName;
+        }
+
+        return ResolveIcon(node.Kind);
+    }
+
     private static string ResolveAccent(WorkflowNodeKind kind)
     {
         return NodeAccents.TryGetValue(kind, out var accent) ? accent : "#334155";
@@ -708,6 +783,7 @@ internal static class WorkflowCanvasDefinitionMapper
             WorkflowNodeKind.LlmCall => "success",
             WorkflowNodeKind.Triage => "accent",
             WorkflowNodeKind.StrictLogic => "warning",
+            WorkflowNodeKind.Executor => "info",
             WorkflowNodeKind.Artifact => "danger",
             WorkflowNodeKind.HumanInput => "warning",
             WorkflowNodeKind.AgentStep => "info",
@@ -715,6 +791,16 @@ internal static class WorkflowCanvasDefinitionMapper
             WorkflowNodeKind.Start or WorkflowNodeKind.End => "success",
             _ => "neutral"
         };
+    }
+
+    private static string ResolveTone(WorkflowCanvasNodeDraft node, WorkflowExecutorDescriptor? executor)
+    {
+        if (node.Kind == WorkflowNodeKind.Executor && executor is not null)
+        {
+            return WorkflowExecutorCanvasCatalog.ResolveTone(executor.Category);
+        }
+
+        return ResolveTone(node.Kind);
     }
 
     public static string BuildCreateActionId(WorkflowNodeKind kind)

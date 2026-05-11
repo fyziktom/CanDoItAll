@@ -120,6 +120,19 @@ public sealed class WorkflowArtifactIdJsonConverter : JsonConverter<WorkflowArti
     }
 }
 
+public sealed class WorkflowExecutorIdJsonConverter : JsonConverter<WorkflowExecutorId>
+{
+    public override WorkflowExecutorId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return new WorkflowExecutorId(WorkflowIdJsonConverterHelpers.ReadString(ref reader, nameof(WorkflowExecutorId)));
+    }
+
+    public override void Write(Utf8JsonWriter writer, WorkflowExecutorId value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.Value);
+    }
+}
+
 internal static class WorkflowIdJsonConverterHelpers
 {
     public static Guid ReadGuid(ref Utf8JsonReader reader, string typeName)
