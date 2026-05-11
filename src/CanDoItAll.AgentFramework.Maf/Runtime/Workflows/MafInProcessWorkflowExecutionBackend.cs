@@ -99,6 +99,12 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                 PayloadJson: string.Empty,
                 DateTimeOffset.UtcNow))
             .ToList();
+        var failureEvent = events.LastOrDefault(workflowEvent =>
+            workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed);
+        if (failureEvent is not null)
+        {
+            finalState = WorkflowRunState.Failed;
+        }
 
         if (!events.Any(workflowEvent => workflowEvent.Kind == WorkflowEventKind.Started))
         {
@@ -131,9 +137,10 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             finalState,
             Descriptor.Kind,
             BackendRunId: run.SessionId,
-            Summary: finalState == WorkflowRunState.Completed
-                ? $"Workflow '{definition.Name}' completed."
-                : $"Workflow '{definition.Name}' is {finalState}.",
+            Summary: failureEvent?.Message ??
+                     (finalState == WorkflowRunState.Completed
+                         ? $"Workflow '{definition.Name}' completed."
+                         : $"Workflow '{definition.Name}' is {finalState}."),
             CreatedAtUtc: now,
             UpdatedAtUtc: DateTimeOffset.UtcNow);
 

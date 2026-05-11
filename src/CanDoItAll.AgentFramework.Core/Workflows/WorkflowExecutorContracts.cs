@@ -30,6 +30,16 @@ public interface IWorkflowExecutorInvoker
         CancellationToken cancellationToken = default);
 }
 
+public interface IWorkflowLlmComponentInvoker
+{
+    ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        LlmCallComponent component,
+        WorkflowNodeInput input,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record WorkflowExecutorExecutionContext(
     WorkflowDefinition Definition,
     WorkflowNode Node,

@@ -257,12 +257,14 @@ internal static class WorkflowCanvasDefinitionMapper
         IReadOnlyList<LlmCallComponent> components,
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
         IReadOnlyList<WorkflowValidationIssue> validationIssues,
+        CanvasWorkbenchUiState uiState,
         string? selectedNodeId)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(components);
         ArgumentNullException.ThrowIfNull(executors);
         ArgumentNullException.ThrowIfNull(validationIssues);
+        ArgumentNullException.ThrowIfNull(uiState);
 
         var issuesByNode = validationIssues
             .Where(issue => issue.NodeId.HasValue)
@@ -290,6 +292,10 @@ internal static class WorkflowCanvasDefinitionMapper
                 ? new List<string> { selectedNodeId }
                 : [];
 
+        var resolvedUiState = CanvasWorkbenchUiState.Parse(uiState.ToJson());
+        resolvedUiState.SelectedNodeIds = selectedNodeIds;
+        resolvedUiState.ActiveInspectorTab = "workflow";
+
         return new CanvasWorkbenchSurface
         {
             SurfaceId = document.DefinitionId?.ToString() ?? "workflow-canvas-draft",
@@ -297,11 +303,7 @@ internal static class WorkflowCanvasDefinitionMapper
             DependencySourceId = document.VersionId?.ToString() ?? "draft",
             Nodes = nodes,
             Links = links,
-            UiState = new CanvasWorkbenchUiState
-            {
-                SelectedNodeIds = selectedNodeIds,
-                ActiveInspectorTab = "workflow"
-            },
+            UiState = resolvedUiState,
             Chrome = BuildChrome(executors)
         };
     }
@@ -492,6 +494,7 @@ internal static class WorkflowCanvasDefinitionMapper
             EmptyStateDescription = "Use the toolbox to add typed workflow steps.",
             FocusActionLabel = "Focus start",
             ShowQuickCreateRail = true,
+            CollapseOnDoubleClick = false,
             QuickCreateActions = CreatableNodeKinds
                 .Select(kind => new CanvasWorkbenchAction
                 {
@@ -501,7 +504,11 @@ internal static class WorkflowCanvasDefinitionMapper
                     Description = ResolveDefaultInstructions(kind),
                     Icon = ResolveIcon(kind),
                     Tone = ResolveTone(kind),
-                    RequiresInput = false
+                    RequiresInput = true,
+                    CreateMode = "dialog",
+                    TitlePlaceholder = ResolveDefaultNodeName(kind),
+                    NotesPlaceholder = ResolveDefaultInstructions(kind),
+                    SubmitLabel = "Add node"
                 })
                 .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors))
                 .ToList()

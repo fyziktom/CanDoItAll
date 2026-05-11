@@ -185,6 +185,18 @@ else if (State.SelectedNode is not null)
                     case AttachmentPreviewKind.Audio:
                         <audio class="project-structure-audio-preview" controls preload="metadata" src="@preview.Route"></audio>
                         break;
+                    case AttachmentPreviewKind.TextDocument:
+                        @if (!string.IsNullOrWhiteSpace(preview.TextContent))
+                        {
+                            <pre class="project-structure-text-asset-preview">@preview.TextContent</pre>
+                        }
+                        else
+                        {
+                            <iframe class="project-structure-document-preview project-structure-document-preview--text"
+                                    src="@preview.PreviewSource"
+                                    title="@($"{preview.DisplayName} text preview")"></iframe>
+                        }
+                        break;
                     case AttachmentPreviewKind.Document:
                         <iframe class="project-structure-document-preview"
                                 src="@preview.PreviewSource"

@@ -10,7 +10,8 @@ public sealed record MafWorkflowBuildResult(
 
 public sealed class MafWorkflowCompiler(
     IWorkflowDefinitionValidator validator,
-    IWorkflowExecutorInvoker? executorInvoker = null)
+    IWorkflowExecutorInvoker? executorInvoker = null,
+    IWorkflowLlmComponentInvoker? llmComponentInvoker = null)
 {
     public MafWorkflowBuildResult Compile(
         WorkflowDefinition definition,
@@ -29,9 +30,10 @@ public sealed class MafWorkflowCompiler(
 
         try
         {
+            var componentsById = components.ToDictionary(component => component.Id);
             var bindings = definition.Graph.Nodes.ToDictionary(
                 node => node.Id,
-                node => CreateExecutorBinding(definition, node));
+                node => CreateExecutorBinding(definition, node, componentsById));
             var start = bindings[definition.Graph.StartNodeId];
             var builder = new WorkflowBuilder(start)
                 .WithName(definition.Name)
@@ -72,13 +74,38 @@ public sealed class MafWorkflowCompiler(
         }
     }
 
-    private ExecutorBinding CreateExecutorBinding(WorkflowDefinition definition, WorkflowNode node)
+    private ExecutorBinding CreateExecutorBinding(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> componentsById)
     {
-        ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        async ValueTask<WorkflowNodeInput> ExecuteAsync(
             WorkflowNodeInput input,
             IWorkflowContext context,
             CancellationToken cancellationToken)
         {
+            if (node.Kind == WorkflowNodeKind.LlmCall)
+            {
+                if (llmComponentInvoker is null)
+                {
+                    throw new InvalidOperationException($"LLM workflow node '{node.Id}' requires a registered LLM component invoker.");
+                }
+
+                if (node.Settings.ComponentId is not { } componentId ||
+                    !componentsById.TryGetValue(componentId, out var component))
+                {
+                    throw new InvalidOperationException($"LLM workflow node '{node.Id}' references component '{node.Settings.ComponentId}', but it was not supplied to the compiler.");
+                }
+
+                var result = await llmComponentInvoker.ExecuteAsync(definition, node, component, input, cancellationToken);
+                if (result.NodeId != node.Id)
+                {
+                    throw new InvalidOperationException($"LLM workflow node '{node.Id}' returned result for node '{result.NodeId}'.");
+                }
+
+                return new WorkflowNodeInput(result.PayloadJson);
+            }
+
             if (node.Kind == WorkflowNodeKind.Executor || node.Settings.ExecutorId is not null)
             {
                 if (executorInvoker is null)
@@ -86,16 +113,14 @@ public sealed class MafWorkflowCompiler(
                     throw new InvalidOperationException($"Workflow executor node '{node.Id}' requires a registered executor invoker.");
                 }
 
-                return executorInvoker.ExecuteAsync(definition, node, input, cancellationToken);
+                var result = await executorInvoker.ExecuteAsync(definition, node, input, cancellationToken);
+                return new WorkflowNodeInput(result.PayloadJson);
             }
 
-            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
-                node.Id,
-                input.PayloadJson,
-                node.Settings.ResultShape ?? WorkflowValueShape.Text));
+            return input;
         }
 
-        return ((Func<WorkflowNodeInput, IWorkflowContext, CancellationToken, ValueTask<WorkflowNodeExecutionResult>>)ExecuteAsync)
+        return ((Func<WorkflowNodeInput, IWorkflowContext, CancellationToken, ValueTask<WorkflowNodeInput>>)ExecuteAsync)
             .BindAsExecutor(node.Id.Value, threadsafe: true);
     }
 }

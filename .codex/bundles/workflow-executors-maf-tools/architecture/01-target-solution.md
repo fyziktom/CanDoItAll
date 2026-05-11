@@ -10,18 +10,20 @@
 ## Runtime Shape
 
 - Add `IWorkflowExecutorCatalog`, `IWorkflowExecutor`, and `IWorkflowExecutorInvoker` in AgentFramework Core.
+- Add `IWorkflowLlmComponentInvoker` so `WorkflowNodeKind.LlmCall` runs through the app's provider-backed agent runtime instead of being treated as a pass-through node.
 - Built-in executors register through DI as catalog/implementation entries; future plugins can register the same contracts without changing workflow compiler code.
-- `MafWorkflowCompiler` creates function executor bindings that call the invoker for `WorkflowNodeKind.Executor` or nodes with an executor id.
+- `MafWorkflowCompiler` creates function executor bindings that call the executor invoker for `WorkflowNodeKind.Executor` or nodes with an executor id, and the LLM invoker for `WorkflowNodeKind.LlmCall`.
 - Each invocation receives `WorkflowExecutorExecutionContext`, `WorkflowNodeInput`, node settings, policy, workflow run metadata, and cancellation.
 - The invoker applies timeout and retry policy explicitly and returns `WorkflowNodeExecutionResult` with payload JSON and result shape. Exhausted retry or timeout produces a failed workflow event, not pass-through output.
 
 ## Built-In Executors
 
 - Storage/file: list/stat/read/search/write/append/diff through existing workspace file services.
-- Project structure: read project/tree/subtree/node and create asset nodes through existing project-structure agent service adapter.
+- Project structure: read project/tree/subtree/node and create asset nodes through existing project-structure agent service adapter. Asset creation can intentionally use upstream workflow payload content for executor -> LLM -> executor chains.
 - HTTP fetch: GET/POST/PUT/PATCH/DELETE over `http`/`https`, bounded response size, headers/body settings, timeout.
 - AI image: prompt/settings to existing image-provider path, output as file/artifact reference when available.
 - Spreadsheet: read workbook summary, read cell/range, write cell/range, save workbook, render Markdown table/report through `CanDoItAll.Tools.Documents`.
+- Storage/file writes and project-structure asset creation expose explicit `ContentFromInput` settings for downstream payload handoff; this is opt-in to avoid silent data overwrites.
 - Descriptor-only planned generic executors: JSON transform, Markdown render, delay/timer, approval/request, command/process execution with explicit follow-up if not implemented.
 
 ## Document Wrapper Boundary

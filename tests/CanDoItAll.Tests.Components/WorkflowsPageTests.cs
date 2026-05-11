@@ -1,10 +1,13 @@
 using Bunit;
+using AngleSharp.Dom;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -13,7 +16,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_creates_starter_workflow_and_runs_preview()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -34,7 +37,6 @@ public sealed class WorkflowsPageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow created");
-            Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
         Assert.Single(await catalogService.ListDefinitionsAsync());
         var component = Assert.Single(await componentLibrary.ListComponentsAsync());
@@ -48,6 +50,14 @@ public sealed class WorkflowsPageTests
             Assert.Equal(expectedModel, component.Model);
         }
 
+        cut.Find("[data-testid='workflows-tab-processes']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
+        });
+
+        cut.Find("[data-testid='workflows-tab-history']").Click();
+        cut.WaitForElement("[data-testid='workflows-run-test']");
         cut.Find("[data-testid='workflows-run-test']").Click();
 
         cut.WaitForAssertion(() =>
@@ -62,7 +72,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_places_llm_component_validates_runs_and_saves_definition()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -71,7 +81,10 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
 
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-provider-options']");
         cut.Find("[data-testid='workflow-canvas-create-component']").Click();
         cut.WaitForAssertion(() =>
@@ -111,6 +124,11 @@ public sealed class WorkflowsPageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow saved");
+        });
+
+        cut.Find("[data-testid='workflows-tab-processes']").Click();
+        cut.WaitForAssertion(() =>
+        {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
 
@@ -120,6 +138,36 @@ public sealed class WorkflowsPageTests
         Assert.NotNull(detail);
         Assert.Contains(detail!.Definition.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
         Assert.Contains(detail.Definition.Graph.Nodes, node => node.CanvasX != 0 && node.CanvasY != 0);
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_preserves_maximized_state_when_selection_changes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+
+        FindButtonByTitle(cut, "Maximize canvas").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.IsMaximized);
+        });
+
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnSelectionChanged("end", "[\"end\"]", 1));
+
+        cut.WaitForAssertion(() =>
+        {
+            var canvas = cut.FindComponent<CanvasWorkbench>().Instance;
+            Assert.True(canvas.Surface.UiState.IsMaximized);
+            Assert.Equal(new[] { "end" }, canvas.Surface.UiState.SelectedNodeIds);
+        });
     }
 
     [Fact]
@@ -139,5 +187,31 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='agents-shell-open-workflows']").Click();
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
+    }
+
+    private static void RegisterDeterministicWorkflowLlmInvoker(IServiceCollection services)
+    {
+        services.RemoveAll<IWorkflowLlmComponentInvoker>();
+        services.AddScoped<IWorkflowLlmComponentInvoker, DeterministicWorkflowLlmComponentInvoker>();
+    }
+
+    private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
+        => cut.FindAll("button")
+            .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
+    {
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowDefinition definition,
+            WorkflowNode node,
+            LlmCallComponent component,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                node.Id,
+                $"Workflow LLM test output: {input.PayloadJson}",
+                component.ResultShape));
+        }
     }
 }
