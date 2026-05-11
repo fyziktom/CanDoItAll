@@ -42,6 +42,10 @@ public interface IWorkflowRuntimeManager
         WorkflowRunId runId,
         CancellationToken cancellationToken = default);
 
+    Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+        WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<WorkflowRunSnapshot> CancelAsync(
         WorkflowRunId runId,
         CancellationToken cancellationToken = default);
@@ -77,9 +81,17 @@ public interface IWorkflowRunStore
 
     Task<IReadOnlyList<WorkflowRunSnapshot>> ListRunsAsync(WorkflowId? workflowId = null, CancellationToken cancellationToken = default);
 
+    Task<WorkflowListPage<WorkflowRunSnapshot>> ListRunPageAsync(
+        WorkflowRunPageRequest request,
+        CancellationToken cancellationToken = default);
+
     Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(WorkflowRunId runId, CancellationToken cancellationToken = default);
+
+    Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+        WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default);
 
     Task SaveExternalRequestAsync(WorkflowExternalRequestRecord request, CancellationToken cancellationToken = default);
 
@@ -90,6 +102,34 @@ public interface IWorkflowRunStore
     Task SaveArtifactAsync(WorkflowArtifactRecord artifact, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<WorkflowArtifactRecord>> ListArtifactsAsync(WorkflowRunId runId, CancellationToken cancellationToken = default);
+}
+
+public sealed record WorkflowRunPageRequest(
+    WorkflowId? WorkflowId = null,
+    WorkflowRunState? State = null,
+    WorkflowRuntimeBackendKind? Backend = null,
+    string Search = "",
+    int PageIndex = 0,
+    int PageSize = 10);
+
+public sealed record WorkflowEventPageRequest(
+    WorkflowRunId RunId,
+    int PageIndex = 0,
+    int PageSize = 10);
+
+public sealed record WorkflowListPage<T>(
+    IReadOnlyList<T> Items,
+    int PageIndex,
+    int PageSize,
+    int TotalCount)
+{
+    public int TotalPages => PageSize <= 0
+        ? 0
+        : (int)Math.Ceiling(TotalCount / (double)PageSize);
+
+    public bool HasPreviousPage => PageIndex > 0;
+
+    public bool HasNextPage => PageIndex + 1 < TotalPages;
 }
 
 public interface IWorkflowEventSink

@@ -188,6 +188,21 @@ internal static class WorkflowsApi
                 query)))
             .WithName("ListWorkflowRuns");
 
+        workflows.MapGet("/runs/page", async (
+                [AsParameters] WorkflowRunListApiQuery query,
+                IWorkflowRunStore runStore,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await runStore.ListRunPageAsync(
+                new WorkflowRunPageRequest(
+                    query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
+                    query.State,
+                    query.Backend,
+                    query.Search ?? string.Empty,
+                    query.PageIndex.GetValueOrDefault(),
+                    query.PageSize ?? query.Take ?? 50),
+                cancellationToken)))
+            .WithName("ListWorkflowRunPage");
+
         workflows.MapGet("/runs/{runId:guid}", async (
                 Guid runId,
                 IWorkflowRuntimeManager runtimeManager,
@@ -225,6 +240,19 @@ internal static class WorkflowsApi
                 CancellationToken cancellationToken) =>
             Results.Ok(await runtimeManager.ListEventsAsync(new WorkflowRunId(runId), cancellationToken)))
             .WithName("ListWorkflowRunEvents");
+
+        workflows.MapGet("/runs/{runId:guid}/events/page", async (
+                Guid runId,
+                [AsParameters] WorkflowEventListApiQuery query,
+                IWorkflowRuntimeManager runtimeManager,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await runtimeManager.ListEventPageAsync(
+                new WorkflowEventPageRequest(
+                    new WorkflowRunId(runId),
+                    query.PageIndex.GetValueOrDefault(),
+                    query.PageSize.GetValueOrDefault(50)),
+                cancellationToken)))
+            .WithName("ListWorkflowRunEventPage");
 
         workflows.MapGet("/runs/{runId:guid}/artifacts", async (
                 Guid runId,
@@ -518,6 +546,17 @@ internal sealed class WorkflowRunListApiQuery
     public string? Search { get; set; }
 
     public int? Take { get; set; }
+
+    public int? PageIndex { get; set; }
+
+    public int? PageSize { get; set; }
+}
+
+internal sealed class WorkflowEventListApiQuery
+{
+    public int? PageIndex { get; set; }
+
+    public int? PageSize { get; set; }
 }
 
 internal sealed class WorkflowAnalyticsApiQuery

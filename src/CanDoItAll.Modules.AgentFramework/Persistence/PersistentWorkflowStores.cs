@@ -631,6 +631,54 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             .ToArray();
     }
 
+    public async Task<WorkflowListPage<WorkflowRunSnapshot>> ListRunPageAsync(
+        WorkflowRunPageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var pageIndex = NormalizePageIndex(request.PageIndex);
+        var pageSize = NormalizePageSize(request.PageSize);
+        var query = dbContext.Set<WorkflowRunRecordEntity>()
+            .AsNoTracking();
+        if (request.WorkflowId.HasValue)
+        {
+            query = query.Where(item => item.WorkflowId == request.WorkflowId.Value.Value);
+        }
+
+        if (request.State.HasValue)
+        {
+            query = query.Where(item => item.State == request.State.Value);
+        }
+
+        if (request.Backend.HasValue)
+        {
+            query = query.Where(item => item.Backend == request.Backend.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim();
+            query = query.Where(item => item.Summary.Contains(search) || item.BackendRunId.Contains(search));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var orderedQuery = dbContext.Database.IsSqlite()
+            ? query.OrderByDescending(item => item.RunId)
+            : query.OrderByDescending(item => item.UpdatedAtUtc).ThenByDescending(item => item.RunId);
+        var records = await orderedQuery
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new WorkflowListPage<WorkflowRunSnapshot>(
+            records.Select(item => item.ToSnapshot()).ToArray(),
+            pageIndex,
+            pageSize,
+            totalCount);
+    }
+
     public async Task SaveEventAsync(
         WorkflowEventRecord workflowEvent,
         CancellationToken cancellationToken = default)
@@ -669,6 +717,34 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             .OrderBy(item => item.CreatedAtUtc)
             .Select(item => item.ToEvent())
             .ToArray();
+    }
+
+    public async Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+        WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var pageIndex = NormalizePageIndex(request.PageIndex);
+        var pageSize = NormalizePageSize(request.PageSize);
+        var query = dbContext.Set<WorkflowEventRecordEntity>()
+            .AsNoTracking()
+            .Where(item => item.RunId == request.RunId.Value);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var orderedQuery = dbContext.Database.IsSqlite()
+            ? query.OrderBy(item => item.Id)
+            : query.OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id);
+        var records = await orderedQuery
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new WorkflowListPage<WorkflowEventRecord>(
+            records.Select(item => item.ToEvent()).ToArray(),
+            pageIndex,
+            pageSize,
+            totalCount);
     }
 
     public async Task SaveExternalRequestAsync(
@@ -820,6 +896,12 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         await dbContext.SaveChangesAsync(cancellationToken);
         return artifact;
     }
+
+    private static int NormalizePageIndex(int pageIndex)
+        => Math.Max(0, pageIndex);
+
+    private static int NormalizePageSize(int pageSize)
+        => Math.Clamp(pageSize, 1, 100);
 }
 
 public sealed class WorkflowDefinitionRecord

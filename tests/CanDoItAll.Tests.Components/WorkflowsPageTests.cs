@@ -141,6 +141,92 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
+        var definition = await CreateHistoryDefinitionAsync(catalogService);
+        var newestRunId = new WorkflowRunId(Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        var now = DateTimeOffset.UtcNow;
+
+        for (var index = 0; index < 12; index++)
+        {
+            var runId = index == 0
+                ? newestRunId
+                : new WorkflowRunId(Guid.Parse($"00000000-0000-0000-0000-{index:x12}"));
+            await runStore.SaveRunAsync(new WorkflowRunSnapshot(
+                runId,
+                definition.Id,
+                definition.VersionId,
+                WorkflowRunState.Completed,
+                WorkflowRuntimeBackendKind.InProcess,
+                $"history-run-{index}",
+                $"History run {index} completed with compact card coverage.",
+                now.AddMinutes(-index),
+                now.AddMinutes(-index)));
+        }
+
+        var hiddenTail = "UNIQUE_FULL_EVENT_TAIL";
+        for (var index = 0; index < 11; index++)
+        {
+            var message = index == 0
+                ? $"Executor completed with a long payload summary {new string('x', 180)} {hiddenTail}"
+                : $"Executor event {index}";
+            await runStore.SaveEventAsync(new WorkflowEventRecord(
+                Guid.Parse($"00000000-0000-0000-0000-{index + 1:x12}"),
+                newestRunId,
+                index % 2 == 0 ? WorkflowEventKind.ExecutorCompleted : WorkflowEventKind.SuperStep,
+                new WorkflowNodeId("history-node"),
+                message,
+                $"{{\"index\":{index},\"marker\":\"payload-{index}\"}}",
+                now.AddSeconds(index)));
+        }
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-history']");
+        cut.Find("[data-testid='workflows-tab-history']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(8, cut.FindAll("[data-testid='workflows-run-item']").Count);
+            Assert.Equal(8, cut.FindAll("[data-testid='workflows-run-event']").Count);
+            Assert.Contains("Page 1 of 2 - 12 runs", cut.Find("[data-testid='workflows-run-pager']").TextContent);
+            Assert.Contains("Page 1 of 2 - 11 events", cut.Find("[data-testid='workflows-event-pager']").TextContent);
+            Assert.DoesNotContain(hiddenTail, cut.Markup);
+        });
+
+        cut.FindAll("[data-testid='workflows-event-detail']").First().Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflows-event-detail-dialog", cut.Markup);
+            Assert.Contains(hiddenTail, cut.Markup);
+            Assert.Contains("payload-0", cut.Markup);
+        });
+
+        cut.Find("[data-testid='workflows-event-detail-dialog'] button[aria-label='Close']").Click();
+        cut.FindAll("[data-testid='workflows-run-detail']").First().Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflows-run-detail-dialog", cut.Markup);
+            Assert.Contains("history-run-0", cut.Markup);
+        });
+
+        cut.Find("[data-testid='workflows-run-page-next']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Page 2 of 2 - 12 runs", cut.Find("[data-testid='workflows-run-pager']").TextContent);
+            Assert.Equal(4, cut.FindAll("[data-testid='workflows-run-item']").Count);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_canvas_preserves_maximized_state_when_selection_changes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
@@ -198,6 +284,59 @@ public sealed class WorkflowsPageTests
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
+    {
+        var start = new WorkflowNodeId("start");
+        var end = new WorkflowNodeId("end");
+        return catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: "Paged history workflow",
+            Description: "Workflow definition used to verify bounded history paging.",
+            WorkflowLifecycleStatus.Active,
+            new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-end"),
+                        start,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
+    }
+
+    private static WorkflowNode CreateHistoryNode(
+        WorkflowNodeId id,
+        WorkflowNodeKind kind,
+        WorkflowValueShape? inputShape = null,
+        WorkflowValueShape? resultShape = null)
+        => new(
+            id,
+            kind,
+            id.Value,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: inputShape ?? WorkflowValueShape.Text,
+                ResultShape: resultShape ?? WorkflowValueShape.Text));
 
     private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
     {

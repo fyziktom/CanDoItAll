@@ -7,6 +7,9 @@ namespace CanDoItAll.Modules.AgentFramework.Pages;
 
 public partial class WorkflowsPage
 {
+    private const int HistoryRunPageSize = 8;
+    private const int HistoryEventPageSize = 8;
+
     [Inject]
     public IWorkflowCatalogService CatalogService { get; set; } = default!;
 
@@ -42,11 +45,17 @@ public partial class WorkflowsPage
     private WorkflowSettings settings = WorkflowSettings.Default;
     private WorkflowDefinition? selectedDefinition;
     private WorkflowRunSnapshot? selectedRun;
+    private WorkflowRunSnapshot? runDetail;
+    private WorkflowEventRecord? eventDetail;
     private WorkflowTestRunResult? testResult;
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string pendingResponseJson = "{\"approved\":true}";
     private string errorMessage = string.Empty;
     private int activeWorkflowTabIndex;
+    private int historyRunPageIndex;
+    private int historyRunTotalCount;
+    private int historyEventPageIndex;
+    private int historyEventTotalCount;
     private bool isLoading = true;
     private bool isBusy;
     private bool isRunningTest;
@@ -60,6 +69,18 @@ public partial class WorkflowsPage
     private string RunText => selectedRun is null ? "No run selected" : selectedRun.State.ToString();
 
     private string RunTone => selectedRun is null ? "neutral" : ResolveRunTone(selectedRun.State);
+
+    private int HistoryRunTotalPages => CalculateTotalPages(historyRunTotalCount, HistoryRunPageSize);
+
+    private int HistoryEventTotalPages => CalculateTotalPages(historyEventTotalCount, HistoryEventPageSize);
+
+    private bool CanGoToPreviousRunPage => historyRunPageIndex > 0;
+
+    private bool CanGoToNextRunPage => historyRunPageIndex + 1 < HistoryRunTotalPages;
+
+    private bool CanGoToPreviousEventPage => historyEventPageIndex > 0;
+
+    private bool CanGoToNextEventPage => historyEventPageIndex + 1 < HistoryEventTotalPages;
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,14 +122,12 @@ public partial class WorkflowsPage
         var definitionsTask = CatalogService.ListDefinitionsAsync();
         var componentsTask = ComponentLibrary.ListComponentsAsync();
         var providerOptionsTask = ComponentLibrary.ListProviderOptionsAsync();
-        var runsTask = RunStore.ListRunsAsync();
-        await Task.WhenAll(settingsTask, definitionsTask, componentsTask, providerOptionsTask, runsTask);
+        await Task.WhenAll(settingsTask, definitionsTask, componentsTask, providerOptionsTask);
 
         settings = await settingsTask;
         definitions = await definitionsTask;
         components = await componentsTask;
         providerOptions = await providerOptionsTask;
-        runs = await runsTask;
 
         var definitionId = preferredDefinitionId ??
                            selectedDefinition?.Id ??
@@ -123,38 +142,17 @@ public partial class WorkflowsPage
             validationIssues = [];
         }
 
-        var runId = preferredRunId ??
-                    selectedRun?.RunId ??
-                    runs.FirstOrDefault(run => selectedDefinition is null || run.WorkflowId == selectedDefinition.Id)?.RunId;
-        if (runId.HasValue)
-        {
-            await SelectRunAsync(runId.Value);
-        }
-        else
-        {
-            selectedRun = null;
-            runEvents = [];
-            artifacts = [];
-            pendingRequests = [];
-        }
+        await LoadRunsPageAsync(
+            selectedDefinition?.Id,
+            pageIndex: 0,
+            preferredRunId);
     }
 
     private async Task SelectDefinitionAsync(WorkflowId definitionId)
     {
         errorMessage = string.Empty;
         await LoadDefinitionAsync(definitionId);
-        runs = await RunStore.ListRunsAsync(definitionId);
-        var firstRun = runs.FirstOrDefault();
-        if (firstRun is null)
-        {
-            selectedRun = null;
-            runEvents = [];
-            artifacts = [];
-            pendingRequests = [];
-            return;
-        }
-
-        await SelectRunAsync(firstRun.RunId);
+        await LoadRunsPageAsync(definitionId, pageIndex: 0);
     }
 
     private async Task LoadDefinitionAsync(WorkflowId definitionId)
@@ -256,11 +254,10 @@ public partial class WorkflowsPage
                 NotificationService.Success("Workflow test completed", testResult.Run?.Summary ?? "Workflow run completed.");
             }
 
-            runs = await RunStore.ListRunsAsync(selectedDefinition.Id);
-            if (testResult.Run is not null)
-            {
-                await SelectRunAsync(testResult.Run.RunId);
-            }
+            await LoadRunsPageAsync(
+                selectedDefinition.Id,
+                pageIndex: 0,
+                preferredRunId: testResult.Run?.RunId);
         }
         catch (Exception exception)
         {
@@ -273,7 +270,7 @@ public partial class WorkflowsPage
         }
     }
 
-    private async Task SelectRunAsync(WorkflowRunId runId)
+    private async Task SelectRunAsync(WorkflowRunId runId, bool resetEventPage = true)
     {
         selectedRun = await RuntimeManager.GetRunAsync(runId);
         if (selectedRun is null)
@@ -281,17 +278,110 @@ public partial class WorkflowsPage
             runEvents = [];
             artifacts = [];
             pendingRequests = [];
+            historyEventPageIndex = 0;
+            historyEventTotalCount = 0;
             return;
         }
 
-        var eventsTask = RuntimeManager.ListEventsAsync(runId);
+        var eventPageIndex = resetEventPage ? 0 : historyEventPageIndex;
+        var eventsTask = RunStore.ListEventPageAsync(new WorkflowEventPageRequest(
+            runId,
+            eventPageIndex,
+            HistoryEventPageSize));
         var artifactsTask = RunStore.ListArtifactsAsync(runId);
         var pendingRequestsTask = RunStore.ListPendingExternalRequestsAsync(runId);
         await Task.WhenAll(eventsTask, artifactsTask, pendingRequestsTask);
 
-        runEvents = await eventsTask;
+        var eventPage = await eventsTask;
+        runEvents = eventPage.Items;
+        historyEventPageIndex = eventPage.PageIndex;
+        historyEventTotalCount = eventPage.TotalCount;
         artifacts = await artifactsTask;
         pendingRequests = await pendingRequestsTask;
+    }
+
+    private async Task LoadRunsPageAsync(
+        WorkflowId? workflowId,
+        int pageIndex,
+        WorkflowRunId? preferredRunId = null)
+    {
+        var runPage = await RunStore.ListRunPageAsync(new WorkflowRunPageRequest(
+            workflowId,
+            null,
+            null,
+            string.Empty,
+            pageIndex,
+            HistoryRunPageSize));
+        runs = runPage.Items;
+        historyRunPageIndex = runPage.PageIndex;
+        historyRunTotalCount = runPage.TotalCount;
+
+        WorkflowRunId? retainedRunId = selectedRun is not null && selectedRun.WorkflowId == workflowId
+            ? selectedRun.RunId
+            : null;
+        var runId = preferredRunId ??
+                    retainedRunId ??
+                    runs.FirstOrDefault()?.RunId;
+        if (runId.HasValue)
+        {
+            await SelectRunAsync(runId.Value);
+            return;
+        }
+
+        selectedRun = null;
+        runEvents = [];
+        artifacts = [];
+        pendingRequests = [];
+        historyEventPageIndex = 0;
+        historyEventTotalCount = 0;
+    }
+
+    private async Task ChangeRunPageAsync(int delta)
+    {
+        var nextPage = Math.Clamp(historyRunPageIndex + delta, 0, Math.Max(0, HistoryRunTotalPages - 1));
+        if (nextPage == historyRunPageIndex)
+        {
+            return;
+        }
+
+        await LoadRunsPageAsync(selectedDefinition?.Id, nextPage);
+    }
+
+    private async Task ChangeEventPageAsync(int delta)
+    {
+        if (selectedRun is null)
+        {
+            return;
+        }
+
+        var nextPage = Math.Clamp(historyEventPageIndex + delta, 0, Math.Max(0, HistoryEventTotalPages - 1));
+        if (nextPage == historyEventPageIndex)
+        {
+            return;
+        }
+
+        historyEventPageIndex = nextPage;
+        await SelectRunAsync(selectedRun.RunId, resetEventPage: false);
+    }
+
+    private void OpenRunDetailDialog(WorkflowRunSnapshot run)
+    {
+        runDetail = run;
+    }
+
+    private void CloseRunDetailDialog()
+    {
+        runDetail = null;
+    }
+
+    private void OpenEventDetailDialog(WorkflowEventRecord workflowEvent)
+    {
+        eventDetail = workflowEvent;
+    }
+
+    private void CloseEventDetailDialog()
+    {
+        eventDetail = null;
     }
 
     private async Task CancelSelectedRunAsync()
@@ -336,8 +426,7 @@ public partial class WorkflowsPage
 
     private async Task HandleCanvasPreviewRunCompletedAsync(WorkflowRunSnapshot run)
     {
-        runs = await RunStore.ListRunsAsync(run.WorkflowId);
-        await SelectRunAsync(run.RunId);
+        await LoadRunsPageAsync(run.WorkflowId, pageIndex: 0, preferredRunId: run.RunId);
     }
 
     private async Task RefreshComponentLibraryAsync()
@@ -471,6 +560,44 @@ public partial class WorkflowsPage
     private static string FormatDate(DateTimeOffset value)
     {
         return value.ToLocalTime().ToString("MMM d, HH:mm");
+    }
+
+    private static string FormatFullDate(DateTimeOffset value)
+    {
+        return value.ToLocalTime().ToString("MMM d, yyyy HH:mm:ss");
+    }
+
+    private static int CalculateTotalPages(int totalCount, int pageSize)
+    {
+        return totalCount <= 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+    }
+
+    private static string FormatPageLabel(int pageIndex, int totalPages, int totalCount, string noun)
+    {
+        if (totalCount == 0)
+        {
+            return $"0 {noun}";
+        }
+
+        return $"Page {pageIndex + 1} of {totalPages} - {totalCount:N0} {noun}";
+    }
+
+    private static string Truncate(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No message.";
+        }
+
+        var normalized = string.Join(" ", value.Split(['\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries)).Trim();
+        return normalized.Length <= maxLength
+            ? normalized
+            : $"{normalized[..Math.Max(0, maxLength - 3)]}...";
+    }
+
+    private static string FormatShortId(Guid value)
+    {
+        return value.ToString("N")[..8];
     }
 
     private WorkflowProviderOption? ResolveDefaultProviderOption()
