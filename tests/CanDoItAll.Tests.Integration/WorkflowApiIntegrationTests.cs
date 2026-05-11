@@ -1,0 +1,260 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.Tests.Integration;
+
+public sealed class WorkflowApiIntegrationTests
+{
+    [Fact]
+    public async Task Workflow_api_saves_validates_and_runs_workflow()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var component = await SaveComponentAsync(host);
+        var saveResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions",
+            CreateDefinitionSaveRequest(component.Id));
+        var saveBody = await saveResponse.Content.ReadAsStringAsync();
+        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
+        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
+
+        var listResponse = await host.Client.GetAsync("/api/workflows/definitions");
+        var listBody = await listResponse.Content.ReadAsStringAsync();
+        Assert.True(listResponse.IsSuccessStatusCode, listBody);
+        var definitions = JsonSerializer.Deserialize<IReadOnlyList<WorkflowCatalogItem>>(listBody, JsonOptions())!;
+
+        var validationResponse = await host.Client.PostAsync($"/api/workflows/definitions/{definition.Id.Value:D}/validate", content: null);
+        var validationBody = await validationResponse.Content.ReadAsStringAsync();
+        Assert.True(validationResponse.IsSuccessStatusCode, validationBody);
+        var validation = JsonSerializer.Deserialize<WorkflowValidationResult>(validationBody, JsonOptions())!;
+
+        var testRunResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                definition.Id,
+                definition.VersionId,
+                DraftDefinition: null,
+                "{\"prompt\":\"hello\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                ValidateOnly: false));
+        var testRunBody = await testRunResponse.Content.ReadAsStringAsync();
+        Assert.True(testRunResponse.IsSuccessStatusCode, testRunBody);
+        var testRun = JsonSerializer.Deserialize<WorkflowTestRunResult>(testRunBody, JsonOptions())!;
+
+        Assert.Contains(definitions, item => item.Id == definition.Id);
+        Assert.True(validation.Succeeded);
+        Assert.True(testRun.Succeeded, testRun.ErrorMessage);
+        Assert.NotNull(testRun.Run);
+        Assert.Equal(WorkflowRunState.Completed, testRun.Run.State);
+        Assert.NotEmpty(testRun.Events);
+    }
+
+    [Fact]
+    public async Task Workflow_api_returns_validation_failure_for_invalid_test_run()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var draft = CreateDefinition(WorkflowComponentId.New());
+
+        var response = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                WorkflowId: null,
+                VersionId: null,
+                DraftDefinition: draft,
+                InputJson: "{}",
+                RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
+                ValidateOnly: false));
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<WorkflowTestRunResult>(body, JsonOptions())!;
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Validation.Issues, issue => issue.Code == WorkflowValidationIssueCode.InvalidComponentReference);
+    }
+
+    [Fact]
+    public async Task Workflow_api_returns_runtime_failure_for_unregistered_durable_backend()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var component = await SaveComponentAsync(host);
+        var saveResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions",
+            CreateDefinitionSaveRequest(
+                component.Id,
+                runtimePolicy: new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    AllowInProcessPreviewRuns: true,
+                    RequireDurableProductionRuns: true,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false)));
+        var saveBody = await saveResponse.Content.ReadAsStringAsync();
+        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
+        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
+
+        var response = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                definition.Id,
+                definition.VersionId,
+                DraftDefinition: null,
+                InputJson: "{}",
+                RequestedBackend: WorkflowRuntimeBackendKind.DurableTask,
+                ValidateOnly: false));
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<WorkflowTestRunResult>(body, JsonOptions())!;
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(result.Succeeded);
+        Assert.Contains("not registered", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Openapi_exposes_workflow_routes()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        using var payload = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
+        var paths = payload.RootElement.GetProperty("paths");
+
+        Assert.True(paths.TryGetProperty("/api/workflows/definitions", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/provider-options", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/components", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/test-runs", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/events", out _));
+    }
+
+    [Fact]
+    public async Task Workflow_api_exposes_agent_provider_options_for_llm_components()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        var response = await host.Client.GetAsync("/api/workflows/provider-options");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var options = JsonSerializer.Deserialize<IReadOnlyList<WorkflowProviderOption>>(body, JsonOptions())!;
+
+        Assert.NotEmpty(options);
+        Assert.All(options, option => Assert.Equal(ProviderProfilePurpose.Chat, option.Purpose));
+        Assert.Contains(options, option => option.IsEnabled && !string.IsNullOrWhiteSpace(option.DefaultModel));
+    }
+
+    private static async Task<LlmCallComponent> SaveComponentAsync(ApiTestHost host)
+    {
+        var response = await host.Client.PostAsJsonAsync("/api/workflows/components", CreateComponentRequest());
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        return JsonSerializer.Deserialize<LlmCallComponent>(body, JsonOptions())!;
+    }
+
+    private static WorkflowDefinitionSaveRequest CreateDefinitionSaveRequest(
+        WorkflowComponentId componentId,
+        WorkflowRuntimePolicy? runtimePolicy = null)
+    {
+        return new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: "API workflow",
+            Description: "Workflow created by API integration tests.",
+            Status: WorkflowLifecycleStatus.Draft,
+            Graph: CreateGraph(componentId),
+            RuntimePolicy: runtimePolicy ?? new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false));
+    }
+
+    private static WorkflowDefinition CreateDefinition(WorkflowComponentId componentId)
+    {
+        return new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "Draft API workflow",
+            "Invalid draft workflow for API validation.",
+            WorkflowLifecycleStatus.Draft,
+            CreateGraph(componentId),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+    }
+
+    private static WorkflowGraph CreateGraph(WorkflowComponentId componentId)
+    {
+        return new WorkflowGraph(
+            new WorkflowNodeId("start"),
+            [
+                CreateNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                CreateNode("llm", WorkflowNodeKind.LlmCall, componentId),
+                CreateNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+            ],
+            [
+                CreateEdge("start-to-llm", "start", "llm"),
+                CreateEdge("llm-to-end", "llm", "end")
+            ]);
+    }
+
+    private static WorkflowNode CreateNode(
+        string id,
+        WorkflowNodeKind kind,
+        WorkflowComponentId? componentId = null,
+        WorkflowValueShape? inputShape = null,
+        WorkflowValueShape? resultShape = null)
+    {
+        return new WorkflowNode(
+            new WorkflowNodeId(id),
+            kind,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                componentId,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: inputShape ?? WorkflowValueShape.Text,
+                ResultShape: resultShape ?? WorkflowValueShape.Text));
+    }
+
+    private static WorkflowEdge CreateEdge(string id, string source, string target)
+    {
+        return new WorkflowEdge(
+            new WorkflowEdgeId(id),
+            new WorkflowNodeId(source),
+            SourcePortId: null,
+            new WorkflowNodeId(target),
+            TargetPortId: null,
+            WorkflowEdgeKind.Direct,
+            ConditionExpression: string.Empty);
+    }
+
+    private static LlmCallComponentSaveRequest CreateComponentRequest()
+    {
+        return new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: "Summarize",
+            ProviderProfileId: null,
+            Model: "gpt-5.4",
+            Modality: WorkflowModality.Text,
+            ModelSettings: new WorkflowModelSettings(
+                Temperature: 0.2,
+                MaxOutputTokens: 800,
+                RequireJsonOutput: false,
+                ResponseFormatJsonSchema: string.Empty),
+            Instructions: "Summarize the input.",
+            InputShape: WorkflowValueShape.Text,
+            ResultShape: WorkflowValueShape.Text,
+            Permissions: AgentPermissionsPolicy.Default);
+    }
+
+    private static JsonSerializerOptions JsonOptions()
+    {
+        return new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    }
+}

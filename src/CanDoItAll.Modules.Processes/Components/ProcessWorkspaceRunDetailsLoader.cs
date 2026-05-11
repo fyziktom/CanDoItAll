@@ -6,6 +6,8 @@ namespace CanDoItAll.Modules.Processes;
 public sealed class ProcessWorkspaceRunDetailsLoader(
     ProcessesService processesService,
     IAgentFrameworkWorkspaceService workspaceService,
+    IWorkflowCatalogService workflowCatalogService,
+    IWorkflowRunStore workflowRunStore,
     IProcessEscalationService escalationService)
 {
     private static readonly string RunLevelAutomationLabel = "Run-level automation";
@@ -21,6 +23,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         var executionRuns = await LoadExecutionRunsAsync(runId, runDetails.StepRuns, cancellationToken);
         var stepRuns = EnrichStepHealth(runDetails.StepRuns, executionRuns, runDetails.OutboxRecords);
         var operatorApprovals = BuildOperatorApprovals(runId, executionRuns);
+        var workflowRuns = await EnrichWorkflowRunsAsync(runDetails.WorkflowRuns, cancellationToken);
         var escalations = MergeEscalations(
             journalEscalations,
             BuildOutboxEscalations(runId, runDetails.OutboxRecords, stepRuns));
@@ -28,6 +31,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         {
             StepRuns = stepRuns,
             ExecutionRuns = executionRuns,
+            WorkflowRuns = workflowRuns,
             Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords),
             Escalations = escalations,
             OperatorApprovals = operatorApprovals,
@@ -780,6 +784,46 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             item.Message.Contains("Invoking tool 'browser_take_screenshot'", StringComparison.OrdinalIgnoreCase));
     }
 
+    private async Task<IReadOnlyList<ProcessWorkflowRunViewModel>> EnrichWorkflowRunsAsync(
+        IReadOnlyList<ProcessWorkflowRunViewModel> workflowRuns,
+        CancellationToken cancellationToken)
+    {
+        if (workflowRuns.Count == 0)
+        {
+            return [];
+        }
+
+        var workflowNamesByKey = (await workflowCatalogService.ListDefinitionsAsync(cancellationToken))
+            .ToDictionary(
+                item => (item.Id.Value, item.VersionId.Value),
+                item => item.Name);
+        var enriched = new List<ProcessWorkflowRunViewModel>(workflowRuns.Count);
+        foreach (var workflowRun in workflowRuns)
+        {
+            var runId = new WorkflowRunId(workflowRun.WorkflowRunId);
+            var snapshot = await workflowRunStore.GetRunAsync(runId, cancellationToken);
+            var artifacts = await workflowRunStore.ListArtifactsAsync(runId, cancellationToken);
+            var pendingRequests = await workflowRunStore.ListPendingExternalRequestsAsync(runId, cancellationToken);
+            enriched.Add(workflowRun with
+            {
+                WorkflowName = workflowNamesByKey.GetValueOrDefault(
+                    (workflowRun.WorkflowDefinitionId, workflowRun.WorkflowVersionId),
+                    workflowRun.WorkflowName),
+                State = snapshot?.State ?? workflowRun.State,
+                Summary = string.IsNullOrWhiteSpace(snapshot?.Summary)
+                    ? workflowRun.Summary
+                    : snapshot.Summary,
+                ArtifactCount = artifacts.Count,
+                PendingRequestCount = pendingRequests.Count,
+                UpdatedAtUtc = snapshot?.UpdatedAtUtc ?? workflowRun.UpdatedAtUtc
+            });
+        }
+
+        return enriched
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList();
+    }
+
     private static bool ExecutionRunBlocksSession(ExecutionRunRecord run)
     {
         return run.PendingApprovals.Count > 0 ||
@@ -805,6 +849,8 @@ public sealed record ProcessWorkspaceRunDetails(
     IReadOnlyList<ProcessDirectMessageThreadViewModel> DirectMessageThreads)
 {
     public IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns { get; init; } = [];
+
+    public IReadOnlyList<ProcessWorkflowRunViewModel> WorkflowRuns { get; init; } = [];
 
     public ProcessRunHealthSummaryViewModel Health { get; init; } = ProcessRunHealthSummaryViewModel.Empty;
 

@@ -53,16 +53,25 @@ public sealed partial class ProcessesService
 
     private static bool IsAiRole(ProcessRoleRequirement role)
     {
+        if (IsWorkflowRole(role))
+        {
+            return false;
+        }
+
         return role.PreferredProjectAssignmentRole == ProjectPartyAssignmentRole.AiAgent ||
-               role.PreferredExecutorKind.Contains("ai", StringComparison.OrdinalIgnoreCase) ||
-               role.PreferredExecutorKind.Contains("agent", StringComparison.OrdinalIgnoreCase) ||
+               ProcessExecutorKindNames.IsAiAgent(role.PreferredExecutorKind) ||
                role.Key.Contains("ai", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAiRoleFromLaunchRole(ProcessLaunchPlanRole role)
     {
-        return role.PreferredExecutorKind.Contains("ai", StringComparison.OrdinalIgnoreCase) ||
-               role.PreferredExecutorKind.Contains("agent", StringComparison.OrdinalIgnoreCase);
+        return ProcessExecutorKindNames.IsAiAgent(role.PreferredExecutorKind);
+    }
+
+    private static bool IsWorkflowRole(ProcessRoleRequirement role)
+    {
+        return role.PreferredWorkflowDefinitionId.HasValue ||
+               ProcessExecutorKindNames.IsWorkflow(role.PreferredExecutorKind);
     }
 
     private static bool RequiresTechnicalAgentBinding(ProcessLaunchPlan plan)
@@ -232,7 +241,7 @@ public sealed partial class ProcessesService
         {
             ProcessLaunchCandidateKind.NewAiAgentProposal => "CreateAiResource",
             ProcessLaunchCandidateKind.AiResource => "BindAiResource",
-            ProcessLaunchCandidateKind.ProjectAssignment when role.PreferredExecutorKind.Contains("ai", StringComparison.OrdinalIgnoreCase) => "BindAiResource",
+            ProcessLaunchCandidateKind.ProjectAssignment when ProcessExecutorKindNames.IsAiAgent(role.PreferredExecutorKind) => "BindAiResource",
             _ => "ProvisionRole"
         };
     }

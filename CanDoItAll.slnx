@@ -42,6 +42,7 @@
     <Project Path="src/CanDoItAll.Modules.Validation/CanDoItAll.Modules.Validation.csproj" />
     <Project Path="src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj" />
     <Project Path="src/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj" />
+    <Project Path="src/CanDoItAll.Tools.Documents/CanDoItAll.Tools.Documents.csproj" />
     <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj" />
     <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Components/CanDoItAll.Space3D.Mouse.Components.csproj" />
     <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Sandbox/CanDoItAll.Space3D.Mouse.Sandbox.csproj" />

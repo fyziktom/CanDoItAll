@@ -38,6 +38,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     IStoragePlacementService storagePlacementService,
     IWorkspacePathResolver workspacePathResolver,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
+    ProcessWorkflowRunCoordinator workflowRunCoordinator,
     IOptions<ProcessRuntimeOptions> processRuntimeOptions,
     IClock clock,
     ILogger<ProcessRunAutomationDispatchService> logger) : IProcessRunAutomationDispatchService

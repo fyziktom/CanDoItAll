@@ -544,6 +544,8 @@ public sealed partial class ProcessRuntimeReadQueryService
                     item.RoleRequirementId,
                     item.StepDefinitionId,
                     item.PartyId,
+                    item.WorkflowDefinitionId,
+                    item.WorkflowVersionId,
                     item.DisplayName,
                     item.ExecutorKind,
                     item.BindingReason,
@@ -578,6 +580,61 @@ public sealed partial class ProcessRuntimeReadQueryService
             .ToListAsync(cancellationToken);
         return items
             .OrderBy(item => item.CreatedAtUtc)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<ProcessWorkflowRunViewModel>> ListWorkflowRunsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var links = await dbContext.Set<ProcessWorkflowRunLink>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runId)
+            .ToListAsync(cancellationToken);
+        if (links.Count == 0)
+        {
+            return [];
+        }
+
+        var stepRunIds = links
+            .Select(item => item.StepRunId)
+            .Distinct()
+            .ToList();
+        var assignmentIds = links
+            .Select(item => item.AssignmentId)
+            .Distinct()
+            .ToList();
+        var stepTitlesById = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => stepRunIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.Title, cancellationToken);
+        var assignmentNamesById = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
+            .Where(item => assignmentIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
+
+        return links
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Select(item => new ProcessWorkflowRunViewModel(
+                item.Id,
+                item.ProcessRunId,
+                item.StepRunId,
+                item.AssignmentId,
+                item.WorkflowDefinitionId,
+                item.WorkflowVersionId,
+                item.WorkflowRunId,
+                assignmentNamesById.GetValueOrDefault(item.AssignmentId, "Workflow"),
+                stepTitlesById.GetValueOrDefault(item.StepRunId, string.Empty),
+                assignmentNamesById.GetValueOrDefault(item.AssignmentId, string.Empty),
+                item.WorkflowBackend,
+                item.WorkflowBackendRunId,
+                item.State,
+                item.Summary,
+                ArtifactCount: 0,
+                PendingRequestCount: 0,
+                item.CreatedAtUtc,
+                item.UpdatedAtUtc))
             .ToList();
     }
 

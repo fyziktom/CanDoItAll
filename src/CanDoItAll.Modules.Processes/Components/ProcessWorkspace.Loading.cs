@@ -77,6 +77,7 @@ public partial class ProcessWorkspace
         selectedProcessId = nextSelectedProcessId;
         editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId, cancellationToken);
         executorOptions = await ProcessesService.ListExecutorOptionsAsync(cancellationToken);
+        workflowOptions = await ProcessesService.ListWorkflowDefinitionOptionsAsync(cancellationToken);
         managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync(cancellationToken);
         analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId, cancellationToken);
         improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId, cancellationToken);
@@ -253,6 +254,7 @@ public partial class ProcessWorkspace
         workBriefs = runDetails.WorkBriefs;
         conformanceObservations = runDetails.ConformanceObservations;
         executionRuns = runDetails.ExecutionRuns;
+        workflowRuns = runDetails.WorkflowRuns;
         processEscalations = runDetails.Escalations;
         operatorApprovals = runDetails.OperatorApprovals;
         attemptTimeline = runDetails.AttemptTimeline;
@@ -302,6 +304,7 @@ public partial class ProcessWorkspace
         workBriefs = [];
         conformanceObservations = [];
         executionRuns = [];
+        workflowRuns = [];
         processEscalations = [];
         operatorApprovals = [];
         attemptTimeline = [];

@@ -86,6 +86,8 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessSubprocessDefinitionOption> SubprocessDefinitionOptions => workspace.SubprocessDefinitionOptions;
 
+        public IReadOnlyList<ProcessWorkflowDefinitionOption> WorkflowOptions => workspace.workflowOptions;
+
         public void CaptureWorkbench(CanvasWorkbench? workbench)
         {
             workspace.workbenchRef = workbench;

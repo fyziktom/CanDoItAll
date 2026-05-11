@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Processes;
@@ -35,6 +36,13 @@ public sealed record ProcessManagerAgentOption(
     string ProviderName,
     string DefaultModel,
     string BindingSummary);
+
+public sealed record ProcessWorkflowDefinitionOption(
+    Guid DefinitionId,
+    Guid VersionId,
+    string Name,
+    WorkflowLifecycleStatus Status,
+    WorkflowRuntimeBackendKind PreferredBackend);
 
 public sealed record ProcessSubprocessDefinitionOption(
     Guid DefinitionId,
@@ -119,6 +127,10 @@ public sealed class ProcessRoleEditorModel
     public string StaffingIntent { get; set; } = string.Empty;
 
     public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public Guid? PreferredWorkflowDefinitionId { get; set; }
+
+    public Guid? PreferredWorkflowVersionId { get; set; }
 
     public ProjectPartyAssignmentRole? PreferredProjectAssignmentRole { get; set; }
 

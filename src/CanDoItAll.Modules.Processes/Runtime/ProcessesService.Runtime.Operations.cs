@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -48,13 +49,18 @@ public sealed partial class ProcessesService
                 await dbContext.Set<ProcessRunAssignment>().AddAsync(assignment, cancellationToken);
             }
 
-            assignment.PartyId = request.PartyId;
+            var executorKind = ProcessExecutorKindNames.Resolve(request.ExecutorKind);
+            assignment.PartyId = executorKind == ProcessExecutorKind.Workflow ? null : request.PartyId;
+            assignment.WorkflowDefinitionId = executorKind == ProcessExecutorKind.Workflow ? request.WorkflowDefinitionId : null;
+            assignment.WorkflowVersionId = executorKind == ProcessExecutorKind.Workflow ? request.WorkflowVersionId : null;
             assignment.DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? "Unassigned role" : request.DisplayName.Trim();
-            assignment.ExecutorKind = request.ExecutorKind.Trim();
+            assignment.ExecutorKind = ProcessExecutorKindNames.ToPersistedName(executorKind);
             assignment.BindingReason = request.BindingReason.Trim();
             assignment.IsFallback = request.IsFallback;
-            assignment.IsCapabilityGap = !request.PartyId.HasValue && string.IsNullOrWhiteSpace(request.DisplayName);
-            assignment.AllowsDirectMessaging = request.AllowsDirectMessaging && !assignment.IsCapabilityGap;
+            assignment.IsCapabilityGap = !HasExecutableTarget(assignment) && string.IsNullOrWhiteSpace(request.DisplayName);
+            assignment.AllowsDirectMessaging = executorKind != ProcessExecutorKind.Workflow &&
+                request.AllowsDirectMessaging &&
+                !assignment.IsCapabilityGap;
 
             await RefreshAffectedStepExecutorSnapshotsAsync(
                 dbContext,
@@ -459,6 +465,20 @@ public sealed partial class ProcessesService
     public async Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default)
     {
         return await executorRegistryBridge.ListOptionsAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProcessWorkflowDefinitionOption>> ListWorkflowDefinitionOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        return (await workflowCatalogService.ListDefinitionsAsync(cancellationToken))
+            .Where(item => item.Status != WorkflowLifecycleStatus.Archived)
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new ProcessWorkflowDefinitionOption(
+                item.Id.Value,
+                item.VersionId.Value,
+                item.Name,
+                item.Status,
+                item.PreferredBackend))
+            .ToList();
     }
 
     public async Task<IReadOnlyList<ProcessManagerAgentOption>> ListManagerAgentOptionsAsync(CancellationToken cancellationToken = default)

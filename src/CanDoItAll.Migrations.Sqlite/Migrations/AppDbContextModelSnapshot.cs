@@ -3267,11 +3267,21 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid?>("TechnicalAgentId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("WorkflowDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("WorkflowVersionId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PartyId");
 
                     b.HasIndex("TechnicalAgentId");
+
+                    b.HasIndex("WorkflowDefinitionId");
+
+                    b.HasIndex("WorkflowVersionId");
 
                     b.HasIndex("LaunchPlanRoleId", "Score");
 
@@ -3659,6 +3669,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("PreferredWorkflowDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PreferredWorkflowVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ProcessDefinitionVersionId")
                         .HasColumnType("TEXT");
 
@@ -3688,6 +3704,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PreferredWorkflowDefinitionId");
+
+                    b.HasIndex("PreferredWorkflowVersionId");
 
                     b.HasIndex("ProcessDefinitionVersionId", "Key")
                         .IsUnique();
@@ -3898,6 +3918,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid?>("StepDefinitionId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("WorkflowDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("WorkflowVersionId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PartyId");
@@ -3905,6 +3931,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("RoleRequirementId");
 
                     b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("WorkflowDefinitionId");
+
+                    b.HasIndex("WorkflowVersionId");
 
                     b.HasIndex("ProcessRunId", "RoleRequirementId")
                         .IsUnique()
@@ -4335,6 +4365,71 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("StepRunId");
 
                     b.ToTable("Processes_WorkBriefs", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProcessRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("StepRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkflowBackend")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkflowBackendRunId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("WorkflowDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("WorkflowRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("WorkflowVersionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.HasIndex("ProcessRunId");
+
+                    b.HasIndex("WorkflowDefinitionId");
+
+                    b.HasIndex("WorkflowRunId");
+
+                    b.HasIndex("StepRunId", "AssignmentId")
+                        .IsUnique();
+
+                    b.ToTable("Processes_WorkflowRunLinks", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Projects.Project", b =>
@@ -6239,6 +6334,27 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("StepRunId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+                        .WithMany()
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+                        .WithMany()
+                        .HasForeignKey("ProcessRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+                        .WithMany()
+                        .HasForeignKey("StepRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>

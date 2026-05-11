@@ -365,6 +365,8 @@ public partial class ProcessWorkspace
             Purpose = source.Purpose,
             StaffingIntent = source.StaffingIntent,
             PreferredExecutorKind = source.PreferredExecutorKind,
+            PreferredWorkflowDefinitionId = source.PreferredWorkflowDefinitionId,
+            PreferredWorkflowVersionId = source.PreferredWorkflowVersionId,
             PreferredProjectAssignmentRole = source.PreferredProjectAssignmentRole,
             IsRequired = source.IsRequired,
             AllowsFallback = source.AllowsFallback,
@@ -387,6 +389,8 @@ public partial class ProcessWorkspace
         target.Purpose = source.Purpose;
         target.StaffingIntent = source.StaffingIntent;
         target.PreferredExecutorKind = source.PreferredExecutorKind;
+        target.PreferredWorkflowDefinitionId = source.PreferredWorkflowDefinitionId;
+        target.PreferredWorkflowVersionId = source.PreferredWorkflowVersionId;
         target.PreferredProjectAssignmentRole = source.PreferredProjectAssignmentRole;
         target.IsRequired = source.IsRequired;
         target.AllowsFallback = source.AllowsFallback;

@@ -106,12 +106,14 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
     private IReadOnlyList<ProcessExecutionRunViewModel> executionRuns = [];
+    private IReadOnlyList<ProcessWorkflowRunViewModel> workflowRuns = [];
     private IReadOnlyList<ProcessEscalationViewModel> processEscalations = [];
     private IReadOnlyList<ProcessOperatorApprovalViewModel> operatorApprovals = [];
     private IReadOnlyList<ProcessAttemptTimelineEntryViewModel> attemptTimeline = [];
     private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
+    private IReadOnlyList<ProcessWorkflowDefinitionOption> workflowOptions = [];
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
     private IReadOnlyList<ProcessManagerAgentOption> managerAgentOptions = [];
 
@@ -143,6 +145,8 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string artifactAllowedUsage = string.Empty;
     private string artifactReview = string.Empty;
     private Guid? assignmentPartyId;
+    private Guid? assignmentWorkflowDefinitionId;
+    private Guid? assignmentWorkflowVersionId;
     private string assignmentDisplayName = string.Empty;
     private string assignmentExecutorKind = "person";
     private string assignmentBindingReason = string.Empty;
@@ -207,7 +211,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments
         => assignments
-            .Where(item => !item.StepDefinitionId.HasValue)
+            .Where(item =>
+                !item.StepDefinitionId.HasValue &&
+                !ProcessExecutorKindNames.IsWorkflow(item.ExecutorKind))
             .OrderBy(
                 item => string.IsNullOrWhiteSpace(item.RoleDisplayName)
                     ? ResolveRoleName(item.RoleRequirementId)

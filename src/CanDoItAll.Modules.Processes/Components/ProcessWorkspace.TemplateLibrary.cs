@@ -91,24 +91,16 @@ public partial class ProcessWorkspace
     private async Task AddRoleTemplateAsync(string itemId)
     {
         var preview = ProcessTemplateLibraryService.GetPreview(ProcessTemplateLibraryCategory.Roles, itemId);
-        var ordinal = 1;
-        ProcessRoleEditorModel draft;
-        do
-        {
-            draft = ProcessTemplateLibraryService.CreateRoleDraft(itemId, ordinal);
-            ordinal++;
-        }
-        while (editor.Roles.Any(role => string.Equals(role.Key, draft.Key, StringComparison.OrdinalIgnoreCase)));
-
-        editor.Roles.Add(draft);
-        RefreshCanvasSurface();
+        var draft = CreateUniqueRoleDraftFromTemplate(itemId, excludedRole: null);
+        templateLibraryOpen = false;
+        OpenRoleDialog(draft, target: null, isNew: true);
 
         NotificationService.Notify(new NotificationMessage
         {
-            Severity = NotificationSeverity.Success,
-            Summary = "Role added",
-            Detail = $"{preview.Title} was added to the current definition draft. Save the definition to persist the change.",
-            Duration = 2800
+            Severity = NotificationSeverity.Info,
+            Summary = "Role template loaded",
+            Detail = $"{preview.Title} is ready to review. Save the role dialog to add it to the process draft.",
+            Duration = 3200
         });
 
         await InvokeAsync(StateHasChanged);

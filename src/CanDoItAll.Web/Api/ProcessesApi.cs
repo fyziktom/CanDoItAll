@@ -318,6 +318,8 @@ internal static class ProcessesApi
                     PartyId = request.PartyId,
                     DisplayName = request.DisplayName,
                     ExecutorKind = request.ExecutorKind,
+                    WorkflowDefinitionId = request.WorkflowDefinitionId,
+                    WorkflowVersionId = request.WorkflowVersionId,
                     BindingReason = request.BindingReason,
                     IsFallback = request.IsFallback,
                     AllowsDirectMessaging = request.AllowsDirectMessaging
@@ -851,6 +853,7 @@ internal static class ProcessesApi
             ShouldInclude(query.IncludeConformanceObservations) ? FilterConformanceObservations(details.ConformanceObservations, query) : [],
             ShouldInclude(query.IncludeDirectMessages) ? FilterDirectMessageThreads(details.DirectMessageThreads, query) : [],
             ShouldInclude(query.IncludeExecutionRuns) ? FilterExecutionRuns(details.ExecutionRuns, query) : [],
+            ShouldInclude(query.IncludeWorkflowRuns) ? FilterWorkflowRuns(details.WorkflowRuns, query) : [],
             ShouldInclude(query.IncludeEscalations) ? details.Escalations : [],
             ShouldInclude(query.IncludeOperatorApprovals) ? details.OperatorApprovals : [],
             ShouldInclude(query.IncludeAttemptTimeline) ? details.AttemptTimeline : [],
@@ -1109,6 +1112,50 @@ internal static class ProcessesApi
             .ToList();
     }
 
+    private static IReadOnlyList<ProcessWorkflowRunViewModel> FilterWorkflowRuns(
+        IReadOnlyList<ProcessWorkflowRunViewModel> workflowRuns,
+        ProcessRunDetailApiQuery query)
+    {
+        var filtered = workflowRuns.AsEnumerable();
+        if (query.StepRunId.HasValue)
+        {
+            filtered = filtered.Where(item => item.StepRunId == query.StepRunId.Value);
+        }
+
+        if (query.WorkflowRunId.HasValue)
+        {
+            filtered = filtered.Where(item => item.WorkflowRunId == query.WorkflowRunId.Value);
+        }
+
+        if (query.WorkflowDefinitionId.HasValue)
+        {
+            filtered = filtered.Where(item => item.WorkflowDefinitionId == query.WorkflowDefinitionId.Value);
+        }
+
+        if (query.WorkflowVersionId.HasValue)
+        {
+            filtered = filtered.Where(item => item.WorkflowVersionId == query.WorkflowVersionId.Value);
+        }
+
+        if (query.WorkflowState.HasValue)
+        {
+            filtered = filtered.Where(item => item.State == query.WorkflowState.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            filtered = filtered.Where(item => Contains(item.WorkflowName, query.Search) ||
+                                             Contains(item.StepTitle, query.Search) ||
+                                             Contains(item.AssignmentDisplayName, query.Search) ||
+                                             Contains(item.Summary, query.Search));
+        }
+
+        return filtered
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Take(NormalizeTake(query.Take))
+            .ToList();
+    }
+
     private static bool Contains(string value, string? search)
     {
         return !string.IsNullOrWhiteSpace(search) &&
@@ -1164,11 +1211,19 @@ internal sealed class ProcessRunDetailApiQuery
 
     public Guid? AgentId { get; set; }
 
+    public Guid? WorkflowRunId { get; set; }
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
     public ProcessStepRunStatus? StepStatus { get; set; }
 
     public ProcessArtifactKind? ArtifactKind { get; set; }
 
     public ExecutionState? ExecutionState { get; set; }
+
+    public WorkflowRunState? WorkflowState { get; set; }
 
     public string? Search { get; set; }
 
@@ -1190,6 +1245,8 @@ internal sealed class ProcessRunDetailApiQuery
 
     public bool? IncludeExecutionRuns { get; set; } = true;
 
+    public bool? IncludeWorkflowRuns { get; set; } = true;
+
     public bool? IncludeEscalations { get; set; } = true;
 
     public bool? IncludeOperatorApprovals { get; set; } = true;
@@ -1208,6 +1265,7 @@ internal sealed record ProcessRunDetail(
     IReadOnlyList<ProcessConformanceObservationViewModel> ConformanceObservations,
     IReadOnlyList<ProcessDirectMessageThreadViewModel> DirectMessageThreads,
     IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns,
+    IReadOnlyList<ProcessWorkflowRunViewModel> WorkflowRuns,
     IReadOnlyList<ProcessEscalationViewModel> Escalations,
     IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals,
     IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline,
@@ -1265,6 +1323,10 @@ internal sealed class ProcessAssignmentResolutionApiRequest
     public string DisplayName { get; set; } = string.Empty;
 
     public string ExecutorKind { get; set; } = string.Empty;
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
 
     public string BindingReason { get; set; } = string.Empty;
 

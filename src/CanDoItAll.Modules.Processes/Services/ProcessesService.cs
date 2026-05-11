@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Projects;
@@ -17,6 +18,7 @@ public sealed partial class ProcessesService(
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IProcessExecutorRegistryBridge executorRegistryBridge,
     IProcessProjectStructureBridge projectStructureBridge,
+    IWorkflowCatalogService workflowCatalogService,
     HrService hrService,
     AiAgentService aiAgentService,
     CollaborationService collaborationService,
@@ -135,6 +137,8 @@ public sealed partial class ProcessesService(
                 Purpose = role.Purpose,
                 StaffingIntent = role.StaffingIntent,
                 PreferredExecutorKind = role.PreferredExecutorKind,
+                PreferredWorkflowDefinitionId = role.PreferredWorkflowDefinitionId,
+                PreferredWorkflowVersionId = role.PreferredWorkflowVersionId,
                 PreferredProjectAssignmentRole = role.PreferredProjectAssignmentRole,
                 IsRequired = role.IsRequired,
                 AllowsFallback = role.AllowsFallback,

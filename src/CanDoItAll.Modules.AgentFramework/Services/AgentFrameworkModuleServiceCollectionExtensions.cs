@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -7,6 +8,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -29,10 +31,18 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
         {
-            var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
-            var profile = serviceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveCurrentProfile();
-            var scope = WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N"));
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new FileSandboxWorkspaceStore(workspaceRoot, scope);
+        });
+        services.TryAddScoped<IWorkspaceFileService>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceFileService(workspaceRoot, scope);
+        });
+        services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspacePathResolutionService(workspaceRoot, scope);
         });
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
@@ -49,6 +59,36 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IDatabaseTransferHandler, AiAgentsDatabaseTransferHandler>();
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
+        services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, ImageGenerationWorkflowExecutor>());
+        foreach (var descriptor in BuiltInWorkflowExecutorDescriptors.Planned)
+        {
+            services.AddScoped<IWorkflowExecutor>(_ => new PlannedWorkflowExecutor(descriptor));
+        }
+
+        services.TryAddScoped<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
+        services.TryAddScoped<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
+        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
+        services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
+        services.TryAddScoped<InMemoryWorkflowCatalogService>();
+        services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddSingleton<InMemoryWorkflowRunStore>();
+        services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
+        services.TryAddScoped<MafWorkflowCompiler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutionBackend, MafInProcessWorkflowExecutionBackend>());
+        services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
+        services.TryAddScoped<IWorkflowProcessExecutorBridge, WorkflowProcessExecutorBridge>();
+        services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
 
         if (backgroundWorkersEnabled)
         {
@@ -57,6 +97,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    private static (string WorkspaceRoot, WorkspaceScopeDescriptor Scope) ResolveCurrentWorkspaceScope(IServiceProvider serviceProvider)
+    {
+        var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var profile = serviceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveCurrentProfile();
+        return (workspaceRoot, WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N")));
     }
 }
 
