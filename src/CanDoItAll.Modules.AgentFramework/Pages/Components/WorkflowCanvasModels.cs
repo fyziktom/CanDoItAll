@@ -84,6 +84,11 @@ internal static class WorkflowCanvasDefinitionMapper
 {
     public const string InputPortId = "workflow:input";
     public const string OutputPortId = "workflow:output";
+    public const string EditNodeActionId = "workflow-node:edit";
+    public const string RemoveNodeActionId = "workflow-node:remove";
+    public const string AddDecisionRouteActionId = "workflow-decision:add-route";
+
+    private const string DecisionRoutesActionId = "workflow-decision:routes";
 
     private static readonly IReadOnlyDictionary<WorkflowNodeKind, string> NodeIcons = new Dictionary<WorkflowNodeKind, string>
     {
@@ -288,8 +293,17 @@ internal static class WorkflowCanvasDefinitionMapper
             .ToDictionary(
                 group => group.Key.Value,
                 group => $"{group.Count()} route(s)");
+        var decisionNodeIds = document.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.Triage)
+            .Select(node => node.Id.Value)
+            .ToHashSet(StringComparer.Ordinal);
         foreach (var node in nodes)
         {
+            if (decisionNodeIds.Contains(node.Id))
+            {
+                AddDecisionContextActions(node);
+            }
+
             if (!decisionSummariesBySource.TryGetValue(node.Id, out var summary))
             {
                 continue;
@@ -807,7 +821,7 @@ internal static class WorkflowCanvasDefinitionMapper
             [
                 new CanvasWorkbenchAction
                 {
-                    ActionId = "workflow-node:edit",
+                    ActionId = EditNodeActionId,
                     Label = "Edit node",
                     MenuLabel = "Edit",
                     Icon = "edit",
@@ -815,7 +829,7 @@ internal static class WorkflowCanvasDefinitionMapper
                 },
                 new CanvasWorkbenchAction
                 {
-                    ActionId = "workflow-node:remove",
+                    ActionId = RemoveNodeActionId,
                     Label = "Remove node",
                     MenuLabel = "Remove",
                     Icon = "delete",
@@ -825,6 +839,37 @@ internal static class WorkflowCanvasDefinitionMapper
             InputPorts = node.Kind == WorkflowNodeKind.Start ? [] : [BuildInputPort(node)],
             OutputPorts = node.Kind == WorkflowNodeKind.End ? [] : [BuildOutputPort(node)]
         };
+    }
+
+    private static void AddDecisionContextActions(CanvasWorkbenchNode node)
+    {
+        if (node.ContextActions.Any(action => string.Equals(action.ActionId, DecisionRoutesActionId, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        node.ContextActions.Insert(Math.Min(1, node.ContextActions.Count), new CanvasWorkbenchAction
+        {
+            ActionId = DecisionRoutesActionId,
+            Label = "Routes",
+            MenuLabel = "Routes",
+            Description = "Add or edit decision outputs.",
+            Icon = "alt_route",
+            Tone = "accent",
+            SubmenuLayout = "hive",
+            Children =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = AddDecisionRouteActionId,
+                    Label = "Add route",
+                    MenuLabel = "Add route",
+                    Description = "Add another decision output route.",
+                    Icon = "add",
+                    Tone = "success"
+                }
+            ]
+        });
     }
 
     private static List<CanvasWorkbenchChip> BuildNodeChips(

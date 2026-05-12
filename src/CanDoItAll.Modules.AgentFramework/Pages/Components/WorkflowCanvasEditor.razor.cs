@@ -71,6 +71,18 @@ public partial class WorkflowCanvasEditor
     private string edgeRouteExpectedValue = "approved";
     private bool edgeRouteCaseSensitive;
     private int? edgeRouteFanOutTargetIndex;
+    private string? decisionRouteEditorNodeId;
+    private WorkflowEdgeId? decisionRouteEditingEdgeId;
+    private string decisionRouteTargetNodeId = string.Empty;
+    private WorkflowRouteKind decisionRouteKind = WorkflowRouteKind.SwitchCase;
+    private string decisionRouteLabel = string.Empty;
+    private string decisionRouteJsonPath = "$.route";
+    private WorkflowRouteOperator decisionRouteOperator = WorkflowRouteOperator.Equals;
+    private WorkflowRouteValueKind decisionRouteValueKind = WorkflowRouteValueKind.String;
+    private string decisionRouteExpectedValue = "case";
+    private bool decisionRouteCaseSensitive;
+    private int? decisionRouteFanOutTargetIndex;
+    private string decisionRouteError = string.Empty;
     private string newComponentProviderProfileId = string.Empty;
     private string newComponentModel = string.Empty;
     private string workflowToolboxSearchText = string.Empty;
@@ -425,13 +437,26 @@ public partial class WorkflowCanvasEditor
     private Task RemoveSelectedNodeAsync()
     {
         var selected = SelectedNode;
-        if (selected is null || selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)
+        return selected is null
+            ? Task.CompletedTask
+            : RemoveNodeAsync(selected);
+    }
+
+    private Task RemoveNodeAsync(WorkflowCanvasNodeDraft node)
+    {
+        if (node.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)
         {
             return Task.CompletedTask;
         }
 
-        document.Nodes.Remove(selected);
-        document.Edges.RemoveAll(edge => edge.SourceNodeId == selected.Id || edge.TargetNodeId == selected.Id);
+        document.Nodes.Remove(node);
+        document.Edges.RemoveAll(edge => edge.SourceNodeId == node.Id || edge.TargetNodeId == node.Id);
+        if (decisionRouteEditorNodeId == node.Id.Value)
+        {
+            ResetDecisionRouteEditor();
+        }
+
+        isNodeDetailsDialogOpen = isNodeDetailsDialogOpen && SelectedNode is not null && SelectedNode != node;
         SelectNode(document.StartNodeId.Value);
         SyncEdgeDefaults();
         return Task.CompletedTask;
@@ -617,6 +642,36 @@ public partial class WorkflowCanvasEditor
         node.Name = request.Title;
         node.Instructions = request.Notes;
         return Task.CompletedTask;
+    }
+
+    private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NodeId))
+        {
+            return;
+        }
+
+        var node = document.Nodes.FirstOrDefault(item => item.Id.Value == request.NodeId);
+        if (node is null)
+        {
+            return;
+        }
+
+        SelectNode(node.Id.Value);
+        switch (request.ActionId)
+        {
+            case WorkflowCanvasDefinitionMapper.EditNodeActionId:
+                ResetDecisionRouteEditor();
+                isNodeDetailsDialogOpen = true;
+                break;
+            case WorkflowCanvasDefinitionMapper.AddDecisionRouteActionId when IsDecisionNode(node):
+                isNodeDetailsDialogOpen = true;
+                BeginDecisionRouteEdit(node, routeEdge: null);
+                break;
+            case WorkflowCanvasDefinitionMapper.RemoveNodeActionId:
+                await RemoveNodeAsync(node);
+                break;
+        }
     }
 
     private void HandleNameChanged(ChangeEventArgs args)
@@ -2054,6 +2109,16 @@ public partial class WorkflowCanvasEditor
         SyncEdgeDefaults();
     }
 
+    private static bool IsDecisionNode(WorkflowCanvasNodeDraft node)
+        => node.Kind == WorkflowNodeKind.Triage;
+
+    private IReadOnlyList<WorkflowCanvasEdgeDraft> GetDecisionRouteEdges(WorkflowCanvasNodeDraft node)
+        => document.Edges
+            .Where(edge => edge.SourceNodeId == node.Id)
+            .OrderBy(edge => edge.Routing.Kind == WorkflowRouteKind.SwitchDefault ? 1 : 0)
+            .ThenBy(edge => edge.Id.Value, StringComparer.Ordinal)
+            .ToArray();
+
     private void ApplyRouteToEditor(WorkflowEdgeRouting routing)
     {
         edgeRouteKind = routing.Kind;
@@ -2066,15 +2131,340 @@ public partial class WorkflowCanvasEditor
         edgeRouteFanOutTargetIndex = routing.FanOutTargetIndex;
     }
 
-    private WorkflowEdgeRouting BuildEdgeRoutingFromEditor()
+    private Task StartAddDecisionRouteAsync(WorkflowCanvasNodeDraft node)
     {
-        var label = edgeRouteLabel.Trim();
-        var jsonPath = edgeRouteJsonPath.Trim();
-        var expectedValueJson = ShowsExpectedValue(edgeRouteKind, edgeRouteOperator)
-            ? NormalizeExpectedValueJson(edgeRouteExpectedValue, edgeRouteValueKind)
+        BeginDecisionRouteEdit(node, routeEdge: null);
+        return Task.CompletedTask;
+    }
+
+    private Task StartEditDecisionRouteAsync(
+        WorkflowCanvasNodeDraft node,
+        WorkflowCanvasEdgeDraft routeEdge)
+    {
+        BeginDecisionRouteEdit(node, routeEdge);
+        return Task.CompletedTask;
+    }
+
+    private Task CancelDecisionRouteEditAsync()
+    {
+        ResetDecisionRouteEditor();
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveDecisionRouteAsync(
+        WorkflowCanvasNodeDraft node,
+        WorkflowCanvasEdgeDraft routeEdge)
+    {
+        if (routeEdge.SourceNodeId != node.Id)
+        {
+            return Task.CompletedTask;
+        }
+
+        document.Edges.Remove(routeEdge);
+        if (decisionRouteEditingEdgeId == routeEdge.Id)
+        {
+            ResetDecisionRouteEditor();
+        }
+
+        SyncEdgeDefaults();
+        return Task.CompletedTask;
+    }
+
+    private Task SaveDecisionRouteAsync(WorkflowCanvasNodeDraft node)
+    {
+        decisionRouteError = string.Empty;
+        if (!IsDecisionNode(node) ||
+            !string.Equals(decisionRouteEditorNodeId, node.Id.Value, StringComparison.Ordinal))
+        {
+            decisionRouteError = "Open a decision route editor before saving.";
+            return Task.CompletedTask;
+        }
+
+        var routing = BuildDecisionRouteFromEditor();
+        if (!TryValidateEdgeRouting(routing, out var routeError))
+        {
+            decisionRouteError = routeError;
+            return Task.CompletedTask;
+        }
+
+        var target = ResolveDecisionRouteTargetNode(node, routing);
+        if (target is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (document.Edges.Any(edge =>
+                edge.SourceNodeId == node.Id &&
+                edge.TargetNodeId == target.Id &&
+                edge.Id != decisionRouteEditingEdgeId))
+        {
+            decisionRouteError = "That decision route already points to the selected output.";
+            return Task.CompletedTask;
+        }
+
+        var edgeKind = ResolveEdgeKindForRoute(routing.Kind);
+        if (decisionRouteEditingEdgeId is { } edgeId &&
+            document.Edges.FirstOrDefault(edge => edge.Id == edgeId) is { } existing)
+        {
+            existing.SourceNodeId = node.Id;
+            existing.TargetNodeId = target.Id;
+            existing.Kind = edgeKind;
+            existing.ConditionExpression = string.Empty;
+            existing.Routing = routing;
+        }
+        else
+        {
+            document.Edges.Add(new WorkflowCanvasEdgeDraft(
+                CreateEdgeId(node.Id, target.Id),
+                node.Id,
+                target.Id)
+            {
+                Kind = edgeKind,
+                Routing = routing
+            });
+        }
+
+        ResetDecisionRouteEditor();
+        SyncEdgeDefaults();
+        NotificationService.Success("Decision route saved", WorkflowCanvasDefinitionMapper.ResolveRouteLabel(
+            new WorkflowCanvasEdgeDraft(new WorkflowEdgeId("route-preview"), node.Id, target.Id)
+            {
+                Routing = routing
+            }));
+        return Task.CompletedTask;
+    }
+
+    private void BeginDecisionRouteEdit(
+        WorkflowCanvasNodeDraft node,
+        WorkflowCanvasEdgeDraft? routeEdge)
+    {
+        decisionRouteEditorNodeId = node.Id.Value;
+        decisionRouteEditingEdgeId = routeEdge?.Id;
+        decisionRouteError = string.Empty;
+
+        if (routeEdge is not null)
+        {
+            decisionRouteTargetNodeId = routeEdge.TargetNodeId.Value;
+            ApplyRouteToDecisionEditor(routeEdge.Routing);
+            return;
+        }
+
+        var outgoingRoutes = GetDecisionRouteEdges(node);
+        var routeKind = InferDecisionRouteKind(outgoingRoutes);
+        var routeNumber = outgoingRoutes.Count + 1;
+        decisionRouteTargetNodeId = string.Empty;
+        decisionRouteKind = routeKind;
+        decisionRouteLabel = ResolveDefaultDecisionRouteLabel(routeKind, routeNumber);
+        decisionRouteJsonPath = ResolveDefaultDecisionRouteJsonPath(routeKind, outgoingRoutes);
+        decisionRouteOperator = routeKind == WorkflowRouteKind.FanOutSelector
+            ? WorkflowRouteOperator.Contains
+            : WorkflowRouteOperator.Equals;
+        decisionRouteValueKind = WorkflowRouteValueKind.String;
+        decisionRouteExpectedValue = routeKind == WorkflowRouteKind.FanOutSelector
+            ? $"target-{routeNumber}"
+            : $"case-{routeNumber}";
+        decisionRouteCaseSensitive = false;
+        decisionRouteFanOutTargetIndex = routeKind == WorkflowRouteKind.FanOutSelector
+            ? outgoingRoutes.Count
+            : null;
+    }
+
+    private void ResetDecisionRouteEditor()
+    {
+        decisionRouteEditorNodeId = null;
+        decisionRouteEditingEdgeId = null;
+        decisionRouteTargetNodeId = string.Empty;
+        decisionRouteKind = WorkflowRouteKind.SwitchCase;
+        decisionRouteLabel = string.Empty;
+        decisionRouteJsonPath = "$.route";
+        decisionRouteOperator = WorkflowRouteOperator.Equals;
+        decisionRouteValueKind = WorkflowRouteValueKind.String;
+        decisionRouteExpectedValue = "case";
+        decisionRouteCaseSensitive = false;
+        decisionRouteFanOutTargetIndex = null;
+        decisionRouteError = string.Empty;
+    }
+
+    private WorkflowCanvasNodeDraft? ResolveDecisionRouteTargetNode(
+        WorkflowCanvasNodeDraft sourceNode,
+        WorkflowEdgeRouting routing)
+    {
+        if (string.IsNullOrWhiteSpace(decisionRouteTargetNodeId))
+        {
+            return CreateDecisionRouteTargetNode(sourceNode, routing);
+        }
+
+        var targetId = new WorkflowNodeId(decisionRouteTargetNodeId.Trim());
+        var target = document.Nodes.FirstOrDefault(node => node.Id == targetId);
+        if (target is null)
+        {
+            decisionRouteError = "Choose an existing output node or create a new branch output.";
+            return null;
+        }
+
+        if (target.Id == sourceNode.Id)
+        {
+            decisionRouteError = "A decision route cannot target its own decision node.";
+            return null;
+        }
+
+        return target;
+    }
+
+    private WorkflowCanvasNodeDraft CreateDecisionRouteTargetNode(
+        WorkflowCanvasNodeDraft sourceNode,
+        WorkflowEdgeRouting routing)
+    {
+        var routeCount = GetDecisionRouteEdges(sourceNode).Count;
+        var target = WorkflowCanvasDefinitionMapper.CreateNode(
+            WorkflowNodeKind.StrictLogic,
+            document.Nodes,
+            componentOptions,
+            sourceNode.CanvasX + 320,
+            sourceNode.CanvasY + (Math.Max(routeCount, 0) * 120));
+        var targetName = ResolveDecisionRouteTargetName(routing, routeCount + 1);
+        target.Name = targetName;
+        target.Instructions = $"Handle {targetName} routed from {sourceNode.Name}.";
+        target.InputShapeKind = WorkflowValueShapeKind.Json;
+        target.ResultShapeKind = WorkflowValueShapeKind.Json;
+        document.Nodes.Add(target);
+
+        var end = document.Nodes.FirstOrDefault(node => node.Kind == WorkflowNodeKind.End);
+        if (end is not null)
+        {
+            document.Edges.Add(new WorkflowCanvasEdgeDraft(
+                CreateEdgeId(target.Id, end.Id),
+                target.Id,
+                end.Id));
+        }
+
+        return target;
+    }
+
+    private static WorkflowRouteKind InferDecisionRouteKind(IReadOnlyList<WorkflowCanvasEdgeDraft> outgoingRoutes)
+    {
+        if (outgoingRoutes.Any(edge => edge.Routing.Kind == WorkflowRouteKind.FanOutSelector))
+        {
+            return WorkflowRouteKind.FanOutSelector;
+        }
+
+        if (outgoingRoutes.Any(edge => edge.Routing.Kind is WorkflowRouteKind.SwitchCase or WorkflowRouteKind.SwitchDefault))
+        {
+            return WorkflowRouteKind.SwitchCase;
+        }
+
+        return WorkflowRouteKind.Predicate;
+    }
+
+    private static string ResolveDefaultDecisionRouteLabel(
+        WorkflowRouteKind routeKind,
+        int routeNumber)
+        => routeKind switch
+        {
+            WorkflowRouteKind.FanOutSelector => $"Fan-out {routeNumber}",
+            WorkflowRouteKind.SwitchCase => $"Case {routeNumber}",
+            WorkflowRouteKind.SwitchDefault => "DEFAULT",
+            _ => $"IF {routeNumber}"
+        };
+
+    private static string ResolveDefaultDecisionRouteJsonPath(
+        WorkflowRouteKind routeKind,
+        IReadOnlyList<WorkflowCanvasEdgeDraft> outgoingRoutes)
+    {
+        var existingPath = outgoingRoutes
+            .Select(edge => edge.Routing.JsonPath)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+        if (!string.IsNullOrWhiteSpace(existingPath))
+        {
+            return existingPath;
+        }
+
+        return routeKind switch
+        {
+            WorkflowRouteKind.FanOutSelector => "$.targets",
+            WorkflowRouteKind.SwitchCase => "$.route",
+            _ => "$.status"
+        };
+    }
+
+    private static string ResolveDecisionRouteTargetName(
+        WorkflowEdgeRouting routing,
+        int routeNumber)
+    {
+        if (!string.IsNullOrWhiteSpace(routing.Label))
+        {
+            return ToBranchTargetName(routing.Label);
+        }
+
+        var expectedValue = FormatExpectedValueForEditor(routing);
+        if (!string.IsNullOrWhiteSpace(expectedValue))
+        {
+            return ToBranchTargetName(expectedValue);
+        }
+
+        return routing.Kind switch
+        {
+            WorkflowRouteKind.SwitchDefault => "Unhandled",
+            WorkflowRouteKind.FanOutSelector => $"Fan Out {routeNumber}",
+            _ => $"Branch {routeNumber}"
+        };
+    }
+
+    private void ApplyRouteToDecisionEditor(WorkflowEdgeRouting routing)
+    {
+        decisionRouteKind = routing.Kind == WorkflowRouteKind.Always
+            ? WorkflowRouteKind.Predicate
+            : routing.Kind;
+        decisionRouteLabel = routing.Label;
+        decisionRouteJsonPath = string.IsNullOrWhiteSpace(routing.JsonPath)
+            ? ResolveDefaultDecisionRouteJsonPath(decisionRouteKind, [])
+            : routing.JsonPath;
+        decisionRouteOperator = routing.Operator;
+        decisionRouteValueKind = routing.ExpectedValueKind;
+        decisionRouteExpectedValue = FormatExpectedValueForEditor(routing);
+        decisionRouteCaseSensitive = routing.CaseSensitive;
+        decisionRouteFanOutTargetIndex = routing.FanOutTargetIndex;
+    }
+
+    private WorkflowEdgeRouting BuildEdgeRoutingFromEditor()
+        => BuildRouteFromFields(
+            edgeRouteKind,
+            edgeRouteLabel,
+            edgeRouteJsonPath,
+            edgeRouteOperator,
+            edgeRouteValueKind,
+            edgeRouteExpectedValue,
+            edgeRouteFanOutTargetIndex,
+            edgeRouteCaseSensitive);
+
+    private WorkflowEdgeRouting BuildDecisionRouteFromEditor()
+        => BuildRouteFromFields(
+            decisionRouteKind,
+            decisionRouteLabel,
+            decisionRouteJsonPath,
+            decisionRouteOperator,
+            decisionRouteValueKind,
+            decisionRouteExpectedValue,
+            decisionRouteFanOutTargetIndex,
+            decisionRouteCaseSensitive);
+
+    private static WorkflowEdgeRouting BuildRouteFromFields(
+        WorkflowRouteKind routeKind,
+        string routeLabel,
+        string routeJsonPath,
+        WorkflowRouteOperator routeOperator,
+        WorkflowRouteValueKind routeValueKind,
+        string routeExpectedValue,
+        int? routeFanOutTargetIndex,
+        bool routeCaseSensitive)
+    {
+        var label = routeLabel.Trim();
+        var jsonPath = routeJsonPath.Trim();
+        var expectedValueJson = ShowsExpectedValue(routeKind, routeOperator)
+            ? NormalizeExpectedValueJson(routeExpectedValue, routeValueKind)
             : string.Empty;
 
-        return edgeRouteKind switch
+        return routeKind switch
         {
             WorkflowRouteKind.Always => WorkflowEdgeRouting.Always with
             {
@@ -2083,25 +2473,25 @@ public partial class WorkflowCanvasEditor
             WorkflowRouteKind.SwitchCase => WorkflowEdgeRouting.SwitchCase(
                 jsonPath,
                 expectedValueJson,
-                edgeRouteValueKind,
+                routeValueKind,
                 label,
-                edgeRouteCaseSensitive),
+                routeCaseSensitive),
             WorkflowRouteKind.SwitchDefault => WorkflowEdgeRouting.SwitchDefault(label),
             WorkflowRouteKind.FanOutSelector => WorkflowEdgeRouting.FanOutSelector(
                 jsonPath,
-                edgeRouteOperator,
+                routeOperator,
                 expectedValueJson,
-                edgeRouteValueKind,
-                edgeRouteFanOutTargetIndex,
+                routeValueKind,
+                routeFanOutTargetIndex,
                 label,
-                edgeRouteCaseSensitive),
+                routeCaseSensitive),
             _ => WorkflowEdgeRouting.Predicate(
                 jsonPath,
-                edgeRouteOperator,
+                routeOperator,
                 expectedValueJson,
-                edgeRouteValueKind,
+                routeValueKind,
                 label,
-                edgeRouteCaseSensitive)
+                routeCaseSensitive)
         };
     }
 
@@ -2173,6 +2563,79 @@ public partial class WorkflowCanvasEditor
             ? targetIndex
             : null;
     }
+
+    private void HandleDecisionRouteKindChanged(ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<WorkflowRouteKind>(args.Value?.ToString(), out var routeKind) ||
+            routeKind == WorkflowRouteKind.Always)
+        {
+            return;
+        }
+
+        decisionRouteKind = routeKind;
+        if (routeKind == WorkflowRouteKind.SwitchDefault)
+        {
+            decisionRouteJsonPath = string.Empty;
+            decisionRouteExpectedValue = string.Empty;
+            decisionRouteFanOutTargetIndex = null;
+            decisionRouteOperator = WorkflowRouteOperator.Exists;
+            decisionRouteValueKind = WorkflowRouteValueKind.Json;
+            decisionRouteLabel = string.IsNullOrWhiteSpace(decisionRouteLabel)
+                ? "DEFAULT"
+                : decisionRouteLabel;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(decisionRouteJsonPath))
+        {
+            decisionRouteJsonPath = routeKind == WorkflowRouteKind.FanOutSelector
+                ? "$.targets"
+                : "$.route";
+        }
+
+        if (routeKind == WorkflowRouteKind.FanOutSelector)
+        {
+            decisionRouteOperator = WorkflowRouteOperator.Contains;
+            decisionRouteFanOutTargetIndex ??= CountCurrentDecisionRoutes();
+            if (string.IsNullOrWhiteSpace(decisionRouteExpectedValue))
+            {
+                decisionRouteValueKind = WorkflowRouteValueKind.String;
+                decisionRouteExpectedValue = $"target-{decisionRouteFanOutTargetIndex.Value + 1}";
+            }
+        }
+        else
+        {
+            decisionRouteFanOutTargetIndex = null;
+            if (!WorkflowRoutingValidation.RequiresExpectedValue(decisionRouteOperator))
+            {
+                decisionRouteOperator = WorkflowRouteOperator.Equals;
+            }
+
+            if (string.IsNullOrWhiteSpace(decisionRouteExpectedValue))
+            {
+                decisionRouteValueKind = WorkflowRouteValueKind.String;
+                decisionRouteExpectedValue = $"case-{CountCurrentDecisionRoutes() + 1}";
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(decisionRouteLabel))
+        {
+            decisionRouteLabel = ResolveDefaultDecisionRouteLabel(routeKind, CountCurrentDecisionRoutes() + 1);
+        }
+    }
+
+    private void HandleDecisionRouteFanOutTargetIndexChanged(ChangeEventArgs args)
+    {
+        var value = ReadString(args);
+        decisionRouteFanOutTargetIndex = int.TryParse(value, out var targetIndex)
+            ? targetIndex
+            : null;
+    }
+
+    private int CountCurrentDecisionRoutes()
+        => string.IsNullOrWhiteSpace(decisionRouteEditorNodeId)
+            ? 0
+            : document.Edges.Count(edge => edge.SourceNodeId.Value == decisionRouteEditorNodeId);
 
     private static bool IsPredicateRoute(WorkflowRouteKind routeKind)
         => routeKind is WorkflowRouteKind.Predicate or WorkflowRouteKind.SwitchCase or WorkflowRouteKind.FanOutSelector;

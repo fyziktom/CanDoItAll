@@ -37,6 +37,7 @@
                              Surface="CanvasSurface"
                              SelectionChanged="HandleCanvasSelectionChangedAsync"
                              NodesMoved="HandleCanvasNodesMovedAsync"
+                             ContextActionRequested="HandleCanvasContextActionAsync"
                              CreateActionInvoked="HandleCanvasCreateActionAsync"
                              NodeEdited="HandleCanvasNodeEditedAsync"
                              NodeOpened="HandleCanvasNodeOpenedAsync"
@@ -1223,6 +1224,206 @@
                                       value="@FormatExecutorSettingsJson(modalNode)"
                                       @onchange="args => HandleSelectedExecutorSettingsJsonChanged(modalNode, args)"
                                       data-testid="workflow-canvas-node-modal-settings-json"></textarea>
+                        </section>
+                    }
+
+                    @if (IsDecisionNode(modalNode))
+                    {
+                        var outgoingRoutes = GetDecisionRouteEdges(modalNode).ToArray();
+                        <section class="workflow-canvas-dialog-section workflow-canvas-decision-routes"
+                                 data-testid="workflow-canvas-decision-routes">
+                            <Split Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Decision routes" />
+                                    <h3 class="workflow-canvas-panel-title">@outgoingRoutes.Length route(s)</h3>
+                                </div>
+                                <Button Text="Add route"
+                                        Icon="add"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => StartAddDecisionRouteAsync(modalNode))"
+                                        data-testid="workflow-canvas-decision-add-route" />
+                            </Split>
+
+                            @if (outgoingRoutes.Length == 0)
+                            {
+                                <p class="workflows-muted mt-3">No routes leave this decision yet.</p>
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var routeEdge in outgoingRoutes)
+                                    {
+                                        <div class="workflow-canvas-decision-route-row"
+                                             data-testid="workflow-canvas-decision-route-row">
+                                            <div class="workflow-canvas-edge-row__main">
+                                                <span>@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(routeEdge) -> @ResolveNodeName(routeEdge.TargetNodeId)</span>
+                                                <small>@WorkflowCanvasDefinitionMapper.BuildRouteSummary(routeEdge)</small>
+                                            </div>
+                                            <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                                <StatusBadge Tone="@WorkflowCanvasDefinitionMapper.ResolveRouteTone(routeEdge)"
+                                                             Text="@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(routeEdge)" />
+                                                <Button Text="Edit"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => StartEditDecisionRouteAsync(modalNode, routeEdge))"
+                                                        data-testid="workflow-canvas-decision-edit-route" />
+                                                <Button Text="Remove"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => RemoveDecisionRouteAsync(modalNode, routeEdge))"
+                                                        data-testid="workflow-canvas-decision-remove-route" />
+                                            </Cluster>
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+
+                            @if (decisionRouteEditorNodeId == modalNode.Id.Value)
+                            {
+                                <div class="workflow-canvas-route-builder workflow-canvas-route-builder--dialog"
+                                     data-testid="workflow-canvas-decision-route-editor">
+                                    @if (decisionRouteEditingEdgeId is not null)
+                                    {
+                                        <p class="workflow-canvas-route-editing">Editing @decisionRouteEditingEdgeId.Value</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="workflow-canvas-route-editing">Adding a new route from @modalNode.Name</p>
+                                    }
+
+                                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                        <label class="workflow-canvas-field">
+                                            <span>Target output</span>
+                                            <select class="cda-input"
+                                                    @bind="decisionRouteTargetNodeId"
+                                                    data-testid="workflow-canvas-decision-route-target">
+                                                <option value="">Create new branch output</option>
+                                                @foreach (var targetNode in document.Nodes.Where(node => node.Id != modalNode.Id && node.Kind != WorkflowNodeKind.Start))
+                                                {
+                                                    <option value="@targetNode.Id.Value">@targetNode.Name</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        <label class="workflow-canvas-field">
+                                            <span>Route mode</span>
+                                            <select class="cda-input"
+                                                    value="@decisionRouteKind"
+                                                    @onchange="HandleDecisionRouteKindChanged"
+                                                    data-testid="workflow-canvas-decision-route-kind">
+                                                @foreach (var kind in Enum.GetValues<WorkflowRouteKind>().Where(kind => kind != WorkflowRouteKind.Always))
+                                                {
+                                                    <option value="@kind">@WorkflowCanvasDefinitionMapper.ResolveRouteModeLabel(kind)</option>
+                                                }
+                                            </select>
+                                        </label>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                        <label class="workflow-canvas-field">
+                                            <span>Route label</span>
+                                            <input class="cda-input"
+                                                   @bind="decisionRouteLabel"
+                                                   data-testid="workflow-canvas-decision-route-label" />
+                                        </label>
+                                        @if (IsPredicateRoute(decisionRouteKind))
+                                        {
+                                            <label class="workflow-canvas-field">
+                                                <span>JSON path</span>
+                                                <input class="cda-input"
+                                                       @bind="decisionRouteJsonPath"
+                                                       placeholder="$.route"
+                                                       data-testid="workflow-canvas-decision-route-json-path" />
+                                            </label>
+                                        }
+                                    </Grid>
+
+                                    @if (IsPredicateRoute(decisionRouteKind))
+                                    {
+                                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                            @if (ShowsOperator(decisionRouteKind))
+                                            {
+                                                <label class="workflow-canvas-field">
+                                                    <span>Operator</span>
+                                                    <select class="cda-input"
+                                                            @bind="decisionRouteOperator"
+                                                            data-testid="workflow-canvas-decision-route-operator">
+                                                        @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
+                                                        {
+                                                            <option value="@routeOperator">@WorkflowRoutingValidation.FormatOperator(routeOperator)</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                            }
+                                            @if (ShowsExpectedValue(decisionRouteKind, decisionRouteOperator))
+                                            {
+                                                <label class="workflow-canvas-field">
+                                                    <span>Value kind</span>
+                                                    <select class="cda-input"
+                                                            @bind="decisionRouteValueKind"
+                                                            data-testid="workflow-canvas-decision-route-value-kind">
+                                                        @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
+                                                        {
+                                                            <option value="@valueKind">@valueKind</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                            }
+                                        </Grid>
+                                    }
+
+                                    @if (ShowsExpectedValue(decisionRouteKind, decisionRouteOperator))
+                                    {
+                                        <label class="workflow-canvas-field">
+                                            <span>Expected value</span>
+                                            <input class="cda-input"
+                                                   @bind="decisionRouteExpectedValue"
+                                                   data-testid="workflow-canvas-decision-route-expected-value" />
+                                        </label>
+                                    }
+
+                                    @if (decisionRouteKind == WorkflowRouteKind.FanOutSelector)
+                                    {
+                                        <label class="workflow-canvas-field">
+                                            <span>Fan-out target index</span>
+                                            <input class="cda-input"
+                                                   type="number"
+                                                   min="0"
+                                                   value="@(decisionRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
+                                                   @onchange="HandleDecisionRouteFanOutTargetIndexChanged"
+                                                   data-testid="workflow-canvas-decision-route-fanout-index" />
+                                        </label>
+                                    }
+
+                                    @if (ShowsCaseSensitivity(decisionRouteKind, decisionRouteOperator))
+                                    {
+                                        <label class="workflow-canvas-check-field">
+                                            <input type="checkbox"
+                                                   @bind="decisionRouteCaseSensitive"
+                                                   data-testid="workflow-canvas-decision-route-case-sensitive" />
+                                            <span>Case-sensitive comparison</span>
+                                        </label>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(decisionRouteError))
+                                    {
+                                        <p class="workflow-canvas-error">@decisionRouteError</p>
+                                    }
+
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap" Class="mt-3">
+                                        <Button Text="Save route"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => SaveDecisionRouteAsync(modalNode))"
+                                                data-testid="workflow-canvas-decision-save-route" />
+                                        <Button Text="Cancel"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="CancelDecisionRouteEditAsync"
+                                                data-testid="workflow-canvas-decision-cancel-route" />
+                                    </Cluster>
+                                </div>
+                            }
                         </section>
                     }
 

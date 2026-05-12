@@ -109,7 +109,7 @@
 }
 
 .workflow-canvas-node-dialog__main {
-    grid-template-rows: auto auto minmax(14rem, 1fr) auto;
+    grid-auto-rows: min-content;
     overflow: auto;
     padding-right: 0.25rem;
 }
@@ -197,6 +197,26 @@
     font-weight: 800;
 }
 
+.workflow-canvas-route-builder--dialog {
+    margin-top: 0.9rem;
+}
+
+.workflow-canvas-decision-routes {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.workflow-canvas-decision-route-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--workflow-canvas-panel-border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #fff;
+}
+
 .workflow-canvas-legacy-edge-fields {
     opacity: 0.72;
 }
@@ -265,6 +285,7 @@
 
     .workflow-canvas-component,
     .workflow-canvas-edge-row,
+    .workflow-canvas-decision-route-row,
     .workflow-canvas-test-result {
         align-items: flex-start;
         flex-direction: column;

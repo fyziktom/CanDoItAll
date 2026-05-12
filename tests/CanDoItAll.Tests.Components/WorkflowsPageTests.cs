@@ -192,6 +192,76 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_decision_context_action_adds_and_edits_routes_in_node_dialog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "workflow-decision:create:Switch",
+            SourceNodeId: "start",
+            X: 420,
+            Y: 220,
+            ParentNodeId: "start",
+            Title: "SWITCH",
+            Subtitle: string.Empty,
+            Notes: "Route by workflow category.",
+            PlacementKind: "child",
+            CreateMode: "dialog",
+            ObjectSubtype: "Switch",
+            UploadedFile: null,
+            InputValues:
+            [
+                new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.route" },
+                new CanvasWorkbenchInputValue { Key = "caseValues", Value = "alpha, beta" },
+                new CanvasWorkbenchInputValue { Key = "defaultLabel", Value = "DEFAULT" }
+            ]);
+
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnCreateAction(SerializationPersistencePack.Serialize(request)));
+
+        cut.WaitForAssertion(() =>
+        {
+            var switchNode = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Title == "SWITCH");
+            Assert.Contains(switchNode.ContextActions, action =>
+                action.Children.Any(child => child.ActionId == "workflow-decision:add-route"));
+        });
+
+        var nodeId = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Title == "SWITCH").Id;
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, "workflow-decision:add-route", 0, 0));
+
+        cut.WaitForElement("[data-testid='workflow-canvas-decision-route-editor']");
+        cut.Find("[data-testid='workflow-canvas-decision-route-label']").Change("Case Gamma");
+        cut.Find("[data-testid='workflow-canvas-decision-route-expected-value']").Change("gamma");
+        cut.Find("[data-testid='workflow-canvas-decision-save-route']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Contains(surface.Links, link => link.Label == "Case Gamma");
+            Assert.Contains(surface.Nodes, node => node.Title == "Case Gamma");
+            Assert.Contains("4 route(s)", cut.Markup);
+        });
+
+        cut.FindAll("[data-testid='workflow-canvas-decision-edit-route']").First().Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-decision-route-editor']");
+        cut.Find("[data-testid='workflow-canvas-decision-route-label']").Change("Case Alpha Updated");
+        cut.Find("[data-testid='workflow-canvas-decision-save-route']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(cut.FindComponent<CanvasWorkbench>().Instance.Surface.Links, link => link.Label == "Case Alpha Updated");
+            Assert.Contains("Case Alpha Updated", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_example_seed_creates_production_examples_when_enabled()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-{Guid.NewGuid():N}");

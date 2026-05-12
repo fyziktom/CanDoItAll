@@ -23,6 +23,7 @@
 - PostgreSQL reset initially exposed local-auth/config sensitivity. Repair: added `tools/dev/Reset-WorkflowRoutingPostgres.ps1` with explicit database/user defaults and a refusal guard for unsafe database names.
 - A PowerShell string interpolation issue in the reset path was corrected before successful live reset.
 - Browser validation showed setup dialogs needed more concrete fields for executors, not only decisions. Repair: added renderer-keyed setup metadata and block-specific setup fields for HTTP, storage, spreadsheets, project structure, image, and execution policy.
+- Follow-up inspection showed the decision-node modal listed existing routes but could not add/edit route rules from the maximized canvas, and the node context menu did not expose a route command. Repair: added a renderer-backed route editor section to the node details dialog and a nested `Routes -> Add route` decision context action wired through `ContextActionRequested`.
 - The first model-comparison prompt produced 18/20 for both models because negative scenario names caused the models to answer the prose outcome instead of the predicate boolean. Repair: tightened the prompt contract and seeded LLM instructions so route fields are literal predicate data. Final comparison passed 20/20 for both models.
 - Component seed validation originally risked SQLite lock churn when asserting through a full render path. Repair: moved seed inventory proof to the catalog/service level while keeping the workflow page tests focused on the UI surface.
 
@@ -32,6 +33,7 @@
 - Workflow example inventory: `reviews/evidence/subbundle-08/workflow-example-inventory.txt` lists 15 seeded examples, including document summary, email task/reply, XLSX read/write, internet research capture, and additional production scenarios.
 - Model comparison: `reviews/evidence/subbundle-09/model-comparison-20-scenarios.md` shows `gpt-5-mini-2025-08-07` correct 20/20, `gptoss20b64k:latest` correct 20/20, and 20/20 agreement. First-run mismatch proof is preserved in `reviews/evidence/subbundle-09/model-comparison-20-scenarios-first-run.md`.
 - Screenshots: `reviews/evidence/subbundle-07/decision-diamond-maximized.png`, `decision-context-submenu.png`, `decision-setup-dialog-maximized.png`, and `http-executor-setup-dialog-maximized.png`.
+- Follow-up decision route screenshots: `reviews/evidence/follow-up/workflow-decision-context-menu-add-route.png`, `workflow-decision-route-editor-maximized.png`, and `workflow-decision-route-added-maximized.png`.
 
 ## Browser Validation Analytics
 
@@ -41,6 +43,7 @@
 | 05 Routing test proof browser proof and ARTL handoff | `/agents/workflows` editor tab | Desktop maximized canvas, 1440x1000 | Confirmed decision node shows `2 route(s)`, branch-side split cues, and visible `Persist` and `Default` route-label pills. | `reviews/evidence/subbundle-05/workflow-routing-e2e-desktop.png` | Passed |
 | 07 Decision node canvas UX and setup renderers | `/agents/workflows` editor tab | Desktop maximized canvas, 1920x1080 | Confirmed SWITCH diamond decision, side anchors, branch labels, nested Decisions submenu, decision setup dialog, and HTTP executor setup dialog. | `reviews/evidence/subbundle-07/*.png` | Passed |
 | 08 Production examples and tuning | `/agents/workflows` editor tab | Desktop 1920x1080 plus PostgreSQL query | Confirmed seeded dashboard counts: 15 definitions, 15 LLM components, default backend DurableTask, and valid selected seeded workflow. | `reviews/evidence/follow-up/workflows-editor-decision-diamond.png`, `reviews/evidence/subbundle-08/workflow-example-inventory.txt` | Passed |
+| 07 Follow-up route editing | `/agents/workflows` editor tab | Desktop maximized canvas, 1920x1080 | Confirmed decision node right-click menu exposes nested `Routes -> Add route`; opened the maximized node dialog, added a new route, and verified route count increased from 4 to 5. | `reviews/evidence/follow-up/workflow-decision-context-menu-add-route.png`, `workflow-decision-route-editor-maximized.png`, `workflow-decision-route-added-maximized.png` | Passed |
 
 ## Analytics Review
 
@@ -51,7 +54,7 @@
 - The 20-scenario routing matrix passed inside `WorkflowExecutorTests.BuiltInRoutingScenarioMatrixCoversRealWorldExamples`.
 - Follow-up web build passed: `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj -m:1 --verbosity minimal` with 0 warnings and 0 errors.
 - Follow-up targeted unit tests passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowExecutorTests|FullyQualifiedName~WorkflowCatalogTests" --no-build --verbosity minimal -m:1` with 25 passed.
-- Follow-up targeted component tests passed: `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --no-build --verbosity minimal -m:1` with 7 passed.
+- Follow-up targeted component tests passed: `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --no-build --verbosity minimal -m:1` with 8 passed.
 - Follow-up targeted integration tests passed: `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkflowApiIntegrationTests|FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests" --verbosity minimal -m:1` with 11 passed.
 - Follow-up model comparison passed after prompt repair: `gpt-5-mini-2025-08-07` correct 20/20, local Ollama `gptoss20b64k:latest` correct 20/20, model agreement 20/20.
 - Completed-stage bundle validator passed: `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\codex\bundles\workflow-basic-routing-maf --profile initiative --stage completed`.
