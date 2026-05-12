@@ -30,7 +30,7 @@ public sealed class WorkflowExampleCatalogSeedService(
     IOptions<WorkflowExampleCatalogSeedOptions> options,
     ILogger<WorkflowExampleCatalogSeedService> logger)
 {
-    private const string SeedVersion = "2026-05-project-structure-workflow-scenarios-v1";
+    private const string SeedVersion = "2026-05-project-structure-workflow-scenarios-v2";
     private const string SeedMarker = "Managed workflow example seed";
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private static readonly WorkflowValueShape JsonShape = new(
@@ -387,27 +387,57 @@ public sealed class WorkflowExampleCatalogSeedService(
             new(
                 "Mouser Order Reconciliation",
                 "Compares the supplied Mouser order workbook and receipt PDF from a project-structure workflow node and stores the reconciliation summary under that workflow node.",
-                "Compare Cart_Mar30_1059AM.xls with MOUSER_Receipt_89566550.pdf when those paths are present in sources. Set route to matched or mismatch. Include item, quantity, total, and source-path evidence in summary and actions.",
+                """
+                Compare the loaded `Cart_Mar30_1059AM.xls` workbook rows with `MOUSER_Receipt_89566550.pdf`.
+                Extract ordered quantity, shipped quantity, pending quantity, unit price, extended price, invoice number, order date, tracking numbers, and merchandise/freight/tax totals when present.
+                Set route to `matched` only when the workbook and receipt agree on line items and totals; otherwise set `mismatch`.
+                The markdown must contain a reconciliation table with Mouser part number, customer/manufacturer part number when visible, quantity, unit price, extended price, and source file evidence.
+                Include any unreadable or missing source as a gap; do not mark matched if a required file was not loaded.
+                """,
                 BuildMouserOrderReconciliationGraph),
             new(
                 "Mouser Purchasing Summary",
                 "Turns a Mouser order folder into a purchasing brief with line-item highlights, open questions, and a result asset under the workflow node.",
-                "Summarize order purpose, notable items, quantities, totals, and purchasing follow-up. Mention both the XLS and PDF source paths when present. Set risk to low, medium, or high from missing or conflicting evidence.",
+                """
+                Build a purchasing brief from all loaded Mouser order sources.
+                Identify invoice/order number, order date, ship date, tracking numbers, destination, line-item highlights, large-cost items, total spend signals, and follow-up questions.
+                Mention both the workbook and receipt source paths when loaded.
+                Set risk to `low` when evidence is complete and internally consistent, `medium` when some values are missing, and `high` when documents conflict or no order document was readable.
+                """,
                 BuildMouserPurchasingSummaryGraph),
             new(
                 "SEAMARK Xray Device Folder Summary",
                 "Summarizes a folder of SEAMARK x-ray device PDFs and stores device/use-case findings under the workflow node.",
-                "Treat the folder path as the primary source. Identify x-ray inspection device families, likely use cases, and documents reviewed. Mention at least two SEAMARK PDF names when present.",
+                """
+                Treat the loaded SEAMARK folder as the primary source. Read every loaded PDF text and produce a real device summary, not a placeholder.
+                Identify device/model families including X-5600, X-6600, X-6600A, product-series context, inspection use cases, tube voltage/current or focal-size evidence, stage size, detector/resolution evidence, operating system, power, weight/dimensions, and source file names.
+                Include quotation evidence when loaded: ZM-x5600 at $35,000, ZM-x6600 at $41,500.00, ZM-x6600A at $66,000, plus the listed marketing price ranges.
+                Critical price mapping: X-5600 is ZM-x5600 and costs $35,000; X-6600 is ZM-x6600 and costs $41,500.00; X-6600A is ZM-x6600A and costs $66,000. Never swap X-6600 and X-6600A prices.
+                If the catalogue PDF has no extractable text, record it as a scanned/unreadable gap while still using the extractable specification and quotation PDFs.
+                Set risk to `medium` when some sources are scanned or pricing needs current validation; set route to `summary`.
+                """,
                 BuildSeamarkFolderSummaryGraph),
             new(
                 "SEAMARK Price List Extraction",
                 "Extracts price-list highlights and uncertainty from the SEAMARK quote and device specification PDFs.",
-                "Focus on X Ray Machine Agent Quotation List2018.pdf and related specification PDFs. Summarize price evidence, model names, assumptions, and gaps. Set needsReview true when price evidence is incomplete.",
+                """
+                Focus on `X Ray Machine Agent Quotation List2018.pdf` and related specification PDFs.
+                Extract price evidence into a table with model, EWX Shenzhen USD price, marketing price range, quantity, and specification evidence from the device PDFs.
+                Required price facts when present: ZM-x5600 $35,000 and USD39900-42000, ZM-x6600 $41,500.00 and USD46000-49000, ZM-x6600A $66,000 and USD73000-78000.
+                Critical price mapping: X-5600 is ZM-x5600 and costs $35,000; X-6600 is ZM-x6600 and costs $41,500.00; X-6600A is ZM-x6600A and costs $66,000. Never swap X-6600 and X-6600A prices.
+                Include quotation date, delivery/payment/service terms, warranty/travel-cost caveat, and validity period.
+                Set needsReview true because the quotation is from 2018 and current prices must be confirmed.
+                """,
                 BuildSeamarkPriceListGraph),
             new(
                 "IoTFactory Financial Plan Review",
                 "Reviews the supplied IoTFactory financial workbook and stores budget risks, assumptions, and follow-up actions under the workflow node.",
-                "Use IoTFactory rozpočet-v1.xlsx as the financial-plan source when present. Summarize budget assumptions, funding or cost risks, validation questions, and concrete next actions.",
+                """
+                Use the loaded `IoTFactory rozpočet-v1.xlsx` workbook as the financial-plan source.
+                Summarize revenue assumptions, module/server unit assumptions, year-by-year budget shape, expense categories, cash/funding risks, and validation questions.
+                Include Czech sheet names or labels such as `Summary Rozpočet`, `Příjmy z modulů`, `Výdaje`, and yearly tabs when loaded.
+                Set risk to high when revenue depends on unvalidated unit-volume growth or missing cost evidence; otherwise medium.
+                """,
                 BuildIotFactoryFinancialPlanGraph),
             new(
                 "Internet Research Capture",
@@ -468,10 +498,15 @@ public sealed class WorkflowExampleCatalogSeedService(
            Contract:
            - Return one JSON object only. Do not wrap it in Markdown.
            - Always include: route, summary, actions, targets, risk, relevant, needsReview, requiresResponse, ready, projectId, nodeId, sourceUrl.
+           - Always include markdown. The markdown field is the user-facing project-structure result asset.
            - Use empty string, false, or [] when a field does not apply.
            - Preserve projectId from top-level projectId or from project.id when either exists. Do not invent ids.
            - Preserve nodeId from top-level nodeId or from runContext.workflowNodeId when either exists. Do not invent ids.
+           - When the input contains project or runContext objects, copy them to the output unchanged so project-structure storage can keep the original execution context.
            - Keep summary under 900 characters and actions as concrete imperative steps.
+           - When the input has sourceDocuments or documents, base the result on those loaded document texts, not on file names alone.
+           - In markdown, include: result summary, evidence table with source file names/paths, concrete findings, open gaps, and recommended next actions.
+           - If a source has extractionStatus pdf-no-extractable-text, say that explicitly and do not pretend the document content was read.
            - Normalize route and target values to lowercase tokens used by the workflow branches.
            - Fields consumed by IF/SWITCH branches must be literal predicate data, not answers to the prose scenario name.
            - Do not invert booleans or route tokens because a label uses negative wording such as "not selected" or "does not need".
@@ -648,13 +683,15 @@ public sealed class WorkflowExampleCatalogSeedService(
         var nodes = new[]
         {
             Start(),
-            Llm(llmId, llmName, componentId, 340, 220),
-            ProjectAsset("store-project-structure-summary", "Store workflow summary", 660, 220, assetTitle),
-            End(980, 220)
+            SourceIngest("ingest-sources", "Load project-structure sources", 330, 220),
+            Llm(llmId, llmName, componentId, 640, 220),
+            ProjectAsset("store-project-structure-summary", "Store workflow summary", 950, 220, assetTitle),
+            End(1260, 220)
         };
         return Graph(
             nodes,
-            Direct("start", llmId),
+            Direct("start", "ingest-sources"),
+            Direct("ingest-sources", llmId),
             Direct(llmId, "store-project-structure-summary"),
             Direct("store-project-structure-summary", "end"));
     }
@@ -958,6 +995,27 @@ public sealed class WorkflowExampleCatalogSeedService(
             },
             "Write the workflow JSON payload to a workspace file.");
 
+    private static WorkflowNode SourceIngest(string id, string name, double x, double y)
+        => Executor(
+            id,
+            name,
+            x,
+            y,
+            WorkflowExecutorIds.SourceIngestion,
+            new WorkflowSourceIngestionExecutorSettings
+            {
+                IncludeAdditionalSources = true,
+                IncludeParentNodePath = true,
+                IncludeSelectedNodePaths = true,
+                IncludeParentSubtreePaths = true,
+                RecursiveFolders = true,
+                AllowAbsoluteInputPaths = true,
+                MaxFiles = 16,
+                MaxCharactersPerFile = 14000,
+                MaxTotalCharacters = 90000
+            },
+            "Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.");
+
     private static WorkflowNode HttpFetch(string id, string name, double x, double y)
         => Executor(
             id,
@@ -1213,7 +1271,9 @@ public sealed class WorkflowExampleCatalogSeedService(
           "properties": {
             "route": { "type": "string" },
             "summary": { "type": "string" },
+            "markdown": { "type": "string" },
             "actions": { "type": "array", "items": { "type": "string" } },
+            "evidence": { "type": "array", "items": { "type": "string" } },
             "targets": { "type": "array", "items": { "type": "string" } },
             "risk": { "type": "string" },
             "relevant": { "type": "boolean" },
@@ -1222,9 +1282,11 @@ public sealed class WorkflowExampleCatalogSeedService(
             "ready": { "type": "boolean" },
             "projectId": { "type": "string" },
             "nodeId": { "type": "string" },
-            "sourceUrl": { "type": "string" }
+            "sourceUrl": { "type": "string" },
+            "project": { "type": "object", "additionalProperties": true },
+            "runContext": { "type": "object", "additionalProperties": true }
           },
-          "required": ["route", "summary", "actions", "targets", "risk", "relevant", "needsReview", "requiresResponse", "ready", "projectId", "nodeId", "sourceUrl"]
+          "required": ["route", "summary", "markdown", "actions", "targets", "risk", "relevant", "needsReview", "requiresResponse", "ready", "projectId", "nodeId", "sourceUrl"]
         }
         """;
 

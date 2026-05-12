@@ -97,13 +97,15 @@
 
 - Added five managed workflow examples for Mouser reconciliation, Mouser purchasing summary, SEAMARK folder summary, SEAMARK pricing extraction, and IoTFactory financial plan review.
 - Updated seeded LLM instructions so project-structure workflow runs preserve `projectId` from `project.id` and `nodeId` from `runContext.workflowNodeId`, allowing result assets to be stored under workflow nodes.
+- Added `source.ingest` to the seeded project-structure summary workflows so file/folder sources are loaded into bounded PDF/XLS/XLSX/text content before the LLM step.
+- Tightened SEAMARK instructions with explicit X-5600/ZM-x5600, X-6600/ZM-x6600, and X-6600A/ZM-x6600A price mappings after provider proof caught a swapped-price result.
 - Added a reusable project-structure scenario harness integration test that seeds parent, child, selected-node, file, folder, and manual JSON inputs through the project-structure API.
 - Covered 20 distinct scenarios, including supplied Mouser XLS/PDF files, SEAMARK PDFs, the IoTFactory workbook, synthetic emails, business plan, support, release, incident, folder intake, file-save, subtree, prompt cleanup, and compliance cases.
 - Added a PostgreSQL variant using the existing test PostgreSQL availability helper and a temporary database.
 
 ## Closure Evidence
 
-- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "ProjectStructureWorkflowScenarioHarnessTests" /p:BuildInParallel=false` passed: 2 tests, including SQLite and PostgreSQL 20-scenario harness runs.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "ProjectStructureWorkflowScenarioHarnessTests" /p:BuildInParallel=false --no-restore` passed: 2 tests, including SQLite and PostgreSQL 20-scenario harness runs.
 - Scenario artifacts written:
   - `.codex/bundles/project-structure-workflow-runs/proof/scenarios/scenario-harness-results.json`
   - `.codex/bundles/project-structure-workflow-runs/proof/scenarios/scenario-harness-postgresql-results.json`

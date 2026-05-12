@@ -55,6 +55,7 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IAgentRuntime>()));
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());

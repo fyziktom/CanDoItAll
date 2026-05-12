@@ -70,6 +70,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());

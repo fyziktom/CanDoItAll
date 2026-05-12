@@ -40,6 +40,9 @@
 | `CANDOITALL_PLAYWRIGHT_BASEURL=http://127.0.0.1:5087 dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "Project_structure_workflow_nodes_can_be_added_started_and_inspected_in_browser" /p:BuildInParallel=false` | `Passed` | PostgreSQL-backed app proof passed after repairing add-dialog preview truncation and async refresh races. Screenshots include add dialog, start confirmation, selection status, result child node, and mobile summary. |
 | `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "ProjectStructureWorkflowScenarioHarnessTests" /p:BuildInParallel=false` | `Passed` | Final rerun passed 2 tests: the same 20 scenarios on SQLite and PostgreSQL. |
 | `Provider validation HTTP proof against http://127.0.0.1:5087` | `Passed` | `proof/providers/provider-validation-results.json` records `gpt-5-mini` and local Ollama `gptoss20b64k:latest` provider chat probes and saved workflow runs; both runs completed with expected markers. |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File .codex\bundles\project-structure-workflow-runs\proof\providers\run-provider-validation-rerun.ps1` | `Passed` | Stronger PostgreSQL app/API proof wrote `proof/providers/provider-validation-results-rerun.json` at `2026-05-12T14:10:57Z`; OpenAI `gpt-5-mini` reconciled the real Mouser XLS/PDF and validated invoice `89566550`, part `485-4754`, unit price `378.16`, and total `565.16`; local Ollama `gptoss20b64k:latest` summarized the real SEAMARK folder through `source.ingest`, created project-structure result assets, and passed strict price-to-device mapping validation. |
+| `dotnet build src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj /p:BuildInParallel=false --no-restore` | `Passed` | Targeted build after source-ingestion executor and SEAMARK instruction repair; 0 warnings/errors. |
+| `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectStructureWorkflowScenarioHarnessTests" /p:BuildInParallel=false --no-restore` | `Passed` | Rerun after provider-proof repair passed 2 tests: 20 scenarios on SQLite and the same 20 scenarios on PostgreSQL. |
 | `dotnet test CanDoItAll.slnx --filter "FullyQualifiedName~Workflow" /p:BuildInParallel=false` | `Failed` | Workflow-filter unit/component/integration suites passed again, but the unrelated Playwright process audit still timed out waiting for `processes-launch-name-input`. |
 | `dotnet test CanDoItAll.slnx /p:BuildInParallel=false` | `Timed out` | Command exceeded 20 minutes and returned no final test summary; stale `dotnet test CanDoItAll.slnx`/vstest/MSBuild processes from that run were stopped. |
 | `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py --stage completed .codex\bundles\project-structure-workflow-runs` | `Passed` | Bundle is valid for stage `completed`. |
@@ -77,9 +80,9 @@
 
 | Scenario | Data | Provider/backend | Expected validation | Result |
 | --- | --- | --- | --- | --- |
-| `S01` Mouser XLS/PDF reconciliation | Mouser XLS and PDF | Harness: SQLite + PostgreSQL in-process; provider proof: `gpt-5-mini` | Item/quantity/price consistency summary | `Harness passed`; provider workflow proof observed `OPENAI-MOUSER-CHECK`. |
+| `S01` Mouser XLS/PDF reconciliation | Mouser XLS and PDF | Harness: SQLite + PostgreSQL in-process; provider proof: `gpt-5-mini` | Item/quantity/price consistency summary | `Harness passed`; provider rerun loaded the real XLS/PDF through `source.ingest`, created a project-structure markdown asset, and validated invoice/part/price/total facts. |
 | `S02` Mouser order executive summary | Mouser XLS and PDF | Harness: SQLite + PostgreSQL in-process | Order summary with file paths | `Harness passed`; validates purchasing summary, Mouser source, open questions. |
-| `S03` SEAMARK folder device summary | SEAMARK folder | Harness: SQLite + PostgreSQL in-process; provider proof: local Ollama `gptoss20b64k:latest` | Model comparison summary grounded in PDFs | `Harness passed`; provider workflow proof observed `OLLAMA-SEAMARK-CHECK`. |
+| `S03` SEAMARK folder device summary | SEAMARK folder | Harness: SQLite + PostgreSQL in-process; provider proof: local Ollama `gptoss20b64k:latest` | Model comparison summary grounded in PDFs | `Harness passed`; rerun provider proof loaded the folder through `source.ingest`, created a project-structure markdown asset, and validated X-5600/$35,000, X-6600/$41,500, and X-6600A/$66,000 mappings. |
 | `S04` SEAMARK price extraction | SEAMARK price list | Harness: SQLite + PostgreSQL in-process | Price list summary with source paths | `Harness passed`; validates quotation list, price, uncertainty. |
 | `S05` SEAMARK model comparison | SEAMARK specs | Harness: SQLite + PostgreSQL in-process | Model comparison summary grounded in specs | `Harness passed`; validates X-5600, X-6600, comparison evidence. |
 | `S06` IoTFactory financial risk review | Financial workbook | Harness: SQLite + PostgreSQL in-process | Risk/opportunity summary | `Harness passed`; validates IoTFactory, budget, risk. |
@@ -90,7 +93,7 @@
 - Subbundle 04 browser-validation evidence captured.
 - Subbundle 06 SQLite and PostgreSQL scenario artifacts captured under `.codex/bundles/project-structure-workflow-runs/proof/scenarios/`.
 - Subbundle 07 PostgreSQL browser evidence captured under `.codex/bundles/project-structure-workflow-runs/proof/browser/`.
-- Provider validation captured under `.codex/bundles/project-structure-workflow-runs/proof/providers/provider-validation-results.json`.
+- Provider validation captured under `.codex/bundles/project-structure-workflow-runs/proof/providers/provider-validation-results.json` and the stronger source-ingestion rerun under `.codex/bundles/project-structure-workflow-runs/proof/providers/provider-validation-results-rerun.json`.
 - All subbundle gate results are closed; only the unrelated global Playwright process audit remains as residual validation state.
 
 ## Raw Note Closure
